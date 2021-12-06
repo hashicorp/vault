@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -78,8 +77,8 @@ type Config struct {
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
-	LogRequestsInfo    log.Level   `hcl:"-"`
-	LogRequestsInfoRaw interface{} `hcl:"log_requests_info"`
+	LogRequestsLevel    string   `hcl:"-"`
+	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
@@ -296,9 +295,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
 	}
 
-	result.LogRequestsInfo = c.LogRequestsInfo
-	if c2.LogRequestsInfo != log.NoLevel {
-		result.LogRequestsInfo = c2.LogRequestsInfo
+	result.LogRequestsLevel = c.LogRequestsLevel
+	if c2.LogRequestsLevel != "" {
+		result.LogRequestsLevel = c2.LogRequestsLevel
 	}
 
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
@@ -489,9 +488,9 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
-	if result.LogRequestsInfoRaw != nil {
-		result.LogRequestsInfo = log.LevelFromString(strings.ToLower(strings.TrimSpace(result.LogRequestsInfoRaw.(string))))
-		result.LogRequestsInfoRaw = ""
+	if result.LogRequestsLevelRaw != nil {
+		result.LogRequestsLevel = strings.ToLower(strings.TrimSpace(result.LogRequestsLevelRaw.(string)))
+		result.LogRequestsLevelRaw = ""
 	}
 
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
@@ -855,7 +854,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 
-		"log_requests_info": c.LogRequestsInfo.String(),
+		"log_requests_level": c.LogRequestsLevel,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

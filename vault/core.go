@@ -389,8 +389,8 @@ type Core struct {
 	// disabled
 	physicalCache physical.ToggleablePurgemonster
 
-	// logRequestsInfo indicates at which level requests should be logged
-	logRequestsInfo *uberAtomic.Int32
+	// logRequestsLevel indicates at which level requests should be logged
+	logRequestsLevel *uberAtomic.Int32
 
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reloadutil.ReloadFunc
@@ -1038,12 +1038,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
 
-	c.logRequestsInfo = uberAtomic.NewInt32(0)
+	logRequestsLevel := log.LevelFromString(conf.RawConfig.LogRequestsLevel)
+	c.logRequestsLevel = uberAtomic.NewInt32(0)
 	switch {
-	case conf.RawConfig.LogRequestsInfo > log.NoLevel && conf.RawConfig.LogRequestsInfo < log.Off:
-		c.logRequestsInfo.Store(int32(conf.RawConfig.LogRequestsInfo))
+	case logRequestsLevel > log.NoLevel && logRequestsLevel < log.Off:
+		c.logRequestsLevel.Store(int32(logRequestsLevel))
 	default:
-		c.logger.Warn("invalid log_requests_info", "level", conf.RawConfig.LogRequestsInfo)
+		c.logger.Warn("invalid log_requests_level", "level", conf.RawConfig.LogRequestsLevel)
 	}
 
 	quotasLogger := conf.Logger.Named("quotas")
@@ -2992,7 +2993,7 @@ func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
 // request from the inFlightReqMap and decrement the number of in-flight
 // requests by one.
 func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
-	if c.logRequestsInfo != nil && c.logRequestsInfo.Load() != 0 {
+	if c.logRequestsLevel != nil && c.logRequestsLevel.Load() != 0 {
 		c.LogCompletedRequests(reqID, statusCode)
 	}
 
@@ -3036,7 +3037,7 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 
 // LogCompletedRequests Logs the completed request to the server logs
 func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
-	logLevel := log.Level(c.logRequestsInfo.Load())
+	logLevel := log.Level(c.logRequestsLevel.Load())
 	c.inFlightReqData.l.Lock()
 	defer c.inFlightReqData.l.Unlock()
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
@@ -3050,17 +3051,17 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
-func (c *Core) ReloadLogRequestsInfo() {
+func (c *Core) ReloadLogRequestsLevel() {
 	conf := c.rawConfig.Load()
 	if conf == nil {
 		return
 	}
-	infoLevel := conf.(*server.Config).LogRequestsInfo
+	infoLevel := log.LevelFromString(conf.(*server.Config).LogRequestsLevel)
 	switch {
 	case infoLevel > log.NoLevel && infoLevel < log.Off:
-		c.logRequestsInfo.Store(int32(infoLevel))
+		c.logRequestsLevel.Store(int32(infoLevel))
 	default:
-		c.logger.Warn("invalid log_requests_info", "level", infoLevel.String())
+		c.logger.Warn("invalid log_requests_level", "level", infoLevel.String())
 	}
 }
 
