@@ -36,7 +36,11 @@
         {
           "name": "@electron-forge/maker-deb",
           "platforms": ["linux"],
-          "config": {}
+          "config": {
+            "productName": "Vault",
+            "genericName": "Vault",
+            "icon": "../public/favicon.png"
+          }
         }
       ]
     }
