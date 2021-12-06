@@ -158,24 +158,6 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		}
 	}
 
-	if config.OrganizationID == 0 {
-		// Previously we did not verify using the Org ID. So if the Org ID is
-		// not set, we will trust-on-first-use and set it now.
-		err = config.setOrganizationID(ctx, b)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		entry, err := logical.StorageEntryJSON("config", config)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, nil, err
-		}
-	}
-
 	client, err := b.Client(token)
 	if err != nil {
 		return nil, nil, err
@@ -187,6 +169,26 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 			return nil, nil, fmt.Errorf("successfully parsed base_url when set but failing to parse now: %w", err)
 		}
 		client.BaseURL = parsedURL
+	}
+
+	if config.OrganizationID == 0 {
+		// Previously we did not verify using the Org ID. So if the Org ID is
+		// not set, we will trust-on-first-use and set it now.
+		err = config.setOrganizationID(ctx, client)
+		if err != nil {
+			b.Logger().Error("failed to set the organization_id on login", "error", err)
+			return nil, nil, err
+		} else {
+			entry, err := logical.StorageEntryJSON("config", config)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if err := req.Storage.Put(ctx, entry); err != nil {
+				return nil, nil, err
+			}
+		}
+
 	}
 
 	// Get the user

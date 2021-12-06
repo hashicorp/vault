@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-github/github"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -19,8 +20,12 @@ func pathConfig(b *backend) *framework.Path {
 			"organization": {
 				Type:        framework.TypeString,
 				Description: "The organization users must be part of",
+				Required:    true,
 			},
-
+			"organization_id": {
+				Type:        framework.TypeInt64,
+				Description: "The ID of the organization users must be part of",
+			},
 			"base_url": {
 				Type: framework.TypeString,
 				Description: `The API endpoint to use. Useful if you
@@ -55,6 +60,7 @@ API-compatible authentication server.`,
 }
 
 func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var resp logical.Response
 	c, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -70,6 +76,10 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse(fmt.Sprintf("organization is a required parameter")), nil
 	}
 
+	if organizationRaw, ok := data.GetOk("organization_id"); ok {
+		c.OrganizationID = organizationRaw.(int64)
+	}
+
 	if baseURLRaw, ok := data.GetOk("base_url"); ok {
 		baseURL := baseURLRaw.(string)
 		_, err := url.Parse(baseURL)
@@ -82,11 +92,23 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		c.BaseURL = baseURL
 	}
 
-	// we want to set the Org ID in the config so we can use that to verify the
-	// credentials on login
-	err = c.setOrganizationID(ctx, b)
+	client, err := b.Client("")
 	if err != nil {
 		return nil, err
+	}
+
+	if c.OrganizationID == 0 {
+		// we want to set the Org ID in the config so we can use that to verify
+		// the credentials on login
+		err = c.setOrganizationID(ctx, client)
+		if err != nil {
+			return nil, err
+		}
+
+		if c.OrganizationID == 0 {
+			b.Logger().Warn("organization_id is missing. It is recommended to set the organization_id.")
+			resp.AddWarning(`organization_id is missing. It is recommended to set the organization_id.`)
+		}
 	}
 
 	if err := c.ParseTokenFields(req, data); err != nil {
@@ -113,7 +135,11 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		return nil, err
 	}
 
-	return nil, nil
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -181,12 +207,7 @@ type config struct {
 	MaxTTL         time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
 }
 
-func (c *config) setOrganizationID(ctx context.Context, b *backend) error {
-	client, err := b.Client("")
-	if err != nil {
-		return err
-	}
-
+func (c *config) setOrganizationID(ctx context.Context, client *github.Client) error {
 	// ensure our client has the BaseURL if it was provided
 	if c.BaseURL != "" {
 		parsedURL, err := url.Parse(c.BaseURL)
