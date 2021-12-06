@@ -1,0 +1,3 @@
+```release-note:feature
+secrets enable, secrets tune: Add `allowed_managed_keys` field which is a list of managed key registry entry names that the mount in question is allowed to access.
+```
