@@ -24,12 +24,7 @@ export default function UseCasePage({ data }) {
     solutionDescription,
     solutionImage,
     solutionLink,
-    caseStudyImage,
-    caseStudyLogo,
-    caseStudyHeading,
-    caseStudyDescription,
-    caseStudyLink,
-    caseStudyStats,
+    customerCaseStudy,
     cardsHeading,
     cardsDescription,
     tutorialCards,
@@ -39,6 +34,7 @@ export default function UseCasePage({ data }) {
     callToActionLinks,
     videoCallout,
   } = data
+  const _customerCaseStudy = customerCaseStudy[0]
   const _videoCallout = videoCallout[0]
 
   return (
@@ -86,29 +82,31 @@ export default function UseCasePage({ data }) {
         }}
       />
 
-      <IoUsecaseCustomer
-        link={caseStudyLink}
-        media={{
-          src: caseStudyImage.url,
-          width: caseStudyImage.width,
-          height: caseStudyImage.height,
-          alt: caseStudyImage.alt,
-        }}
-        logo={{
-          src: caseStudyLogo.url,
-          width: caseStudyLogo.width,
-          height: caseStudyLogo.height,
-          alt: caseStudyLogo.alt,
-        }}
-        heading={caseStudyHeading}
-        description={caseStudyDescription}
-        stats={caseStudyStats.map((stat) => {
-          return {
-            value: stat.value,
-            key: stat.label,
-          }
-        })}
-      />
+      {_customerCaseStudy ? (
+        <IoUsecaseCustomer
+          link={_customerCaseStudy.link}
+          media={{
+            src: _customerCaseStudy.image.url,
+            width: _customerCaseStudy.image.width,
+            height: _customerCaseStudy.image.height,
+            alt: _customerCaseStudy.image.alt,
+          }}
+          logo={{
+            src: _customerCaseStudy.logo.url,
+            width: _customerCaseStudy.logo.width,
+            height: _customerCaseStudy.logo.height,
+            alt: _customerCaseStudy.logo.alt,
+          }}
+          heading={_customerCaseStudy.heading}
+          description={_customerCaseStudy.description}
+          stats={_customerCaseStudy.stats.map((stat) => {
+            return {
+              value: stat.value,
+              key: stat.label,
+            }
+          })}
+        />
+      ) : null}
 
       <div className={s.cards}>
         <IoCardContainer
