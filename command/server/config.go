@@ -77,7 +77,7 @@ type Config struct {
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
-	LogRequestsLevel    string   `hcl:"-"`
+	LogRequestsLevel    string      `hcl:"-"`
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
