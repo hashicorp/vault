@@ -141,8 +141,9 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedManagedKeys,
 		Target: &c.flagAllowedManagedKeys,
-		Usage: "Comma-separated string or list of managed key registry entry names" +
-			"that the mount in question is allowed to access ",
+		Usage: "Managed key registry entry name that the mount in question is allowed" +
+			"to access. Note that multiple keys may be specified by providing this option" +
+			"multiple times, each time with 1 key.",
 	})
 
 	return set
