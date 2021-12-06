@@ -31,7 +31,14 @@ export default function IoUsecaseSection({
   cta,
 }: IoUsecaseSectionProps): React.ReactElement {
   return (
-    <section className={classNames(s.section, s[brand])}>
+    <section
+      className={classNames(s.section, s[brand])}
+      style={
+        {
+          '--background-accent': `var(--${brand}-secondary)`,
+        } as React.CSSProperties
+      }
+    >
       <div className={s.container}>
         <p className={s.eyebrow}>{eyebrow}</p>
         <div className={s.columns}>

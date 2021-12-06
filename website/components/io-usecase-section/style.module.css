@@ -21,7 +21,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: var(--vault-secondary);
+      background-color: var(--background-accent);
 
       @media (--medium-up) {
         border-top-left-radius: 6px;
