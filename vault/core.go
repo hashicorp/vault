@@ -2992,7 +2992,7 @@ func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
 // request from the inFlightReqMap and decrement the number of in-flight
 // requests by one.
 func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
-	if c.logRequestsInfo.Load() != 0 {
+	if c.logRequestsInfo != nil && c.logRequestsInfo.Load() != 0 {
 		c.LogCompletedRequests(reqID, statusCode)
 	}
 
