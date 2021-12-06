@@ -189,8 +189,8 @@ limitation in mind.
 -> **Note:** From Vault 1.9, `disable_iss_validation` and `issuer` are deprecated
 and the default for `disable_iss_validation` has changed to `true`. The following
 section only applies if you set `disable_iss_validation=false`. The Kubernetes API
-does the same validation when reviewing tokens, so enabling issuer validation is
-duplicated work.
+does the same validation when reviewing tokens, so enabling issuer validation on
+the Vault side is duplicated work.
 
 Kubernetes 1.21+ clusters may require setting the service account
 [`issuer`](/api-docs/auth/kubernetes#issuer) to the same value as
