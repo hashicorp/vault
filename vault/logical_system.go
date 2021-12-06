@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
+	"github.com/shirou/gopsutil/host"
 )
 
 const (
@@ -4143,6 +4144,43 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 	return nil
 }
 
+func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// We're always the leader if we're handling this request.
+	h, _ := host.Info()
+	nodes := []HAStatusNode{
+		{
+			Hostname:       h.Hostname,
+			APIAddress:     b.Core.redirectAddr,
+			ClusterAddress: b.Core.ClusterAddr(),
+			ActiveNode:     true,
+		},
+	}
+
+	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
+		lastEcho := peerNode.LastEcho
+		nodes = append(nodes, HAStatusNode{
+			Hostname:       peerNode.Hostname,
+			APIAddress:     peerNode.APIAddress,
+			ClusterAddress: peerNode.ClusterAddress,
+			LastEcho:       &lastEcho,
+		})
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"nodes": nodes,
+		},
+	}, nil
+}
+
+type HAStatusNode struct {
+	Hostname       string     `json:"hostname"`
+	APIAddress     string     `json:"api_address"`
+	ClusterAddress string     `json:"cluster_address"`
+	ActiveNode     bool       `json:"active_node"`
+	LastEcho       *time.Time `json:"last_echo"`
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4630,6 +4668,13 @@ This path responds to the following HTTP methods.
 		`Enable or disable audit backends.`,
 		`
 Enable a new audit backend or disable an existing backend.
+		`,
+	},
+
+	"ha-status": {
+		"Provides information about the nodes in an HA cluster.",
+		`
+		Provides the list of hosts known to the active node and when they were last heard from.
 		`,
 	},
 

@@ -1066,7 +1066,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	return c, nil
 }
 
-// HandleVersionTimeStamps stores the current version at the current time to
+// handleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now()
@@ -3050,7 +3050,7 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
-func (c *Core) ReloadLogRequestsInfo(){
+func (c *Core) ReloadLogRequestsInfo() {
 	conf := c.rawConfig.Load()
 	if conf == nil {
 		return
@@ -3062,4 +3062,26 @@ func (c *Core) ReloadLogRequestsInfo(){
 	default:
 		c.logger.Warn("invalid log_requests_info", "level", infoLevel.String())
 	}
+}
+
+type PeerNode struct {
+	Hostname       string    `json:"hostname"`
+	APIAddress     string    `json:"api_address"`
+	ClusterAddress string    `json:"cluster_address"`
+	LastEcho       time.Time `json:"last_echo"`
+}
+
+// GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
+func (c *Core) GetHAPeerNodesCached() []PeerNode {
+	var nodes []PeerNode
+	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
+		info := item.Object.(nodeHAConnectionInfo)
+		nodes = append(nodes, PeerNode{
+			Hostname:       info.nodeInfo.Hostname,
+			APIAddress:     info.nodeInfo.ApiAddr,
+			ClusterAddress: itemClusterAddr,
+			LastEcho:       info.lastHeartbeat,
+		})
+	}
+	return nodes
 }

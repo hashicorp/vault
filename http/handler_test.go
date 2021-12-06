@@ -993,6 +993,9 @@ func TestHandler_Patch_Audit(t *testing.T) {
 			"file_path": auditLogFile.Name(),
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	writeData := map[string]interface{}{
 		"data": map[string]interface{}{

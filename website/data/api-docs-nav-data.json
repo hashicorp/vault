@@ -434,6 +434,10 @@
         "path": "system/key-status"
       },
       {
+        "title": "<code>/sys/ha-status</code>",
+        "path": "system/ha-status"
+      },
+      {
         "title": "<code>/sys/leader</code>",
         "path": "system/leader"
       },
