@@ -42,7 +42,7 @@ export default function IoCardContaianer({
               {cta ? (
                 <Button
                   title={cta.text}
-                  href={cta.url}
+                  url={cta.url}
                   linkType="inbound"
                   theme={{
                     brand: 'neutral',
