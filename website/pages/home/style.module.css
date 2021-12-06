@@ -117,8 +117,8 @@
 .caseStudies {
   position: relative;
   margin: 0 auto 0;
-  padding-top: 64px;
-  padding-bottom: 64px;
+  padding-top: 80px;
+  padding-bottom: 80px;
   max-width: 1600px;
 
   @media (--medium-up) {

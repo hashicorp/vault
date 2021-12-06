@@ -26,24 +26,26 @@ query UseCasesQuery {
       height
     }
     solutionLink
-    caseStudyImage {
-      url
-      alt
-      width
-      height
-    }
-    caseStudyLogo {
-      url
-      alt
-      width
-      height
-    }
-    caseStudyHeading
-    caseStudyDescription
-    caseStudyLink
-    caseStudyStats {
-      value
-      label
+    customerCaseStudy {
+      image {
+        url
+        alt
+        width
+        height
+      }
+      logo {
+        url
+        alt
+        width
+        height
+      }
+      heading
+      description
+      link
+      stats {
+        value
+        label
+      }
     }
     cardsHeading
     cardsDescription
