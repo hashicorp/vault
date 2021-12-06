@@ -377,7 +377,7 @@ func (c *DebugCommand) Run(args []string) int {
 	wg.Wait()
 	for i, err := range errs {
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error capturing static information for address %s: %s", c.flagAddresses[i], err))
+			c.UI.Error(fmt.Sprintf("Error capturing dynamic information for address %s: %s", c.flagAddresses[i], err))
 			return 2
 		}
 	}
@@ -575,7 +575,6 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, *debugIndex, error) 
 
 	// Populate initial index fields
 	debugIndex := &debugIndex{
-		// VaultAddress:           client.Address(),
 		ClientVersion:          version.GetVersion().VersionNumber(),
 		Compress:               c.flagCompress,
 		DurationSeconds:        int(c.flagDuration.Seconds()),
