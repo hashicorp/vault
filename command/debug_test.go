@@ -704,16 +704,24 @@ func TestDebugCommand_MultiAddress(t *testing.T) {
 		addrArgs = append(addrArgs, "-addresses", core.Client.Address())
 	}
 	cases := []struct {
-		name string
-		args []string
+		name      string
+		args      []string
+		expectErr bool
 	}{
 		{
 			"multi-addresses",
 			addrArgs,
+			false,
 		},
 		{
 			"cluster",
 			[]string{"-cluster"},
+			false,
+		},
+		{
+			"both",
+			append([]string{"-cluster"}, addrArgs...),
+			true,
 		},
 	}
 
@@ -730,9 +738,14 @@ func TestDebugCommand_MultiAddress(t *testing.T) {
 			}
 
 			code := cmd.Run(append(args, testcase.args...))
-			if code != 0 {
+			switch {
+			case !testcase.expectErr && code != 0:
 				t.Log(ui.ErrorWriter.String())
 				t.Fatalf("expected code to be 0, got: %d", code)
+			case testcase.expectErr && code == 0:
+				t.Fatalf("expected code to be non-zero, got: %d", code)
+			case testcase.expectErr:
+				return
 			}
 
 			bundlePath := output + debugCompressionExt
