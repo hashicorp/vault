@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -77,7 +78,7 @@ type Config struct {
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
-	LogRequestsInfo    string      `hcl:"-"`
+	LogRequestsInfo    log.Level   `hcl:"-"`
 	LogRequestsInfoRaw interface{} `hcl:"log_requests_info"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
@@ -296,7 +297,7 @@ func (c *Config) Merge(c2 *Config) *Config {
 	}
 
 	result.LogRequestsInfo = c.LogRequestsInfo
-	if c2.LogRequestsInfo != "" {
+	if c2.LogRequestsInfo != log.NoLevel {
 		result.LogRequestsInfo = c2.LogRequestsInfo
 	}
 
@@ -489,7 +490,7 @@ func ParseConfig(d, source string) (*Config, error) {
 	}
 
 	if result.LogRequestsInfoRaw != nil {
-		result.LogRequestsInfo = strings.ToLower(strings.TrimSpace(result.LogRequestsInfoRaw.(string)))
+		result.LogRequestsInfo = log.LevelFromString(strings.ToLower(strings.TrimSpace(result.LogRequestsInfoRaw.(string))))
 		result.LogRequestsInfoRaw = ""
 	}
 
@@ -854,7 +855,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 
-		"log_requests_info": c.LogRequestsInfo,
+		"log_requests_info": c.LogRequestsInfo.String(),
 	}
 	for k, v := range sharedResult {
 		result[k] = v

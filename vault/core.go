@@ -390,7 +390,7 @@ type Core struct {
 	physicalCache physical.ToggleablePurgemonster
 
 	// logRequestsInfo indicates at which level requests should be logged
-	logRequestsInfo uberAtomic.String
+	logRequestsInfo *uberAtomic.Int32
 
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reloadutil.ReloadFunc
@@ -1038,10 +1038,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
 
+	c.logRequestsInfo = uberAtomic.NewInt32(0)
 	switch {
-	case log.LevelFromString(conf.RawConfig.LogRequestsInfo) > log.NoLevel && log.LevelFromString(conf.RawConfig.LogRequestsInfo) < log.Off:
-		c.logRequestsInfo.Store(conf.RawConfig.LogRequestsInfo)
-	case conf.RawConfig.LogRequestsInfo != "":
+	case conf.RawConfig.LogRequestsInfo > log.NoLevel && conf.RawConfig.LogRequestsInfo < log.Off:
+		c.logRequestsInfo.Store(int32(conf.RawConfig.LogRequestsInfo))
+	default:
 		c.logger.Warn("invalid log_requests_info", "level", conf.RawConfig.LogRequestsInfo)
 	}
 
@@ -2991,7 +2992,7 @@ func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
 // request from the inFlightReqMap and decrement the number of in-flight
 // requests by one.
 func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
-	if c.logRequestsInfo.Load() != "" {
+	if c.logRequestsInfo.Load() != 0 {
 		c.LogCompletedRequests(reqID, statusCode)
 	}
 
@@ -3035,7 +3036,7 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 
 // LogCompletedRequests Logs the completed request to the server logs
 func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
-	logLevel := log.LevelFromString(c.logRequestsInfo.Load())
+	logLevel := log.Level(c.logRequestsInfo.Load())
 	c.inFlightReqData.l.Lock()
 	defer c.inFlightReqData.l.Unlock()
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
@@ -3056,9 +3057,9 @@ func (c *Core) ReloadLogRequestsInfo(){
 	}
 	infoLevel := conf.(*server.Config).LogRequestsInfo
 	switch {
-	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
-		c.logRequestsInfo.Store(infoLevel)
-	case infoLevel != "":
-		c.logger.Warn("invalid log_requests_info", "level", infoLevel)
+	case infoLevel > log.NoLevel && infoLevel < log.Off:
+		c.logRequestsInfo.Store(int32(infoLevel))
+	default:
+		c.logger.Warn("invalid log_requests_info", "level", infoLevel.String())
 	}
 }

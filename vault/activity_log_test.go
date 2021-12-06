@@ -120,7 +120,7 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 		NamespaceID:  namespace_id,
 	}
 
-	id, isTWE := core.CreateClientID(te)
+	id, isTWE := te.CreateClientID()
 	a.HandleTokenUsage(te, id, isTWE)
 
 	a.fragmentLock.Lock()
@@ -137,7 +137,7 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 		NamespaceID:  namespace_id,
 	}
 
-	id, isTWE = core.CreateClientID(teNew)
+	id, isTWE = teNew.CreateClientID()
 	a.HandleTokenUsage(teNew, id, isTWE)
 
 	a.fragmentLock.Lock()
@@ -363,13 +363,13 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	tokenEntryOne := logical.TokenEntry{NamespaceID: "ns1_id", Policies: []string{"hi"}}
 	entityEntry := logical.TokenEntry{EntityID: "foo", NamespaceID: "ns1_id", Policies: []string{"hi"}}
 
-	idNonEntity, isTWE := core.CreateClientID(&tokenEntryOne)
+	idNonEntity, isTWE := tokenEntryOne.CreateClientID()
 
 	for i := 0; i < 3; i++ {
 		a.HandleTokenUsage(&tokenEntryOne, idNonEntity, isTWE)
 	}
 
-	idEntity, isTWE := core.CreateClientID(&entityEntry)
+	idEntity, isTWE := entityEntry.CreateClientID()
 	for i := 0; i < 2; i++ {
 		a.HandleTokenUsage(&entityEntry, idEntity, isTWE)
 	}
