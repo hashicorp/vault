@@ -5,7 +5,7 @@ import { isInternalLink } from 'lib/utils'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
 
-interface IoHomeFeatureProps {
+export interface IoHomeFeatureProps {
   link?: string
   image: {
     url: string

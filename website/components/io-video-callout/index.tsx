@@ -6,7 +6,7 @@ import IoDialog from 'components/io-dialog'
 import PlayIcon from './play-icon'
 import s from './style.module.css'
 
-interface IoHomeVideoCalloutProps {
+export interface IoHomeVideoCalloutProps {
   youtubeId: string
   thumbnail: string
   heading: string

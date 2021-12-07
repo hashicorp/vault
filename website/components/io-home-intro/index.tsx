@@ -1,10 +1,37 @@
 import * as React from 'react'
 import Image from 'next/image'
 import classNames from 'classnames'
+import { Products } from '@hashicorp/platform-product-meta'
 import Button from '@hashicorp/react-button'
-import IoVideoCallout from 'components/io-video-callout'
-import IoHomeFeature from 'components/io-home-feature'
+import IoVideoCallout, {
+  IoHomeVideoCalloutProps,
+} from 'components/io-video-callout'
+import IoHomeFeature, { IoHomeFeatureProps } from 'components/io-home-feature'
 import s from './style.module.css'
+
+interface IoHomeIntroProps {
+  brand: Products
+  heading: string
+  description: string
+  features?: Array<IoHomeFeatureProps>
+  offerings?: {
+    image: {
+      src: string
+      width: number
+      height: number
+      alt: string
+    }
+    list: Array<{
+      heading: string
+      description: string
+    }>
+    cta?: {
+      title: string
+      link: string
+    }
+  }
+  video?: IoHomeVideoCalloutProps
+}
 
 export default function IoHomeIntro({
   brand,
@@ -13,7 +40,7 @@ export default function IoHomeIntro({
   features,
   offerings,
   video,
-}) {
+}: IoHomeIntroProps) {
   return (
     <section
       className={classNames(
@@ -113,9 +140,9 @@ export default function IoHomeIntro({
             heading={video.heading}
             description={video.description}
             person={{
-              name: video.personName,
-              description: video.personDescription,
-              avatar: video.personAvatar,
+              name: video.person.name,
+              description: video.person.description,
+              avatar: video.person.avatar,
             }}
           />
         </div>
