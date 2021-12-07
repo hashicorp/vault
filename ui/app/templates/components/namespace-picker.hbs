@@ -6,9 +6,9 @@
 {{else}}
   <div class="namespace-picker">
     <BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
-      <D.trigger
-        @tagName="button"
-        @class="button is-transparent namespace-picker-trigger has-current-color"
+      <D.Trigger
+        @htmlTag="button"
+        class="button is-transparent namespace-picker-trigger has-current-color"
         data-test-namespace-toggle
         >
         {{yield}}
@@ -21,8 +21,8 @@
           @direction="down"
           @class="has-text-white auto-width is-status-chevron"
         />
-      </D.trigger>
-      <D.content @class="namespace-picker-content">
+      </D.Trigger>
+      <D.Content class="namespace-picker-content">
         <div class="is-mobile level-left">
           {{#unless isUserRootNamespace}}
             <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
@@ -93,7 +93,7 @@
               </div>
           {{/if}}
         </div>
-      </D.content>
+      </D.Content>
     </BasicDropdown>
   </div>
   <div class="navbar-separator"></div>

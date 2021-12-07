@@ -2,19 +2,19 @@
   <div class="has-text-grey">
     {{#if @glyph}}
       <ToolTip @horizontalPosition="left" as |T|>
-        <T.trigger>
+        <T.Trigger>
           <Icon
             @glyph={{@glyph}}
             @size="l"
             class="has-text-grey-light"
             data-test-linkable-item-glyph
           />
-        </T.trigger>
-        <T.content @class="tool-tip">
+        </T.Trigger>
+        <T.Content class="tool-tip">
           <div class="box">
             {{or @glyphText @title}}
           </div>
-        </T.content>
+        </T.Content>
       </ToolTip>
     {{/if}}
 

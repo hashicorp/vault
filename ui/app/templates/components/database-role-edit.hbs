@@ -116,7 +116,7 @@
               </button>
             {{else}}
               <ToolTip @horizontalPosition="left" as |T|>
-                <T.trigger>
+                <T.Trigger>
                   <button
                     data-test-secret-save
                     type="submit"
@@ -125,12 +125,12 @@
                   >
                     Save
                   </button>
-                </T.trigger>
-                <T.content @class="tool-tip">
+                </T.Trigger>
+                <T.Content class="tool-tip">
                   <div class="box">
                     You don't have permissions required to {{if (eq @mode 'create') "create" "update"}} this role. See form for details.
                   </div>
-                </T.content>
+                </T.Content>
               </ToolTip>
             {{/if}}
           </div>

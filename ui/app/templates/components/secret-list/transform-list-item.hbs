@@ -64,14 +64,14 @@
             @verticalPosition="above"
             @horizontalPosition="left"
             as |T|>
-            <T.trigger @tabindex=false>
+            <T.Trigger @tabindex=false>
               {{@item.id}}
-            </T.trigger>
-            <T.content @class="tool-tip">
+            </T.Trigger>
+            <T.Content class="tool-tip">
               <div class="box">
                 This is a built-in HashiCorp {{@itemType}}. It can't be viewed or edited.
               </div>
-            </T.content>
+            </T.Content>
           </ToolTip>
         {{else}}
           {{@item.id}}

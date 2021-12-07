@@ -17,10 +17,10 @@
   </h1>
   {{#if showProgress}}
     <ToolTip @verticalPosition="below" as |T|>
-      <T.trigger @tabindex="-1">
+      <T.Trigger @tabindex="-1">
         <WizardProgress @currentFeatureProgress={{currentFeatureProgress}} @progressBar={{progressBar}} />
-      </T.trigger>
-      <T.content @class="tool-tip">
+      </T.Trigger>
+      <T.Content class="tool-tip">
         <div class="box">
           {{#if currentTutorialProgress}}
             {{currentTutorialProgress.text}}
@@ -29,7 +29,7 @@
             {{currentFeatureProgress.text}}
           {{/if}}
         </div>
-      </T.content>
+      </T.Content>
     </ToolTip>
   {{else}}
     {{#if selectProgress}}

@@ -11,14 +11,14 @@
     <span>{{helperText}}</span>
     {{#if description}}
       <ToolTip @verticalPosition="below" as |T|>
-        <T.trigger data-test-tooltip-trigger tabindex="-1">
+        <T.Trigger data-test-tooltip-trigger tabindex="-1">
           <Icon @glyph="info-circle-outline" aria-label="description" />
-        </T.trigger>
-        <T.content @class="tool-tip">
+        </T.Trigger>
+        <T.Content class="tool-tip">
           <div class="box" data-test-hover-copy-tooltip-text>
             {{description}}
           </div>
-        </T.content>
+        </T.Content>
       </ToolTip>
     {{/if}}
   </div>

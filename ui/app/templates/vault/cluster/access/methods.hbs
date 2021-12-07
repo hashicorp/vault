@@ -24,7 +24,7 @@
       <div class="level-left">
         <div>
           <ToolTip @horizontalPosition="left" as |T|>
-            <T.trigger>
+            <T.Trigger>
               <Icon @size="l" class="has-text-grey-light" 
                 @glyph={{if
                 (or
@@ -34,12 +34,12 @@
                 method.methodType
                 "auth"}} 
               />
-            </T.trigger>
-            <T.content @class="tool-tip">
+            </T.Trigger>
+            <T.Content class="tool-tip">
               <div class="box">
                 {{method.methodType}}
               </div>
-            </T.content>
+            </T.Content>
           </ToolTip>
           <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
             {{method.path}}

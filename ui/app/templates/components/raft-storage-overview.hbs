@@ -13,15 +13,15 @@
         @verticalPosition="below"
         as |D|
       >
-        <D.trigger
+        <D.Trigger
           data-test-popup-menu-trigger="true"
-          @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-          @tagName="button"
+          class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+          @htmlTag="button"
         >
           Snapshots
           <Chevron @direction="down" @isButton={{true}} />
-        </D.trigger>
-        <D.content @class="popup-menu-content">
+        </D.Trigger>
+        <D.Content class="popup-menu-content">
           <nav class="box menu">
             <ul class="menu-list">
               <li class="action">
@@ -42,7 +42,7 @@
               </li>
             </ul>
           </nav>
-        </D.content>
+        </D.Content>
       </BasicDropdown>
     </ToolbarActions>
   </Toolbar>

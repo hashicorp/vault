@@ -17,12 +17,12 @@ as |dd|>
   {{yield (assign
     dd
     (hash
-      trigger=(component dd.trigger
+      Trigger=(component dd.Trigger
         onMouseDown=(action "prevent")
         onMouseEnter=(action "open")
         onMouseLeave=(action "close")
       )
-      content=(component dd.content
+      Content=(component dd.Content
         onMouseEnter=(action "open")
         onMouseLeave=(action "close")
       )

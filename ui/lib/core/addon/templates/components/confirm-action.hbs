@@ -5,8 +5,8 @@
     @onOpen={{action "toggleConfirm"}}
     @onClose={{action "toggleConfirm"}}
     as |d|>
-    <d.trigger
-      @tagName="button"
+    <d.Trigger
+      @htmlTag="button"
       class={{concat buttonClasses " popup-menu-trigger" (if d.isOpen " is-active")}}
       type="button"
       disabled={{disabled}}
@@ -16,9 +16,9 @@
       {{#if (eq buttonClasses 'toolbar-link')}}
         <Chevron @direction={{if showConfirm 'up' 'down'}} />
       {{/if}}
-    </d.trigger>
-    <d.content
-      @class="popup-menu-content"
+    </d.Trigger>
+    <d.Content
+      class="popup-menu-content"
     >
       <div class="box confirm-action-message">
         <div class="message is-highlight">
@@ -50,6 +50,6 @@
           </button>
         </div>
       </div>
-    </d.content>
+    </d.Content>
   </BasicDropdown>
 </div>

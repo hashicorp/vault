@@ -52,14 +52,14 @@
       {{state}}
       {{#if inSyncState}}
         <ToolTip @verticalPosition="above" as |T|>
-          <T.trigger>
+          <T.Trigger>
             <Icon @glyph={{'check-circle-outline'}} @size="m" class={{'has-text-success'}} data-test-glyph />
-          </T.trigger>
-          <T.content @class="tool-tip">
+          </T.Trigger>
+          <T.Content class="tool-tip">
             <div class="box">
               Everything is in sync
             </div>
-          </T.content>
+          </T.Content>
         </ToolTip>
       {{/if}}
     </h2>

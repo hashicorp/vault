@@ -4,7 +4,7 @@
     @verticalPosition="above"
     @horizontalPosition="center"
     as |T|>
-    <T.trigger @tabindex="-1">
+    <T.Trigger @tabindex="-1">
       <label
         for={{@type}}
         class="box-radio is-disabled is-marginless"
@@ -27,12 +27,12 @@
           @disabled={{@disabled}}
         />
       </label>
-    </T.trigger>
-    <T.content @class="tool-tip">
+    </T.Trigger>
+    <T.Content class="tool-tip">
       <div class="box">
         {{@tooltipMessage}}
       </div>
-    </T.content>
+    </T.Content>
   </ToolTip>
 </div>
 {{else}}

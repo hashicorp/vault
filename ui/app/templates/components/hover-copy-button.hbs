@@ -1,5 +1,5 @@
 <ToolTip @onClose={{action (mut tooltipText) "Copy"}} as |T|>
-  <T.trigger data-test-tooltip-trigger tabindex="-1">
+  <T.Trigger data-test-tooltip-trigger tabindex="-1">
     <CopyButton
       data-test-hover-copy-button
       class="copy-button button is-compact is-transparent"
@@ -8,10 +8,10 @@
     >
       <Icon @glyph="copy-action" aria-label="Copy" />
     </CopyButton>
-  </T.trigger>
-  <T.content @class="tool-tip">
+  </T.Trigger>
+  <T.Content class="tool-tip">
     <div class="box" data-test-hover-copy-tooltip-text>
       {{tooltipText}}
     </div>
-  </T.content>
+  </T.Content>
 </ToolTip>

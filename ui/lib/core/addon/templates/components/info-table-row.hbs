@@ -6,14 +6,14 @@
           @verticalPosition="below"
           @horizontalPosition="left"
           as |T|>
-          <T.trigger @tabindex=false>
+          <T.Trigger @tabindex=false>
             <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>  
-          </T.trigger>
-          <T.content @class="tool-tip">
+          </T.Trigger>
+          <T.Content class="tool-tip">
             <div class="box fit-content">
               {{label}}
             </div>
-          </T.content>
+          </T.Content>
         </ToolTip>
       {{else}}
         <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
@@ -70,10 +70,10 @@
             @verticalPosition="above"
             @horizontalPosition="left"
             as |T|>
-            <T.trigger @tabindex=false>
+            <T.Trigger @tabindex=false>
               <span class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</span>  
-            </T.trigger>
-            <T.content @class="tool-tip">
+            </T.Trigger>
+            <T.Content class="tool-tip">
               <CopyButton
                 @clipboardText={{tooltipText}}
                 @success={{action (set-flash-message 'Data copied!')}}
@@ -86,7 +86,7 @@
                   {{tooltipText}}
                 </div>
               </CopyButton>
-            </T.content>
+            </T.Content>
           </ToolTip>
         {{else}}
           <span class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</span>

@@ -24,7 +24,7 @@
             @verticalPosition="above"
             @horizontalPosition="center"
             as |T|>
-            <T.trigger @tabindex="-1">
+            <T.Trigger @tabindex="-1">
               <button
               class="toolbar-link"
               aria-disabled="true"
@@ -33,12 +33,12 @@
               >
                 Delete transformation
               </button>
-            </T.trigger>
-            <T.content @class="tool-tip">
+            </T.Trigger>
+            <T.Content class="tool-tip">
               <div class="box">
                 This transformation is in use by a role and can’t be deleted.
               </div>
-            </T.content>
+            </T.Content>
           </ToolTip>
         {{else}}
         <button
