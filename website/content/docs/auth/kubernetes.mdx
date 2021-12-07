@@ -83,13 +83,6 @@ management tool.
 For the list of available configuration options, please see the
 [API documentation](/api/auth/kubernetes).
 
-    ```bash
-    vault write auth/kubernetes/config \
-        token_reviewer_jwt="<your reviewer service account JWT>" \
-        kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
-        kubernetes_ca_cert=@ca.crt
-    ```
-
     -> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
     the JWT token over the network. Given the [security model of
     Vault](/docs/internals/security), this is allowable because Vault is
@@ -97,6 +90,13 @@ For the list of available configuration options, please see the
     **not** share this JWT with other applications, as it allows API calls to be
     made on behalf of the Pod and can result in unintended access being granted
     to 3rd parties.
+
+    ```bash
+    vault write auth/kubernetes/config \
+        token_reviewer_jwt="<your reviewer service account JWT>" \
+        kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
+        kubernetes_ca_cert=@ca.crt
+    ```
 
 1.  Create a named role:
 
