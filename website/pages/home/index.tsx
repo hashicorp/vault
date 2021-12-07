@@ -123,21 +123,12 @@ export default function Homepage({ data }): React.ReactElement {
         </div>
       </section>
 
-      <section className={s.caseStudies}>
-        <div className={s.container}>
-          <header className={s.caseStudiesHeader}>
-            <h2 className={s.caseStudiesHeading}>{caseStudies.heading}</h2>
-            <p className={s.caseStudiesDescription}>
-              {caseStudies.description}
-            </p>
-          </header>
-
-          <IoHomeCaseStudies
-            primary={caseStudies.features}
-            secondary={caseStudies.links}
-          />
-        </div>
-      </section>
+      <IoHomeCaseStudies
+        heading={caseStudies.heading}
+        description={caseStudies.description}
+        primary={caseStudies.features}
+        secondary={caseStudies.links}
+      />
 
       <IoHomeCallToAction
         brand="vault"

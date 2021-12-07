@@ -1,3 +1,54 @@
+.root {
+  position: relative;
+  margin: 0 auto 0;
+  padding-top: 64px;
+  padding-bottom: 64px;
+  max-width: 1600px;
+
+  @media (--medium-up) {
+    margin-bottom: 128px;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--vault-accent);
+
+    @media (--large) {
+      border-radius: 6px;
+      left: 24px;
+      right: 24px;
+    }
+  }
+}
+
+.container {
+  composes: g-grid-container from global;
+}
+
+.header {
+  margin-bottom: 32px;
+
+  @media (--medium-up) {
+    max-width: calc(100% * 5 / 12);
+  }
+}
+
+.heading {
+  margin: 0;
+  composes: g-type-display-3 from global;
+}
+
+.description {
+  margin: 8px 0 0;
+  composes: g-type-body from global;
+  color: var(--gray-3);
+}
+
 .caseStudies {
   --columns: 1;
 
