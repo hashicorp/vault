@@ -60,6 +60,8 @@
   grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   gap: 32px;
   overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   margin: -4px;
   padding: 4px;
 
