@@ -295,9 +295,11 @@ Configuration steps:
 1. Find the issuer URL of the cluster.
 
    ```bash
-   # When you're done, kill this background process, e.g. using: kill %1
    kubectl proxy &
    ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
+
+   # Kill the background proxy process when you're done
+   kill %%
    ```
 
 1. Enable and configure JWT auth in Vault.
@@ -308,7 +310,7 @@ Configuration steps:
       kubectl exec vault-0 -- vault auth enable jwt
       kubectl exec vault-0 -- vault write auth/jwt/config \
          oidc_discovery_url=https://kubernetes.default.svc.cluster.local \
-         oidc_discovery_ca_pem=@/run/secrets/kubernetes.io/serviceaccount/ca.crt
+         oidc_discovery_ca_pem=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
       ```
 
    1. Alternatively, if Vault is _not_ running in Kubernetes:
@@ -349,7 +351,6 @@ Configuration steps:
 
    ```bash
    # 1. Find the issuer URL of the cluster.
-   # When you're done, kill this background process, e.g. using: kill %1
    kubectl proxy &
    ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
 
@@ -357,6 +358,9 @@ Configuration steps:
    # NB: You may need to run this from a pod within the cluster if the $ISSUER
    # URL is not available outside the cluster.
    curl "$(curl --fail --silent --show-error "${ISSUER}/.well-known/openid-configuration" | jq -r '.jwks_uri')"
+
+   # Kill the background proxy process when you're done
+   kill %%
    ```
 
 1. Convert the keys from JWK format to PEM. You can use a CLI tool or an online

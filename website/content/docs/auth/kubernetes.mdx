@@ -20,7 +20,7 @@ Kubernetes auth.
 -> **Note:** If you are upgrading to Kubernetes v1.21+, ensure the config option
 `disable_iss_validation` is set to true. Assuming the default mount path, you
 can check with `vault read -field disable_iss_validation auth/kubernetes/config`.
-See [Kubernetes 1.21][#kubernetes-1.21] below for more details.
+See [Kubernetes 1.21](#kubernetes-1.21) below for more details.
 
 ## Authentication
 
@@ -74,8 +74,8 @@ management tool.
 
 1.  Enable the Kubernetes auth method:
 
-    ```text
-    $ vault auth enable kubernetes
+    ```bash
+    vault auth enable kubernetes
     ```
 
 1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
@@ -83,14 +83,14 @@ management tool.
 For the list of available configuration options, please see the
 [API documentation](/api/auth/kubernetes).
 
-    ```text
-    $ vault write auth/kubernetes/config \
+    ```bash
+    vault write auth/kubernetes/config \
         token_reviewer_jwt="<your reviewer service account JWT>" \
         kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
         kubernetes_ca_cert=@ca.crt
     ```
 
-    !> **NOTE:** The pattern Vault uses to authenticate Pods depends on sharing
+    -> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
     the JWT token over the network. Given the [security model of
     Vault](/docs/internals/security), this is allowable because Vault is
     part of the trusted compute base. In general, Kubernetes applications should
@@ -125,7 +125,7 @@ Kubernetes auth:
 * The value of the JWT's `"iss"` claim depends on the cluster's configuration.
 
 The changes to token lifetime are important when configuring the
-[`token_reviewer_jwt](/api-docs/auth/kubernetes#token_reviewer_jwt) option. You
+[`token_reviewer_jwt`](/api-docs/auth/kubernetes#token_reviewer_jwt) option. You
 must avoid using a short-lived token because Vault stores that token in Vault
 storage and does not automatically refresh it. If a short-lived token is used,
 Kubernetes will revoke it as soon as the pod or service account are deleted, or
@@ -141,7 +141,7 @@ possible for a single Kubernetes auth configuration to work for default mounted
 pod tokens with both Kubernetes 1.20 and 1.21. Note that auth mounts created
 before Vault 1.9 will maintain the old default, and you will need to explicitly
 set `disable_iss_validation=true` before upgrading Kubernetes to 1.21. See
-[Discovering the service account `issuer`][#discovering-the-service-account-issuer]
+[Discovering the service account `issuer`](#discovering-the-service-account-issuer)
 below for guidance if you wish to enable issuer validation in Vault.
 
 [k8s-1.21-changelog]: https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.21.md#api-change-2
@@ -234,7 +234,6 @@ unable to check this value directly, you can run the following and look for the
 `"iss"` field to find the required value:
 
 ```bash
-# When you're done, kill this background process, e.g. using: kill %1
 kubectl proxy &
 curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/default/token \
   -H "Content-Type: application/json" \
@@ -243,15 +242,20 @@ curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/de
   | jq -r '.status.token' \
   | cut -d . -f2 \
   | base64 -D
+
+# Kill the background proxy process when you're done
+kill %%
 ```
 
 Most clusters will also have that information available at the
 `.well-known/openid-configuration` endpoint:
 
 ```bash
-# When you're done, kill this background process, e.g. using: kill %1
 kubectl proxy &
 curl --silent http://127.0.0.1:8001/.well-known/openid-configuration | jq -r .issuer
+
+# Kill the background proxy process when you're done
+kill %%
 ```
 
 This value is then used when configuring Kubernetes auth, e.g.:
@@ -259,7 +263,6 @@ This value is then used when configuring Kubernetes auth, e.g.:
 ```bash
 vault write auth/kubernetes/config \
   kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" \
-  kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
   issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
 ```
 
