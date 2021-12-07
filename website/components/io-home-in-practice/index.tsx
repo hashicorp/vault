@@ -1,10 +1,10 @@
+import * as React from 'react'
 import Image from 'next/image'
 import Button from '@hashicorp/react-button'
 import { Products } from '@hashicorp/platform-product-meta'
 import { IoCardProps } from 'components/io-card'
 import IoCardContainer from 'components/io-card-container'
 import s from './style.module.css'
-import * as React from 'react'
 
 interface IoHomeInPracticeProps {
   brand: Products

@@ -1,12 +1,13 @@
 .root {
   position: relative;
   margin: 0 auto;
-  padding-top: 64px;
-  padding-bottom: 64px;
+  margin: 60px auto;
+  padding: 64px 0;
   max-width: 1600px;
 
   @media (--medium-up) {
-    margin: 128px auto;
+    padding: 80px 0;
+    margin: 120px auto;
   }
 
   &::before {

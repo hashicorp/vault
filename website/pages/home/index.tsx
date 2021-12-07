@@ -4,10 +4,9 @@ import rivetQuery from '@hashicorp/nextjs-scripts/dato/client'
 import homepageQuery from './query.graphql'
 import { renderMetaTags } from 'react-datocms'
 import IoHomeHero from 'components/io-home-hero'
+import IoHomeIntro from 'components/io-home-intro'
 import IoHomeInPractice from 'components/io-home-in-practice'
-import IoVideoCallout from 'components/io-video-callout'
 import IoCardContainer from 'components/io-card-container'
-import IoHomeFeature from 'components/io-home-feature'
 import IoHomeCaseStudies from 'components/io-home-case-studies'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
@@ -65,54 +64,23 @@ export default function Homepage({ data }): React.ReactElement {
         })}
       />
 
-      <section className={s.intro}>
-        <header className={s.introHeader}>
-          <div className={s.container}>
-            <div className={s.introHeaderInner}>
-              <h2 className={s.introHeading}>{introHeading}</h2>
-              <p className={s.introDescription}>{introDescription}</p>
-            </div>
-          </div>
-        </header>
-
-        <ul className={s.features}>
-          {introFeatures.map((feature, index) => {
-            return (
-              // Index is stable
-              // eslint-disable-next-line react/no-array-index-key
-              <li key={index}>
-                <div className={s.container}>
-                  <IoHomeFeature
-                    image={{
-                      url: feature.image.url,
-                      alt: feature.image.alt,
-                    }}
-                    heading={feature.heading}
-                    description={feature.description}
-                    link={feature.link}
-                  />
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-
-        {_introVideo ? (
-          <div className={s.container}>
-            <IoVideoCallout
-              youtubeId={_introVideo.youtubeId}
-              thumbnail={_introVideo.thumbnail.url}
-              heading={_introVideo.heading}
-              description={_introVideo.description}
-              person={{
-                name: _introVideo.personName,
-                description: _introVideo.personDescription,
-                avatar: _introVideo.personAvatar?.url,
-              }}
-            />
-          </div>
-        ) : null}
-      </section>
+      <IoHomeIntro
+        brand="vault"
+        heading={introHeading}
+        description={introDescription}
+        features={introFeatures}
+        video={{
+          youtubeId: _introVideo.youtubeId,
+          thumbnail: _introVideo.thumbnail.url,
+          heading: _introVideo.heading,
+          description: _introVideo.description,
+          person: {
+            name: _introVideo.personName,
+            description: _introVideo.personDescription,
+            avatar: _introVideo.personAvatar?.url,
+          },
+        }}
+      />
 
       <IoHomeInPractice
         brand="vault"
