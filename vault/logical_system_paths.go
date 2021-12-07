@@ -156,7 +156,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share.",
+					Description: "Specifies a single unseal key share.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -165,8 +165,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary:     "Enter a single master key share to progress the root generation attempt.",
-					Description: "If the threshold number of master key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
+					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
+					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
 				},
 			},
 
@@ -239,11 +239,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				"secret_shares": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares to split the master key into.",
+					Description: "Specifies the number of shares to split the unseal key into.",
 				},
 				"secret_threshold": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as `secret_shares`.",
+					Description: "Specifies the number of shares required to reconstruct the unseal key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as `secret_shares`.",
 				},
 				"stored_shares": {
 					Type:        framework.TypeInt,
@@ -299,11 +299,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"secret_shares": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares to split the master key into.",
+					Description: "Specifies the number of shares to split the unseal key into.",
 				},
 				"secret_threshold": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
+					Description: "Specifies the number of shares required to reconstruct the unseal key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
 				},
 				"pgp_keys": {
 					Type:        framework.TypeCommaStringSlice,
@@ -372,7 +372,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share.",
+					Description: "Specifies a single unseal key share.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -382,7 +382,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary: "Enter a single master key share to progress the rekey of the Vault.",
+					Summary: "Enter a single unseal key share to progress the rekey of the Vault.",
 				},
 			},
 		},
@@ -392,7 +392,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master share key from the new set of shares.",
+					Description: "Specifies a single unseal share key from the new set of shares.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -430,7 +430,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share. This is required unless reset is true.",
+					Description: "Specifies a single unseal key share. This is required unless reset is true.",
 				},
 				"reset": {
 					Type:        framework.TypeBool,

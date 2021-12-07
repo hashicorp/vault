@@ -2547,7 +2547,7 @@ func (c *Core) adjustSealConfigDuringMigration(existBarrierSealConfig, existReco
 	}
 }
 
-func (c *Core) unsealKeyToMasterKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
+func (c *Core) unsealKeyToRootKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
 	return c.unsealKeyToMasterKey(ctx, c.seal, combinedKey, true, false)
 }
 
@@ -2586,7 +2586,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 		}
 		return storedKeys[0], nil
 
-	case vaultseal.StoredKeysSupportedShamirMaster:
+	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
 			testseal := NewDefaultSeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{

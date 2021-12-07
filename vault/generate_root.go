@@ -38,12 +38,12 @@ type GenerateRootStrategy interface {
 type generateStandardRootToken struct{}
 
 func (g generateStandardRootToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	masterKey, err := c.unsealKeyToMasterKeyPostUnseal(ctx, combinedKey)
+	rootKey, err := c.unsealKeyToRootKeyPostUnseal(ctx, combinedKey)
 	if err != nil {
 		return fmt.Errorf("unable to authenticate: %w", err)
 	}
-	if err := c.barrier.VerifyMaster(masterKey); err != nil {
-		return fmt.Errorf("master key verification failed: %w", err)
+	if err := c.barrier.VerifyRoot(rootKey); err != nil {
+		return fmt.Errorf("root key verification failed: %w", err)
 	}
 
 	return nil
@@ -303,7 +303,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		combinedKey, err = shamir.Combine(c.generateRootProgress)
 		c.generateRootProgress = nil
 		if err != nil {
-			return nil, fmt.Errorf("failed to compute master key: %w", err)
+			return nil, fmt.Errorf("failed to compute root key: %w", err)
 		}
 	}
 
