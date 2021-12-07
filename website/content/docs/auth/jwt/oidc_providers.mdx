@@ -432,6 +432,11 @@ kind: Pod
 metadata:
   name: nginx
 spec:
+  # automountServiceAccountToken is redundant in this example because the
+  # mountPath overlapping with the default path below will already stop the
+  # default admission injected token from being created. Use this option if you
+  # choose a different mount path.
+  automountServiceAccountToken: false
   containers:
     - name: nginx
       image: nginx

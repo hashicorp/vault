@@ -163,8 +163,7 @@ table summarizes the options, each of which is explained in more detail below.
 injected service account tokens to a year to help smooth the transition to
 short-lived tokens. If you would like to disable this, set
 [--service-account-extend-token-expiration=false][k8s-extended-tokens] for
-`kube-apiserver` or specify your own `serviceAccountToken` volume mount at
-`/var/run/secrets/kubernetes.io/serviceaccount` in your pods. See
+`kube-apiserver` or specify your own `serviceAccountToken` volume mount. See
 [here](/docs/auth/jwt/oidc_providers#specifying-ttl-and-audience) for an example.
 
 [k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
@@ -173,7 +172,7 @@ short-lived tokens. If you would like to disable this, set
 
 When configuring Kubernetes auth, you can omit the `token_reviewer_jwt`, and Vault
 will use the Vault client's JWT as its own auth token when communicating with
-the Kubernetes TokenReview API. If Vault is running in Kubernetes, you also need
+the Kubernetes `TokenReview` API. If Vault is running in Kubernetes, you also need
 to set `disable_local_ca_jwt=true`.
 
 This means Vault does not store any JWTs and allows you to use short-lived tokens
