@@ -1,5 +1,5 @@
 // const EXPIRY_DATE = '2021-05-12T23:20:50.52Z';
-
+// ARG TODO need to uncomment and put back to normal before final push
 export default function() {
   this.namespace = 'v1';
 

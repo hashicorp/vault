@@ -1,10 +1,11 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { select } from 'd3-selection';
-import { scaleLinear, scaleBand, scaleTime } from 'd3-scale';
+import { scaleLinear, scaleBand } from 'd3-scale';
 import { stack } from 'd3-shape';
 
 /**
+ * ARG TODO fill out
  * @module TotalClientUsage
  * TotalClientUsage components are used to...
  *
@@ -17,6 +18,7 @@ import { stack } from 'd3-shape';
  * @param {string} [param1=defaultValue] - param1 is...
  */
 
+// ARG TODO pull in data
 const DATA = [
   { month: 'January', directEntities: 500, nonDirectTokens: 22 },
   { month: 'February', directEntities: 150, nonDirectTokens: 22 },
@@ -33,28 +35,24 @@ const DATA = [
 ];
 
 // COLOR THEME:
-const BAR_COLOR_DEFAULT = ['#BFD4FF', '#8AB1FF'];
+const BAR_COLOR_DEFAULT = ['#1563FF', '#8AB1FF'];
 
 export default class TotalClientUsage extends Component {
   @action
   registerListner(element) {
     let stackFunction = stack().keys(['directEntities', 'nonDirectTokens']);
     let stackedData = stackFunction(DATA);
-    let countArray = DATA.map(month => month.directEntities); // change to combined
     let yScale = scaleLinear()
-      // .domain([0, Math.max(...countArray)])
       .domain([0, 802]) // TODO calculate high of total combined
-      .range([100, 0]); // 250 is the height of the chart
+      .range([100, 0]);
     let xScale = scaleBand()
-      // .domain(DATA.map(month => month.month))
-      .domain(DATA.map(month => month.month)) // needs to iterate through each one.
-      .range([0, 100]) // width of the chart as percent
+      .domain(DATA.map(month => month.month))
+      .range([0, 100])
       .paddingInner(0.85);
     let chartSvg = select(element);
     chartSvg.attr('width', '100%');
     chartSvg.attr('height', '100%');
 
-    // ARG STOP HERE
     let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
