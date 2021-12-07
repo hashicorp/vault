@@ -1,32 +1,12 @@
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import { hash } from 'rsvp';
-import { getTime } from 'date-fns';
-import { parseDateString } from 'vault/helpers/parse-date-string';
 
 const getActivityParams = ({ tab, start, end }) => {
   // Expects MM-yyyy format
   // TODO: minStart, maxEnd
   let params = {};
-  if (tab === 'current') {
-    params.tab = tab;
-  } else if (tab === 'history') {
-    if (start) {
-      let startDate = parseDateString(start);
-      if (startDate) {
-        // TODO: Replace with formatRFC3339 when date-fns is updated
-        // converts to milliseconds, divide by 1000 to get epoch
-        params.start_time = getTime(startDate) / 1000;
-      }
-    }
-    if (end) {
-      let endDate = parseDateString(end);
-      if (endDate) {
-        // TODO: Replace with formatRFC3339 when date-fns is updated
-        params.end_time = getTime(endDate) / 1000;
-      }
-    }
-  }
+  params.tab = tab;
   return params;
 };
 
