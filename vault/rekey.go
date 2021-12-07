@@ -675,7 +675,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	}
 
 	// Generate a new root key
-	newRootKey, err := c.barrier.GenerateKey(c.secureRandomReader)
+	newRecoveryKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		c.logger.Error("failed to generate recovery key", "error", err)
 		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("recovery key generation failed: %w", err).Error())
@@ -687,10 +687,10 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	}
 
 	if c.recoveryRekeyConfig.SecretShares == 1 {
-		results.SecretShares = append(results.SecretShares, newRootKey)
+		results.SecretShares = append(results.SecretShares, newRecoveryKey)
 	} else {
 		// Split the root key using the Shamir algorithm
-		shares, err := shamir.Split(newRootKey, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
+		shares, err := shamir.Split(newRecoveryKey, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
 		if err != nil {
 			c.logger.Error("failed to generate shares", "error", err)
 			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to generate shares: %w", err).Error())
@@ -748,14 +748,14 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 			return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to generate verification nonce: %w", err).Error())
 		}
 		c.recoveryRekeyConfig.VerificationNonce = nonce
-		c.recoveryRekeyConfig.VerificationKey = newRootKey
+		c.recoveryRekeyConfig.VerificationKey = newRecoveryKey
 
 		results.VerificationRequired = true
 		results.VerificationNonce = nonce
 		return results, nil
 	}
 
-	if err := c.performRecoveryRekey(ctx, newRootKey); err != nil {
+	if err := c.performRecoveryRekey(ctx, newRecoveryKey); err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to perform recovery rekey: %w", err).Error())
 	}
 
