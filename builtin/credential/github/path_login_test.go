@@ -66,7 +66,7 @@ func TestGitHub_Login_OrgInvalid(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	// write and store config without Org ID
+	// write and store config
 	config := config{
 		Organization:   "foo-org",
 		OrganizationID: 9999,
@@ -102,7 +102,7 @@ func TestGitHub_Login_OrgNameChanged(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	// write and store config without Org ID
+	// write and store config
 	// the name does not match what the API will return but the ID does
 	config := config{
 		Organization:   "old-name",
