@@ -51,8 +51,9 @@ export default class HistoryComponent extends Component {
     return dataset.map(d => {
       return {
         label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
-        non_entity_tokens: d['counts']['non_entity_tokens'],
+        // the order here determines which data is the left bar and which is the right
         distinct_entities: d['counts']['distinct_entities'],
+        non_entity_tokens: d['counts']['non_entity_tokens'],
         total: d['counts']['clients'],
       };
     });
