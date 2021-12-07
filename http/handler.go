@@ -402,7 +402,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// Storing the in-flight requests. Path should include namespace as well
 		core.StoreInFlightReqData(
 			inFlightReqID,
-			&vault.InFlightReqData {
+			vault.InFlightReqData {
 				StartTime: inFlightReqStartTime,
 				ReqPath: r.URL.Path,
 				ClientRemoteAddr: clientAddr,

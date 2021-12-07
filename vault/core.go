@@ -1038,12 +1038,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
 
-	logRequestsLevel := log.LevelFromString(conf.RawConfig.LogRequestsLevel)
+	logRequestsLevel := conf.RawConfig.LogRequestsLevel
 	c.logRequestsLevel = uberAtomic.NewInt32(0)
 	switch {
-	case logRequestsLevel > log.NoLevel && logRequestsLevel < log.Off:
-		c.logRequestsLevel.Store(int32(logRequestsLevel))
-	default:
+	case log.LevelFromString(logRequestsLevel) > log.NoLevel && log.LevelFromString(logRequestsLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(logRequestsLevel)))
+	case logRequestsLevel != "":
 		c.logger.Warn("invalid log_requests_level", "level", conf.RawConfig.LogRequestsLevel)
 	}
 
@@ -2968,7 +2968,6 @@ type LicenseState struct {
 }
 
 type InFlightRequests struct {
-	l                sync.RWMutex
 	InFlightReqMap   *sync.Map
 	InFlightReqCount *uberAtomic.Uint64
 }
@@ -2981,9 +2980,7 @@ type InFlightReqData struct {
 	ClientID         string    `json:"client_id"`
 }
 
-func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
-	c.inFlightReqData.l.Lock()
-	defer c.inFlightReqData.l.Unlock()
+func (c *Core) StoreInFlightReqData(reqID string, data InFlightReqData) {
 	c.inFlightReqData.InFlightReqMap.Store(reqID, data)
 	c.inFlightReqData.InFlightReqCount.Inc()
 }
@@ -2997,8 +2994,6 @@ func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
 		c.LogCompletedRequests(reqID, statusCode)
 	}
 
-	c.inFlightReqData.l.Lock()
-	defer c.inFlightReqData.l.Unlock()
 	c.inFlightReqData.InFlightReqMap.Delete(reqID)
 	c.inFlightReqData.InFlightReqCount.Dec()
 }
@@ -3007,12 +3002,10 @@ func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
 // in-flight requests
 func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
 	currentInFlightReqMap := make(map[string]InFlightReqData)
-	c.inFlightReqData.l.Lock()
-	defer c.inFlightReqData.l.Unlock()
 	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
 		// there is only one writer to this map, so skip checking for errors
-		v, _ := value.(*InFlightReqData)
-		currentInFlightReqMap[key.(string)] = *v
+		v, _ := value.(InFlightReqData)
+		currentInFlightReqMap[key.(string)] = v
 		return true
 	})
 
@@ -3022,15 +3015,13 @@ func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
 // UpdateInFlightReqData updates the data for a specific reqID with
 // the clientID
 func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
-	c.inFlightReqData.l.Lock()
-	defer c.inFlightReqData.l.Unlock()
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
 		c.Logger().Trace("failed to retrieve request with ID %v", reqID)
 		return
 	}
 
-	reqData, _ := v.(*InFlightReqData)
+	reqData, _ := v.(InFlightReqData)
 	reqData.ClientID = clientID
 	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
 }
@@ -3038,8 +3029,6 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 // LogCompletedRequests Logs the completed request to the server logs
 func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	logLevel := log.Level(c.logRequestsLevel.Load())
-	c.inFlightReqData.l.Lock()
-	defer c.inFlightReqData.l.Unlock()
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
 		c.logger.Log(logLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
@@ -3047,7 +3036,7 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	}
 
 	// there is only one writer to this map, so skip checking for errors
-	reqData, _ := v.(*InFlightReqData)
+	reqData, _ := v.(InFlightReqData)
 	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
@@ -3056,12 +3045,13 @@ func (c *Core) ReloadLogRequestsLevel() {
 	if conf == nil {
 		return
 	}
-	infoLevel := log.LevelFromString(conf.(*server.Config).LogRequestsLevel)
+
+	infoLevel := conf.(*server.Config).LogRequestsLevel
 	switch {
-	case infoLevel > log.NoLevel && infoLevel < log.Off:
-		c.logRequestsLevel.Store(int32(infoLevel))
-	default:
-		c.logger.Warn("invalid log_requests_level", "level", infoLevel.String())
+	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
+	case infoLevel != "":
+		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
 	}
 }
 
