@@ -369,6 +369,10 @@
       {
         "title": "<code>Entropy Augmentation</code> <sup>ENT</sup>",
         "path": "configuration/entropy-augmentation"
+      },
+      {
+        "title": "<code>kms_library</code> <sup>ENT</sup>",
+        "path": "configuration/kms-library"
       }
     ]
   },
