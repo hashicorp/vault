@@ -213,9 +213,10 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedManagedKeys,
 		Target: &c.flagAllowedManagedKeys,
-		Usage: "Managed key registry entry name that the mount in question is allowed" +
-			"to access. Note that multiple keys may be specified by providing this option" +
-			"multiple times, each time with 1 key.",
+		Usage: "Managed key name(s) that the mount in question is allowed to access. " +
+			"Note that multiple keys may be specified either by providing the key names " +
+			"as a comma separated string or by providing this option multiple times, " +
+			"each time with 1 key.",
 	})
 
 	return set
