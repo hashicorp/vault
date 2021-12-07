@@ -3004,7 +3004,7 @@ func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
 	currentInFlightReqMap := make(map[string]InFlightReqData)
 	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
 		// there is only one writer to this map, so skip checking for errors
-		v, _ := value.(InFlightReqData)
+		v := value.(InFlightReqData)
 		currentInFlightReqMap[key.(string)] = v
 		return true
 	})
@@ -3021,7 +3021,8 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 		return
 	}
 
-	reqData, _ := v.(InFlightReqData)
+	// there is only one writer to this map, so skip checking for errors
+	reqData := v.(InFlightReqData)
 	reqData.ClientID = clientID
 	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
 }
@@ -3036,7 +3037,7 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	}
 
 	// there is only one writer to this map, so skip checking for errors
-	reqData, _ := v.(InFlightReqData)
+	reqData := v.(InFlightReqData)
 	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
