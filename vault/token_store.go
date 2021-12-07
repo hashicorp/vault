@@ -3348,6 +3348,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	oldEntryTokenType := entry.TokenType
 	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
 		tokenTypeStr = new(string)
+		if tokenTypeRaw == nil {
+			return logical.ErrorResponse("Invalid 'token_type' value: null"), nil
+		}
 		*tokenTypeStr = tokenTypeRaw.(string)
 		delete(data.Raw, "token_type")
 		entry.TokenType = logical.TokenTypeDefault

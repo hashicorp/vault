@@ -270,8 +270,7 @@
           },
           {
             "title": "Alicloud OSS",
-            "path": "configuration/storage/alicloudoss",
-            "hidden": true
+            "path": "configuration/storage/alicloudoss"
           },
           {
             "title": "Azure",
@@ -370,6 +369,10 @@
       {
         "title": "<code>Entropy Augmentation</code> <sup>ENT</sup>",
         "path": "configuration/entropy-augmentation"
+      },
+      {
+        "title": "<code>kms_library</code> <sup>ENT</sup>",
+        "path": "configuration/kms-library"
       }
     ]
   },
@@ -443,11 +446,6 @@
         "path": "commands/delete"
       },
       {
-        "title": "<code>help</code>",
-        "path": "commands/help",
-        "hidden": true
-      },
-      {
         "title": "<code>kv</code>",
         "routes": [
           {
@@ -505,8 +503,7 @@
           },
           {
             "title": "<code>lookup</code>",
-            "path": "commands/lease/lookup",
-            "hidden": true
+            "path": "commands/lease/lookup"
           },
           {
             "title": "<code>renew</code>",
@@ -573,6 +570,10 @@
           {
             "title": "<code>key-status</code>",
             "path": "commands/operator/key-status"
+          },
+          {
+            "title": "<code>members</code>",
+            "path": "commands/operator/members"
           },
           {
             "title": "<code>migrate</code>",
@@ -903,11 +904,6 @@
         "path": "secrets/azure"
       },
       {
-        "title": "Cassandra",
-        "path": "secrets/cassandra",
-        "hidden": true
-      },
-      {
         "title": "Consul",
         "path": "secrets/consul"
       },
@@ -1106,8 +1102,7 @@
           },
           {
             "title": "FF3-1 Tweak Usage",
-            "path": "secrets/transform/ff3-tweak-details",
-            "hidden": true
+            "path": "secrets/transform/ff3-tweak-details"
           },
           {
             "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
@@ -1462,11 +1457,6 @@
   },
   {
     "divider": true
-  },
-  {
-    "title": "Versus Other Software",
-    "path": "vs",
-    "hidden": true
   },
   {
     "title": "Upgrade Guides",
