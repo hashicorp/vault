@@ -1,9 +1,5 @@
 .preFooter {
-  padding: 64px 0;
-
-  @media (--medium-up) {
-    padding-top: 96px;
-  }
+  margin: 60px auto;
 }
 
 .container {

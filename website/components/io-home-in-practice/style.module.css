@@ -1,12 +1,12 @@
 .inPractice {
   position: relative;
-  margin: 0 auto 64px;
+  margin: 60px auto;
   padding: 64px 0;
   max-width: 1600px;
 
   @media (--medium-up) {
     padding: 80px 0;
-    margin-bottom: 128px;
+    margin: 120px auto;
   }
 
   &::before {
