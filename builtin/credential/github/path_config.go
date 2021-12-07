@@ -92,12 +92,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		c.BaseURL = baseURL
 	}
 
-	client, err := b.Client("")
-	if err != nil {
-		return nil, err
-	}
-
 	if c.OrganizationID == 0 {
+		client, err := b.Client("")
+		if err != nil {
+			return nil, err
+		}
+
 		// we want to set the Org ID in the config so we can use that to verify
 		// the credentials on login
 		err = c.setOrganizationID(ctx, client)
