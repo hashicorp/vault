@@ -61,6 +61,10 @@
 .description {
   margin: 24px 0 0;
   composes: g-type-body-large from global;
+
+  @nest .withOfferings:not(.withFeatures) & {
+    color: var(--gray-3);
+  }
 }
 
 /*
@@ -99,13 +103,13 @@
     --columns: 12;
   }
 
-@nest .features + & {
-  margin-top: 60px;
+  @nest .features + & {
+    margin-top: 60px;
 
-  @media (--medium-up) {
-    margin-top: 120px;
+    @media (--medium-up) {
+      margin-top: 120px;
+    }
   }
-}
 }
 
 .offeringsMedia {
