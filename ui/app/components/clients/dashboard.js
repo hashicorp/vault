@@ -3,7 +3,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { format } from 'date-fns';
 
-export default class DashboardComponent extends Component {
+export default class Dashboard extends Component {
   max_namespaces = 10;
 
   @tracked selectedNamespace = null;

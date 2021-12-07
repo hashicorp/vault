@@ -39,7 +39,7 @@ const BAR_COLOR_DEFAULT = ['#1563FF', '#8AB1FF'];
 
 export default class TotalClientUsage extends Component {
   @action
-  registerListner(element) {
+  registerListener(element) {
     let stackFunction = stack().keys(['directEntities', 'nonDirectTokens']);
     let stackedData = stackFunction(DATA);
     let yScale = scaleLinear()
