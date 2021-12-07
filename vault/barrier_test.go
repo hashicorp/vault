@@ -245,8 +245,8 @@ func testInitAndUnseal(t *testing.T, b SecurityBarrier) (error, *logical.Storage
 		t.Fatalf("should be unsealed")
 	}
 
-	// Verify the master key
-	if err := b.VerifyMaster(key); err != nil {
+	// Verify the root key
+	if err := b.VerifyRoot(key); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	return err, e, key
