@@ -74,45 +74,45 @@ management tool.
 
 1.  Enable the Kubernetes auth method:
 
-    ```bash
-    vault auth enable kubernetes
-    ```
+  ```bash
+  vault auth enable kubernetes
+  ```
 
 1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
 `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
 For the list of available configuration options, please see the
 [API documentation](/api/auth/kubernetes).
 
-    ```bash
-    vault write auth/kubernetes/config \
-        token_reviewer_jwt="<your reviewer service account JWT>" \
-        kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
-        kubernetes_ca_cert=@ca.crt
-    ```
+  ```bash
+  vault write auth/kubernetes/config \
+      token_reviewer_jwt="<your reviewer service account JWT>" \
+      kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
+      kubernetes_ca_cert=@ca.crt
+  ```
 
   -> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
-    the JWT token over the network. Given the [security model of
-    Vault](/docs/internals/security), this is allowable because Vault is
-    part of the trusted compute base. In general, Kubernetes applications should
-    **not** share this JWT with other applications, as it allows API calls to be
-    made on behalf of the Pod and can result in unintended access being granted
-    to 3rd parties.
+     the JWT token over the network. Given the [security model of
+     Vault](/docs/internals/security), this is allowable because Vault is
+     part of the trusted compute base. In general, Kubernetes applications should
+     **not** share this JWT with other applications, as it allows API calls to be
+     made on behalf of the Pod and can result in unintended access being granted
+     to 3rd parties.
 
 1.  Create a named role:
 
-    ```text
-    vault write auth/kubernetes/role/demo \
-        bound_service_account_names=vault-auth \
-        bound_service_account_namespaces=default \
-        policies=default \
-        ttl=1h
-    ```
+  ```text
+  vault write auth/kubernetes/role/demo \
+      bound_service_account_names=vault-auth \
+      bound_service_account_namespaces=default \
+      policies=default \
+      ttl=1h
+  ```
 
-    This role authorizes the "vault-auth" service account in the default
-    namespace and it gives it the default policy.
+  This role authorizes the "vault-auth" service account in the default
+  namespace and it gives it the default policy.
 
-    For the complete list of configuration options, please see the [API
-    documentation](/api/auth/kubernetes).
+  For the complete list of configuration options, please see the [API
+  documentation](/api/auth/kubernetes).
 
 ## Kubernetes 1.21
 
