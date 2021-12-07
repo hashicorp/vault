@@ -367,6 +367,10 @@
         "path": "configuration/ui"
       },
       {
+        "title": "<code>Log Completed Requests</code>",
+        "path": "configuration/log-requests-level"
+      },
+      {
         "title": "<code>Entropy Augmentation</code> <sup>ENT</sup>",
         "path": "configuration/entropy-augmentation"
       }
