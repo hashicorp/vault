@@ -72,16 +72,16 @@ Auth methods must be configured in advance before users or machines can
 authenticate. These steps are usually completed by an operator or configuration
 management tool.
 
-1.  Enable the Kubernetes auth method:
+1. Enable the Kubernetes auth method:
 
   ```bash
   vault auth enable kubernetes
   ```
 
-1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
-`kubectl cluster-info` to validate the Kubernetes host address and TCP port.
-For the list of available configuration options, please see the
-[API documentation](/api/auth/kubernetes).
+1. Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
+  `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
+  For the list of available configuration options, please see the
+  [API documentation](/api/auth/kubernetes).
 
   ```bash
   vault write auth/kubernetes/config \
@@ -90,15 +90,15 @@ For the list of available configuration options, please see the
       kubernetes_ca_cert=@ca.crt
   ```
 
-  -> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
-     the JWT token over the network. Given the [security model of
-     Vault](/docs/internals/security), this is allowable because Vault is
-     part of the trusted compute base. In general, Kubernetes applications should
-     **not** share this JWT with other applications, as it allows API calls to be
-     made on behalf of the Pod and can result in unintended access being granted
-     to 3rd parties.
+  !> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
+  the JWT token over the network. Given the [security model of
+  Vault](/docs/internals/security), this is allowable because Vault is
+  part of the trusted compute base. In general, Kubernetes applications should
+  **not** share this JWT with other applications, as it allows API calls to be
+  made on behalf of the Pod and can result in unintended access being granted
+  to 3rd parties.
 
-1.  Create a named role:
+1. Create a named role:
 
   ```text
   vault write auth/kubernetes/role/demo \
