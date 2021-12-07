@@ -6,7 +6,7 @@
   max-width: 1600px;
 
   @media (--medium-up) {
-    margin-bottom: 128px;
+    margin: 128px auto;
   }
 
   &::before {
