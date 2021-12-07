@@ -87,6 +87,39 @@ func TestGitHub_WriteReadConfig(t *testing.T) {
 	assert.Equal(t, "foo-org", resp.Data["organization"])
 }
 
+// TestGitHub_WriteReadConfig_OrgID tests that we can successfully read and
+// write the github auth config with an organization_id param
+func TestGitHub_WriteReadConfig_OrgID(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	// Write the config and pass in organization_id
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "config",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"organization":    "foo-org",
+			"organization_id": 98765,
+		},
+		Storage: s,
+	})
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+	assert.NoError(t, resp.Error())
+
+	// Read the config
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "config",
+		Operation: logical.ReadOperation,
+		Storage:   s,
+	})
+	assert.NoError(t, err)
+	assert.NoError(t, resp.Error())
+
+	// the ID should be set to what was written in the config
+	assert.Equal(t, int64(98765), resp.Data["organization_id"])
+	assert.Equal(t, "foo-org", resp.Data["organization"])
+}
+
 // TestGitHub_WriteConfig_ErrorNoOrg tests that an error is returned when the
 // required "organization" parameter is not provided
 func TestGitHub_WriteConfig_ErrorNoOrg(t *testing.T) {

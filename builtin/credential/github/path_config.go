@@ -80,14 +80,15 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		c.OrganizationID = organizationRaw.(int64)
 	}
 
+	var parsedURL *url.URL
 	if baseURLRaw, ok := data.GetOk("base_url"); ok {
 		baseURL := baseURLRaw.(string)
-		_, err := url.Parse(baseURL)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error parsing given base_url: %s", err)), nil
-		}
 		if !strings.HasSuffix(baseURL, "/") {
 			baseURL += "/"
+		}
+		parsedURL, err = url.Parse(baseURL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("error parsing given base_url: %s", err)), nil
 		}
 		c.BaseURL = baseURL
 	}
@@ -96,6 +97,10 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		client, err := b.Client("")
 		if err != nil {
 			return nil, err
+		}
+		// ensure our client has the BaseURL if it was provided
+		if parsedURL != nil {
+			client.BaseURL = parsedURL
 		}
 
 		// we want to set the Org ID in the config so we can use that to verify
@@ -106,8 +111,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		}
 
 		if c.OrganizationID == 0 {
-			b.Logger().Warn("organization_id is missing. It is recommended to set the organization_id.")
-			resp.AddWarning(`organization_id is missing. It is recommended to set the organization_id.`)
+			warningMsg := "organization_id is missing. It is recommended to set the organization_id."
+			b.Logger().Warn(warningMsg)
+			resp.AddWarning(warningMsg)
 		}
 	}
 
@@ -208,15 +214,6 @@ type config struct {
 }
 
 func (c *config) setOrganizationID(ctx context.Context, client *github.Client) error {
-	// ensure our client has the BaseURL if it was provided
-	if c.BaseURL != "" {
-		parsedURL, err := url.Parse(c.BaseURL)
-		if err != nil {
-			return err
-		}
-		client.BaseURL = parsedURL
-	}
-
 	org, _, err := client.Organizations.Get(ctx, c.Organization)
 	if err != nil {
 		return err
