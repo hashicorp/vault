@@ -32,10 +32,6 @@ export default Component.extend({
   disabled: false,
   disabledTooltip: null,
   glyph: computed('type', function() {
-    if (this.type == 'add') {
-      return 'plus-plain';
-    } else {
-      return 'chevron-right';
-    }
+    return this.type == 'add' ? 'plus' : 'chevron-right';
   }),
 });

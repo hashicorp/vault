@@ -31,10 +31,11 @@
         {{#each-in @details as |key detail|}}
           <InfoTableRow @label={{key}} @value={{key}}>
             {{#if (or (eq detail "No") (eq detail "None"))}}
-              <Icon class="has-text-grey" @glyph="cancel-square-outline" /> {{detail}}
+              <Icon @name="x-circle" class="has-text-grey" />
+              {{detail}}
             {{else}}
               {{#if (eq detail "Yes") }}
-                <Icon class="has-text-success" @glyph="check-circle-outline" />
+                <Icon @name="check-circle" class="has-text-success" />
               {{/if}}
               {{detail}}
             {{/if}}

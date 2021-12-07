@@ -43,3 +43,10 @@
   width: 32px;
   height: 32px;
 }
+
+.flight-icon {
+  &.flight-icon-display-inline {
+    vertical-align: middle;
+    margin: 0px 4px;
+  }
+}

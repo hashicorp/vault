@@ -52,11 +52,7 @@
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
         <div class="list-item-row is-flex" data-test-policy-item>
-          <Icon
-            aria-hidden="true"
-            class="has-text-grey-light"
-            @glyph="file-outline"
-          />
+          <Icon @name="file" class="has-text-grey-light" />
           <div>
             <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
               {{item.id}}
@@ -77,11 +73,9 @@
         }}
           <div class="columns is-mobile">
             <div class="column is-10">
-              <LinkTo @route="vault.cluster.policy.show" @models={{array policyType item.id}} class="has-text-black has-text-weight-semibold" data-test-policy-item={{true}}><Icon
-                  aria-hidden="true"
-                  class="has-text-grey-light"
-                  @glyph="file-outline"
-                /><span class="is-underline" data-test-policy-name>{{item.id}}</span>
+              <LinkTo @route="vault.cluster.policy.show" @models={{array policyType item.id}} class="has-text-black has-text-weight-semibold" data-test-policy-item={{true}}>
+                <Icon @name="file" class="has-text-grey-light" />
+                <span class="is-underline" data-test-policy-name>{{item.id}}</span>
               </LinkTo>
             </div>
             <div class="column has-text-right">

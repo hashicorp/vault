@@ -19,7 +19,7 @@
     <ToolTip @verticalPosition="above" as |T|>
       <T.trigger tabindex="-1">
         <LinkToComponent ...attributes>
-          {{yield}} <Icon @glyph={{glyph}} data-test-icon={{glyph}} />
+          {{yield}} <Icon @name={{glyph}} data-test-icon={{glyph}} />
         </LinkToComponent>
       </T.trigger>
       <T.content @class="tool-tip smaller-font">
@@ -30,7 +30,7 @@
     </ToolTip>
   {{else}}
     <LinkToComponent ...attributes>
-      {{yield}} <Icon @glyph={{glyph}} data-test-icon={{glyph}} />
+      {{yield}} <Icon @name={{glyph}} data-test-icon={{glyph}} />
     </LinkToComponent>
   {{/if}}
 {{/let}}

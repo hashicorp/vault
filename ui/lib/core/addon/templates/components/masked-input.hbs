@@ -32,7 +32,7 @@
       @success={{action (set-flash-message 'Data copied!')}}
       class="copy-button button {{if displayOnly "is-compact"}}"
         data-test-copy-button>
-      <Icon @glyph="copy-action" aria-hidden="Copy value" />
+      <Icon @name="clipboard-copy" aria-hidden="Copy value" />
     </CopyButton>
   {{/if}}
   <button 
@@ -40,6 +40,6 @@
     type="button"
     class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button"
     data-test-button>
-    <Icon @glyph={{if showValue "visibility-show" "visibility-hide"}} aria-hidden="true" />
+    <Icon @name={{if showValue "eye" "eye-off"}} />
   </button>
 </div>
