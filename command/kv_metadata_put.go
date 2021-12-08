@@ -71,7 +71,7 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:    "max-versions",
 		Target:  &c.flagMaxVersions,
-		Default: 1,
+		Default: -1,
 		Usage:   `The number of versions to keep. If not set, the backend’s configured max version is used.`,
 	})
 
@@ -165,7 +165,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	}
 
 	if len(c.flagCustomMetadata) > 0 {
-		data["cas_required"] = c.flagCustomMetadata
+		data["custom_metadata"] = c.flagCustomMetadata
 	}
 
 	secret, err := client.Logical().Write(path, data)
