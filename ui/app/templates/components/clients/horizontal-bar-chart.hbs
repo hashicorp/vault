@@ -1,12 +1,34 @@
-<div class="horizontal-bar-chart">
-  <div class="chart">
+<div class="chart-wrapper">
+  <div class="chart-header has-export">
+    <div class="header-left">
+      <h2 class="chart-title">{{@title}}</h2>
+        {{#if @description}}
+          <p class="chart-description">{{@description}}</p>
+        {{/if}}
+    </div> 
+    <div class="header-right">
+      {{#if @dataset}}
+        {{yield}}
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="data-description">{{@subText}}</div>
+
+  <div class="data-one">Data 1</div>
+  
+  <div class="data-two">Data 2</div>
+  
+  <div class="horizontal-bar-chart chart-container">
     <svg class="chart"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >
     </svg>
+
+    <div class="legend-container">
+      <svg class="legend"></svg>
+    </div>
   </div>
-  <div class="legend">
-    <svg class="legend"></svg>
-  </div>
+
 </div>
 

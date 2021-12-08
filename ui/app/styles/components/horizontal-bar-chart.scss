@@ -1,11 +1,5 @@
 // TODO: combine into main chart css file and delete/unimport this file
 div.horizontal-bar-chart {
-  display: block;
-
-  > div.chart {
-    border-bottom: 0.3px solid $ui-gray-200;
-  }
-
   > div.legend {
     height: $spacing-l;
     margin-top: $spacing-xs;

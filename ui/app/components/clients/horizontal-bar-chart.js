@@ -155,6 +155,14 @@ export default class HorizontalBarChart extends Component {
     let yAxis = axisLeft(yScale).tickSize(0);
     yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
 
+    let truncate = selection =>
+      selection.text(string =>
+        string.length < CHAR_LIMIT ? string : string.slice(0, CHAR_LIMIT - 3) + '...'
+      );
+
+    chartSvg.selectAll('.tick text').call(truncate);
+    chartSvg.select('.domain').remove();
+
     groups
       .selectAll('rect')
       // iterate through the stacked data and chart respectively
@@ -169,5 +177,24 @@ export default class HorizontalBarChart extends Component {
       .attr('y', ({ data }) => yScale(data[labelKey]))
       .attr('rx', 3)
       .attr('ry', 3);
+
+    let startingXCoordinate = 100 - this.chartLegend.length * 20;
+    let legendSvg = select('.legend');
+    this.chartLegend.map((legend, i) => {
+      let xCoordinate = startingXCoordinate + i * 20;
+      legendSvg
+        .append('circle')
+        .attr('cx', `${xCoordinate}%`)
+        .attr('cy', '50%')
+        .attr('r', 6)
+        .style('fill', `${BAR_COLOR_DEFAULT[i]}`);
+      legendSvg
+        .append('text')
+        .attr('x', `${xCoordinate + 2}%`)
+        .attr('y', '50%')
+        .text(`${legend.label}`)
+        .style('font-size', '.8rem')
+        .attr('alignment-baseline', 'middle');
+    });
   }
 }
