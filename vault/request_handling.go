@@ -346,6 +346,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Accessor:    req.ClientTokenAccessor,
 	}
 
+	var clientID string
+	var isTWE bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
@@ -362,6 +364,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		if te.CreationTime > 0 {
 			auth.IssueTime = time.Unix(te.CreationTime, 0)
 		}
+		clientID, isTWE = te.CreateClientID()
+		req.ClientID = clientID
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -398,7 +402,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
 	if !unauth && c.activityLog != nil {
-		req.ClientID = c.activityLog.HandleTokenUsage(te)
+		c.activityLog.HandleTokenUsage(te, clientID, isTWE)
 	}
 	return auth, te, nil
 }
@@ -439,7 +443,12 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
 
-	resp, err = c.handleCancelableRequest(namespace.ContextWithNamespace(ctx, ns), req)
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	inFlightReqID, ok := httpCtx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
+	}
+	resp, err = c.handleCancelableRequest(ctx, req)
 
 	req.SetTokenEntry(nil)
 	cancel()
@@ -773,6 +782,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	auth, te, ctErr := c.checkToken(ctx, req, false)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
+	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
 	// We run this logic first because we want to decrement the use count even
@@ -1168,6 +1183,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+	}
+
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
