@@ -418,7 +418,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	if consts.IsFIPS() && warnAboutNonceUsage {
-		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS standards.")
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
 	if req.Operation == logical.CreateOperation && !upserted {

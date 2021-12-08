@@ -160,7 +160,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	if consts.IsFIPS() && shouldWarnAboutNonceUsage(p, nonce) {
-		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS standards.")
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
 	if plaintextAllowed {

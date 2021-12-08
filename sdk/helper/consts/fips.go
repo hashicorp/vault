@@ -1,4 +1,3 @@
-//go:build !fips_140_3
 // +build !fips_140_3
 
 package consts
