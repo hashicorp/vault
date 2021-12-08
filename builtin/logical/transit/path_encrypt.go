@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/helper/constants"
 	"net/http"
 	"reflect"
 
@@ -417,7 +417,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	if consts.IsFIPS() && warnAboutNonceUsage {
+	if constants.IsFIPS() && warnAboutNonceUsage {
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
