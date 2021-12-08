@@ -1,15 +1,15 @@
 ---
 layout: docs
-page_title: Upgrading to Vault 1.7.0 - Guides
+page_title: Upgrading to Vault 1.7.x - Guides
 description: |-
   This page contains the list of deprecations and important or breaking changes
-  for Vault 1.7.0. Please read it carefully.
+  for Vault 1.7.x. Please read it carefully.
 ---
 
 # Overview
 
 This page contains the list of deprecations and important or breaking changes
-for Vault 1.7.0 compared to 1.6. Please read it carefully.
+for Vault 1.7.x compared to 1.6. Please read it carefully.
 
 ## Barrier Key Auto-Rotation
 
@@ -31,6 +31,8 @@ endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws#depr
 
 @include 'alpine-314.mdx'
 
+@include 'entity-alias-mapping.mdx'
+
 ## Known Issues
 
 Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.7.0.
@@ -49,4 +51,3 @@ Due to the known issue, Lease Count Quota users with DR Secondaries are recommen
 
 @include 'lease-count-quota-upgrade.mdx'
 
-@include 'entity-alias-mapping.mdx'
