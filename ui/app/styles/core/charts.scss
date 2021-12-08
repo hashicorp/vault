@@ -37,6 +37,22 @@
   }
 }
 
+.has-export {
+  display: grid;
+  grid-template-columns: 4fr 1fr;
+
+  .header-right {
+    text-align: right;
+    > button {
+      font-size: $size-8;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
 .data-subTitle {
   grid-column-start: 1;
   grid-row-start: 2;
