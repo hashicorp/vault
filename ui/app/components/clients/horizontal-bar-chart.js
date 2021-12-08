@@ -110,6 +110,15 @@ export default class HorizontalBarChart extends Component {
     return this.args.chartLegend;
   }
 
+  // TODO: use maxIndex function when packages are updated
+  get topNamespace() {
+    // this.args.dataset[maxIndex(this.args.dataset, d => d.total)]
+    return {
+      label: 'Top namespace',
+      total: 3348,
+    };
+  }
+
   hasLegend() {
     if (!this.args.chartLegend || !Array.isArray(this.args.chartLegend)) {
       return false;

@@ -13,12 +13,18 @@
     </div>
   </div>
 
-  <div class="data-description">{{@subText}}</div>
+  <div class="data-subTitle">
+    <p>{{@subText}}</p>
+  </div>
 
-  <div class="data-one">Data 1</div>
+  <div class="data-one">Top namespace 
+    <p>{{this.topNamespace.label}}</p>
+  </div>
   
-  <div class="data-two">Data 2</div>
-  
+  <div class="data-two">Clients in namespace
+    <p>{{format-number this.topNamespace.total}}</p>
+  </div>
+ 
   <div class="horizontal-bar-chart chart-container">
     <svg class="chart"
       {{did-insert this.renderChart @dataset}} 
