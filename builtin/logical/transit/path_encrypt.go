@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"net/http"
 	"reflect"
 
@@ -357,9 +358,14 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
+	warnAboutNonceUsage := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
+		}
+
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+			warnAboutNonceUsage = true
 		}
 
 		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
@@ -411,6 +417,10 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
+	if consts.IsFIPS() && warnAboutNonceUsage {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS standards.")
+	}
+
 	if req.Operation == logical.CreateOperation && !upserted {
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
@@ -429,6 +439,34 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	return resp, nil
+}
+
+// shouldWarnAboutNonceUsage attempts to determine if we will use a provided nonce or not. Ideally this
+// would be information returned through p.Encrypt but that would require an SDK api change and this is
+// transit specific
+func shouldWarnAboutNonceUsage(p *keysutil.Policy, userSuppliedNonce []byte) bool {
+	if len(userSuppliedNonce) == 0 {
+		return false
+	}
+
+	var supportedKeyType bool
+	switch p.Type {
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		supportedKeyType = true
+	default:
+		supportedKeyType = false
+	}
+
+	if supportedKeyType && p.ConvergentEncryption && p.ConvergentVersion == 1 {
+		// We only use the user supplied nonce for v1 convergent encryption keys
+		return true
+	}
+
+	if supportedKeyType && !p.ConvergentEncryption {
+		return true
+	}
+
+	return false
 }
 
 const pathEncryptHelpSyn = `Encrypt a plaintext value or a batch of plaintext
