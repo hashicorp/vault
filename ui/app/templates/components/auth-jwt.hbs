@@ -1,6 +1,6 @@
 <form
   id="auth-form"
-  onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit) (hash role=roleName jwt=jwt)}}
+  onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit) (hash role=this.roleName jwt=this.jwt)}}
 >
   <div class="field">
     <label for="role" class="is-label">Role</label>
@@ -29,7 +29,7 @@
     <div class="field">
       <label for="token" class="is-label">JWT Token</label>
       <div class="control">
-        <Input @type="password" @value={{jwt}} @name="jwt" class="input" @autocomplete="off" @spellcheck="false" data-test-jwt={{true}} />
+        <Input @type="password" @value={{this.jwt}} @name="jwt" class="input" @autocomplete="off" @spellcheck="false" data-test-jwt={{true}} />
       </div>
     </div>
   {{/unless}}

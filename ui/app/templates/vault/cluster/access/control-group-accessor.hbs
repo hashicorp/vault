@@ -6,7 +6,7 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  {{#if model.canConfigure}}
+  {{#if this.model.canConfigure}}
     <Toolbar>
       <ToolbarActions>
         <ToolbarLink @params={{array 'vault.cluster.access.control-groups-configure'}}>
@@ -15,7 +15,7 @@
       </ToolbarActions>
     </Toolbar>
   {{/if}}
-  <ControlGroup @model={{model}} />
+  <ControlGroup @model={{this.model}} />
 {{else}}
   <UpgradePage @title="Control Groups" @minimumEdition="Vault Enterprise Premium" />
 {{/if}}

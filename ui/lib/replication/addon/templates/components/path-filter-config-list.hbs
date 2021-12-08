@@ -5,7 +5,7 @@
   <label
     for="no-filtering"
     class="radio-card
-      {{unless config.mode " is-selected"}}"
+      {{unless this.config.mode " is-selected"}}"
   >
     <div class="radio-card-row">
       <Icon
@@ -26,9 +26,9 @@
       <RadioButton
         @value={{null}}
         @radioClass="radio"
-        @groupValue={{config.mode}}
+        @groupValue={{this.config.mode}}
         @changed={{queue
-          (action (mut config.mode))
+          (action (mut this.config.mode))
         }}
         @name="config-mode"
         @radioId="no-filtering"
@@ -39,7 +39,7 @@
   <label
     for="allow"
     class="radio-card
-      {{if (eq config.mode "allow") " is-selected"}}"
+      {{if (eq this.config.mode "allow") " is-selected"}}"
   >
     <div class="radio-card-row">
       <Icon
@@ -60,9 +60,9 @@
       <RadioButton
         @value="allow"
         @radioClass="radio"
-        @groupValue={{config.mode}}
+        @groupValue={{this.config.mode}}
         @changed={{queue
-          (action (mut config.mode))
+          (action (mut this.config.mode))
         }}
         @name="config-mode"
         @radioId="allow"
@@ -73,7 +73,7 @@
   <label
     for="deny"
     class="radio-card
-      {{if (eq config.mode "deny") " is-selected"}}"
+      {{if (eq this.config.mode "deny") " is-selected"}}"
   >
     <div class="radio-card-row">
       <Icon
@@ -94,9 +94,9 @@
       <RadioButton
         @value="deny"
         @radioClass="radio"
-        @groupValue={{config.mode}}
+        @groupValue={{this.config.mode}}
         @changed={{queue
-          (action (mut config.mode))
+          (action (mut this.config.mode))
         }}
         @name="config-mode"
         @radioId="deny"
@@ -105,18 +105,18 @@
     </div>
   </label>
 </div>
-{{#if (or (eq config.mode "allow") (eq config.mode "deny"))}}
+{{#if (or (eq this.config.mode "allow") (eq this.config.mode "deny"))}}
   <SearchSelect
     @id="paths"
     @labelClass="title is-7"
     @onChange={{action "pathsChanged"}}
-    @inputValue={{config.paths}}
-    @label="Paths in this {{config.mode}}"
+    @inputValue={{this.config.paths}}
+    @label="Paths in this {{this.config.mode}}"
     @options={{this.autoCompleteOptions}}
     @search={{perform this.setAutoCompleteOptions}}
     />
 {{/if}}
-{{#if (and (not config.mode) this.startedWithMode)}}
+{{#if (and (not this.config.mode) this.startedWithMode)}}
   <AlertInline
     data-test-remove-warning
     @type="warning"

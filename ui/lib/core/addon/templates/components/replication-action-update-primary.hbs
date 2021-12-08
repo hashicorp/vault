@@ -12,7 +12,7 @@
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isModalActive) true}}
+      onclick={{action (mut this.isModalActive) true}}
       data-test-update-primary-action-trigger
     >
       Update
@@ -22,8 +22,8 @@
 
 <Modal
   @title="Update primary"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
+  @onClose={{action (mut this.isModalActive) false}}
+  @isActive={{this.isModalActive}}
   @type="warning"
   @showCloseButton={{true}}
 >
@@ -33,13 +33,13 @@
     </p>
 
     <div data-test-update-primary-inputs>
-      {{#if (eq replicationMode "dr")}}
+      {{#if (eq this.replicationMode "dr")}}
       <div class="field">
         <label for="dr_operation_token_primary" class="is-label">
           DR operation token
         </label>
         <div class="control">
-          {{input class="input" id="dr_operation_token_primary" name="dr_operation_token_primary" value=dr_operation_token_primary}}
+          {{input class="input" id="dr_operation_token_primary" name="dr_operation_token_primary" value=this.dr_operation_token_primary}}
         </div>
       </div>
       {{/if}}
@@ -48,7 +48,7 @@
           Secondary activation token
         </label>
         <div class="control">
-          {{textarea value=token id="secondary-token" name="secondary-token" class="textarea"}}
+          {{textarea value=this.token id="secondary-token" name="secondary-token" class="textarea"}}
         </div>
       </div>
       <div class="field">
@@ -56,7 +56,7 @@
           Primary API address <em class="is-optional">(optional)</em>
         </label>
         <div class="control">
-          {{input class="input" value=primary_api_addr id="primary_api_addr" name="primary_api_addr"}}
+          {{input class="input" value=this.primary_api_addr id="primary_api_addr" name="primary_api_addr"}}
         </div>
         <p class="help">
           Set this to the API address (normal Vault address) to override the
@@ -68,7 +68,7 @@
           CA file <em class="is-optional">(optional)</em>
         </label>
         <div class="control">
-          {{input value=ca_file id="ca_file" name="ca_file" class="input"}}
+          {{input value=this.ca_file id="ca_file" name="ca_file" class="input"}}
         </div>
         <p class="help">
           Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the primary.
@@ -79,7 +79,7 @@
           CA path <em class="is-optional">(optional)</em>
         </label>
         <div class="control">
-          {{input value=ca_path id="ca_path" name="ca_file" class="input"}}
+          {{input value=this.ca_path id="ca_path" name="ca_file" class="input"}}
         </div>
         <p class="help">
           Specifies the path to a CA root directory containing PEM-format files that the secondary can use when unwrapping the token from the primary.
@@ -91,7 +91,7 @@
     <button
       type="button"
       class="button is-primary"
-      onclick={{action "onSubmit" "update-primary" model.replicationAttrs.modeForUrl (hash token=token dr_operation_token_primary=dr_operation_token_primary primary_api_addr=primary_api_addr ca_path=ca_path ca_file=ca_file)}}
+      onclick={{action "onSubmit" "update-primary" this.model.replicationAttrs.modeForUrl (hash token=this.token dr_operation_token_primary=this.dr_operation_token_primary primary_api_addr=this.primary_api_addr ca_path=this.ca_path ca_file=this.ca_file)}}
       data-test-confirm-action-trigger
     >
       Update
@@ -99,7 +99,7 @@
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isModalActive) false}}
+      onclick={{action (mut this.isModalActive) false}}
       data-test-update-primary-cancel-button>
       Cancel
     </button>

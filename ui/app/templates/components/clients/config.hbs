@@ -47,7 +47,7 @@
       <div class="control">
         <button
           type="submit"
-          disabled={{buttonDisabled}}
+          disabled={{this.buttonDisabled}}
           class="button is-primary"
           data-test-edit-metrics-config-save=true
         >
@@ -82,7 +82,7 @@
       <button
         type="button"
         class="button is-secondary"
-        onclick={{action (mut modalOpen) false}}
+        onclick={{action (mut this.modalOpen) false}}
         data-test-metrics-config-cancel
       >
         Cancel

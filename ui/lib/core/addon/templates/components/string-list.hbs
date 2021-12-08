@@ -1,29 +1,29 @@
-{{#if label}}
+{{#if this.label}}
   <label class="title is-label" data-test-string-list-label="true">
-    {{label}}
-    {{#if helpText}}
-      {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
+    {{this.label}}
+    {{#if this.helpText}}
+      {{#info-tooltip}}{{this.helpText}}{{/info-tooltip}}
     {{/if}}
   </label>
 {{/if}}
-{{#if warning}}
-  <AlertBanner @type="warning" @message={{warning}} />
+{{#if this.warning}}
+  <AlertBanner @type="warning" @message={{this.warning}} />
 {{/if}}
-{{#each inputList as |data index|}}
+{{#each this.inputList as |data index|}}
   <div class="field is-grouped" data-test-string-list-row="{{index}}">
     <div class="control is-expanded">
       {{textarea
         data-test-string-list-input=index
         class="input"
         value=data.value
-        name=(concat elementId "-" index)
-        id=(concat elementId "-" index)
+        name=(concat this.elementId "-" index)
+        id=(concat this.elementId "-" index)
         key-up=(action "inputChanged" index)
         change=(action (action "inputChanged" index) value="target.value")
       }}
     </div>
     <div class="control">
-      {{#if (eq (inc index) inputList.length)}}
+      {{#if (eq (inc index) this.inputList.length)}}
         <button
           type="button"
           class="button is-outlined is-primary"

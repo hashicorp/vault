@@ -1,5 +1,5 @@
 <div class="wizard-header">
-  {{#unless hidePopup}}
+  {{#unless this.hidePopup}}
     <PopupMenu @class="wizard-dismiss-menu">
       <nav class="menu">
         <ul class="menu-list">
@@ -13,27 +13,27 @@
     </PopupMenu>
   {{/unless}}
   <h1 class="title is-5">
-    <Icon @glyph={{glyph}} @size="l"/> {{headerText}}
+    <Icon @glyph={{this.glyph}} @size="l" /> {{this.headerText}}
   </h1>
-  {{#if showProgress}}
+  {{#if this.showProgress}}
     <ToolTip @verticalPosition="below" as |T|>
       <T.Trigger @tabindex="-1">
-        <WizardProgress @currentFeatureProgress={{currentFeatureProgress}} @progressBar={{progressBar}} />
+        <WizardProgress @currentFeatureProgress={{this.currentFeatureProgress}} @progressBar={{this.progressBar}} />
       </T.Trigger>
       <T.Content class="tool-tip">
         <div class="box">
-          {{#if currentTutorialProgress}}
-            {{currentTutorialProgress.text}}
+          {{#if this.currentTutorialProgress}}
+            {{this.currentTutorialProgress.text}}
           {{else}}
-            <p>{{capitalize currentFeatureProgress.feature}}</p>
-            {{currentFeatureProgress.text}}
+            <p>{{capitalize this.currentFeatureProgress.feature}}</p>
+            {{this.currentFeatureProgress.text}}
           {{/if}}
         </div>
       </T.Content>
     </ToolTip>
   {{else}}
-    {{#if selectProgress}}
-      <WizardProgress @noProgress={{true}} @progressBar={{selectProgress}} />
+    {{#if this.selectProgress}}
+      <WizardProgress @noProgress={{true}} @progressBar={{this.selectProgress}} />
     {{/if}}
   {{/if}}
 </div>

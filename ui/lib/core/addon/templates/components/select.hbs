@@ -1,26 +1,26 @@
 
-  {{#if label}}
+  {{#if this.label}}
     <label
       for="select-{{this.elementId}}"
       class="is-label"
       data-test-select-label
       >
-      {{label}}
+      {{this.label}}
     </label>
   {{/if}}
-  <div class="control {{if isInline "select is-inline-block"}}">
-    <div class="select {{if isFullwidth "is-fullwidth"}}">
+  <div class="control {{if this.isInline "select is-inline-block"}}">
+    <div class="select {{if this.isFullwidth "is-fullwidth"}}">
     <select
       class="select"
       id="select-{{this.elementId}}"
       onchange={{action this.onChange value="target.value"}}
-      data-test-select={{name}}
+      data-test-select={{this.name}}
       >
-      {{#each options as |op|}}
+      {{#each this.options as |op|}}
         <option
-          value={{or (get op valueAttribute) op}}
-          selected={{eq selectedValue (or (get op valueAttribute) op)}}>
-          {{or (get op labelAttribute) op}}
+          value={{or (get op this.valueAttribute) op}}
+          selected={{eq this.selectedValue (or (get op this.valueAttribute) op)}}>
+          {{or (get op this.labelAttribute) op}}
         </option>
       {{/each}}
     </select>

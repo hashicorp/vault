@@ -1,4 +1,4 @@
-<WizardContent @headerText="Vault Web UI" @glyph="tour" @selectProgress={{selectProgress}}>
+<WizardContent @headerText="Vault Web UI" @glyph="tour" @selectProgress={{this.selectProgress}}>
   <h2 class="title is-6">
     Choosing where to go
   </h2>
@@ -11,7 +11,7 @@
   {{/if}}
   <h3 class="feature-header">Walk me through setting up:</h3>
   <form id="features-form" class="feature-selection" {{action "saveFeatures" on="submit"}}>
-    {{#each allFeatures as |feature|}}
+    {{#each this.allFeatures as |feature|}}
     {{#if feature.show}}
     <div class="feature-box {{if feature.selected 'is-active'}} {{if feature.disabled 'is-disabled'}}"
         data-test-select-input={{true}}>
@@ -52,13 +52,13 @@
       <button
         type="submit"
         class="button is-primary"
-        disabled={{cannotStartWizard}}
+        disabled={{this.cannotStartWizard}}
         data-test-start-button
         >
         Start
       </button>
-      {{#if selectedFeatures}}
-        <span class="time-estimate"><Icon @glyph="stopwatch" class="has-text-grey" aria-hidden="true" />About {{estimatedTime}} minutes</span>
+      {{#if this.selectedFeatures}}
+        <span class="time-estimate"><Icon @glyph="stopwatch" class="has-text-grey" aria-hidden="true" />About {{this.estimatedTime}} minutes</span>
       {{/if}}
     </span>
   </form>

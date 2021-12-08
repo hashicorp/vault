@@ -29,9 +29,9 @@
       {{date-format @model.creationTime 'MMM dd, yyyy [at] h:mm a'}}
     </time>
   </InfoTableRow>
-  <InfoTableRow @label="Last Updated" @value={{model.lastUpdateTime}}>
-    <time datetime={{model.lastUpdateTime}} title={{model.lastUpdateTime}}>
-      {{date-format model.lastUpdateTime 'MMM dd, yyyy [at] h:mm a'}}
+  <InfoTableRow @label="Last Updated" @value={{this.model.lastUpdateTime}}>
+    <time datetime={{this.model.lastUpdateTime}} title={{this.model.lastUpdateTime}}>
+      {{date-format this.model.lastUpdateTime 'MMM dd, yyyy [at] h:mm a'}}
     </time>
   </InfoTableRow>
 </div>

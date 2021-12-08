@@ -1,10 +1,10 @@
-{{#with (compact (flatten (array link model))) as |params|}}
+{{#with (compact (flatten (array this.link this.model))) as |params|}}
 <nav class="pagination is-centered" role="navigation" aria-label="pagination">
-  {{#if hasPrevious}}
+  {{#if this.hasPrevious}}
     {{#link-to
       params=(append
         params
-        (query-params page=(dec page))
+        (query-params page=(dec this.page))
       )
       class="pagination-previous"
     }}
@@ -21,11 +21,11 @@
       </span>
     </button>
   {{/if}}
-  {{#if hasNext}}
+  {{#if this.hasNext}}
     {{#link-to
       params=(append
         params
-        (query-params page=(inc page))
+        (query-params page=(inc this.page))
       )
       class="pagination-next"
     }}
@@ -42,7 +42,7 @@
       <Chevron />
     </button>
   {{/if}}
-  {{#if segmentLinks }}
+  {{#if this.segmentLinks }}
     <ul class="pagination-list">
       <li>
         {{#link-to
@@ -50,21 +50,21 @@
             params
             (query-params page=1)
           )
-          class=(concat (if (eq page 1) "is-current ") "pagination-link")
+          class=(concat (if (eq this.page 1) "is-current ") "pagination-link")
           aria-label=(concat "Go to page " 1)
         }}
           1
         {{/link-to}}
       </li>
       <li><span class="pagination-ellipsis">&hellip;</span></li>
-      {{#each pageRange as |p|}}
+      {{#each this.pageRange as |p|}}
         <li>
           {{#link-to
             params=(append
               params
               (query-params page=p)
             )
-            class=(concat (if (eq page p) "is-current ") "pagination-link")
+            class=(concat (if (eq this.page p) "is-current ") "pagination-link")
             aria-label=(concat "Go to page " p)
           }}
             {{p}}
@@ -76,25 +76,25 @@
         {{#link-to
           params=(append
             params
-            (query-params page=lastPage)
+            (query-params page=this.lastPage)
           )
-          class=(concat (if (eq page lastPage) "is-current ") "pagination-link")
-          aria-label=(concat "Go to page " lastPage)
+          class=(concat (if (eq this.page this.lastPage) "is-current ") "pagination-link")
+          aria-label=(concat "Go to page " this.lastPage)
         }}
-          {{lastPage}}
+          {{this.lastPage}}
         {{/link-to}}
       </li>
     </ul>
   {{else}}
     <ul class="pagination-list">
-      {{#each pageRange as |p|}}
+      {{#each this.pageRange as |p|}}
         <li>
           {{#link-to
             params=(append
               params
               (query-params page=p)
             )
-            class=(concat (if (eq page p) "is-current ") "pagination-link")
+            class=(concat (if (eq this.page p) "is-current ") "pagination-link")
             aria-label=(concat "Go to page " p)
           }}
             {{p}}

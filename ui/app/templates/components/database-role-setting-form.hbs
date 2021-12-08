@@ -11,7 +11,7 @@
         {{#if (and (eq @mode 'edit') (eq attr.name 'username'))}}
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else}}
-          {{form-field data-test-field attr=attr model=@model}}
+          {{form-field this.data-test-field attr=attr model=@model}}
         {{/if}}
         
       {{/each}}    
@@ -30,7 +30,7 @@
     {{else}}
       <div class="form-section">
         {{#each this.statementFields as |attr|}}
-          {{form-field data-test-field attr=attr model=@model}}
+          {{form-field this.data-test-field attr=attr model=@model}}
         {{/each}}    
       </div>
     {{/unless}}

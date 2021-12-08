@@ -1,10 +1,10 @@
 <section class="section">
   <div class="container is-widescreen">
-    {{#if (and (eq model.drMode "secondary") (eq model.drModeInit "primary"))}}
+    {{#if (and (eq this.model.drMode "secondary") (eq this.model.drModeInit "primary"))}}
       <nav class="navbar"></nav>
       <LayoutLoading />
     {{else}}
-      {{#if model.replicationAttrs.replicationEnabled}}
+      {{#if this.model.replicationAttrs.replicationEnabled}}
         <PageHeader as |p|>
           <p.top>
             <nav class="key-value-header breadcrumb">
@@ -17,16 +17,16 @@
                 </li>
                 <li>
                   <span class="sep"></span>
-                    {{model.replicationModeForDisplay}}
+                    {{this.model.replicationModeForDisplay}}
                 </li>
               </ul>
             </nav>
             </p.top>
             <p.levelLeft>
               <h1 class="has-top-margin-m title is-3 " data-test-replication-title=true>
-                {{model.replicationModeForDisplay}}
+                {{this.model.replicationModeForDisplay}}
                 <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
-                  {{model.replicationAttrs.modeForHeader}}
+                  {{this.model.replicationAttrs.modeForHeader}}
                 </span>
               </h1>
           </p.levelLeft>
@@ -35,18 +35,18 @@
           <nav class="tabs sub-nav">
             <ul>
               <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
-                {{#link-to "mode" replicationMode data-test-replication-link="details"}}
+                {{#link-to "mode" this.replicationMode data-test-replication-link="details"}}
                   Details
                 {{/link-to}}
               </li>
               <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
-                {{#link-to "mode.manage" replicationMode data-test-replication-link="manage"}}
+                {{#link-to "mode.manage" this.replicationMode data-test-replication-link="manage"}}
                   Manage
                 {{/link-to}}
               </li>
-              {{#if model.replicationAttrs.isPrimary}}
+              {{#if this.model.replicationAttrs.isPrimary}}
                 <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
-                  {{#link-to "mode.secondaries" replicationMode data-test-replication-link="secondaries"}}
+                  {{#link-to "mode.secondaries" this.replicationMode data-test-replication-link="secondaries"}}
                     Secondaries
                   {{/link-to}}
                 </li>

@@ -1,13 +1,13 @@
   <HeaderScope />
   <Toolbar>
-    {{#if model.meta.total}}
+    {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
           @filterFocusDidChange={{action "setFilterFocus" }}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
-          @filterMatchesKey={{filterMatchesKey}}
-          @firstPartialMatch={{firstPartialMatch}}
+          @filterMatchesKey={{this.filterMatchesKey}}
+          @firstPartialMatch={{this.firstPartialMatch}}
           @placeholder="Filter scopes by name"
           @urls={{hash
             create="vault.cluster.secrets.backend.kmip.scopes.create"
@@ -15,15 +15,15 @@
             show="vault.cluster.secrets.backend.kmip.scope.roles"
           }}
         />
-        {{#if filterFocused}}
-          {{#if filterMatchesKey}}
+        {{#if this.filterFocused}}
+          {{#if this.filterMatchesKey}}
             <p class="input-hint">
               <kbd>ENTER</kbd> to go to <code>{{this.filter}}</code>
             </p>
           {{/if}}
-          {{#if firstPartialMatch}}
+          {{#if this.firstPartialMatch}}
             <p class="input-hint">
-              <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+              <kbd>TAB</kbd> to complete <code>{{this.firstPartialMatch.id}}</code>
             </p>
           {{/if}}
         {{/if}}
@@ -39,7 +39,7 @@
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
-  <ListView @items={{model}} @itemNoun="scope" @paginationRouteName="scopes.index" as |list|>
+  <ListView @items={{this.model}} @itemNoun="scope" @paginationRouteName="scopes.index" as |list|>
     {{#if list.empty}}
       <list.empty
         @title="KMIP Secrets Engine"

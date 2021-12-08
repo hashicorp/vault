@@ -13,11 +13,11 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{methodModel.id}}
+      {{this.methodModel.id}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#with (tabs-for-auth-section methodModel 'authConfig' paths) as |tabs|}}
+{{#with (tabs-for-auth-section this.methodModel 'authConfig' this.paths) as |tabs|}}
   {{#if tabs.length}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs">
@@ -41,44 +41,45 @@
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink
-      data-test-create={{itemType}}
+      data-test-create={{this.itemType}}
       @type="add"
       @params={{array
         "vault.cluster.access.method.item.create"
-        itemType
+        this.itemType
       }}>
       Create
-      {{singularize itemType}}
+      {{singularize this.itemType}}
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView @items={{model}} @itemNoun={{itemType}} @paginationRouteName="vault.cluster.access.method.item.list" as |list|>
+<ListView @items={{this.model}} @itemNoun={{this.itemType}} @paginationRouteName="vault.cluster.access.method.item.list" as |list|>
   {{#if list.empty}}
-    <list.empty @title="No {{pluralize itemType}} yet"
-      @message="A list of {{pluralize itemType}} will be listed here. Create your first {{itemType}} to get started.">
+    <list.empty @title="No {{pluralize this.itemType}} yet"
+      @message="A list of {{pluralize this.itemType}} will be listed here. Create your first {{this.itemType}} to get started.">
       {{#link-to
         "vault.cluster.access.method.item.create"
-        itemType
+        this.itemType
         class="link"
       }}
-        Create {{singularize itemType}}
+        Create {{singularize this.itemType}}
       {{/link-to}}
     </list.empty>
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show"
-      itemType list.item.id}} as |Item|>
+      this.itemType
+      list.item.id}} as |Item|>
       <Item.content>
         <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
       </Item.content>
       <Item.menu as |Menu|>
         <li class="action">
           {{#link-to "vault.cluster.access.method.item.show" list.item.id class="is-block"}}
-            View {{singularize itemType}}
+            View {{singularize this.itemType}}
           {{/link-to}}
         </li>
         <li class="action">
           {{#link-to "vault.cluster.access.method.item.edit" list.item.id class="is-block"}}
-            Edit {{singularize itemType}}
+            Edit {{singularize this.itemType}}
           {{/link-to}}
         </li>
         <li>
@@ -90,14 +91,14 @@
                 Item.callMethod
                 "destroyRecord"
                 list.item
-                (concat "Successfully deleted " (singularize itemType) " " list.item.id ".")
-                (concat "There was an error deleting this " (singularize itemType))
+                (concat "Successfully deleted " (singularize this.itemType) " " list.item.id ".")
+                (concat "There was an error deleting this " (singularize this.itemType))
                 (action "refreshItemList")
               )
             }}
-            @message={{concat "Are you sure you want to delete " (singularize itemType) " " list.item.id "?"}}
+            @message={{concat "Are you sure you want to delete " (singularize this.itemType) " " list.item.id "?"}}
             data-test-secret-delete="true"
-            @triggerText={{concat "Delete " (singularize itemType)}}/>
+            @triggerText={{concat "Delete " (singularize this.itemType)}} />
         </li>
       </Item.menu>
     </ListItem>

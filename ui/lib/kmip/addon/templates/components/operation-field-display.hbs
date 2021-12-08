@@ -1,4 +1,4 @@
-{{#if model.operationAll}}
+{{#if this.model.operationAll}}
   <AlertInline @type="info" @message="This role allows all KMIP operations" class="is-marginless" />
 {{/if}}
 {{#each @model.operationFormFields as |group|}}
@@ -11,8 +11,8 @@
         {{#each fieldsInGroup as |field|}}
           <Icon
             aria-hidden="true"
-            class={{compute (action "iconClass") model field}}
-            @glyph={{compute (action "iconGlyph") model field}}
+            class={{compute (action "iconClass") this.model field}}
+            @glyph={{compute (action "iconGlyph") this.model field}}
             /> {{field.options.label}}
           <br />
         {{/each}}

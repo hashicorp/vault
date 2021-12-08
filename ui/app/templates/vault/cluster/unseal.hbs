@@ -1,4 +1,4 @@
-{{#if showLicenseError}}
+{{#if this.showLicenseError}}
   <NavHeader as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item splash-page-logo has-text-white">
@@ -6,7 +6,7 @@
       </HomeLink>
     </Nav.home>
     <Nav.items>
-    <div class="navbar-item status-indicator-button" data-status="{{if activeCluster.unsealed "good" "bad"}}">
+    <div class="navbar-item status-indicator-button" data-status="{{if this.activeCluster.unsealed "good" "bad"}}">
       <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
     </div>
     </Nav.items>
@@ -34,7 +34,7 @@
     </Page.header>
     <Page.content>
       <div class="box is-borderless is-shadowless is-marginless">
-      <p class="title is-5">{{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}}</p>
+      <p class="title is-5">{{capitalize this.model.name}} is {{if this.model.unsealed 'unsealed' 'sealed'}}</p>
       <p>
         Unseal Vault by entering portions of the unseal key. This can be done via multiple mechanisms on multiple computers. Once all portions are entered, the root key will be decrypted and Vault will unseal.
       </p>
@@ -47,8 +47,8 @@
         @buttonText="Unseal"
         @thresholdPath="t"
         @isComplete={{action 'isUnsealed'}}
-        @threshold={{model.sealThreshold}}
-        @progress={{model.sealProgress}}
+        @threshold={{this.model.sealThreshold}}
+        @progress={{this.model.sealProgress}}
       />
     </Page.content>
     <Page.footer>

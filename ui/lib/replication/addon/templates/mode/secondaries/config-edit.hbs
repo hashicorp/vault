@@ -1,13 +1,13 @@
 <Toolbar/>
 <div class="box is-fullwidth is-shadowless is-marginless">
   <h4 class="title is-5 is-marginless">
-    Edit path filter config for <code>{{model.config.id}}</code>
+    Edit path filter config for <code>{{this.model.config.id}}</code>
   </h4>
 </div>
-<form {{action "saveConfig" model.config on="submit"}}>
+<form {{action "saveConfig" this.model.config on="submit"}}>
   <PathFilterConfigList
-    @paths={{model.paths}}
-    @config={{model.config}}
+    @paths={{this.model.paths}}
+    @config={{this.model.config}}
   />
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
@@ -19,7 +19,7 @@
       <div class="control">
         {{#link-to
           "mode.secondaries.config-show"
-          model.config.id
+          this.model.config.id
           class="button"
           }}
           Cancel

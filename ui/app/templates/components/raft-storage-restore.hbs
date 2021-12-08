@@ -41,7 +41,7 @@
         @title="This might take a while"
         @message="Raft snapshots can be very large files. Uploading the snapshot may take some time."
         />
-      <FileToArrayBuffer @onChange={{action (mut file)}} />
+      <FileToArrayBuffer @onChange={{action (mut this.file)}} />
       <div class="b-checkbox">
         <input
           type="checkbox"

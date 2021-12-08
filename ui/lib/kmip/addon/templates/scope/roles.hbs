@@ -9,14 +9,14 @@
   </p.levelLeft>
 </PageHeader>
 <Toolbar>
-  {{#if model.meta.total}}
+  {{#if this.model.meta.total}}
     <ToolbarFilters>
     <NavigateInput
       @filterFocusDidChange={{action "setFilterFocus" }}
       @filterDidChange={{action "setFilter"}}
       @filter={{this.filter}}
-      @filterMatchesKey={{filterMatchesKey}}
-      @firstPartialMatch={{firstPartialMatch}}
+      @filterMatchesKey={{this.filterMatchesKey}}
+      @firstPartialMatch={{this.firstPartialMatch}}
       @placeholder="Filter roles by name"
       @extraNavParams={{this.scope}}
       @urls={{hash
@@ -25,15 +25,15 @@
         show="vault.cluster.secrets.backend.kmip.credentials"
       }}
     />
-      {{#if filterFocused}}
-        {{#if filterMatchesKey}}
+      {{#if this.filterFocused}}
+        {{#if this.filterMatchesKey}}
           <p class="input-hint">
             <kbd>ENTER</kbd> to go to <code>{{this.filter}}</code> roles
           </p>
         {{/if}}
-        {{#if firstPartialMatch}}
+        {{#if this.firstPartialMatch}}
           <p class="input-hint">
-            <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+            <kbd>TAB</kbd> to complete <code>{{this.firstPartialMatch.id}}</code>
           </p>
         {{/if}}
       {{/if}}
@@ -49,7 +49,7 @@
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView @items={{model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
+<ListView @items={{this.model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
   {{#if list.empty}}
     <list.empty
       @title="No roles in this scope yet"

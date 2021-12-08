@@ -62,8 +62,8 @@
         type="checkbox"
         id="{{@attr.name}}"
         class="styled"
-        checked={{get model @attr.name}}
-        onchange={{action (mut (get model @attr.name)) value="target.checked"}}
+        checked={{get this.model @attr.name}}
+        onchange={{action (mut (get this.model @attr.name)) value="target.checked"}}
         data-test-input={{@attr.name}}
        />
 

@@ -1,8 +1,8 @@
 <Modal
-  @title={{title}}
-  @onClose={{onClose}}
-  @isActive={{isActive}}
-  @type={{type}}
+  @title={{this.title}}
+  @onClose={{this.onClose}}
+  @isActive={{this.isActive}}
+  @type={{this.type}}
   @showCloseButton={{true}}
 >
   <section class="modal-card-body">
@@ -13,32 +13,32 @@
       <p class="has-text-weight-semibold is-size-6">
         Confirm
       </p>
-      <p class="is-help">Type <strong>{{confirmText}}</strong> to confirm {{toConfirmMsg}}</p>
+      <p class="is-help">Type <strong>{{this.confirmText}}</strong> to confirm {{this.toConfirmMsg}}</p>
       {{input
         type="text"
-        value=confirmationInput
+        value=this.confirmationInput
         name="confirmationInput"
         class="input has-margin-top"
         autocomplete="off"
         spellcheck="false"
-        data-test-confirmation-modal-input=testSelector
+        data-test-confirmation-modal-input=this.testSelector
       }}
     </div>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
       type="button"
-      class="button {{buttonClass}}"
-      disabled={{unless (eq confirmationInput confirmText) true}}
-      onclick={{onConfirm}}
-      data-test-confirm-button={{testSelector}}
+      class="button {{this.buttonClass}}"
+      disabled={{unless (eq this.confirmationInput this.confirmText) true}}
+      onclick={{this.onConfirm}}
+      data-test-confirm-button={{this.testSelector}}
     >
-      {{buttonText}}
+      {{this.buttonText}}
     </button>
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isActive) false}}
+      onclick={{action (mut this.isActive) false}}
       data-test-cancel-button>
       Cancel
     </button>

@@ -1,5 +1,5 @@
-{{#if showNav}}
-  <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}}"
+{{#if this.showNav}}
+  <NavHeader data-test-header-with-nav @class="{{if this.consoleOpen 'panel-open'}}"
     as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item has-text-white has-current-color-fill">
@@ -12,7 +12,7 @@
           <li>
             <NamespacePicker
               @class="navbar-item"
-              @namespace={{namespaceQueryParam}}
+              @namespace={{this.namespaceQueryParam}}
             >
             </NamespacePicker>
           </li>
@@ -67,12 +67,12 @@
     </Nav.main>
     <Nav.items>
       <div class="navbar-separator is-hidden-tablet"></div>
-      {{#if namespaceService.inRootNamespace}}
-        <div class="navbar-item status-indicator-button" data-status="{{if activeCluster.unsealed "good" "bad"}}">
+      {{#if this.namespaceService.inRootNamespace}}
+        <div class="navbar-item status-indicator-button" data-status="{{if this.activeCluster.unsealed "good" "bad"}}">
           <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
         </div>
         <div class="navbar-separator is-hidden-mobile"></div>
-      {{else if (and (has-permission 'clients' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
+      {{else if (and (has-permission 'clients' routeParams='activity') (not this.cluster.dr.isSecondary) this.auth.currentToken)}}
         <div class="navbar-sections">
           <div class="{{if (is-active-route 'vault.cluster.clients') 'is-active'}}">
             {{#link-to
@@ -87,8 +87,7 @@
         </div>
       {{/if}}
       <div class="navbar-item">
-        <button type="button" class="button is-transparent nav-console-button{{if consoleOpen " popup-open"}}"
-          {{action (queue (action 'toggleConsole') (action Nav.closeDrawer))}} data-test-console-toggle>
+        <button type="button" class="button is-transparent nav-console-button{{if this.consoleOpen " popup-open"}}" {{action (queue (action 'toggleConsole') (action Nav.closeDrawer))}} data-test-console-toggle>
           <Icon @glyph="console" @size="l" />
           <div class="status-menu-label">
             Console
@@ -96,15 +95,15 @@
           <Chevron @direction="down" class="has-text-white is-status-chevron" />
         </button>
       </div>
-      <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}" data-test-allow-expiration="{{auth.allowExpiration}}">
+      <div class="navbar-item nav-user-button {{if this.auth.allowExpiration "may-expire"}}" data-test-allow-expiration="{{this.auth.allowExpiration}}">
         <StatusMenu @type="user" @label="User" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
     </Nav.items>
   </NavHeader>
 {{/if}}
-<LicenseBanners @expiry={{activeCluster.licenseExpiry}} @autoloaded={{eq activeCluster.licenseState 'autoloaded'}} />
+<LicenseBanners @expiry={{this.activeCluster.licenseExpiry}} @autoloaded={{eq this.activeCluster.licenseState 'autoloaded'}} />
 <div class="global-flash">
-  {{#each flashMessages.queue as |flash|}}
+  {{#each this.flashMessages.queue as |flash|}}
     {{#flash-message data-test-flash-message=true flash=flash as |customComponent flash close|}}
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
@@ -114,14 +113,14 @@
     {{/flash-message}}
   {{/each}}
 </div>
-{{#if currentlyLoading}}
+{{#if this.currentlyLoading}}
   <LogoSplash />
 {{else}}
-  {{#if showNav}}
+  {{#if this.showNav}}
     <UiWizard>
       <section class="section">
         <div class="container is-widescreen">
-          <TokenExpireWarning @expirationDate={{auth.tokenExpirationDate}}>
+          <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
             {{outlet}}
           </TokenExpireWarning>
         </div>

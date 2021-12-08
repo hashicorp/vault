@@ -10,9 +10,9 @@
       &copy; {{date-format (now) "yyyy"}} HashiCorp
     </span>
     <span>
-      <a href={{changelog-url-for activeCluster.leaderNode.version}}
+      <a href={{changelog-url-for this.activeCluster.leaderNode.version}}
       class="link has-text-grey">
-        Vault {{activeCluster.leaderNode.version}}
+        Vault {{this.activeCluster.leaderNode.version}}
       </a>
     </span>
     {{#if (is-version "OSS")}}
@@ -29,7 +29,7 @@
       <a class="has-text-grey" target="_blank" rel="noreferrer noopener" href="https://www.vaultproject.io/docs/index.html">Documentation</a>
     </span>
   </footer>
-  {{#if (eq env "development") }}
+  {{#if (eq this.env "development") }}
     <div class="env-banner level development">
       <div class="level-item notification">
         <Icon @glyph="git-branch" /><Icon @glyph="edit" /> Local development <Icon @glyph="edit" /><Icon @glyph="git-branch" />

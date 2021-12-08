@@ -1,6 +1,6 @@
 <InfoTableRow @label="Name" @value={{@model.name}} @data-test-alias-name={{true}} />
 <InfoTableRow @label="ID" @value={{@model.id}} />
-<InfoTableRow @label={{if (eq @model.identityType "entity-alias") "Entity ID" "Group ID"}} @value={{model.canonicalId}}>
+<InfoTableRow @label={{if (eq @model.identityType "entity-alias") "Entity ID" "Group ID"}} @value={{this.model.canonicalId}}>
   <LinkTo @route="vault.cluster.access.identity.show" @models={{array (if (eq @model.identityType "entity-alias") "entities" "groups") @model.canonicalId "details"}} class="has-text-black is-font-mono">
     {{@model.canonicalId}}
   </LinkTo>

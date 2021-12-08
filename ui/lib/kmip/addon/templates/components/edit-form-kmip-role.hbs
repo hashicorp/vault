@@ -1,11 +1,11 @@
-<form {{action (queue (action "preSave" model) (perform save model)) on="submit"}}>
-  <MessageError @model={{model}} data-test-edit-form-error /> <div class="box is-sideless is-fullwidth is-marginless">
+<form {{action (queue (action "preSave" this.model) (perform this.save this.model)) on="submit"}}>
+  <MessageError @model={{this.model}} data-test-edit-form-error /> <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" />
     {{#if (eq @mode "create")}}
       <FormField
         data-test-field
         @attr={{hash name="name" type="string"}}
-        @model={{model}}
+        @model={{this.model}}
       />
     {{/if}}
     <div class="control is-flex box is-shadowless is-fullwidth is-marginless">
@@ -77,7 +77,7 @@
         <FormField
           data-test-field
           @attr={{attr}}
-          @model={{model}}
+          @model={{this.model}}
         />
       {{/each}}
     </div>
@@ -85,20 +85,20 @@
       <FormField
         data-test-field
         @attr={{attr}}
-        @model={{model}}
+        @model={{this.model}}
       />
     {{/each}}
   </div>
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
-        <button type="submit" data-test-edit-form-submit class="button is-primary {{if save.isRunning 'loading'}}" disabled={{save.isRunning}}>
-          {{saveButtonText}}
+        <button type="submit" data-test-edit-form-submit class="button is-primary {{if this.save.isRunning 'loading'}}" disabled={{this.save.isRunning}}>
+          {{this.saveButtonText}}
         </button>
       </div>
-      {{#if cancelLinkParams}}
+      {{#if this.cancelLinkParams}}
         <div class="control">
-          {{#link-to params=cancelLinkParams class="button" data-test-edit-form-cancel="true"}}
+          {{#link-to params=this.cancelLinkParams class="button" data-test-edit-form-cancel="true"}}
             Cancel
           {{/link-to}}
         </div>

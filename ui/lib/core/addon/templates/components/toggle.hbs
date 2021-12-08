@@ -1,17 +1,17 @@
 {{input
-  id=safeId
-  name=name
+  id=this.safeId
+  name=this.name
   type="checkbox"
-  checked=checked
+  checked=this.checked
   change=(action "handleChange" value='target.checked')
-  class=inputClasses
-  disabled=disabled
-  data-test-toggle-input=name
+  class=this.inputClasses
+  disabled=this.disabled
+  data-test-toggle-input=this.name
 }}
-<label data-test-toggle-label={{name}} for={{safeId}} class="toggle-label">
+<label data-test-toggle-label={{this.name}} for={{this.safeId}} class="toggle-label">
   {{#if (has-block)}}
     {{yield}}
   {{else}}
-    {{name}}
+    {{this.name}}
   {{/if}}
 </label>

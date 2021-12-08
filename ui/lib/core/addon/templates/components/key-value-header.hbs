@@ -1,9 +1,9 @@
 <ul>
   {{yield}}
-  {{#each secretPath as |path index|}}
+  {{#each this.secretPath as |path index|}}
     <li class="{{if (is-active-route path.path path.model isExact=true) 'is-active'}}">
       <span class="sep">&#x0002f;</span>
-      {{#if linkToPaths}}
+      {{#if this.linkToPaths}}
         {{#link-to params=(array path.path path.model) data-test-secret-root-link=(if (eq index 0) true false) data-test-secret-breadcrumb=path.text}}
 
           {{path.text}}

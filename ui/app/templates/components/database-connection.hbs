@@ -1,6 +1,6 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{mode}} @root={{@root}} @showCurrent={{true}}  />
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}}  />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
@@ -23,7 +23,7 @@
           <button
             type="button"
             class="toolbar-link"
-            onclick={{action (mut isDeleteModalActive) true}}
+            onclick={{action (mut this.isDeleteModalActive) true}}
             data-test-database-connection-delete
           >
             Delete connection
@@ -94,7 +94,7 @@
   <form {{on 'submit' this.handleCreateConnection}}>
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
-        {{form-field data-test-field attr=attr model=@model}}
+        {{form-field this.data-test-field attr=attr model=@model}}
       {{/if}}
     {{/each}}
 
@@ -122,11 +122,11 @@
                       )
                     )}}
                       <div class="column is-one-third">
-                        {{form-field data-test-field attr=attr model=@model}}
+                        {{form-field this.data-test-field attr=attr model=@model}}
                       </div>
                     {{else}}
                       <div class="column is-full">
-                        {{form-field data-test-field attr=attr model=@model}}
+                        {{form-field this.data-test-field attr=attr model=@model}}
                       </div>
                     {{/if}}
                   {{/each}}
@@ -136,7 +136,7 @@
                 {{#if (get this (concat "show" (camelize group)))}}
                   <div class="box is-marginless">
                     {{#each fields as |attr|}}
-                      {{form-field data-test-field attr=attr model=@model}}
+                      {{form-field this.data-test-field attr=attr model=@model}}
                     {{/each}}
                   </div>
                 {{/if}}
@@ -158,7 +158,7 @@
           />
         {{else}}
           {{#each @model.statementFields as |attr|}}
-            {{form-field data-test-field attr=attr model=@model}}
+            {{form-field this.data-test-field attr=attr model=@model}}
           {{/each}}
         {{/if}}
       </div>
@@ -170,7 +170,7 @@
           <button
             data-test-secret-save
             type="submit"
-            disabled={{buttonDisabled}}
+            disabled={{this.buttonDisabled}}
             class="button is-primary"
           >
             Create database
@@ -190,7 +190,7 @@
       {{#if (or (eq attr.name 'name') (eq attr.name 'plugin_name'))}}
         <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
       {{else if (not-eq attr.options.readOnly true)}}
-        {{form-field data-test-field attr=attr model=@model}}
+        {{form-field this.data-test-field attr=attr model=@model}}
       {{/if}}
     {{/each}}
 
@@ -212,7 +212,7 @@
                     )
                   )}}
                     <div class="column is-one-third">
-                      {{form-field data-test-field attr=attr model=@model}}
+                      {{form-field this.data-test-field attr=attr model=@model}}
                     </div>
                   {{else if (eq attr.name "password")}}
                     <div class="column is-full">
@@ -248,7 +248,7 @@
                     </div>
                   {{else}}
                     <div class="column is-full">
-                      {{form-field data-test-field attr=attr model=@model}}
+                      {{form-field this.data-test-field attr=attr model=@model}}
                     </div>
                   {{/if}}
                 {{/each}}
@@ -258,7 +258,7 @@
               {{#if (get this (concat "show" (camelize group)))}}
                 <div class="box is-marginless">
                   {{#each fields as |attr|}}
-                    {{form-field data-test-field attr=attr model=@model}}
+                    {{form-field this.data-test-field attr=attr model=@model}}
                   {{/each}}
                 </div>
               {{/if}}
@@ -274,7 +274,7 @@
         <fieldset class="form-fieldset">
           <legend class="title is-5">Statements</legend>
           {{#each @model.statementFields as |attr|}}
-            {{form-field data-test-field attr=attr model=@model}}
+            {{form-field this.data-test-field attr=attr model=@model}}
           {{/each}}
         </fieldset>
       </div>
@@ -286,7 +286,7 @@
           <button
             data-test-secret-save
             type="submit"
-            disabled={{buttonDisabled}}
+            disabled={{this.buttonDisabled}}
             class="button is-primary"
           >
             Save
@@ -378,8 +378,8 @@
 
 <ConfirmationModal
   @title="Delete connection?"
-  @onClose={{action (mut isDeleteModalActive) false}}
-  @isActive={{isDeleteModalActive}}
+  @onClose={{action (mut this.isDeleteModalActive) false}}
+  @isActive={{this.isDeleteModalActive}}
   @confirmText={{@model.name}}
   @toConfirmMsg="deleting the connection"
   @onConfirm={{action "delete"}}
@@ -388,5 +388,5 @@
   <p>
     Deleting the connection means that any associated roles won't be able to generate credentials until the connection is reconfigured.
   </p>
-  <MessageError @model={{model}} @errorMessage={{error}} />
+  <MessageError @model={{this.model}} @errorMessage={{this.error}} />
 </ConfirmationModal>

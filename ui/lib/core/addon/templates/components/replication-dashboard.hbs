@@ -1,27 +1,27 @@
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless" data-test-replication-dashboard>
-  {{#if isReindexing}}
+  {{#if this.isReindexing}}
     <div class="reindexing-alert">
       <AlertBanner
-        @title={{concat "Re-indexing in progress" reindexingStage}}
+        @title={{concat "Re-indexing in progress" this.reindexingStage}}
         @type="info"
-        @progressBar={{progressBar}}
-        @message={{reindexMessage}}
+        @progressBar={{this.progressBar}}
+        @message={{this.reindexMessage}}
         data-test-isReindexing />
     </div>
   {{/if}}
-  {{#if isSummaryDashboard}}
+  {{#if this.isSummaryDashboard}}
     <div class="summary-state">
-      <h6 class="title is-5 {{unless (get (cluster-states summaryState) "isOk") "has-text-danger"}}" data-test-error>state</h6>
-      {{#unless (get (cluster-states summaryState) "isOk")}}
+      <h6 class="title is-5 {{unless (get (cluster-states this.summaryState) "isOk") "has-text-danger"}}" data-test-error>state</h6>
+      {{#unless (get (cluster-states this.summaryState) "isOk")}}
         <AlertInline
           @type="danger"
-          @message="The cluster is {{summaryState}}. Please check your server logs." />
+          @message="The cluster is {{this.summaryState}}. Please check your server logs." />
       {{else}}
         <p class="has-text-grey is-size-8">The current operating state of both Disaster Recovery and Performance. This value should be ‘running.’ If the value is idle, it indicates an issue and needs to be investigated.</p>
       {{/unless}}
-      <h2 class="title is-3" data-test-summary-state>{{summaryState}}
-        {{#if (get (cluster-states summaryState) "isOk")}}
-          <Icon @glyph={{get (cluster-states summaryState) "glyph"}} class="{{if (get (cluster-states summaryState) "isOk") "has-text-success" "has-text-danger"}}" data-test-icon />
+      <h2 class="title is-3" data-test-summary-state>{{this.summaryState}}
+        {{#if (get (cluster-states this.summaryState) "isOk")}}
+          <Icon @glyph={{get (cluster-states this.summaryState) "glyph"}} class="{{if (get (cluster-states this.summaryState) "isOk") "has-text-success" "has-text-danger"}}" data-test-icon />
         {{/if}}
       </h2>
     </div>
@@ -29,22 +29,22 @@
       class="selectable-card-container summary"
       data-test-selectable-card-container-summary>
         {{yield (hash
-          card=(component componentToRender replicationDetails=replicationDetailsSummary)
+          card=(component this.componentToRender replicationDetails=this.replicationDetailsSummary)
         )}}
     </div>
   {{else}}
     <div
-      class="selectable-card-container {{if isSecondary 'secondary' 'primary'}}"
-      data-test-selectable-card-container={{if isSecondary 'secondary' 'primary'}}>
+      class="selectable-card-container {{if this.isSecondary 'secondary' 'primary'}}"
+      data-test-selectable-card-container={{if this.isSecondary 'secondary' 'primary'}}>
       {{yield (hash
-        card=(component componentToRender replicationDetails=replicationDetails)
+        card=(component this.componentToRender replicationDetails=this.replicationDetails)
       )}}
-      {{#unless isSecondary}}
+      {{#unless this.isSecondary}}
         {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
       {{/unless}}
     </div>
   {{/if}}
-  {{#if isSyncing}}
+  {{#if this.isSyncing}}
     <div class="syncing-alert">
       <AlertBanner
         @title="Syncing in progress"
@@ -54,10 +54,10 @@
         data-test-isSyncing/>
     </div>
   {{/if}}
-  {{#unless isSummaryDashboard}}
+  {{#unless this.isSummaryDashboard}}
     <ReplicationTableRows
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}/>
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}} />
     <ReplicationDocLink data-test-replication-doc-link/>
   {{/unless}}
 </div>

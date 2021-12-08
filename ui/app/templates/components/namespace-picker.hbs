@@ -1,4 +1,4 @@
-{{#if (and (not accessibleNamespaces.length) inRootNamespace)}}
+{{#if (and (not this.accessibleNamespaces.length) this.inRootNamespace)}}
   <div class="namespace-picker no-namespaces">
     {{!-- Just yield the logo if they're in the root namespace and only have access to it --}}
     {{yield}}
@@ -12,8 +12,8 @@
         data-test-namespace-toggle
         >
         {{yield}}
-        {{#if namespaceDisplay}}
-          <span class="namespace-name">{{namespaceDisplay}}</span>
+        {{#if this.namespaceDisplay}}
+          <span class="namespace-name">{{this.namespaceDisplay}}</span>
         {{else}}
           <span class="namespace-name is-hidden-tablet">/ (Root)</span>
         {{/if}}
@@ -24,8 +24,8 @@
       </D.Trigger>
       <D.Content class="namespace-picker-content">
         <div class="is-mobile level-left">
-          {{#unless isUserRootNamespace}}
-            <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
+          {{#unless this.isUserRootNamespace}}
+            <NamespaceLink @targetNamespace={{or (object-at (dec 2 this.menuLeaves.length) this.lastMenuLeaves) this.auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
               <Chevron
                 @direction="left"
                 @class="has-text-grey"
@@ -36,9 +36,9 @@
         </div>
         <div class="namespace-header-bar level is-mobile">
           <div class="level-left">
-            <header >
+            <header>
               <div class="level is-mobile namespace-link">
-                <span class="level-left" data-test-current-namespace>{{if namespacePath (concat namespacePath "/") "root"}}</span>
+                <span class="level-left" data-test-current-namespace>{{if this.namespacePath (concat this.namespacePath "/") "root"}}</span>
                 <span class="level-right">
                   <Icon @glyph="check-circle-outline" class="has-text-success" />
                 </span>
@@ -46,10 +46,10 @@
             </header>
           </div>
         </div>
-        <div class="namespace-list {{if isAnimating "animated-list"}}">
+        <div class="namespace-list {{if this.isAnimating "animated-list"}}">
           <div class="is-mobile level-left">
-          {{#unless isUserRootNamespace}}
-            <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
+          {{#unless this.isUserRootNamespace}}
+            <NamespaceLink @targetNamespace={{or (object-at (dec 2 this.menuLeaves.length) this.lastMenuLeaves) this.auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
               <Chevron
                 @direction="left"
                 @class="has-text-grey"
@@ -58,24 +58,24 @@
           {{/unless}}
           <h5 class="list-header">Namespaces</h5>
         </div>
-          {{#if (contains '' lastMenuLeaves)}}
+          {{#if (contains '' this.lastMenuLeaves)}}
             {{!-- leaf is '' which is the root namespace, and then we need to iterate the root leaves --}}
             <div class="leaf-panel
-              {{if (eq '' currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
-            ">{{~#each rootLeaves as |rootLeaf|}}
+              {{if (eq '' this.currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
+            ">{{~#each this.rootLeaves as |rootLeaf|}}
                 <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
               {{/each~}}</div>
           {{/if}}
-          {{#each lastMenuLeaves as |leaf|}}
+          {{#each this.lastMenuLeaves as |leaf|}}
               <div class="leaf-panel
-                {{if (eq leaf currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
-                {{if (and isAdding (eq leaf changedLeaf)) "leaf-panel-adding"}}
-                {{if (and (not isAdding) (eq leaf changedLeaf)) "leaf-panel-exiting"}}
-              ">{{~#each-in (get namespaceTree leaf) as |leafName|}}
+                {{if (eq leaf this.currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
+                {{if (and this.isAdding (eq leaf this.changedLeaf)) "leaf-panel-adding"}}
+                {{if (and (not this.isAdding) (eq leaf this.changedLeaf)) "leaf-panel-exiting"}}
+              ">{{~#each-in (get this.namespaceTree leaf) as |leafName|}}
               <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" @showLastSegment={{true}} />
                 {{/each-in~}}</div>
           {{/each}}
-          {{#if canList}}
+          {{#if this.canList}}
             <div class="leaf-panel leaf-panel-current ">
               <LinkTo
                 @params={{array "vault.cluster.access.namespaces"}}

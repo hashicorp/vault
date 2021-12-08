@@ -5,7 +5,7 @@
     </HomeLink>
   </Nav.home>
   <Nav.items>
-   <div class="navbar-item status-indicator-button" data-status="{{if activeCluster.unsealed "good" "bad"}}">
+   <div class="navbar-item status-indicator-button" data-status="{{if this.activeCluster.unsealed "good" "bad"}}">
      <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
    </div>
   </Nav.items>

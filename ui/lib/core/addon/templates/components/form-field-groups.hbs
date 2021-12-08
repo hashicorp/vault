@@ -1,17 +1,17 @@
-{{#each model.fieldGroups as |fieldGroup|}}
+{{#each this.model.fieldGroups as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
-    {{#if (or (not renderGroup) (and renderGroup (eq group renderGroup)))}}
+    {{#if (or (not this.renderGroup) (and this.renderGroup (eq group this.renderGroup)))}}
       {{#if (eq group "default")}}
         {{#each fields as |attr|}}
-          {{#unless (and (not-eq mode "create") (eq attr.name "name"))}}
+          {{#unless (and (not-eq this.mode "create") (eq attr.name "name"))}}
             <FormField
               data-test-field
               @attr={{attr}}
-              @mode={{mode}}
-              @model={{model}}
-              @onChange={{onChange}}
-              @onKeyUp={{onKeyUp}}
-              @validationMessages={{validationMessages}}
+              @mode={{this.mode}}
+              @model={{this.model}}
+              @onChange={{this.onChange}}
+              @onKeyUp={{this.onKeyUp}}
+              @validationMessages={{this.validationMessages}}
             />
           {{/unless}}
         {{/each}}
@@ -30,8 +30,8 @@
               <FormField
                 data-test-field
                 @attr={{attr}}
-                @mode={{mode}}
-                @model={{model}}
+                @mode={{this.mode}}
+                @model={{this.model}}
               />
             {{/each}}
           </div>

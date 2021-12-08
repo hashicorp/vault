@@ -1,5 +1,5 @@
 {{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
-{{#if isSecondary}}
+{{#if this.isSecondary}}
   <NavHeader as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item splash-page-logo has-text-white">
@@ -7,7 +7,7 @@
       </HomeLink>
     </Nav.home>
     <Nav.items>
-      <div class="navbar-item status-indicator-button" data-status="{{if data.unsealed "good" "bad"}}">
+      <div class="navbar-item status-indicator-button" data-status="{{if this.data.unsealed "good" "bad"}}">
         <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
     </Nav.items>
@@ -15,11 +15,11 @@
 {{/if}}
 <PageHeader as |p|>
   <p.top>
-    {{#unless (or isSummaryDashboard isSecondary) }}
+    {{#unless (or this.isSummaryDashboard this.isSecondary) }}
       {{#key-value-header
-        baseKey=baseKey
+        baseKey=this.baseKey
         path="vault.cluster.replication-dr-promote"
-        root=backendCrumb
+        root=this.backendCrumb
       }}
         <li>
           <span class="sep">
@@ -34,23 +34,23 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{title}}
-      {{#if data.anyReplicationEnabled}}
+      {{this.title}}
+      {{#if this.data.anyReplicationEnabled}}
         <span class="tag is-light has-text-grey-dark" data-test-mode>
-          {{if isSecondary 'secondary' 'primary'}}
+          {{if this.isSecondary 'secondary' 'primary'}}
         </span>
         <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
-          {{secondaryId}}
+          {{this.secondaryId}}
         </span>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if showTabs}}
+{{#if this.showTabs}}
   <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
-      {{#unless isSummaryDashboard}}
+      {{#unless this.isSummaryDashboard}}
         <ul>
           {{#link-to
             "vault.cluster.replication-dr-promote.details"

@@ -1,15 +1,15 @@
 <BasicDropdown
-  renderInPlace={{renderInPlace}}
-  verticalPosition={{verticalPosition}}
-  horizontalPosition={{horizontalPosition}}
-  matchTriggerWidth={{matchTriggerWidth}}
-  triggerComponent={{triggerComponent}}
-  contentComponent={{contentComponent}}
-  calculatePosition={{calculatePosition}}
-  onOpen={{onOpen}}
-  onClose={{onClose}}
-  onFocus={{onFocus}}
-  calculateInPlacePosition={{calculateInPlacePosition}}
+  @renderInPlace={{this.renderInPlace}}
+  @verticalPosition={{this.verticalPosition}}
+  @horizontalPosition={{this.horizontalPosition}}
+  @matchTriggerWidth={{this.matchTriggerWidth}}
+  @triggerComponent={{this.triggerComponent}}
+  @contentComponent={{this.contentComponent}}
+  @calculatePosition={{this.calculatePosition}}
+  @onOpen={{this.onOpen}}
+  @onClose={{this.onClose}}
+  @onFocus={{this.onFocus}}
+  @calculateInPlacePosition={{this.calculateInPlacePosition}}
   {{on 'mousedown' this.prevent}}
   {{on 'mouseenter' (fn this.open dd)}}
   {{on 'mouseleave' (fn this.closeLater dd)}}
