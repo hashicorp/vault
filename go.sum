@@ -968,6 +968,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0 h1:0Vi5WEIpZctk/ZoRClod
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0/go.mod h1:6DPwGu8oGR1sZRpjwkcAnrQZWQuAJ/Ph+rQHfUo1Yf4=
 github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211123171606-16933c88368a h1:GVA3sY+FRhQrMexWGMCsIfVVMgcdru36WMKvDtKed5I=
 github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211123171606-16933c88368a/go.mod h1:TNPRoB53Twd9tYvlhqqEhMsQPiVN604kZw9jr2zUzDk=
+github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211206210934-74fe79f60b74 h1:Gd00flX13KiJtzF03r5EfsRQ1qU27OjzjAUD3jv5YZE=
+github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211206210934-74fe79f60b74/go.mod h1:hqiJmS2cH9AmaZ/aYksWhJVBPCQGCeJloMesGA12Hbs=
 github.com/hashicorp/vault-plugin-secrets-kv v0.10.1 h1:88a6YkbU0FCboZoFdB5uv6ukBf3gc3zDLKM4z64dWxo=
 github.com/hashicorp/vault-plugin-secrets-kv v0.10.1/go.mod h1:TNPRoB53Twd9tYvlhqqEhMsQPiVN604kZw9jr2zUzDk=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.5.1 h1:Maewon4nu0KL1ALBOvL6Rsj+Qyr9hdULWflyMz7+9nk=
