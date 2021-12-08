@@ -1462,16 +1462,16 @@
         "path": "upgrading/plugins"
       },
       {
-        "title": "Upgrade to 1.9.0",
-        "path": "upgrading/upgrade-to-1.9.0"
+        "title": "Upgrade to 1.9.x",
+        "path": "upgrading/upgrade-to-1.9.x"
       },
       {
-        "title": "Upgrade to 1.8.0",
-        "path": "upgrading/upgrade-to-1.8.0"
+        "title": "Upgrade to 1.8.x",
+        "path": "upgrading/upgrade-to-1.8.x"
       },
       {
-        "title": "Upgrade to 1.7.0",
-        "path": "upgrading/upgrade-to-1.7.0"
+        "title": "Upgrade to 1.7.x",
+        "path": "upgrading/upgrade-to-1.7.x"
       },
       {
         "title": "Upgrade to 1.6.3",
