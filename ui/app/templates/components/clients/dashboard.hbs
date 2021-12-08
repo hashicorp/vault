@@ -137,8 +137,14 @@
         {{#if this.showGraphs}}
         {{!-- ARG TODO chart playground --}}
           <Clients::TotalClientUsage
-            @title="Title"
-            @description="description"
+            @title="Vault usage"
+            @description="This data can be used to understand how many total clients are using Vault each month for the time period selected above."
+            @subTitle="Total monthly clients"
+            @subDescription="Each unique client is counted once per month. This can help with capacity planning."
+            @dataOne="Average total clients per month"
+            @dataOneData="100"
+            @dataTwo="Average new clients per month"
+            @dataTwoData="4"
           />
           {{!-- ARG TODO this is the search select from the old graph that can be reused --}}
           {{!-- <div class="column">
