@@ -162,5 +162,9 @@ export async function getStaticProps() {
     props: {
       data: vaultHomepage,
     },
+    revalidate:
+      process.env.HASHI_ENV === 'production'
+        ? process.env.GLOBAL_REVALIDATE
+        : 10,
   }
 }
