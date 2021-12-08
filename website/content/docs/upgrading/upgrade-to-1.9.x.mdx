@@ -1,15 +1,15 @@
 ---
 layout: docs
-page_title: Upgrading to Vault 1.9.0 - Guides
+page_title: Upgrading to Vault 1.9.x - Guides
 description: |-
   This page contains the list of deprecations and important or breaking changes
-  for Vault 1.9.0. Please read it carefully.
+  for Vault 1.9.x. Please read it carefully.
 ---
 
 # Overview
 
 This page contains the list of deprecations and important or breaking changes
-for Vault 1.9.0 compared to 1.8. Please read it carefully.
+for Vault 1.9.x compared to 1.8. Please read it carefully.
 
 ## OIDC Provider
 
@@ -56,6 +56,8 @@ To re-enable the old behavior, update the roles with a value
 of `"*"` to the `allowed_extensions` parameter allowing any/all extensions to be
 specified by clients.
 
+@include 'entity-alias-mapping.mdx'
+
 ## Deprecations
 
 ### HTTP Request Counter Deprecation
@@ -92,3 +94,4 @@ Additionally, Go has begun doing automated cipher suite ordering and no longer
 respects the order of suites given in `tls_cipher_suites`.
 
 See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information.
+
