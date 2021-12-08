@@ -25,7 +25,8 @@ a particular authentication backend.
 
 For example, a user with accounts in both GitHub and LDAP can be mapped to a
 single entity in Vault with two aliases, one of type GitHub and one of type
-LDAP.
+LDAP. Note however, if both aliases are created on the same auth mount, say
+a Github mount, both aliases cannot be mapped to the same entity.
 
 ![Entity  overview](/img/vault-identity-doc-1.png)
 
