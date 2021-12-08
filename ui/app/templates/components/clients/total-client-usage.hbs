@@ -7,16 +7,22 @@
   </div>
   <div class="chart-container">
     <svg 
-      {{did-insert this.registerListner}}
+      {{did-insert this.registerListener}}
       class="chart"
     ></svg>
   </div>
 
-  <div class="data-description">Description</div>
+   <div class="data-subTitle">{{@subTitle}}
+    <p>{{@subDescription}}</p>
+  </div>
 
-  <div class="data-one">Data 1</div>
+  <div class="data-one">{{@dataOne}}
+    <p>{{@dataOneData}}</p>
+  </div>
   
-  <div class="data-two">Data 2</div>
+  <div class="data-two">{{@dataTwo}}
+    <p>{{@dataTwoData}}</p>
+  </div>
 
   <div class="legend-container">
     legend
