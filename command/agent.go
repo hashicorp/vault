@@ -565,7 +565,7 @@ func (c *AgentCommand) Run(args []string) int {
 					AAD:     aad,
 				})
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
+					c.UI.Error(fmt.Sprintf("Error opening persistent cache with wrapper: %v", err))
 					return 1
 				}
 
