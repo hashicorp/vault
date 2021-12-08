@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"hash"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -31,6 +33,10 @@ func (b *backend) pathHash() *framework.Path {
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256".`,
 			},
@@ -86,6 +92,14 @@ func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *fr
 		hf = sha512.New384()
 	case "sha2-512":
 		hf = sha512.New()
+	case "sha3-224":
+		hf = sha3.New224()
+	case "sha3-256":
+		hf = sha3.New256()
+	case "sha3-384":
+		hf = sha3.New384()
+	case "sha3-512":
+		hf = sha3.New512()
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
 	}

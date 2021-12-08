@@ -1144,7 +1144,7 @@ func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal
 
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
-// can validate the snapshot was taken using the same master keys or not.
+// can validate the snapshot was taken using the same root keys or not.
 func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -1167,7 +1167,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
 // extracts the data and writes the snapshot to a temporary file. The seal
 // access is used to decrypt the SHASUM file in the archive to ensure this
-// snapshot has the same master key as the running instance. If the provided
+// snapshot has the same root key as the running instance. If the provided
 // access is nil then it will skip that validation.
 func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
@@ -1288,6 +1288,9 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 // or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
+	if len(entry.Key) > bolt.MaxKeySize {
+		return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+	}
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -1349,6 +1352,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
+			if len(txn.Entry.Key) > bolt.MaxKeySize {
+				return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+			}
 			op.OpType = putOp
 			op.Key = txn.Entry.Key
 			op.Value = txn.Entry.Value

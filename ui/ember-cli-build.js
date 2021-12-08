@@ -32,7 +32,7 @@ module.exports = function(defaults) {
       keyMaps: ['sublime'],
     },
     babel: {
-      plugins: ['@babel/plugin-proposal-object-rest-spread'],
+      plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
     },
     'ember-cli-babel': {
       includePolyfill: isTest || isProd || isCI,
@@ -71,6 +71,8 @@ module.exports = function(defaults) {
   app.import('node_modules/codemirror/addon/lint/lint.js');
   app.import('node_modules/codemirror/addon/lint/json-lint.js');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
+  app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
+  app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
 

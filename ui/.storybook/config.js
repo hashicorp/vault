@@ -1,6 +1,7 @@
 import { configure, addParameters, addDecorator } from '@storybook/ember';
 import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport';
 import theme from './theme.js';
+import flightIconSprite from '@hashicorp/flight-icons/svg-sprite/svg-sprite-module';
 
 function loadStories() {
   // automatically import all files ending in *.stories.js
@@ -17,6 +18,9 @@ addParameters({
 
 addDecorator(storyFn => {
   const { template, context } = storyFn();
+
+  // flight icon sprite must be inserted into dom for icon lookup via use element
+  document.getElementById('root').insertAdjacentHTML('afterbegin', flightIconSprite.trim());
 
   // This adds styling to the Canvas tab.
   const styles = {
