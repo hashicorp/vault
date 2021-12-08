@@ -185,7 +185,7 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 				t.Fatalf("kv-v2 mount error: %#v", err)
 			}
 
-			putArgs := []string{"-cas-required=true", secretPath}
+			putArgs := []string{"-cas-required=true", "-custom-metadata=foo=abc", "-custom-metadata=bar=def", secretPath}
 			code, combined := kvMetadataPutWithRetry(t, client, putArgs, nil)
 
 			if code != 0 {
@@ -222,12 +222,8 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 					expectedVal = initialMetadata.Data[k]
 				}
 
-				if k == "custom_metadata" || k == "versions" {
-					if diff := deep.Equal(expectedVal, v); len(diff) > 0 {
-						t.Fatalf("patched %q mismatch, diff: %#v", k, diff)
-					}
-				} else if expectedVal != v {
-					t.Fatalf("patched key %q mismatch, expected: %#v, actual %#v", k, expectedVal, v)
+				if diff := deep.Equal(expectedVal, v); len(diff) > 0 {
+					t.Fatalf("patched %q mismatch, diff: %#v", k, diff)
 				}
 			}
 		})
