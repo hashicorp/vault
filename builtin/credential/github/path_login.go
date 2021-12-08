@@ -219,7 +219,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	orgLoginName := ""
 	for _, o := range allOrgs {
-		if *o.ID == config.OrganizationID {
+		if o != nil && *o.ID == config.OrganizationID {
 			org = o
 			orgLoginName = *o.Login
 			break
