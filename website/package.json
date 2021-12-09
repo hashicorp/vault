@@ -26,7 +26,7 @@
     "@hashicorp/react-markdown-page": "^1.4.3",
     "@hashicorp/react-product-downloads-page": "^2.5.2",
     "@hashicorp/react-section-header": "^5.0.4",
-    "@hashicorp/react-subnav": "^9.2.2",
+    "@hashicorp/react-subnav": "^9.3.0",
     "@hashicorp/react-text-splits": "^3.2.7",
     "@hashicorp/react-use-cases": "^5.0.0",
     "@hashicorp/react-vertical-text-block-list": "^7.0.0",
