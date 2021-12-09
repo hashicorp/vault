@@ -5,6 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | horizontal-bar-chart', function(hooks) {
   setupRenderingTest(hooks);
+  // TODO: update test
 
   test('it renders', async function(assert) {
     // Set any properties with this.set('myProperty', 'value');
