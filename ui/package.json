@@ -12,7 +12,7 @@
     "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
     "build:dev": "ember build",
     "lint:fix": "npm-run-all --aggregate-output --continue-on-error --parallel lint:*:fix",
-    "lint:hbs": "ember-template-lint app/**/* lib/**/*",
+    "lint:hbs": "ember-template-lint app/**/*.hbs lib/**/*.hbs",
     "lint:hbs:fix": "ember-template-lint . --fix",
     "lint:js": "eslint . --cache",
     "lint:js:fix": "eslint . --fix",
