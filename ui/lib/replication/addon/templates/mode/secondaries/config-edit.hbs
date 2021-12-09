@@ -17,13 +17,9 @@
         </button>
       </div>
       <div class="control">
-        {{#link-to
-          "mode.secondaries.config-show"
-          this.model.config.id
-          class="button"
-          }}
+        <LinkTo @route="mode.secondaries.config-show" @model={{this.model.config.id}} class="button">
           Cancel
-        {{/link-to}}
+        </LinkTo>
       </div>
     </div>
   </div>

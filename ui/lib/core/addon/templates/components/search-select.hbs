@@ -11,7 +11,7 @@
   <label class="{{if this.labelClass this.labelClass 'title is-4'}}" data-test-field-label>
     {{this.label}}
     {{#if this.helpText}}
-      {{#info-tooltip}}{{this.helpText}}{{/info-tooltip}}
+      <InfoTooltip>{{this.helpText}}</InfoTooltip>
     {{/if}}
   </label>
   {{#if this.subLabel}}
@@ -21,18 +21,19 @@
     <p class="sub-text">{{this.subText}}</p>
   {{/if}}
   {{#unless (gte this.selectedOptions.length this.selectLimit)}}
-    {{#power-select-with-create
-      options=this.options
-      search=this.search
-      onchange=(action "selectOption")
-      oncreate=(action "createOption")
-      placeholderComponent=(component "search-select-placeholder")
-      renderInPlace=true
-      searchField="searchText"
-      verticalPosition="below"
-      showCreateWhen=(action "hideCreateOptionOnSameID")
-      buildSuggestion=(action "constructSuggestion") as |option|
-    }}
+    <PowerSelectWithCreate
+      @options={{this.options}}
+      @search={{this.search}}
+      @onchange={{action "selectOption"}}
+      @oncreate={{action "createOption"}}
+      @placeholderComponent={{component "search-select-placeholder"}}
+      @renderInPlace={{true}}
+      @searchField="searchText"
+      @verticalPosition="below"
+      @showCreateWhen={{action "hideCreateOptionOnSameID"}}
+      @buildSuggestion={{action "constructSuggestion"}}
+      as |option|
+    >
       {{#if this.shouldRenderName}}
         {{option.name}}
         <small class="search-select-list-key" data-test-smaller-id="true">
@@ -41,7 +42,7 @@
       {{else}}
         {{option.id}}
       {{/if}}
-    {{/power-select-with-create}}
+    </PowerSelectWithCreate>
   {{/unless}}
   <ul class="search-select-list">
     {{#each this.selectedOptions as |selected|}}

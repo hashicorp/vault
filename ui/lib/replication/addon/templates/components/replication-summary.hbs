@@ -1,5 +1,5 @@
 {{#unless (has-feature "DR Replication")}}
-  {{upgrade-page title="Replication"}}
+  <UpgradePage @title="Replication" />
 {{else if (or this.cluster.allReplicationDisabled this.cluster.replicationAttrs.replicationDisabled)}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -32,7 +32,7 @@
           )
       }}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      {{message-error errors=this.errors}}
+      <MessageError @errors={{this.errors}} />
       {{#if this.initialReplicationMode}}
         {{#if (eq this.initialReplicationMode 'dr')}}
           <h3 class="title is-flex-center is-5 is-marginless">
@@ -78,12 +78,7 @@
                 </p>
               </div>
               <div>
-                {{radio-button
-                  value="dr"
-                  groupValue=this.replicationMode
-                  name="replication-mode"
-                  radioId="dr"
-                }}
+                <RadioButton @value="dr" @groupValue={{this.replicationMode}} @name="replication-mode" @radioId="dr" />
                 <label for="dr" data-test-replication-type-select="dr"></label>
               </div>
             </label>
@@ -108,13 +103,7 @@
               </div>
               <div>
                 {{#if (has-feature "Performance Replication")}}
-                  {{radio-button
-                    value="performance"
-                    groupValue=this.replicationMode
-                    name="replication-mode"
-                    classNames="box columns is-centered"
-                    radioId="performance"
-                  }}
+                  <RadioButton @value="performance" @groupValue={{this.replicationMode}} @name="replication-mode" @classNames="box columns is-centered" @radioId="performance" />
                   <label for="performance" data-test-replication-type-select="performance"></label>
                 {{/if}}
               </div>
@@ -149,7 +138,7 @@
               Primary cluster address <em class="is-optional">(optional)</em>
             </label>
             <div class="control">
-              {{input class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=this.primary_cluster_addr}}
+              <Input class="input" @id="primary_cluster_addr" @name="primary_cluster_addr" @value={{this.primary_cluster_addr}} />
             </div>
             <p class="help has-text-grey">
               Overrides the cluster address that the primary gives to secondary nodes.
@@ -169,13 +158,7 @@
             )
           }}
             <div class="has-text-danger">
-              {{toggle-button
-                toggleTarget=this
-                toggleAttr='showExplanation'
-                openLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
-                closedLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
-                class="has-text-danger"
-              }}
+              <ToggleButton @toggleTarget={{this}} @toggleAttr="showExplanation" @openLabel="Disable Performance Replication in order to enable this cluster as a DR secondary." @closedLabel="Disable Performance Replication in order to enable this cluster as a DR secondary." @class="has-text-danger" />
               {{#if this.showExplanation}}
                 <p>
                   When running as a DR Secondary Vault is read only.
@@ -191,7 +174,7 @@
                 Secondary activation token
               </label>
               <div class="control">
-                {{textarea value=this.token id="secondary-token" name="secondary-token" class="textarea"}}
+                <Textarea @value={{this.token}} @id="secondary-token" @name="secondary-token" class="textarea" />
               </div>
             </div>
             <div class="field">
@@ -200,7 +183,7 @@
                     class="is-optional">(optional)</em>{{/unless}}
               </label>
               <div class="control">
-                {{input value=this.primary_api_addr id="primary_api_addr" name="primary_api_addr" class="input"}}
+                <Input @value={{this.primary_api_addr}} @id="primary_api_addr" @name="primary_api_addr" class="input" />
               </div>
               <p class="help {{if (and this.token (not this.tokenIncludesAPIAddr)) 'is-danger' 'has-text-grey'}}">
                 {{#if (and this.token (not this.tokenIncludesAPIAddr))}}
@@ -217,7 +200,7 @@
                 CA file <em class="is-optional">(optional)</em>
               </label>
               <div class="control">
-                {{input value=this.ca_file id="ca_file" name="ca_file" class="input"}}
+                <Input @value={{this.ca_file}} @id="ca_file" @name="ca_file" class="input" />
               </div>
               <p class="help has-text-grey">
                 Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token
@@ -229,7 +212,7 @@
                 CA path <em class="is-optional">(optional)</em>
               </label>
               <div class="control">
-                {{input value=this.ca_path id="ca_path" name="ca_file" class="input"}}
+                <Input @value={{this.ca_path}} @id="ca_path" @name="ca_file" class="input" />
               </div>
               <p class="help has-text-grey">
                 Specifies the path to a CA root directory containing PEM-format files that the secondary can use when
@@ -292,24 +275,12 @@
         {{#if this.submit.isRunning }}
           <LayoutLoading />
         {{else}}
-          {{#link-to
-            "mode.index"
-            "dr"
-            class="link-plain"
-          }}
-            {{replication-mode-summary
-              mode="dr"
-              cluster=this.cluster
-              tagName="span"
-            }}
-          {{/link-to}}
+          <LinkTo @route="mode.index" @model="dr" class="link-plain">
+            <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="span" />
+          </LinkTo>
         {{/if}}
       {{else}}
-        {{replication-mode-summary
-          mode="dr"
-          cluster=this.cluster
-          tagName="div"
-        }}
+        <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="div" />
       {{/if}}
     </div>
       {{#unless (and this.submit.isRunning (eq this.cluster.dr.mode "bootstrapping"))}}
@@ -318,17 +289,9 @@
           <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
           Performance
         </h3>
-          {{#link-to
-            "mode.index"
-            "performance"
-            class="link-plain"
-          }}
-            {{replication-mode-summary
-              mode="performance"
-              cluster=this.cluster
-              tagName="span"
-            }}
-          {{/link-to}}
+          <LinkTo @route="mode.index" @model="performance" class="link-plain">
+            <ReplicationModeSummary @mode="performance" @cluster={{this.cluster}} @tagName="span" />
+          </LinkTo>
       </div>
     {{/unless}}
   {{/if}}

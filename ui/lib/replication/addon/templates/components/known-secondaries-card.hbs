@@ -15,9 +15,9 @@
     {{/unless}}
   </div>
   {{#if this.cluster.canAddSecondary}}
-    {{#link-to "mode.secondaries.add" this.cluster.replicationMode class="link add-secondaries"}}
+    <LinkTo @route="mode.secondaries.add" @model={{this.cluster.replicationMode}} class="link add-secondaries">
       Add secondary
-    {{/link-to}}
+    </LinkTo>
   {{/if}}
 </div>
 

@@ -41,7 +41,7 @@
   </div>
 {{else if (and this.generateAction (not this.started))}}
   <form {{action 'startGenerate' (hash pgp_key=this.pgp_key) on="submit"}} id="shamir">
-    {{message-error errors=this.errors}}
+    <MessageError @errors={{this.errors}} />
     {{#if (eq this.generateStep 'chooseMethod')}}
       <div class="box is-marginless is-shadowless">
         <p>
@@ -73,7 +73,7 @@
           Choose a PGP Key from your computer or paste the contents of one in the form below.
           This key will be used to Encrypt the generated Operation Token.
         </p>
-        {{pgp-file index='' key=this.pgpKeyFile onChange=(action 'setKey')}}
+        <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{action "setKey"}} />
       </div>
       <div class="field is-grouped box is-marginless is-shadowless">
         <div class="control">
@@ -123,7 +123,7 @@
     <div class="box is-shadowless">
       {{#if this.errors}}
         <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
-          {{message-error errors=this.errors}}
+          <MessageError @errors={{this.errors}} />
         </div>
       {{/if}}
       <div class="box is-shadowless is-marginless no-padding-top is-fullwidth" data-test-form-text>
@@ -152,7 +152,7 @@
           Unseal Key Portion
         </label>
         <div class="control">
-          {{input class="input"type="password"name="key"value=this.key data-test-shamir-input=true}}
+          <Input class="input" @type="password" @name="key" @value={{this.key}} data-test-shamir-input={{true}} />
         </div>
       </div>
     </div>

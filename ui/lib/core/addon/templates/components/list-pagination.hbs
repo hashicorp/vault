@@ -1,6 +1,8 @@
 {{#with (compact (flatten (array this.link this.model))) as |params|}}
 <nav class="pagination is-centered" role="navigation" aria-label="pagination">
   {{#if this.hasPrevious}}
+    {{!-- refactor to use @route and @model args and convert to angle brackets --}}
+    {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
     {{#link-to
       params=(append
         params

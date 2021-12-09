@@ -16,20 +16,16 @@
 <PageHeader as |p|>
   <p.top>
     {{#unless (or this.isSummaryDashboard this.isSecondary) }}
-      {{#key-value-header
-        baseKey=this.baseKey
-        path="vault.cluster.replication-dr-promote"
-        root=this.backendCrumb
-      }}
+      <KeyValueHeader @baseKey={{this.baseKey}} @path="vault.cluster.replication-dr-promote" @root={{this.backendCrumb}}>
         <li>
           <span class="sep">
             /
           </span>
-          {{#link-to "vault.cluster.replication.index"}}
+          <LinkTo @route="vault.cluster.replication.index">
             Replication
-          {{/link-to}}
+          </LinkTo>
         </li>
-      {{/key-value-header}}
+      </KeyValueHeader>
     {{/unless}}
   </p.top>
   <p.levelLeft>
@@ -52,25 +48,16 @@
     <nav class="tabs">
       {{#unless this.isSummaryDashboard}}
         <ul>
-          {{#link-to
-            "vault.cluster.replication-dr-promote.details"
-            tagName="li"
-            activeClass="is-active"
-          }}
-            {{#link-to "vault.cluster.replication-dr-promote.details"}}
+          <LinkTo @route="vault.cluster.replication-dr-promote.details" @tagName="li" @activeClass="is-active">
+            <LinkTo @route="vault.cluster.replication-dr-promote.details">
               Details
-            {{/link-to}}
-          {{/link-to}}
-          {{#link-to
-            "vault.cluster.replication-dr-promote"
-            tagName="li"
-            activeClass="is-active"
-            current-when="vault.cluster.replication-dr-promote.index"
-          }}
-            {{#link-to "vault.cluster.replication-dr-promote"}}
+            </LinkTo>
+          </LinkTo>
+          <LinkTo @route="vault.cluster.replication-dr-promote" @tagName="li" @activeClass="is-active" @current-when="vault.cluster.replication-dr-promote.index">
+            <LinkTo @route="vault.cluster.replication-dr-promote">
               Manage
-            {{/link-to}}
-        {{/link-to}}
+            </LinkTo>
+        </LinkTo>
       </ul>
       {{else}}
         <ul>

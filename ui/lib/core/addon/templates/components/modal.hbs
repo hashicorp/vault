@@ -1,4 +1,4 @@
-{{#ember-wormhole to="modal-wormhole"}}
+<EmberWormhole @to="modal-wormhole">
   <div class="{{this.modalClass}} {{if this.isActive 'is-active'}}" aria-modal="true">
     <div class="modal-background" onclick={{this.onClose}} data-test-modal-background></div>
     <div class="modal-card">
@@ -22,4 +22,4 @@
       {{yield}}
     </div>
   </div>
-{{/ember-wormhole}}
+</EmberWormhole>

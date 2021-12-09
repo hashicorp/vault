@@ -4,10 +4,10 @@
   </h4>
 </div>
 <form {{action "saveConfig" this.model.config on="submit"}}>
-  {{path-filter-config-list
-    paths=this.model.paths
-    config=this.model.config
-  }}
+  <PathFilterConfigList
+    @paths={{this.model.paths}}
+    @config={{this.model.config}}
+  />
   <div class="field is-grouped box is-fullwidth is-shadowless">
     <div class="control">
       <button type="submit" class="button is-primary" >
@@ -15,13 +15,9 @@
       </button>
     </div>
     <div class="control">
-      {{#link-to
-        "mode.secondaries.config-show"
-        this.model.config.id
-        class="button"
-        }}
+      <LinkTo @route="mode.secondaries.config-show" @model={{this.model.config.id}} class="button">
         Cancel
-      {{/link-to}}
+      </LinkTo>
     </div>
   </div>
 </form>

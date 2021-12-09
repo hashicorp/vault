@@ -55,9 +55,9 @@
       @title="No roles in this scope yet"
       @message="Roles let you generate credentials with a specified set of KMIP operations permissions that clients are allowed to perform."
     >
-      {{#link-to "scope.roles.create"}}
+      <LinkTo @route="scope.roles.create">
         Create a role
-      {{/link-to}}
+      </LinkTo>
     </list.empty>
   {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "credentials" this.scope list.item.id}} as |Item|>
@@ -66,20 +66,20 @@
       </Item.content>
       <Item.menu as |m|>
         <li class="action">
-          {{#link-to "credentials" this.scope list.item.id class="is-block"}}
+          <LinkTo @route="credentials" @models={{array this.scope list.item.id}} class="is-block">
             View credentials
-          {{/link-to}}
+          </LinkTo>
         </li>
         <li class="action">
-          {{#link-to "role" this.scope list.item.id class="is-block"}}
+          <LinkTo @route="role" @models={{array this.scope list.item.id}} class="is-block">
             View role
-          {{/link-to}}
+          </LinkTo>
         </li>
         {{#if list.item.updatePath.canUpdate}}
           <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            {{#link-to "role.edit" this.scope list.item.id class="is-block"}}
+            <LinkTo @route="role.edit" @models={{array this.scope list.item.id}} class="is-block">
               Edit role
-            {{/link-to}}
+            </LinkTo>
           </MenuLoader>
         {{/if}}
         {{#if list.item.updatePath.canDelete}}

@@ -16,16 +16,16 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
-      {{#link-to "scopes.index" tagName="li"}}
-        {{#link-to "scopes.index" data-test-kmip-link-scopes="true"}}
+      <LinkTo @route="scopes.index" @tagName="li">
+        <LinkTo @route="scopes.index" data-test-kmip-link-scopes="true">
           Scopes
-        {{/link-to}}
-      {{/link-to}}
-      {{#link-to "configuration" tagName="li"}}
-        {{#link-to "configuration" data-test-kmip-link-config="true"}}
+        </LinkTo>
+      </LinkTo>
+      <LinkTo @route="configuration" @tagName="li">
+        <LinkTo @route="configuration" data-test-kmip-link-config="true">
           Configuration
-        {{/link-to}}
-      {{/link-to}}
+        </LinkTo>
+      </LinkTo>
     </ul>
   </nav>
 </div>

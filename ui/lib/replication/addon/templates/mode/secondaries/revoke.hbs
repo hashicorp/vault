@@ -3,13 +3,13 @@
     Revoke a secondary token
   </h4>
 </div>
-{{message-error errors=this.errors}}
+<MessageError @errors={{this.errors}} />
 <div class="field">
   <label for="activation-token-id" class="is-label">
     Secondary ID
   </label>
   <div class="control">
-    {{input class="input" name="activation-token-id" id="activation-token-id" value=this.id }}
+    <Input class="input" @name="activation-token-id" @id="activation-token-id" @value={{this.id}} />
   </div>
   <p class="help has-text-grey">
     The secondary id to revoke; given initially to generate a secondary token.
@@ -32,9 +32,9 @@
   </div>
   <div class="control">
     {{#unless this.isRevoking}}
-      {{#link-to "mode.secondaries" this.replicationMode class="button"}}
+      <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} class="button">
         Cancel
-      {{/link-to}}
+      </LinkTo>
     {{/unless}}
   </div>
 </div>

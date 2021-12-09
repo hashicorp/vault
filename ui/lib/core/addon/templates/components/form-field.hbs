@@ -22,11 +22,11 @@
     <label for="{{this.attr.name}}" class="is-label">
       {{this.labelString}}
       {{#if this.attr.options.helpText}}
-        {{#info-tooltip}}
+        <InfoTooltip>
           <span data-test-help-text>
             {{this.attr.options.helpText}}
           </span>
-        {{/info-tooltip}}
+        </InfoTooltip>
       {{/if}}
     </label>
     {{#if this.attr.options.subText}}
@@ -69,7 +69,7 @@
     <label for="{{this.attr.name}}" class="is-label">
       {{this.labelString}}
       {{#if this.attr.options.helpText}}
-        {{#info-tooltip}}{{this.attr.options.helpText}}{{/info-tooltip}}
+        <InfoTooltip>{{this.attr.options.helpText}}</InfoTooltip>
       {{/if}}
     </label>
   </div>
@@ -92,37 +92,13 @@
     />
   </div>
 {{else if (eq this.attr.options.editType "mountAccessor")}}
-  {{mount-accessor-select
-    name=this.attr.name
-    label=this.labelString
-    warning=this.attr.options.warning
-    helpText=this.attr.options.helpText
-    value=(get this.model this.valuePath)
-    onChange=(action "setAndBroadcast" this.valuePath)
-  }}
+  <MountAccessorSelect @name={{this.attr.name}} @label={{this.labelString}} @warning={{this.attr.options.warning}} @helpText={{this.attr.options.helpText}} @value={{get this.model this.valuePath}} @onChange={{action "setAndBroadcast" this.valuePath}} />
 {{else if (eq this.attr.options.editType "kv")}}
 {{!-- KV Object Editor --}}
-  {{kv-object-editor
-    value=(get this.model this.valuePath)
-    onChange=(action "setAndBroadcast" this.valuePath)
-    label=this.labelString
-    warning=this.attr.options.warning
-    helpText=this.attr.options.helpText
-    subText=this.attr.options.subText
-    small-label=(if (eq this.mode "create") true false )
-    formSection=(if (eq this.mode "customMetadata") false true )
-    name=this.valuePath
-    onKeyUp=this.onKeyUp
-    validationMessages=this.validationMessages
-  }}
+  <KvObjectEditor @value={{get this.model this.valuePath}} @onChange={{action "setAndBroadcast" this.valuePath}} @label={{this.labelString}} @warning={{this.attr.options.warning}} @helpText={{this.attr.options.helpText}} @subText={{this.attr.options.subText}} @small-label={{if (eq this.mode "create") true false}} @formSection={{if (eq this.mode "customMetadata") false true}} @name={{this.valuePath}} @onKeyUp={{this.onKeyUp}} @validationMessages={{this.validationMessages}} />
 {{else if (eq this.attr.options.editType "file")}}
 {{!-- File Input --}}
-  {{text-file
-    helpText=this.attr.options.helpText
-    file=this.file
-    onChange=(action "setFile")
-    label=this.labelString
-  }}
+  <TextFile @helpText={{this.attr.options.helpText}} @file={{this.file}} @onChange={{action "setFile"}} @label={{this.labelString}} />
 {{else if (eq this.attr.options.editType "ttl")}}
   {{!-- TTL Picker --}}
   <div class="field">
@@ -185,14 +161,7 @@
     {{/if}}
   </Toggle>
 {{else if (eq this.attr.options.editType "stringArray")}}
-  {{string-list
-    data-test-input=this.attr.name
-    label=this.labelString
-    warning=this.attr.options.warning
-    helpText=this.attr.options.helpText
-    inputValue=(get this.model this.valuePath)
-    onChange=(action (action "setAndBroadcast" this.valuePath))
-  }}
+  <StringList @data-test-input={{this.attr.name}} @label={{this.labelString}} @warning={{this.attr.options.warning}} @helpText={{this.attr.options.helpText}} @inputValue={{get this.model this.valuePath}} @onChange={{action (action "setAndBroadcast" this.valuePath)}} />
 {{else if (eq this.attr.options.sensitive true)}}
 {{!-- Masked Input --}}
   <MaskedInput
@@ -309,7 +278,7 @@
     <label for="{{this.attr.name}}" class="is-label">
       {{this.labelString}}
       {{#if (and this.showHelpText this.attr.options.helpText)}}
-        {{#info-tooltip}}{{this.attr.options.helpText}}{{/info-tooltip}}
+        <InfoTooltip>{{this.attr.options.helpText}}</InfoTooltip>
       {{/if}}
     </label>
       {{#if this.attr.options.subText}}
@@ -317,10 +286,5 @@
       {{/if}}
   </div>
 {{else if (eq this.attr.type "object")}}
-  {{json-editor
-    title=this.labelString
-    value=(if (get this.model this.valuePath) (stringify (get this.model this.valuePath)) this.emptyData)
-    valueUpdated=(action "codemirrorUpdated" this.attr.name false)
-    helpText=this.attr.options.helpText
-  }}
+  <JsonEditor @title={{this.labelString}} @value={{if (get this.model this.valuePath) (stringify (get this.model this.valuePath)) this.emptyData}} @valueUpdated={{action "codemirrorUpdated" this.attr.name false}} @helpText={{this.attr.options.helpText}} />
 {{/if}}

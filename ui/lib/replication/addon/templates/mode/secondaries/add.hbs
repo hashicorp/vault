@@ -5,13 +5,13 @@
     </h4>
     <p>Generate a token to enable {{this.model.replicationModeForDisplay}} replication or change primaries on secondary cluster.</p>
   </div>
-  {{message-error errors=this.errors}}
+  <MessageError @errors={{this.errors}} />
   <div class="field">
     <label for="activation-token-id" class="is-label">
       Secondary ID
     </label>
     <div class="control">
-      {{input class="input" name="activation-token-id" id="activation-token-id" value=this.id data-test-replication-secondary-id=true}}
+      <Input class="input" @name="activation-token-id" @id="activation-token-id" @value={{this.id}} data-test-replication-secondary-id={{true}} />
     </div>
     <p class="help has-text-grey">
       This will be used to identify a secondary cluster once a connection has been established with the primary.
@@ -45,9 +45,9 @@
       </button>
       </div>
     <div class="control">
-      {{#link-to "mode.secondaries" this.replicationMode class="button"}}
+      <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} class="button">
         Cancel
-      {{/link-to}}
+      </LinkTo>
     </div>
   </div>
 </form>
@@ -63,12 +63,8 @@
             <textarea readonly value={{this.token}} id="token-textarea" class="textarea level-left" />          </div>
         </div>
         <div class="has-top-margin-xl has-bottom-margin-s">
-          {{info-table-row
-            label="TTL"
-            value=this.ttl}}
-          {{info-table-row
-            label="Expires"
-            value=(date-format this.expirationDate 'MMM dd, yyyy hh:mm:ss a')}}
+          <InfoTableRow @label="TTL" @value={{this.ttl}} />
+          <InfoTableRow @label="Expires" @value={{date-format this.expirationDate "MMM dd, yyyy hh:mm:ss a"}} />
         </div>
       </div>
     </section>

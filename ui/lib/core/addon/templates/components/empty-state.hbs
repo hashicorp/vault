@@ -24,7 +24,7 @@
     {{/if}}
     {{#if this.message}}
     <p class={{concat "empty-state-message" (if this.bottomBorder " has-border-bottom-light")}} data-test-empty-state-message>
-      {{message}}
+      {{this.message}}
     </p>
     {{/if}}
     {{#if (has-block)}}

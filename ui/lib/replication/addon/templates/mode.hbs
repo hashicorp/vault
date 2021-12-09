@@ -10,10 +10,10 @@
             <nav class="key-value-header breadcrumb">
               <ul>
                 <li>
-                  {{#link-to "index"}}
+                  <LinkTo @route="index">
                     <span class="sep" data-test-replication-breadcrumb />
                     Replication
-                  {{/link-to}}
+                  </LinkTo>
                 </li>
                 <li>
                   <span class="sep"></span>
@@ -35,20 +35,20 @@
           <nav class="tabs sub-nav">
             <ul>
               <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
-                {{#link-to "mode" this.replicationMode data-test-replication-link="details"}}
+                <LinkTo @route="mode" @model={{this.replicationMode}} data-test-replication-link="details">
                   Details
-                {{/link-to}}
+                </LinkTo>
               </li>
               <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
-                {{#link-to "mode.manage" this.replicationMode data-test-replication-link="manage"}}
+                <LinkTo @route="mode.manage" @model={{this.replicationMode}} data-test-replication-link="manage">
                   Manage
-                {{/link-to}}
+                </LinkTo>
               </li>
               {{#if this.model.replicationAttrs.isPrimary}}
                 <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
-                  {{#link-to "mode.secondaries" this.replicationMode data-test-replication-link="secondaries"}}
+                  <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} data-test-replication-link="secondaries">
                     Secondaries
-                  {{/link-to}}
+                  </LinkTo>
                 </li>
               {{/if}}
             </ul>

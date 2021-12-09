@@ -101,13 +101,13 @@
 </div>
 <div class="level-right">
   {{#if this.replicationDisabled}}
-    {{#link-to 'mode.index' this.cluster.name this.mode class='button is-primary'}}
+    <LinkTo @route="mode.index" @models={{array this.cluster.name this.mode}} class="button is-primary">
       Enable
-    {{/link-to}}
+    </LinkTo>
   {{else}}
-    {{#link-to 'mode.index' this.cluster.name this.mode class="button is-secondary"}}
+    <LinkTo @route="mode.index" @models={{array this.cluster.name this.mode}} class="button is-secondary">
       Details
-    {{/link-to}}
+    </LinkTo>
   {{/if}}
 </div>
   </div>
