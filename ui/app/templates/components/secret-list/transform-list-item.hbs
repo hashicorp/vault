@@ -64,7 +64,7 @@
             @verticalPosition="above"
             @horizontalPosition="left"
             as |T|>
-            <T.Trigger @tabindex=false>
+            <T.Trigger @tabindex={{false}}>
               {{@item.id}}
             </T.Trigger>
             <T.Content class="tool-tip">

@@ -39,8 +39,8 @@
         <ToolbarSecretLink
           @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
+          @data-test-edit-link={{true}}
+          @replace={{true}}
         >
           Edit template
         </ToolbarSecretLink>
@@ -87,7 +87,7 @@
         type="submit"
         disabled={{this.buttonDisabled}}
         class="button is-primary"
-        data-test-template-transform-create=true
+        data-test-template-transform-create={{true}}
       >
         {{#if (eq this.mode 'create')}}
           Create template

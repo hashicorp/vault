@@ -29,7 +29,7 @@
 
       {{#if (or (not this.model.requestEntity) this.currentUserIsRequesting)}}
         <div class="message is-list is-highlight has-copy-button" tabindex="-1" data-test-accessor-callout>
-          <HoverCopyButton @alwaysShow=true @copyValue={{this.model.id}} />
+          <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.model.id}} />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
               Accessor
@@ -65,7 +65,7 @@
       <p class="control-group-token-text" data-test-token>
         We’ve saved your request token, but you may want to copy it just in case:
         <span class="tag has-font-monospaced" data-test-token-value>{{this.controlGroupResponse.token}}</span>
-        <HoverCopyButton @alwaysShow=true @copyValue={{this.controlGroupResponse.token}} />
+        <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.controlGroupResponse.token}} />
       </p>
     {{/if}}
 

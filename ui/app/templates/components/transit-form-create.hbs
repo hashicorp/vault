@@ -14,7 +14,7 @@
             name="key-type"
             id="key-type"
             onchange={{action (mut @key.type) value="target.value"}}
-            data-test-transit-key-type=true
+            data-test-transit-key-type={{true}}
           >
             <option selected={{eq @key.type "aes128-gcm96"}} value="aes128-gcm96">
               aes128-gcm96
@@ -57,7 +57,7 @@
           class="styled"
           checked={{@key.exportable}}
           onchange={{@setValueOnKey}}
-          data-test-transit-key-exportable=true
+          data-test-transit-key-exportable={{true}}
         />
         <label for="key-exportable" class="is-label">
           Exportable
@@ -78,7 +78,7 @@
             class="styled"
             checked={{@key.derived}}
             onchange={{@derivedChange}}
-            data-test-transit-key-derived=true
+            data-test-transit-key-derived={{true}}
           />
           <label for="key-derived" class="is-label">
             Derived

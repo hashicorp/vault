@@ -40,7 +40,7 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="edit"
-          @replace=true
+          @replace={{true}}
         >
           Edit role
         </ToolbarSecretLink>
@@ -71,7 +71,7 @@
           type="submit"
           disabled={{this.buttonDisabled}}
           class="button is-primary"
-          data-test-role-aws-create=true
+          data-test-role-aws-create={{true}}
         >
           {{#if (eq this.mode 'create')}}
             Create role

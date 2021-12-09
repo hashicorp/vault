@@ -18,7 +18,7 @@
     <AlertInline 
       @type="danger" 
       @message={{get this.validationMessages this.name}} 
-      @paddingTop=true
+      @paddingTop={{true}}
     />
   </div>
 {{/if}}
@@ -45,7 +45,7 @@
       />    </div>
     <div class="column is-narrow">
       {{#if (eq this.kvData.length (inc index))}}
-        <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row=true>
+        <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{true}}>
           Add
         </button>
       {{else}}

@@ -53,7 +53,7 @@
   </Toolbar>
 {{/if}}
 {{#if (eq this.mode "show")}}
-  <FieldGroupShow @model={{this.model}} @showAllFields=true />
+  <FieldGroupShow @model={{this.model}} @showAllFields={{true}} />
 {{else}}
   <form {{action (perform this.saveModel) on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">

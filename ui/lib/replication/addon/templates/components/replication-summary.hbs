@@ -129,7 +129,7 @@
       </label>
       <div class="field is-expanded">
         <div class="control select is-fullwidth">
-          <select onchange={{action (mut this.mode) value="target.value"}} id="replication-mode" name="replication-mode" data-test-replication-cluster-mode-select=true>
+          <select onchange={{action (mut this.mode) value="target.value"}} id="replication-mode" name="replication-mode" data-test-replication-cluster-mode-select={{true}}>
             {{#each (array 'primary' 'secondary') as |modeOption|}}
               <option selected={{if this.mode (eq this.mode modeOption) (eq modeOption 'primary')}} value={{modeOption}}>
                 {{modeOption}}
@@ -249,7 +249,7 @@
     {{#if (or (and (eq this.mode 'primary') this.cluster.canEnablePrimary) (and (eq this.mode 'secondary') this.cluster.canEnableSecondary))}}
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
-          <button type="submit" class="button is-primary" disabled={{this.disallowEnable}} data-test-replication-enable=true>
+          <button type="submit" class="button is-primary" disabled={{this.disallowEnable}} data-test-replication-enable={{true}}>
             Enable Replication
           </button>
         </div>

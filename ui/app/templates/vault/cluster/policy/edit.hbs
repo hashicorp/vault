@@ -36,7 +36,7 @@
       {{/if}}
       <ToolbarLink
         @params={{array 'vault.cluster.policy.show' this.model.id}}
-        @data-test-policy-edit-toggle=true
+        @data-test-policy-edit-toggle={{true}}
       >
         Back to policy
       </ToolbarLink>
@@ -75,7 +75,7 @@
                type="submit"
                disabled={{this.buttonDisabled}}
                class="button is-primary"
-               data-test-policy-save=true
+               data-test-policy-save={{true}}
              >
                Save
             </button>

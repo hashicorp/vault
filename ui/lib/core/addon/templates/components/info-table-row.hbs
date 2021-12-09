@@ -6,7 +6,7 @@
           @verticalPosition="below"
           @horizontalPosition="left"
           as |T|>
-          <T.Trigger @tabindex=false>
+          <T.Trigger @tabindex={{false}}>
             <span class="is-label has-text-grey-dark" data-test-row-label="{{this.label}}">{{this.label}}</span>  
           </T.Trigger>
           <T.Content class="tool-tip">
@@ -70,7 +70,7 @@
             @verticalPosition="above"
             @horizontalPosition="left"
             as |T|>
-            <T.Trigger @tabindex=false>
+            <T.Trigger @tabindex={{false}}>
               <span class="is-word-break has-text-black" data-test-row-value="{{this.label}}">{{this.value}}</span>  
             </T.Trigger>
             <T.Content class="tool-tip">

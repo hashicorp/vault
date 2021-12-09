@@ -57,7 +57,7 @@
   <InfoTableRow @label="TTL" @value={{this.model.ttl}} />
 </div>
 {{#if (and (not this.model.isAuthLease) this.model.renewable this.capabilities.renew.canUpdate)}}
-  <div class="box is-shadowless" data-test-lease-renew-picker=true>
+  <div class="box is-shadowless" data-test-lease-renew-picker={{true}}>
     <h2 class="title is-6">Renew Lease</h2>
     <form {{action "renewLease" this.model this.increment on="submit"}}>
       <TtlPicker2 

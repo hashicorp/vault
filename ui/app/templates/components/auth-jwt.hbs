@@ -19,8 +19,8 @@
       />
     </div>
     <AlertInline
-      @sizeSmall=true 
-      @paddingTop=true
+      @sizeSmall={{true}} 
+      @paddingTop={{true}}
       @type="info" 
       @message="Leave blank to sign in with the default role if one is configured"
     />
@@ -36,7 +36,7 @@
   <div data-test-yield-content>
     {{yield}}
   </div>
-  <button data-test-auth-submit=true type="submit" disabled={{@disabled}} class="button is-primary {{if @disabled 'is-loading'}}" id="auth-submit">
+  <button data-test-auth-submit={{true}} type="submit" disabled={{@disabled}} class="button is-primary {{if @disabled 'is-loading'}}" id="auth-submit">
     {{#if this.isOIDC}}
       {{#if this.role.providerButtonComponent}}
         {{component this.role.providerButtonComponent}}

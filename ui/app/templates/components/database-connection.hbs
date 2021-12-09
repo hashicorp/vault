@@ -62,7 +62,7 @@
             @mode="create"
             @type="add"
             @queryParams={{query-params initialKey=@model.name itemType="role"}}
-            @data-test-secret-create=true
+            @data-test-secret-create={{true}}
           >
             Add role
           </ToolbarSecretLink>
@@ -71,8 +71,8 @@
           <ToolbarSecretLink
             @secret={{@model.id}}
             @mode="edit"
-            @data-test-edit-link=true
-            @replace=true
+            @data-test-edit-link={{true}}
+            @replace={{true}}
           >
             Edit configuration
           </ToolbarSecretLink>

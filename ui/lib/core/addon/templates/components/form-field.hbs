@@ -206,7 +206,7 @@
     <AlertInline 
       @type="danger" 
       @message={{get this.validationMessages this.attr.name}} 
-      @paddingTop=true
+      @paddingTop={{true}}
     />
   {{/if}}
 {{else if (or (eq this.attr.type "number") (eq this.attr.type "string"))}}
@@ -294,7 +294,7 @@
         <AlertInline 
           @type="danger" 
           @message={{get this.validationMessages this.attr.name}} 
-          @paddingTop=true
+          @paddingTop={{true}}
         />
       {{/if}}
     {{/if}}

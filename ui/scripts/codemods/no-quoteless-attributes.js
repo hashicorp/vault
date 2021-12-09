@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+/* eslint-env node */
+
+module.exports = (env) => {
+  const { builders } = env.syntax;
+  return {
+    ElementNode({ attributes }) {
+      let i = 0;
+      while (i < attributes.length) {
+        const { type, chars } = attributes[i].value;
+        if (type === 'TextNode' && chars && !attributes[i].quoteType) {
+          attributes[i].value = builders.mustache(builders.path(attributes[i].value.chars));
+        }
+        i++;
+      }
+    },
+  };
+};

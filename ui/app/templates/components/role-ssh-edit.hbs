@@ -31,8 +31,8 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="credentials"
-          @data-test-backend-credentials=true
-          @replace=true
+          @data-test-backend-credentials={{true}}
+          @replace={{true}}
         >
          Generate Credential
        </ToolbarSecretLink>
@@ -40,8 +40,8 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="sign"
-          @data-test-backend-credentials=true
-          @replace=true
+          @data-test-backend-credentials={{true}}
+          @replace={{true}}
         >
           Sign Keys
         </ToolbarSecretLink>
@@ -50,8 +50,8 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
+          @data-test-edit-link={{true}}
+          @replace={{true}}
         >
           Edit role
         </ToolbarSecretLink>
@@ -76,7 +76,7 @@
           type="submit"
           disabled={{this.buttonDisabled}}
           class="button is-primary"
-          data-test-role-ssh-create=true
+          data-test-role-ssh-create={{true}}
         >
           {{#if (eq this.mode 'create')}}
             Create role

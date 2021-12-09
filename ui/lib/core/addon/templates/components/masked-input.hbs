@@ -16,7 +16,7 @@
   {{else}}
     <textarea 
       class="input masked-value {{unless this.showValue "masked-font"}}"
-      rows=1
+      rows={{1}}
       wrap="off"
       onkeydown={{action this.onKeyDown}}
       onchange={{action "updateValue"}}

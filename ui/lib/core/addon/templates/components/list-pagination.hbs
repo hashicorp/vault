@@ -14,7 +14,7 @@
       </span>
     {{/link-to}}
   {{else}}
-    <button type="button" disabled=true class="pagination-previous is-invisible" aria-hidden=true>
+    <button type="button" disabled={{true}} class="pagination-previous is-invisible" aria-hidden={{true}}>
       <Chevron @direction="left" />
       <span class="pagination-previous-label">
         Previous
@@ -35,7 +35,7 @@
       <Chevron />
     {{/link-to}}
   {{else}}
-    <button type="button" disabled=true class="pagination-next is-invisible" aria-hidden=true>
+    <button type="button" disabled={{true}} class="pagination-next is-invisible" aria-hidden={{true}}>
       <span class="pagination-next-label">
         Next
       </span>

@@ -103,13 +103,13 @@
             @selectedAuthIsPath={{this.selectedAuthIsPath}}
           />
         {{/if}}
-        <button data-test-auth-submit=true type="submit" disabled={{this.authenticate.isRunning}} class="button is-primary {{if this.authenticate.isRunning 'is-loading'}}" id="auth-submit">
+        <button data-test-auth-submit={{true}} type="submit" disabled={{this.authenticate.isRunning}} class="button is-primary {{if this.authenticate.isRunning 'is-loading'}}" id="auth-submit">
           Sign In
         </button>
         {{#if (and this.delayAuthMessageReminder.isIdle this.showLoading)}}
           <AlertInline
-            @paddingTop=true
-            @sizeSmall=true
+            @paddingTop={{true}}
+            @sizeSmall={{true}}
             @type="info"
             @message="If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out."
             data-test-auth-message="push"

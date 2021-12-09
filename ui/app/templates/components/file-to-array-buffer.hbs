@@ -12,7 +12,7 @@
           <Icon @glyph="upload" class="has-light-grey-text" />
           Choose a file…
         </span>
-        <span class="file-name has-text-grey-dark" data-test-text-file-input-label=true>
+        <span class="file-name has-text-grey-dark" data-test-text-file-input-label={{true}}>
           {{or this.fileName "No file chosen"}}
         </span>
         {{#if this.fileName}}

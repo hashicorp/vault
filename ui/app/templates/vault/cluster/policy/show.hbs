@@ -31,7 +31,7 @@
     {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
       <ToolbarLink
         @params={{array 'vault.cluster.policy.edit' this.model.id}}
-        @data-test-policy-edit-toggle=true
+        @data-test-policy-edit-toggle={{true}}
       >
         Edit policy
       </ToolbarLink>

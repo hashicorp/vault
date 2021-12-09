@@ -31,7 +31,7 @@
     {{#if (eq this.identityType "entity")}}
       <ToolbarLink
         @params={{array "vault.cluster.access.identity.merge" (pluralize this.identityType)}}
-        @data-test-entity-merge-link=true
+        @data-test-entity-merge-link={{true}}
       >
         Merge {{pluralize this.identityType}}
       </ToolbarLink>
@@ -39,7 +39,7 @@
     <ToolbarLink
       @type="add"
       @params={{array "vault.cluster.access.identity.create" (pluralize this.identityType)}}
-      @data-test-entity-create-link=true
+      @data-test-entity-create-link={{true}}
     >
       Create {{this.identityType}}
     </ToolbarLink>
