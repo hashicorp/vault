@@ -2,7 +2,7 @@
   <div class="chart-header">
     <h2 class="chart-title">{{@title}}</h2>
     {{#if @description}}
-      <p class="chart-description">{{@description}}</p>
+      <p class="chart-description" id="blah">{{@description}}</p>
     {{/if}}
   </div>
   <div class="chart-container">
@@ -28,4 +28,17 @@
     legend
     {{!-- <svg class="legend"></svg> --}}
   </div>
+  <p id="wtf">wtf</p>
+
+  {{!-- TOOLTIP --}}
+  {{!-- must be in curly bracket notation --}}
+  {{#modal-dialog
+    tetherTarget=this.tooltipTarget
+    targetAttachment='top middle'
+    attachment='bottom middle'
+    offset='14px 0'
+  }}
+    <p class="chart-tooltip">{{this.hoveredLabel}}</p>
+    <div class="chart-tooltip-arrow" />
+  {{/modal-dialog}}
 </div>

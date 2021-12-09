@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { select } from 'd3-selection';
+import { tracked } from '@glimmer/tracking';
+import { select, selectAll, node } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { stack } from 'd3-shape';
 
@@ -38,10 +39,14 @@ const DATA = [
 const BAR_COLOR_DEFAULT = ['#1563FF', '#8AB1FF'];
 
 export default class TotalClientUsage extends Component {
+  @tracked tooltipTarget = '#wtf';
+  @tracked hoveredLabel = 'init';
+  @tracked trackingTest = 0;
   @action
   registerListener(element) {
     let stackFunction = stack().keys(['directEntities', 'nonDirectTokens']);
     let stackedData = stackFunction(DATA);
+
     let yScale = scaleLinear()
       .domain([0, 802]) // TODO calculate high of total combined
       .range([100, 0]);
@@ -68,6 +73,19 @@ export default class TotalClientUsage extends Component {
       .attr('width', `${xScale.bandwidth()}%`)
       .attr('height', data => `${100 - yScale(data[1])}%`)
       .attr('x', data => `${xScale(data.data.month)}%`)
-      .attr('y', data => `${yScale(data[0]) + yScale(data[1]) - 100}%`);
+      .attr('y', data => `${yScale(data[0]) + yScale(data[1]) - 100}%`)
+      // for tooltip
+      .on('mouseover', data => {
+        this.hoveredLabel = data.data.month;
+        let node = groups
+          .selectAll('rect')
+          .filter(data => data.data.month === this.hoveredLabel)
+          .nodes();
+        this.tooltipTarget = node[1]; // grab the second node from the list of 24 rects
+      })
+      .on('mouseout', () => {
+        this.hoveredLabel = null;
+        // this.tooltipTarget = null;
+      });
   }
 }
