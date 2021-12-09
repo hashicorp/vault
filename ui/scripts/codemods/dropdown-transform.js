@@ -5,8 +5,6 @@
  * Codemod to transform BasicDropdown and Tooltip trigger and content components
  * As of version 2 of ember-basic-dropdown the yielded component names are now capitalized
  * In addition, splattributes are used and class must be passed as an attribute rather than argument
- * example execution from ui directory -> npx ember-template-recast ./app/templates -t ./scripts/codemods/dropdown-transform.js
- * above will run transform on all files in templates directory
  */
 
 module.exports = () => {

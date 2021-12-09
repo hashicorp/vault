@@ -6,10 +6,10 @@
         <Input
           @type="string"
           @value={{this.start}}
-          @name="start"
+          name="start"
           class={{concat "input" (unless this.startDate " has-error")}}
-          @autocomplete="off"
-          @spellcheck="false"
+          autocomplete="off"
+          spellcheck="false"
           data-test-start-input="true"
         />
       </div>
@@ -20,10 +20,10 @@
         <Input
           @type="string"
           @value={{this.end}}
-          @name="end"
+          name="end"
           class={{concat "input" (unless this.endDate " has-error")}}
-          @autocomplete="off"
-          @spellcheck="false"
+          autocomplete="off"
+          spellcheck="false"
           data-test-end-input="true"
         />
       </div>

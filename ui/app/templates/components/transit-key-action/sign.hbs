@@ -18,7 +18,7 @@
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" @id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     {{#if @key.derived}}
@@ -28,7 +28,7 @@
         </label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="context" @value={{@context}} class="input" data-test-transit-input="context" />
+            <Input @type="text" id="context" @value={{@context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
             <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
@@ -43,7 +43,7 @@
         </div>
         <div class="level-right">
           <div class="control is-flex">
-            <Input @id="prehashed" @type="checkbox" @name="prehashed" class="switch is-rounded is-success is-small" @checked={{@prehashed}} />
+            <Input id="prehashed" @type="checkbox" name="prehashed" class="switch is-rounded is-success is-small" @checked={{@prehashed}} />
             <label for="prehashed">Prehashed</label>
           </div>
         </div>

@@ -191,11 +191,11 @@
         data-test-input={{this.attr.name}}
         @type="password"
         @value={{get this.model this.valuePath}}
-        @name={{this.attr.name}}
+        name={{this.attr.name}}
         class="input"
         {{!-- Prevents browsers from auto-filling --}}
-        @autocomplete="new-password"
-        @spellcheck="false" />
+        autocomplete="new-password"
+        spellcheck="false" />
     {{else if (eq this.attr.options.editType "json")}}
       {{!-- JSON Editor --}}
       <JsonEditor

@@ -37,7 +37,7 @@
         <ToolbarActions>
           <div class="toolbar-separator"></div>
             <div class="control is-flex">
-                  <Input @id="fileUploadToggle" @type="checkbox" @name="fileUploadToggle" class="switch is-rounded is-success is-small" @checked={{this.showFileUpload}} @change={{toggle-action "showFileUpload" this}} data-test-policy-edit-toggle={{true}} />
+                  <Input id="fileUploadToggle" @type="checkbox" name="fileUploadToggle" class="switch is-rounded is-success is-small" @checked={{this.showFileUpload}} @change={{toggle-action "showFileUpload" this}} data-test-policy-edit-toggle={{true}} />
                   <label for="fileUploadToggle">Upload file</label>
             </div>
           </ToolbarActions>

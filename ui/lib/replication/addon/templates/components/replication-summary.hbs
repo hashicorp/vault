@@ -138,7 +138,7 @@
               Primary cluster address <em class="is-optional">(optional)</em>
             </label>
             <div class="control">
-              <Input class="input" @id="primary_cluster_addr" @name="primary_cluster_addr" @value={{this.primary_cluster_addr}} />
+              <Input class="input" id="primary_cluster_addr" name="primary_cluster_addr" @value={{this.primary_cluster_addr}} />
             </div>
             <p class="help has-text-grey">
               Overrides the cluster address that the primary gives to secondary nodes.
@@ -174,7 +174,7 @@
                 Secondary activation token
               </label>
               <div class="control">
-                <Textarea @value={{this.token}} @id="secondary-token" @name="secondary-token" class="textarea" />
+                <Textarea @value={{this.token}} id="secondary-token" name="secondary-token" class="textarea" />
               </div>
             </div>
             <div class="field">
@@ -183,7 +183,7 @@
                     class="is-optional">(optional)</em>{{/unless}}
               </label>
               <div class="control">
-                <Input @value={{this.primary_api_addr}} @id="primary_api_addr" @name="primary_api_addr" class="input" />
+                <Input @value={{this.primary_api_addr}} id="primary_api_addr" name="primary_api_addr" class="input" />
               </div>
               <p class="help {{if (and this.token (not this.tokenIncludesAPIAddr)) 'is-danger' 'has-text-grey'}}">
                 {{#if (and this.token (not this.tokenIncludesAPIAddr))}}
@@ -200,7 +200,7 @@
                 CA file <em class="is-optional">(optional)</em>
               </label>
               <div class="control">
-                <Input @value={{this.ca_file}} @id="ca_file" @name="ca_file" class="input" />
+                <Input @value={{this.ca_file}} id="ca_file" name="ca_file" class="input" />
               </div>
               <p class="help has-text-grey">
                 Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token
@@ -212,7 +212,7 @@
                 CA path <em class="is-optional">(optional)</em>
               </label>
               <div class="control">
-                <Input @value={{this.ca_path}} @id="ca_path" @name="ca_file" class="input" />
+                <Input @value={{this.ca_path}} id="ca_path" name="ca_file" class="input" />
               </div>
               <p class="help has-text-grey">
                 Specifies the path to a CA root directory containing PEM-format files that the secondary can use when

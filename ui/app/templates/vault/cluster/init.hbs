@@ -89,7 +89,7 @@
               data-test-advance-button
               class="control"
             >
-              <LinkTo @route="vault.cluster.auth" @model={{this.model.name}} class={{concat (if this.model.sealed "is-loading " "") "button is-primary"}} @disabled={{this.model.sealed}}>
+              <LinkTo @route="vault.cluster.auth" @model={{this.model.name}} class={{concat (if this.model.sealed "is-loading " "") "button is-primary"}} disabled={{this.model.sealed}}>
                 Continue to Authenticate
               </LinkTo>
             </div>
@@ -137,7 +137,7 @@
               Key shares
             </label>
             <div class="control">
-              <Input data-test-key-shares="true" class="input" @autocomplete="off" @spellcheck="false" @name="key-shares" @type="number" @step="1" @min="1" @pattern="[0-9]*" @value={{this.secret_shares}} />
+              <Input data-test-key-shares="true" class="input" autocomplete="off" spellcheck="false" name="key-shares" @type="number" step="1" min="1" pattern="[0-9]*" @value={{this.secret_shares}} />
             </div>
             <p class="help has-text-grey">
               The number of key shares to split the master key into
@@ -151,7 +151,7 @@
               Key threshold
             </label>
             <div class="control">
-              <Input data-test-key-threshold="true" class="input" @autocomplete="off" @spellcheck="false" @name="key-threshold" @type="number" @step="1" @min="1" @pattern="[0-9]*" @value={{this.secret_threshold}} />
+              <Input data-test-key-threshold="true" class="input" autocomplete="off" spellcheck="false" name="key-threshold" @type="number" step="1" min="1" pattern="[0-9]*" @value={{this.secret_threshold}} />
             </div>
             <p class="help has-text-grey">
               The number of key shares required to reconstruct the master key

@@ -237,11 +237,11 @@
                               {{on "change" (fn this.updatePassword attr.name)}}
                               @type="password"
                               @value={{get @model attr.name}}
-                              @name={{attr.name}}
+                              name={{attr.name}}
                               class="input"
                               {{!-- Prevents browsers from auto-filling --}}
-                              @autocomplete="new-password"
-                              @spellcheck="false" />
+                              autocomplete="new-password"
+                              spellcheck="false" />
                           {{/if}}
                         </Toggle>
                       </div>

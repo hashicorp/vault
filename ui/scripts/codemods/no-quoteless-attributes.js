@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /* eslint-env node */
 
+/**
+ * Codemod to convert quoteless attribute or argument to mustache statement
+ * eg. data-test-foo=true -> data-test-foo={{true}}
+ * eg @isVisible=true -> @isVisible={{true}}
+ */
+
 module.exports = (env) => {
   const { builders } = env.syntax;
   return {

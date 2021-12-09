@@ -30,14 +30,14 @@
     <div class="column">
       <Textarea 
         data-test-kv-value={{true}}
-        @name={{row.name}}
+        name={{row.name}}
         class="input {{if (get this.validationMessages this.name) "has-error-border"}}"
         @change={{action "updateRow" row index}}
         @value={{row.value}}
-        @wrap="off"
+        wrap="off"
         class="input"
         placeholder="value"
-        @rows={{1}}
+        rows={{1}}
         onkeyup={{action
           (action "handleKeyUp" this.name)
           value="target.value"

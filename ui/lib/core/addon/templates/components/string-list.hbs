@@ -12,7 +12,7 @@
 {{#each this.inputList as |data index|}}
   <div class="field is-grouped" data-test-string-list-row="{{index}}">
     <div class="control is-expanded">
-      <Textarea data-test-string-list-input={{index}} class="input" @value={{data.value}} @name={{concat this.elementId "-" index}} @id={{concat this.elementId "-" index}} @key-up={{action "inputChanged" index}} @change={{action (action "inputChanged" index) value="target.value"}} />
+      <Textarea data-test-string-list-input={{index}} class="input" @value={{data.value}} name={{concat this.elementId "-" index}} id={{concat this.elementId "-" index}} @key-up={{action "inputChanged" index}} @change={{action (action "inputChanged" index) value="target.value"}} />
     </div>
     <div class="control">
       {{#if (eq (inc index) this.inputList.length)}}

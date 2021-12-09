@@ -54,7 +54,7 @@
   />
   {{else if (or (eq @attr.type "number") (eq @attr.type "string"))}}
     <div class="control">
-      <Input @id={{@attr.name}} @value={{get @model (or @attr.options.fieldValue @attr.name)}} class="input" data-test-input={{@attr.name}} />
+      <Input id={{@attr.name}} @value={{get @model (or @attr.options.fieldValue @attr.name)}} class="input" data-test-input={{@attr.name}} />
     </div>
   {{else if (eq @attr.type "boolean")}}
     <div class="b-checkbox">

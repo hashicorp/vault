@@ -9,13 +9,13 @@
               <ul>
                 {{#if @cluster.anyReplicationEnabled}}
                   <li>
-                    <LinkTo @route="vault.cluster.replication.mode.index" @model="dr" @disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
+                    <LinkTo @route="vault.cluster.replication.mode.index" @model="dr" disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
                       <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
                     </LinkTo>
                   </li>
                   <li>
                     {{#if (has-feature "Performance Replication")}}
-                      <LinkTo @route="vault.cluster.replication.mode.index" @model="performance" @disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
+                      <LinkTo @route="vault.cluster.replication.mode.index" @model="performance" disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
                         <ReplicationModeSummary @mode="performance" @display="menu" @cluster={{@cluster}} @tagName="span" />
                       </LinkTo>
                     {{else}}
@@ -43,7 +43,7 @@
               <ul>
                 {{#if @cluster.anyReplicationEnabled}}
                   <li>
-                    <LinkTo @route="vault.cluster.replication-dr-promote.details" @disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
+                    <LinkTo @route="vault.cluster.replication-dr-promote.details" disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
                       <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
                     </LinkTo>
                   </li>
