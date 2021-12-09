@@ -6,7 +6,7 @@ import { stack } from 'd3-shape';
 import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
-import { max } from 'd3-array';
+import { max, maxIndex } from 'd3-array';
 
 /**
  * @module HorizontalBarChart
@@ -112,11 +112,8 @@ export default class HorizontalBarChart extends Component {
 
   // TODO: use maxIndex function when packages are updated
   get topNamespace() {
-    // this.args.dataset[maxIndex(this.args.dataset, d => d.total)]
-    return {
-      label: 'Top namespace',
-      total: 3348,
-    };
+    console.log(this.args.dataset[maxIndex(this.args.dataset, d => d.total)]);
+    return this.args.dataset[maxIndex(this.args.dataset, d => d.total)];
   }
 
   hasLegend() {

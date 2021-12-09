@@ -13,28 +13,25 @@
     </div>
   </div>
 
-  <div class="data-subTitle">
-    <p>{{@subText}}</p>
-  </div>
-
-  <div class="data-one">Top namespace 
-    <p>{{this.topNamespace.label}}</p>
-  </div>
-  
-  <div class="data-two">Clients in namespace
-    <p>{{format-number this.topNamespace.total}}</p>
-  </div>
- 
-  <div class="horizontal-bar-chart chart-container">
+  <div class="horizontal-bar-chart chart-column-left">
+    <h2 class="title"> New Clients </h2>
     <svg class="chart"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >
     </svg>
-
-    <div class="legend-container">
-      <svg class="legend"></svg>
-    </div>
   </div>
 
+  <div class="horizontal-bar-chart chart-column-right">
+    <h2 class="title"> Total monthly clients </h2>
+    <svg class="chart"
+      {{did-insert this.renderChart @dataset}} 
+      {{did-update this.renderChart @dataset}} >
+    </svg>
+  </div>
+
+  <div class="legend-container-right">
+    LEGEND
+    {{!-- <svg class="legend"></svg> --}}
+  </div>
 </div>
 

@@ -136,7 +136,7 @@
         {{!-- ARG TODO end of part that goes to Running Client --}}
         {{#if this.showGraphs}}
         {{!-- ARG TODO chart playground --}}
-           <Clients::HorizontalBarChart
+           <Clients::HorizontalBarCharts
             @title="Attribution"
             @description="This data can be used to understand where unique clients are originating. These are total unique clients for the time period selected above. In each case, we will show the top ten."
             @subText="This data shows the top ten namespaces by client count. They are identified by their path. To see all namespaces, export this data."
@@ -144,7 +144,7 @@
             @chartLegend={{this.chartLegend}}
           >
             Export attribution data
-          </Clients::HorizontalBarChart>
+          </Clients::HorizontalBarCharts>
 
           <Clients::TotalClientUsage
             @title="Vault usage"
