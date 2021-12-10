@@ -1,0 +1,37 @@
+<div class="chart-wrapper">
+  <div class="chart-header has-export">
+    <div class="header-left">
+      <h2 class="chart-title">{{@title}}</h2>
+        {{#if @description}}
+          <p class="chart-description">{{@description}}</p>
+        {{/if}}
+    </div> 
+    <div class="header-right">
+      {{#if @dataset}}
+        {{yield}}
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="horizontal-bar-chart chart-column-left">
+    <h2 class="title"> New Clients </h2>
+    <svg class="chart"
+      {{did-insert this.renderChart @dataset}} 
+      {{did-update this.renderChart @dataset}} >
+    </svg>
+  </div>
+
+  <div class="horizontal-bar-chart chart-column-right">
+    <h2 class="title"> Total monthly clients </h2>
+    <svg class="chart"
+      {{did-insert this.renderChart @dataset}} 
+      {{did-update this.renderChart @dataset}} >
+    </svg>
+  </div>
+
+  <div class="legend-container-right">
+    LEGEND
+    {{!-- <svg class="legend"></svg> --}}
+  </div>
+</div>
+
