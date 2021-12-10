@@ -86,19 +86,10 @@ async function processLines(input, eachLine = () => {}) {
       }
     });
     try {
-      if (process.argv[2] === '--browserstack') {
-        await run('ember', ['browserstack:connect']);
-        try {
-          await run('ember', ['test', '-f=secrets/secret/create', '-c', 'testem.browserstack.js']);
-
-          console.log('success');
-          process.exit(0);
-        } finally {
-          if (process.env.CI === 'true') {
-            await run('ember', ['browserstack:results']);
-          }
-          await run('ember', ['browserstack:disconnect']);
-        }
+      if (process.argv[2] === '--browsers') {
+        await run('ember', ['test', '--server', '-f=secrets/secret/create']);
+        console.log('success');
+        process.exit(0);
       } else {
         await run('ember', ['test', ...process.argv.slice(2)]);
       }

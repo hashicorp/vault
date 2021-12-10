@@ -6,8 +6,8 @@ steps:
   - attach_workspace:
       at: .
   - run:
-      name: Run Browserstack Tests
+      name: Run Browser Tests
       command: |
         # Add ./bin to the PATH so vault binary can be found.
         export PATH="${PWD}"/bin:${PATH}
-        make test-ui-browserstack
+        make test-ui-browsers

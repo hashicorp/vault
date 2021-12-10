@@ -146,7 +146,7 @@ test-ember:
 	@cd ui && yarn run test:oss
 
 ember-ci-test: # Deprecated, to be removed soon.
-	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
+	@echo "ember-ci-test is deprecated in favour of test-ui-browsers"
 	@exit 1
 
 check-vault-in-path:
@@ -154,15 +154,11 @@ check-vault-in-path:
 		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
 		printf "Using Vault at %s:\n\$$ vault version\n%s\n" "$$VAULT_BIN" "$$(vault version)"
 
-check-browserstack-creds:
-	@[ -n "$$BROWSERSTACK_ACCESS_KEY" ] || { echo "BROWSERSTACK_ACCESS_KEY not set"; exit 1; }
-	@[ -n "$$BROWSERSTACK_USERNAME" ] || { echo "BROWSERSTACK_USERNAME not set"; exit 1; }
-
-test-ui-browserstack: check-vault-in-path check-browserstack-creds
+test-ui-browsers: check-vault-in-path
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
-	@echo "--> Running ember tests in Browserstack"
-	@cd ui && yarn run test:browserstack
+	@echo "--> Running ember tests in Browsers"
+	@cd ui && yarn run test:browsers
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
@@ -251,7 +247,7 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path test-ui-browsers packages build build-ci
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
