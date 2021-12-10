@@ -5,7 +5,7 @@
       <p class="chart-description" id="blah">{{@description}}</p>
     {{/if}}
   </div>
-  <div class="chart-container">
+  <div class="chart-container" {{on "mouseleave" (fn this.closeMe)}}>
     <svg 
       {{did-insert this.registerListener}}
       class="chart"
@@ -32,13 +32,17 @@
 
   {{!-- TOOLTIP --}}
   {{!-- must be in curly bracket notation --}}
-  {{#modal-dialog
-    tetherTarget=this.tooltipTarget
-    targetAttachment='top middle'
-    attachment='bottom middle'
-    offset='14px 0'
-  }}
-    <p class="chart-tooltip">{{this.hoveredLabel}}</p>
-    <div class="chart-tooltip-arrow" />
-  {{/modal-dialog}}
+  {{#if this.tooltipTarget}}  
+  {{!-- Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 --}}
+    {{#modal-dialog
+      tagName='div'
+      tetherTarget=this.tooltipTarget
+      targetAttachment='bottom middle'
+      attachment='bottom middle'
+      offset='100px 0'
+    }}
+      <p class="chart-tooltip">{{this.hoveredLabel}}</p>
+      <div class="chart-tooltip-arrow" />
+    {{/modal-dialog}}
+  {{/if}}
 </div>
