@@ -1,7 +1,6 @@
 import { module, test } from 'qunit';
-import { settled } from '@ember/test-helpers';
+import { settled, waitUntil } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
-import { later } from '@ember/runloop';
 import { setupApplicationTest } from 'ember-qunit';
 import enginesPage from 'vault/tests/pages/secrets/backends';
 import authPage from 'vault/tests/pages/auth';
@@ -38,18 +37,11 @@ module('Acceptance | console', function (hooks) {
     await settled();
     await consoleComponent.runCommands('fullscreen');
     await settled();
-    // have to wrap in a later so that we can wait for the CSS transition to finish
-    await later(() => {
-      let consoleEle = document.querySelector('[data-test-component="console/ui-panel"]');
-
-      assert.equal(
-        consoleEle.offsetHeight,
-        window.innerHeight,
-        'fullscreen is the same height as the window'
-      );
-
-      assert.equal(consoleEle.offsetTop, 0, 'fullscreen is aligned to the top of window');
-    }, 300);
+    const consoleEle = document.querySelector('[data-test-component="console/ui-panel"]');
+    // wait for the CSS transition to finish
+    await waitUntil(() => consoleEle.offsetHeight === window.innerHeight);
+    assert.equal(consoleEle.offsetHeight, window.innerHeight, 'fullscreen is the same height as the window');
+    assert.equal(consoleEle.offsetTop, 0, 'fullscreen is aligned to the top of window');
   });
 
   test('array output is correctly formatted', async function (assert) {
@@ -57,13 +49,11 @@ module('Acceptance | console', function (hooks) {
     await settled();
     await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self');
     await settled();
-    // have to wrap in a later so that we can wait for the CSS transition to finish
-    await later(() => {
-      let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
-
-      assert.notOk(consoleOut.includes('function(){'));
-      assert.equal(consoleOut, '["root"]');
-    }, 300);
+    const consoleOut = document.querySelector('.console-ui-output>pre');
+    // wait for the CSS transition to finish
+    await waitUntil(() => consoleOut.innerText);
+    assert.notOk(consoleOut.innerText.includes('function(){'));
+    assert.equal(consoleOut.innerText, '["root"]');
   });
 
   test('number output is correctly formatted', async function (assert) {
@@ -71,11 +61,10 @@ module('Acceptance | console', function (hooks) {
     await settled();
     await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self');
     await settled();
-    // have to wrap in a later so that we can wait for the CSS transition to finish
-    await later(() => {
-      let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
-      assert.ok(consoleOut.match(/^\d+$/).length == 1);
-    }, 300);
+    const consoleOut = document.querySelector('.console-ui-output>pre');
+    // wait for the CSS transition to finish
+    await waitUntil(() => consoleOut.innerText);
+    assert.ok(consoleOut.innerText.match(/^\d+$/).length == 1);
   });
 
   test('boolean output is correctly formatted', async function (assert) {
@@ -83,10 +72,9 @@ module('Acceptance | console', function (hooks) {
     await settled();
     await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self');
     await settled();
+    let consoleOut = document.querySelector('.console-ui-output>pre');
     // have to wrap in a later so that we can wait for the CSS transition to finish
-    await later(() => {
-      let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
-      assert.ok(consoleOut.match(/^(true|false)$/g).length == 1);
-    }, 300);
+    await waitUntil(() => consoleOut.innerText);
+    assert.ok(consoleOut.innerText.match(/^(true|false)$/g).length == 1);
   });
 });

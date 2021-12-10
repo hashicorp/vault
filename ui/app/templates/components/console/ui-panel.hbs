@@ -8,5 +8,13 @@
     </p>
   </div>
   <Console::OutputLog @outputLog={{this.cliLog}} />
-  <Console::CommandInput @isFullscreen={{this.isFullscreen}} @isRunning={{this.isRunning}} @value={{this.inputValue}} @onValueUpdate={{action (mut this.inputValue)}} @onFullscreen={{action "toggleFullscreen"}} @onExecuteCommand={{action "executeCommand"}} @onShiftCommand={{action "shiftCommandIndex"}} />
+  <Console::CommandInput
+    @isFullscreen={{this.isFullscreen}}
+    @isRunning={{this.isRunning}}
+    @value={{this.inputValue}}
+    @onValueUpdate={{action (mut this.inputValue)}}
+    @onFullscreen={{action "toggleFullscreen"}}
+    @onExecuteCommand={{action "executeCommand"}}
+    @onShiftCommand={{action "shiftCommandIndex"}}
+  />
 </div>
