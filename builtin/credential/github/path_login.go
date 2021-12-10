@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -32,16 +33,13 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
-	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
+	verifyResp, err := b.verifyCredentials(ctx, req, token)
+	if err != nil {
 		return nil, err
-	} else if resp != nil {
-		return resp, nil
-	} else {
-		verifyResp = verifyResponse
 	}
 
 	return &logical.Response{
+		Warnings: verifyResp.Warnings,
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
 				Name: *verifyResp.User.Login,
@@ -53,13 +51,9 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
-	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
+	verifyResp, err := b.verifyCredentials(ctx, req, token)
+	if err != nil {
 		return nil, err
-	} else if resp != nil {
-		return resp, nil
-	} else {
-		verifyResp = verifyResponse
 	}
 
 	auth := &logical.Auth{
@@ -83,7 +77,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}
 
 	resp := &logical.Response{
-		Auth: auth,
+		Warnings: verifyResp.Warnings,
+		Auth:     auth,
 	}
 
 	for _, teamName := range verifyResp.TeamNames {
@@ -109,14 +104,11 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 	token := tokenRaw.(string)
 
-	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
+	verifyResp, err := b.verifyCredentials(ctx, req, token)
+	if err != nil {
 		return nil, err
-	} else if resp != nil {
-		return resp, nil
-	} else {
-		verifyResp = verifyResponse
 	}
+
 	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies do not match")
 	}
@@ -125,6 +117,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	resp.Auth.Period = verifyResp.Config.TokenPeriod
 	resp.Auth.TTL = verifyResp.Config.TokenTTL
 	resp.Auth.MaxTTL = verifyResp.Config.TokenMaxTTL
+	resp.Warnings = verifyResp.Warnings
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil
@@ -138,36 +131,37 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	return resp, nil
 }
 
-func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, *logical.Response, error) {
-	var resp logical.Response
+func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, error) {
+	var verifyResp *verifyCredentialsResp
+	var warnings []string
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if config == nil {
-		return nil, logical.ErrorResponse("configuration has not been set"), nil
+		return nil, errors.New("configuration has not been set")
 	}
 
 	// Check for a CIDR match.
 	if len(config.TokenBoundCIDRs) > 0 {
 		if req.Connection == nil {
-			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
-			return nil, nil, logical.ErrPermissionDenied
+			b.Logger().Error("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
 		}
 		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
-			return nil, nil, logical.ErrPermissionDenied
+			return nil, logical.ErrPermissionDenied
 		}
 	}
 
 	client, err := b.Client(token)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if config.BaseURL != "" {
 		parsedURL, err := url.Parse(config.BaseURL)
 		if err != nil {
-			return nil, nil, fmt.Errorf("successfully parsed base_url when set but failing to parse now: %w", err)
+			return nil, fmt.Errorf("successfully parsed base_url when set but failing to parse now: %w", err)
 		}
 		client.BaseURL = parsedURL
 	}
@@ -178,15 +172,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		err = config.setOrganizationID(ctx, client)
 		if err != nil {
 			b.Logger().Error("failed to set the organization_id on login", "error", err)
-			return nil, nil, err
+			return nil, err
 		} else {
 			entry, err := logical.StorageEntryJSON("config", config)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
 			if err := req.Storage.Put(ctx, entry); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 
@@ -195,7 +189,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	// Get the user
 	user, _, err := client.Users.Get(ctx, "")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Verify that the user is part of the organization
@@ -209,7 +203,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	for {
 		orgs, listResp, err := client.Organizations.List(ctx, "", orgOpt)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		allOrgs = append(allOrgs, orgs...)
 		if listResp.NextPage == 0 {
@@ -227,7 +221,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		}
 	}
 	if org == nil {
-		return nil, logical.ErrorResponse("user is not part of required org"), nil
+		return nil, errors.New("user is not part of required org")
 	}
 
 	if orgLoginName != config.Organization {
@@ -238,7 +232,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 			config.OrganizationID,
 		)
 		b.Logger().Warn(warningMsg)
-		resp.AddWarning(warningMsg)
+		warnings = append(warnings, warningMsg)
 	}
 
 	// Get the teams that this user is part of to determine the policies
@@ -252,7 +246,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	for {
 		teams, listResp, err := client.Teams.ListUserTeams(ctx, teamOpt)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		allTeams = append(allTeams, teams...)
 		if listResp.NextPage == 0 {
@@ -276,23 +270,24 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	groupPoliciesList, err := b.TeamMap.Policies(ctx, req.Storage, teamNames...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	userPoliciesList, err := b.UserMap.Policies(ctx, req.Storage, []string{*user.Login}...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	verifyResp := &verifyCredentialsResp{
+	verifyResp = &verifyCredentialsResp{
 		User:      user,
 		Org:       org,
 		Policies:  append(groupPoliciesList, userPoliciesList...),
 		TeamNames: teamNames,
 		Config:    config,
+		Warnings:  warnings,
 	}
 
-	return verifyResp, &resp, nil
+	return verifyResp, nil
 }
 
 type verifyCredentialsResp struct {
@@ -300,6 +295,9 @@ type verifyCredentialsResp struct {
 	Org       *github.Organization
 	Policies  []string
 	TeamNames []string
+
+	// Warnings to send back to the caller
+	Warnings []string
 
 	// This is just a cache to send back to the caller
 	Config *config

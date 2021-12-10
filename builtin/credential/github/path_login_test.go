@@ -87,9 +87,9 @@ func TestGitHub_Login_OrgInvalid(t *testing.T) {
 		Storage:   s,
 	})
 
-	assert.NoError(t, err)
-	assert.Error(t, resp.Error())
-	assert.Equal(t, errors.New("user is not part of required org"), resp.Error())
+	assert.Nil(t, resp)
+	assert.Error(t, err)
+	assert.Equal(t, errors.New("user is not part of required org"), err)
 }
 
 // TestGitHub_Login_OrgNameChanged tests that we can successfully login with the
