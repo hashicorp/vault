@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { findAll, render } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | bar-chart', function (hooks) {
@@ -63,9 +63,9 @@ module('Integration | Component | bar-chart', function (hooks) {
 
     await render(hbs`
       <BarChart 
-        @title={{title}}
-        @description={{description}}
-        @dataset={{dataset}}
+        @title={{this.title}}
+        @description={{this.description}}
+        @dataset={{this.dataset}}
         @mapLegend={{array
         (hash key="non_entity_tokens" label="Active direct tokens")
         (hash key="distinct_entities" label="Unique Entities")}}

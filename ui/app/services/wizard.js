@@ -2,6 +2,7 @@ import { next } from '@ember/runloop';
 import { typeOf } from '@ember/utils';
 import Service, { inject as service } from '@ember/service';
 import { Machine } from 'xstate';
+import { capitalize } from '@ember/string';
 
 import getStorage from 'vault/lib/token-storage';
 import { STORAGE_KEYS, DEFAULTS, MACHINES } from 'vault/helpers/wizard-constants';
@@ -287,7 +288,7 @@ export default Service.extend(DEFAULTS, {
       return;
     }
     this.startFeature();
-    let nextFeature = this.featureList.length > 1 ? this.featureList.objectAt(1).capitalize() : 'Finish';
+    let nextFeature = this.featureList.length > 1 ? capitalize(this.featureList.objectAt(1)) : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
     if (this.currentMachine === 'secrets' && this.featureState === 'display') {

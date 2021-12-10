@@ -1,4 +1,4 @@
-import { click, fillIn, find, findAll, currentURL, visit, settled } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, currentURL, visit } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';

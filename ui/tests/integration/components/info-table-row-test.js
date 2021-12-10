@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled, triggerEvent } from '@ember/test-helpers';
+import { render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const VALUE = 'test value';
@@ -41,9 +41,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`<InfoTableRow
-        @value={{value}}
-        @label={{label}}
-        @defaultShown={{default}}
+        @value={{this.value}}
+        @label={{this.label}}
+        @defaultShown={{this.default}}
       />`);
 
     assert.dom('[data-test-component="info-table-row"]').exists();
@@ -59,9 +59,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('tooltipText', 'Tooltip text!');
 
     await render(hbs`<InfoTableRow
-        @value={{value}}
-        @label={{label}}
-        @tooltipText={{tooltipText}}
+        @value={{this.value}}
+        @label={{this.label}}
+        @tooltipText={{this.tooltipText}}
       />`);
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
@@ -77,10 +77,10 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     await render(hbs`
       <InfoTableRow 
-        @label={{label}}
-        @value={{value}} 
+        @label={{this.label}}
+        @value={{this.value}} 
         @tooltipText="Foo bar"
-        @isTooltipCopyable={{isCopyable}}
+        @isTooltipCopyable={{this.isCopyable}}
       />
     `);
 
@@ -98,8 +98,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function (assert) {
     // This could be changed in the component so that it adds a link for any item type, but right now it should only add a link if item type is an array.
     await render(hbs`<InfoTableRow
-        @value={{value}}
-        @label={{label}}
+        @value={{this.value}}
+        @label={{this.label}}
         @isLink={{true}}
       />`);
     assert.dom('[data-test-row-value]').hasText(VALUE, 'renders value in code element and not in a tag');
@@ -108,10 +108,10 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   test('it renders links if isLink is true and type is array', async function (assert) {
     this.set('valueArray', ['valueArray']);
     await render(hbs`<InfoTableRow
-      @value={{valueArray}}
-      @label={{label}}
+      @value={{this.valueArray}}
+      @label={{this.label}}
       @isLink={{true}}
-      @type={{type}}
+      @type={{this.type}}
     />`);
 
     assert.dom('[data-test-item="array"]').hasText('valueArray', 'Confirm link with item value exist');
@@ -123,10 +123,10 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('default', '');
 
     await render(hbs`<InfoTableRow
-      @value={{value}}
-      @label={{label}}
+      @value={{this.value}}
+      @label={{this.label}}
       @alwaysRender={{true}}
-      @defaultShown={{default}}
+      @defaultShown={{this.default}}
     />`);
 
     assert.dom('div.column span').hasClass('hs-icon-s', 'Renders a dash (-) for the label');
@@ -153,8 +153,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
   test('block content overrides any passed in value content', async function (assert) {
     await render(hbs`<InfoTableRow
-      @value={{value}}
-      @label={{label}}
+      @value={{this.value}}
+      @label={{this.label}}
       @alwaysRender={{true}}>
       Block content is here 
       </InfoTableRow>`);

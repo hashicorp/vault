@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { settled, render, click, fillIn, triggerEvent, waitUntil } from '@ember/test-helpers';
+import { render, click, fillIn, triggerEvent, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 let file;
@@ -27,7 +27,13 @@ module('Integration | Component | pgp file', function (hooks) {
     this.set('key', { value: '' });
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
 
     assert.dom('[data-test-pgp-label]').hasText('PGP KEY 1');
     assert.dom('[data-test-pgp-file-input-label]').hasText('Choose a file…');
@@ -39,7 +45,13 @@ module('Integration | Component | pgp file', function (hooks) {
     this.set('key', key);
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
     triggerEvent('[data-test-pgp-file-input]', ...event);
 
     // FileReader is async, but then we need extra run loop wait to re-render
@@ -59,7 +71,13 @@ module('Integration | Component | pgp file', function (hooks) {
     this.set('key', key);
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
     await click('[data-test-text-toggle]');
     assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
 
@@ -76,7 +94,13 @@ module('Integration | Component | pgp file', function (hooks) {
     this.set('key', key);
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
     await triggerEvent('[data-test-pgp-file-input]', ...event);
 
     await click('[data-test-text-toggle]');

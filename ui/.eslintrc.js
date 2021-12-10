@@ -19,11 +19,13 @@ module.exports = {
   },
   rules: {
     'ember/no-mixins': 'warn',
+    'ember/no-new-mixins': 'off', // should be warn but then every line of the mixin is green
     // need to be fully glimmerized before these rules can be turned on
     'ember/no-classic-classes': 'off',
     'ember/no-classic-components': 'off',
     'ember/no-actions-hash': 'off',
     'ember/require-tagless-components': 'off',
+    'ember/no-component-lifecycle-hooks': 'off',
   },
   overrides: [
     // node files

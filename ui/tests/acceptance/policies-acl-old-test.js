@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';

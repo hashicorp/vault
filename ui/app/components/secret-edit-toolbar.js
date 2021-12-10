@@ -36,7 +36,7 @@
  * @param {object} wrappedData - when copy the data it's the token of the secret returned.
  * @param {object} editActions - actions passed from parent to child
  */
-
+/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { not } from '@ember/object/computed';

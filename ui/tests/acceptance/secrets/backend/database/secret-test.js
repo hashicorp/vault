@@ -521,7 +521,7 @@ path "${backend}/config/*" {
     assert.dom('[data-test-tab="overview"]').exists('renders overview tab');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert
-      .dom('[data-test-secret-list-tab="Roles]')
+      .dom('[data-test-secret-list-tab="Roles"]')
       .doesNotExist(`does not show the roles tab because it does not have permissions`);
     assert
       .dom('[data-test-selectable-card="Connections"]')

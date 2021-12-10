@@ -1,4 +1,4 @@
-import { settled, currentRouteName, click, findAll } from '@ember/test-helpers';
+import { settled, currentRouteName, click } from '@ember/test-helpers';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 import page from 'vault/tests/pages/access/identity/create';
 import showPage from 'vault/tests/pages/access/identity/show';

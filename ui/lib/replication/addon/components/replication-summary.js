@@ -5,12 +5,13 @@ import Component from '@ember/component';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import ReplicationActions from 'core/mixins/replication-actions';
 import { task } from 'ember-concurrency';
+import { A } from '@ember/array';
 
 const DEFAULTS = {
   token: null,
   id: null,
   loading: false,
-  errors: [],
+  errors: A(),
   primary_api_addr: null,
   primary_cluster_addr: null,
   ca_file: null,

@@ -4,11 +4,12 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
+import { A } from '@ember/array';
 
 const DEFAULTS = {
   token: null,
   rewrap_token: null,
-  errors: [],
+  errors: A(),
   wrap_info: null,
   creation_time: null,
   creation_ttl: null,

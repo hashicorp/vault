@@ -4,18 +4,20 @@ import { camelize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import layout from '../templates/components/shamir-flow';
+import { A } from '@ember/array';
 
+const pgpKeyFileDefault = () => ({ value: '' });
 const DEFAULTS = {
   key: null,
   loading: false,
-  errors: [],
+  errors: A(),
   threshold: null,
   progress: null,
   pgp_key: null,
   haveSavedPGPKey: false,
   started: false,
   generateWithPGP: false,
-  pgpKeyFile: { value: '' },
+  pgpKeyFile: pgpKeyFileDefault(),
   nonce: '',
 };
 

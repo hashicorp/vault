@@ -16,6 +16,7 @@
     "lint:hbs:quiet": "ember-template-lint '**/*.hbs' --quiet",
     "lint:hbs:fix": "ember-template-lint . --fix",
     "lint:js": "eslint . --cache",
+    "lint:js:quiet": "eslint . --cache --quiet",
     "lint:js:fix": "eslint . --fix",
     "fmt": "yarn run fmt-js && yarn run fmt-styles",
     "fmt:js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write '{app,tests,config,lib}/**/*.js'",

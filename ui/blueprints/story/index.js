@@ -1,5 +1,6 @@
 'use strict';
 /* eslint-disable node/no-extraneous-require */
+/* eslint-disable ember/no-string-prototype-extensions */
 const getPathOption = require('ember-cli-get-component-path-option');
 const stringUtil = require('ember-cli-string-utils');
 const path = require('path');
