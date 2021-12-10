@@ -9,6 +9,7 @@
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
   <nav class="tabs">
     <ul>
+      {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
       <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='current' start=null end=null}} @tagName="li" @activeClass="is-active">
         <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='current' start=null end=null}} data-test-usage-tab={{true}}>
           Current month
@@ -26,6 +27,7 @@
           </LinkTo>
         </LinkTo>
       {{/if}}
+      {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
     </ul>
   </nav>
 </div>

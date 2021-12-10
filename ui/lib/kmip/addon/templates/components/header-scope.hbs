@@ -16,6 +16,7 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
+      {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
       <LinkTo @route="scopes.index" @tagName="li">
         <LinkTo @route="scopes.index" data-test-kmip-link-scopes="true">
           Scopes
@@ -26,6 +27,7 @@
           Configuration
         </LinkTo>
       </LinkTo>
+      {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
     </ul>
   </nav>
 </div>

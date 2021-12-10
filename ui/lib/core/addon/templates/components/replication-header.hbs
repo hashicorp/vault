@@ -49,6 +49,7 @@
     <nav class="tabs">
       {{#unless this.isSummaryDashboard}}
         <ul>
+          {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
           <LinkTo @route="vault.cluster.replication-dr-promote.details" @tagName="li" @activeClass="is-active">
             <LinkTo @route="vault.cluster.replication-dr-promote.details">
               Details
@@ -58,8 +59,9 @@
             <LinkTo @route="vault.cluster.replication-dr-promote">
               Manage
             </LinkTo>
-        </LinkTo>
-      </ul>
+          </LinkTo>
+          {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
+        </ul>
       {{else}}
         <ul>
           <li class="is-active">
