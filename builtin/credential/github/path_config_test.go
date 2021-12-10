@@ -120,6 +120,38 @@ func TestGitHub_WriteReadConfig_OrgID(t *testing.T) {
 	assert.Equal(t, "foo-org", resp.Data["organization"])
 }
 
+// TestGitHub_ErrorNoOrgID tests that an error is returned when we cannot fetch
+// the org ID for the given org name
+func TestGitHub_ErrorNoOrgID(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+	// use a test server to return our mock GH org info
+	ts := func() *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			resp := `{ "id": 0 }`
+			fmt.Fprintln(w, resp)
+		}))
+	}
+
+	defer ts().Close()
+
+	// Write the config
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "config",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"organization": "foo-org",
+			"base_url":     ts().URL, // base_url will call the test server
+		},
+		Storage: s,
+	})
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Equal(t, errors.New(
+		"unable to fetch the organization_id, you must manually set it in the config: organization_id not found for foo-org",
+	), err)
+}
+
 // TestGitHub_WriteConfig_ErrorNoOrg tests that an error is returned when the
 // required "organization" parameter is not provided
 func TestGitHub_WriteConfig_ErrorNoOrg(t *testing.T) {

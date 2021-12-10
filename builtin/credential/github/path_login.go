@@ -173,17 +173,17 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		if err != nil {
 			b.Logger().Error("failed to set the organization_id on login", "error", err)
 			return nil, err
-		} else {
-			entry, err := logical.StorageEntryJSON("config", config)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := req.Storage.Put(ctx, entry); err != nil {
-				return nil, err
-			}
+		}
+		entry, err := logical.StorageEntryJSON("config", config)
+		if err != nil {
+			return nil, err
 		}
 
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
+		b.Logger().Info("set ID on a trust-on-first use basis", "organization_id", organization_id)
 	}
 
 	// Get the user

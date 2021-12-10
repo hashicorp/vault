@@ -107,13 +107,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		// the credentials on login
 		err = c.setOrganizationID(ctx, client)
 		if err != nil {
-			return nil, err
-		}
-
-		if c.OrganizationID == 0 {
-			warningMsg := "organization_id is missing. It is recommended to set the organization_id."
-			b.Logger().Warn(warningMsg)
-			resp.AddWarning(warningMsg)
+			errorMsg := fmt.Errorf("unable to fetch the organization_id, you must manually set it in the config: %s", err)
+			b.Logger().Error(errorMsg.Error())
+			return nil, errorMsg
 		}
 	}
 
