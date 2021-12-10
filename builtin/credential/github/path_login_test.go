@@ -93,7 +93,7 @@ func TestGitHub_Login_OrgInvalid(t *testing.T) {
 }
 
 // TestGitHub_Login_OrgNameChanged tests that we can successfully login with the
-// given config and update the organization name when it has changed
+// given config and emit a warning when the organization name has changed
 func TestGitHub_Login_OrgNameChanged(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 	ctx := namespace.RootContext(nil)
@@ -134,7 +134,8 @@ func TestGitHub_Login_OrgNameChanged(t *testing.T) {
 }
 
 // TestGitHub_Login_NoOrgID tests that we can successfully login with the given
-// config when no organization ID is present
+// config when no organization ID is present and write the fetched ID to the
+// config
 func TestGitHub_Login_NoOrgID(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 	ctx := namespace.RootContext(nil)

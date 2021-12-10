@@ -182,7 +182,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 			return nil, err
 		}
 
-		b.Logger().Info("set ID on a trust-on-first use basis", "organization_id", config.OrganizationID)
+		b.Logger().Info("set ID on a trust-on-first-use basis", "organization_id", config.OrganizationID)
 	}
 
 	// Get the user
