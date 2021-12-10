@@ -132,7 +132,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, error) {
-	var verifyResp *verifyCredentialsResp
 	var warnings []string
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
@@ -201,15 +200,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	var allOrgs []*github.Organization
 	for {
-		orgs, listResp, err := client.Organizations.List(ctx, "", orgOpt)
+		orgs, resp, err := client.Organizations.List(ctx, "", orgOpt)
 		if err != nil {
 			return nil, err
 		}
 		allOrgs = append(allOrgs, orgs...)
-		if listResp.NextPage == 0 {
+		if resp.NextPage == 0 {
 			break
 		}
-		orgOpt.Page = listResp.NextPage
+		orgOpt.Page = resp.NextPage
 	}
 
 	orgLoginName := ""
@@ -244,15 +243,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	var allTeams []*github.Team
 	for {
-		teams, listResp, err := client.Teams.ListUserTeams(ctx, teamOpt)
+		teams, resp, err := client.Teams.ListUserTeams(ctx, teamOpt)
 		if err != nil {
 			return nil, err
 		}
 		allTeams = append(allTeams, teams...)
-		if listResp.NextPage == 0 {
+		if resp.NextPage == 0 {
 			break
 		}
-		teamOpt.Page = listResp.NextPage
+		teamOpt.Page = resp.NextPage
 	}
 
 	for _, t := range allTeams {
@@ -278,7 +277,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		return nil, err
 	}
 
-	verifyResp = &verifyCredentialsResp{
+	verifyResp := &verifyCredentialsResp{
 		User:      user,
 		Org:       org,
 		Policies:  append(groupPoliciesList, userPoliciesList...),

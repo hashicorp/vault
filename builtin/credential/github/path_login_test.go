@@ -170,4 +170,16 @@ func TestGitHub_Login_NoOrgID(t *testing.T) {
 	assert.Equal(t, expectedMetaData, resp.Auth.Metadata)
 	assert.NoError(t, err)
 	assert.NoError(t, resp.Error())
+
+	// Read the config
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "config",
+		Operation: logical.ReadOperation,
+		Storage:   s,
+	})
+	assert.NoError(t, err)
+	assert.NoError(t, resp.Error())
+
+	// the ID should be set, we grab it from the GET /orgs API
+	assert.Equal(t, int64(12345), resp.Data["organization_id"])
 }
