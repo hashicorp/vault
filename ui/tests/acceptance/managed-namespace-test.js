@@ -35,7 +35,6 @@ module('Acceptance | Enterprise | Managed namespace root', function(hooks) {
   test('it shows the managed namespace toolbar when feature flag exists', async function(assert) {
     await logout.visit();
     await visit('/vault/auth');
-    console.log(currentURL(), 'current');
     assert.ok(currentURL().startsWith('/vault/auth'), 'Redirected to auth');
     assert.ok(currentURL().includes('?namespace=admin'), 'with base namespace');
 
