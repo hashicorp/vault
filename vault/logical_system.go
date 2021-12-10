@@ -43,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
-	"github.com/shirou/gopsutil/host"
 )
 
 const (
@@ -3035,7 +3034,6 @@ func (b *SystemBackend) handleInFlightRequestData(_ context.Context, req *logica
 	resp.Data[logical.HTTPStatusCode] = http.StatusOK
 
 	return resp, nil
-
 }
 
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
