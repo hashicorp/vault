@@ -18,6 +18,8 @@
           </li>
         {{/if}}
         <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
+          {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
+          {{!-- template-lint-configure no-link-to-positional-params "warn" --}}
           {{#link-to
             "vault.cluster.secrets"
             current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
@@ -63,6 +65,8 @@
             {{/link-to}}
           </li>
         {{/if}}
+        {{!-- template-lint-configure no-curly-component-invocation "on" --}}
+        {{!-- template-lint-configure no-link-to-positional-params "on" --}}
       </ul>
     </Nav.main>
     <Nav.items>
@@ -75,6 +79,8 @@
       {{else if (and (has-permission 'clients' routeParams='activity') (not this.cluster.dr.isSecondary) this.auth.currentToken)}}
         <div class="navbar-sections">
           <div class="{{if (is-active-route 'vault.cluster.clients') 'is-active'}}">
+            {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
+            {{!-- template-lint-configure no-link-to-positional-params "warn" --}}
             {{#link-to
               "vault.cluster.clients"
               (query-params tab="history")
@@ -83,6 +89,8 @@
             }}
               Client count
             {{/link-to}}
+            {{!-- template-lint-configure no-curly-component-invocation "on" --}}
+            {{!-- template-lint-configure no-link-to-positional-params "on" --}}
           </div>
         </div>
       {{/if}}
@@ -104,13 +112,13 @@
 <LicenseBanners @expiry={{this.activeCluster.licenseExpiry}} @autoloaded={{eq this.activeCluster.licenseState 'autoloaded'}} />
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
-    {{#flash-message data-test-flash-message=true flash=flash as |customComponent flash close|}}
+    <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
         <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}} @isPreformatted={{flash.preformatted}} />
       {{/if}}
-    {{/flash-message}}
+    </FlashMessage>
   {{/each}}
 </div>
 {{#if this.currentlyLoading}}

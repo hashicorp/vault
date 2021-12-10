@@ -1,15 +1,15 @@
 <PageHeader as |p|>
   <p.top>
-    {{#key-value-header path="vault.cluster.access.methods"}}
+    <KeyValueHeader @path="vault.cluster.access.methods">
       <li>
         <span class="sep">
           /
         </span>
-        {{#link-to "vault.cluster.access.methods"}}
+        <LinkTo @route="vault.cluster.access.methods">
           methods
-        {{/link-to}}
+        </LinkTo>
       </li>
-    {{/key-value-header}}
+    </KeyValueHeader>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -23,6 +23,7 @@
       <nav class="tabs">
         <ul>
           {{#each tabs as |tab|}}
+            {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
             {{#link-to
               params=tab.routeParams
               tagName="li"
@@ -32,6 +33,7 @@
                 {{tab.label}}
               {{/link-to}}
             {{/link-to}}
+            {{!-- template-lint-configure no-curly-component-invocation "on" --}}
           {{/each}}
         </ul>
       </nav>
@@ -56,6 +58,8 @@
   {{#if list.empty}}
     <list.empty @title="No {{pluralize this.itemType}} yet"
       @message="A list of {{pluralize this.itemType}} will be listed here. Create your first {{this.itemType}} to get started.">
+      {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
+      {{!-- template-lint-configure no-link-to-positional-params "warn" --}}
       {{#link-to
         "vault.cluster.access.method.item.create"
         this.itemType
@@ -63,6 +67,8 @@
       }}
         Create {{singularize this.itemType}}
       {{/link-to}}
+      {{!-- template-lint-configure no-curly-component-invocation "on" --}}
+      {{!-- template-lint-configure no-link-to-positional-params "on" --}}
     </list.empty>
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show"
@@ -73,6 +79,8 @@
       </Item.content>
       <Item.menu as |Menu|>
         <li class="action">
+          {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
+          {{!-- template-lint-configure no-link-to-positional-params "warn" --}}
           {{#link-to "vault.cluster.access.method.item.show" list.item.id class="is-block"}}
             View {{singularize this.itemType}}
           {{/link-to}}
@@ -81,6 +89,8 @@
           {{#link-to "vault.cluster.access.method.item.edit" list.item.id class="is-block"}}
             Edit {{singularize this.itemType}}
           {{/link-to}}
+          {{!-- template-lint-configure no-curly-component-invocation "on" --}}
+          {{!-- template-lint-configure no-link-to-positional-params "on" --}}
         </li>
         <li>
           <Menu.Message

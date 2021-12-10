@@ -4,6 +4,7 @@
       <nav class="tabs">
         <ul>
           {{#each tabs as |tab|}}
+            {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
             {{#link-to
               params=tab.routeParams
               tagName="li"
@@ -13,6 +14,7 @@
                 {{tab.label}}
               {{/link-to}}
             {{/link-to}}
+            {{!-- template-lint-configure no-curly-component-invocation "on" --}}
           {{/each}}
         </ul>
       </nav>
