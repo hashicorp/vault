@@ -18,7 +18,7 @@ interface IoUsecaseCustomerProps {
   }
   heading: string
   description: string
-  stats: Array<{
+  stats?: Array<{
     value: string
     key: string
   }>
@@ -66,18 +66,20 @@ export default function IoUsecaseCustomer({
             ) : null}
           </div>
         </div>
-        <ul className={s.stats}>
-          {stats.map(({ key, value }, index) => {
-            return (
-              // Index is stable
-              // eslint-disable-next-line react/no-array-index-key
-              <li key={index}>
-                <p className={s.value}>{value}</p>
-                <p className={s.key}>{key}</p>
-              </li>
-            )
-          })}
-        </ul>
+        {stats.length > 0 ? (
+          <ul className={s.stats}>
+            {stats.map(({ key, value }, index) => {
+              return (
+                // Index is stable
+                // eslint-disable-next-line react/no-array-index-key
+                <li key={index}>
+                  <p className={s.value}>{value}</p>
+                  <p className={s.key}>{key}</p>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
       </div>
     </section>
   )
