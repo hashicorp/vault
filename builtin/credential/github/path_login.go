@@ -139,6 +139,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, *logical.Response, error) {
+	var resp logical.Response
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, err
@@ -206,15 +207,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	var allOrgs []*github.Organization
 	for {
-		orgs, resp, err := client.Organizations.List(ctx, "", orgOpt)
+		orgs, listResp, err := client.Organizations.List(ctx, "", orgOpt)
 		if err != nil {
 			return nil, nil, err
 		}
 		allOrgs = append(allOrgs, orgs...)
-		if resp.NextPage == 0 {
+		if listResp.NextPage == 0 {
 			break
 		}
-		orgOpt.Page = resp.NextPage
+		orgOpt.Page = listResp.NextPage
 	}
 
 	orgLoginName := ""
@@ -230,16 +231,14 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	}
 
 	if orgLoginName != config.Organization {
-		// the org name has changed, update it
-		config.Organization = orgLoginName
-		entry, err := logical.StorageEntryJSON("config", config)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, nil, err
-		}
+		warningMsg := fmt.Sprintf(
+			"the organization name has changed to %q. It is recommended to verify and update the organization name in the config: %s=%d",
+			orgLoginName,
+			"organization_id",
+			config.OrganizationID,
+		)
+		b.Logger().Warn(warningMsg)
+		resp.AddWarning(warningMsg)
 	}
 
 	// Get the teams that this user is part of to determine the policies
@@ -251,15 +250,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	var allTeams []*github.Team
 	for {
-		teams, resp, err := client.Teams.ListUserTeams(ctx, teamOpt)
+		teams, listResp, err := client.Teams.ListUserTeams(ctx, teamOpt)
 		if err != nil {
 			return nil, nil, err
 		}
 		allTeams = append(allTeams, teams...)
-		if resp.NextPage == 0 {
+		if listResp.NextPage == 0 {
 			break
 		}
-		teamOpt.Page = resp.NextPage
+		teamOpt.Page = listResp.NextPage
 	}
 
 	for _, t := range allTeams {
@@ -285,13 +284,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		return nil, nil, err
 	}
 
-	return &verifyCredentialsResp{
+	verifyResp := &verifyCredentialsResp{
 		User:      user,
 		Org:       org,
 		Policies:  append(groupPoliciesList, userPoliciesList...),
 		TeamNames: teamNames,
 		Config:    config,
-	}, nil, nil
+	}
+
+	return verifyResp, &resp, nil
 }
 
 type verifyCredentialsResp struct {

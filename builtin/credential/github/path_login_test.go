@@ -124,13 +124,13 @@ func TestGitHub_Login_OrgNameChanged(t *testing.T) {
 		Storage:   s,
 	})
 
-	expectedMetaData := map[string]string{
-		"org":      "foo-org",
-		"username": "user-foo",
-	}
-	assert.Equal(t, expectedMetaData, resp.Auth.Metadata)
 	assert.NoError(t, err)
-	assert.NoError(t, resp.Error())
+	assert.Nil(t, resp.Error())
+	assert.Equal(
+		t,
+		[]string{"the organization name has changed to \"foo-org\". It is recommended to verify and update the organization name in the config: organization_id=12345"},
+		resp.Warnings,
+	)
 }
 
 // TestGitHub_Login_NoOrgID tests that we can successfully login with the given
