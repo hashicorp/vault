@@ -1,4 +1,4 @@
-{{#if (eq @model.config.queriesAvailable false)}}
+{{#if (and (eq @tab 'history') (eq @model.config.queriesAvailable false))}}
   {{#if (eq @model.config.enabled 'On')}}
     <EmptyState
       @title="No monthly history"
