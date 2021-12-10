@@ -5,7 +5,7 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
+{{!-- template-lint-configure simple-unless "warn" --}}
 {{#unless (or (eq this.model.httpStatus 400) (eq this.model.httpStatus 404))}}
   {{this.model.message}}
 {{/unless}}

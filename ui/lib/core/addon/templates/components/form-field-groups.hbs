@@ -3,6 +3,7 @@
     {{#if (or (not this.renderGroup) (and this.renderGroup (eq group this.renderGroup)))}}
       {{#if (eq group "default")}}
         {{#each fields as |attr|}}
+          {{!-- template-lint-configure simple-unless "warn" --}}
           {{#unless (and (not-eq this.mode "create") (eq attr.name "name"))}}
             <FormField
               data-test-field

@@ -1,3 +1,4 @@
+{{!-- template-lint-configure simple-unless "warn" --}}
 {{#unless (has-feature "DR Replication")}}
   <UpgradePage @title="Replication" />
 {{else if (or this.cluster.allReplicationDisabled this.cluster.replicationAttrs.replicationDisabled)}}

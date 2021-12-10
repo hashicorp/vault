@@ -61,14 +61,15 @@
       </div>
     </div>
   {{/if}}
-    {{#if this.controlGroupResponse.token}}
-      <p class="control-group-token-text" data-test-token>
-        We’ve saved your request token, but you may want to copy it just in case:
-        <span class="tag has-font-monospaced" data-test-token-value>{{this.controlGroupResponse.token}}</span>
-        <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.controlGroupResponse.token}} />
-      </p>
-    {{/if}}
 
+  {{#if this.controlGroupResponse.token}}
+    <p class="control-group-token-text" data-test-token>
+      We’ve saved your request token, but you may want to copy it just in case:
+      <span class="tag has-font-monospaced" data-test-token-value>{{this.controlGroupResponse.token}}</span>
+      <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.controlGroupResponse.token}} />
+    </p>
+  {{/if}}
+  {{!-- template-lint-configure simple-unless "warn" --}}
   {{#unless (and this.model.approved (or (not this.model.requestEntity) this.currentUserIsRequesting))}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if this.model.canAuthorize}}

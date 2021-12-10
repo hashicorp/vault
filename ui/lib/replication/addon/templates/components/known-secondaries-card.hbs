@@ -6,13 +6,14 @@
     </ToolbarLink>
   </div>
   <div class="secondaries-table">
-    {{#unless this.replicationAttrs.secondaries}}
+    {{#if this.replicationAttrs.secondaries}}
+      <KnownSecondariesTable @secondaries={{this.replicationAttrs.secondaries}} />
+    {{else}}
       <EmptyState
         @title="No known {{this.cluster.replicationMode}} secondary clusters associated with this cluster"
-        @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started." />
-    {{else}}
-      <KnownSecondariesTable @secondaries={{this.replicationAttrs.secondaries}} />
-    {{/unless}}
+        @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
+      />
+    {{/if}}
   </div>
   {{#if this.cluster.canAddSecondary}}
     <LinkTo @route="mode.secondaries.add" @model={{this.cluster.replicationMode}} class="link add-secondaries">

@@ -102,12 +102,7 @@
     <div class="form-section box is-shadowless is-fullwidth">
       <fieldset class="form-fieldset">
         <legend class="title is-5">Plugin config</legend>
-        {{#unless @model.pluginFieldGroups}}
-          <EmptyState
-            @title="No plugin selected"
-            @message="Select a plugin type to be able to configure it."
-          />
-        {{else}}
+        {{#if @model.pluginFieldGroups}}
           {{#each @model.pluginFieldGroups as |fieldGroup|}}
             {{#each-in fieldGroup as |group fields|}}
               {{#if (eq group "default")}}
@@ -143,11 +138,17 @@
               {{/if}}
             {{/each-in}}
           {{/each}}
-        {{/unless}}
+        {{else}}
+          <EmptyState
+            @title="No plugin selected"
+            @message="Select a plugin type to be able to configure it."
+          />
+        {{/if}}
       </fieldset>
     </div>
 
     {{!-- Statements Section --}}
+    {{!-- template-lint-configure simple-unless "warn"  --}}
     {{#unless (and @model.plugin_name (not @model.statementFields))}}
       <div class="form-section box is-shadowless is-fullwidth">
         <h3 class="title is-5">Statements</h3>

@@ -2,7 +2,25 @@
   <div class="box">
     {{#unless this.version.isOSS}}
       {{#if (and this.activeCluster.unsealed this.auth.currentToken)}}
-        {{#unless @cluster.dr.isSecondary}}
+        {{#if @cluster.dr.isSecondary}}
+          {{#if (has-permission 'status' routeParams='replication')}}
+            <nav class="menu">
+              <p class="menu-label">Replication</p>
+              <ul>
+                {{#if @cluster.anyReplicationEnabled}}
+                  <li>
+                    {{!-- template-lint-disable no-unknown-arguments-for-builtin-components --}}
+                    <LinkTo @route="vault.cluster.replication-dr-promote.details" disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
+                      <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
+                    </LinkTo>
+                    {{!-- template-lint-enable --}}
+                  </li>
+                {{/if}}
+              </ul>
+            </nav>
+            <hr/>
+          {{/if}}
+        {{else}}
           {{#if (has-permission 'status' routeParams='replication')}}
             <nav class="menu">
               <p class="menu-label">Replication</p>
@@ -43,25 +61,7 @@
             </nav>
             <hr/>
           {{/if}}
-        {{else}}
-          {{#if (has-permission 'status' routeParams='replication')}}
-            <nav class="menu">
-              <p class="menu-label">Replication</p>
-              <ul>
-                {{#if @cluster.anyReplicationEnabled}}
-                  <li>
-                    {{!-- template-lint-disable no-unknown-arguments-for-builtin-components --}}
-                    <LinkTo @route="vault.cluster.replication-dr-promote.details" disabled={{not this.auth.currentToken}} @invokeAction={{@onLinkClick}}>
-                      <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
-                    </LinkTo>
-                    {{!-- template-lint-enable --}}
-                  </li>
-                {{/if}}
-              </ul>
-            </nav>
-            <hr/>
-          {{/if}}
-        {{/unless}}
+        {{/if}}
       {{/if}}
     {{/unless}}
       <nav class="menu">

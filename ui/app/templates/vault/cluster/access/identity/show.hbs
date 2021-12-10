@@ -32,6 +32,7 @@
 </div>
 <Toolbar>
   <ToolbarActions>
+    {{!-- template-lint-configure simple-unless "warn" --}}
     {{#unless (or (and (eq this.model.identityType "group") (eq this.model.type "internal")) this.model.alias)}}
       <ToolbarLink
         @type="add"

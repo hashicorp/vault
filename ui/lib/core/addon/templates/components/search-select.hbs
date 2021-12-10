@@ -20,6 +20,7 @@
   {{#if this.subText}}
     <p class="sub-text">{{this.subText}}</p>
   {{/if}}
+  {{!-- template-lint-configure simple-unless "warn" --}}
   {{#unless (gte this.selectedOptions.length this.selectLimit)}}
     <PowerSelectWithCreate
       @options={{this.options}}

@@ -21,7 +21,7 @@
     </ul>
   </nav>
 </div>
-{{#unless (eq @tab 'actions')}}
+{{#if (not-eq @tab 'actions')}}
   <Toolbar>
     <ToolbarActions>
       {{#if (eq @tab 'versions')}}
@@ -45,7 +45,7 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-{{/unless}}
+{{/if}}
 
 {{#if (eq @tab 'actions')}}
   <div class="transit-card-container">
