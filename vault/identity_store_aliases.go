@@ -8,7 +8,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -141,10 +140,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		customMetadata := make(map[string]string)
 		data, customMetadataExists := d.GetOk("custom_metadata")
 		if customMetadataExists {
-			err = mapstructure.Decode(data, &customMetadata)
-			if err != nil {
-				return nil, err
-			}
+			customMetadata = data.(map[string]string)
 		}
 
 		// Get entity id
