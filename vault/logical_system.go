@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -4156,10 +4157,14 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// We're always the leader if we're handling this request.
-	h, _ := host.Info()
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
 	nodes := []HAStatusNode{
 		{
-			Hostname:       h.Hostname,
+			Hostname:       hostname,
 			APIAddress:     b.Core.redirectAddr,
 			ClusterAddress: b.Core.ClusterAddr(),
 			ActiveNode:     true,
