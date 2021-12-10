@@ -142,6 +142,9 @@
             @subText="This data shows the top ten namespaces by client count. They are identified by their path. To see all namespaces, export this data."
             @dataset={{this.barChartDataset}}
             @chartLegend={{this.chartLegend}}
+            {{!-- Make these variables getters in dashboard.js depending on whether client counts are namespace vs auth method? --}}
+            @newClientsDescription="New client count numbers description"
+            @totalDescription="Total client count numbers description"
           >
             Export attribution data
           </Clients::HorizontalBarCharts>

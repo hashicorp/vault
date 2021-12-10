@@ -14,7 +14,8 @@
   </div>
 
   <div class="horizontal-bar-chart chart-column-left">
-    <h2 class="title"> New Clients </h2>
+    <h2 class="chart-title"> New Clients </h2>
+    <p class="chart-description">{{@newClientsDescription}}</p>
     <svg class="chart"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >
@@ -22,7 +23,8 @@
   </div>
 
   <div class="horizontal-bar-chart chart-column-right">
-    <h2 class="title"> Total monthly clients </h2>
+    <h2 class="chart-title"> Total monthly clients </h2>
+    <p class="chart-description"> {{@totalDescription}} </p>
     <svg class="chart"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >

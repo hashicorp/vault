@@ -29,12 +29,13 @@
     line-height: normal;
     margin-bottom: $spacing-xs;
   }
-  .chart-description {
-    font-size: $size-8;
-    font-weight: $font-weight-normal;
-    color: $ui-gray-700;
-    margin-bottom: $spacing-xs;
-  }
+}
+
+p.chart-description {
+  font-size: $size-8;
+  font-weight: $font-weight-normal;
+  color: $ui-gray-700;
+  margin-bottom: $spacing-xs;
 }
 
 .has-export {
@@ -58,10 +59,9 @@
   grid-column-end: 4;
   grid-row-start: 2;
   grid-row-end: 5;
-  h2.title {
+  h2.chart-title {
     font-size: $size-5;
     font-weight: $font-weight-bold;
-    margin-bottom: $spacing-l;
   }
 }
 
@@ -70,10 +70,9 @@
   grid-column-end: 8;
   grid-row-start: 2;
   grid-row-end: 5;
-  h2.title {
+  h2.chart-title {
     font-size: $size-5;
     font-weight: $font-weight-bold;
-    margin-bottom: $spacing-l;
   }
 }
 
