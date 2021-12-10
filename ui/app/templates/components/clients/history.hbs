@@ -172,7 +172,7 @@
                         @disallowNewItems={{true}}
                         @onChange={{action this.selectNamespace}}
                         @label="Single namespace"
-                        @options={{or this.searchDataset []}}
+                        @options={{or this.searchDataset (array)}}
                         @searchField="namespace_path"
                         @selectLimit={{1}}
                         />

@@ -11,8 +11,8 @@
   @onFocus={{this.onFocus}}
   @calculateInPlacePosition={{this.calculateInPlacePosition}}
   {{on 'mousedown' this.prevent}}
-  {{on 'mouseenter' (fn this.open dd)}}
-  {{on 'mouseleave' (fn this.closeLater dd)}}
+  {{on 'mouseenter' this.open}}
+  {{on 'mouseleave' this.closeLater}}
 as |dd|>
   {{yield (assign
     dd

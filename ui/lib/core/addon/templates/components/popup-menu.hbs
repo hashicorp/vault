@@ -1,4 +1,4 @@
-<BasicDropdown class="popup-menu" horizontalPosition="auto-right" verticalPosition="below" onOpen={{onOpen}} as |d|>
+<BasicDropdown class="popup-menu" horizontalPosition="auto-right" verticalPosition="below" onOpen={{this.onOpen}} as |d|>
   <d.Trigger tagName="button" class={{concat "popup-menu-trigger button is-ghost" (if d.isOpen " is-active")}} data-test-popup-menu-trigger={{true}}>
     <Icon
       @glyph="more-horizontal"
