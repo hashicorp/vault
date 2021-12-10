@@ -4,8 +4,11 @@ import { tracked } from '@glimmer/tracking';
 import { format } from 'date-fns';
 
 export default class Dashboard extends Component {
-  max_namespaces = 10;
-
+  maxNamespaces = 10;
+  chartLegend = [
+    { key: 'distinct_entities', label: 'Direct entities' },
+    { key: 'non_entity_tokens', label: 'Active direct tokens' },
+  ];
   @tracked selectedNamespace = null;
 
   @tracked barChartSelection = false;
@@ -47,12 +50,13 @@ export default class Dashboard extends Component {
     if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
-    let dataset = this.args.model.activity.byNamespace.slice(0, this.max_namespaces);
+    let dataset = this.args.model.activity.byNamespace.slice(0, this.maxNamespaces);
     return dataset.map(d => {
       return {
         label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
-        non_entity_tokens: d['counts']['non_entity_tokens'],
+        // the order here determines which data is the left bar and which is the right
         distinct_entities: d['counts']['distinct_entities'],
+        non_entity_tokens: d['counts']['non_entity_tokens'],
         total: d['counts']['clients'],
       };
     });
