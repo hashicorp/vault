@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -42,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
-	"github.com/shirou/gopsutil/host"
 )
 
 const (
@@ -3034,7 +3034,6 @@ func (b *SystemBackend) handleInFlightRequestData(_ context.Context, req *logica
 	resp.Data[logical.HTTPStatusCode] = http.StatusOK
 
 	return resp, nil
-
 }
 
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -4156,10 +4155,14 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// We're always the leader if we're handling this request.
-	h, _ := host.Info()
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
 	nodes := []HAStatusNode{
 		{
-			Hostname:       h.Hostname,
+			Hostname:       hostname,
 			APIAddress:     b.Core.redirectAddr,
 			ClusterAddress: b.Core.ClusterAddr(),
 			ActiveNode:     true,
