@@ -1,5 +1,6 @@
 <form onsubmit={{action "doSubmit"}}>
   {{#if (eq this.selectedAction 'hash')}}
+    {{!-- template-lint-disable no-passed-in-event-handlers --}}
     <ToolHash
       @onClear={{action "onClear"}}
       @sum={{this.sum}}
@@ -8,6 +9,7 @@
       @format={{this.format}}
       @input={{input}}
     />
+    {{!-- template-lint-enable no-passed-in-event-handlers --}}
   {{else if (eq this.selectedAction 'random')}}
     <ToolRandom
       @onClear={{action "onClear"}}

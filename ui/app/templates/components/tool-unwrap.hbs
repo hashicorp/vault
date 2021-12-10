@@ -10,12 +10,14 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <nav class="tabs">
       <ul>
+        {{!-- template-lint-configure no-nested-interactive "warn" --}}
         <li role="tab" aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}} class="{{if (eq @unwrapActiveTab "data") "is-active"}}">
           <button type="button" class="link link-plain tab has-text-weight-semibold" {{action (mut @unwrapActiveTab) "data"}} data-test-button-data>Data</button>
         </li>
         <li role="tab" aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}} class="{{if (eq @unwrapActiveTab "details") "is-active"}}">
           <button type="button" class="link link-plain tab has-text-weight-semibold" {{action (mut @unwrapActiveTab) "details"}} data-test-button-details>Wrap Details</button>
         </li>
+        {{!-- template-lint-configure no-nested-interactive "on" --}}
       </ul>
     </nav>
     {{#if (eq @unwrapActiveTab "data")}}

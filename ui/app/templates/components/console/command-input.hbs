@@ -6,7 +6,9 @@
   {{/if}}
   <input onkeyup={{action 'handleKeyUp'}} value={{this.value}} autocomplete="off" spellcheck="false" />
   <ToolTip @horizontalPosition="auto-right" @verticalPosition={{if this.isFullscreen "above" "below"}} as |d|>
+    {{!-- template-lint-disable no-passed-in-event-handlers --}}
     <d.Trigger @htmlTag="button" @type="button" class={{concat "button is-compact" (if this.isFullscreen " active")}} @click={{action "fullscreen"}} @data-test-tool-tip-trigger={{true}}>
+    {{!-- template-lint-enable no-passed-in-event-handlers --}}
     <Icon @size="l" @glyph={{if this.isFullscreen "expand-less" "expand-more"}} aria-label={{if this.isFullscreen "Minimize" "Maximize"}} />
     </d.Trigger>
     <d.Content class="tool-tip">

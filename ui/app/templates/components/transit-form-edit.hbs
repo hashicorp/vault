@@ -17,12 +17,12 @@
       </div>
     </div>
     <div class="field">
-      <label for="key-min-version" class="is-label">Minimum decryption version</label>
+      <label for="key-min-decrypt-version" class="is-label">Minimum decryption version</label>
       <div class="control is-expanded">
         <div class="select is-fullwidth">
           <select
-            name="key-min-version"
-            id="key-min-version"
+            name="key-min-decrypt-version"
+            id="key-min-decrypt-version"
             onchange={{action (mut @key.minDecryptionVersion) value="target.value"}}
           >
             {{#each @key.keyVersions as |version|}}
@@ -39,12 +39,12 @@
       </p>
     </div>
     <div class="field">
-      <label for="key-min-version" class="is-label">Minimum encryption version</label>
+      <label for="key-min-encrypt-version" class="is-label">Minimum encryption version</label>
       <div class="control is-expanded">
         <div class="select is-fullwidth">
           <select
-            name="key-min-version"
-            id="key-min-version"
+            name="key-min-encrypt-version"
+            id="key-min-encrypt-version"
             onchange={{action (mut @key.minEncryptionVersion) value="target.value"}}
           >
              <option

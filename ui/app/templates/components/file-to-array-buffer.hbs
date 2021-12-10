@@ -16,9 +16,11 @@
           {{or this.fileName "No file chosen"}}
         </span>
         {{#if this.fileName}}
+          {{!-- template-lint-configure no-nested-interactive "warn" --}}
           <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear>
             <Icon @glyph="cancel-circle-outline" />
           </button>
+          {{!-- template-lint-configure no-nested-interactive "on" --}}
         {{/if}}
       </label>
     </div>

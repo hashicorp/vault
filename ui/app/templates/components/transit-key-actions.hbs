@@ -15,6 +15,7 @@
   <MessageError @errors={{this.errors}} />
   {{#if this.selectedAction}}
     <div data-test-transit-action={{this.selectedAction}}>
+      {{!-- template-lint-disable no-passed-in-event-handlers --}}
       {{ component (concat 'transit-key-action/' this.selectedAction)
           key=this.key
           keys=this.keys

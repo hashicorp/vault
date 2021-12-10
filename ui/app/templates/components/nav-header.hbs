@@ -36,6 +36,6 @@
     </div>
   {{/unless}}
 
-  <div class="navbar-drawer-overlay{{if this.navDrawerOpen ' is-active'}}" onclick={{action "toggleNavDrawer" (not this.navDrawerOpen)}}></div>
+  <div class="navbar-drawer-overlay{{if this.navDrawerOpen ' is-active'}}" role="button" onclick={{action "toggleNavDrawer" (not this.navDrawerOpen)}}></div>
 </nav>
 <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
