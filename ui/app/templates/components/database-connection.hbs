@@ -94,7 +94,7 @@
   <form {{on 'submit' this.handleCreateConnection}}>
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
-        {{form-field this.data-test-field attr=attr model=@model}}
+        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
       {{/if}}
     {{/each}}
 
@@ -117,11 +117,11 @@
                       )
                     )}}
                       <div class="column is-one-third">
-                        {{form-field this.data-test-field attr=attr model=@model}}
+                        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
                       </div>
                     {{else}}
                       <div class="column is-full">
-                        {{form-field this.data-test-field attr=attr model=@model}}
+                        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
                       </div>
                     {{/if}}
                   {{/each}}
@@ -131,7 +131,7 @@
                 {{#if (get this (concat "show" (camelize group)))}}
                   <div class="box is-marginless">
                     {{#each fields as |attr|}}
-                      {{form-field this.data-test-field attr=attr model=@model}}
+                    <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
                     {{/each}}
                   </div>
                 {{/if}}
@@ -159,7 +159,7 @@
           />
         {{else}}
           {{#each @model.statementFields as |attr|}}
-            {{form-field this.data-test-field attr=attr model=@model}}
+            <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
           {{/each}}
         {{/if}}
       </div>
@@ -191,7 +191,7 @@
       {{#if (or (eq attr.name 'name') (eq attr.name 'plugin_name'))}}
         <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
       {{else if (not-eq attr.options.readOnly true)}}
-        {{form-field this.data-test-field attr=attr model=@model}}
+        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
       {{/if}}
     {{/each}}
 
@@ -213,7 +213,7 @@
                     )
                   )}}
                     <div class="column is-one-third">
-                      {{form-field this.data-test-field attr=attr model=@model}}
+                      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
                     </div>
                   {{else if (eq attr.name "password")}}
                     <div class="column is-full">
@@ -249,7 +249,7 @@
                     </div>
                   {{else}}
                     <div class="column is-full">
-                      {{form-field this.data-test-field attr=attr model=@model}}
+                      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
                     </div>
                   {{/if}}
                 {{/each}}
@@ -259,7 +259,7 @@
               {{#if (get this (concat "show" (camelize group)))}}
                 <div class="box is-marginless">
                   {{#each fields as |attr|}}
-                    {{form-field this.data-test-field attr=attr model=@model}}
+                    <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
                   {{/each}}
                 </div>
               {{/if}}
@@ -275,7 +275,7 @@
         <fieldset class="form-fieldset">
           <legend class="title is-5">Statements</legend>
           {{#each @model.statementFields as |attr|}}
-            {{form-field this.data-test-field attr=attr model=@model}}
+            <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
           {{/each}}
         </fieldset>
       </div>

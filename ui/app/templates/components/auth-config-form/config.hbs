@@ -4,7 +4,7 @@
     <MessageError @model={{this.model}} />
     {{#if this.model.attrs}}
       {{#each this.model.attrs as |attr|}}
-        {{form-field this.data-test-field attr=attr model=this.model}}
+        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
       {{/each}}
     {{else if this.model.fieldGroups}}
       <FormFieldGroups @model={{this.model}} @mode={{this.mode}} />

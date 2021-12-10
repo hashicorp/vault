@@ -23,7 +23,7 @@
       />
     {{/if}}
     {{#each this.model.fields as |attr|}}
-      {{form-field this.data-test-field attr=attr model=this.model}}
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
     {{/each}}
   </div>
 

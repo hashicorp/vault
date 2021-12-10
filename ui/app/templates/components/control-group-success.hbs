@@ -41,7 +41,14 @@
             Token to access data
           </label>
           <div class="control">
-            {{input this.data-test-token-input class="input" autocomplete="off" spellcheck="false" name="token" value=this.token}}
+            <Input
+              data-test-token-input
+              class="input"
+              autocomplete="off"
+              spellcheck="false"
+              name="token"
+              @value={{this.token}}
+            />
           </div>
         <div class="field is-grouped box is-fullwidth is-bottomless">
           <button data-test-unwrap-button type="submit" class="button is-primary" disabled={{not this.token}}>

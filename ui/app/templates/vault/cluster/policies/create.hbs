@@ -69,7 +69,7 @@
       {{/if}}
     </div>
     {{#each this.model.additionalAttrs as |attr|}}
-      {{form-field this.data-test-field attr=attr model=this.model}}
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">

@@ -160,7 +160,13 @@
         Signed Intermediate Certificate
       </label>
       <div class="control">
-        {{textarea this.data-test-signed-intermediate class="textarea" id="certificate" name="certificate" value=this.model.certificate}}
+        <Textarea
+          data-test-signed-intermediate
+          class="textarea"
+          id="certificate"
+          name="certificate"
+          @value={{this.model.certificate}}
+        />
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
