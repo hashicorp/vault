@@ -27,7 +27,7 @@ export default Component.extend({
   tagName: '',
   supportsDataTestProperties: true,
   type: null,
-  glyph: computed('type', function() {
+  glyph: computed('type', function () {
     if (this.type == 'add') {
       return 'plus-plain';
     } else {

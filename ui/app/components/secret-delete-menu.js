@@ -6,7 +6,7 @@ import { action } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
-const getErrorMessage = errors => {
+const getErrorMessage = (errors) => {
   let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
   return errorMessage;
 };
@@ -19,7 +19,7 @@ export default class SecretDeleteMenu extends Component {
 
   @maybeQueryRecord(
     'capabilities',
-    context => {
+    (context) => {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
@@ -33,7 +33,7 @@ export default class SecretDeleteMenu extends Component {
 
   @maybeQueryRecord(
     'capabilities',
-    context => {
+    (context) => {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
@@ -47,7 +47,7 @@ export default class SecretDeleteMenu extends Component {
 
   @maybeQueryRecord(
     'capabilities',
-    context => {
+    (context) => {
       if (!context.args.model || !context.args.model.engine || !context.args.model.id) return;
       let backend = context.args.model.engine.id;
       let id = context.args.model.id;
@@ -64,7 +64,7 @@ export default class SecretDeleteMenu extends Component {
 
   @maybeQueryRecord(
     'capabilities',
-    context => {
+    (context) => {
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
@@ -85,7 +85,7 @@ export default class SecretDeleteMenu extends Component {
 
   @maybeQueryRecord(
     'capabilities',
-    context => {
+    (context) => {
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
@@ -136,7 +136,7 @@ export default class SecretDeleteMenu extends Component {
       return this.store
         .adapterFor('secret-v2-version')
         .v2DeleteOperation(this.store, this.args.modelForData.id, deleteType, currentVersionForNoReadMetadata)
-        .then(resp => {
+        .then((resp) => {
           if (Ember.testing) {
             return;
           }

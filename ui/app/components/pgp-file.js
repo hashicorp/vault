@@ -41,7 +41,7 @@ export default Component.extend({
     reader.readAsDataURL(file);
   },
 
-  setPGPKey: task(function*(dataURL, filename) {
+  setPGPKey: task(function* (dataURL, filename) {
     const b64File = dataURL.split(',')[1].trim();
     const decoded = atob(b64File).trim();
 

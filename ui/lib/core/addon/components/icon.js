@@ -22,7 +22,7 @@ export default Component.extend({
   layout,
   glyph: null,
   size: 'm',
-  sizeClass: computed('size', function() {
+  sizeClass: computed('size', function () {
     let { size } = this;
     assert(
       `The size property of ${this.toString()} must be one of the following: ${SIZES.join(', ')}`,

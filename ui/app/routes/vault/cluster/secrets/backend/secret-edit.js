@@ -286,10 +286,7 @@ export default Route.extend(UnloadModelRoute, {
       capabilities: model.capabilities,
       baseKey: { id: secret },
       // mode will be 'show', 'edit', 'create'
-      mode: this.routeName
-        .split('.')
-        .pop()
-        .replace('-root', ''),
+      mode: this.routeName.split('.').pop().replace('-root', ''),
       backend,
       preferAdvancedEdit,
       backendType,
@@ -325,7 +322,7 @@ export default Route.extend(UnloadModelRoute, {
       // when you don't have read access on metadata we add currentVersion to the model
       // this makes it look like you have unsaved changes and prompts a browser warning
       // here we are specifically ignoring it.
-      if (mode === 'edit' && (changedKeys.length && changedKeys[0] === 'currentVersion')) {
+      if (mode === 'edit' && changedKeys.length && changedKeys[0] === 'currentVersion') {
         version && version.rollbackAttributes();
         return true;
       }
@@ -333,7 +330,7 @@ export default Route.extend(UnloadModelRoute, {
       // it's going to dirty the model state, so we need to look for it
       // and explicity ignore it here
       if (
-        (mode !== 'show' && (changedKeys.length && changedKeys[0] !== 'backend')) ||
+        (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') ||
         (mode !== 'show' && version && Object.keys(version.changedAttributes()).length)
       ) {
         if (

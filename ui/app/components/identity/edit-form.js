@@ -19,7 +19,7 @@ export default Component.extend({
    */
   onSave: () => {},
 
-  cancelLink: computed('mode', 'model.identityType', function() {
+  cancelLink: computed('mode', 'model.identityType', function () {
     let { model, mode } = this;
     let routes = {
       'create-entity': 'vault.cluster.access.identity',
@@ -49,7 +49,7 @@ export default Component.extend({
     return `Successfully ${action} ${typeDisplay}.`;
   },
 
-  save: task(function*() {
+  save: task(function* () {
     let model = this.model;
     let message = this.getMessage(model);
 
@@ -66,6 +66,7 @@ export default Component.extend({
     .withTestWaiter(),
 
   willDestroy() {
+    this._super(...arguments);
     let model = this.model;
     if (!model) return;
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {

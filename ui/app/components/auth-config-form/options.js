@@ -19,7 +19,7 @@ import { task } from 'ember-concurrency';
 export default AuthConfigComponent.extend({
   router: service(),
   wizard: service(),
-  saveModel: task(function*() {
+  saveModel: task(function* () {
     let data = this.model.config.serialize();
     data.description = this.model.description;
 

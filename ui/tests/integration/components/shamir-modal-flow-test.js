@@ -4,15 +4,15 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-module('Integration | Component | shamir-modal-flow', function(hooks) {
+module('Integration | Component | shamir-modal-flow', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('isActive', true);
     this.set('onClose', sinon.spy());
   });
 
-  test('it renders with initial content by default', async function(assert) {
+  test('it renders with initial content by default', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <ShamirModalFlow
@@ -34,7 +34,7 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
-  test('Shows correct content when started', async function(assert) {
+  test('Shows correct content when started', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <ShamirModalFlow
@@ -54,7 +54,7 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
-  test('Shows OTP when provided and flow started', async function(assert) {
+  test('Shows OTP when provided and flow started', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <ShamirModalFlow

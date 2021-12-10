@@ -1,9 +1,9 @@
 const EXPIRY_DATE = '2021-05-12T23:20:50.52Z';
 
-export default function() {
+export default function () {
   this.namespace = 'v1';
 
-  this.get('sys/internal/counters/activity', function(db) {
+  this.get('sys/internal/counters/activity', function (db) {
     let data = {};
     const firstRecord = db['clients/activities'].first();
     if (firstRecord) {
@@ -15,14 +15,14 @@ export default function() {
     };
   });
 
-  this.get('sys/internal/counters/config', function(db) {
+  this.get('sys/internal/counters/config', function (db) {
     return {
       request_id: '00001',
       data: db['clients/configs'].first(),
     };
   });
 
-  this.get('/sys/internal/ui/feature-flags', db => {
+  this.get('/sys/internal/ui/feature-flags', (db) => {
     const featuresResponse = db.features.first();
     return {
       data: {
@@ -31,7 +31,7 @@ export default function() {
     };
   });
 
-  this.get('/sys/internal/counters/activity/monthly', function() {
+  this.get('/sys/internal/counters/activity/monthly', function () {
     return {
       data: {
         by_namespace: [
@@ -223,7 +223,7 @@ export default function() {
     };
   });
 
-  this.get('/sys/health', function() {
+  this.get('/sys/health', function () {
     return {
       initialized: true,
       sealed: false,
@@ -243,7 +243,7 @@ export default function() {
     };
   });
 
-  this.get('/sys/license/status', function() {
+  this.get('/sys/license/status', function () {
     return {
       data: {
         autoloading_used: false,

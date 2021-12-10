@@ -62,7 +62,7 @@ export default Component.extend(DEFAULTS, {
 
   dataIsEmpty: match('data', new RegExp(DEFAULTS.data)),
 
-  expirationDate: computed('creation_time', 'creation_ttl', function() {
+  expirationDate: computed('creation_time', 'creation_ttl', function () {
     const { creation_time, creation_ttl } = this;
     if (!(creation_time && creation_ttl)) {
       return null;
@@ -127,7 +127,10 @@ export default Component.extend(DEFAULTS, {
       this.store
         .adapterFor('tools')
         .toolAction(action, data, { wrapTTL })
-        .then(resp => this.handleSuccess(resp, action), (...errArgs) => this.handleError(...errArgs));
+        .then(
+          (resp) => this.handleSuccess(resp, action),
+          (...errArgs) => this.handleError(...errArgs)
+        );
     },
 
     onClear() {

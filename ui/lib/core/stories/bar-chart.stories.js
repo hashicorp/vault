@@ -43,7 +43,7 @@ const dataset = [
 ];
 
 const flattenData = () => {
-  return dataset.map(d => {
+  return dataset.map((d) => {
     return {
       label: d['namespace_path'],
       non_entity_tokens: d['counts']['non_entity_tokens'],

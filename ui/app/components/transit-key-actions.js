@@ -92,7 +92,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     });
   },
 
-  keyIsRSA: computed('key.type', function() {
+  keyIsRSA: computed('key.type', function () {
     let type = this.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
@@ -134,7 +134,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     }
 
     if (paramsToKeep) {
-      paramsToKeep.forEach(param => delete params[param]);
+      paramsToKeep.forEach((param) => delete params[param]);
     }
     //resets params still left in the object to defaults
     this.clearErrors();
@@ -204,7 +204,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
     clearParams(params) {
       const arr = Array.isArray(params) ? params : [params];
-      arr.forEach(param => this.set(param, null));
+      arr.forEach((param) => this.set(param, null));
     },
 
     toggleModal(successMessage) {
@@ -235,7 +235,7 @@ export default Component.extend(TRANSIT_PARAMS, {
         .adapterFor('transit-key')
         .keyAction(action, { backend, id, payload }, options)
         .then(
-          resp => this.handleSuccess(resp, options, action),
+          (resp) => this.handleSuccess(resp, options, action),
           (...errArgs) => this.handleError(...errArgs)
         );
     },

@@ -34,7 +34,7 @@ export default class HistoryComponent extends Component {
       return null;
     }
     let dataList = this.args.model.activity.byNamespace;
-    return dataList.map(d => {
+    return dataList.map((d) => {
       return {
         name: d['namespace_id'],
         id: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
@@ -48,7 +48,7 @@ export default class HistoryComponent extends Component {
       return null;
     }
     let dataset = this.args.model.activity.byNamespace.slice(0, this.max_namespaces);
-    return dataset.map(d => {
+    return dataset.map((d) => {
       return {
         label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
         non_entity_tokens: d['counts']['non_entity_tokens'],
@@ -69,7 +69,7 @@ export default class HistoryComponent extends Component {
 
     results = fields.join(',') + '\n';
 
-    namespaces.forEach(function(item) {
+    namespaces.forEach(function (item) {
       let path = item.namespace_path !== '' ? item.namespace_path : 'root',
         total = item.counts.clients,
         unique = item.counts.distinct_entities,
@@ -95,7 +95,7 @@ export default class HistoryComponent extends Component {
 
   // Get the namespace by matching the path from the namespace list
   getNamespace(path) {
-    return this.args.model.activity.byNamespace.find(ns => {
+    return this.args.model.activity.byNamespace.find((ns) => {
       if (path === 'root') {
         return ns.namespace_path === '';
       }

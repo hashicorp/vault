@@ -12,7 +12,7 @@ export default Route.extend(UnloadModel, {
   },
   model() {
     return this.version.hasNamespaces
-      ? this.store.findAll('namespace').catch(e => {
+      ? this.store.findAll('namespace').catch((e) => {
           if (e.httpStatus === 404) {
             return [];
           }

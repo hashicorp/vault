@@ -9,14 +9,14 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
 
-module('Acceptance | console', function(hooks) {
+module('Acceptance | console', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test("refresh reloads the current route's data", async function(assert) {
+  test("refresh reloads the current route's data", async function (assert) {
     await enginesPage.visit();
     await settled();
     let numEngines = enginesPage.rows.length;
@@ -33,7 +33,7 @@ module('Acceptance | console', function(hooks) {
     assert.equal(enginesPage.rows.length, numEngines + 3, 'new engines were added to the page');
   });
 
-  test('fullscreen command expands the cli panel', async function(assert) {
+  test('fullscreen command expands the cli panel', async function (assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('fullscreen');
@@ -52,7 +52,7 @@ module('Acceptance | console', function(hooks) {
     }, 300);
   });
 
-  test('array output is correctly formatted', async function(assert) {
+  test('array output is correctly formatted', async function (assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self');
@@ -66,7 +66,7 @@ module('Acceptance | console', function(hooks) {
     }, 300);
   });
 
-  test('number output is correctly formatted', async function(assert) {
+  test('number output is correctly formatted', async function (assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self');
@@ -78,7 +78,7 @@ module('Acceptance | console', function(hooks) {
     }, 300);
   });
 
-  test('boolean output is correctly formatted', async function(assert) {
+  test('boolean output is correctly formatted', async function (assert) {
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self');

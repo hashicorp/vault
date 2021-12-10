@@ -19,28 +19,28 @@ module.exports = {
     },
   ],
 
-  filesPath: function() {
+  filesPath: function () {
     let filesDirectory = 'files';
 
     return path.join(this.path, filesDirectory);
   },
 
-  fileMapTokens: function() {
+  fileMapTokens: function () {
     return {
-      __path__: function(options) {
+      __path__: function (options) {
         if (options.pod) {
           return path.join(options.podPath, options.locals.path, options.dasherizedModuleName);
         } else {
           return 'components';
         }
       },
-      __templatepath__: function(options) {
+      __templatepath__: function (options) {
         if (options.pod) {
           return path.join(options.podPath, options.locals.path, options.dasherizedModuleName);
         }
         return 'templates/components';
       },
-      __templatename__: function(options) {
+      __templatename__: function (options) {
         if (options.pod) {
           return 'template';
         }
@@ -49,11 +49,11 @@ module.exports = {
     };
   },
 
-  normalizeEntityName: function(entityName) {
+  normalizeEntityName: function (entityName) {
     return normalizeEntityName(entityName);
   },
 
-  locals: function(options) {
+  locals: function (options) {
     let exportDefault = 'export default ';
     let exportAddOn = '';
     let importTemplate = '';

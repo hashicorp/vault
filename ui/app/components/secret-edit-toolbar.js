@@ -75,7 +75,7 @@ export default class SecretEditToolbar extends Component {
       this.store
         .adapterFor('secret-v2-version')
         .queryRecord(this.args.modelForData.id, { wrapTTL: 1800 })
-        .then(resp => {
+        .then((resp) => {
           this.wrappedData = resp.wrap_info.token;
           this.flashMessages.success('Secret Successfully Wrapped!');
         })
@@ -93,7 +93,7 @@ export default class SecretEditToolbar extends Component {
           id: this.args.modelForData.id,
           wrapTTL: 1800,
         })
-        .then(resp => {
+        .then((resp) => {
           this.wrappedData = resp.wrap_info.token;
           this.flashMessages.success('Secret Successfully Wrapped!');
         })

@@ -10,7 +10,7 @@ export default Secret.extend({
   path: attr('string'),
   deletionTime: attr('string'),
   createdTime: attr('string'),
-  deleted: computed('deletionTime', function() {
+  deleted: computed('deletionTime', function () {
     const deletionTime = new Date(this.deletionTime);
     const now = new Date();
     return deletionTime <= now;

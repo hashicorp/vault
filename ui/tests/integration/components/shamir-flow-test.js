@@ -24,10 +24,10 @@ const storeStub = Service.extend({
   },
 });
 
-module('Integration | Component | shamir flow', function(hooks) {
+module('Integration | Component | shamir flow', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeStub);
@@ -35,7 +35,7 @@ module('Integration | Component | shamir flow', function(hooks) {
     });
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`{{shamir-flow formText="like whoa"}}`);
 
     assert.dom('form [data-test-form-text]').hasText('like whoa', 'renders formText inline');
@@ -65,7 +65,7 @@ module('Integration | Component | shamir flow', function(hooks) {
     assert.dom('.message.is-danger').exists({ count: 2 }, 'renders errors');
   });
 
-  test('it sends data to the passed action', async function(assert) {
+  test('it sends data to the passed action', async function (assert) {
     this.set('key', 'foo');
     await render(hbs`
       {{shamir-flow key=key action='foo' thresholdPath='required'}}
@@ -79,13 +79,13 @@ module('Integration | Component | shamir flow', function(hooks) {
     );
   });
 
-  test('it checks onComplete to call onShamirSuccess', async function(assert) {
+  test('it checks onComplete to call onShamirSuccess', async function (assert) {
     this.set('key', 'foo');
-    this.set('onSuccess', function() {
+    this.set('onSuccess', function () {
       assert.ok(true, 'onShamirSuccess called');
     });
 
-    this.set('checkComplete', function() {
+    this.set('checkComplete', function () {
       assert.ok(true, 'onComplete called');
       // return true so we trigger success call
       return true;
@@ -97,7 +97,7 @@ module('Integration | Component | shamir flow', function(hooks) {
     await click('[data-test-shamir-submit]');
   });
 
-  test('it fetches progress on init when fetchOnInit is true', async function(assert) {
+  test('it fetches progress on init when fetchOnInit is true', async function (assert) {
     await render(hbs`
       {{shamir-flow action='foo' fetchOnInit=true}}
     `);

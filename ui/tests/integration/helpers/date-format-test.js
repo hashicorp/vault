@@ -4,10 +4,10 @@ import { render } from '@ember/test-helpers';
 import { format } from 'date-fns';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Helper | date-format', function(hooks) {
+module('Integration | Helper | date-format', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it is able to format a date object', async function(assert) {
+  test('it is able to format a date object', async function (assert) {
     let today = new Date();
     this.set('today', today);
 
@@ -17,7 +17,7 @@ module('Integration | Helper | date-format', function(hooks) {
       .includesText(today.getFullYear(), 'it renders the date in the year format');
   });
 
-  test('it supports date timestamps', async function(assert) {
+  test('it supports date timestamps', async function (assert) {
     let today = new Date().getTime();
     this.set('today', today);
 
@@ -26,7 +26,7 @@ module('Integration | Helper | date-format', function(hooks) {
     assert.ok(formattedDate.match(/^\d{2}:\d{2}:\d{2}$/));
   });
 
-  test('it supports date strings', async function(assert) {
+  test('it supports date strings', async function (assert) {
     let todayString = new Date().getFullYear().toString();
     this.set('todayString', todayString);
 
@@ -36,7 +36,7 @@ module('Integration | Helper | date-format', function(hooks) {
       .includesText(todayString, 'it renders the a date if passed in as a string');
   });
 
-  test('it supports ten digit dates', async function(assert) {
+  test('it supports ten digit dates', async function (assert) {
     let tenDigitDate = 1621785298;
     this.set('tenDigitDate', tenDigitDate);
 
@@ -44,7 +44,7 @@ module('Integration | Helper | date-format', function(hooks) {
     assert.dom('[data-test-date-format]').includesText('05/23/2021');
   });
 
-  test('it supports already formatted dates', async function(assert) {
+  test('it supports already formatted dates', async function (assert) {
     let formattedDate = new Date();
     this.set('formattedDate', formattedDate);
 
@@ -54,7 +54,7 @@ module('Integration | Helper | date-format', function(hooks) {
     assert.dom('[data-test-date-format]').includesText(format(formattedDate, 'MMMM dd, yyyy hh:mm:ss a'));
   });
 
-  test('displays correct date when timestamp is in ISO 8601 format', async function(assert) {
+  test('displays correct date when timestamp is in ISO 8601 format', async function (assert) {
     let timestampDate = '2021-09-01T00:00:00Z';
     this.set('timestampDate', timestampDate);
 

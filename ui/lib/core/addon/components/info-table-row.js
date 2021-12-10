@@ -44,11 +44,11 @@ export default Component.extend({
   defaultShown: '',
   hasLabelOverflow: false, // is calculated and set in didInsertElement
 
-  valueIsBoolean: computed('value', function() {
+  valueIsBoolean: computed('value', function () {
     return typeOf(this.value) === 'boolean';
   }),
 
-  valueIsEmpty: computed('value', function() {
+  valueIsEmpty: computed('value', function () {
     let { value } = this;
     if (typeOf(value) === 'array' && value.length === 0) {
       return true;

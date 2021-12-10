@@ -26,7 +26,7 @@ export default Controller.extend({
     return '';
   },
 
-  updateManagedNamespace: task(function*(value) {
+  updateManagedNamespace: task(function* (value) {
     // debounce
     yield timeout(500);
     // TODO: Move this to shared fn
@@ -35,7 +35,7 @@ export default Controller.extend({
     this.set('namespaceQueryParam', newNamespace);
   }).restartable(),
 
-  updateNamespace: task(function*(value) {
+  updateNamespace: task(function* (value) {
     // debounce
     yield timeout(500);
     this.namespaceService.setNamespace(value, true);

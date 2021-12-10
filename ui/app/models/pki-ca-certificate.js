@@ -6,7 +6,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 // TODO: alphabetize attrs
 export default Certificate.extend({
-  DISPLAY_FIELDS: computed(function() {
+  DISPLAY_FIELDS: computed(function () {
     return [
       'csr',
       'certificate',
@@ -47,7 +47,7 @@ export default Certificate.extend({
     label: 'Upload PEM bundle',
     readOnly: true,
   }),
-  fieldDefinition: computed('caType', 'uploadPemBundle', function() {
+  fieldDefinition: computed('caType', 'uploadPemBundle', function () {
     const type = this.caType;
     const isUpload = this.uploadPemBundle;
     let groups = [{ default: ['caType', 'uploadPemBundle'] }];
@@ -128,7 +128,7 @@ export default Certificate.extend({
   }),
 
   keyType: attr('string', {
-    possibleValues: ['rsa', 'ec','ed25519'],
+    possibleValues: ['rsa', 'ec', 'ed25519'],
     defaultValue: 'rsa',
   }),
   keyBits: attr('number', {

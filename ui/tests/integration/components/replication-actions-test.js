@@ -26,10 +26,10 @@ const routerService = Service.extend({
   transitionTo: sinon.stub().returns(resolve()),
 });
 
-module('Integration | Component | replication actions', function(hooks) {
+module('Integration | Component | replication actions', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.register('service:router', routerService);
       this.owner.unregister('service:store');
@@ -44,7 +44,7 @@ module('Integration | Component | replication actions', function(hooks) {
       'primary',
       'disable',
       'Disable Replication',
-      async function() {
+      async function () {
         fillIn('[data-test-confirmation-modal-input]', 'Disaster Recovery');
       },
       ['disable', 'primary'],
@@ -55,7 +55,7 @@ module('Integration | Component | replication actions', function(hooks) {
       'primary',
       'disable',
       'Disable Replication',
-      async function() {
+      async function () {
         fillIn('[data-test-confirmation-modal-input]', 'Performance');
       },
       ['disable', 'primary'],
@@ -66,7 +66,7 @@ module('Integration | Component | replication actions', function(hooks) {
       'secondary',
       'disable',
       'Disable Replication',
-      async function() {
+      async function () {
         fillIn('[data-test-confirmation-modal-input]', 'Performance');
       },
       ['disable', 'secondary'],
@@ -92,7 +92,7 @@ module('Integration | Component | replication actions', function(hooks) {
       'secondary',
       'promote',
       'Promote cluster',
-      async function() {
+      async function () {
         await fillIn('[name="primary_cluster_addr"]', 'cluster addr');
         await blur('[name="primary_cluster_addr"]');
       },
@@ -104,7 +104,7 @@ module('Integration | Component | replication actions', function(hooks) {
       'secondary',
       'update-primary',
       'Update primary',
-      async function() {
+      async function () {
         await fillIn('#secondary-token', 'token');
         await blur('#secondary-token');
         await fillIn('#primary_api_addr', 'addr');
@@ -124,7 +124,7 @@ module('Integration | Component | replication actions', function(hooks) {
     expectedOnSubmit,
     oldVersion,
   ] of testCases) {
-    test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function(assert) {
+    test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function (assert) {
       const testKey = `${replicationMode}-${clusterMode}-${action}`;
       this.set('model', {
         replicationAttrs: {

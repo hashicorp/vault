@@ -23,7 +23,7 @@ const AuthConfigBase = Component.extend({
   flashMessages: service(),
   router: service(),
   wizard: service(),
-  saveModel: task(function*() {
+  saveModel: task(function* () {
     try {
       yield this.model.save();
     } catch (err) {

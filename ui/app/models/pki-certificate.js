@@ -14,7 +14,7 @@ export default Model.extend({
   idForNav: attr('string', {
     readOnly: true,
   }),
-  DISPLAY_FIELDS: computed(function() {
+  DISPLAY_FIELDS: computed(function () {
     return [
       'certificate',
       'commonName',
@@ -83,7 +83,7 @@ export default Model.extend({
     return fieldToAttrs(this, fieldGroups);
   },
 
-  fieldDefinition: computed(function() {
+  fieldDefinition: computed(function () {
     const groups = [
       { default: ['commonName', 'format'] },
       { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'otherSans'] },
@@ -91,11 +91,11 @@ export default Model.extend({
     return groups;
   }),
 
-  fieldGroups: computed('fieldDefinition', function() {
+  fieldGroups: computed('fieldDefinition', function () {
     return this.fieldsToAttrs(this.fieldDefinition);
   }),
 
-  attrs: computed('DISPLAY_FIELDS', 'certificate', 'csr', function() {
+  attrs: computed('DISPLAY_FIELDS', 'certificate', 'csr', function () {
     let keys = this.certificate || this.csr ? this.DISPLAY_FIELDS.slice(0) : [];
     return expandAttributeMeta(this, keys);
   }),
@@ -108,7 +108,7 @@ export default Model.extend({
     'privateKeyType',
     'revocationTime',
     'serialNumber',
-    function() {
+    function () {
       const props = {
         certificate: this.certificate,
         issuingCa: this.issuingCa,

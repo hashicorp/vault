@@ -4,9 +4,9 @@ import { render } from '@ember/test-helpers';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | client count current', function(hooks) {
+module('Integration | Component | client count current', function (hooks) {
   setupRenderingTest(hooks);
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     let model = EmberObject.create({
       config: {},
       activity: {},
@@ -15,7 +15,7 @@ module('Integration | Component | client count current', function(hooks) {
     this.tab = 'current';
   });
 
-  test('it shows empty state when disabled and no data available', async function(assert) {
+  test('it shows empty state when disabled and no data available', async function (assert) {
     Object.assign(this.model.config, { enabled: 'Off', queriesAvailable: false });
     await render(hbs`<Clients::History @tab={{tab}} @model={{model}} />`);
 
@@ -23,7 +23,7 @@ module('Integration | Component | client count current', function(hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('Data tracking is disabled');
   });
 
-  test('it shows empty state when enabled and no data available', async function(assert) {
+  test('it shows empty state when enabled and no data available', async function (assert) {
     Object.assign(this.model.config, { enabled: 'On', queriesAvailable: false });
     await render(hbs`<Clients::History @tab={{tab}} @model={{model}} />`);
 
@@ -31,7 +31,7 @@ module('Integration | Component | client count current', function(hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('No monthly history');
   });
 
-  test('it shows empty state when data available but not returned', async function(assert) {
+  test('it shows empty state when data available but not returned', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true, enabled: 'On' });
     await render(hbs`<Clients::History @tab={{tab}} @model={{model}} />`);
     assert.dom('[data-test-pricing-metrics-form]').doesNotExist('Date range component should not exists');
@@ -39,7 +39,7 @@ module('Integration | Component | client count current', function(hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('No data received');
   });
 
-  test('it shows data when available from query', async function(assert) {
+  test('it shows data when available from query', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true, configPath: { canRead: true } });
     Object.assign(this.model.activity, {
       clients: 1234,

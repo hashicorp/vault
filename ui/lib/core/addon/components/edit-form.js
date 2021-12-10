@@ -32,7 +32,7 @@ export default Component.extend({
   // is the case, set this value to true
   callOnSaveAfterRender: false,
 
-  save: task(function*(model, options = { method: 'save' }) {
+  save: task(function* (model, options = { method: 'save' }) {
     let { method } = options;
     let messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
     try {
@@ -60,6 +60,7 @@ export default Component.extend({
     .withTestWaiter(),
 
   willDestroy() {
+    this._super(...arguments);
     let { model } = this;
     if (!model) return;
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {

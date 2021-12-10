@@ -4,10 +4,10 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 
-module('Integration | Component | icon', function(hooks) {
+module('Integration | Component | icon', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<Icon class="i-con" />`);
     assert.dom('.i-con').exists('renders');
 

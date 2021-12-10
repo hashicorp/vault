@@ -9,7 +9,7 @@ const DISPLAY_ARRAY = ['role-1', 'role-2', 'role-3', 'role-4', 'role-5'];
 
 const storeService = Service.extend({
   query() {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       resolve([
         { id: 'role-1' },
         { id: 'role-2' },
@@ -22,10 +22,10 @@ const storeService = Service.extend({
   },
 });
 
-module('Integration | Component | InfoTableItemArray', function(hooks) {
+module('Integration | Component | InfoTableItemArray', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('displayArray', DISPLAY_ARRAY);
     this.set('isLink', true);
     this.set('modelType', 'transform/role');
@@ -39,11 +39,11 @@ module('Integration | Component | InfoTableItemArray', function(hooks) {
     });
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.owner.unregister('service:store');
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<InfoTableItemArray
         @displayArray={{displayArray}}
       />`);
@@ -58,7 +58,7 @@ module('Integration | Component | InfoTableItemArray', function(hooks) {
     );
   });
 
-  test('it renders links if isLink is true', async function(assert) {
+  test('it renders links if isLink is true', async function (assert) {
     await render(hbs`<InfoTableItemArray
       @displayArray={{displayArray}}
       @isLink={{isLink}}
@@ -73,7 +73,7 @@ module('Integration | Component | InfoTableItemArray', function(hooks) {
     );
   });
 
-  test('it renders a badge and view all if wildcard in display array && < 10', async function(assert) {
+  test('it renders a badge and view all if wildcard in display array && < 10', async function (assert) {
     const displayArrayWithWildcard = ['role-1', 'role-2', 'role-3', 'r*'];
     this.set('displayArrayWithWildcard', displayArrayWithWildcard);
     await render(hbs`<InfoTableItemArray
@@ -95,7 +95,7 @@ module('Integration | Component | InfoTableItemArray', function(hooks) {
     assert.dom('[data-test-view-all="roles"]').exists({ count: 1 }, 'renders 1 view all roles');
   });
 
-  test('it renders a badge and view all if wildcard in display array && >= 10', async function(assert) {
+  test('it renders a badge and view all if wildcard in display array && >= 10', async function (assert) {
     const displayArrayWithWildcard = [
       'role-1',
       'role-2',

@@ -21,7 +21,7 @@ export default Base.extend({
             );
           });
       })
-      .catch(e => {
+      .catch((e) => {
         if (e.httpStatus === 404) {
           return this.store.createRecord('path-filter-config', {
             id,

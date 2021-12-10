@@ -97,7 +97,7 @@ export default Component.extend(DEFAULTS, {
     }
   },
 
-  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function() {
+  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function () {
     let { generateWithPGP, pgp_key, haveSavedPGPKey } = this;
     if (!generateWithPGP && !pgp_key) {
       return 'chooseMethod';
@@ -144,9 +144,10 @@ export default Component.extend(DEFAULTS, {
     const adapter = this.store.adapterFor('cluster');
     const method = adapter[action];
 
-    method
-      .call(adapter, data, { checkStatus })
-      .then(resp => this.actionSuccess(resp), (...args) => this.actionError(...args));
+    method.call(adapter, data, { checkStatus }).then(
+      (resp) => this.actionSuccess(resp),
+      (...args) => this.actionError(...args)
+    );
   },
 
   actions: {
