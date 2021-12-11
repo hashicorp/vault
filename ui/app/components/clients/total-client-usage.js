@@ -44,7 +44,7 @@ const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
 const AXES_MARGIN = { bottom: 250, left: 50 }; // makes space for y-axis legend
 const TRANSLATE = { up: -30, rightSmall: 100, rightLarge: 111 };
-const CHART_HEIGHT = 350;
+const CHART_HEIGHT = 300;
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '#wtf';
   @tracked hoveredLabel = 'init';
