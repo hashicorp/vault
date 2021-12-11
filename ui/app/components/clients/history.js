@@ -10,11 +10,11 @@ export default class HistoryComponent extends Component {
 
   @tracked barChartSelection = false;
 
-  // Determine if we have client count data based on the current tab,
-  // since model is slightly different for current month vs history api
+  // Determine if we have client count data based on the current tab
   get hasClientData() {
     if (this.args.tab === 'current') {
-      return this.args.model.activity && this.args.model.activity.clients;
+      // Show the current numbers as long as config is on
+      return this.args.model.config?.enabled !== 'Off';
     }
     return this.args.model.activity && this.args.model.activity.total;
   }
