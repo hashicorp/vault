@@ -24,27 +24,27 @@ import { stack } from 'd3-shape';
 
 // ARG TODO pull in data
 const DATA = [
-  { month: 'January', directEntities: 5000, nonDirectTokens: 22 },
-  { month: 'February', directEntities: 1500, nonDirectTokens: 22 },
-  { month: 'March', directEntities: 1550, nonDirectTokens: 25 },
-  { month: 'April', directEntities: 1550, nonDirectTokens: 229 },
-  { month: 'May', directEntities: 1560, nonDirectTokens: 24 },
-  { month: 'June', directEntities: 1570, nonDirectTokens: 42 },
-  { month: 'July', directEntities: 1580, nonDirectTokens: 12 },
-  { month: 'August', directEntities: 1610, nonDirectTokens: 1 },
-  { month: 'September', directEntities: 1900, nonDirectTokens: 222 },
-  { month: 'October', directEntities: 2500, nonDirectTokens: 66 },
-  { month: 'November', directEntities: 3000, nonDirectTokens: 32 },
-  { month: 'December', directEntities: 6000, nonDirectTokens: 202 },
+  { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
+  { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
+  { month: 'March', directEntities: 700, nonEntityTokens: 125, total: 825 },
+  { month: 'April', directEntities: 1550, nonEntityTokens: 229, total: 1779 },
+  { month: 'May', directEntities: 1560, nonEntityTokens: 124, total: 1684 },
+  { month: 'June', directEntities: 1570, nonEntityTokens: 142, total: 1712 },
+  { month: 'July', directEntities: 300, nonEntityTokens: 112, total: 412 },
+  { month: 'August', directEntities: 1610, nonEntityTokens: 130, total: 1740 },
+  { month: 'September', directEntities: 1900, nonEntityTokens: 222, total: 2122 },
+  { month: 'October', directEntities: 500, nonEntityTokens: 166, total: 666 },
+  { month: 'November', directEntities: 480, nonEntityTokens: 132, total: 612 },
+  { month: 'December', directEntities: 980, nonEntityTokens: 202, total: 1182 },
 ];
 
 // COLOR THEME:
-const BAR_COLOR_DEFAULT = ['#1563FF', '#8AB1FF'];
+const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
-const CHART_MARGIN = { top: 10, right: 0, bottom: 0, left: 5 }; // makes space for y-axis legend
-const LINE_HEIGHT = 30; // each bar w/ padding is 24 pixels thick
-
+const AXES_MARGIN = { bottom: 250, left: 50 }; // makes space for y-axis legend
+const TRANSLATE = { up: -30, rightSmall: 100, rightLarge: 111 };
+const CHART_HEIGHT = 350;
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '#wtf';
   @tracked hoveredLabel = 'init';
@@ -52,29 +52,31 @@ export default class TotalClientUsage extends Component {
   @action
   registerListener(element) {
     // Define the chart
-    let chartSvg = select(element);
-    chartSvg.attr('width', '100%');
-    chartSvg.attr('height', '100%');
-    chartSvg.attr('viewBox', `0 0 1000 ${(DATA.length + 1) * LINE_HEIGHT}`);
+    let dataset = DATA; // will be data passed in as argument
 
-    let stackFunction = stack().keys(['directEntities', 'nonDirectTokens']);
-    let stackedData = stackFunction(DATA);
+    let stackFunction = stack().keys(['directEntities', 'nonEntityTokens']);
+    let stackedData = stackFunction(dataset);
 
     let yScale = scaleLinear()
-      .domain([0, max(stackedData[1].map(d => d.data.directEntities + d.data.nonDirectTokens))]) // TODO will need to recalculate when you get the data
-      .range([98, 0]);
+      .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
+      .range([0, 80]); // don't want 100% because will cut off
 
     let xScale = scaleBand()
-      .domain(DATA.map(month => month.month))
-      .range([0, 100]) // unsure about this 100 range?
+      .domain(dataset.map(d => d.month))
+      .range([0, 700]) // set width to fix number of pixels
       .paddingInner(0.85);
+
+    let chartSvg = select(element);
+
+    let chartWrapper = select('chart-wrapper');
+    chartWrapper.attr('viewBox', `0 0 1152 500`); // set aspect ratio
 
     let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
-      .attr('transform', `translate(${CHART_MARGIN.left}})`)
+      .attr('transform', `translate(${TRANSLATE.rightLarge}, ${TRANSLATE.up})`) // +11 centers blue bars inside grey bars
       .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
     groups
@@ -82,25 +84,46 @@ export default class TotalClientUsage extends Component {
       .data(stackedData => stackedData)
       .enter()
       .append('rect')
-      .attr('width', `${xScale.bandwidth()}%`)
-      .attr('height', data => `${100 - yScale(data[1])}%`)
-      .attr('x', data => `${xScale(data.data.month)}%`)
-      .attr('y', data => `${yScale(data[0]) + yScale(data[1]) - 102}%`) // subtract higher than 100% to give space for x axis ticks
-      // shifts chart to accommodate y-axis legend
-      .attr('transform', `translate(${CHART_MARGIN.left})`);
+      .attr('width', '7px')
+      .attr('height', stackedData => `${yScale(stackedData[1] - stackedData[0])}%`)
+      .attr('x', ({ data }) => xScale(data.month)) // uses destructuring because was data.data.month
+      .attr('y', data => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
+
+    // MAKE AXES //
+    let yAxisScale = scaleLinear()
+      .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
+      .range([CHART_HEIGHT, 0]);
+
+    // customize y-axis
+    let yAxis = axisLeft(yAxisScale)
+      .tickSize(5)
+      .ticks(6);
+
+    yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left}, ${TRANSLATE.up * 2})`));
+
+    let xAxisGenerator = axisBottom(xScale);
+    let xAxis = chartSvg.append('g').call(xAxisGenerator);
+
+    xAxis.attr('transform', `translate(${TRANSLATE.rightLarge}, ${AXES_MARGIN.bottom})`);
+
+    chartSvg.selectAll('.domain').remove(); // remove domain lines
 
     // creating wider area for tooltip hover
-    let tooltipRect = chartSvg
+    let actionBars = chartSvg
+      .append('g')
+      .attr('transform', `translate(${TRANSLATE.rightSmall}, ${TRANSLATE.up})`);
+
+    let tooltipRect = actionBars
       .selectAll('.tooltip-rect')
-      .data(DATA)
+      .data(dataset)
       .enter()
       .append('rect')
       .style('cursor', 'pointer')
       .attr('class', 'tooltip-rect')
       .attr('height', '100%')
-      .attr('width', '50px') // three times width
+      .attr('width', '30px') // three times width
       .attr('y', '0') // start at bottom
-      .attr('x', data => `${xScale(data.month) - 1.1}%`) // not data.data because this is not stacked data
+      .attr('x', data => xScale(data.month)) // not data.data because this is not stacked data
       .style('fill', `${BACKGROUND_BAR_COLOR}`)
       .style('opacity', '1')
       .style('mix-blend-mode', 'multiply');
@@ -117,23 +140,23 @@ export default class TotalClientUsage extends Component {
 
     // axis lines
 
-    let xScaleNotPercent = scaleBand()
-      .domain(DATA.map(month => month.month))
-      .range([0, 1200]) //hard coded width because 100 before with percents 0 to width
-      .paddingInner(0.85);
+    // let xScaleNotPercent = scaleBand()
+    //   .domain(DATA.map(month => month.month))
+    //   .range([0, 1200]) //hard coded width because 100 before with percents 0 to width
+    //   .paddingInner(0.85);
 
-    let yScaleNotPercent = scaleLinear()
-      .domain([0, max(stackedData[1].map(d => d.data.directEntities + d.data.nonDirectTokens))]) // TODO calculate high of total combined
-      .range([800, 0]); // height to zero (it's inverted), TODO make 98 as a percent instead of a fixed number
+    // let yScaleNotPercent = scaleLinear()
+    //   .domain([0, max(stackedData[1].map(d => d.data.directEntities + d.data.nonDirectTokens))]) // TODO calculate high of total combined
+    //   .range([800, 0]); // height to zero (it's inverted), TODO make 98 as a percent instead of a fixed number
 
-    let xAxis = axisBottom(xScaleNotPercent).tickSize(1);
-    xAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left},375)`));
+    // let xAxis = axisBottom(xScaleNotPercent).tickSize(1);
+    // xAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left},375)`));
 
-    // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
-    let yAxisTickFormat = number => format('.1s')(number).replace('G', 'B'); // for billions to replace G with B.
+    // // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
+    // let yAxisTickFormat = number => format('.1s')(number).replace('G', 'B'); // for billions to replace G with B.
 
-    let yAxis = axisLeft(yScaleNotPercent).tickFormat(yAxisTickFormat); // format number as 8k or 8M
-    yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left},0)`));
+    // let yAxis = axisLeft(yScaleNotPercent).tickFormat(yAxisTickFormat); // format number as 8k or 8M
+    // yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left},0)`));
   }
 
   // ARG TODO rename

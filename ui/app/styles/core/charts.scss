@@ -53,6 +53,27 @@
   }
 }
 
+.chart-container {
+  grid-column-start: 3;
+  grid-column-end: span col6-end;
+  grid-row-start: 2;
+  grid-row-end: span 3;
+
+  padding: $spacing-m 0;
+
+  svg.chart {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.chart {
+  .tick > text {
+    font-weight: $font-weight-semibold;
+    font-size: $size-8;
+  }
+}
+
 .chart-column-left {
   grid-column-start: 1;
   grid-column-end: 4;
@@ -117,22 +138,6 @@
     font-size: $size-4;
     font-weight: $font-weight-normal;
     margin-top: $spacing-xs;
-  }
-}
-
-.chart-container {
-  grid-column-start: 3;
-  grid-column-end: span col6-end;
-  grid-row-start: 2;
-  grid-row-end: span 3;
-
-  padding: 0 0 0 80px;
-}
-
-.chart {
-  .tick > text {
-    font-weight: $font-weight-semibold;
-    font-size: $size-8;
   }
 }
 

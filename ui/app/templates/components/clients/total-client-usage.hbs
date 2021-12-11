@@ -6,9 +6,8 @@
     {{/if}}
   </div>
   <div class="chart-container" {{on "mouseleave" (fn this.closeMe)}}>
-    <svg 
+    <svg class="chart"
       {{did-insert this.registerListener}}
-      class="chart"
     ></svg>
   </div>
 
