@@ -53,7 +53,7 @@ export default function Homepage({ content }) {
         <section className="g-grid-container remove-bottom-padding">
           <SectionHeader
             headline="Secure dynamic infrastructure across clouds and environments"
-            description="The shift from static, on-premise infrastructure to dynamic, multi-provider infrastructure changes the approach to security. Security in static infrastructure relies on dedicated servers, static IP addresses, and a clear network perimeter. Security in dynamic infrastructure is defined by ephemeral applications and servers, trusted sources of user and application identity, and software-based encryption."
+            description="The shift from static, on-premises infrastructure to dynamic, multi-provider infrastructure changes the approach to security. Security in static infrastructure relies on dedicated servers, static IP addresses, and a clear network perimeter. Security in dynamic infrastructure is defined by ephemeral applications and servers, trusted sources of user and application identity, and software-based encryption."
           />
         </section>
 
