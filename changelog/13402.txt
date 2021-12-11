@@ -1,0 +1,3 @@
+```release-note:bug
+docs: Fixed typos (on-premise to on-premises)
+```
