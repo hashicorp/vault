@@ -6,7 +6,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
@@ -110,6 +109,7 @@ func (s *Secret) extractListOfStrings(key string) ([]string, error) {
 	if s.Data == nil {
 		return nil, nil
 	}
+
 	_, ok := s.Data[key]
 	if !ok {
 		return nil, nil
@@ -124,6 +124,7 @@ func (s *Secret) extractListOfStrings(key string) ([]string, error) {
 	if !ok {
 		return nil, fmt.Errorf("unable to convert identity policies to expected format")
 	}
+
 	for _, v := range list {
 		item, ok := v.(string)
 		if !ok {
@@ -146,14 +147,11 @@ func (s *Secret) TokenPolicies() ([]string, error) {
 		return s.Auth.Policies, nil
 	}
 
-	if s.Data == nil {
-		return nil, nil
-	}
-
 	tokenPolicies, err := s.extractListOfStrings("policies")
-	if tokenPolicies == nil || err != nil {
+	if err != nil {
 		return tokenPolicies, err
 	}
+
 	identityPolicies, err := s.extractListOfStrings("identity_policies")
 	if err != nil {
 		return nil, err
@@ -175,14 +173,6 @@ func (s *Secret) TokenPolicies() ([]string, error) {
 // TokenAccessors returns the standardized list of accessors for the given secret
 func (s *Secret) TokenAccessors() ([]string, error) {
 	if s == nil {
-		return nil, nil
-	}
-
-	if s.Auth != nil && len(s.Auth.Policies) > 0 {
-		return s.Auth.Policies, nil
-	}
-
-	if s.Data == nil {
 		return nil, nil
 	}
 
@@ -243,7 +233,7 @@ func (s *Secret) TokenIsRenewable() (bool, error) {
 
 	renewable, err := parseutil.ParseBool(s.Data["renewable"])
 	if err != nil {
-		return false, errwrap.Wrapf("could not convert renewable value to a boolean: {{err}}", err)
+		return false, fmt.Errorf("could not convert renewable value to a boolean: %v", err)
 	}
 
 	return renewable, nil
