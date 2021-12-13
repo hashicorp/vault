@@ -33,6 +33,9 @@ SECRET_NAME=vault-server-tls
 
 # TMPDIR is a temporary working directory.
 TMPDIR=/tmp
+
+# CSR_NAME can be any name you want. It's the name of the CSR as seen by Kubernetes
+CSR_NAME=vault-csr
 ```
 
 1. Create a key for Kubernetes to sign.
@@ -76,7 +79,6 @@ TMPDIR=/tmp
    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
       ```bash
-      $ export CSR_NAME=vault-csr
       $ cat <<EOF >${TMPDIR}/csr.yaml
       apiVersion: certificates.k8s.io/v1beta1
       kind: CertificateSigningRequest
@@ -92,8 +94,6 @@ TMPDIR=/tmp
         - server auth
       EOF
       ```
-
-      -> `CSR_NAME` can be any name you want. It's the name of the CSR as seen by Kubernetes
 
    2. Send the CSR to Kubernetes.
 
