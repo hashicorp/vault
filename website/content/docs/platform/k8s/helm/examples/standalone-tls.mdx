@@ -87,7 +87,7 @@ CSR_NAME=vault-csr
       spec:
         groups:
         - system:authenticated
-        request: $(cat ${TMPDIR}/server.csr | base64 | tr -d '\n')
+        request: $(base64 ${TMPDIR}/server.csr | tr -d '\n')
         usages:
         - digital signature
         - key encipherment
