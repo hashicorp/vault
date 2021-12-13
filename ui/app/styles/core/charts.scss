@@ -5,15 +5,22 @@
   height: 547px; // TODO amend for specific chart heights
   width: 100%;
 
-  display: grid;
-  grid-template-columns: 1fr 0.3fr 1fr 1fr 1fr 1fr;
-  grid-template-rows: repeat(5, 1fr);
-
   // ARG TODO we can manage this using css grid
   // > div.is-border {
   //   border: 0.3px solid $ui-gray-200;
   //   margin-bottom: $spacing-xxs;
   // }
+}
+.single-chart {
+  display: grid;
+  grid-template-columns: 1fr 0.3fr 1fr 1fr 1fr 1fr;
+  grid-template-rows: repeat(5, 1fr);
+}
+
+.double-chart {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(5, 1fr);
 }
 
 .chart-header {
