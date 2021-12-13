@@ -42,9 +42,9 @@ const DATA = [
 const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
-const AXES_MARGIN = { yLeft: 0, xLeft: 11, yDown: -40, xDown: 265 }; // makes space for y-axis legend
+const AXES_MARGIN = { xLeft: 10, xDown: 290 }; // makes space for y-axis legend
 const TRANSLATE = { none: 0, right: 11, down: -30 };
-const CHART_HEIGHT = 300;
+
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '#wtf';
   @tracked hoveredLabel = 'init';
@@ -68,7 +68,7 @@ export default class TotalClientUsage extends Component {
 
     let chartSvg = select(element);
 
-    chartSvg.attr('viewBox', `0 0 725 291`); // set aspect ratio
+    chartSvg.attr('viewBox', `0 5 725 305`); // set aspect ratio
 
     let groups = chartSvg
       .selectAll('g')
@@ -89,12 +89,15 @@ export default class TotalClientUsage extends Component {
       .attr('y', data => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
 
     // MAKE AXES //
+    let svgChartSize = chartSvg.node().getBoundingClientRect();
+    console.log(svgChartSize);
+
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([CHART_HEIGHT, 0]);
+      .range([svgChartSize.height, 0]);
 
     // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
-    let formatNumbers = number => format('.1s')(number).replace('G', 'B'); // for billions to replace G with B.
+    let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.
 
     // customize y-axis
     let yAxis = axisLeft(yAxisScale)
@@ -102,7 +105,7 @@ export default class TotalClientUsage extends Component {
       .ticks(6)
       .tickFormat(formatNumbers);
 
-    yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.yLeft}, ${AXES_MARGIN.yDown})`));
+    yAxis(chartSvg.append('g'));
 
     let xAxisGenerator = axisBottom(xScale);
     let xAxis = chartSvg.append('g').call(xAxisGenerator);
