@@ -73,7 +73,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		c.Organization = organizationRaw.(string)
 	}
 	if c.Organization == "" {
-		return logical.ErrorResponse(fmt.Sprintf("organization is a required parameter")), nil
+		return logical.ErrorResponse("organization is a required parameter"), nil
 	}
 
 	if organizationRaw, ok := data.GetOk("organization_id"); ok {
@@ -214,11 +214,13 @@ func (c *config) setOrganizationID(ctx context.Context, client *github.Client) e
 	if err != nil {
 		return err
 	}
-	if org == nil || *org.ID == 0 {
+
+	orgID := org.GetID()
+	if orgID == 0 {
 		return fmt.Errorf("organization_id not found for %s", c.Organization)
 	}
 
-	c.OrganizationID = *org.ID
+	c.OrganizationID = orgID
 
 	return nil
 }
