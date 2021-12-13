@@ -111,15 +111,13 @@ export default function UseCasePage({ data }) {
 
       <div className={s.cards}>
         <IoCardContainer
-          heading={cardsHeading}
-          description={cardsDescription}
-          label="Tutorials"
+          label="Docs"
           cta={{
-            url: 'https://learn.hashicorp.com/vault',
+            url: '/docs',
             text: 'Explore all',
           }}
           cardsPerRow={3}
-          cards={tutorialCards.map((card) => {
+          cards={documentationCards.map((card) => {
             return {
               eyebrow: card.eyebrow,
               link: {
@@ -134,13 +132,15 @@ export default function UseCasePage({ data }) {
         />
 
         <IoCardContainer
-          label="Docs"
+          heading={cardsHeading}
+          description={cardsDescription}
+          label="Tutorials"
           cta={{
-            url: '/docs',
+            url: 'https://learn.hashicorp.com/vault',
             text: 'Explore all',
           }}
           cardsPerRow={3}
-          cards={documentationCards.map((card) => {
+          cards={tutorialCards.map((card) => {
             return {
               eyebrow: card.eyebrow,
               link: {
