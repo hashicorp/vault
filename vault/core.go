@@ -3017,7 +3017,7 @@ func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
 func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
-		c.Logger().Trace("failed to retrieve request with ID %v", reqID)
+		c.Logger().Trace("failed to retrieve request with ID", "request_id", reqID)
 		return
 	}
 
