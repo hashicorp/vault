@@ -93,10 +93,14 @@ export default class TotalClientUsage extends Component {
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
       .range([CHART_HEIGHT, 0]);
 
+    // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
+    let formatNumbers = number => format('.1s')(number).replace('G', 'B'); // for billions to replace G with B.
+
     // customize y-axis
     let yAxis = axisLeft(yAxisScale)
       .tickSize(5)
-      .ticks(6);
+      .ticks(6)
+      .tickFormat(formatNumbers);
 
     yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.yLeft}, ${AXES_MARGIN.yDown})`));
 
@@ -148,9 +152,6 @@ export default class TotalClientUsage extends Component {
 
     // let xAxis = axisBottom(xScaleNotPercent).tickSize(1);
     // xAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left},375)`));
-
-    // // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
-    // let yAxisTickFormat = number => format('.1s')(number).replace('G', 'B'); // for billions to replace G with B.
 
     // let yAxis = axisLeft(yScaleNotPercent).tickFormat(yAxisTickFormat); // format number as 8k or 8M
     // yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left},0)`));
