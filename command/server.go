@@ -52,11 +52,14 @@ import (
 	"github.com/posener/complete"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
+	"golang.org/x/net/http2"
 	"google.golang.org/grpc/grpclog"
 )
 
-var _ cli.Command = (*ServerCommand)(nil)
-var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+var (
+	_ cli.Command             = (*ServerCommand)(nil)
+	_ cli.CommandAutocomplete = (*ServerCommand)(nil)
+)
 
 var memProfilerEnabled = false
 
@@ -668,6 +671,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
 		}
+		conf := &http2.Server{
+			NewWriteScheduler: func() http2.WriteScheduler {
+				return http2.NewPriorityWriteScheduler(nil)
+			},
+		}
+		http2.ConfigureServer(server, conf)
 
 		go server.Serve(ln.Listener)
 	}
@@ -1142,7 +1151,7 @@ func (c *ServerCommand) Run(args []string) int {
 				}),
 			})
 			var sealInfoKeys []string
-			var sealInfoMap = map[string]string{}
+			sealInfoMap := map[string]string{}
 			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
@@ -1159,7 +1168,7 @@ func (c *ServerCommand) Run(args []string) int {
 				})
 			}
 
-			var infoPrefix = ""
+			infoPrefix := ""
 			if configSeal.Disabled {
 				unwrapSeal = seal
 				infoPrefix = "Old "
@@ -1780,7 +1789,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 						"Development mode should NOT be used in production installations!"))
 					c.UI.Warn("")
 				})
-			})}
+			}),
+		}
 		c.logger.RegisterSink(qw)
 	}
 
@@ -2230,7 +2240,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		return 1
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0755); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0o755); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing token to tempfile: %s", err))
 		return 1
 	}
@@ -2462,7 +2472,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}
@@ -2525,7 +2535,6 @@ type StorageMigrationStatus struct {
 
 func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) {
 	entry, err := b.Get(context.Background(), storageMigrationLock)
-
 	if err != nil {
 		return nil, err
 	}
