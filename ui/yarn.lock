@@ -8104,6 +8104,11 @@ d3-format@1:
   resolved "https://registry.yarnpkg.com/d3-format/-/d3-format-1.4.5.tgz#374f2ba1320e3717eb74a9356c67daee17a7edb4"
   integrity sha512-J0piedu6Z8iB6TbIGfZgDzfXxUFN3qQRMofy2oPdXzQibYGqPB/9iMcxr/TGalU+2RsyDO+U4f33id8tbnSRMQ==
 
+d3-format@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/d3-format/-/d3-format-3.1.0.tgz#9260e23a28ea5cb109e93b21a06e24e2ebd55641"
+  integrity sha512-YyUI6AEuY/Wpt8KWLgZHsIU86atmikuoOmCfommt0LYHiQSPjvX2AcFc38PX0CBpr2RCyZhjex+NS/LPOv6YqA==
+
 d3-geo@1:
   version "1.12.1"
   resolved "https://registry.yarnpkg.com/d3-geo/-/d3-geo-1.12.1.tgz#7fc2ab7414b72e59fbcbd603e80d9adc029b035f"
@@ -9726,6 +9731,13 @@ ember-get-config@^0.2.2:
     broccoli-file-creator "^1.1.1"
     ember-cli-babel "^6.3.0"
 
+ember-ignore-children-helper@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/ember-ignore-children-helper/-/ember-ignore-children-helper-1.0.1.tgz#f7c4aa17afb9c5685e1d4dcdb61c7b138ca7cdc3"
+  integrity sha512-AgKkrvd1/hIBWdLn42gITlweVsALUGPYF9fMpQ2IDqp7QnRmtO8ocRbZEmMddPDWY9Xu7W5qO2f35rbD7OSpYw==
+  dependencies:
+    ember-cli-babel "^6.8.2"
+
 "ember-inflector@^2.0.0 || ^3.0.0", ember-inflector@^3.0.0, ember-inflector@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/ember-inflector/-/ember-inflector-3.0.1.tgz#04be6df4d7e4000f6d6bd70787cdc995f77be4ab"
@@ -9771,6 +9783,17 @@ ember-maybe-in-element@^0.4.0:
   integrity sha512-ADQ9jewz46Y2MWiTAKrheIukHiU6p0QHn3xqz1BBDDOmubW1WdAjSrvtkEWsJQ08DyxIn3RdMuNDzAUo6HN6qw==
   dependencies:
     ember-cli-babel "^7.1.0"
+
+ember-modal-dialog@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/ember-modal-dialog/-/ember-modal-dialog-3.0.3.tgz#4dd1c699fef02953f21e2b2b290cca380a6317dd"
+  integrity sha512-a3WHPIZMbnM4GDZdyNseClUIKWcI6AZuhXdNpw0XbfKzpocW2vAqhwLmQ17Fo+W5mCwQXU131DAROFWeOP68xQ==
+  dependencies:
+    ember-cli-babel "^7.23.0"
+    ember-cli-htmlbars "^3.0.0"
+    ember-cli-version-checker "^2.1.0"
+    ember-ignore-children-helper "^1.0.1"
+    ember-wormhole "^0.5.5"
 
 ember-modifier-manager-polyfill@^1.1.0:
   version "1.2.0"
@@ -10035,6 +10058,15 @@ ember-test-waiters@^1.1.1:
   dependencies:
     ember-cli-babel "^7.11.0"
     semver "^6.3.0"
+
+ember-tether@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/ember-tether/-/ember-tether-2.0.1.tgz#29cab1463c43ebc22c836887b25d9b5106231366"
+  integrity sha512-ECjmFVqo58YK6SmrBW77hmp1wE76n9azl3H6oMvYOXLA4FraOB4xhuk/VCV/XPbG0p1bArKepGjxM8Qbu8g0Lw==
+  dependencies:
+    ember-auto-import "^1.2.19"
+    ember-cli-babel "^7.1.2"
+    tether "^1.4.0"
 
 ember-text-measurer@^0.5.0:
   version "0.5.0"
@@ -19252,6 +19284,11 @@ testem@^3.2.0:
     tap-parser "^7.0.0"
     tmp "0.0.33"
     xmldom "^0.6.0"
+
+tether@^1.4.0:
+  version "1.4.7"
+  resolved "https://registry.yarnpkg.com/tether/-/tether-1.4.7.tgz#d56a818590d8fe72e387f77a67f93ab96d8e1fb2"
+  integrity sha512-Z0J1aExjoFU8pybVkQAo/vD2wfSO63r+XOPfWQMC5qtf1bI7IWqNk4MiyBcgvvnY8kqnY06dVdvwTK2S3PU/Fw==
 
 text-encoder-lite@2.0.0:
   version "2.0.0"

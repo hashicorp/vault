@@ -1,14 +1,13 @@
-<div class="chart-wrapper">
+<div class="chart-wrapper single-chart">
   <div class="chart-header">
     <h2 class="chart-title">{{@title}}</h2>
     {{#if @description}}
       <p class="chart-description">{{@description}}</p>
     {{/if}}
   </div>
-  <div class="chart-container">
-    <svg 
+  <div class="chart-container" {{on "mouseleave" (fn this.removeTooltip)}}>
+    <svg class="chart"
       {{did-insert this.registerListener}}
-      class="chart"
     ></svg>
   </div>
 
@@ -28,4 +27,21 @@
     legend
     {{!-- <svg class="legend"></svg> --}}
   </div>
+
+  {{!-- TOOLTIP --}}
+  
+  {{#if this.tooltipTarget}}  
+  {{!-- Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 --}}
+  {{!-- Component must be in curly bracket notation --}}
+    {{#modal-dialog
+      tagName='div'
+      tetherTarget=this.tooltipTarget
+      targetAttachment='bottom middle'
+      attachment='bottom middle'
+      offset='100px 0'
+    }}
+      <p class="chart-tooltip">{{this.hoveredLabel}}</p>
+      <div class="chart-tooltip-arrow" />
+    {{/modal-dialog}}
+  {{/if}}
 </div>
