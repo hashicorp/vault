@@ -164,7 +164,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17
     resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -297,7 +297,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17 \
               tail -f /dev/null
 
             # Run tests
@@ -361,7 +361,7 @@ jobs:
     - GO_TAGS: ''
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -490,7 +490,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17 \
               tail -f /dev/null
 
             # Run tests
@@ -571,7 +571,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17
     resource_class: large
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -700,7 +700,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17 \
               tail -f /dev/null
 
             # Run tests
@@ -843,7 +843,7 @@ jobs:
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17
     resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -976,7 +976,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.17.5-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17 \
               tail -f /dev/null
 
             # Run tests
