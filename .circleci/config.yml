@@ -9,7 +9,7 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - restore_cache:
@@ -30,7 +30,7 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - run:
@@ -83,7 +83,7 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - checkout
@@ -101,7 +101,7 @@ jobs:
   build-go-dev:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -164,9 +164,9 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -361,9 +361,9 @@ jobs:
     - GO_TAGS: ''
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
     resource_class: xlarge
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -571,7 +571,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -761,7 +761,7 @@ jobs:
   pre-flight-checks:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -845,9 +845,9 @@ jobs:
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
