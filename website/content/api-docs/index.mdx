@@ -47,6 +47,11 @@ Responses from auth login methods that generate an authentication token are
 sent back to the client via JSON. The resulting token should be saved on the
 client or passed via the `X-Vault-Token` or `Authorization` header for future requests.
 
+## Parameter restrictions
+
+Several Vault APIs require path parameters. These parameters cannot end in periods, as that 
+will cause Vault to return a 404 unsupported path error.
+
 ## Namespaces
 
 If using the [Namespaces](/docs/enterprise/namespaces) feature, API
