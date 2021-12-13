@@ -6,7 +6,7 @@
   width: 100%;
 
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: 1fr 0.3fr 1fr 1fr 1fr 1fr;
   grid-template-rows: repeat(5, 1fr);
 
   // ARG TODO we can manage this using css grid

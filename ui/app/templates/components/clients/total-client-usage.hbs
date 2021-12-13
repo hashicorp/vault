@@ -2,10 +2,10 @@
   <div class="chart-header">
     <h2 class="chart-title">{{@title}}</h2>
     {{#if @description}}
-      <p class="chart-description" id="blah">{{@description}}</p>
+      <p class="chart-description">{{@description}}</p>
     {{/if}}
   </div>
-  <div class="chart-container" {{on "mouseleave" (fn this.closeMe)}}>
+  <div class="chart-container" {{on "mouseleave" (fn this.removeTooltip)}}>
     <svg class="chart"
       {{did-insert this.registerListener}}
     ></svg>
@@ -27,12 +27,12 @@
     legend
     {{!-- <svg class="legend"></svg> --}}
   </div>
-  <p id="wtf">wtf</p>
 
   {{!-- TOOLTIP --}}
-  {{!-- must be in curly bracket notation --}}
+  
   {{#if this.tooltipTarget}}  
   {{!-- Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 --}}
+  {{!-- Component must be in curly bracket notation --}}
     {{#modal-dialog
       tagName='div'
       tetherTarget=this.tooltipTarget

@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { max } from 'd3-array';
+// eslint-disable-next-line no-unused-vars
 import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scaleBand } from 'd3-scale';
@@ -46,8 +47,8 @@ const AXES_MARGIN = { xLeft: 10, xDown: 290 }; // makes space for y-axis legend
 const TRANSLATE = { none: 0, right: 10, down: -31 };
 
 export default class TotalClientUsage extends Component {
-  @tracked tooltipTarget = '#wtf';
-  @tracked hoveredLabel = 'init';
+  @tracked tooltipTarget = '';
+  @tracked hoveredLabel = '';
   @tracked trackingTest = 0;
   @action
   registerListener(element) {
@@ -75,7 +76,7 @@ export default class TotalClientUsage extends Component {
       .data(stackedData)
       .enter()
       .append('g')
-      .attr('transform', `translate(${TRANSLATE.right}, ${TRANSLATE.down})`) //
+      .attr('transform', `translate(${TRANSLATE.right}, ${TRANSLATE.down})`)
       .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
     groups
@@ -89,11 +90,10 @@ export default class TotalClientUsage extends Component {
       .attr('y', data => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
 
     // MAKE AXES //
-    let svgChartSize = chartSvg.node().getBoundingClientRect();
-
+    let svgChartSize = chartSvg.node().getBBox(); // getBBox will return the width and height of svg element
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([svgChartSize.height, 0]);
+      .range([svgChartSize.height + -TRANSLATE.down, 0]);
 
     // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
     let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.
@@ -102,7 +102,7 @@ export default class TotalClientUsage extends Component {
     let yAxis = axisLeft(yAxisScale)
       .ticks(6)
       .tickPadding(10)
-      .tickSizeInner(-(svgChartSize.x + 47)) // makes grid lines correct length
+      .tickSizeInner(-svgChartSize.width) // makes grid lines correct length
       .tickFormat(formatNumbers);
 
     yAxis(
@@ -137,7 +137,7 @@ export default class TotalClientUsage extends Component {
       .attr('y', '0') // start at bottom
       .attr('x', data => xScale(data.month)) // not data.data because this is not stacked data
       .style('fill', `${BACKGROUND_BAR_COLOR}`)
-      .style('opacity', '1')
+      .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
     // for tooltip
@@ -149,27 +149,9 @@ export default class TotalClientUsage extends Component {
         .node();
       this.tooltipTarget = node; // grab the second node from the list of 24 rects
     });
-
-    // axis lines
-
-    // let xScaleNotPercent = scaleBand()
-    //   .domain(DATA.map(month => month.month))
-    //   .range([0, 1200]) //hard coded width because 100 before with percents 0 to width
-    //   .paddingInner(0.85);
-
-    // let yScaleNotPercent = scaleLinear()
-    //   .domain([0, max(stackedData[1].map(d => d.data.directEntities + d.data.nonDirectTokens))]) // TODO calculate high of total combined
-    //   .range([800, 0]); // height to zero (it's inverted), TODO make 98 as a percent instead of a fixed number
-
-    // let xAxis = axisBottom(xScaleNotPercent).tickSize(1);
-    // xAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left},375)`));
-
-    // let yAxis = axisLeft(yScaleNotPercent).tickFormat(yAxisTickFormat); // format number as 8k or 8M
-    // yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left},0)`));
   }
 
-  // ARG TODO rename
-  @action closeMe() {
+  @action removeTooltip() {
     this.tooltipTarget = null;
   }
 }
