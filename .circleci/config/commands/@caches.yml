@@ -32,7 +32,7 @@ save_go_mod_cache:
         name: Save go modules cache
         key: *gocachekey
         paths:
-          - /go/pkg/mod
+          - /home/circleci/go/pkg/mod
 refresh_go_mod_cache:
   steps:
     - restore_go_mod_cache_permissive

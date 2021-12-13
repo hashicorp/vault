@@ -144,8 +144,8 @@ steps:
           docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
           # Copy the downloaded modules inside the container.
-          docker exec testcontainer sh -c 'mkdir -p /go/pkg'
-          docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+          docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+          docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
 
           docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
             -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
