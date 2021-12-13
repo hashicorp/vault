@@ -67,6 +67,7 @@ export default function UseCasePage({ data }) {
 
       <IoUsecaseSection
         brand="vault"
+        bottomIsFlush={_customerCaseStudy}
         eyebrow="Solution"
         heading={solutionHeading}
         description={solutionDescription}

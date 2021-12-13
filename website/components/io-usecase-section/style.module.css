@@ -24,12 +24,16 @@
       background-color: var(--background-accent);
 
       @media (--medium-up) {
-        border-top-left-radius: 6px;
-        border-top-right-radius: 6px;
+        border-radius: 6px;
         left: 24px;
         right: 24px;
       }
     }
+  }
+
+  &.isFlush::before {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 }
 

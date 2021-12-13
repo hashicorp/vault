@@ -7,6 +7,7 @@ import s from './style.module.css'
 
 interface IoUsecaseSectionProps {
   brand?: Products | 'neutral'
+  bottomIsFlush?: boolean
   eyebrow: string
   heading: string
   description: string
@@ -24,6 +25,7 @@ interface IoUsecaseSectionProps {
 
 export default function IoUsecaseSection({
   brand = 'neutral',
+  bottomIsFlush = false,
   eyebrow,
   heading,
   description,
@@ -32,7 +34,7 @@ export default function IoUsecaseSection({
 }: IoUsecaseSectionProps): React.ReactElement {
   return (
     <section
-      className={classNames(s.section, s[brand])}
+      className={classNames(s.section, s[brand], bottomIsFlush && s.isFlush)}
       style={
         {
           '--background-accent': `var(--${brand}-secondary)`,
