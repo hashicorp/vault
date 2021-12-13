@@ -49,7 +49,7 @@ CSR_NAME=vault-csr
    1. Create a file `${TMPDIR}/csr.conf` with the following contents:
 
       ```bash
-      $ cat <<EOF >${TMPDIR}/csr.conf
+      cat <<EOF >${TMPDIR}/csr.conf
       [req]
       req_extensions = v3_req
       distinguished_name = req_distinguished_name
@@ -79,7 +79,7 @@ CSR_NAME=vault-csr
    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
       ```bash
-      $ cat <<EOF >${TMPDIR}/csr.yaml
+      cat <<EOF >${TMPDIR}/csr.yaml
       apiVersion: certificates.k8s.io/v1beta1
       kind: CertificateSigningRequest
       metadata:
