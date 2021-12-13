@@ -42,8 +42,8 @@ const DATA = [
 const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
-const AXES_MARGIN = { bottom: 250, left: 50 }; // makes space for y-axis legend
-const TRANSLATE = { up: -30, rightSmall: 100, rightLarge: 111 };
+const AXES_MARGIN = { yLeft: 0, xLeft: 11, yDown: -40, xDown: 265 }; // makes space for y-axis legend
+const TRANSLATE = { none: 0, right: 11, down: -30 };
 const CHART_HEIGHT = 300;
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '#wtf';
@@ -68,15 +68,14 @@ export default class TotalClientUsage extends Component {
 
     let chartSvg = select(element);
 
-    let chartWrapper = select('chart-wrapper');
-    chartWrapper.attr('viewBox', `0 0 1152 500`); // set aspect ratio
+    chartSvg.attr('viewBox', `0 0 725 291`); // set aspect ratio
 
     let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
-      .attr('transform', `translate(${TRANSLATE.rightLarge}, ${TRANSLATE.up})`) // +11 centers blue bars inside grey bars
+      .attr('transform', `translate(${TRANSLATE.right}, ${TRANSLATE.down})`) //
       .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
     groups
@@ -99,21 +98,19 @@ export default class TotalClientUsage extends Component {
       .tickSize(5)
       .ticks(6);
 
-    yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.left}, ${TRANSLATE.up * 2})`));
+    yAxis(chartSvg.append('g').attr('transform', `translate(${AXES_MARGIN.yLeft}, ${AXES_MARGIN.yDown})`));
 
     let xAxisGenerator = axisBottom(xScale);
     let xAxis = chartSvg.append('g').call(xAxisGenerator);
 
-    xAxis.attr('transform', `translate(${TRANSLATE.rightLarge}, ${AXES_MARGIN.bottom})`);
+    xAxis.attr('transform', `translate(${AXES_MARGIN.xLeft}, ${AXES_MARGIN.xDown})`);
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
     // creating wider area for tooltip hover
-    let actionBars = chartSvg
-      .append('g')
-      .attr('transform', `translate(${TRANSLATE.rightSmall}, ${TRANSLATE.up})`);
+    let greyBars = chartSvg.append('g').attr('transform', `translate(${TRANSLATE.none}, ${TRANSLATE.down})`);
 
-    let tooltipRect = actionBars
+    let tooltipRect = greyBars
       .selectAll('.tooltip-rect')
       .data(dataset)
       .enter()
