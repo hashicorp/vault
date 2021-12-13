@@ -20,8 +20,6 @@ var (
 		return nil
 	}
 
-	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
-
 	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]interface{} { return nil }
 	addSentinelPolicyData     = func(map[string]interface{}, *Policy) {}
 	inputSentinelPolicyData   = func(*framework.FieldData, *Policy) *logical.Response { return nil }
@@ -85,6 +83,12 @@ var (
 	}
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
+
+func getSystemSchemas() []func() *memdb.TableSchema {
+	return []func() *memdb.TableSchema{
+		mfaConfigTableSchema,
+	}
+}
 
 // tuneMount is used to set config on a mount point
 func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration) error {

@@ -4,6 +4,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -103,7 +104,13 @@ func postUnsealPhysical(c *Core) error {
 	return nil
 }
 
-func loadMFAConfigs(context.Context, *Core) error { return nil }
+func loadMFAConfigs(ctx context.Context, c *Core) error {
+	if c.systemBackend == nil {
+		return fmt.Errorf("system backend is not setup")
+	}
+
+	return c.systemBackend.loadMFAConfigs(ctx)
+}
 
 func shouldStartClusterListener(*Core) bool { return true }
 
