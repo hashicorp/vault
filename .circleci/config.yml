@@ -588,6 +588,8 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - attach_workspace:
+        at: /home/circleci/go/bin
     - add_ssh_keys:
         fingerprints:
         - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
