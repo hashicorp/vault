@@ -178,3 +178,13 @@
   bottom: -9px;
   left: calc(50% - 5px);
 }
+
+.axes-lines {
+  g > text {
+    color: $ui-gray-500;
+  }
+
+  g > line {
+    color: $ui-gray-300;
+  }
+}

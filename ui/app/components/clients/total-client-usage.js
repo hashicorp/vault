@@ -43,7 +43,7 @@ const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
 const AXES_MARGIN = { xLeft: 10, xDown: 290 }; // makes space for y-axis legend
-const TRANSLATE = { none: 0, right: 11, down: -30 };
+const TRANSLATE = { none: 0, right: 10, down: -31 };
 
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '#wtf';
@@ -90,7 +90,6 @@ export default class TotalClientUsage extends Component {
 
     // MAKE AXES //
     let svgChartSize = chartSvg.node().getBoundingClientRect();
-    console.log(svgChartSize);
 
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
@@ -101,16 +100,25 @@ export default class TotalClientUsage extends Component {
 
     // customize y-axis
     let yAxis = axisLeft(yAxisScale)
-      .tickSize(5)
       .ticks(6)
+      .tickPadding(10)
+      .tickSizeInner(-(svgChartSize.x + 47)) // makes grid lines correct length
       .tickFormat(formatNumbers);
 
-    yAxis(chartSvg.append('g'));
+    yAxis(
+      chartSvg
+        .append('g')
+        .attr('transform', `translate(${TRANSLATE.right})`)
+        .attr('class', 'axes-lines')
+    );
 
+    // customize x-axis
     let xAxisGenerator = axisBottom(xScale);
     let xAxis = chartSvg.append('g').call(xAxisGenerator);
 
-    xAxis.attr('transform', `translate(${AXES_MARGIN.xLeft}, ${AXES_MARGIN.xDown})`);
+    xAxis
+      .attr('transform', `translate(${TRANSLATE.right}, ${AXES_MARGIN.xDown})`)
+      .attr('class', 'axes-lines');
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
