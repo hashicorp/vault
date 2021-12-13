@@ -111,6 +111,8 @@ export default function UseCasePage({ data }) {
 
       <div className={s.cards}>
         <IoCardContainer
+          heading={cardsHeading}
+          description={cardsDescription}
           label="Docs"
           cta={{
             url: '/docs',
@@ -132,8 +134,6 @@ export default function UseCasePage({ data }) {
         />
 
         <IoCardContainer
-          heading={cardsHeading}
-          description={cardsDescription}
           label="Tutorials"
           cta={{
             url: 'https://learn.hashicorp.com/vault',
