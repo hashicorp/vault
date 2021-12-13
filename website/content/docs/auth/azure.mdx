@@ -192,6 +192,18 @@ for your server at `path/to/plugins`:
    $ vault auth enable -path=azure azure-auth
    ```
 
+## Azure Debug Logs
+
+The Azure Auth Plugin supports additional logging of all requests to the Azure API
+when additional information is needed (such as correlation ID headers).
+
+To enable the Azure debug logs, set the following environment variable on the Vault
+server:
+
+```shell
+AZURE_SDK_GO_LOGGING=debug
+```
+
 ## API
 
 The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api/auth/azure) for more details.
