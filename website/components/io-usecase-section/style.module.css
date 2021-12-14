@@ -32,9 +32,17 @@
     }
   }
 
-  &.isFlush::before {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+  &.isFlush {
+    padding-bottom: 96px;
+
+    @media (--medium-up) {
+      padding-bottom: 164px;
+    }
+
+    &::before {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
   }
 }
 
