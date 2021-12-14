@@ -13,7 +13,7 @@ jobs:
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
     - run:
         command: |
@@ -22,7 +22,7 @@ jobs:
           npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Save yarn cache
         paths:
         - ui/node_modules
@@ -49,7 +49,7 @@ jobs:
         working_directory: ~/
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
     - attach_workspace:
         at: .
@@ -88,7 +88,7 @@ jobs:
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
     - attach_workspace:
         at: .
