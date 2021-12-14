@@ -62,10 +62,12 @@
   overflow-x: auto;
   -ms-overflow-style: none;
   scrollbar-width: none;
-  margin: -4px;
-  padding: 4px;
+  margin: 0 -24px;
+  padding: 6px 24px;
 
   @media (--medium-up) {
+    margin: 0;
+    padding: 0;
     overflow-x: unset;
   }
 
