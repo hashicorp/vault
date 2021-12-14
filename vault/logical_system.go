@@ -1625,6 +1625,15 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
 		AllowedManagedKeys := rawVal.([]string)
+		// Sanitize the names of the managed keys, to avoid problems later when the
+		// key configuration is created.
+		for i := range AllowedManagedKeys {
+			sanitizedKey, err := sanitizeManagedKeyName(AllowedManagedKeys[i])
+			if err != nil {
+				return handleError(err)
+			}
+			AllowedManagedKeys[i] = sanitizedKey
+		}
 
 		oldVal := mountEntry.Config.AllowedManagedKeys
 		mountEntry.Config.AllowedManagedKeys = AllowedManagedKeys

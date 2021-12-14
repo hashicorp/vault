@@ -355,6 +355,9 @@ type Core struct {
 	// identityStore is used to manage client entities
 	identityStore *IdentityStore
 
+	// managedKeyRegistry is used to keep track of keys managed by an external KMS
+	managedKeyRegistry *ManagedKeyRegistry
+
 	// activityLog is used to track active client count
 	activityLog *ActivityLog
 
@@ -2041,6 +2044,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 	if err := c.setupPolicyStore(ctx); err != nil {
+		return err
+	}
+	if err := c.setupManagedKeyRegistry(); err != nil {
 		return err
 	}
 	if err := c.loadCORSConfig(ctx); err != nil {
