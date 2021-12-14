@@ -215,9 +215,12 @@ p.chart-description {
 .axes-lines {
   g > text {
     color: $ui-gray-500;
+    font-weight: $font-weight-semibold;
+    font-size: $size-8;
   }
 
   g > line {
     color: $ui-gray-300;
+    mix-blend-mode: darken;
   }
 }
