@@ -136,6 +136,12 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   circumstances, such as if proprietary vendor extensions are required to
   create keys of a suitable type.
 
+- `force_rw_session` `(string: "false")`: Force all operations to open up
+  a read-write session to the HSM. This is a boolean expressed as a string (e.g.
+  `"true"`). May also be specified by the `VAULT_HSM_FORCE_RW_SESSION` environment
+  variable. This key is mainly to work around a limitation within AWS's CloudHSM v5
+  pkcs11 implementation.
+
 ### Mechanism Specific Flags
 
 - `rsa_encrypt_local` `(string: "false")`: For HSMs that do not support encryption
@@ -172,6 +178,7 @@ VAULT_HSM_HMAC_MECHANISM
 VAULT_HSM_GENERATE_KEY
 VAULT_HSM_RSA_ENCRYPT_LOCAL
 VAULT_HSM_RSA_OAEP_HASH
+VAULT_HSM_FORCE_RW_SESSION
 ```
 
 ## Vault Key Generation Attributes
