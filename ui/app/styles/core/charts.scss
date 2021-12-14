@@ -156,6 +156,32 @@ p.chart-description {
   }
 }
 
+.timestamp {
+  grid-column-start: 1;
+  grid-column-end: 2;
+  grid-row-start: 5;
+  color: $ui-gray-500;
+  font-size: $size-9;
+  align-self: end;
+}
+
+.light-dot {
+  background-color: #bfd4ff;
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  padding-right: 10px;
+}
+
+.dark-dot {
+  background-color: #1563ff;
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 .legend-container-center {
   grid-row-start: 5;
   grid-column-start: 3;
@@ -163,6 +189,7 @@ p.chart-description {
   height: $spacing-l;
   align-self: center;
   justify-self: center;
+  font-size: $size-9;
 }
 
 .legend-container-right {
@@ -172,6 +199,7 @@ p.chart-description {
   height: $spacing-l;
   align-self: start;
   justify-self: start;
+  font-size: $size-9;
 }
 
 .chart-tooltip {

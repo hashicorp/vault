@@ -17,7 +17,7 @@ import { max, maxIndex } from 'd3-array';
  * <HorizontalBarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
  * ```
  * @param {object} dataset - dataset for the chart
- * @param {array} chartLegend - array of objects with key names 'key' and 'label' for the map legend
+ * @param {array} chartLegend - array of objects with key names 'key' and 'label' for the chart legend
  * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis (i.e. 'namespace_path')
  * @param {string} [param1=defaultValue] - param1 is...
  */
@@ -103,26 +103,11 @@ export default class HorizontalBarChart extends Component {
   }
 
   get chartLegend() {
-    assert(
-      'chart legend is required, must be an array of objects with key names of "key" and "label"',
-      this.hasLegend()
-    );
     return this.args.chartLegend;
   }
 
-  // TODO: use maxIndex function when packages are updated
   get topNamespace() {
-    console.log(this.args.dataset[maxIndex(this.args.dataset, d => d.total)]);
     return this.args.dataset[maxIndex(this.args.dataset, d => d.total)];
-  }
-
-  hasLegend() {
-    if (!this.args.chartLegend || !Array.isArray(this.args.chartLegend)) {
-      return false;
-    } else {
-      let legendKeys = this.args.chartLegend.map(obj => Object.keys(obj));
-      return legendKeys.map(array => array.includes('key', 'label')).every(element => element === true);
-    }
   }
 
   @action
@@ -183,24 +168,5 @@ export default class HorizontalBarChart extends Component {
       .attr('y', ({ data }) => yScale(data[labelKey]))
       .attr('rx', 3)
       .attr('ry', 3);
-
-    let startingXCoordinate = 100 - this.chartLegend.length * 20;
-    let legendSvg = select('.legend');
-    this.chartLegend.map((legend, i) => {
-      let xCoordinate = startingXCoordinate + i * 20;
-      legendSvg
-        .append('circle')
-        .attr('cx', `${xCoordinate}%`)
-        .attr('cy', '50%')
-        .attr('r', 6)
-        .style('fill', `${BAR_COLOR_DEFAULT[i]}`);
-      legendSvg
-        .append('text')
-        .attr('x', `${xCoordinate + 2}%`)
-        .attr('y', '50%')
-        .text(`${legend.label}`)
-        .style('font-size', '.8rem')
-        .attr('alignment-baseline', 'middle');
-    });
   }
 }
