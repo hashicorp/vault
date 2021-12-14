@@ -93,5 +93,14 @@
 
   & > li {
     display: flex;
+
+    @media (--small) {
+      &:last-of-type::after {
+        content: '';
+        width: 24px;
+        flex-shrink: 0;
+        background: lime;
+      }
+    }
   }
 }
