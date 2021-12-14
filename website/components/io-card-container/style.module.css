@@ -70,6 +70,7 @@
     left: 50%;
     margin-left: -50vw;
     width: 100vw;
+
     &::after {
       content: '';
       display: block;
