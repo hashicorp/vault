@@ -49,6 +49,7 @@ query UseCasesQuery {
     }
     cardsHeading
     cardsDescription
+    tutorialsLink
     tutorialCards {
       eyebrow
       heading
@@ -58,6 +59,7 @@ query UseCasesQuery {
         name
       }
     }
+    documentationLink
     documentationCards {
       eyebrow
       heading

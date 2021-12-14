@@ -82,6 +82,28 @@ export default function Homepage({ data }): React.ReactElement {
         }}
       />
 
+      <section className={s.useCases}>
+        <div className={s.container}>
+          <IoCardContainer
+            heading={useCasesHeading}
+            description={useCasesDescription}
+            cardsPerRow={4}
+            cards={useCasesCards.map((card) => {
+              return {
+                eyebrow: card.eyebrow,
+                link: {
+                  url: card.link,
+                  type: 'inbound',
+                },
+                heading: card.heading,
+                description: card.description,
+                products: card.products,
+              }
+            })}
+          />
+        </div>
+      </section>
+
       <IoHomeInPractice
         brand="vault"
         pattern="/img/practice-pattern.svg"
@@ -106,28 +128,6 @@ export default function Homepage({ data }): React.ReactElement {
           image: inPracticeCtaImage,
         }}
       />
-
-      <section className={s.useCases}>
-        <div className={s.container}>
-          <IoCardContainer
-            heading={useCasesHeading}
-            description={useCasesDescription}
-            cardsPerRow={4}
-            cards={useCasesCards.map((card) => {
-              return {
-                eyebrow: card.eyebrow,
-                link: {
-                  url: card.link,
-                  type: 'inbound',
-                },
-                heading: card.heading,
-                description: card.description,
-                products: card.products,
-              }
-            })}
-          />
-        </div>
-      </section>
 
       <IoHomeCaseStudies
         heading={caseStudiesHeading}

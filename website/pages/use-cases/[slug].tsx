@@ -27,7 +27,9 @@ export default function UseCasePage({ data }) {
     customerCaseStudy,
     cardsHeading,
     cardsDescription,
+    tutorialsLink,
     tutorialCards,
+    documentationLink,
     documentationCards,
     callToActionHeading,
     callToActionDescription,
@@ -115,7 +117,7 @@ export default function UseCasePage({ data }) {
           description={cardsDescription}
           label="Docs"
           cta={{
-            url: '/docs',
+            url: documentationLink ? documentationLink : '/docs',
             text: 'Explore all',
           }}
           cardsPerRow={3}
@@ -136,7 +138,9 @@ export default function UseCasePage({ data }) {
         <IoCardContainer
           label="Tutorials"
           cta={{
-            url: 'https://learn.hashicorp.com/vault',
+            url: tutorialsLink
+              ? tutorialsLink
+              : 'https://learn.hashicorp.com/vault',
             text: 'Explore all',
           }}
           cardsPerRow={3}
