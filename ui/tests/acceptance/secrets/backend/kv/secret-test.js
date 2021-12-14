@@ -124,7 +124,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     //remove validation error and cause another error that is captured by the API
     await fillIn('[data-test-kv-value]', 'removed');
     await typeIn('[data-test-kv-value]', '!');
-    await click('[data-test-secret-save="true"]');
+    await click('[data-test-secret-save]');
     assert
       .dom('[data-test-error]')
       .includesText(
@@ -218,12 +218,12 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     assert
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
-    assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
+    assert.dom('[data-test-secret-save]').isDisabled('Save button is disabled');
     await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
     await editPage.path(secretPath);
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
-    await click('[data-test-secret-save="true"]');
+    await click('[data-test-secret-save]');
     assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/${secretPath}`, 'navigates to show secret');
   });
 
@@ -441,7 +441,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
     assert.dom('[data-test-whitespace-warning]').exists('renders warning about their being a space');
     await settled();
-    await click('[data-test-secret-save="true"]');
+    await click('[data-test-secret-save]');
 
     await click('[data-test-popup-menu-trigger="version"]');
 

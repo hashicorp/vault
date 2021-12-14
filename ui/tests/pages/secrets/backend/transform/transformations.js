@@ -6,7 +6,7 @@ export default create({
   visit: visitable('/vault/secrets/:backend/list'),
   visitShow: visitable('/vault/secrets/:backend/show/:id'),
   visitCreate: visitable('/vault/secrets/:backend/create'),
-  createLink: clickable('[data-test-secret-create="true"]'),
+  createLink: clickable('[data-test-secret-create]'),
   name: fillable('[data-test-input="name"]'),
   submit: clickable('[data-test-transform-create]'),
   type: fillable('[data-test-input="type"'),

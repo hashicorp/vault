@@ -38,7 +38,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   });
 
   test('it shows a disabled button when no item is selected', async function (assert) {
-    await render(hbs`<GetCredentialsCard @title={{title}} @searchLabel={{searchLabel}}/>`);
+    await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
     assert.dom('[data-test-get-credentials]').isDisabled();
   });
 
@@ -46,7 +46,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
     const models = ['database/role'];
     this.set('models', models);
     await render(
-      hbs`<GetCredentialsCard @title={{title}} @searchLabel={{searchLabel}} @models={{models}} @type="role"/>`
+      hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}} @models={{this.models}} @type="role"/>`
     );
     await clickTrigger();
     await selectChoose('', 'my-role');
@@ -55,7 +55,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
 
   test('it shows input field that can be clicked to a secret when role is secret', async function (assert) {
     await render(
-      hbs`<GetCredentialsCard @title={{title}} @shouldUseFallback={{true}} @placeHolder="secret/" @backend="kv" @type="secret"/>`
+      hbs`<GetCredentialsCard @title={{this.title}} @shouldUseFallback={{true}} @placeHolder="secret/" @backend="kv" @type="secret"/>`
     );
     let card = document.querySelector('[data-test-search-roles]').childNodes[1];
     let placeholder = card.querySelector('input').placeholder;

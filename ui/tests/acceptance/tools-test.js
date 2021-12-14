@@ -1,4 +1,4 @@
-import { click, fillIn, find, findAll, currentURL, visit } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, currentURL, visit, settled } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -78,6 +78,7 @@ module('Acceptance | tools', function (hooks) {
       're-wrapped token is not the wrapped token'
     );
     tokenStore.set(find('[data-test-tools-input="rewrapped-token"]').value);
+    await settled();
 
     //unwrap
     await click('[data-test-tools-action-link="unwrap"]');

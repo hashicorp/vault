@@ -21,7 +21,7 @@
     <button
       type="button"
       class="button {{this.buttonClass}}"
-      disabled={{if (not-eq this.confirmationInput this.confirmText) true}}
+      disabled={{not-eq this.confirmationInput this.confirmText}}
       onclick={{this.onConfirm}}
       data-test-confirm-button={{this.testSelector}}
     >

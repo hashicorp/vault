@@ -19,10 +19,8 @@
         name={{concat this.elementId "-" index}}
         id={{concat this.elementId "-" index}}
         {{on "keyup" (action "inputChanged" index)}}
-        {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
-        @change={{action (action "inputChanged" index) value="target.value"}}
+        {{on "change" (action "inputChanged" index)}}
       />
-      {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
     </div>
     <div class="control">
       {{#if (eq (inc index) this.inputList.length)}}

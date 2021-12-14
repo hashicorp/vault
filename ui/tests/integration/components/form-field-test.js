@@ -26,7 +26,7 @@ module('Integration | Component | form field', function (hooks) {
     this.set('onChange', spy);
     this.set('model', model);
     this.set('attr', attr);
-    await render(hbs`{{form-field attr=attr model=model onChange=onChange}}`);
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
     return [model, spy];
   };
 
@@ -34,7 +34,7 @@ module('Integration | Component | form field', function (hooks) {
     let model = EmberObject.create({});
     this.attr = { name: 'foo' };
     this.model = model;
-    await render(hbs`{{form-field attr=attr model=model}}`);
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
 
     assert.equal(component.fields.objectAt(0).labelText, 'Foo', 'renders a label');
     assert.notOk(component.hasInput, 'renders only the label');
@@ -103,11 +103,11 @@ module('Integration | Component | form field', function (hooks) {
   test('it renders: editType file', async function (assert) {
     await setup.call(this, createAttr('foo', 'string', { editType: 'file' }));
     assert.ok(component.hasTextFile, 'renders the text-file component');
-    await click('[data-test-text-toggle="true"]');
-    await fillIn('[data-test-text-file-textarea="true"]', 'hello world');
-    assert.dom('[data-test-text-file-textarea="true"]').hasClass('masked-font');
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-text-file-textarea]', 'hello world');
+    assert.dom('[data-test-text-file-textarea]').hasClass('masked-font');
     await click('[data-test-button]');
-    assert.dom('[data-test-text-file-textarea="true"]').doesNotHaveClass('masked-font');
+    assert.dom('[data-test-text-file-textarea]').doesNotHaveClass('masked-font');
   });
 
   test('it renders: editType ttl', async function (assert) {
@@ -158,7 +158,7 @@ module('Integration | Component | form field', function (hooks) {
       onChange: () => {},
     });
 
-    await render(hbs`{{form-field attr=attr model=model onChange=onChange}}`);
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
     assert
       .dom('[data-test-toggle-input="Foo"]')
       .isNotChecked('Toggle is initially unchecked when given default value');
@@ -174,7 +174,7 @@ module('Integration | Component | form field', function (hooks) {
       onChange: () => {},
     });
 
-    await render(hbs`{{form-field attr=attr model=model onChange=onChange}}`);
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
     assert.dom('[data-test-toggle-input="Foo"]').isChecked('Toggle is initially checked when given value');
     assert.dom('[data-test-ttl-value="Foo"]').hasValue('1', 'Ttl input displays with correct value');
   });

@@ -45,7 +45,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`<InfoTableItemArray
-        @displayArray={{displayArray}}
+        @displayArray={{this.displayArray}}
       />`);
 
     assert.dom('[data-test-info-table-item-array]').exists();
@@ -60,11 +60,11 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
 
   test('it renders links if isLink is true', async function (assert) {
     await render(hbs`<InfoTableItemArray
-      @displayArray={{displayArray}}
-      @isLink={{isLink}}
-      @modelType={{modelType}}
-      @queryParam={{queryParam}}
-      @backend={{backend}}
+      @displayArray={{this.displayArray}}
+      @isLink={{this.isLink}}
+      @modelType={{this.modelType}}
+      @queryParam={{this.queryParam}}
+      @backend={{this.backend}}
     />`);
     assert.equal(
       document.querySelectorAll('a > span').length,
@@ -77,12 +77,12 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
     const displayArrayWithWildcard = ['role-1', 'role-2', 'role-3', 'r*'];
     this.set('displayArrayWithWildcard', displayArrayWithWildcard);
     await render(hbs`<InfoTableItemArray
-      @displayArray={{displayArrayWithWildcard}}
-      @isLink={{isLink}}
-      @modelType={{modelType}}
-      @queryParam={{queryParam}}
-      @backend={{backend}}
-      @viewAll={{viewAll}}
+      @displayArray={{this.displayArrayWithWildcard}}
+      @isLink={{this.isLink}}
+      @modelType={{this.modelType}}
+      @queryParam={{this.queryParam}}
+      @backend={{this.backend}}
+      @viewAll={{this.viewAll}}
     />`);
 
     assert.equal(
@@ -111,12 +111,12 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
     ];
     this.set('displayArrayWithWildcard', displayArrayWithWildcard);
     await render(hbs`<InfoTableItemArray
-      @displayArray={{displayArrayWithWildcard}}
-      @isLink={{isLink}}
-      @modelType={{modelType}}
-      @queryParam={{queryParam}}
-      @backend={{backend}}
-      @viewAll={{viewAll}}
+      @displayArray={{this.displayArrayWithWildcard}}
+      @isLink={{this.isLink}}
+      @modelType={{this.modelType}}
+      @queryParam={{this.queryParam}}
+      @backend={{this.backend}}
+      @viewAll={{this.viewAll}}
     />`);
     const numberCutOffTruncatedArray = displayArrayWithWildcard.length - 5;
     assert.equal(document.querySelectorAll('a > span').length, 5, 'renders truncated array of five');

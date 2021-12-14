@@ -27,7 +27,9 @@ module('Integration | Component | replication known-secondaries-card', function 
   });
 
   test('it renders with a table of known secondaries', async function (assert) {
-    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+    await render(
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+    );
 
     assert
       .dom('[data-test-known-secondaries-table]')
@@ -40,7 +42,9 @@ module('Integration | Component | replication known-secondaries-card', function 
       secondaries: [],
     };
     this.set('replicationAttrs', noSecondaries);
-    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+    await render(
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+    );
 
     assert
       .dom('[data-test-known-secondaries-table]')
@@ -51,7 +55,9 @@ module('Integration | Component | replication known-secondaries-card', function 
   });
 
   test('it renders an Add secondary link if user has capabilites', async function (assert) {
-    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+    await render(
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+    );
 
     assert.dom('.add-secondaries').exists();
   });
@@ -61,7 +67,9 @@ module('Integration | Component | replication known-secondaries-card', function 
       canAddSecondary: false,
     };
     this.set('cluster', noCapabilities);
-    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+    await render(
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+    );
 
     assert.dom('.add-secondaries').doesNotExist();
   });

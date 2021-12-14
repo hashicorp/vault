@@ -30,7 +30,7 @@ export default {
   commonNameIsPresent: isPresent('[data-test-row-value="Common name"]'),
   uploadCert: clickable('[data-test-input="uploadPemBundle"]'),
   enterCertAsText: clickable('[data-test-text-toggle]'),
-  pemBundle: fillable('[data-test-text-file-textarea="true"]'),
+  pemBundle: fillable('[data-test-text-file-textarea]'),
   commonName: fillable('[data-test-input="commonName"]'),
 
   issueDateIsPresent: text('[data-test-row-value="Issue date"]'),

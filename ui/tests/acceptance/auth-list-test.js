@@ -53,7 +53,7 @@ module('Acceptance | auth backend list', function (hooks) {
 
     await click(`[data-test-auth-backend-link="${path2}"]`);
 
-    await click('[data-test-create="user"]');
+    await click('[data-test-entity-create-link="user"]');
 
     await fillIn('[data-test-input="username"]', user2);
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);

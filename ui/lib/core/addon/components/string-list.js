@@ -122,10 +122,10 @@ export default Component.extend({
   },
 
   actions: {
-    inputChanged(idx, val) {
+    inputChanged(idx, event) {
       const inputObj = this.inputList.objectAt(idx);
       const onChange = this.onChange;
-      set(inputObj, 'value', val);
+      set(inputObj, 'value', event.target.value);
       onChange(this.toVal());
     },
 

@@ -16,7 +16,7 @@ export default create({
   metadataTab: clickable('[data-test-secret-metadata-tab]'),
   hasMetadataFields: isPresent('[data-test-metadata-fields]'),
   maxVersion: fillable('[data-test-input="maxVersions"]'),
-  startCreateSecret: clickable('[data-test-secret-create="true"]'),
+  startCreateSecret: clickable('[data-test-secret-create]'),
   editor: {
     fillIn: codeFillable('[data-test-component="json-editor"]'),
   },

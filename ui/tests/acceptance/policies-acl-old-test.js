@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';
@@ -28,6 +28,7 @@ module('Acceptance | policies (old)', function (hooks) {
     findAll('.CodeMirror')[0].CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
 
+    await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);
     assert.equal(
       currentURL(),
       `/vault/policy/acl/${encodeURIComponent(policyLower)}`,
