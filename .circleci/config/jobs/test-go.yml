@@ -3,8 +3,6 @@ parallelism: 8
 steps:
   - exit-if-ui-or-docs-branch
   - checkout
-  - attach_workspace:
-      at: /home/circleci/go/bin
   - go_test:
       log_dir: "/tmp/testlogs"
   - store_artifacts:
