@@ -21,7 +21,8 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: var(--background-accent);
+      background-color: var(--gray-6);
+      opacity: 0.4;
 
       @media (--medium-up) {
         border-radius: 6px;

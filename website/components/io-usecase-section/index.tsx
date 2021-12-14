@@ -35,11 +35,6 @@ export default function IoUsecaseSection({
   return (
     <section
       className={classNames(s.section, s[brand], bottomIsFlush && s.isFlush)}
-      style={
-        {
-          '--background-accent': `var(--${brand}-secondary)`,
-        } as React.CSSProperties
-      }
     >
       <div className={s.container}>
         <p className={s.eyebrow}>{eyebrow}</p>
