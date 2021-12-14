@@ -60,6 +60,7 @@
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   gap: 32px;
+  padding: 0;
 
   @media (--small) {
     overflow-x: auto;
