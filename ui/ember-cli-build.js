@@ -60,6 +60,9 @@ const appConfig = {
   'ember-composable-helpers': {
     except: ['array'],
   },
+  'ember-cli-deprecation-workflow': {
+    enabled: true,
+  },
 };
 
 module.exports = function (defaults) {
