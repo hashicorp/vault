@@ -2,28 +2,10 @@
   position: relative;
   margin: 0 auto;
   margin: 60px auto;
-  padding: 64px 0;
   max-width: 1600px;
 
   @media (--medium-up) {
-    padding: 80px 0;
     margin: 120px auto;
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--vault-accent);
-
-    @media (--large) {
-      border-radius: 6px;
-      left: 24px;
-      right: 24px;
-    }
   }
 }
 
