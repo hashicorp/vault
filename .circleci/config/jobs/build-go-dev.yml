@@ -3,6 +3,8 @@ steps:
   - setup-go
   - checkout
   - restore_go_mod_cache
+  - attach_workspace:
+      at: .
   - run:
       name: Build dev binary
       command: |

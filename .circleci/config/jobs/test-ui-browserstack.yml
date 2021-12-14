@@ -3,6 +3,8 @@ resource_class: xlarge
 steps:
   - checkout
   - restore_yarn_cache
+  - attach_workspace:
+      at: .
   - run:
       name: Run Browserstack Tests
       command: |
