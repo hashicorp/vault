@@ -74,13 +74,6 @@
   }
 }
 
-.chart {
-  .tick > text {
-    font-weight: $font-weight-semibold;
-    font-size: $size-8;
-  }
-}
-
 .chart-column-left {
   grid-column-start: 1;
   grid-column-end: 4;
@@ -189,9 +182,12 @@
 .axes-lines {
   g > text {
     color: $ui-gray-500;
+    font-weight: $font-weight-semibold;
+    font-size: $size-8;
   }
 
   g > line {
     color: $ui-gray-300;
+    mix-blend-mode: darken;
   }
 }

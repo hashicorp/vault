@@ -44,7 +44,7 @@ const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
 const AXES_MARGIN = { xLeft: 10, xDown: 290 }; // makes space for y-axis legend
-const TRANSLATE = { none: 0, right: 10, down: -31 };
+const TRANSLATE = { none: 0, right: 10, down: -30 };
 
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '';
