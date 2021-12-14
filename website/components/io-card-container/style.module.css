@@ -60,24 +60,16 @@
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   gap: 32px;
-  overflow-x: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  margin: 0;
-  padding: 6px 24px;
-  left: 50%;
-  margin-left: -50vw;
-  width: 100vw;
 
-  /* margin: 0 -24px; */
-
-  /* padding: 6px 24px; */
-
-  @media (--medium-up) {
-    /* margin: 0; */
-
-    /* padding: 0; */
-    overflow-x: unset;
+  @media (--small) {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    margin: 0;
+    padding: 6px 24px;
+    left: 50%;
+    margin-left: -50vw;
+    width: 100vw;
   }
 
   &.threeUp {
