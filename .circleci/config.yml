@@ -51,8 +51,6 @@ jobs:
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
-    - attach_workspace:
-        at: .
     - run:
         command: |
           set -x
@@ -90,8 +88,6 @@ jobs:
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
-    - attach_workspace:
-        at: .
     - run:
         command: |
           # Add ./bin to the PATH so vault binary can be found.
@@ -125,10 +121,8 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
-    - attach_workspace:
-        at: .
     - run:
         command: |
           # Move dev UI assets to expected location
@@ -199,7 +193,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -393,7 +387,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -588,8 +582,6 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
-    - attach_workspace:
-        at: /home/circleci/go/bin
     - add_ssh_keys:
         fingerprints:
         - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
@@ -605,7 +597,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -812,9 +804,9 @@ jobs:
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.3-{{checksum "go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}
         name: Restore closest matching go modules cache
     - run:
         command: |
@@ -834,7 +826,7 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Save go modules cache
         paths:
         - /home/circleci/go/pkg/mod
@@ -880,7 +872,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |

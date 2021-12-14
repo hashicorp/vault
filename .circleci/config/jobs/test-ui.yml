@@ -4,8 +4,6 @@ steps:
   - exit-if-branch-does-not-need-test-ui
   - checkout
   - restore_yarn_cache
-  - attach_workspace:
-      at: .
   - run:
       name: Test UI
       command: |
