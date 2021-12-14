@@ -67,7 +67,8 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
     margin: 0;
-    padding: 6px 24px;
+    padding: 6px max(24px, env(safe-area-inset-right)) 6px
+      max(24px, env(safe-area-inset-left));
     left: 50%;
     margin-left: -50vw;
     width: 100vw;
