@@ -2,7 +2,7 @@ restore_yarn_cache:
   steps:
     - restore_cache:
         name: Restore yarn cache
-        key: &YARN_LOCK_CACHE_KEY yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: &YARN_LOCK_CACHE_KEY yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
 save_yarn_cache:
   steps:
     - save_cache:
