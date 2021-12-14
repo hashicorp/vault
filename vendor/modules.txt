@@ -371,9 +371,6 @@ github.com/fatih/color
 github.com/fatih/structs
 # github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 github.com/form3tech-oss/jwt-go
-# github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
-## explicit
-github.com/fullsailor/pkcs7
 # github.com/gammazero/deque v0.0.0-20190130191400-2afb3858e9c7
 github.com/gammazero/deque
 # github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56
@@ -433,12 +430,14 @@ github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/struct
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
-# github.com/golang/snappy v0.0.2
+# github.com/golang/snappy v0.0.4
 github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
 # github.com/google/go-cmp v0.5.5
+## explicit
 github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function

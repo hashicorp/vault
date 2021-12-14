@@ -9,11 +9,11 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
     - run:
         command: |
           cd ui
@@ -21,19 +21,19 @@ jobs:
           npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
   test-ui:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -66,12 +66,12 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
     - attach_workspace:
         at: .
     - run:
@@ -83,7 +83,7 @@ jobs:
   build-go-dev:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -93,7 +93,7 @@ jobs:
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
@@ -121,7 +121,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.15
+    - GO_VERSION: 1.16.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
@@ -141,9 +141,9 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.15-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -222,15 +222,15 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.15-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
@@ -257,7 +257,7 @@ jobs:
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
         name: Copy test results
         when: always
     - store_artifacts:
@@ -272,9 +272,9 @@ jobs:
     - GO111MODULE: 'off'
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.15-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: xlarge
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -349,15 +349,15 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.15-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
@@ -417,9 +417,9 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.15-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: large
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -494,15 +494,15 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.15-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
@@ -569,7 +569,7 @@ jobs:
   go-mod-vendor:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -579,7 +579,7 @@ jobs:
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
@@ -599,14 +599,14 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.15
+    - GO_VERSION: 1.16.12
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.15-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -685,15 +685,15 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.15-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
@@ -720,7 +720,7 @@ jobs:
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
         name: Copy test results
         when: always
     - store_artifacts:
