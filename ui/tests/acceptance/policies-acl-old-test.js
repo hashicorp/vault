@@ -70,10 +70,8 @@ module('Acceptance | policies (old)', function (hooks) {
     await fillIn('[data-test-policy-input="name"]', policyName);
     find('.CodeMirror').CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
-
-    assert.equal(
-      currentURL(),
-      `/vault/policy/acl/${policyName}`,
+    assert.ok(
+      await waitUntil(() => currentURL() === `/vault/policy/acl/${policyName}`),
       'navigates to policy show on successful save'
     );
     assert.dom('[data-test-policy-edit-toggle]').exists({ count: 1 }, 'shows the edit toggle');
