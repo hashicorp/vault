@@ -95,11 +95,11 @@
     display: flex;
 
     @media (--small) {
+      width: 250px;
       &:last-of-type::after {
         content: '';
         width: 24px;
         flex-shrink: 0;
-        background: lime;
       }
     }
   }
