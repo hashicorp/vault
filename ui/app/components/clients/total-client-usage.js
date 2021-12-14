@@ -44,7 +44,7 @@ const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
 const AXES_MARGIN = { xLeft: 10, xDown: 290 }; // makes space for y-axis legend
-const TRANSLATE = { none: 0, right: 10, down: -31 };
+const TRANSLATE = { none: 0, right: 10, down: -30 };
 
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '';
@@ -72,7 +72,7 @@ export default class TotalClientUsage extends Component {
     chartSvg.attr('viewBox', `0 5 725 305`); // set aspect ratio
 
     let groups = chartSvg
-      .selectAll('g')
+      .selectAll('g.rect')
       .data(stackedData)
       .enter()
       .append('g')
@@ -110,6 +110,7 @@ export default class TotalClientUsage extends Component {
         .append('g')
         .attr('transform', `translate(${TRANSLATE.right})`)
         .attr('class', 'axes-lines')
+      // .style('mix-blend-mode', 'darken')
     );
 
     // customize x-axis
