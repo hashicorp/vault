@@ -292,9 +292,9 @@ module('Acceptance | transit', function (hooks) {
 
   test(`transit backend: list menu`, async function (assert) {
     await generateTransitKey(keyTypes[0], now);
-    await settled();
-    await secretListPage.secrets.objectAt(0).menuToggle();
-    await settled();
+    const secret = await waitUntil(() => find('[data-test-secret-link] [data-test-popup-menu-trigger]'));
+    await click(secret);
+    // await settled();
     assert.equal(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
   });
   for (let key of keyTypes) {

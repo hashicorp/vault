@@ -119,12 +119,13 @@ module('Acceptance | ssh secret backend', function (hooks) {
 
       await role.fillInGenerate();
       if (role.type === 'ca') {
+        await settled();
         role.assertBeforeGenerate(assert);
       }
 
       // generate creds
       await click('[data-test-secret-generate]');
-
+      await settled(); // eslint-disable-line
       role.assertAfterGenerate(assert, sshPath);
 
       // click the "Back" button

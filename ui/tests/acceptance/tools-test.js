@@ -110,7 +110,7 @@ module('Acceptance | tools', function (hooks) {
     await click('[data-test-tools-b64-toggle="input"]');
 
     await click('[data-test-tools-submit]');
-    const sumInput = await waitUntil(() => find('[data-test-tools-input="sum"]'));
+    let sumInput = await waitUntil(() => find('[data-test-tools-input="sum"]'));
     assert
       .dom(sumInput)
       .hasValue('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
@@ -119,9 +119,9 @@ module('Acceptance | tools', function (hooks) {
     await fillIn('[data-test-tools-input="hash-input"]', 'e2RhdGE6ImZvbyJ9');
 
     await click('[data-test-tools-submit]');
-
+    sumInput = await waitUntil(() => find('[data-test-tools-input="sum"]'));
     assert
-      .dom('[data-test-tools-input="sum"]')
+      .dom(sumInput)
       .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
   });
 
