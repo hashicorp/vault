@@ -71,6 +71,7 @@
     margin-left: -50vw;
     width: 100vw;
 
+    /* This is to ensure there is overflow padding right on mobile. */
     &::after {
       content: '';
       display: block;
