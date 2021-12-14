@@ -103,7 +103,7 @@ let generateTransitKey = async function (key, now) {
     await click('[data-test-transit-key-convergent-encryption]');
   }
   await click('[data-test-transit-key-create]');
-
+  await settled(); // eslint-disable-line
   // link back to the list
   await click('[data-test-secret-root-link]');
 
@@ -292,8 +292,8 @@ module('Acceptance | transit', function (hooks) {
 
   test(`transit backend: list menu`, async function (assert) {
     await generateTransitKey(keyTypes[0], now);
-    const secret = await waitUntil(() => find('[data-test-secret-link] [data-test-popup-menu-trigger]'));
-    await click(secret);
+    await secretListPage.secrets.objectAt(0).menuToggle();
+    await settled();
     assert.equal(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
   });
   for (let key of keyTypes) {
