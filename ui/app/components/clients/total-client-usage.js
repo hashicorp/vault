@@ -72,7 +72,7 @@ export default class TotalClientUsage extends Component {
     chartSvg.attr('viewBox', `0 5 725 305`); // set aspect ratio
 
     let groups = chartSvg
-      .selectAll('g.rect')
+      .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
@@ -110,7 +110,6 @@ export default class TotalClientUsage extends Component {
         .append('g')
         .attr('transform', `translate(${TRANSLATE.right})`)
         .attr('class', 'axes-lines')
-      // .style('mix-blend-mode', 'darken')
     );
 
     // customize x-axis
