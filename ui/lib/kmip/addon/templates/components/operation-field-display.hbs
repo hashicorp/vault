@@ -12,7 +12,7 @@
           <Icon
             aria-hidden="true"
             class={{compute (action "iconClass") this.model field}}
-            @glyph={{compute (action "iconGlyph") this.model field}}
+            @name={{compute (action "iconGlyph") this.model field}}
             /> {{field.options.label}}
           <br />
         {{/each}}

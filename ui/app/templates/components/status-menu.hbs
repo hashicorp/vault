@@ -1,6 +1,6 @@
 <BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" @renderInPlace={{this.media.isMobile}} as |d|>
   <d.Trigger @htmlTag={{if (eq this.type "replication") "span" "button"}} class={{if (eq this.type "replication") "" "button is-transparent"}}>
-    <Icon @glyph={{this.glyphName}} @size="l" aria-label={{this.ariaLabel}} />
+    <Icon @name={{this.glyphName}} aria-label={{this.ariaLabel}} />
     <div class="status-menu-label">
       {{this.label}}
     </div>

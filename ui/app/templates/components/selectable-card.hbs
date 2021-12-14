@@ -20,7 +20,9 @@
           data-test-action-text={{this.actionText}}
         >
           {{this.actionText}}
-          {{#if this.actionText}}<Icon @glyph="chevron-right" />{{/if}}
+          {{#if this.actionText}}
+            <Icon @name="chevron-right" />
+          {{/if}}
         </LinkTo>
       </div>
         <p class="has-text-grey is-size-8">{{this.subText}}</p>

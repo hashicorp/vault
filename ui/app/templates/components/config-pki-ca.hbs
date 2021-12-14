@@ -8,6 +8,13 @@
     {{/if}}
   </h2>
   {{#if (or this.model.certificate this.model.csr)}}
+    {{#if (not (eq this.model.canParse true))}}
+      <AlertBanner
+        @type="info"
+        @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the issue and expiration dates. This will not interfere with the certificate's functionality."
+        data-test-warning
+      />
+    {{/if}}
     {{#each this.model.attrs as |attr|}}
       {{#if attr.options.masked}}
         <InfoTableRow data-test-table-row
@@ -102,10 +109,10 @@
             @allowCopy={{true}}
           />
         </InfoTableRow>
-     {{else if (and (get this.model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
+      {{else if (and (get this.model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
         <InfoTableRow data-test-table-row={{this.value}}
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{date-format (get this.model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}} />
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{date-format (get this.model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}}/>
       {{else}}
         <InfoTableRow data-test-table-row={{this.value}} 
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 

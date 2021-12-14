@@ -66,7 +66,7 @@
         <code class="level-left" data-test-encrypted-value="ciphertext">{{@ciphertext}}</code>
         <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
           @clipboardText={{@ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
+          <Icon @name="clipboard-copy" aria-label="Copy" />
         </CopyButton>
       </div>
     </div>

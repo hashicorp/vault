@@ -24,14 +24,16 @@
         <div>
           <ToolTip @horizontalPosition="left" as |T|>
             <T.Trigger>
-              <Icon @size="l" class="has-text-grey-light" 
-                @glyph={{if
-                (or
-                  (find-by "type" method.methodType (mountable-auth-methods))
-                  (eq method.methodType "token")
-                )
-                method.methodType
-                "auth"}} 
+              <Icon
+                @name={{if
+                  (or
+                    (find-by "type" method.methodType (mountable-auth-methods))
+                    (eq method.methodType "token")
+                  )
+                  method.methodType
+                  "auth"
+                }}
+                class="has-text-grey-light"
               />
             </T.Trigger>
             <T.Content class="tool-tip">

@@ -921,6 +921,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		}
 	}{
 		{
+			// don't set NextSigningKey to ensure its non-existence can be handled
 			&namedKey{
 				name:            "test-key",
 				Algorithm:       "RS256",
@@ -928,7 +929,6 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				RotationPeriod:  1 * cyclePeriod,
 				KeyRing:         nil,
 				SigningKey:      jwk,
-				NextSigningKey:  jwk,
 				NextRotation:    time.Now(),
 			},
 			[]struct {
@@ -936,8 +936,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				numKeys       int
 				numPublicKeys int
 			}{
-				{1, 1, 1},
-				{2, 2, 2},
+				{1, 2, 2},
+				{2, 3, 3},
 				{3, 3, 3},
 				{4, 3, 3},
 				{5, 3, 3},

@@ -9,8 +9,7 @@
     <d.Trigger>
       <button type="button" class={{concat "button is-compact" (if this.isFullscreen " active")}} {{on "click" (action "fullscreen")}} data-test-tool-tip-trigger>
         <Icon
-          @size="l"
-          @glyph={{if this.isFullscreen "expand-less" "expand-more"}}
+          @name={{if this.isFullscreen "minimize" "maximize"}}
           aria-label={{if this.isFullscreen "Minimize" "Maximize"}}
         />
       </button>

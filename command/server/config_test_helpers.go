@@ -701,6 +701,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
+		"log_requests_level":                   "basic",
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
@@ -1062,4 +1063,27 @@ func testConfigRaftAutopilot(t *testing.T) {
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func testKmsLibraryFailsForNonHSMBinary(t *testing.T) {
+	config := `
+ui = false
+storage "file" {
+	path = "/tmp/test"
+}
+
+listener "tcp" {
+	address       = "0.0.0.0:8200"
+	tls_cert_file = "/opt/vault/tls/tls.crt"
+	tls_key_file  = "/opt/vault/tls/tls.key"
+}
+
+kms_library "pkcs11" {
+	name="Logical1"
+	library="a library"
+}
+`
+	_, err := ParseConfig(config, "")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "requires the Vault Enterprise HSM binary")
 }

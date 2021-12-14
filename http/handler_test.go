@@ -294,6 +294,45 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	}
 }
 
+func TestHandler_InFlightRequest(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/in-flight-req", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if resp == nil {
+		t.Fatalf("nil response")
+	}
+
+	var actual map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if actual == nil || len(actual) == 0 {
+		t.Fatal("expected to get at least one in-flight request, got nil or zero length map")
+	}
+	for _, v := range actual {
+		reqInfo, ok := v.(map[string]interface{})
+		if !ok {
+			t.Fatal("failed to read in-flight request")
+		}
+		if reqInfo["request_path"] != "/v1/sys/in-flight-req" {
+			t.Fatalf("expected /v1/sys/in-flight-req in-flight request path, got %s", actual["request_path"])
+		}
+	}
+}
+
 // TestHandler_MissingToken tests the response / error code if a request comes
 // in with a missing client token. See
 // https://github.com/hashicorp/vault/issues/8377
@@ -315,8 +354,8 @@ func TestHandler_MissingToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode != 400 {
-		t.Fatalf("expected code 400, got: %d", resp.StatusCode)
+	if resp.StatusCode != 403 {
+		t.Fatalf("expected code 403, got: %d", resp.StatusCode)
 	}
 }
 
@@ -914,54 +953,6 @@ func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Sec
 	}
 }
 
-func TestHandler_Patch_NotFound(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": kv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
-	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
-
-	// Mount a KVv2 backend
-	err := c.Sys().Mount("kv", &api.MountInput{
-		Type: "kv-v2",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	kvData := map[string]interface{}{
-		"data": map[string]interface{}{
-			"bar": "a",
-		},
-	}
-
-	resp, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
-		return c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
-	})
-
-	if err == nil {
-		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
-	}
-
-	responseError := err.(*api.ResponseError)
-	if responseError.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected PATCH request to fail with %d status code - err: %#v, resp: %#v\n", http.StatusNotFound, responseError, resp)
-	}
-}
-
 func TestHandler_Patch_Audit(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -1002,6 +993,9 @@ func TestHandler_Patch_Audit(t *testing.T) {
 			"file_path": auditLogFile.Name(),
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	writeData := map[string]interface{}{
 		"data": map[string]interface{}{

@@ -139,6 +139,8 @@ export default class SecretDeleteMenu extends Component {
         .v2DeleteOperation(this.store, this.args.modelForData.id, deleteType, currentVersionForNoReadMetadata)
         .then((resp) => {
           if (Ember.testing) {
+            this.showDeleteModal = false;
+            // we don't want a refresh otherwise test loop will rerun in a loop
             return;
           }
           if (!resp) {

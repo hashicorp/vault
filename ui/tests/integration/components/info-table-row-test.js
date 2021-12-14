@@ -129,17 +129,17 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @defaultShown={{this.default}}
     />`);
 
-    assert.dom('div.column span').hasClass('hs-icon-s', 'Renders a dash (-) for the label');
+    assert.dom('div.column.is-one-quarter .flight-icon').exists('Renders a dash (-) for the label');
 
     this.set('value', '');
     this.set('label', LABEL);
-    assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for empty string value');
+    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for empty string value');
 
     this.set('value', null);
-    assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for null value');
+    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for null value');
 
     this.set('value', undefined);
-    assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for undefined value');
+    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for undefined value');
 
     this.set('default', DEFAULT);
     assert.dom('[data-test-value-div]').hasText(DEFAULT, 'Renders default text if value is empty');
@@ -147,7 +147,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('value', '');
     this.set('label', '');
     this.set('default', '');
-    let dashCount = document.querySelectorAll('.hs-icon-s').length;
+    let dashCount = document.querySelectorAll('.flight-icon').length;
     assert.equal(dashCount, 2, 'Renders dash (-) when both label and value do not exist (and no defaults)');
   });
 

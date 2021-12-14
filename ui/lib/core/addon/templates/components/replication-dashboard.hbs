@@ -22,7 +22,11 @@
       {{/if}}
       <h2 class="title is-3" data-test-summary-state>{{this.summaryState}}
         {{#if (get (cluster-states this.summaryState) "isOk")}}
-          <Icon @glyph={{get (cluster-states this.summaryState) "glyph"}} class="{{if (get (cluster-states this.summaryState) "isOk") "has-text-success" "has-text-danger"}}" data-test-icon />
+          <Icon
+            @name={{get (cluster-states this.summaryState) "glyph"}}
+            class="{{if (get (cluster-states this.summaryState) "isOk") "has-text-success" "has-text-danger"}}"
+            data-test-icon
+          />
         {{/if}}
       </h2>
     </div>

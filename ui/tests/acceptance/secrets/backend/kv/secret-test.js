@@ -600,13 +600,8 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await assert
       .dom('[data-test-value-div="secret-key"]')
       .exists('secret view page and info table row with secret-key value');
-    // check you can create new version
-    await click('[data-test-secret-edit="true"]');
-
-    await fillIn('[data-test-secret-key]', 'version2');
-    await editPage.save();
-    await settled();
-    assert.dom('[data-test-row-label="version2"]').exists('the current version displayed is the new version');
+    // create new version should be disabled with no metadata read access
+    assert.dom('[data-test-secret-edit]').hasClass('disabled', 'Create new version action is disabled');
     assert
       .dom('[data-test-popup-menu-trigger="version"]')
       .doesNotExist('the version drop down menu does not show');
@@ -670,6 +665,19 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     assert.dom('[data-test-delete-modal="destroy-version"]').exists('destroy this version option shows');
     assert.dom('[data-test-delete-modal="destroy-all-versions"]').exists('destroy all versions option shows');
     assert.dom('[data-test-delete-modal="delete-version"]').doesNotExist('delete version does not show');
+
+    // because destroy requires a page refresh (making the test suite run in a loop) this action is caught in ember testing and does not refresh.
+    // therefore to show new state change after modal closes we jump to the metadata tab and then back.
+    await click('#destroy-version');
+    await settled(); // eslint-disable-line
+    await click('[data-test-modal-delete]');
+    await settled(); // eslint-disable-line
+    await click('[data-test-secret-metadata-tab]');
+    await settled(); // eslint-disable-line
+    await click('[data-test-secret-tab]');
+    await settled(); // eslint-disable-line
+    let text = document.querySelector('[data-test-empty-state-title]').innerText.trim();
+    assert.equal(text, 'Version 1 of this secret has been permanently destroyed');
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function (assert) {
@@ -709,6 +717,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await visit(url);
 
     await click(`[data-test-secret-link=${secretPath}]`);
+    await settled(); // eslint-disable-line
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
   });

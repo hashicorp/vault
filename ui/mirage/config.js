@@ -272,5 +272,32 @@ export default function () {
     };
   });
 
+  this.get('sys/namespaces', function () {
+    return {
+      data: {
+        keys: [
+          'ns1/',
+          'ns2/',
+          'ns3/',
+          'ns4/',
+          'ns5/',
+          'ns6/',
+          'ns7/',
+          'ns8/',
+          'ns9/',
+          'ns10/',
+          'ns11/',
+          'ns12/',
+          'ns13/',
+          'ns14/',
+          'ns15/',
+          'ns16/',
+          'ns17/',
+          'ns18/',
+        ],
+      },
+    };
+  });
+
   this.passthrough();
 }

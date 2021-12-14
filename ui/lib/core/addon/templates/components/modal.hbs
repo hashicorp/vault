@@ -6,10 +6,9 @@
           <h2 class="modal-card-title title is-5" data-test-modal-title>
             {{#if this.glyph}}
               <Icon
-                @size="l"
                 class="{{this.glyph.glyphClass}}"
                 aria-hidden="true"
-                @glyph={{this.glyph.glyph}}
+                @name={{this.glyph.glyph}}
                 data-test-modal-glyph={{this.glyph.glyph}}
               />
             {{/if}}

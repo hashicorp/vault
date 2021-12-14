@@ -69,17 +69,15 @@
 
       {{#if server.voter}}
         <Icon
+          @name="check-circle"
           aria-label="Yes"
           class="icon-true has-text-success"
-          @size="l"
-          @glyph="check-circle-outline"
         />
       {{else}}
         <Icon
+          @name="x-square"
           aria-label="No"
           class="icon-false"
-          @size="l"
-          @glyph="cancel-square-outline"
         />
       {{/if}}
             </td>
