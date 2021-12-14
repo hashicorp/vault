@@ -75,32 +75,41 @@ p.chart-description {
   }
 }
 
-.chart {
-  .tick > text {
-    font-weight: $font-weight-semibold;
-    font-size: $size-8;
-  }
-}
-
-.chart-column-left {
+.chart-container-left {
   grid-column-start: 1;
   grid-column-end: 4;
   grid-row-start: 2;
   grid-row-end: 5;
+  box-shadow: inset 0 -1px 0 $vault-gray-200;
+
   h2.chart-title {
     font-size: $size-5;
     font-weight: $font-weight-bold;
   }
 }
 
-.chart-column-right {
+.chart-container-right {
   grid-column-start: 4;
   grid-column-end: 8;
   grid-row-start: 2;
   grid-row-end: 5;
+  box-shadow: inset 0 -1px 0 $vault-gray-200;
+
   h2.chart-title {
     font-size: $size-5;
     font-weight: $font-weight-bold;
+  }
+}
+
+.horizontal-bar-chart {
+  .tick > text {
+    font-weight: $font-weight-semibold;
+    font-size: $size-8;
+  }
+  > div.legend {
+    height: $spacing-l;
+    margin-top: $spacing-xs;
+    float: right;
   }
 }
 
