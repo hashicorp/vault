@@ -2043,6 +2043,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
+	if err := c.setupManagedKeyRegistry(); err != nil {
+		return err
+	  }
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
