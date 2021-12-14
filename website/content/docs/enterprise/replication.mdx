@@ -91,6 +91,8 @@ namespaces.
 
 ![Performance Replication - primary](/img/vault-mount-filter-7.png)
 
+In the above example, the `EU_GDPR_data/` path and `office_FR` namespace will
+not be replicated and stay only on the primary cluster.
 
 On the similar note, if you want to avoid secondary cluster's data to be
 replicated, you can mark those secrets engine and/or auth methods **local**.
@@ -101,7 +103,7 @@ replication.
 `-local` flag.  
 
 ```shell-session 
-$ vault secrets enable -local -path=EU_ONLY_data kv-v2
+$ vault secrets enable -local -path=us_west_data kv-v2
 ```
 
 -> **Learn:** Refer to the [Performance Replication with Paths
