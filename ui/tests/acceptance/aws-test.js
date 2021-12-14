@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -78,7 +78,7 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     // save the role
     await click('[data-test-role-aws-create]');
-
+    await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
     assert.equal(
       currentURL(),
       `/vault/secrets/${path}/show/${roleName}`,

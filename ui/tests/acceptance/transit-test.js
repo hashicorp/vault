@@ -1,4 +1,4 @@
-import { click, fillIn, find, currentURL, settled, visit } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { encodeString } from 'vault/utils/b64';
@@ -248,6 +248,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     await click('[data-test-button-encrypt]');
 
     if (testCase.assertAfterEncrypt) {
+      await settled();
       testCase.assertAfterEncrypt(keyName);
     }
     // store ciphertext for decryption step
@@ -258,12 +259,14 @@ const testConvergentEncryption = async function (assert, keyName) {
     await click('[data-test-transit-action-link="decrypt"]');
 
     if (testCase.assertBeforeDecrypt) {
+      await settled();
       testCase.assertBeforeDecrypt(keyName);
     }
     find('#ciphertext-control .CodeMirror').CodeMirror.setValue(copiedCiphertext);
     await click('[data-test-button-decrypt]');
 
     if (testCase.assertAfterDecrypt) {
+      await settled();
       testCase.assertAfterDecrypt(keyName);
     }
 
@@ -303,11 +306,12 @@ module('Acceptance | transit', function (hooks) {
       // wait for capabilities
 
       assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
+      await settled();
       await click('[data-test-confirm-action-trigger]');
 
       await click('[data-test-confirm-button]');
       // wait for rotate call
-
+      await waitUntil(() => findAll('[data-test-transit-key-version-row]').length >= 2);
       assert
         .dom('[data-test-transit-key-version-row]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);

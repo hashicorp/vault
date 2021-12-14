@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -107,7 +107,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
 
       // save the role
       await click('[data-test-role-ssh-create]');
-
+      await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/show/${role.name}`); // flaky without this
       assert.equal(
         currentURL(),
         `/vault/secrets/${sshPath}/show/${role.name}`,
