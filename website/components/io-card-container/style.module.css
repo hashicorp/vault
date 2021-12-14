@@ -96,10 +96,15 @@
 
     @media (--small) {
       width: 250px;
-      &:last-of-type::after {
+
+      &:last-of-type {
+        width: 274px;
+
+      &::after {
         content: '';
         width: 24px;
         flex-shrink: 0;
+      }
       }
     }
   }
