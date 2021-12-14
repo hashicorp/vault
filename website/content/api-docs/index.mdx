@@ -49,8 +49,8 @@ client or passed via the `X-Vault-Token` or `Authorization` header for future re
 
 ## Parameter restrictions
 
-Several Vault APIs require path parameters. These parameters cannot end in periods, as that 
-will cause Vault to return a 404 unsupported path error.
+Several Vault APIs require specifying path parameters. The path parameter cannot end 
+in periods. Otherwise, Vault will return a 404 unsupported path error.
 
 ## Namespaces
 
