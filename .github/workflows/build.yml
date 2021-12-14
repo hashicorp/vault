@@ -23,6 +23,7 @@ jobs:
         run: |
           make version
           echo "::set-output name=product-version::$(make version)"
+
   generate-metadata-file:
     needs: get-product-version
     runs-on: ubuntu-latest
@@ -88,7 +89,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -134,7 +135,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -209,7 +210,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
