@@ -9,7 +9,7 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - restore_cache:
@@ -28,7 +28,7 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - checkout
@@ -66,7 +66,7 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - checkout
@@ -83,7 +83,7 @@ jobs:
   build-go-dev:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -93,7 +93,7 @@ jobs:
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
@@ -141,9 +141,9 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.12-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -163,10 +163,23 @@ jobs:
         version: 18.09.3
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
+    - run:
+        command: |
           set -x
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -186,13 +199,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -202,6 +215,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -217,47 +240,70 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.16.12-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-               \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:
@@ -272,9 +318,9 @@ jobs:
     - GO111MODULE: 'off'
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.12-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: xlarge
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -291,10 +337,23 @@ jobs:
     - checkout
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
+    - run:
+        command: |
           set -x
 
+          EXTRA_TAGS=
           case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -313,13 +372,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -329,6 +388,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -344,42 +413,64 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.16.12-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              -race \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -417,9 +508,9 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.12-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: large
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -436,10 +527,23 @@ jobs:
     - checkout
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
+    - run:
+        command: |
           set -x
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -458,13 +562,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -474,6 +578,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -489,42 +603,64 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.16.12-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-               \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -569,7 +705,7 @@ jobs:
   go-mod-vendor:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -579,7 +715,7 @@ jobs:
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
@@ -604,9 +740,9 @@ jobs:
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.12-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -626,10 +762,23 @@ jobs:
         version: 18.09.3
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
+    - run:
+        command: |
           set -x
 
+          EXTRA_TAGS=
           case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -649,13 +798,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -665,6 +814,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -680,47 +839,70 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.16.12-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              -race \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:

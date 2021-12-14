@@ -89,7 +89,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
-          
+
         run: |
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }}  VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
@@ -138,7 +138,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
-          
+
         run: |
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }}  VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
@@ -216,7 +216,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
-          
+
         run: |
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }}  VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
