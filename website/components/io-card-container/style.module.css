@@ -57,12 +57,11 @@
   --columns: var(--length);
 
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   gap: 32px;
   padding: 0;
 
   @media (--small) {
+    display: flex;
     overflow-x: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -71,6 +70,17 @@
     left: 50%;
     margin-left: -50vw;
     width: 100vw;
+    &::after {
+      content: '';
+      display: block;
+      width: 1px;
+      flex-shrink: 0;
+    }
+  }
+
+  @media (--medium-up) {
+    display: grid;
+    grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   }
 
   &.threeUp {
@@ -95,17 +105,8 @@
     display: flex;
 
     @media (--small) {
+      flex-shrink: 0;
       width: 250px;
-
-      &:last-of-type {
-        width: 274px;
-
-      &::after {
-        content: '';
-        width: 24px;
-        flex-shrink: 0;
-      }
-      }
     }
   }
 }
