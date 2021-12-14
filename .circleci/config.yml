@@ -9,11 +9,11 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
     - run:
         command: |
@@ -22,7 +22,7 @@ jobs:
           npm rebuild node-sass
         name: Install UI dependencies
     - save_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Save yarn cache
         paths:
         - ui/node_modules
@@ -30,7 +30,7 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - run:
@@ -49,7 +49,7 @@ jobs:
         working_directory: ~/
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
     - attach_workspace:
         at: .
@@ -83,12 +83,12 @@ jobs:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
         name: Restore yarn cache
     - attach_workspace:
         at: .
@@ -101,7 +101,7 @@ jobs:
   build-go-dev:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -111,7 +111,7 @@ jobs:
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
@@ -125,7 +125,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - attach_workspace:
         at: .
@@ -145,7 +145,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.16.9
+    - GO_VERSION: 1.16.12
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
@@ -164,9 +164,9 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -199,7 +199,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -282,20 +282,20 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
               -e GO_TAGS \
@@ -331,7 +331,7 @@ jobs:
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
           docker cp testcontainer:/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
@@ -346,9 +346,9 @@ jobs:
     - GO_TAGS: ''
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: xlarge
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -378,7 +378,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -460,20 +460,20 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
               -e GO_TAGS \
@@ -541,9 +541,9 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: large
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -573,7 +573,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -655,20 +655,20 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
               -e GO_TAGS \
@@ -714,7 +714,7 @@ jobs:
   pre-flight-checks:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
     - run:
         command: |
@@ -724,7 +724,7 @@ jobs:
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
+          GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
@@ -765,9 +765,9 @@ jobs:
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.3-{{checksum "go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}
         name: Restore closest matching go modules cache
     - run:
         command: |
@@ -787,20 +787,20 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Save go modules cache
         paths:
-        - /go/pkg/mod
+        - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.16.9
+    - GO_VERSION: 1.16.12
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
     resource_class: medium
-    working_directory: /go/src/github.com/hashicorp/vault
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
     - run:
@@ -833,7 +833,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -916,20 +916,20 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.9-buster \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
               tail -f /dev/null
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
 
-            docker exec -w /go/src/github.com/hashicorp/vault/ \
+            docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
               -e GO_TAGS \
@@ -965,7 +965,7 @@ jobs:
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
           docker cp testcontainer:/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
