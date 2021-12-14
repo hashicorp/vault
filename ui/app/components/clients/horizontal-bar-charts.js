@@ -1,6 +1,5 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { assert } from '@ember/debug';
 import { stack } from 'd3-shape';
 // eslint-disable-next-line no-unused-vars
 import { select, event, selectAll } from 'd3-selection';
@@ -17,7 +16,7 @@ import { max, maxIndex } from 'd3-array';
  * <HorizontalBarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
  * ```
  * @param {object} dataset - dataset for the chart
- * @param {array} chartLegend - array of objects with key names 'key' and 'label' for the map legend
+ * @param {array} chartLegend - array of objects with key names 'key' and 'label' for the chart legend
  * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis (i.e. 'namespace_path')
  * @param {string} [param1=defaultValue] - param1 is...
  */
@@ -27,6 +26,7 @@ import { max, maxIndex } from 'd3-array';
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 137 }; // makes space for y-axis legend
+const TRANSLATE = { down: 16 };
 const CHAR_LIMIT = 18; // character count limit for y-axis labels to trigger truncating
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
@@ -103,26 +103,11 @@ export default class HorizontalBarChart extends Component {
   }
 
   get chartLegend() {
-    assert(
-      'chart legend is required, must be an array of objects with key names of "key" and "label"',
-      this.hasLegend()
-    );
     return this.args.chartLegend;
   }
 
-  // TODO: use maxIndex function when packages are updated
   get topNamespace() {
-    console.log(this.args.dataset[maxIndex(this.args.dataset, d => d.total)]);
     return this.args.dataset[maxIndex(this.args.dataset, d => d.total)];
-  }
-
-  hasLegend() {
-    if (!this.args.chartLegend || !Array.isArray(this.args.chartLegend)) {
-      return false;
-    } else {
-      let legendKeys = this.args.chartLegend.map(obj => Object.keys(obj));
-      return legendKeys.map(array => array.includes('key', 'label')).every(element => element === true);
-    }
   }
 
   @action
@@ -134,6 +119,7 @@ export default class HorizontalBarChart extends Component {
     let dataset = args[0];
     let stackedData = stackFunction(dataset);
     let labelKey = this.labelKey;
+    let handleClick = this.args.onClick;
 
     let xScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))])
@@ -161,13 +147,14 @@ export default class HorizontalBarChart extends Component {
     let yAxis = axisLeft(yScale).tickSize(0);
     yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
 
+    chartSvg.select('.domain').remove();
+
     let truncate = selection =>
       selection.text(string =>
         string.length < CHAR_LIMIT ? string : string.slice(0, CHAR_LIMIT - 3) + '...'
       );
 
     chartSvg.selectAll('.tick text').call(truncate);
-    chartSvg.select('.domain').remove();
 
     groups
       .selectAll('rect')
@@ -184,23 +171,147 @@ export default class HorizontalBarChart extends Component {
       .attr('rx', 3)
       .attr('ry', 3);
 
-    let startingXCoordinate = 100 - this.chartLegend.length * 20;
-    let legendSvg = select('.legend');
-    this.chartLegend.map((legend, i) => {
-      let xCoordinate = startingXCoordinate + i * 20;
-      legendSvg
-        .append('circle')
-        .attr('cx', `${xCoordinate}%`)
-        .attr('cy', '50%')
-        .attr('r', 6)
-        .style('fill', `${BAR_COLOR_DEFAULT[i]}`);
-      legendSvg
-        .append('text')
-        .attr('x', `${xCoordinate + 2}%`)
-        .attr('y', '50%')
-        .text(`${legend.label}`)
-        .style('font-size', '.8rem')
-        .attr('alignment-baseline', 'middle');
-    });
+    let actionBars = chartSvg
+      .selectAll('.action-bar')
+      .data(dataset)
+      .enter()
+      .append('rect')
+      .style('cursor', 'pointer')
+      .attr('class', 'action-bar')
+      .attr('width', '100%')
+      .attr('height', `${LINE_HEIGHT}px`)
+      .attr('x', '0')
+      .attr('y', chartData => yScale(chartData[labelKey]))
+      .style('fill', `${BACKGROUND_BAR_COLOR}`)
+      .style('opacity', '0')
+      .style('mix-blend-mode', 'multiply');
+
+    let yLegendBars = chartSvg
+      .selectAll('.label-bar')
+      .data(dataset)
+      .enter()
+      .append('rect')
+      .style('cursor', 'pointer')
+      .attr('class', 'label-action-bar')
+      .attr('width', CHART_MARGIN.left)
+      .attr('height', `${LINE_HEIGHT}px`)
+      .attr('x', '0')
+      .attr('y', chartData => yScale(chartData[labelKey]))
+      .style('opacity', '0')
+      .style('mix-blend-mode', 'multiply');
+
+    let dataBars = chartSvg.selectAll('rect.data-bar');
+    let actionBarSelection = chartSvg.selectAll('rect.action-bar');
+    let compareAttributes = (elementA, elementB, attr) =>
+      select(elementA).attr(`${attr}`) === elementB.getAttribute(`${attr}`);
+
+    // MOUSE AND CLICK EVENTS FOR DATA BARS
+    actionBars
+      .on('click', function(chartData) {
+        if (handleClick) {
+          handleClick(chartData);
+        }
+      })
+      .on('mouseover', function() {
+        select(this).style('opacity', 1);
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+        // TODO: change to use modal instead of tooltip div
+        select('.chart-tooltip')
+          .transition()
+          .duration(200)
+          .style('opacity', 1);
+      })
+      .on('mouseout', function() {
+        select(this).style('opacity', 0);
+        select('.chart-tooltip').style('opacity', 0);
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+      })
+      .on('mousemove', function(chartData) {
+        select('.chart-tooltip')
+          .style('opacity', 1)
+          .style('max-width', '200px')
+          .style('left', `${event.pageX - 325}px`)
+          .style('top', `${event.pageY - 140}px`)
+          .text(
+            `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
+            ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
+          `
+          );
+      });
+
+    // MOUSE EVENTS FOR Y-AXIS LABELS
+    yLegendBars
+      .on('click', function(chartData) {
+        if (handleClick) {
+          handleClick(chartData);
+        }
+      })
+      .on('mouseover', function(chartData) {
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '1');
+        if (chartData.label.length >= CHAR_LIMIT) {
+          select('.chart-tooltip')
+            .transition()
+            .duration(200)
+            .style('opacity', 1);
+        }
+      })
+      .on('mouseout', function() {
+        select('.chart-tooltip').style('opacity', 0);
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '0');
+      })
+      .on('mousemove', function(chartData) {
+        if (chartData.label.length >= CHAR_LIMIT) {
+          select('.chart-tooltip')
+            .style('left', `${event.pageX - 300}px`)
+            .style('top', `${event.pageY - 100}px`)
+            .text(`${chartData.label}`)
+            .style('max-width', 'fit-content');
+        } else {
+          select('.chart-tooltip').style('opacity', 0);
+        }
+      });
+
+    // add client count total values to the right
+    chartSvg
+      .append('g')
+      .attr('transform', `translate(${CHART_MARGIN.left}, ${TRANSLATE.down})`)
+      .selectAll('text')
+      .data(dataset)
+      .enter()
+      .append('text')
+      .text(d => d.total)
+      .attr('fill', '#000')
+      .attr('class', 'total-value')
+      .style('font-size', '.8rem')
+      .attr('text-anchor', 'start')
+      .attr('alignment-baseline', 'middle')
+      .attr('x', chartData => `${xScale(chartData.total)}%`)
+      .attr('y', chartData => yScale(chartData.label));
   }
 }

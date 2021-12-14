@@ -13,25 +13,32 @@
     </div>
   </div>
 
-  <div class="horizontal-bar-chart chart-column-left">
-    <h2 class="title"> New Clients </h2>
+  <div class="horizontal-bar-chart chart-container-left">
+    <h2 class="chart-title"> New Clients </h2>
+    <p class="chart-description">{{@newClientsDescription}}</p>
     <svg class="chart"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >
     </svg>
   </div>
 
-  <div class="horizontal-bar-chart chart-column-right">
-    <h2 class="title"> Total monthly clients </h2>
+  <div class="horizontal-bar-chart chart-container-right">
+    <h2 class="chart-title"> Total monthly clients </h2>
+    <p class="chart-description"> {{@totalDescription}} </p>
     <svg class="chart"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >
     </svg>
   </div>
 
-  <div class="legend-container-right">
-    LEGEND
-    {{!-- <svg class="legend"></svg> --}}
+  <div class="timestamp">
+    Updated Nov 15 2021, 4:07:32 pm
+  </div>
+
+  <div class="legend-container">
+    {{!-- TO DO - fix styling --}}
+    <span class="light-dot"></span><p>{{@chartLegend.0.label}}</p>
+    <span class="dark-dot">{{@chartLegend.1.label}}</span>
   </div>
 </div>
 
