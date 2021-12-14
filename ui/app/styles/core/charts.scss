@@ -182,23 +182,13 @@ p.chart-description {
   display: inline-block;
 }
 
-.legend-container-center {
+.legend-container {
   grid-row-start: 5;
   grid-column-start: 3;
   grid-column-end: 4;
   height: $spacing-l;
   align-self: center;
   justify-self: center;
-  font-size: $size-9;
-}
-
-.legend-container-right {
-  grid-row-start: 5;
-  grid-column-start: 5;
-  grid-column-end: 6;
-  height: $spacing-l;
-  align-self: start;
-  justify-self: start;
   font-size: $size-9;
 }
 
