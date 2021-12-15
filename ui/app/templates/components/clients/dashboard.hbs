@@ -38,7 +38,6 @@
           {{/if}}
         </EmptyState>
       {{/if}}
-    {{else}}
       {{#if (eq @model.config.enabled 'Off')}}
         <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
           Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will
@@ -49,15 +48,28 @@
           to enable tracking again.
         </AlertBanner>
       {{/if}}
-      <h1 data-test-client-count-title class="title is-4 has-bottom-margin-s">
-        Monthly history
-        {{!-- ARG TODO change --}}
+      <h1 data-test-client-count-title class="title is-6 has-bottom-margin-s">
+        Billing start month
       </h1>
+      {{!-- ARG TODO make dynamic --}}
+      <div>
+        <p>January 2021</p>
+        {{!-- button and not link per accessibility --}}
+        <button
+          type="button"
+          class="is-ghost"
+          {{!-- onclick={{action "openCalendarWidget"}} --}}
+        >
+          Edit
+        </button>
+      </div>
+      
       <p class="has-bottom-margin-s">
         This data is presented by full month. If there is data missing, it's possible that tracking was turned off at
         the time. Vault will only show data for contiguous blocks of time during which tracking was on.
       </p>
       {{!-- ARG TODO replace with calendar widget --}}
+      here
       <PricingMetricsDates
         @queryStart={{@model.queryStart}}
         @queryEnd={{@model.queryEnd}}
