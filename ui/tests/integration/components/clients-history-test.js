@@ -33,10 +33,6 @@ module('Integration | Component | client count history', function (hooks) {
 
   test('it shows empty state when data available but not returned', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true });
-    Object.assign(this.model.activity, {
-      clients: 1234,
-      total: 1234,
-    });
     await render(hbs`<Clients::History @tab={{this.tab}} @model={{this.model}} />`);
     assert.dom('[data-test-pricing-metrics-form]').exists('Date range form component exists');
     assert.dom('[data-test-pricing-result-dates]').doesNotExist('Date range form result dates are not shown');
