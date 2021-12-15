@@ -88,6 +88,10 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256". Not valid for all key types,
 including ed25519.`,
@@ -183,6 +187,10 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256". Not valid for all key types.`,
 			},

@@ -825,9 +825,9 @@ func (c *Core) checkKeyUpgrades(ctx context.Context) error {
 	return nil
 }
 
-func (c *Core) reloadMasterKey(ctx context.Context) error {
-	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
-		return fmt.Errorf("error reloading master key: %w", err)
+func (c *Core) reloadRootKey(ctx context.Context) error {
+	if err := c.barrier.ReloadRootKey(ctx); err != nil {
+		return fmt.Errorf("error reloading root key: %w", err)
 	}
 	return nil
 }
@@ -841,7 +841,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedGeneric:
 		return nil
-	case seal.StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirRoot:
 		entry, err := c.barrier.Get(ctx, shamirKekPath)
 		if err != nil {
 			return err
@@ -855,7 +855,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to update seal access: %w", err)
 		}
-		shamirKey = keyring.masterKey
+		shamirKey = keyring.rootKey
 	}
 	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(shamirKey)
 }
@@ -865,8 +865,8 @@ func (c *Core) performKeyUpgrades(ctx context.Context) error {
 		return fmt.Errorf("error checking for key upgrades: %w", err)
 	}
 
-	if err := c.reloadMasterKey(ctx); err != nil {
-		return fmt.Errorf("error reloading master key: %w", err)
+	if err := c.reloadRootKey(ctx); err != nil {
+		return fmt.Errorf("error reloading root key: %w", err)
 	}
 
 	if err := c.barrier.ReloadKeyring(ctx); err != nil {

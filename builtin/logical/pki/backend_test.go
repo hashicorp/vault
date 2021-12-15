@@ -1183,21 +1183,21 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	getRandCsr := func(keyType string, errorOk bool, csrTemplate *x509.CertificateRequest) csrPlan {
-		rsaKeyBits := []int{2048, 4096}
+		rsaKeyBits := []int{2048, 3072, 4096}
 		ecKeyBits := []int{224, 256, 384, 521}
 		plan := csrPlan{errorOk: errorOk}
 
 		var testBitSize int
 		switch keyType {
 		case "rsa":
-			plan.roleKeyBits = rsaKeyBits[mathRand.Int()%2]
+			plan.roleKeyBits = rsaKeyBits[mathRand.Int()%len(rsaKeyBits)]
 			testBitSize = plan.roleKeyBits
 
 			// If we don't expect an error already, randomly choose a
 			// key size and expect an error if it's less than the role
 			// setting
 			if !keybitSizeRandOff && !errorOk {
-				testBitSize = rsaKeyBits[mathRand.Int()%2]
+				testBitSize = rsaKeyBits[mathRand.Int()%len(rsaKeyBits)]
 			}
 
 			if testBitSize < plan.roleKeyBits {
@@ -1205,14 +1205,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 
 		case "ec":
-			plan.roleKeyBits = ecKeyBits[mathRand.Int()%4]
+			plan.roleKeyBits = ecKeyBits[mathRand.Int()%len(ecKeyBits)]
 			testBitSize = plan.roleKeyBits
 
 			// If we don't expect an error already, randomly choose a
 			// key size and expect an error if it's less than the role
 			// setting
 			if !keybitSizeRandOff && !errorOk {
-				testBitSize = ecKeyBits[mathRand.Int()%4]
+				testBitSize = ecKeyBits[mathRand.Int()%len(ecKeyBits)]
 			}
 
 			if testBitSize < plan.roleKeyBits {
