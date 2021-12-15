@@ -43,7 +43,7 @@ const DATA = [
 const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
-const AXES_MARGIN = { xLeft: 10, xDown: 290 }; // makes space for y-axis legend
+const AXES_MARGIN = { xLeft: 10, xDown: 290 };
 const TRANSLATE = { none: 0, right: 10, down: -30 };
 
 export default class TotalClientUsage extends Component {
@@ -105,20 +105,13 @@ export default class TotalClientUsage extends Component {
       .tickSizeInner(-svgChartSize.width) // makes grid lines correct length
       .tickFormat(formatNumbers);
 
-    yAxis(
-      chartSvg
-        .append('g')
-        .attr('transform', `translate(${TRANSLATE.right})`)
-        .attr('class', 'axes-lines')
-    );
+    yAxis(chartSvg.append('g').attr('transform', `translate(${TRANSLATE.right})`));
 
     // customize x-axis
     let xAxisGenerator = axisBottom(xScale);
     let xAxis = chartSvg.append('g').call(xAxisGenerator);
 
-    xAxis
-      .attr('transform', `translate(${TRANSLATE.right}, ${AXES_MARGIN.xDown})`)
-      .attr('class', 'axes-lines');
+    xAxis.attr('transform', `translate(${TRANSLATE.right}, ${AXES_MARGIN.xDown})`);
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 

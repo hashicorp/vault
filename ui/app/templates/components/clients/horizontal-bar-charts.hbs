@@ -1,4 +1,4 @@
-<div class="chart-wrapper double-chart">
+<div class="chart-wrapper dual-chart-grid">
   <div class="chart-header has-export">
     <div class="header-left">
       <h2 class="chart-title">{{@title}}</h2>
@@ -13,19 +13,19 @@
     </div>
   </div>
 
-  <div class="horizontal-bar-chart chart-container-left">
+  <div class="chart-container-left">
     <h2 class="chart-title"> New Clients </h2>
     <p class="chart-description">{{@newClientsDescription}}</p>
-    <svg class="chart"
+    <svg class="chart is-horizontal"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >
     </svg>
   </div>
 
-  <div class="horizontal-bar-chart chart-container-right">
+  <div class="chart-container-right">
     <h2 class="chart-title"> Total monthly clients </h2>
     <p class="chart-description"> {{@totalDescription}} </p>
-    <svg class="chart"
+    <svg class="chart is-horizontal"
       {{did-insert this.renderChart @dataset}} 
       {{did-update this.renderChart @dataset}} >
     </svg>
@@ -36,9 +36,8 @@
   </div>
 
   <div class="legend-container">
-    {{!-- TO DO - fix styling --}}
-    <span class="light-dot"></span><p>{{@chartLegend.0.label}}</p>
-    <span class="dark-dot">{{@chartLegend.1.label}}</span>
+    <span class="light-dot"></span><span class="legend-label">{{@chartLegend.0.label}}</span>
+    <span class="dark-dot"></span><span class="legend-label">{{@chartLegend.1.label}}</span>
   </div>
 </div>
 
