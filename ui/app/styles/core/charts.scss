@@ -17,7 +17,7 @@
 .dual-chart-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: repeat(5, 1fr);
+  grid-template-rows: 0.75fr 1fr 1fr 1fr 0.5;
   height: 547px;
   width: 100%;
 }
@@ -50,6 +50,7 @@
   grid-column-end: span col6-end;
   grid-row-start: 2;
   grid-row-end: span 3;
+  justify-self: center;
   max-height: 305px;
   max-width: 730px;
 
@@ -107,7 +108,7 @@
   grid-column-start: 3;
   grid-column-end: 5;
   height: $spacing-l;
-  align-self: center;
+  align-self: end;
   justify-self: center;
   font-size: $size-9;
 }

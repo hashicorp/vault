@@ -119,7 +119,7 @@ export default class TotalClientUsage extends Component {
       .append('g')
       .attr('transform', `translate(${TRANSLATE.left})`)
       .style('fill', `${BACKGROUND_BAR_COLOR}`)
-      .style('opacity', '1')
+      .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
     let tooltipRect = greyBars
