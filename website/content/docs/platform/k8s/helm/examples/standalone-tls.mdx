@@ -135,7 +135,9 @@ CSR_NAME=vault-csr
 3. Retrieve Kubernetes CA.
 
    ```bash
-   kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
+   kubectl get secret \
+     -o jsonpath="{.items[?(@.type==\"kubernetes.io/service-account-token\")].data['ca\.crt']}" \
+     | base64 --decode > ${TMPDIR}/vault.ca
    ```
 
 4. Create the namespace.
