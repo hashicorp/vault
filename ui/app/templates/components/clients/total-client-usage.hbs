@@ -5,7 +5,7 @@
       <p class="chart-description">{{@description}}</p>
     {{/if}}
   </div>
-  <div class="chart-container" {{on "mouseleave" (fn this.removeTooltip)}}>
+  <div class="chart-container-wide" {{on "mouseleave" (fn this.removeTooltip)}}>
     <svg class="chart has-grid"
       {{did-insert this.registerListener}}
     ></svg>

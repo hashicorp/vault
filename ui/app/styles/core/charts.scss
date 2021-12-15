@@ -3,21 +3,23 @@
   border-radius: $radius-large;
   padding: $spacing-l $spacing-l $spacing-s $spacing-l;
   margin-bottom: $spacing-m;
-  height: 547px; // TODO amend for specific chart heights
-  width: 100%;
 }
 
 // GRID LAYOUT //
 .single-chart-grid {
   display: grid;
-  grid-template-columns: 1fr 0.3fr 1fr 1fr 0.3fr 1fr;
-  grid-template-rows: repeat(5, 1fr);
+  grid-template-columns: 1fr 0.3fr 1fr 1fr 1fr 0.3fr;
+  grid-template-rows: 0.75fr 1fr 1fr 1fr 0.75;
+  height: 429px;
+  width: 100%;
 }
 
 .dual-chart-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: repeat(5, 1fr);
+  height: 547px;
+  width: 100%;
 }
 
 .chart-header {
@@ -43,13 +45,13 @@
   }
 }
 
-.chart-container {
+.chart-container-wide {
   grid-column-start: 3;
   grid-column-end: span col6-end;
   grid-row-start: 2;
   grid-row-end: span 3;
-
-  padding: $spacing-m 0;
+  max-height: 305px;
+  max-width: 730px;
 
   svg.chart {
     width: 100%;
@@ -75,20 +77,19 @@
 
 .chart-subTitle {
   grid-column-start: 1;
-  grid-column-end: 3;
+  grid-column-end: 2;
   grid-row-start: 2;
-  margin-bottom: $spacing-l;
 }
 
 .data-details-top {
   grid-column-start: 1;
-  grid-column-end: 3;
+  grid-column-end: 2;
   grid-row-start: 3;
 }
 
 .data-details-bottom {
   grid-column-start: 1;
-  grid-column-end: 3;
+  grid-column-end: 2;
   grid-row-start: 4;
 }
 
@@ -191,8 +192,7 @@ p.data-details {
 .has-grid {
   g > text {
     color: $ui-gray-500;
-    font-weight: $font-weight-semibold;
-    font-size: $size-8;
+    font-size: $size-9;
   }
 
   g > line {
@@ -205,6 +205,6 @@ p.data-details {
 .is-horizontal {
   .tick > text {
     font-weight: $font-weight-semibold;
-    font-size: $size-8;
+    font-size: $size-9;
   }
 }
