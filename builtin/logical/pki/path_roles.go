@@ -199,10 +199,11 @@ protection use. Defaults to false.`,
 
 			"key_bits": {
 				Type:    framework.TypeInt,
-				Default: 2048,
-				Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
+				Default: 0,
+				Description: `The number of bits to use. Allowed values are
+0 (universal default); with rsa key_type: 2048 (default), 3072, or
+4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
+ed25519.`,
 			},
 
 			"signature_bits": &framework.FieldSchema{
@@ -615,17 +616,13 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
 	}
 
-	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
-		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
-	}
-
 	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
 		return logical.ErrorResponse(
 			`"ttl" value must be less than "max_ttl" value`,
 		), nil
 	}
 
-	if err := certutil.ValidateKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, &entry.SignatureBits); err != nil {
+	if entry.KeyBits, entry.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, entry.SignatureBits); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 

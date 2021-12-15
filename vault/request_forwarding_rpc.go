@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"net/http"
+	"os"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault/replication"
-	"github.com/shirou/gopsutil/host"
 )
 
 type forwardedRequestRPCServer struct {
@@ -117,10 +117,10 @@ type forwardingClient struct {
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
 		clusterAddr := c.core.ClusterAddr()
-		h, _ := host.Info()
+		hostname, _ := os.Hostname()
 		ni := NodeInformation{
 			ApiAddr:  c.core.redirectAddr,
-			Hostname: h.Hostname,
+			Hostname: hostname,
 			Mode:     "standby",
 		}
 		tick := func() {

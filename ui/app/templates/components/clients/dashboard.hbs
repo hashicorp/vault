@@ -1,4 +1,4 @@
-{{#if (eq @model.config.queriesAvailable false)}}
+{{#if (and (eq @tab 'history') (eq @model.config.queriesAvailable false))}}
   {{#if (eq @model.config.enabled 'On')}}
     <EmptyState
       @title="No monthly history"
@@ -107,7 +107,7 @@
               <div class="column" data-test-client-count-stats>
                 <StatText
                   @label="Total active clients"
-                  @value={{or @model.activity.clients @model.activity.total.clients}}
+                  @value={{or @model.activity.clients @model.activity.total.clients "0"}}
                   @size="l"
                   @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
                 />
@@ -116,7 +116,7 @@
                 <StatText
                   class="column"
                   @label="Unique entities"
-                  @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities}}
+                  @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities "0"}}
                   @size="l"
                   @subText="Representation of a particular user, client or application that created a token via login."
                 />
@@ -125,7 +125,7 @@
                 <StatText
                   class="column"
                   @label="Non-entity tokens"
-                  @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens}}
+                  @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens "0"}}
                   @size="l"
                   @subText="Tokens created via a method that is not associated with an entity."
                 />

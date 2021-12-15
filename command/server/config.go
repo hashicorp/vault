@@ -8,9 +8,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -22,6 +25,8 @@ import (
 var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
 	return nil
 }
+
+var kmsLibraryValidator = defaultKmsLibraryValidator
 
 // Config is the configuration for the vault server.
 type Config struct {
@@ -77,11 +82,16 @@ type Config struct {
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
+	LogRequestsLevel    string      `hcl:"-"`
+	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
 	License     string `hcl:"-"`
 	LicensePath string `hcl:"license_path"`
+
+	KmsLibraries map[string]*KMSLibrary `hcl:"-"`
 }
 
 const (
@@ -98,6 +108,9 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	}
 	for _, l := range c.Listeners {
 		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	for _, kmslibrary := range c.KmsLibraries {
+		results = append(results, kmslibrary.Validate(sourceFilePath)...)
 	}
 	results = append(results, c.validateEnt(sourceFilePath)...)
 	return results
@@ -166,6 +179,24 @@ func (b *ServiceRegistration) Validate(source string) []configutil.ConfigError {
 
 func (b *ServiceRegistration) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
+}
+
+// KMSLibrary is a per-server configuration that will be further augmented with managed key configuration to
+// build up a KMS wrapper type to delegate encryption operations to HSMs
+type KMSLibrary struct {
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	FoundKeys  []string                `hcl:",decodedFields"`
+	Type       string                  `hcl:"-"`
+	Name       string                  `hcl:"name"`
+	Library    string                  `hcl:"library"`
+}
+
+func (k *KMSLibrary) Validate(source string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(k.UnusedKeys, source)
+}
+
+func (k *KMSLibrary) GoString() string {
+	return fmt.Sprintf("*%#v", *k)
 }
 
 func NewConfig() *Config {
@@ -290,6 +321,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.EnableResponseHeaderHostname = c.EnableResponseHeaderHostname
 	if c2.EnableResponseHeaderHostname {
 		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
+	}
+
+	result.LogRequestsLevel = c.LogRequestsLevel
+	if c2.LogRequestsLevel != "" {
+		result.LogRequestsLevel = c2.LogRequestsLevel
 	}
 
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
@@ -480,6 +516,11 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
+	if result.LogRequestsLevelRaw != nil {
+		result.LogRequestsLevel = strings.ToLower(strings.TrimSpace(result.LogRequestsLevelRaw.(string)))
+		result.LogRequestsLevelRaw = ""
+	}
+
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
 		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
 			return nil, err
@@ -525,6 +566,14 @@ func ParseConfig(d, source string) (*Config, error) {
 		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
 			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
+		}
+	}
+
+	// Parse KMSLibraries sections if any
+	if o := list.Filter("kms_library"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "kms_library")
+		if err := parseKmsLibraries(result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'kms_library': %w", err)
 		}
 	}
 
@@ -794,6 +843,75 @@ func parseServiceRegistration(result *Config, list *ast.ObjectList, name string)
 	return nil
 }
 
+func parseKmsLibraries(result *Config, list *ast.ObjectList) error {
+	result.KmsLibraries = make(map[string]*KMSLibrary, len(list.Items))
+
+	for _, item := range list.Items {
+		library, err := decodeKmsLibrary(item)
+		if err != nil {
+			return err
+		}
+
+		if err := validateKmsLibrary(library); err != nil {
+			return err
+		}
+
+		if _, ok := result.KmsLibraries[library.Name]; ok {
+			return fmt.Errorf("duplicated kms_library configuration sections with name %s", library.Name)
+		}
+
+		result.KmsLibraries[library.Name] = library
+	}
+	return nil
+}
+
+func decodeKmsLibrary(item *ast.ObjectItem) (*KMSLibrary, error) {
+	library := &KMSLibrary{}
+	if err := hcl.DecodeObject(&library, item.Val); err != nil {
+		return nil, multierror.Prefix(err, "kms_library")
+	}
+
+	if len(item.Keys) != 1 {
+		return nil, errors.New("kms_library section was missing a type")
+	}
+
+	library.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
+	library.Name = strings.ToLower(library.Name)
+
+	return library, nil
+}
+
+func defaultKmsLibraryValidator(kms *KMSLibrary) error {
+	switch kms.Type {
+	case wrapping.PKCS11:
+		return fmt.Errorf("KMS type 'pkcs11' requires the Vault Enterprise HSM binary")
+
+	default:
+		return fmt.Errorf("unknown KMS type %q", kms.Type)
+	}
+}
+
+func validateKmsLibrary(kmsConfig *KMSLibrary) error {
+	if kmsConfig.Library == "" {
+		return fmt.Errorf("library key can not be blank within kms_library type: %s", kmsConfig.Type)
+	}
+
+	if kmsConfig.Name == "" {
+		return fmt.Errorf("name key can not be blank within kms_library type: %s", kmsConfig.Type)
+	}
+
+	nameRegex := regexp.MustCompile("^[\\w._-]+$")
+	if !nameRegex.MatchString(kmsConfig.Name) {
+		return fmt.Errorf("value ('%s') for name field contained invalid characters within kms_library type: %s", kmsConfig.Name, kmsConfig.Type)
+	}
+
+	if err := kmsLibraryValidator(kmsConfig); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Sanitized returns a copy of the config with all values that are considered
 // sensitive stripped. It also strips all `*Raw` values that are mainly
 // used for parsing.
@@ -840,6 +958,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
 
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
+
+		"log_requests_level": c.LogRequestsLevel,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

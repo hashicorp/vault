@@ -91,6 +91,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 0, nil)
 			}
 
+			// Capture the total number of in-flight requests
+			c.inFlightReqGaugeMetric()
+
 			// Refresh gauge metrics that are looped
 			c.cachedGaugeMetricsEmitter()
 
@@ -533,4 +536,10 @@ func (c *Core) cachedGaugeMetricsEmitter() {
 	}
 
 	loopMetrics.Range(emit)
+}
+
+func (c *Core) inFlightReqGaugeMetric() {
+	totalInFlightReq := c.inFlightReqData.InFlightReqCount.Load()
+	// Adding a gauge metric to capture total number of inflight requests
+	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_requests"}, float32(totalInFlightReq), nil)
 }
