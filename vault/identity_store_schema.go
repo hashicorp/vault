@@ -71,7 +71,8 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				},
 			},
 			"local_bucket_key": {
-				Name: "local_bucket_key",
+				Name:         "local_bucket_key",
+				AllowMissing: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "LocalBucketKey",
 				},

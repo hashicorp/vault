@@ -24,7 +24,7 @@
         </div>
       {{/if}}
     {{else}}
-      <Icon @size="s" @glyph="minus-plain"/>
+      <Icon @name="minus" />
     {{/if}}
   </div>
   <div class="column is-flex" data-test-value-div="{{label}}">
@@ -33,25 +33,21 @@
     {{else if valueIsBoolean}}
       {{#if value}}
         <Icon
-          aria-hidden="true"
           class="icon-true"
-          @size="l"
-          @glyph="check-circle-outline"
+          @name="check-circle"
           data-test-boolean-true
         /> Yes
       {{else}}
         <Icon
-          aria-hidden="true"
+          @name="x-square"
           class="icon-false"
-          @size="l"
-          @glyph="cancel-square-outline"
         /> No
       {{/if}}
     {{!-- alwaysRender is still true --}}
     {{else if (and (not value) defaultShown)}}
       <span data-test-row-value="{{label}}">{{defaultShown}}</span>
     {{else if valueIsEmpty}} 
-      <Icon @size="s" @glyph="minus-plain"/>
+      <Icon @name="minus" />
     {{else}}
       {{#if (eq type 'array')}}
         <InfoTableItemArray

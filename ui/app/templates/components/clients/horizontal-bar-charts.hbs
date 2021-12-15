@@ -1,0 +1,44 @@
+<div class="chart-wrapper double-chart">
+  <div class="chart-header has-export">
+    <div class="header-left">
+      <h2 class="chart-title">{{@title}}</h2>
+        {{#if @description}}
+          <p class="chart-description">{{@description}}</p>
+        {{/if}}
+    </div> 
+    <div class="header-right">
+      {{#if @dataset}}
+        {{yield}}
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="horizontal-bar-chart chart-container-left">
+    <h2 class="chart-title"> New Clients </h2>
+    <p class="chart-description">{{@newClientsDescription}}</p>
+    <svg class="chart"
+      {{did-insert this.renderChart @dataset}} 
+      {{did-update this.renderChart @dataset}} >
+    </svg>
+  </div>
+
+  <div class="horizontal-bar-chart chart-container-right">
+    <h2 class="chart-title"> Total monthly clients </h2>
+    <p class="chart-description"> {{@totalDescription}} </p>
+    <svg class="chart"
+      {{did-insert this.renderChart @dataset}} 
+      {{did-update this.renderChart @dataset}} >
+    </svg>
+  </div>
+
+  <div class="timestamp">
+    Updated Nov 15 2021, 4:07:32 pm
+  </div>
+
+  <div class="legend-container">
+    {{!-- TO DO - fix styling --}}
+    <span class="light-dot"></span><p>{{@chartLegend.0.label}}</p>
+    <span class="dark-dot">{{@chartLegend.1.label}}</span>
+  </div>
+</div>
+

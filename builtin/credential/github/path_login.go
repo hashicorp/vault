@@ -2,9 +2,9 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -33,16 +33,13 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
-	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
+	verifyResp, err := b.verifyCredentials(ctx, req, token)
+	if err != nil {
 		return nil, err
-	} else if resp != nil {
-		return resp, nil
-	} else {
-		verifyResp = verifyResponse
 	}
 
 	return &logical.Response{
+		Warnings: verifyResp.Warnings,
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
 				Name: *verifyResp.User.Login,
@@ -54,13 +51,9 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
-	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
+	verifyResp, err := b.verifyCredentials(ctx, req, token)
+	if err != nil {
 		return nil, err
-	} else if resp != nil {
-		return resp, nil
-	} else {
-		verifyResp = verifyResponse
 	}
 
 	auth := &logical.Auth{
@@ -84,7 +77,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}
 
 	resp := &logical.Response{
-		Auth: auth,
+		Warnings: verifyResp.Warnings,
+		Auth:     auth,
 	}
 
 	for _, teamName := range verifyResp.TeamNames {
@@ -110,14 +104,11 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 	token := tokenRaw.(string)
 
-	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
+	verifyResp, err := b.verifyCredentials(ctx, req, token)
+	if err != nil {
 		return nil, err
-	} else if resp != nil {
-		return resp, nil
-	} else {
-		verifyResp = verifyResponse
 	}
+
 	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies do not match")
 	}
@@ -126,6 +117,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	resp.Auth.Period = verifyResp.Config.TokenPeriod
 	resp.Auth.TTL = verifyResp.Config.TokenTTL
 	resp.Auth.MaxTTL = verifyResp.Config.TokenMaxTTL
+	resp.Warnings = verifyResp.Warnings
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil
@@ -139,48 +131,64 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	return resp, nil
 }
 
-func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, *logical.Response, error) {
+func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, error) {
+	var warnings []string
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if config == nil {
-		return nil, logical.ErrorResponse("configuration has not been set"), nil
+		return nil, errors.New("configuration has not been set")
 	}
 
 	// Check for a CIDR match.
 	if len(config.TokenBoundCIDRs) > 0 {
 		if req.Connection == nil {
-			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
-			return nil, nil, logical.ErrPermissionDenied
+			b.Logger().Error("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
 		}
 		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
-			return nil, nil, logical.ErrPermissionDenied
+			return nil, logical.ErrPermissionDenied
 		}
-	}
-
-	if config.Organization == "" {
-		return nil, logical.ErrorResponse(
-			"organization not found in configuration"), nil
 	}
 
 	client, err := b.Client(token)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if config.BaseURL != "" {
 		parsedURL, err := url.Parse(config.BaseURL)
 		if err != nil {
-			return nil, nil, fmt.Errorf("successfully parsed base_url when set but failing to parse now: %w", err)
+			return nil, fmt.Errorf("successfully parsed base_url when set but failing to parse now: %w", err)
 		}
 		client.BaseURL = parsedURL
+	}
+
+	if config.OrganizationID == 0 {
+		// Previously we did not verify using the Org ID. So if the Org ID is
+		// not set, we will trust-on-first-use and set it now.
+		err = config.setOrganizationID(ctx, client)
+		if err != nil {
+			b.Logger().Error("failed to set the organization_id on login", "error", err)
+			return nil, err
+		}
+		entry, err := logical.StorageEntryJSON("config", config)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
+		b.Logger().Info("set ID on a trust-on-first-use basis", "organization_id", config.OrganizationID)
 	}
 
 	// Get the user
 	user, _, err := client.Users.Get(ctx, "")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Verify that the user is part of the organization
@@ -194,7 +202,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	for {
 		orgs, resp, err := client.Organizations.List(ctx, "", orgOpt)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		allOrgs = append(allOrgs, orgs...)
 		if resp.NextPage == 0 {
@@ -203,14 +211,27 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		orgOpt.Page = resp.NextPage
 	}
 
+	orgLoginName := ""
 	for _, o := range allOrgs {
-		if strings.EqualFold(*o.Login, config.Organization) {
+		if o.GetID() == config.OrganizationID {
 			org = o
+			orgLoginName = *o.Login
 			break
 		}
 	}
 	if org == nil {
-		return nil, logical.ErrorResponse("user is not part of required org"), nil
+		return nil, errors.New("user is not part of required org")
+	}
+
+	if orgLoginName != config.Organization {
+		warningMsg := fmt.Sprintf(
+			"the organization name has changed to %q. It is recommended to verify and update the organization name in the config: %s=%d",
+			orgLoginName,
+			"organization_id",
+			config.OrganizationID,
+		)
+		b.Logger().Warn(warningMsg)
+		warnings = append(warnings, warningMsg)
 	}
 
 	// Get the teams that this user is part of to determine the policies
@@ -224,7 +245,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	for {
 		teams, resp, err := client.Teams.ListUserTeams(ctx, teamOpt)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		allTeams = append(allTeams, teams...)
 		if resp.NextPage == 0 {
@@ -248,21 +269,24 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	groupPoliciesList, err := b.TeamMap.Policies(ctx, req.Storage, teamNames...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	userPoliciesList, err := b.UserMap.Policies(ctx, req.Storage, []string{*user.Login}...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return &verifyCredentialsResp{
+	verifyResp := &verifyCredentialsResp{
 		User:      user,
 		Org:       org,
 		Policies:  append(groupPoliciesList, userPoliciesList...),
 		TeamNames: teamNames,
 		Config:    config,
-	}, nil, nil
+		Warnings:  warnings,
+	}
+
+	return verifyResp, nil
 }
 
 type verifyCredentialsResp struct {
@@ -270,6 +294,9 @@ type verifyCredentialsResp struct {
 	Org       *github.Organization
 	Policies  []string
 	TeamNames []string
+
+	// Warnings to send back to the caller
+	Warnings []string
 
 	// This is just a cache to send back to the caller
 	Config *config

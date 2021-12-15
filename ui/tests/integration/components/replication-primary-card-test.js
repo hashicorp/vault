@@ -45,10 +45,10 @@ module('Integration | Component | replication-primary-card', function(hooks) {
 
       if (CLUSTER_STATES[state].isOk) {
         assert.dom('[data-test-hasError]').doesNotExist();
-        assert.dom('[data-test-icon]').exists('shows an icon if state is ok');
+        assert.dom('[data-test-cluster-state-icon]').exists('shows an icon if state is ok');
       } else {
         assert.dom('[data-test-hasError]').exists('shows an error if the cluster state is not ok');
-        assert.dom('[data-test-icon]').doesNotExist('does not show an icon if state is not ok');
+        assert.dom('[data-test-cluster-state-icon]').doesNotExist('does not show an icon if state is not ok');
       }
     });
   });

@@ -5,7 +5,7 @@ import layout from '../templates/components/list-view';
 
 /**
  * @module ListView
- * `ListView` components are used in conjuction with `ListItem` for rendering a list.
+ * `ListView` components are used in conjunction with `ListItem` for rendering a list.
  *
  * @example
  * ```js

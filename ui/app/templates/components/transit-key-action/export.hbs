@@ -73,7 +73,7 @@
         <pre data-test-encrypted-value="export" class="level-left">{{if this.wrapTTL @wrappedToken (stringify @keys)}}</pre>
         <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
           @clipboardText={{if this.wrapTTL @wrappedToken (stringify @keys)}} @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
+          <Icon @name="clipboard-copy" aria-label="Copy" />
         </CopyButton>
       </div>
     </div>
