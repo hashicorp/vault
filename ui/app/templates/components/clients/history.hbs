@@ -90,7 +90,7 @@
             <div class="column" data-test-client-count-stats>
               <StatText
                 @label="Total active clients"
-                @value={{or @model.activity.clients @model.activity.total.clients}}
+                @value={{or @model.activity.clients @model.activity.total.clients "0"}}
                 @size="l"
                 @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
               />
@@ -99,7 +99,7 @@
               <StatText
                 class="column"
                 @label="Unique entities"
-                @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities}}
+                @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities "0"}}
                 @size="l"
                 @subText="Representation of a particular user, client or application that created a token via login."
               />
@@ -108,7 +108,7 @@
               <StatText
                 class="column"
                 @label="Non-entity tokens"
-                @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens}}
+                @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens "0"}}
                 @size="l"
                 @subText="Tokens created via a method that is not associated with an entity."
               />
@@ -135,66 +135,70 @@
           </div>
           <div class="column">
             <div class="card">
-                <div class="card-content">
-                  {{#if (and this.barChartSelection this.selectedNamespace)}}
-                    <label class="title is-5 has-bottom-margin-m">Single namespace</label>
-                    <ul class="has-bottom-margin-l search-select-list">
-                      <li class="search-select-list-item">
-                        <div>
-                          {{or this.selectedNamespace.namespace_path 'root'}}
-                        </div>
-                        <div class="control">
-                          <button type="button" class="button is-ghost" {{action "resetData"}}>
-                          <Icon @glyph="trash" class="has-text-grey" />
-                        </button>
-                        </div>
-                      </li>
-                    </ul>
-                  {{else}}
-                    <SearchSelect
-                      @id="namespaces"
-                      @labelClass="title is-5"
-                      @disallowNewItems={{true}}
-                      @onChange={{action this.selectNamespace}}
-                      @label="Single namespace"
-                      @options={{or this.searchDataset (array)}}
-                      @searchField="namespace_path"
-                      @selectLimit={{1}}
-                      />
-                  {{/if}}
-                  {{#if this.selectedNamespace}}
-                    <div class="columns">
-                        <div class="column">
-                            <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
-                        </div>
+              <div class="card-content">
+                {{#if (and this.barChartSelection this.selectedNamespace)}}
+                  <label class="title is-5 has-bottom-margin-m">Single namespace</label>
+                  <ul class="has-bottom-margin-l search-select-list">
+                    <li class="search-select-list-item">
+                      <div>
+                        {{or this.selectedNamespace.namespace_path 'root'}}
+                      </div>
+                      <div class="control">
+                        <button type="button" class="button is-ghost" {{action "resetData"}}>
+                        <Icon @glyph="trash" class="has-text-grey" />
+                      </button>
+                      </div>
+                    </li>
+                  </ul>
+                {{else}}
+                  <SearchSelect
+                    @id="namespaces"
+                    @labelClass="title is-5"
+                    @disallowNewItems={{true}}
+                    @onChange={{action this.selectNamespace}}
+                    @label="Single namespace"
+                    @options={{or this.searchDataset (array)}}
+                    @searchField="namespace_path"
+                    @selectLimit={{1}}
+                    />
+                {{/if}}
+                {{#if this.selectedNamespace}}
+                  <div class="columns">
+                    <div class="column">
+                      <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
                     </div>
-                    <div class="columns">
-                        <div class="column">
-                            <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
-                        </div>
-                        <div class="column">
-                            <StatText @label="Non-entity tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
-                        </div>
+                  </div>
+                  <div class="columns">
+                    <div class="column">
+                      <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
                     </div>
-                  {{else}}
-                    <EmptyState @title="No namespace selected" 
-                        @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts." />
-                  {{/if}}
-                </div>
+                    <div class="column">
+                      <StatText @label="Non-entity tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
+                    </div>
+                  </div>
+                {{else}}
+                  <EmptyState
+                    @title="No namespace selected" 
+                    @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts."
+                  />
+                {{/if}}
+              </div>
             </div>
           </div>
         </div>
-      {{else if (and (eq @tab "current") (eq @model.config.enabled "On"))}}
+      {{/if}}
+    {{else if (eq @tab "current")}}
+      {{#if (eq @model.config.enabled "On")}}
         <EmptyState
           @title="No data received"
           @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
         />
-      {{else}}
-        <EmptyState
-          @title="No data received"
-          @message="No data exists for that query period. Try searching again."
-        />
       {{/if}}
+    {{else}}
+      <EmptyState
+        @title="No data received"
+        @message="No data exists for that query period. Try searching again."
+      />
     {{/if}}
   </div>
 {{/if}}

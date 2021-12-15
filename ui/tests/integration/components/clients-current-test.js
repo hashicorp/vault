@@ -37,10 +37,6 @@ module('Integration | Component | client count current', function (hooks) {
 
   test('it shows zeroed data when enabled but no counts', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true, enabled: 'On' });
-    Object.assign(this.model.activity, {
-      clients: 1234,
-      total: 1234,
-    });
     await render(hbs`<Clients::History @tab={{this.tab}} @model={{this.model}} />`);
     assert.dom('[data-test-pricing-metrics-form]').doesNotExist('Date range component should not exists');
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty state does not exist');
