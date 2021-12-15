@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-  extends: 'octane',
+  extends: ['octane', 'stylistic'],
   rules: {
     'no-bare-strings': 'off',
     'no-action': 'off',

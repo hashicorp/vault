@@ -4,6 +4,10 @@
     "allowJs": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".storybook",
+    ".yarn",
+    "public",
+    "storybook-static"
   ]
 }

@@ -18,6 +18,7 @@ module.exports = {
     browser: true,
   },
   rules: {
+    indent: ['error', 2],
     'no-console': 'warn',
     'ember/no-mixins': 'warn',
     'ember/no-new-mixins': 'off', // should be warn but then every line of the mixin is green
