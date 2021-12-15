@@ -382,3 +382,9 @@ type CustomHeader struct {
 	Name  string
 	Value string
 }
+
+type CtxKeyInFlightRequestID struct{}
+
+func (c CtxKeyInFlightRequestID) String() string {
+	return "in-flight-request-ID"
+}

@@ -365,6 +365,9 @@ type Core struct {
 	// metrics emission and sealing leading to a nil pointer
 	metricsMutex sync.Mutex
 
+	// inFlightReqMap is used to store info about in-flight requests
+	inFlightReqData *InFlightRequests
+
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
 	metricSink *metricsutil.ClusterMetricSink
@@ -385,6 +388,9 @@ type Core struct {
 	// Cache stores the actual cache; we always have this but may bypass it if
 	// disabled
 	physicalCache physical.ToggleablePurgemonster
+
+	// logRequestsLevel indicates at which level requests should be logged
+	logRequestsLevel *uberAtomic.Int32
 
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reloadutil.ReloadFunc
@@ -848,6 +854,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.router.logger = c.logger.Named("router")
 	c.allLoggers = append(c.allLoggers, c.router.logger)
 
+	c.inFlightReqData = &InFlightRequests{
+		InFlightReqMap:   &sync.Map{},
+		InFlightReqCount: uberAtomic.NewUint64(0),
+	}
+
 	c.SetConfig(conf.RawConfig)
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
@@ -1025,6 +1036,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(NewListenerCustomHeader(conf.RawConfig.Listeners, c.logger, uiHeaders))
 	} else {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
+	}
+
+	logRequestsLevel := conf.RawConfig.LogRequestsLevel
+	c.logRequestsLevel = uberAtomic.NewInt32(0)
+	switch {
+	case log.LevelFromString(logRequestsLevel) > log.NoLevel && log.LevelFromString(logRequestsLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(logRequestsLevel)))
+	case logRequestsLevel != "":
+		c.logger.Warn("invalid log_requests_level", "level", conf.RawConfig.LogRequestsLevel)
 	}
 
 	quotasLogger := conf.Logger.Named("quotas")
@@ -2023,6 +2043,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
+	if err := c.setupManagedKeyRegistry(); err != nil {
+		return err
+	  }
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
@@ -2945,6 +2968,95 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+type InFlightRequests struct {
+	InFlightReqMap   *sync.Map
+	InFlightReqCount *uberAtomic.Uint64
+}
+
+type InFlightReqData struct {
+	StartTime        time.Time `json:"start_time"`
+	ClientRemoteAddr string    `json:"client_remote_address"`
+	ReqPath          string    `json:"request_path"`
+	Method           string    `json:"request_method"`
+	ClientID         string    `json:"client_id"`
+}
+
+func (c *Core) StoreInFlightReqData(reqID string, data InFlightReqData) {
+	c.inFlightReqData.InFlightReqMap.Store(reqID, data)
+	c.inFlightReqData.InFlightReqCount.Inc()
+}
+
+// FinalizeInFlightReqData is going log the completed request if the
+// corresponding server config option is enabled. It also removes the
+// request from the inFlightReqMap and decrement the number of in-flight
+// requests by one.
+func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
+	if c.logRequestsLevel != nil && c.logRequestsLevel.Load() != 0 {
+		c.LogCompletedRequests(reqID, statusCode)
+	}
+
+	c.inFlightReqData.InFlightReqMap.Delete(reqID)
+	c.inFlightReqData.InFlightReqCount.Dec()
+}
+
+// LoadInFlightReqData creates a snapshot map of the current
+// in-flight requests
+func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
+	currentInFlightReqMap := make(map[string]InFlightReqData)
+	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
+		// there is only one writer to this map, so skip checking for errors
+		v := value.(InFlightReqData)
+		currentInFlightReqMap[key.(string)] = v
+		return true
+	})
+
+	return currentInFlightReqMap
+}
+
+// UpdateInFlightReqData updates the data for a specific reqID with
+// the clientID
+func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.Logger().Trace("failed to retrieve request with ID", "request_id", reqID)
+		return
+	}
+
+	// there is only one writer to this map, so skip checking for errors
+	reqData := v.(InFlightReqData)
+	reqData.ClientID = clientID
+	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
+}
+
+// LogCompletedRequests Logs the completed request to the server logs
+func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
+	logLevel := log.Level(c.logRequestsLevel.Load())
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.logger.Log(logLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
+		return
+	}
+
+	// there is only one writer to this map, so skip checking for errors
+	reqData := v.(InFlightReqData)
+	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+}
+
+func (c *Core) ReloadLogRequestsLevel() {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+
+	infoLevel := conf.(*server.Config).LogRequestsLevel
+	switch {
+	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
+	case infoLevel != "":
+		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
+	}
 }
 
 type PeerNode struct {

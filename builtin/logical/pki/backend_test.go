@@ -1183,21 +1183,21 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	getRandCsr := func(keyType string, errorOk bool, csrTemplate *x509.CertificateRequest) csrPlan {
-		rsaKeyBits := []int{2048, 4096}
+		rsaKeyBits := []int{2048, 3072, 4096}
 		ecKeyBits := []int{224, 256, 384, 521}
 		plan := csrPlan{errorOk: errorOk}
 
 		var testBitSize int
 		switch keyType {
 		case "rsa":
-			plan.roleKeyBits = rsaKeyBits[mathRand.Int()%2]
+			plan.roleKeyBits = rsaKeyBits[mathRand.Int()%len(rsaKeyBits)]
 			testBitSize = plan.roleKeyBits
 
 			// If we don't expect an error already, randomly choose a
 			// key size and expect an error if it's less than the role
 			// setting
 			if !keybitSizeRandOff && !errorOk {
-				testBitSize = rsaKeyBits[mathRand.Int()%2]
+				testBitSize = rsaKeyBits[mathRand.Int()%len(rsaKeyBits)]
 			}
 
 			if testBitSize < plan.roleKeyBits {
@@ -1205,14 +1205,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 
 		case "ec":
-			plan.roleKeyBits = ecKeyBits[mathRand.Int()%4]
+			plan.roleKeyBits = ecKeyBits[mathRand.Int()%len(ecKeyBits)]
 			testBitSize = plan.roleKeyBits
 
 			// If we don't expect an error already, randomly choose a
 			// key size and expect an error if it's less than the role
 			// setting
 			if !keybitSizeRandOff && !errorOk {
-				testBitSize = ecKeyBits[mathRand.Int()%4]
+				testBitSize = ecKeyBits[mathRand.Int()%len(ecKeyBits)]
 			}
 
 			if testBitSize < plan.roleKeyBits {
@@ -2986,6 +2986,128 @@ func TestBackend_URI_SANs(t *testing.T) {
 		t.Fatalf(
 			"expected URIs SANs %v to equal provided values spiffe://host.com/something, http://someuri/abc",
 			cert.URIs)
+	}
+}
+
+func TestBackend_AllowedURISANsTemplate(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Write test policy for userpass auth method.
+	err := client.Sys().PutPolicy("test", `
+   path "pki/*" {  
+     capabilities = ["update"]
+   }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable userpass auth method.
+	if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure test role for userpass.
+	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+		"password": "test",
+		"policies": "test",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Login userpass for test role and keep client token.
+	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
+		"password": "test",
+	})
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	userpassToken := secret.Auth.ClientToken
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Mount PKI.
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate internal CA.
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write role PKI.
+	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+		"allowed_uri_sans": []string{"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}/*", "spiffe://domain/foo"},
+		"allowed_uri_sans_template": true,
+		"require_cn":                false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with identity templating
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname, spiffe://domain/foo"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with identity templating and glob
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname/bar"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with non-matching identity template parameter
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/unknownuser"})
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	// Set allowed_uri_sans_template to false.
+	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+		"allowed_uri_sans_template": false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with userpassToken.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/users/userpassname"})
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 

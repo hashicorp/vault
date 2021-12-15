@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { currentURL, visit, fillIn } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
+import logout from 'vault/tests/pages/logout';
 
 const FEATURE_FLAGS_RESPONSE = {
   feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
@@ -23,6 +24,7 @@ module('Acceptance | Enterprise | Managed namespace root', function(hooks) {
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
     });
   });
 
@@ -31,8 +33,10 @@ module('Acceptance | Enterprise | Managed namespace root', function(hooks) {
   });
 
   test('it shows the managed namespace toolbar when feature flag exists', async function(assert) {
+    await logout.visit();
     await visit('/vault/auth');
-    assert.equal(currentURL(), '/vault/auth?namespace=admin&with=token', 'Redirected to base namespace');
+    assert.ok(currentURL().startsWith('/vault/auth'), 'Redirected to auth');
+    assert.ok(currentURL().includes('?namespace=admin'), 'with base namespace');
 
     assert.dom('[data-test-namespace-toolbar]').doesNotExist('Normal namespace toolbar does not exist');
     assert.dom('[data-test-managed-namespace-toolbar]').exists('Managed namespace toolbar exists');

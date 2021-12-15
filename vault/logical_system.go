@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -42,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
-	"github.com/shirou/gopsutil/host"
 )
 
 const (
@@ -177,6 +177,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.inFlightRequestPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
@@ -3013,6 +3014,28 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
+func (b *SystemBackend) handleInFlightRequestData(_ context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "text/plain",
+			logical.HTTPStatusCode:  http.StatusInternalServerError,
+		},
+	}
+
+	currentInFlightReqMap := b.Core.LoadInFlightReqData()
+
+	content, err := json.Marshal(currentInFlightReqMap)
+	if err != nil {
+		resp.Data[logical.HTTPRawBody] = fmt.Sprintf("error while marshalling the in-flight requests data: %s", err)
+		return resp, nil
+	}
+	resp.Data[logical.HTTPContentType] = "application/json"
+	resp.Data[logical.HTTPRawBody] = content
+	resp.Data[logical.HTTPStatusCode] = http.StatusOK
+
+	return resp, nil
+}
+
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
 	w := req.ResponseWriter
@@ -4132,10 +4155,14 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// We're always the leader if we're handling this request.
-	h, _ := host.Info()
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
 	nodes := []HAStatusNode{
 		{
-			Hostname:       h.Hostname,
+			Hostname:       hostname,
 			APIAddress:     b.Core.redirectAddr,
 			ClusterAddress: b.Core.ClusterAddr(),
 			ActiveNode:     true,
@@ -4911,6 +4938,14 @@ This path responds to the following HTTP methods.
 	"metrics": {
 		"Export the metrics aggregated for telemetry purpose.",
 		"",
+	},
+	"in-flight-req": {
+		"reports in-flight requests",
+		`
+This path responds to the following HTTP methods.
+		GET /
+			Returns a map of in-flight requests.
+		`,
 	},
 	"internal-counters-requests": {
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
