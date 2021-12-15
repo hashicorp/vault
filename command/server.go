@@ -575,13 +575,14 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}()
 
 	coreConfig := &vault.CoreConfig{
-		Physical:     backend,
-		StorageType:  config.Storage.Type,
-		Seal:         barrierSeal,
-		Logger:       c.logger,
-		DisableMlock: config.DisableMlock,
-		RecoveryMode: c.flagRecovery,
-		ClusterAddr:  config.ClusterAddr,
+		Physical:        backend,
+		StorageType:     config.Storage.Type,
+		Seal:            barrierSeal,
+		Logger:          c.logger,
+		DisableMlock:    config.DisableMlock,
+		RecoveryMode:    c.flagRecovery,
+		ClusterAddr:     config.ClusterAddr,
+		KmsKeyLibraries: config.KmsLibraries,
 	}
 
 	core, newCoreError := vault.NewCore(coreConfig)
