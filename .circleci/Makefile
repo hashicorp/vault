@@ -78,7 +78,7 @@ define GEN_CONFIG
 	@mv -f $@.tmp $@
 endef
 
-$(OUT): $(CONFIG_SOURCE)
+$(OUT): $(CONFIG_SOURCE) 
 	$(GEN_CONFIG)
 	@echo "$@ updated"
 
