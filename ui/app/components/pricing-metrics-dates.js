@@ -119,13 +119,13 @@ export default Component.extend({
         },
       });
     },
-    handleQueryFromCalendar(start, end) {
-      this.router.transitionTo('vault.cluster.clients', {
-        queryParams: {
-          start,
-          end,
-        },
-      });
-    },
+    // handleQueryFromCalendar(start, end) {
+    //   this.router.transitionTo('vault.cluster.clients', {
+    //     queryParams: {
+    //       start,
+    //       end,
+    //     },
+    //   });
+    // },
   },
 });

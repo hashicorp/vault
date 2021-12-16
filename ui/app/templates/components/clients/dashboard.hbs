@@ -22,7 +22,7 @@
   <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
     {{!-- ARG TODO change current to Dashboard --}}
     {{#if (eq @tab 'current')}}
-      <p class="has-bottom-margin-s">
+      <p class="has-bottom-margin-xl">
         {{!-- ARG TODO Add link for documentation "here" --}}
         This dashboard will surface Vault client usage over time. Clients represent anything that has authenticated to or communicated with Vault. Documentation is available here.
       </p>
@@ -48,37 +48,123 @@
           to enable tracking again.
         </AlertBanner>
       {{/if}}
-      <h1 data-test-client-count-title class="title is-6 has-bottom-margin-s">
+      <h1 data-test-client-count-title class="title is-6 title-has-bottom-margin-xs">
         Billing start month
       </h1>
       {{!-- ARG TODO make dynamic --}}
-      <div>
-        <p>January 2021</p>
+      <div class="is-flex-align-baseline">
+        <p class="is-size-6">January 2021</p>
         {{!-- button and not link per accessibility --}}
         <button
           type="button"
-          class="is-ghost"
-          {{!-- onclick={{action "openCalendarWidget"}} --}}
+          class="button is-link"
+         {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}
         >
           Edit
         </button>
       </div>
       
-      <p class="has-bottom-margin-s">
-        This data is presented by full month. If there is data missing, it's possible that tracking was turned off at
-        the time. Vault will only show data for contiguous blocks of time during which tracking was on.
+      <p class="is-8 has-text-grey has-bottom-margin-xl">
+        This date is when client counting starts. Without this starting point, the data shown is not reliable.
       </p>
       {{!-- ARG TODO replace with calendar widget --}}
-      here
-      <PricingMetricsDates
-        @queryStart={{@model.queryStart}}
-        @queryEnd={{@model.queryEnd}}
-        @resultStart={{@model.activity.startTime}}
-        @resultEnd={{@model.activity.endTime}}
-        @defaultSpan={{or @model.config.defaultReportMonths 12}}
-        @retentionMonths={{@model.config.retentionMonths}}
-        @useCalendar={{true}}
-      />
+      {{#if this.isEditStartMonthOpen}}
+      {{!-- ARG TODO needs to be a modal I think --}}
+        
+      {{/if}}
+      {{!-- Some other toggle or dropdown. still thinking --}}
+      <CalendarWidget />
+      <div class="filter-title">Filters</div>
+      <Toolbar>
+        <ToolbarActions>
+          <BasicDropdown
+            @class="popup-menu"
+            @horizontalPosition="auto-right"
+            @verticalPosition="below"
+            {{!-- @onClose={{action "clearWrappedData"}} --}}
+            as |D|
+          >
+            <D.trigger
+              data-test-popup-menu-trigger="true"
+              @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+              @tagName="button"
+            >
+            {{!-- ARG TODO hardcoded --}}
+              Jan 2021 - Apr 2021 
+              <Chevron @direction="down" @isButton={{true}} />
+            </D.trigger>
+            <D.content @class="popup-menu-content is-wide">
+              <nav class="box menu">
+                <ul class="menu-list">
+                  <li class="action">
+                    <CopyButton
+                      @class="link link-plain has-text-weight-semibold is-ghost"
+                      @clipboardText={{stringify @modelForData.secretData}}
+                      @success={{action (set-flash-message "JSON Copied!")}}
+                      data-test-copy-button
+                    >
+                      Copy JSON
+                    </CopyButton>
+                  </li>
+                  <li class="action">
+                    {{#if this.showWrapButton}}
+                      <button
+                        class="link link-plain has-text-weight-semibold is-ghost {{if isWrapping "is-loading"}}"
+                        type="button"
+                        {{on "click" this.handleWrapClick}}
+                        data-test-wrap-button
+                        disabled={{this.isWrapping}}
+                      >
+                        Wrap secret
+                      </button>
+                    {{else}}
+                      <MaskedInput
+                        @class="has-padding"
+                        @displayOnly={{true}}
+                        @allowCopy={{true}}
+                        @value={{this.wrappedData}}
+                        @success={{action "handleCopySuccess"}}
+                        @error={{action "handleCopyError"}}
+                      />
+                    {{/if}}
+                  </li>
+                </ul>
+              </nav>
+            </D.content>
+          </BasicDropdown>
+        </ToolbarActions>
+        <ToolbarFilters>
+          {{!-- <NavigateInput
+            @enterpriseProduct="vault"
+            @filterFocusDidChange={{action "setFilterFocus"}}
+            @filterDidChange={{action "setFilter"}}
+            @filter={{this.filter}}
+            @filterMatchesKey={{filterMatchesKey}}
+            @firstPartialMatch={{firstPartialMatch}}
+            @baseKey={{get baseKey "id"}}
+            @shouldNavigateTree={{options.navigateTree}}
+            @placeholder={{options.searchPlaceholder}}
+            @mode={{if (eq tab 'certs') 'secrets-cert' 'secrets'}}
+            @data-test-nav-input={{true}}
+          /> --}}
+          {{!-- {{#if filterFocused}}
+            {{#if filterMatchesKey}}
+              {{#unless filterIsFolder}}
+                <p class="input-hint">
+                  <kbd>Enter</kbd> to view {{filter}}
+                </p>
+              {{/unless}}
+            {{/if}}
+            {{#if firstPartialMatch}}
+              <p class="input-hint">
+                <kbd>Tab</kbd> to autocomplete
+              </p>
+            {{/if}}
+          {{/if}} --}}
+        </ToolbarFilters>
+
+        
+      </Toolbar>
     {{/if}}
     {{#if @isLoading}}
         <LayoutLoading />
@@ -227,4 +313,100 @@
       {{/unless}}
     {{/if}}
   </div>
+
+  <Modal
+    @title="Edit start month"
+    @onClose={{action (mut this.isEditStartMonthOpen) false}}
+    @isActive={{this.isEditStartMonthOpen}}
+    @showCloseButton={{true}}
+  >
+    <section class="modal-card-body">
+      <p class="has-bottom-margin-s">This date is when client counting starts, or the point at which clients become unique. Without this starting point, the data shown is not reliable.</p>
+      <p class="has-bottom-margin-s"><strong>Billing contract start month</strong></p>
+      {{!-- ARG TODO add dropdowns --}}
+      <div class="modal-radio-button">
+        <BasicDropdown
+          @class="popup-menu"
+          @horizontalPosition="auto-right"
+          @verticalPosition="below"
+          as |D|
+        >
+          <D.trigger
+            data-test-popup-menu-trigger="left-version"
+            @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+            @tagName="button"
+          >
+           {{or this.startMonth "Month"}}
+            <Chevron @direction="down" @isButton={{true}} />
+          </D.trigger>
+          <D.content @class="popup-menu-content">
+            <nav class="box menu">
+              <ul class="menu-list">
+                {{!-- ARG TODO ideally iterate over months and only show months that are applicable. --}}
+                {{#each this.months as |month|}}
+                  <button
+                    type="button"
+                    class="link"
+                    onclick={{queue (action "selectMonth" month) (action D.actions.close)}}
+                    >
+                    {{month}}
+                  </button>
+                {{/each}}
+              </ul>
+            </nav>
+          </D.content>
+        </BasicDropdown>
+        <BasicDropdown
+          @class="popup-menu"
+          @horizontalPosition="auto-right"
+          @verticalPosition="below"
+          as |D|
+        >
+          <D.trigger
+            data-test-popup-menu-trigger="left-version"
+            @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+            @tagName="button"
+          >
+            {{or this.startYear "Year"}}
+            <Chevron @direction="down" @isButton={{true}} />
+          </D.trigger>
+          <D.content @class="popup-menu-content">
+            <nav class="box menu">
+              <ul class="menu-list">
+                {{!-- ARG TODO ideally iterate over months and only show months that are applicable. --}}
+                {{#each this.years as |year|}}
+                  <button
+                    type="button"
+                    class="link"
+                    onclick={{queue (action "selectYear" year) (action D.actions.close)}}
+                    >
+                    {{year}}
+                  </button>
+                {{/each}}
+              </ul>
+            </nav>
+          </D.content>
+        </BasicDropdown>
+      </div>
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button
+        type="button"
+        class="button is-primary"
+        {{on "click" (fn this.handleEditStartMonth this.month this.year (action (mut this.isEditStartMonthOpen) false))}}
+        {{!-- ARG TODO require month and year selected --}}
+        disabled={{if (and this.startMonth this.startYear) false true}} 
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        class="button is-secondary"
+        {{on "click" (action (mut this.isEditStartMonthOpen) false)}}
+      >
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+
 {{/if}}

@@ -9,9 +9,18 @@ export default class Dashboard extends Component {
     { key: 'distinct_entities', label: 'Direct entities' },
     { key: 'non_entity_tokens', label: 'Active direct tokens' },
   ];
-  @tracked selectedNamespace = null;
+  months = Array.from({ length: 12 }, (item, i) => {
+    return new Date(0, i).toLocaleString('en-US', { month: 'long' });
+  });
+  years = Array.from({ length: 5 }, (item, i) => {
+    return new Date().getFullYear() - i;
+  });
 
+  @tracked isEditStartMonthOpen = false;
   @tracked barChartSelection = false;
+  @tracked selectedNamespace = null;
+  @tracked startMonth = null;
+  @tracked startYear = null;
 
   // Determine if we have client count data based on the current tab
   get hasClientData() {
@@ -105,6 +114,33 @@ export default class Dashboard extends Component {
       }
       return ns.namespace_path === path;
     });
+  }
+
+  @action
+  handleEditStartMonth(month, year) {
+    // ARG TODO do something here.
+    console.log(month, year, 'eventually do something here');
+  }
+
+  @action
+  toggleEditStartMonth() {
+    this.isEditStartMonthOpen = !this.isEditStartMonthOpen;
+  }
+
+  @action
+  selectMonth(month) {
+    // ARG TODO set the month selected
+    //maybe do validation here
+    this.startMonth = month;
+    console.log(month);
+  }
+
+  @action
+  selectYear(year) {
+    // ARG TODO set the year selected
+    //maybe do validation here
+    this.startYear = year;
+    console.log(year);
   }
 
   @action
