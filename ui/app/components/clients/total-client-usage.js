@@ -51,6 +51,7 @@ export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '';
   @tracked hoveredLabel = '';
   @tracked trackingTest = 0;
+
   @action
   registerListener(element) {
     // Define the chart
@@ -85,6 +86,7 @@ export default class TotalClientUsage extends Component {
       .enter()
       .append('rect')
       .attr('width', '7px')
+      .attr('class', 'data-bar')
       .attr('height', stackedData => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data.month)) // uses destructuring because was data.data.month
       .attr('y', data => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
@@ -137,10 +139,16 @@ export default class TotalClientUsage extends Component {
     // for tooltip
     tooltipRect.on('mouseover', data => {
       this.hoveredLabel = data.month;
+      // let node = chartSvg
+      //   .selectAll('rect.tooltip-rect')
+      //   .filter(data => data.month === this.hoveredLabel)
+      //   .node();
       let node = chartSvg
-        .selectAll('rect.tooltip-rect')
-        .filter(data => data.month === this.hoveredLabel)
+        .selectAll('rect.data-bar')
+        // filter for the top data bar
+        .filter(data => data[0] !== 0 && data.data.month === this.hoveredLabel)
         .node();
+      console.log(node);
       this.tooltipTarget = node; // grab the second node from the list of 24 rects
     });
   }
