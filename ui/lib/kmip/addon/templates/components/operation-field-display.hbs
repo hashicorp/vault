@@ -3,17 +3,15 @@
 {{/if}}
 {{#each @model.operationFormFields as |group|}}
   {{#each-in group as |groupName fieldsInGroup|}}
-    <InfoTableRow @alwaysRender={{true}}
-      @label={{groupName}}
-      @value={{true}}
-    >
+    <InfoTableRow @alwaysRender={{true}} @label={{groupName}} @value={{true}}>
       <div>
         {{#each fieldsInGroup as |field|}}
           <Icon
             aria-hidden="true"
             class={{compute (action "iconClass") this.model field}}
             @name={{compute (action "iconGlyph") this.model field}}
-            /> {{field.options.label}}
+          />
+          {{field.options.label}}
           <br />
         {{/each}}
       </div>

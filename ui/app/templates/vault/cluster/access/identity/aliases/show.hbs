@@ -21,13 +21,13 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType) as |tab|}}
-        {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
+        {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
         <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}} @tagName="li">
           <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}}>
             {{capitalize tab}}
           </LinkTo>
         </LinkTo>
-        {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
+        {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
       {{/each}}
     </ul>
   </nav>
@@ -38,8 +38,9 @@
       @params={{array "vault.cluster.access.identity.aliases.edit" this.model.id}}
       @data-test-alias-edit-link={{true}}
     >
-      Edit {{lowercase (humanize this.model.identityType)}}
+      Edit
+      {{lowercase (humanize this.model.identityType)}}
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-{{component (concat 'identity/item-alias/alias-' this.section) model=this.model}}
+{{component (concat "identity/item-alias/alias-" this.section) model=this.model}}

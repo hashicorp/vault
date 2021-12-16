@@ -3,8 +3,8 @@
     <MessageError @model={{this.model}} />
     <NamespaceReminder @mode={{this.mode}} @noun="transformation" />
     {{#each this.model.transformFieldAttrs as |attr|}}
-      {{#if (or (eq attr.name 'name') (eq attr.name 'type')) }}
-        <label for="{{attr.name}}" class="is-label">
+      {{#if (or (eq attr.name "name") (eq attr.name "type"))}}
+        <label for {{attr.name}} class="is-label">
           {{attr.options.label}}
         </label>
         {{#if attr.options.subText}}
@@ -13,7 +13,7 @@
         {{#if attr.options.possibleValues}}
           <div class="control is-expanded field is-readOnly">
             <div class="select is-fullwidth">
-              <select name="{{attr.name}}" id="{{attr.name}}" disabled data-test-input={{attr.name}}>
+              <select name={{attr.name}} id={{attr.name}} disabled data-test-input={{attr.name}}>
                 <option selected={{get this.model attr.name}} value={{get this.model attr.name}}>
                   {{get this.model attr.name}}
                 </option>
@@ -21,14 +21,19 @@
             </div>
           </div>
         {{else}}
-          <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false" value={{or (get this.model attr.name) attr.options.defaultValue}} readonly class="field input is-readOnly" type={{attr.type}} />
+          <input
+            data-test-input={{attr.name}}
+            id={{attr.name}}
+            autocomplete="off"
+            spellcheck="false"
+            value={{or (get this.model attr.name) attr.options.defaultValue}}
+            readonly
+            class="field input is-readOnly"
+            type={{attr.type}}
+          />
         {{/if}}
       {{else}}
-      <FormField
-        data-test-field
-        @attr={{attr}}
-        @model={{this.model}}
-      />
+        <FormField data-test-field @attr={{attr}} @model={{this.model}} />
       {{/if}}
     {{/each}}
   </div>
@@ -40,9 +45,9 @@
         class="button is-primary"
         data-test-transformation-save-button={{true}}
       >
-        {{#if (eq this.mode 'create')}}
+        {{#if (eq this.mode "create")}}
           Create transformation
-        {{else if (eq this.mode 'edit')}}
+        {{else if (eq this.mode "edit")}}
           Save
         {{/if}}
       </button>

@@ -38,7 +38,9 @@
 <div class="box is-fullwidth is-shadowless">
   {{#if (and this.resultStart this.resultEnd)}}
     <h2 class="title is-4" data-test-pricing-result-dates>
-      {{date-format this.resultStart "MMM dd, yyyy" dateOnly=true}} through {{date-format this.resultEnd "MMM dd, yyyy" dateOnly=true}}
+      {{date-format this.resultStart "MMM dd, yyyy" dateOnly=true}}
+      through
+      {{date-format this.resultEnd "MMM dd, yyyy" dateOnly=true}}
     </h2>
   {{/if}}
 </div>

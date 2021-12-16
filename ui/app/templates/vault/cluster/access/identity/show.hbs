@@ -21,20 +21,28 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType this.model.type) as |tab|}}
-        {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
-        <LinkTo @route="vault.cluster.access.identity.show" @models={{array (pluralize this.model.identityType) this.model.id tab}} @tagName="li" data-test-tab-subnav={{tab}}>
-          <LinkTo @route="vault.cluster.access.identity.show" @models={{array (pluralize this.model.identityType) this.model.id tab}}>
+        {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
+        <LinkTo
+          @route="vault.cluster.access.identity.show"
+          @models={{array (pluralize this.model.identityType) this.model.id tab}}
+          @tagName="li"
+          data-test-tab-subnav={{tab}}
+        >
+          <LinkTo
+            @route="vault.cluster.access.identity.show"
+            @models={{array (pluralize this.model.identityType) this.model.id tab}}
+          >
             {{capitalize (humanize tab)}}
           </LinkTo>
         </LinkTo>
-        {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
+        {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
       {{/each}}
     </ul>
   </nav>
 </div>
 <Toolbar>
   <ToolbarActions>
-    {{!-- template-lint-configure simple-unless "warn" --}}
+    {{! template-lint-configure simple-unless "warn" }}
     {{#unless (or (and (eq this.model.identityType "group") (eq this.model.type "internal")) this.model.alias)}}
       <ToolbarLink
         @type="add"
@@ -48,8 +56,9 @@
       @params={{array "vault.cluster.access.identity.edit" (pluralize this.model.identityType) this.model.id}}
       @data-test-entity-edit-link={{true}}
     >
-      Edit {{this.model.identityType}}
+      Edit
+      {{this.model.identityType}}
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-{{component (concat 'identity/item-' this.section) model=this.model}}
+{{component (concat "identity/item-" this.section) model=this.model}}

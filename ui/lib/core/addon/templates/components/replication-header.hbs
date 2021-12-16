@@ -1,4 +1,4 @@
-{{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
+{{! DR Secondary has a different Nav Header with access only to the Status menu }}
 {{#if this.isSecondary}}
   <NavHeader as |Nav|>
     <Nav.home>
@@ -7,7 +7,7 @@
       </HomeLink>
     </Nav.home>
     <Nav.items>
-      <div class="navbar-item status-indicator-button" data-status="{{if this.data.unsealed "good" "bad"}}">
+      <div class="navbar-item status-indicator-button" data-status={{if this.data.unsealed "good" "bad"}}>
         <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
     </Nav.items>
@@ -15,8 +15,8 @@
 {{/if}}
 <PageHeader as |p|>
   <p.top>
-    {{!-- template-lint-configure simple-unless "warn" --}}
-    {{#unless (or this.isSummaryDashboard this.isSecondary) }}
+    {{! template-lint-configure simple-unless "warn" }}
+    {{#unless (or this.isSummaryDashboard this.isSecondary)}}
       <KeyValueHeader @baseKey={{this.baseKey}} @path="vault.cluster.replication-dr-promote" @root={{this.backendCrumb}}>
         <li>
           <span class="sep">
@@ -34,7 +34,7 @@
       {{this.title}}
       {{#if this.data.anyReplicationEnabled}}
         <span class="tag is-light has-text-grey-dark" data-test-mode>
-          {{if this.isSecondary 'secondary' 'primary'}}
+          {{if this.isSecondary "secondary" "primary"}}
         </span>
         <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
           {{this.secondaryId}}
@@ -49,18 +49,23 @@
     <nav class="tabs">
       {{#unless this.isSummaryDashboard}}
         <ul>
-          {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
+          {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
           <LinkTo @route="vault.cluster.replication-dr-promote.details" @tagName="li" @activeClass="is-active">
             <LinkTo @route="vault.cluster.replication-dr-promote.details">
               Details
             </LinkTo>
           </LinkTo>
-          <LinkTo @route="vault.cluster.replication-dr-promote" @tagName="li" @activeClass="is-active" @current-when="vault.cluster.replication-dr-promote.index">
+          <LinkTo
+            @route="vault.cluster.replication-dr-promote"
+            @tagName="li"
+            @activeClass="is-active"
+            @current-when="vault.cluster.replication-dr-promote.index"
+          >
             <LinkTo @route="vault.cluster.replication-dr-promote">
               Manage
             </LinkTo>
           </LinkTo>
-          {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
+          {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
         </ul>
       {{else}}
         <ul>

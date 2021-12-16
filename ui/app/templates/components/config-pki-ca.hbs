@@ -17,29 +17,37 @@
     {{/if}}
     {{#each this.model.attrs as |attr|}}
       {{#if attr.options.masked}}
-        <InfoTableRow data-test-table-row
+        <InfoTableRow
+          data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}>
-          <MaskedInput
-            @value={{get this.model attr.name}}
-            @displayOnly={{true}}
-            @allowCopy={{true}}
-          />
+          @value={{get this.model attr.name}}
+        >
+          <MaskedInput @value={{get this.model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
         </InfoTableRow>
       {{else if (and (get this.model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
-        <InfoTableRow data-test-table-row={{this.value}}
+        <InfoTableRow
+          data-test-table-row={{this.value}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{date-format (get this.model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}} />
+          @value={{date-format (get this.model attr.name) "MMM dd, yyyy hh:mm:ss a" isFormatted=true}}
+        />
       {{else}}
-        <InfoTableRow data-test-table-row={{this.value}} 
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
-          @value={{get this.model attr.name}} />
+        <InfoTableRow
+          data-test-table-row={{this.value}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+        />
       {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <CopyButton @clipboardText={{or this.model.certificate this.model.csr}} @class="button" @buttonType="button" @success={{action (set-flash-message (concat (if this.model.certificate "Certificate" "CSR") " copied!"))}}>
-          Copy {{if this.model.certificate "Certificate" "CSR"}}
+        <CopyButton
+          @clipboardText={{or this.model.certificate this.model.csr}}
+          @class="button"
+          @buttonType="button"
+          @success={{action (set-flash-message (concat (if this.model.certificate "Certificate" "CSR") " copied!"))}}
+        >
+          Copy
+          {{if this.model.certificate "Certificate" "CSR"}}
         </CopyButton>
       </div>
       <div class="control">
@@ -58,14 +66,16 @@
           data-test-warning
         />
       {{/if}}
-      <FormFieldGroupsLoop
-        @model={{this.model}}
-        @mode={{this.mode}}
-      />
+      <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
         <div class="field is-grouped">
           <div class="control">
-            <button data-test-submit type="submit" class="button is-primary {{if this.loading 'is-loading'}}" disabled={{this.loading}}>
+            <button
+              data-test-submit
+              type="submit"
+              class="button is-primary {{if this.loading "is-loading"}}"
+              disabled={{this.loading}}
+            >
               Save
             </button>
           </div>
@@ -99,29 +109,35 @@
     />
     {{#each this.model.attrs as |attr|}}
       {{#if attr.options.masked}}
-        <InfoTableRow 
+        <InfoTableRow
           data-test-table-row={{this.value}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}>
-          <MaskedInput
-            @value={{get this.model attr.name}}
-            @displayOnly={{true}}
-            @allowCopy={{true}}
-          />
+          @value={{get this.model attr.name}}
+        >
+          <MaskedInput @value={{get this.model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
         </InfoTableRow>
       {{else if (and (get this.model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
-        <InfoTableRow data-test-table-row={{this.value}}
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
-          @value={{date-format (get this.model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}}/>
+        <InfoTableRow
+          data-test-table-row={{this.value}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{date-format (get this.model attr.name) "MMM dd, yyyy hh:mm:ss a" isFormatted=true}}
+        />
       {{else}}
-        <InfoTableRow data-test-table-row={{this.value}} 
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
-          @value={{get this.model attr.name}} />
+        <InfoTableRow
+          data-test-table-row={{this.value}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+        />
       {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <CopyButton @clipboardText={{this.model.certificate}} @class="button" @buttonType="button" @success={{action (set-flash-message "Certificate copied!")}}>
+        <CopyButton
+          @clipboardText={{this.model.certificate}}
+          @class="button"
+          @buttonType="button"
+          @success={{action (set-flash-message "Certificate copied!")}}
+        >
           Copy Certificate
         </CopyButton>
       </div>
@@ -136,13 +152,15 @@
     <NamespaceReminder @mode="save" @noun="PKI change" />
     <MessageError @model={{this.model}} />
     <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
-      <FormFieldGroupsLoop
-        @model={{this.model}}
-        @mode={{this.mode}}
-      />
+      <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
-          <button data-test-submit type="submit" class="button is-primary {{if this.loading 'is-loading'}}" disabled={{this.loading}}>
+          <button
+            data-test-submit
+            type="submit"
+            class="button is-primary {{if this.loading "is-loading"}}"
+            disabled={{this.loading}}
+          >
             Save
           </button>
         </div>
@@ -158,9 +176,9 @@
   <h2 data-test-title class="title is-3">Set signed intermediate</h2>
   <NamespaceReminder @mode="save" @noun="PKI change" />
   <MessageError @model={{this.model}} />
-    <p class="has-text-grey-dark">
-      Submit a signed CA certificate corresponding to a generated private key.
-    </p>
+  <p class="has-text-grey-dark">
+    Submit a signed CA certificate corresponding to a generated private key.
+  </p>
   <form {{action "saveCA" "setSignedIntermediate" on="submit"}} data-test-set-signed-intermediate-form="true">
     <div class="field">
       <label for="certificate" class="is-label">
@@ -178,7 +196,12 @@
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <button data-test-submit type="submit" class="button is-primary {{if this.loading 'is-loading'}}" disabled={{this.loading}}>
+        <button
+          data-test-submit
+          type="submit"
+          class="button is-primary {{if this.loading "is-loading"}}"
+          disabled={{this.loading}}
+        >
           Save
         </button>
       </div>
@@ -191,7 +214,8 @@
   </form>
 {{else}}
   <p class="has-text-grey-dark">
-    This is the default CA certificate used in Vault. It is not used for self-signed certificates or if you have a signed intermediate CA certificate with a generated key.
+    This is the default CA certificate used in Vault. It is not used for self-signed certificates or if you have a signed
+    intermediate CA certificate with a generated key.
   </p>
   {{#each this.downloadHrefs as |dl|}}
     <div class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
@@ -219,7 +243,12 @@
       </div>
     {{/if}}
     <div class="control">
-      <button data-test-go-set-signed-intermediate type="button" {{action "toggleVal" "setSignedIntermediate"}} class="button">
+      <button
+        data-test-go-set-signed-intermediate
+        type="button"
+        {{action "toggleVal" "setSignedIntermediate"}}
+        class="button"
+      >
         Set signed intermediate
       </button>
     </div>

@@ -8,16 +8,17 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array 'vault.cluster.settings.auth.enable'}} data-test-auth-enable>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.settings.auth.enable"}} data-test-auth-enable>
       Enable new method
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 
 {{#each (sort-by "path" this.model) as |method|}}
-  <LinkedBlock @params={{array
-    "vault.cluster.access.method"
-    method.id}} class="list-item-row" data-test-auth-backend-link={{method.id}}
+  <LinkedBlock
+    @params={{array "vault.cluster.access.method" method.id}}
+    class="list-item-row"
+    data-test-auth-backend-link={{method.id}}
   >
     <div class="level is-mobile">
       <div class="level-left">
@@ -26,10 +27,7 @@
             <T.Trigger>
               <Icon
                 @name={{if
-                  (or
-                    (find-by "type" method.methodType (mountable-auth-methods))
-                    (eq method.methodType "token")
-                  )
+                  (or (find-by "type" method.methodType (mountable-auth-methods)) (eq method.methodType "token"))
                   method.methodType
                   "auth"
                 }}
@@ -47,7 +45,7 @@
           </span>
           <br />
           <code class="has-text-grey is-size-8">
-          {{method.accessor}}
+            {{method.accessor}}
           </code>
         </div>
       </div>
@@ -70,15 +68,15 @@
                     </li>
                   {{/if}}
 
-                  {{#if (and (not-eq method.methodType 'token') method.canDisable)}}
+                  {{#if (and (not-eq method.methodType "token") method.canDisable)}}
                     <li class="action">
                       <c.Message
                         @id={{method.id}}
                         @title="Disable method?"
                         @message="This may affect access to Vault data."
                         @triggerText="Disable"
-                        @onConfirm={{perform this.disableMethod method}}>
-                      </c.Message>
+                        @onConfirm={{perform this.disableMethod method}}
+                      />
                     </li>
                   {{/if}}
                 </ul>

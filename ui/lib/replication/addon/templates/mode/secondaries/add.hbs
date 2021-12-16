@@ -3,7 +3,11 @@
     <h4 class="title is-5">
       Generate a secondary token
     </h4>
-    <p>Generate a token to enable {{this.model.replicationModeForDisplay}} replication or change primaries on secondary cluster.</p>
+    <p>
+      Generate a token to enable
+      {{this.model.replicationModeForDisplay}}
+      replication or change primaries on secondary cluster.
+    </p>
   </div>
   <MessageError @errors={{this.errors}} />
   <div class="field">
@@ -11,7 +15,13 @@
       Secondary ID
     </label>
     <div class="control">
-      <Input class="input" name="activation-token-id" id="activation-token-id" @value={{this.id}} data-test-replication-secondary-id={{true}} />
+      <Input
+        class="input"
+        name="activation-token-id"
+        id="activation-token-id"
+        @value={{this.id}}
+        data-test-replication-secondary-id={{true}}
+      />
     </div>
     <p class="help has-text-grey">
       This will be used to identify a secondary cluster once a connection has been established with the primary.
@@ -28,22 +38,14 @@
     />
   </div>
   {{#if (eq this.replicationMode "performance")}}
-    <PathFilterConfigList
-      @paths={{this.paths}}
-      @config={{this.filterConfig}}
-      @id={{this.id}}
-    />
+    <PathFilterConfigList @paths={{this.paths}} @config={{this.filterConfig}} @id={{this.id}} />
   {{/if}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button
-        type="submit"
-        class="button is-primary"
-        data-test-secondary-add={{true}}
-        >
+      <button type="submit" class="button is-primary" data-test-secondary-add={{true}}>
         Generate token
       </button>
-      </div>
+    </div>
     <div class="control">
       <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} class="button">
         Cancel
@@ -55,12 +57,17 @@
 {{#if this.isModalActive}}
   <Modal @title="Copy your token" @onClose={{action "toggleModal" "Token copied!"}} @isActive={{this.isModalActive}}>
     <section class="modal-card-body">
-      <p>This token can be used to enable {{this.model.replicationModeForDisplay}} replication or change primaries on the secondary cluster.</p>
+      <p>
+        This token can be used to enable
+        {{this.model.replicationModeForDisplay}}
+        replication or change primaries on the secondary cluster.
+      </p>
       <div class="box is-shadowless is-fullwidth is-sideless">
         <h2 class="title is-6">Activation token</h2>
         <div class="copy-text level">
           <div class="is-fullwidth">
-            <textarea readonly value={{this.token}} id="token-textarea" class="textarea level-left" />          </div>
+            <textarea readonly value={{this.token}} id="token-textarea" class="textarea level-left"></textarea>
+          </div>
         </div>
         <div class="has-top-margin-xl has-bottom-margin-s">
           <InfoTableRow @label="TTL" @value={{this.ttl}} />
@@ -69,7 +76,14 @@
       </div>
     </section>
     <footer class="modal-card-foot">
-      <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{this.token}} @buttonType="button" @type="copy" @success={{action "copyClose" "Token copied!"}}>
+      <CopyButton
+        class="button is-primary copy-close"
+        data-test-button="modal-copy-close"
+        @clipboardText={{this.token}}
+        @buttonType="button"
+        @type="copy"
+        @success={{action "copyClose" "Token copied!"}}
+      >
         Copy &amp; Close
       </CopyButton>
     </footer>

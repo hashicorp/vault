@@ -2,14 +2,11 @@
   <div class="field is-flex">
     <div class="control">
       <div class="select is-fullwidth">
-        <select
-          name="param"
-          id="param"
-          onchange={{action (mut this.param) value="target.value"}}
-        >
+        <select name="param" id="param" onchange={{action (mut this.param) value="target.value"}}>
           {{#each (array "alias name" "name" "id" "alias id") as |paramOption|}}
             <option selected={{eq this.param paramOption}} value={{paramOption}}>
-             Lookup by {{paramOption}}
+              Lookup by
+              {{paramOption}}
             </option>
           {{/each}}
         </select>

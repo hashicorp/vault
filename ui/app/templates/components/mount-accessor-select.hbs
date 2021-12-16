@@ -1,5 +1,5 @@
 {{#if this.label}}
-  <label for="{{this.name}}" class="is-label">
+  <label for={{this.name}} class="is-label">
     {{this.label}}
     {{#if this.helpText}}
       <InfoTooltip>
@@ -13,16 +13,13 @@
     <span class="loader is-inline-block"></span>
   </div>
 {{else if this.authMethods.last.value}}
-  <div class="control is-expanded" >
+  <div class="control is-expanded">
     <div class="select is-fullwidth">
-      <select
-        name={{this.name}}
-        id={{this.name}}
-        onchange={{action "change" value="target.value"}}
-      >
+      <select name={{this.name}} id={{this.name}} onchange={{action "change" value="target.value"}}>
         {{#each this.authMethods.last.value as |method|}}
           <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
-          {{method.path}} ({{method.type}})
+            {{method.path}}
+            ({{method.type}})
           </option>
         {{/each}}
       </select>
@@ -36,6 +33,5 @@
     value={{this.value}}
     placeholder="Mount accessor"
     onchange={{action "change" value="target.value"}}
-    />
+  />
 {{/if}}
-

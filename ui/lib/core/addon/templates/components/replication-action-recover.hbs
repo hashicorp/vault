@@ -33,19 +33,15 @@
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      onclick={{action "onSubmit" "recover"}}
-      data-test-recover-confirm-button
-    >
+    <button type="button" class="button is-primary" onclick={{action "onSubmit" "recover"}} data-test-recover-confirm-button>
       Recover
     </button>
     <button
       type="button"
       class="button is-secondary"
       onclick={{action (mut this.isModalActive) false}}
-      data-test-recover-cancel-button>
+      data-test-recover-cancel-button
+    >
       Cancel
     </button>
   </footer>

@@ -10,22 +10,42 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <nav class="tabs">
       <ul>
-        {{!-- template-lint-configure no-nested-interactive "warn" --}}
-        <li role="tab" aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}} class="{{if (eq @unwrapActiveTab "data") "is-active"}}">
-          <button type="button" class="link link-plain tab has-text-weight-semibold" {{action (mut @unwrapActiveTab) "data"}} data-test-button-data>Data</button>
+        {{! template-lint-configure no-nested-interactive "warn" }}
+        <li
+          role="tab"
+          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
+          class={{if (eq @unwrapActiveTab "data") "is-active"}}
+        >
+          <button
+            type="button"
+            class="link link-plain tab has-text-weight-semibold"
+            {{action (mut @unwrapActiveTab) "data"}}
+            data-test-button-data
+          >
+            Data
+          </button>
         </li>
-        <li role="tab" aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}} class="{{if (eq @unwrapActiveTab "details") "is-active"}}">
-          <button type="button" class="link link-plain tab has-text-weight-semibold" {{action (mut @unwrapActiveTab) "details"}} data-test-button-details>Wrap Details</button>
+        <li
+          role="tab"
+          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
+          class={{if (eq @unwrapActiveTab "details") "is-active"}}
+        >
+          <button
+            type="button"
+            class="link link-plain tab has-text-weight-semibold"
+            {{action (mut @unwrapActiveTab) "details"}}
+            data-test-button-details
+          >
+            Wrap Details
+          </button>
         </li>
-        {{!-- template-lint-configure no-nested-interactive "on" --}}
+        {{! template-lint-configure no-nested-interactive "on" }}
       </ul>
     </nav>
     {{#if (eq @unwrapActiveTab "data")}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="Unwrapped Data" @value={{stringify @unwrap_data}} @options={{hash
-              readOnly=true
-            }} />
+          <JsonEditor @title="Unwrapped Data" @value={{stringify @unwrap_data}} @options={{hash readOnly=true}} />
         </div>
       </div>
     {{else}}
@@ -36,7 +56,7 @@
               <Icon @name="x-circle" class="has-text-grey" />
               {{detail}}
             {{else}}
-              {{#if (eq detail "Yes") }}
+              {{#if (eq detail "Yes")}}
                 <Icon @name="check-circle" class="has-text-success" />
               {{/if}}
               {{detail}}
@@ -48,7 +68,12 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton @clipboardText={{stringify @unwrap_data}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Data copied!")}}>
+      <CopyButton
+        @clipboardText={{stringify @unwrap_data}}
+        @class="button is-primary"
+        @buttonType="button"
+        @success={{action (set-flash-message "Data copied!")}}
+      >
         Copy
       </CopyButton>
     </div>
@@ -65,7 +90,15 @@
     <div class="field">
       <label for="token" class="is-label">Wrapping token</label>
       <div class="control">
-        <Input @value={{@token}} class="input" id="token" name="token" autocomplete="off" spellcheck="false" data-test-tools-input="wrapping-token" />
+        <Input
+          @value={{@token}}
+          class="input"
+          id="token"
+          name="token"
+          autocomplete="off"
+          spellcheck="false"
+          data-test-tools-input="wrapping-token"
+        />
       </div>
     </div>
   </div>

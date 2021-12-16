@@ -3,18 +3,21 @@
     <div class="breadcrumb">
       <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
         <span class="sep">&#x0002f;</span>
-        {{uppercase this.policyType}} Policies
+        {{uppercase this.policyType}}
+        Policies
       </LinkTo>
     </div>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Create {{uppercase this.policyType}} policy
+      Create
+      {{uppercase this.policyType}}
+      policy
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-<form {{ action "savePolicy" this.model on="submit"}}>
+<form {{action "savePolicy" this.model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
     <MessageError @model={{this.model}} />
     <NamespaceReminder @mode="create" @noun="policy" />
@@ -22,13 +25,13 @@
       <label for="policy-name" class="is-label">Name</label>
       <div class="control">
         <input
-         type="text"
-         id="policy-name"
-         class="input"
-         value={{this.model.name}}
-         oninput={{action "setModelName" this.model}}
-         data-test-policy-input="name"
-         />
+          type="text"
+          id="policy-name"
+          class="input"
+          value={{this.model.name}}
+          oninput={{action "setModelName" this.model}}
+          data-test-policy-input="name"
+        />
       </div>
     </div>
     <div class="field">
@@ -36,20 +39,20 @@
         <label class="is-label">Policy</label>
         <ToolbarActions>
           <div class="toolbar-separator"></div>
-            <div class="control is-flex">
-                  <Input
-                    id="fileUploadToggle"
-                    @type="checkbox"
-                    name="fileUploadToggle"
-                    class="switch is-rounded is-success is-small"
-                    @checked={{this.showFileUpload}}
-                    {{on "change" (toggle-action "showFileUpload" this)}}
-                    data-test-policy-edit-toggle={{true}}
-                  />
-                  <label for="fileUploadToggle">Upload file</label>
-            </div>
-          </ToolbarActions>
-        </Toolbar>
+          <div class="control is-flex">
+            <Input
+              id="fileUploadToggle"
+              @type="checkbox"
+              name="fileUploadToggle"
+              class="switch is-rounded is-success is-small"
+              @checked={{this.showFileUpload}}
+              {{on "change" (toggle-action "showFileUpload" this)}}
+              data-test-policy-edit-toggle={{true}}
+            />
+            <label for="fileUploadToggle">Upload file</label>
+          </div>
+        </ToolbarActions>
+      </Toolbar>
       {{#if this.showFileUpload}}
         <TextFile @inputOnly={{true}} @file={{this.file}} @onChange={{action "setPolicyFromFile"}} />
       {{else}}
@@ -59,13 +62,8 @@
           @showToolbar={{false}}
           @value={{this.model.policy}}
           @valueUpdated={{action (mut this.model.policy)}}
-          @options={{hash
-            mode='ruby'
-            extraKeys=(hash
-              Shift-Enter=(action "savePolicy" this.model)
-            )
-          }}>
-          </JsonEditor>
+          @options={{hash mode="ruby" extraKeys=(hash Shift-Enter=(action "savePolicy" this.model))}}
+        />
       {{/if}}
     </div>
     {{#each this.model.additionalAttrs as |attr|}}
@@ -74,12 +72,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button
-        type="submit"
-        disabled={{this.buttonDisabled}}
-        class="button is-primary"
-        data-test-policy-save={{true}}
-      >
+      <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-policy-save={{true}}>
         Create policy
       </button>
     </div>

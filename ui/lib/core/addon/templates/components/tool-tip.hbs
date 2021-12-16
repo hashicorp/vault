@@ -10,22 +10,20 @@
   @onClose={{this.onClose}}
   @onFocus={{this.onFocus}}
   @calculateInPlacePosition={{this.calculateInPlacePosition}}
-  {{on 'mousedown' this.prevent}}
-  {{on 'mouseenter' this.open}}
-  {{on 'mouseleave' this.closeLater}}
-as |dd|>
-  {{yield (assign
-    dd
-    (hash
-      Trigger=(component dd.Trigger
-        onMouseDown=(action "prevent")
-        onMouseEnter=(action "open")
-        onMouseLeave=(action "close")
-      )
-      Content=(component dd.Content
-        onMouseEnter=(action "open")
-        onMouseLeave=(action "close")
+  {{on "mousedown" this.prevent}}
+  {{on "mouseenter" this.open}}
+  {{on "mouseleave" this.closeLater}}
+  as |dd|
+>
+  {{yield
+    (assign
+      dd
+      (hash
+        Trigger=(component
+          dd.Trigger onMouseDown=(action "prevent") onMouseEnter=(action "open") onMouseLeave=(action "close")
+        )
+        Content=(component dd.Content onMouseEnter=(action "open") onMouseLeave=(action "close"))
       )
     )
-  )}}
+  }}
 </BasicDropdown>

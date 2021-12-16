@@ -1,6 +1,12 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{this.baseKey}} @path="vault.cluster.access.leases.list" @root={{this.backendCrumb}} @showCurrent={{true}} @linkToPaths={{this.capabilities.leases.canList}} />
+    <KeyValueHeader
+      @baseKey={{this.baseKey}}
+      @path="vault.cluster.access.leases.list"
+      @root={{this.backendCrumb}}
+      @showCurrent={{true}}
+      @linkToPaths={{this.capabilities.leases.canList}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -30,24 +36,24 @@
 
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
   <InfoTableRow @label="Issue time" @value={{this.model.issueTime}}>
-    {{date-format this.model.issueTime 'MMM dd, yyyy hh:mm:ss a'}}
-    <br/>
+    {{date-format this.model.issueTime "MMM dd, yyyy hh:mm:ss a"}}
+    <br />
     <code>
       {{this.model.issueTime}}
     </code>
   </InfoTableRow>
   <InfoTableRow @label="Renewable" @value={{this.model.renewable}} />
   <InfoTableRow @label="Last renewal" @value={{this.model.lastRenewal}}>
-    {{date-format this.model.lastRenewal 'MMM dd, yyyy hh:mm:ss a'}}
-    <br/>
+    {{date-format this.model.lastRenewal "MMM dd, yyyy hh:mm:ss a"}}
+    <br />
     <code>
       {{this.model.lastRenewal}}
     </code>
   </InfoTableRow>
   {{#if this.model.expireTime}}
     <InfoTableRow @label="Expiration time" @value={{this.model.expireTime}}>
-      {{date-format this.model.expireTime 'MMM dd, yyyy hh:mm:ss a'}}
-      <br/>
+      {{date-format this.model.expireTime "MMM dd, yyyy hh:mm:ss a"}}
+      <br />
       <code>
         {{this.model.expireTime}}
       </code>
@@ -60,20 +66,17 @@
   <div class="box is-shadowless" data-test-lease-renew-picker={{true}}>
     <h2 class="title is-6">Renew Lease</h2>
     <form {{action "renewLease" this.model this.increment on="submit"}}>
-      <TtlPicker2 
+      <TtlPicker2
         @label="Increment"
         @helperTextEnabled="Lease will expire after"
         @helperTextDisabled="Vault will use the default lease duration"
         @labelClass="is-label"
         @onChange={{action (mut this.increment)}}
-        @unit="s" 
+        @unit="s"
       />
       <div class="field has-top-margin-s">
         <div class="control">
-          <button
-            type="submit"
-            class="button is-primary"
-          >
+          <button type="submit" class="button is-primary">
             Renew lease
           </button>
         </div>

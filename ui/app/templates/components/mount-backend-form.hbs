@@ -3,10 +3,7 @@
     <h1 class="title is-3" data-test-mount-form-header="true">
       {{#if this.showEnable}}
         {{#with (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
-          <Icon
-            @name={{or typeInfo.glyph typeInfo.type}}
-            class="has-text-grey-light"
-           />
+          <Icon @name={{or typeInfo.glyph typeInfo.type}} class="has-text-grey-light" />
 
           {{#if (eq this.mountType "auth")}}
             {{concat "Enable " typeInfo.displayName " Authentication Method"}}
@@ -24,13 +21,16 @@
 </PageHeader>
 <form {{action (perform this.mountBackend) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder
-      @mode="enable"
-      @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}}
-     />
+    <NamespaceReminder @mode="enable" @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}} />
     <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} />
     {{#if this.showEnable}}
-      <FormFieldGroups @model={{this.mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="default" @validationMessages={{this.validationMessages}} @onKeyUp={{action "onKeyUp"}} />
+      <FormFieldGroups
+        @model={{this.mountModel}}
+        @onChange={{action "onTypeChange"}}
+        @renderGroup="default"
+        @validationMessages={{this.validationMessages}}
+        @onKeyUp={{action "onKeyUp"}}
+      />
       <FormFieldGroups @model={{this.mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
     {{else}}
       {{#each (array "generic" "cloud" "infra") as |category|}}
@@ -45,14 +45,15 @@
               @glyph={{or type.glyph type.type}}
               @groupValue={{this.mountModel.type}}
               @groupName="mount-type"
-              @onRadioChange={{queue
-                (action (mut this.mountModel.type))
-                (action "onTypeChange" "type")
-              }}
+              @onRadioChange={{queue (action (mut this.mountModel.type)) (action "onTypeChange" "type")}}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-              @tooltipMessage={{if (or (eq type.type 'transform') (eq type.type 'kmip'))
-                (concat type.displayName " is part of the Advanced Data Protection module, which is not included in your enterprise license.")
-                'This secret engine is not included in your license.'
+              @tooltipMessage={{if
+                (or (eq type.type "transform") (eq type.type "kmip"))
+                (concat
+                  type.displayName
+                  " is part of the Advanced Data Protection module, which is not included in your enterprise license."
+                )
+                "This secret engine is not included in your license."
               }}
             />
           {{/each}}
@@ -77,12 +78,7 @@
         </button>
       </div>
       <div class="control">
-        <button
-          data-test-mount-back
-          type="button"
-          class="button"
-          onclick={{action "toggleShowEnable" false}}
-        >
+        <button data-test-mount-back type="button" class="button" onclick={{action "toggleShowEnable" false}}>
           Back
         </button>
       </div>

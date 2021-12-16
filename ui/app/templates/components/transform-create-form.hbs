@@ -3,24 +3,15 @@
     <MessageError @model={{this.model}} />
     <NamespaceReminder @mode={{this.mode}} @noun="transformation" />
     {{#each this.model.transformFieldAttrs as |attr|}}
-      <FormField
-        data-test-field
-        @attr={{attr}}
-        @model={{this.model}}
-      />
+      <FormField data-test-field @attr={{attr}} @model={{this.model}} />
     {{/each}}
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
-      <button
-        type="submit"
-        disabled={{this.buttonDisabled}}
-        class="button is-primary"
-        data-test-transform-create={{true}}
-      >
-        {{#if (eq this.mode 'create')}}
+      <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-transform-create={{true}}>
+        {{#if (eq this.mode "create")}}
           Create transformation
-        {{else if (eq this.mode 'edit')}}
+        {{else if (eq this.mode "edit")}}
           Save
         {{/if}}
       </button>

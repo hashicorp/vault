@@ -10,7 +10,7 @@
   <AlertBanner @type="warning" @message={{this.warning}} />
 {{/if}}
 {{#each this.inputList as |data index|}}
-  <div class="field is-grouped" data-test-string-list-row="{{index}}">
+  <div class="field is-grouped" data-test-string-list-row={{index}}>
     <div class="control is-expanded">
       <Textarea
         data-test-string-list-input={{index}}
@@ -24,12 +24,7 @@
     </div>
     <div class="control">
       {{#if (eq (inc index) this.inputList.length)}}
-        <button
-          type="button"
-          class="button is-outlined is-primary"
-          data-test-string-list-button="add"
-          {{action "addInput"}}
-        >
+        <button type="button" class="button is-outlined is-primary" data-test-string-list-button="add" {{action "addInput"}}>
           Add
         </button>
       {{else}}

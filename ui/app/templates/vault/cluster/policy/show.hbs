@@ -4,7 +4,8 @@
       <li>
         <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
           <span class="sep">&#x0002f;</span>
-          {{uppercase this.policyType}} policies
+          {{uppercase this.policyType}}
+          policies
         </LinkTo>
       </li>
     </nav>
@@ -29,10 +30,7 @@
       @data={{this.model.policy}}
     />
     {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
-      <ToolbarLink
-        @params={{array 'vault.cluster.policy.edit' this.model.id}}
-        @data-test-policy-edit-toggle={{true}}
-      >
+      <ToolbarLink @params={{array "vault.cluster.policy.edit" this.model.id}} @data-test-policy-edit-toggle={{true}}>
         Edit policy
       </ToolbarLink>
     {{/if}}
@@ -44,10 +42,8 @@
       @title="Policy"
       @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
       @value={{this.model.policy}}
-      @options={{hash
-        readOnly=true
-        mode='ruby'
-      }} />
+      @options={{hash readOnly=true mode="ruby"}}
+    />
   </div>
   {{#if this.model.paths}}
     <div class="field box is-shadowless no-bottom-padding is-marginless">

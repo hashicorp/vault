@@ -13,16 +13,17 @@
     </p.levelLeft>
   </PageHeader>
   <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
-    {{#if (and
-      (eq this.model.httpStatus 403)
-      (eq this.model.policyPath 'sys/capabilities-self')
-      )
-    }}
+    {{#if (and (eq this.model.httpStatus 403) (eq this.model.policyPath "sys/capabilities-self"))}}
       <p>
-        Your auth token does not have access to <code>{{this.model.policyPath}}</code>. Vault Enterprise uses this endpoint to determine what actions are allowed in the interface.
+        Your auth token does not have access to
+        <code>{{this.model.policyPath}}</code>. Vault Enterprise uses this endpoint to determine what actions are allowed in
+        the interface.
       </p>
       <p>
-      Make sure the policy for the path <code>{{this.model.policyPath}}</code> includes <code>capabilities = ['update']</code>.
+        Make sure the policy for the path
+        <code>{{this.model.policyPath}}</code>
+        includes
+        <code>capabilities = ['update']</code>.
       </p>
     {{else}}
       {{#if this.model.message}}

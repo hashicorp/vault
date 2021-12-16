@@ -2,7 +2,7 @@
   <Page.header>
     {{#if this.oidcProvider}}
       <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
-        <LogoEdition aria-label="Sign in with Hashicorp Vault"/>
+        <LogoEdition aria-label="Sign in with Hashicorp Vault" />
       </div>
     {{else}}
       <h1 class="title is-3">
@@ -49,24 +49,24 @@
           <div class="field-label is-normal">
             <label class="is-label" for="namespace">Namespace</label>
           </div>
-            <div class="field-body">
-              <div class="field">
-                <div class="control">
-                  <input
-                    value={{this.namespaceQueryParam}}
-                    placeholder="/ (Root)"
-                    oninput={{perform this.updateNamespace value="target.value"}}
-                    autocomplete="off"
-                    spellcheck="false"
-                    name="namespace"
-                    id="namespace"
-                    class="input"
-                    type="text"
-                    disabled={{this.oidcProvider}}
-                  />
-                </div>
+          <div class="field-body">
+            <div class="field">
+              <div class="control">
+                <input
+                  value={{this.namespaceQueryParam}}
+                  placeholder="/ (Root)"
+                  oninput={{perform this.updateNamespace value="target.value"}}
+                  autocomplete="off"
+                  spellcheck="false"
+                  name="namespace"
+                  id="namespace"
+                  class="input"
+                  type="text"
+                  disabled={{this.oidcProvider}}
+                />
               </div>
             </div>
+          </div>
         </div>
       </Toolbar>
     </Page.sub-header>
@@ -78,13 +78,14 @@
       @namespace={{this.namespaceQueryParam}}
       @redirectTo={{this.redirectTo}}
       @selectedAuth={{this.authMethod}}
-      />
+    />
   </Page.content>
   <Page.footer>
     <div class="has-short-padding">
       <p class="help has-text-grey-dark" data-test-auth-helptext>
         {{#if this.oidcProvider}}
-          Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.
+          Once you log in, you will be redirected back to your application. If you require login credentials, contact your
+          administrator.
         {{else}}
           Contact your administrator for login credentials
         {{/if}}

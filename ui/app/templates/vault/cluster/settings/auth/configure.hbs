@@ -4,7 +4,8 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Configure {{get (find-by "type" this.model.type (mountable-auth-methods)) "displayName"}}
+      Configure
+      {{get (find-by "type" this.model.type (mountable-auth-methods)) "displayName"}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -13,10 +14,7 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @params={{array "vault.cluster.access.method" this.model.id}}
-      @data-test-backend-view-link={{true}}
-    >
+    <ToolbarLink @params={{array "vault.cluster.access.method" this.model.id}} @data-test-backend-view-link={{true}}>
       View method
     </ToolbarLink>
   </ToolbarActions>

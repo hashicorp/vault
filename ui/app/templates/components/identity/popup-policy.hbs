@@ -18,7 +18,8 @@
           @confirmMessage="This policy may affect permissions to access Vault data."
           @onConfirmAction={{action "performTransaction" this.model this.policyName}}
         >
-          Remove from {{this.model.identityType}}
+          Remove from
+          {{this.model.identityType}}
         </ConfirmAction>
       </li>
     </ul>

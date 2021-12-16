@@ -13,7 +13,12 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton @clipboardText={{@random_bytes}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Random bytes copied!")}}>
+      <CopyButton
+        @clipboardText={{@random_bytes}}
+        @class="button is-primary"
+        @buttonType="button"
+        @success={{action (set-flash-message "Random bytes copied!")}}
+      >
         Copy
       </CopyButton>
     </div>
@@ -42,12 +47,8 @@
           </label>
           <div class="control is-expanded">
             <div class="select is-fullwidth">
-              <select
-                 name="format"
-                 id="format"
-                 onchange={{action (mut @format) value="target.value"}}
-              >
-                {{#each (array 'base64' 'hex') as |formatOption|}}
+              <select name="format" id="format" onchange={{action (mut @format) value="target.value"}}>
+                {{#each (array "base64" "hex") as |formatOption|}}
                   <option selected={{if @format (eq @format formatOption)}} value={{formatOption}}>
                     {{formatOption}}
                   </option>
@@ -61,12 +62,8 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button
-         type="submit"
-         class="button is-primary"
-         data-test-tools-submit="true"
-       >
-         Generate
+      <button type="submit" class="button is-primary" data-test-tools-submit="true">
+        Generate
       </button>
     </div>
   </div>

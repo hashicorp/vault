@@ -5,20 +5,21 @@
       {{#if @description}}
         <p class="chart-description">{{@description}}</p>
       {{/if}}
-    </div> 
+    </div>
     <div class="header-right">
-    {{#if @dataset}}
-      {{yield}}
-    {{/if}}
+      {{#if @dataset}}
+        {{yield}}
+      {{/if}}
     </div>
   </div>
   {{#if @dataset}}
     <div class="is-border"></div>
     <div class="bar-chart-container">
-      <svg 
-        {{did-insert this.renderBarChart @dataset @tooltipData}} 
-        {{did-update this.renderBarChart @dataset @tooltipData}} 
-        class="bar-chart"></svg>
+      <svg
+        {{did-insert this.renderBarChart @dataset @tooltipData}}
+        {{did-update this.renderBarChart @dataset @tooltipData}}
+        class="bar-chart"
+      ></svg>
     </div>
     <div class="is-border"></div>
     <div class="legend-container">
@@ -26,6 +27,6 @@
     </div>
   {{else}}
     <div class="toolbar"></div>
-    <EmptyState @title="No namespace data" @message="There is no data to display for namespaces."/>
+    <EmptyState @title="No namespace data" @message="There is no data to display for namespaces." />
   {{/if}}
 </div>

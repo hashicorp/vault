@@ -1,6 +1,6 @@
 <Modal
   @title="Generate operation token"
-  @onClose={{action 'onClose'}}
+  @onClose={{action "onClose"}}
   @isActive={{this.isActive}}
   @type="warning"
   @showCloseButton={{true}}
@@ -43,103 +43,115 @@
           </h4>
           <p class="help has-text-grey has-bottom-margin-xs">
             {{#if this.otp}}
-            This command contains both the encoded token and the OTP. It should be executed on the secondary cluster in order to generate the operation token.
+              This command contains both the encoded token and the OTP. It should be executed on the secondary cluster in
+              order to generate the operation token.
             {{else}}
-            This command requires the OTP saved earlier. It should be executed on the secondary cluster in order to generate the operation token.
+              This command requires the OTP saved earlier. It should be executed on the secondary cluster in order to
+              generate the operation token.
             {{/if}}
           </p>
           <div class="message is-list has-copy-button" tabindex="-1">
-            {{#let (if this.otp
-              (concat 'vault operator generate-root -dr-token -otp="' this.otp '" -decode="' this.encoded_token '"')
-              (concat 'vault operator generate-root -dr-token -otp="<enter your otp here>" -decode="' this.encoded_token '"')
-              ) as |cmd|}}
+            {{! template-lint-disable quotes }}
+            {{#let
+              (if
+                this.otp
+                (concat 'vault operator generate-root -dr-token -otp="' this.otp '" -decode="' this.encoded_token '"')
+                (concat
+                  'vault operator generate-root -dr-token -otp="<enter your otp here>" -decode="' this.encoded_token '"'
+                )
+              )
+              as |cmd|
+            }}
               <HoverCopyButton @copyValue={{cmd}} />
               <code class="is-word-break">{{cmd}}</code>
             {{/let}}
+            {{! template-lint-enable quotes }}
           </div>
         </div>
       </div>
       <div>
-        <button type="button" class="button is-primary" {{action 'onCancelClose'}}>
+        <button type="button" class="button is-primary" {{action "onCancelClose"}}>
           Clear &amp; Close
         </button>
       </div>
     {{else if (and this.generateAction (not this.started))}}
-    <form {{action 'startGenerate' (hash pgp_key=this.pgp_key) on="submit"}} id="shamir">
-      <MessageError @errors={{this.errors}} />
-      {{#if (eq this.generateStep 'chooseMethod')}}
-        <div class="has-bottom-margin-m" data-test-shamir-modal-body>
-          {{yield}}
-        </div>
-        <div class="field is-grouped">
-          <div class="control is-flex-row">
-            <button type="button" class="link" {{action (mut this.generateWithPGP) true}}>
-              Provide PGP Key
-            </button>
+      <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir">
+        <MessageError @errors={{this.errors}} />
+        {{#if (eq this.generateStep "chooseMethod")}}
+          <div class="has-bottom-margin-m" data-test-shamir-modal-body>
+            {{yield}}
           </div>
-          <div class="control">
-            <span class="button auto-width is-white is-static">
-              or
-            </span>
+          <div class="field is-grouped">
+            <div class="control is-flex-row">
+              <button type="button" class="link" {{action (mut this.generateWithPGP) true}}>
+                Provide PGP Key
+              </button>
+            </div>
+            <div class="control">
+              <span class="button auto-width is-white is-static">
+                or
+              </span>
+            </div>
+            <div class="control">
+              <button type="submit" class="button is-primary" data-test-generate-token-cta>
+                Generate operation token
+              </button>
+            </div>
           </div>
-          <div class="control">
-            <button type="submit" class="button is-primary" data-test-generate-token-cta>
-              Generate operation token
-            </button>
+        {{/if}}
+        {{#if (eq this.generateStep "providePGPKey")}}
+          <div class="has-bottom-margin-m">
+            <p>
+              Choose a PGP Key from your computer or paste the contents of one in the form below. This key will be used to
+              Encrypt the generated operation token.
+            </p>
+            <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{action "setKey"}} />
           </div>
-        </div>
-      {{/if}}
-      {{#if (eq this.generateStep 'providePGPKey')}}
-        <div class="has-bottom-margin-m">
-          <p>
-            Choose a PGP Key from your computer or paste the contents of one in the form below.
-            This key will be used to Encrypt the generated operation token.
-          </p>
-          <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{action "setKey"}} />
-        </div>
-        <div class="field is-grouped">
-          <div class="control">
-            <button type="button" class="button" {{action "reset"}}>
-              Back
-            </button>
+          <div class="field is-grouped">
+            <div class="control">
+              <button type="button" class="button" {{action "reset"}}>
+                Back
+              </button>
+            </div>
+            <div class="control">
+              <button type="button" disabled={{not this.pgp_key}} class="button is-primary" {{action "savePGPKey"}}>
+                Use PGP Key
+              </button>
+            </div>
           </div>
-          <div class="control">
-            <button type="button" disabled={{not this.pgp_key}} class="button is-primary" {{action "savePGPKey"}}>
-              Use PGP Key
-            </button>
+        {{/if}}
+        {{#if (eq this.generateStep "beginGenerationWithPGP")}}
+          <div>
+            <p class="has-bottom-margin-m">
+              Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token. Next we'll
+              enter portions of the master key to generate an operation token. Click the "Generate operation token" button to
+              proceed.
+            </p>
+            <h4 class="field-title has-bottom-padding-m is-fullwidth">
+              PGP Key
+              {{this.pgpKeyFile.fileName}}
+            </h4>
+            <div class="message is-list has-copy-button" tabindex="-1">
+              <HoverCopyButton @copyValue={{this.pgp_key}} />
+              <code class="is-word-break">{{this.pgp_key}}</code>
+            </div>
           </div>
-        </div>
-      {{/if}}
-      {{#if (eq this.generateStep 'beginGenerationWithPGP')}}
-        <div>
-          <p class="has-bottom-margin-m">
-            Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token.
-            Next we'll enter portions of the master key to generate an operation token. Click the "Generate operation token" button to proceed.
-          </p>
-          <h4 class="field-title has-bottom-padding-m is-fullwidth">
-            PGP Key {{this.pgpKeyFile.fileName}}
-          </h4>
-          <div class="message is-list has-copy-button" tabindex="-1">
-            <HoverCopyButton @copyValue={{this.pgp_key}} />
-            <code class="is-word-break">{{this.pgp_key}}</code>
+          <div class="field is-grouped">
+            <div class="control">
+              <button type="button" class="button" {{action "reset"}}>
+                Back
+              </button>
+            </div>
+            <div class="control">
+              <button type="submit" disabled={{and (not this.pgp_key)}} class="button is-primary">
+                Generate operation token
+              </button>
+            </div>
           </div>
-        </div>
-        <div class="field is-grouped">
-          <div class="control">
-            <button type="button" class="button" {{action "reset"}}>
-              Back
-            </button>
-          </div>
-          <div class="control">
-            <button type="submit" disabled={{and (not this.pgp_key)}} class="button is-primary">
-              Generate operation token
-            </button>
-          </div>
-        </div>
-      {{/if}}
-    </form>
+        {{/if}}
+      </form>
     {{else}}
-      <form {{action 'onSubmit' (hash key=this.key) on="submit"}} id="shamir">
+      <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir">
         <div class="has-bottom-margin-m">
           {{#if this.errors}}
             <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
@@ -153,7 +165,8 @@
                   One-time password (OTP)
                 </h4>
                 <p class="help has-text-grey has-bottom-margin-xs">
-                  This OTP will be used to decode the generated operation token. <span class="has-text-semibold">Save this</span>, as you will need it later to decode the operation token.
+                  This OTP will be used to decode the generated operation token.
+                  <span class="has-text-semibold">Save this</span>, as you will need it later to decode the operation token.
                 </p>
                 <div class="message is-list has-copy-button" tabindex="-1">
                   <HoverCopyButton @copyValue={{this.otp}} />
@@ -162,7 +175,8 @@
               </div>
             {{/if}}
             <p>
-              Generate an operation token by entering a portion of the primary's master key. Once all portions are entered, the generated token may be used to manage your secondary Disaster Recovery cluster.
+              Generate an operation token by entering a portion of the primary's master key. Once all portions are entered,
+              the generated token may be used to manage your secondary Disaster Recovery cluster.
             </p>
           </div>
           <div class="field">
@@ -177,21 +191,13 @@
         <div class="has-bottom-margin-m">
           <div class="columns is-mobile">
             <div class="column is-narrow">
-              <button
-                type="submit"
-                class="button is-primary"
-                disabled={{this.loading}}
-                data-test-shamir-submit={{true}}
-              >
+              <button type="submit" class="button is-primary" disabled={{this.loading}} data-test-shamir-submit={{true}}>
                 {{if this.generateAction "Generate Token" this.buttonText}}
               </button>
             </div>
             <div class="column is-flex-v-centered is-flex-end">
               {{#if (or this.started this.hasProgress)}}
-                <ShamirProgress
-                  @threshold={{this.threshold}}
-                  @progress={{this.progress}}
-                />
+                <ShamirProgress @threshold={{this.threshold}} @progress={{this.progress}} />
               {{/if}}
             </div>
           </div>
@@ -203,10 +209,10 @@
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action 'onCancelClose'}}
+      onclick={{action "onCancelClose"}}
       data-test-shamir-modal-cancel-button
     >
-      {{if this.encoded_token 'Close' 'Cancel'}}
+      {{if this.encoded_token "Close" "Cancel"}}
     </button>
   </footer>
 </Modal>

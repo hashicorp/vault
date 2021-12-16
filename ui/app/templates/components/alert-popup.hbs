@@ -1,10 +1,7 @@
 <div class="message {{this.type.class}}">
   <div class="columns is-mobile is-variable is-1">
     <div class="column is-narrow message-icon">
-      <Icon
-        aria-hidden="true"
-        @name={{this.type.glyph}}
-      />
+      <Icon aria-hidden="true" @name={{this.type.glyph}} />
     </div>
     <div class="column">
       <button type="button" class="close-button" {{action this.close}}>
@@ -14,7 +11,9 @@
         {{this.type.text}}
       </div>
       {{#if this.message}}
-        <p class="message-body {{if @isPreformatted 'pre'}}" data-test-flash-message-body="true">{{this.message}}</p>
+        <p class="message-body {{if @isPreformatted "pre"}}" data-test-flash-message-body="true" test="another attribute">
+          {{this.message}}
+        </p>
       {{/if}}
     </div>
   </div>

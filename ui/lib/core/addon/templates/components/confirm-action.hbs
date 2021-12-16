@@ -4,7 +4,8 @@
     @verticalPosition={{this.verticalPosition}}
     @onOpen={{action "toggleConfirm"}}
     @onClose={{action "toggleConfirm"}}
-    as |d|>
+    as |d|
+  >
     <d.Trigger
       @htmlTag="button"
       class={{concat this.buttonClasses " popup-menu-trigger" (if d.isOpen " is-active")}}
@@ -13,13 +14,11 @@
       data-test-confirm-action-trigger="true"
     >
       {{yield}}
-      {{#if (eq this.buttonClasses 'toolbar-link')}}
-        <Chevron @direction={{if this.showConfirm 'up' 'down'}} />
+      {{#if (eq this.buttonClasses "toolbar-link")}}
+        <Chevron @direction={{if this.showConfirm "up" "down"}} />
       {{/if}}
     </d.Trigger>
-    <d.Content
-      class="popup-menu-content"
-    >
+    <d.Content class="popup-menu-content">
       <div class="box confirm-action-message">
         <div class="message is-highlight">
           <div class="message-title">
@@ -36,16 +35,11 @@
             disabled={{this.disabled}}
             class="link is-destroy"
             data-test-confirm-button="true"
-            {{action 'onConfirm'}}
+            {{action "onConfirm"}}
           >
             {{this.confirmButtonText}}
           </button>
-          <button
-            type="button"
-            class="link"
-            data-test-confirm-cancel-button="true"
-            {{action d.actions.close}}
-          >
+          <button type="button" class="link" data-test-confirm-cancel-button="true" {{action d.actions.close}}>
             {{this.cancelButtonText}}
           </button>
         </div>

@@ -1,30 +1,23 @@
-<HeaderScope/>
+<HeaderScope />
 <Toolbar>
   <ToolbarActions>
-  {{#if this.model}}
-    <ToolbarDownloadButton
-      @actionText="Download CA cert"
-      @extension="pem"
-      @filename={{concat this.model.ca.id "-ca"}}
-      @data={{this.model.ca.caPem}}
-    />
-  {{/if}}
-    <ToolbarLink
-      @params={{array "configure"}}
-      data-test-kmip-link-configure
-    >
-     Configure
+    {{#if this.model}}
+      <ToolbarDownloadButton
+        @actionText="Download CA cert"
+        @extension="pem"
+        @filename={{concat this.model.ca.id "-ca"}}
+        @data={{this.model.ca.caPem}}
+      />
+    {{/if}}
+    <ToolbarLink @params={{array "configure"}} data-test-kmip-link-configure>
+      Configure
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 {{#if this.model}}
   <FieldGroupShow @model={{this.model}} />
   <InfoTableRow @label="CA PEM" @value={{this.model.ca.caPem}}>
-    <MaskedInput
-      @value={{this.model.ca.caPem}}
-      @displayOnly={{true}}
-      @allowCopy={{true}}
-    />
+    <MaskedInput @value={{this.model.ca.caPem}} @displayOnly={{true}} @allowCopy={{true}} />
   </InfoTableRow>
 {{else}}
   <EmptyState

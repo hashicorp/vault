@@ -11,6 +11,7 @@ module.exports = {
     },
     'require-input-label': 'off',
     'no-down-event-binding': 'warn',
+    'self-closing-void-elements': 'off',
   },
   ignore: ['lib/story-md'],
 };

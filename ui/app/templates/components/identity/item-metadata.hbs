@@ -19,13 +19,16 @@
 {{else}}
   <EmptyState
     @title="No metadata for {{@model.name}}"
-    @message="You can store custom data that you want to associate with a {{lowercase (humanize @model.identityType)}}. Edit this {{lowercase (humanize @model.identityType)}} to get started."
+    @message="You can store custom data that you want to associate with a {{lowercase
+      (humanize @model.identityType)
+    }}. Edit this {{lowercase (humanize @model.identityType)}} to get started."
   >
-    {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
+    {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
     <LinkTo @route="vault.cluster.access.identity.edit" @model={{@model.id}} @tagName="button" class="link">
-      Edit {{lowercase (humanize @model.identityType)}}
+      Edit
+      {{lowercase (humanize @model.identityType)}}
     </LinkTo>
-    {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
+    {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
     <LearnLink @path="/vault/identity-access-management/iam-identity">
       Learn more
     </LearnLink>

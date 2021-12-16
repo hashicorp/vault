@@ -1,7 +1,7 @@
 {{#if this.componentName}}
   {{component this.componentName item=this.item}}
 {{else if this.linkParams}}
-  <LinkedBlock 
+  <LinkedBlock
     @params={{this.linkParams}}
     @queryParams={{@queryParams}}
     @linkPrefix={{@linkPrefix}}
@@ -10,15 +10,20 @@
   >
     <div class="level is-mobile">
       <div class="level-left is-flex-1" data-test-list-item-content>
-        {{!-- refactor to use @route and @model args and convert to angle brackets --}}
-        {{!-- template-lint-configure no-curly-component-invocation "warn" --}}
-        {{#link-to params=this.linkParams class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"}}
+        {{! refactor to use @route and @model args and convert to angle brackets }}
+        {{! template-lint-configure no-curly-component-invocation "warn" }}
+        {{#link-to
+          params=this.linkParams
+          class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"
+        }}
           {{yield (hash content=(component "list-item/content"))}}
         {{/link-to}}
-    </div>
+      </div>
       <div class="level-right">
         <div class="level-item" data-test-list-item-popup>
-          {{yield (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))}}
+          {{yield
+            (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))
+          }}
         </div>
       </div>
     </div>
@@ -31,10 +36,11 @@
       </div>
       <div class="level-right">
         <div class="level-item" data-test-list-item-popup>
-            {{yield (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))}}
+          {{yield
+            (hash callMethod=this.callMethod menu=(component "list-item/popup-menu" item=this.item hasMenu=this.hasMenu))
+          }}
         </div>
       </div>
     </div>
   </div>
 {{/if}}
-

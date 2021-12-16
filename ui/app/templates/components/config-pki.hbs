@@ -2,7 +2,8 @@
 
 {{#if (eq this.section "tidy")}}
   <p class="has-text-grey-dark" data-test-text="true">
-    You can tidy up the backend storage and/or CRL by removing certificates that have expired and are past a certain buffer period beyond their expiration time.
+    You can tidy up the backend storage and/or CRL by removing certificates that have expired and are past a certain buffer
+    period beyond their expiration time.
   </p>
 {{else if (eq this.section "crl")}}
   <h2 class="title is-5" data-test-title="true">
@@ -14,13 +15,18 @@
 {{/if}}
 
 <MessageError @model={{this.config}} />
-<form {{action "save" this.section on="submit"}}  class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
+<form {{action "save" this.section on="submit"}} class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
   {{#each (get this.config (concat this.section "Attrs")) as |attr|}}
     <FormField @attr={{attr}} @model={{this.config}} @data-test-field={{attr.name}} />
   {{/each}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button data-test-submit type="submit" class="button is-primary {{if this.loading 'is-loading'}}" disabled={{this.loading}}>
+      <button
+        data-test-submit
+        type="submit"
+        class="button is-primary {{if this.loading "is-loading"}}"
+        disabled={{this.loading}}
+      >
         Save
       </button>
     </div>

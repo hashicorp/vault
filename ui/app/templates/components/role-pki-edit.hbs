@@ -1,32 +1,35 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{this.model}} @path="vault.cluster.secrets.backend.list" @mode={{this.mode}} @root={{this.root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @baseKey={{this.model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq this.mode "create") }}
+      {{#if (eq this.mode "create")}}
         Create a PKI Role
-      {{else if (eq this.mode 'edit')}}
+      {{else if (eq this.mode "edit")}}
         Edit PKI Role
       {{else}}
-        PKI Role <code>{{this.model.id}}</code>
+        PKI Role
+        <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq this.mode "show") }}
+{{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
       {{#if this.model.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-          data-test-role-delete="true"
-        >
+        <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "delete"}} data-test-role-delete="true">
           Delete role
         </ConfirmAction>
-        <div class="toolbar-separator" />
+        <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.model.canGenerate}}
         <ToolbarSecretLink
@@ -49,39 +52,26 @@
         </ToolbarSecretLink>
       {{/if}}
       {{#if this.model.canEdit}}
-        <ToolbarSecretLink
-          @secret={{this.model.id}}
-          @mode="edit"
-          @data-test-edit-link={{true}}
-          @replace={{true}}
-        >
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
           Edit role
         </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
 {{/if}}
-{{#if (or (eq this.mode 'edit') (eq this.mode 'create'))}}
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
   <form onsubmit={{action "createOrUpdate" "create"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @model={{this.model}} />
       <NamespaceReminder @mode={{this.mode}} @noun="PKI role" />
-      <FormFieldGroupsLoop
-        @model={{this.model}}
-        @mode={{this.mode}}
-      />
+      <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
-        <button
-          type="submit"
-          disabled={{this.buttonDisabled}}
-          class="button is-primary"
-          data-test-role-create={{true}}
-        >
-          {{#if (eq this.mode 'create')}}
+        <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-role-create={{true}}>
+          {{#if (eq this.mode "create")}}
             Create role
-          {{else if (eq this.mode 'edit')}}
+          {{else if (eq this.mode "edit")}}
             Save
           {{/if}}
         </button>
@@ -97,7 +87,11 @@
       {{#each-in fieldGroup as |group fields|}}
         {{#if (or (eq group "default") (eq group "Options"))}}
           {{#each fields as |attr|}}
-            <InfoTableRow @alwaysRender={{true}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get this.model attr.name}} />
+            <InfoTableRow
+              @alwaysRender={{true}}
+              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+              @value={{get this.model attr.name}}
+            />
           {{/each}}
         {{else}}
           <div class="box is-sideless is-fullwidth is-marginless">
@@ -105,7 +99,11 @@
               {{group}}
             </h2>
             {{#each fields as |attr|}}
-              <InfoTableRow @alwaysRender={{true}} @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get this.model attr.name}} />
+              <InfoTableRow
+                @alwaysRender={{true}}
+                @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+                @value={{get this.model attr.name}}
+              />
             {{/each}}
           </div>
         {{/if}}

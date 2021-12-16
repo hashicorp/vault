@@ -4,7 +4,7 @@
       <nav class="menu">
         <ul class="menu-list">
           <li class="action">
-            <button type="button" class="button link " onclick={{action "dismissWizard"}}>
+            <button type="button" class="button link" onclick={{action "dismissWizard"}}>
               Dismiss
             </button>
           </li>
@@ -13,7 +13,8 @@
     </PopupMenu>
   {{/unless}}
   <h1 class="title is-5">
-    <Icon @name={{this.glyph}} /> {{this.headerText}}
+    <Icon @name={{this.glyph}} />
+    {{this.headerText}}
   </h1>
   {{#if this.showProgress}}
     <ToolTip @verticalPosition="below" as |T|>

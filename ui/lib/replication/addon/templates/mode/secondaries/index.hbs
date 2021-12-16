@@ -3,9 +3,7 @@
     <ToolbarActions>
       {{#if this.model.replicationAttrs.knownSecondaries.length}}
         {{#if this.model.canRevokeSecondary}}
-          <ToolbarLink
-            @params={{array "mode.secondaries.revoke" this.replicationMode}}
-          >
+          <ToolbarLink @params={{array "mode.secondaries.revoke" this.replicationMode}}>
             Revoke secondary
           </ToolbarLink>
         {{/if}}
@@ -29,13 +27,17 @@
             {{secondary}}
           </div>
           <div class="column has-text-right">
-            {{#if (or (eq this.replicationMode 'performance') this.model.canRevokeSecondary)}}
+            {{#if (or (eq this.replicationMode "performance") this.model.canRevokeSecondary)}}
               <PopupMenu @name="secondary-details">
                 <nav class="menu">
                   <ul class="menu-list">
-                    {{#if (eq this.replicationMode 'performance')}}
+                    {{#if (eq this.replicationMode "performance")}}
                       <li class="action">
-                        <LinkTo @route="mode.secondaries.config-show" @models={{array this.replicationMode secondary}} data-test-replication-mount-filter-link={{true}}>
+                        <LinkTo
+                          @route="mode.secondaries.config-show"
+                          @models={{array this.replicationMode secondary}}
+                          data-test-replication-mount-filter-link={{true}}
+                        >
                           Mount filter config
                         </LinkTo>
                       </li>

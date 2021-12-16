@@ -8,7 +8,7 @@
     </div>
     <div class="field">
       <label for="key-type" class="is-label">Type</label>
-      <div class="control is-expanded" >
+      <div class="control is-expanded">
         <div class="select is-fullwidth">
           <select
             name="key-type"
@@ -52,7 +52,8 @@
     </div>
     <div class="field">
       <div class="b-checkbox">
-        <input type="checkbox"
+        <input
+          type="checkbox"
           id="key-exportable"
           class="styled"
           checked={{@key.exportable}}
@@ -64,7 +65,8 @@
         </label>
       </div>
     </div>
-    {{#if (or
+    {{#if
+      (or
         (eq @key.type "aes128-gcm96")
         (eq @key.type "aes256-gcm96")
         (eq @key.type "chacha20-poly1305")
@@ -73,7 +75,8 @@
     }}
       <div class="field">
         <div class="b-checkbox">
-          <input type="checkbox"
+          <input
+            type="checkbox"
             id="key-derived"
             class="styled"
             checked={{@key.derived}}
@@ -86,20 +89,16 @@
         </div>
       </div>
     {{/if}}
-    {{#if (or
-        (eq @key.type "aes128-gcm96")
-        (eq @key.type "aes256-gcm96")
-        (eq @key.type "chacha20-poly1305")
-      )
-    }}
+    {{#if (or (eq @key.type "aes128-gcm96") (eq @key.type "aes256-gcm96") (eq @key.type "chacha20-poly1305"))}}
       <div class="field">
         <div class="b-checkbox">
-          <input type="checkbox"
-           data-test-transit-key-convergent-encryption
-           id="key-convergent"
-           class="styled"
-           checked={{@key.convergentEncryption}}
-           onchange={{@convergentEncryptionChange}}
+          <input
+            type="checkbox"
+            data-test-transit-key-convergent-encryption
+            id="key-convergent"
+            class="styled"
+            checked={{@key.convergentEncryption}}
+            onchange={{@convergentEncryptionChange}}
           />
           <label for="key-convergent" class="is-label">
             Enable convergent encryption
@@ -114,7 +113,7 @@
         data-test-transit-key-create
         type="submit"
         disabled={{@requestInFlight}}
-        class="button is-primary {{if @requestInFlight 'is-loading'}}"
+        class="button is-primary {{if @requestInFlight "is-loading"}}"
       >
         Create encryption key
       </button>

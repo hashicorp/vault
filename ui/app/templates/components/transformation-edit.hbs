@@ -1,15 +1,22 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{this.model}} @path="vault.cluster.secrets.backend.list" @mode={{this.mode}} @root={{this.root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @baseKey={{this.model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq this.mode "create") }}
+      {{#if (eq this.mode "create")}}
         Create transformation
-      {{else if (eq this.mode 'edit')}}
+      {{else if (eq this.mode "edit")}}
         Edit transformation
       {{else}}
-        Transformation <code>{{this.model.id}}</code>
+        Transformation
+        <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -20,17 +27,9 @@
     <ToolbarActions>
       {{#if this.capabilities.canDelete}}
         {{#if (gt this.model.allowed_roles.length 0)}}
-          <ToolTip
-            @verticalPosition="above"
-            @horizontalPosition="center"
-            as |T|>
+          <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
             <T.Trigger @tabindex="-1">
-              <button
-              class="toolbar-link"
-              aria-disabled="true"
-              type="button"
-              disabled
-              >
+              <button class="toolbar-link" aria-disabled="true" type="button" disabled>
                 Delete transformation
               </button>
             </T.Trigger>
@@ -41,17 +40,13 @@
             </T.Content>
           </ToolTip>
         {{else}}
-        <button
-          class="toolbar-link"
-          onclick={{action (mut this.isDeleteModalActive) true}}
-          type="button"
-        >
-          Delete transformation
-        </button>
+          <button class="toolbar-link" onclick={{action (mut this.isDeleteModalActive) true}} type="button">
+            Delete transformation
+          </button>
         {{/if}}
-        <div class="toolbar-separator" />
+        <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.capabilities.canUpdate }}
+      {{#if this.capabilities.canUpdate}}
         {{#if (gt this.model.allowed_roles.length 0)}}
           <button
             class="toolbar-link"
@@ -62,12 +57,7 @@
             Edit transformation
           </button>
         {{else}}
-          <ToolbarSecretLink
-            @secret={{this.model.id}}
-            @mode="edit"
-            @data-test-edit-link={{true}}
-            @replace={{true}}
-          >
+          <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
             Edit transformation
           </ToolbarSecretLink>
         {{/if}}
@@ -76,14 +66,12 @@
   </Toolbar>
 {{/if}}
 
-{{#if (eq this.mode 'edit')}}
+{{#if (eq this.mode "edit")}}
   <TransformEditForm @mode={{this.mode}} @model={{this.model}} />
-{{else if (eq this.mode 'create')}}
+{{else if (eq this.mode "create")}}
   <TransformCreateForm @mode={{this.mode}} @model={{this.model}} />
 {{else}}
-  <TransformShowTransformation
-    @model={{this.model}}
-  />
+  <TransformShowTransformation @model={{this.model}} />
 {{/if}}
 
 <ConfirmationModal
@@ -95,7 +83,10 @@
   @onConfirm={{action "delete"}}
 >
   <p class="has-bottom-margin-m">
-    Deleting the <strong>{{this.model.name}}</strong> transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and cannot be decoded.
+    Deleting the
+    <strong>{{this.model.name}}</strong>
+    transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and
+    cannot be decoded.
   </p>
   <MessageError @model={{this.model}} @errorMessage={{this.error}} />
 </ConfirmationModal>
@@ -109,20 +100,23 @@
 >
   <section class="modal-card-body">
     <p>
-      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode operations stop working. Are you sure?
+      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode
+      operations stop working. Are you sure?
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "warn" --}}
-    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{this.model.id}} @tagName="button" class="button is-primary" data-test-edit-confirm-button={{true}}>
+    {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
+    <LinkTo
+      @route="vault.cluster.secrets.backend.edit"
+      @model={{this.model.id}}
+      @tagName="button"
+      class="button is-primary"
+      data-test-edit-confirm-button={{true}}
+    >
       Confirm
     </LinkTo>
-    {{!-- template-lint-configure no-unknown-arguments-for-builtin-components "on" --}}
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isEditModalActive) false}}
-    >
+    {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
+    <button type="button" class="button is-secondary" onclick={{action (mut this.isEditModalActive) false}}>
       Cancel
     </button>
   </footer>

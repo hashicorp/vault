@@ -4,7 +4,8 @@
       {{#if this.label}}
         {{this.label}}
       {{else}}
-        PGP KEY {{if (not-eq this.index '') (inc this.index)}}
+        PGP KEY
+        {{if (not-eq this.index "") (inc this.index)}}
       {{/if}}
     </label>
   </div>
@@ -45,7 +46,7 @@
     <div class="control is-expanded">
       <div class="file">
         <label class="file-label is-fullwidth">
-          <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-pgp-file-input={{true}}>
+          <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-pgp-file-input={{true}} />
           <span class="file-cta is-fullwidth">
             <span class="file-icon has-text-grey-dark">
               <Icon @name="file" />
@@ -58,11 +59,11 @@
               {{/if}}
             </span>
             {{#if this.key.fileName}}
-              {{!-- template-lint-configure no-nested-interactive "warn" --}}
-              <button type="button" class="file-delete-button" {{action 'clearKey'}} data-test-pgp-clear={{true}}>
+              {{! template-lint-configure no-nested-interactive "warn" }}
+              <button type="button" class="file-delete-button" {{action "clearKey"}} data-test-pgp-clear={{true}}>
                 <Icon @name="x" aria-label="Close" />
               </button>
-              {{!-- template-lint-configure no-nested-interactive "on" --}}
+              {{! template-lint-configure no-nested-interactive "on" }}
             {{/if}}
           </span>
         </label>

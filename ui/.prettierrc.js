@@ -9,6 +9,7 @@ module.exports = {
       files: '*.hbs',
       options: {
         singleQuote: false,
+        printWidth: 125,
       },
     },
   ],

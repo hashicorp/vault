@@ -1,11 +1,7 @@
 <div data-test-flash-message="true">
   <div class="columns is-mobile is-variable is-1">
     <div class="column is-narrow message-icon">
-      <Icon
-        class={{this.alertType.glyphClass}}
-        aria-hidden="true"
-        @name={{this.alertType.glyph}}
-      />
+      <Icon class={{this.alertType.glyphClass}} aria-hidden="true" @name={{this.alertType.glyph}} />
     </div>
     {{#if @yieldWithoutColumn}}
       {{yield}}
@@ -14,11 +10,7 @@
         <div class="message-title">
           {{or @title this.alertType.text}}
           {{#if @secondIconType}}
-            <Icon
-              class="{{this.secondAlertType.glyphClass}}"
-              aria-hidden="true"
-              @name={{this.secondAlertType.glyph}}
-            />
+            <Icon class={{this.secondAlertType.glyphClass}} aria-hidden="true" @name={{this.secondAlertType.glyph}} />
           {{/if}}
           {{#if @progressBar}}
             <progress

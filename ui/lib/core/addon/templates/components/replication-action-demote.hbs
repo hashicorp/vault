@@ -4,7 +4,9 @@
       Demote cluster
     </h4>
     <p>
-      Demote this {{this.model.replicationModeForDisplay}} primary to a secondary.
+      Demote this
+      {{this.model.replicationModeForDisplay}}
+      primary to a secondary.
     </p>
   </div>
   <div class="action-block-action">
@@ -30,21 +32,21 @@
   @testSelector="demote"
 >
   <p class="has-bottom-margin-m">
-    {{#if (and
-      (eq this.replicationMode 'dr')
-      (not this.model.performance.replicationDisabled)
-    )}}
+    {{#if (and (eq this.replicationMode "dr") (not this.model.performance.replicationDisabled))}}
       <p class="has-bottom-margin-m" data-test-demote-warning>
-        This cluster is currently operating as a performance secondary. Demoting it will leave your replication setup <strong>without a performance primary cluster</strong> until a new cluster is promoted.
+        This cluster is currently operating as a performance secondary. Demoting it will leave your replication setup
+        <strong>without a performance primary cluster</strong>
+        until a new cluster is promoted.
       </p>
     {{/if}}
-    Demoting this {{this.model.replicationModeForDisplay}} primary to a {{this.model.replicationModeForDisplay}} secondary means that the resulting secondary cluster:
+    Demoting this
+    {{this.model.replicationModeForDisplay}}
+    primary to a
+    {{this.model.replicationModeForDisplay}}
+    secondary means that the resulting secondary cluster:
   </p>
   <ul class="bullet has-bottom-margin-m">
-    {{#if (and
-      (eq this.replicationMode 'dr')
-      (not this.model.performance.replicationDisabled)
-    )}}
+    {{#if (and (eq this.replicationMode "dr") (not this.model.performance.replicationDisabled))}}
       <li>Will be read-only</li>
     {{/if}}
     <li>Will not attempt to connect to a primary</li>

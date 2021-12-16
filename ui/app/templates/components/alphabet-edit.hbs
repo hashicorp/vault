@@ -10,12 +10,13 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq this.mode "create") }}
+      {{#if (eq this.mode "create")}}
         Create Alphabet
       {{else if (eq this.mode "edit")}}
         Edit Alphabet
       {{else}}
-        Alphabet <code>{{this.model.id}}</code>
+        Alphabet
+        <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -25,17 +26,12 @@
   <Toolbar>
     <ToolbarActions>
       {{#if this.capabilities.canDelete}}
-        <button
-          type="button"
-          class="toolbar-link"
-          onclick={{action "delete"}}
-          data-test-transformation-alphabet-delete
-        >
+        <button type="button" class="toolbar-link" onclick={{action "delete"}} data-test-transformation-alphabet-delete>
           Delete alphabet
         </button>
-        <div class="toolbar-separator" />
+        <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.capabilities.canUpdate }}
+      {{#if this.capabilities.canUpdate}}
         <ToolbarSecretLink
           @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"
@@ -49,58 +45,58 @@
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq this.mode 'edit') (eq this.mode 'create'))}}
-<form onsubmit={{action "createOrUpdate" this.mode}}>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @model={{this.model}} />
-    <NamespaceReminder @mode={{this.mode}} @noun="transform alphabet" />
-    {{#each this.model.attrs as |attr|}}
-      {{#if (and (eq attr.name 'name') (eq this.mode 'edit')) }}
-        <label for="{{attr.name}}" class="is-label">
-          {{attr.options.label}}
-        </label>
-        {{#if attr.options.subText}}
-          <p class="sub-text">{{attr.options.subText}}</p>
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+  <form onsubmit={{action "createOrUpdate" this.mode}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{this.model}} />
+      <NamespaceReminder @mode={{this.mode}} @noun="transform alphabet" />
+      {{#each this.model.attrs as |attr|}}
+        {{#if (and (eq attr.name "name") (eq this.mode "edit"))}}
+          <label for={{attr.name}} class="is-label">
+            {{attr.options.label}}
+          </label>
+          {{#if attr.options.subText}}
+            <p class="sub-text">{{attr.options.subText}}</p>
+          {{/if}}
+          <input
+            data-test-input={{attr.name}}
+            id={{attr.name}}
+            autocomplete="off"
+            spellcheck="false"
+            value={{or (get this.model attr.name) this.model.id}}
+            readonly
+            class="field input is-readOnly"
+            type={{attr.type}}
+          />
+        {{else}}
+          <FormField data-test-field @attr={{attr}} @model={{this.model}} />
         {{/if}}
-        <input
-          data-test-input={{attr.name}}
-          id={{attr.name}}
-          autocomplete="off"
-          spellcheck="false"
-          value={{or (get this.model attr.name) this.model.id}}
-          readonly
-          class="field input is-readOnly"
-          type={{attr.type}}
-        />
-      {{else}}
-        <FormField
-          data-test-field
-          @attr={{attr}}
-          @model={{this.model}}
-        />
-      {{/if}}
-    {{/each}}
-  </div>
-  <div class="field is-grouped-split box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="submit"
-        disabled={{this.buttonDisabled}}
-        class="button is-primary"
-        data-test-alphabet-transform-create={{true}}
-      >
-        {{#if (eq this.mode 'create')}}
-          Create alphabet
-        {{else if (eq this.mode 'edit')}}
-          Save
-        {{/if}}
-      </button>
-      <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} @class="button" @secret={{concat this.model.idPrefix this.model.id}}>
-        Cancel
-      </SecretLink>
+      {{/each}}
     </div>
-  </div>
-</form>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          disabled={{this.buttonDisabled}}
+          class="button is-primary"
+          data-test-alphabet-transform-create={{true}}
+        >
+          {{#if (eq this.mode "create")}}
+            Create alphabet
+          {{else if (eq this.mode "edit")}}
+            Save
+          {{/if}}
+        </button>
+        <SecretLink
+          @mode={{if (eq this.mode "create") "list" "show"}}
+          @class="button"
+          @secret={{concat this.model.idPrefix this.model.id}}
+        >
+          Cancel
+        </SecretLink>
+      </div>
+    </div>
+  </form>
 {{else}}
   {{#if this.model.displayErrors}}
     <div class="has-top-margin-s">
@@ -110,11 +106,23 @@
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each this.model.attrs as |attr|}}
       {{#if (eq attr.type "object")}}
-        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get this.model attr.name)}} />
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get this.model attr.name)}}
+        />
       {{else if (eq attr.type "array")}}
-        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get this.model attr.name}} @type={{attr.type}} @isLink={{eq attr.name "transformations"}} @viewAll="transformations" />
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+          @type={{attr.type}}
+          @isLink={{eq attr.name "transformations"}}
+          @viewAll="transformations"
+        />
       {{else}}
-        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get this.model attr.name}} />
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+        />
       {{/if}}
     {{/each}}
   </div>

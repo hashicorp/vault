@@ -1,6 +1,6 @@
 <form onsubmit={{action "doSubmit"}}>
-  {{#if (eq this.selectedAction 'hash')}}
-    {{!-- template-lint-disable no-passed-in-event-handlers --}}
+  {{#if (eq this.selectedAction "hash")}}
+    {{! template-lint-disable no-passed-in-event-handlers }}
     <ToolHash
       @onClear={{action "onClear"}}
       @sum={{this.sum}}
@@ -9,8 +9,8 @@
       @format={{this.format}}
       @input={{input}}
     />
-    {{!-- template-lint-enable no-passed-in-event-handlers --}}
-  {{else if (eq this.selectedAction 'random')}}
+    {{! template-lint-enable no-passed-in-event-handlers }}
+  {{else if (eq this.selectedAction "random")}}
     <ToolRandom
       @onClear={{action "onClear"}}
       @random_bytes={{this.random_bytes}}
@@ -18,7 +18,7 @@
       @format={{this.format}}
       @bytes={{this.bytes}}
     />
-  {{else if (eq this.selectedAction 'rewrap')}}
+  {{else if (eq this.selectedAction "rewrap")}}
     <ToolRewrap
       @onClear={{action "onClear"}}
       @rewrap_token={{this.rewrap_token}}
@@ -27,7 +27,7 @@
       @token={{this.token}}
       @bytes={{this.bytes}}
     />
-  {{else if (eq this.selectedAction 'unwrap')}}
+  {{else if (eq this.selectedAction "unwrap")}}
     <ToolUnwrap
       @onClear={{action "onClear"}}
       @unwrap_data={{this.unwrap_data}}
@@ -36,7 +36,7 @@
       @errors={{this.errors}}
       @token={{this.token}}
     />
-  {{else if (eq this.selectedAction 'lookup')}}
+  {{else if (eq this.selectedAction "lookup")}}
     <ToolLookup
       @creation_time={{this.creation_time}}
       @creation_ttl={{this.creation_ttl}}
@@ -47,7 +47,7 @@
       @onClear={{action "onClear"}}
       @errors={{this.errors}}
     />
-  {{else if (eq this.selectedAction 'wrap')}}
+  {{else if (eq this.selectedAction "wrap")}}
     <ToolWrap
       @token={{this.token}}
       @selectedAction={{this.selectedAction}}
@@ -58,8 +58,6 @@
       @errors={{this.errors}}
     />
   {{else}}
-    <EmptyState
-      @title="Tool not available"
-    />
+    <EmptyState @title="Tool not available" />
   {{/if}}
 </form>

@@ -1,4 +1,4 @@
-{{!-- conditional to check if SelectableCard is apart of a CSS Grid, if yes return grid item class --}}
+{{! conditional to check if SelectableCard is apart of a CSS Grid, if yes return grid item class }}
 {{#if this.gridContainer}}
   <div class="selectable-card is-rounded is-grid-container">
     <div class="selectable-card-title">
@@ -13,7 +13,7 @@
     {{#if this.actionCard}}
       <div class="is-flex-between is-fullwidth card-details" data-test-selectable-card={{this.formattedCardTitle}}>
         <h3 class="title is-5">{{this.formattedCardTitle}}</h3>
-        <LinkTo 
+        <LinkTo
           @route={{this.actionTo}}
           class="has-icon-right is-ghost is-no-underline has-text-semibold"
           @query={{hash itemType=this.queryParam}}
@@ -25,8 +25,8 @@
           {{/if}}
         </LinkTo>
       </div>
-        <p class="has-text-grey is-size-8">{{this.subText}}</p>
-        <h2 class="title-number">{{format-number this.total}}</h2>
+      <p class="has-text-grey is-size-8">{{this.subText}}</p>
+      <h2 class="title-number">{{format-number this.total}}</h2>
     {{else}}
       <div>
         <h2 class="title-number">{{format-number this.total}}</h2>

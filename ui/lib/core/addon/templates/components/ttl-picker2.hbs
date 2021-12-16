@@ -2,11 +2,11 @@
   @name={{this.label}}
   @status="success"
   @size="small"
-  @onChange={{action 'toggleEnabled'}}
+  @onChange={{action "toggleEnabled"}}
   @checked={{this.enableTTL}}
   data-test-ttl-toggle
 >
-  <span class="ttl-picker-label is-large">{{this.label}}</span><br/>
+  <span class="ttl-picker-label is-large">{{this.label}}</span><br />
   <div class="description has-text-grey">
     <span>{{this.helperText}}</span>
     {{#if this.description}}
@@ -24,11 +24,11 @@
   </div>
 </Toggle>
 {{#if this.enableTTL}}
-  <div class="ttl-show-picker" data-test-ttl-picker-group="{{this.label}}">
+  <div class="ttl-show-picker" data-test-ttl-picker-group={{this.label}}>
     <div class="field is-grouped is-marginless">
       <div class="control is-marginless">
         <input
-          data-test-ttl-value="{{this.label}}"
+          data-test-ttl-value={{this.label}}
           value={{this.time}}
           id="time-{{this.elementId}}"
           type="text"
@@ -40,22 +40,19 @@
       </div>
       <div class="control">
         <Select
-          data-test-ttl-unit="{{this.label}}"
-          @name='ttl-unit'
+          data-test-ttl-unit={{this.label}}
+          @name="ttl-unit"
           @options={{this.unitOptions}}
-          @onChange={{action 'updateUnit'}}
+          @onChange={{action "updateUnit"}}
           @selectedValue={{this.unit}}
           @isFullwidth={{true}}
-          />
+        />
       </div>
     </div>
     {{#if this.errorMessage}}
       <div class="columns is-mobile is-variable is-1 ttl-value-error">
         <div class="is-narrow message-icon">
-          <Icon
-            @name="x-square-fill"
-            class="has-text-danger"
-          />
+          <Icon @name="x-square-fill" class="has-text-danger" />
         </div>
         <div class="has-text-danger">
           {{this.errorMessage}}

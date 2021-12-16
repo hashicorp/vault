@@ -4,9 +4,10 @@
       @type="warning"
       @title="Attention"
       @message="This {{@model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked."
-      data-test-disabled-warning>
+      data-test-disabled-warning
+    >
       {{#if @model.canEdit}}
-        <button onclick={{action 'enable' @model}} type="button" class="link" data-test-enable={{true}}>
+        <button onclick={{action "enable" @model}} type="button" class="link" data-test-enable={{true}}>
           Enable
         </button>
       {{/if}}
@@ -26,12 +27,12 @@
   </InfoTableRow>
   <InfoTableRow @label="Created" @value={{@model.creationTime}}>
     <time datetime={{@model.creationTime}} title={{@model.creationTime}}>
-      {{date-format @model.creationTime 'MMM dd, yyyy [at] h:mm a'}}
+      {{date-format @model.creationTime "MMM dd, yyyy [at] h:mm a"}}
     </time>
   </InfoTableRow>
   <InfoTableRow @label="Last Updated" @value={{this.model.lastUpdateTime}}>
     <time datetime={{this.model.lastUpdateTime}} title={{this.model.lastUpdateTime}}>
-      {{date-format this.model.lastUpdateTime 'MMM dd, yyyy [at] h:mm a'}}
+      {{date-format this.model.lastUpdateTime "MMM dd, yyyy [at] h:mm a"}}
     </time>
   </InfoTableRow>
 </div>

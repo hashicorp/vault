@@ -9,10 +9,7 @@
 
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink
-        @type="add"
-        @params={{array 'vault.cluster.access.namespaces.create'}}
-      >
+      <ToolbarLink @type="add" @params={{array "vault.cluster.access.namespaces.create"}}>
         Create namespace
       </ToolbarLink>
     </ToolbarActions>
@@ -58,7 +55,8 @@
                   "There was an error deleting this namespace: "
                   (action "refreshNamespaceList")
                 )
-              }} />
+              }}
+            />
           </li>
         </Item.menu>
       </ListItem>

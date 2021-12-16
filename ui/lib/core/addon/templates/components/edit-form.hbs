@@ -1,6 +1,6 @@
 <form {{action (perform this.save this.model) on="submit"}}>
   <MessageError @model={{this.model}} data-test-edit-form-error />
-  <div class="{{if this.includeBox 'box is-sideless is-fullwidth is-marginless'}}">
+  <div class={{if this.includeBox "box is-sideless is-fullwidth is-marginless"}}>
     <NamespaceReminder @mode="save" />
     {{#if (or this.model.fields this.model.attrs)}}
       {{#each (or this.model.fields this.model.attrs) as |attr|}}
@@ -16,5 +16,5 @@
     @canceLinkParams={{@canceLinkParams}}
     @includeBox={{this.includeBox}}
     @onCancel={{@onCancel}}
-    />
+  />
 </form>

@@ -5,11 +5,7 @@
         <div class="box is-shadowless is-flex-v-centered">
           <LogoEdition />
         </div>
-        <AlertBanner
-          @type="danger"
-          @title={{this.model.error.title}}
-          @message={{this.model.error.message}}
-        />
+        <AlertBanner @type="danger" @title={{this.model.error.title}} @message={{this.model.error.message}} />
       {{else if this.model.consent}}
         <OidcConsentBlock
           @code={{this.model.consent.code}}

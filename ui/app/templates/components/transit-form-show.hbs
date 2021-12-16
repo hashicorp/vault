@@ -1,44 +1,53 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
-      <li class="{{if (eq @tab 'actions') 'is-active'}}">
-        <SecretLink @secret={{@key.id}} @mode="show" @replace={{true}} @queryParams={{query-params tab='actions'}} @data-test-transit-key-actions-link={{true}}>
+      <li class={{if (eq @tab "actions") "is-active"}}>
+        <SecretLink
+          @secret={{@key.id}}
+          @mode="show"
+          @replace={{true}}
+          @queryParams={{query-params tab="actions"}}
+          @data-test-transit-key-actions-link={{true}}
+        >
           Key Actions
         </SecretLink>
       </li>
 
-      <li class="{{if (eq @tab 'details') 'is-active'}}">
-        <SecretLink @secret={{@key.id}} @mode="show" @replace={{true}} @queryParams={{query-params tab='details'}} @data-test-transit-link="details">
+      <li class={{if (eq @tab "details") "is-active"}}>
+        <SecretLink
+          @secret={{@key.id}}
+          @mode="show"
+          @replace={{true}}
+          @queryParams={{query-params tab="details"}}
+          @data-test-transit-link="details"
+        >
           Details
         </SecretLink>
       </li>
 
-      <li class="{{if (eq @tab 'versions') 'is-active'}}">
-        <SecretLink @secret={{@key.id}} @mode="show" @replace={{true}} @queryParams={{query-params tab='versions'}} @data-test-transit-link="versions">
+      <li class={{if (eq @tab "versions") "is-active"}}>
+        <SecretLink
+          @secret={{@key.id}}
+          @mode="show"
+          @replace={{true}}
+          @queryParams={{query-params tab="versions"}}
+          @data-test-transit-link="versions"
+        >
           Versions
         </SecretLink>
       </li>
     </ul>
   </nav>
 </div>
-{{#if (not-eq @tab 'actions')}}
+{{#if (not-eq @tab "actions")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (eq @tab 'versions')}}
-        <TransitKeyActions
-          @key={{@key}}
-          @selectedAction="rotate"
-          @capabilities={{@capabilities}}
-          @onRefresh={{@refresh}}
-        />
+      {{#if (eq @tab "versions")}}
+        <TransitKeyActions @key={{@key}} @selectedAction="rotate" @capabilities={{@capabilities}} @onRefresh={{@refresh}} />
       {{/if}}
-      {{#if (eq @mode "show") }}
+      {{#if (eq @mode "show")}}
         {{#if (or @capabilities.canUpdate @capabilities.canDelete)}}
-          <ToolbarSecretLink
-            @secret={{@key.id}}
-            @mode="edit"
-            replace={{true}}
-          >
+          <ToolbarSecretLink @secret={{@key.id}} @mode="edit" replace={{true}}>
             Edit encryption key
           </ToolbarSecretLink>
         {{/if}}
@@ -47,7 +56,7 @@
   </Toolbar>
 {{/if}}
 
-{{#if (eq @tab 'actions')}}
+{{#if (eq @tab "actions")}}
   <div class="transit-card-container">
     {{#each @model.supportedActions as |supportedAction|}}
       {{#linked-block
@@ -66,9 +75,9 @@
         </div>
         <div class="transit-description">
           <h2 class="title is-6" data-test-transit-action-title={{supportedAction.name}}>
-            {{#if (eq supportedAction.name 'export')}}
+            {{#if (eq supportedAction.name "export")}}
               Export Key
-            {{else if (eq supportedAction.name 'hmac')}}
+            {{else if (eq supportedAction.name "hmac")}}
               HMAC
             {{else}}
               {{humanize supportedAction.name}}
@@ -79,29 +88,21 @@
       {{/linked-block}}
     {{/each}}
   </div>
-{{else if (eq @tab 'versions')}}
-  {{#if (or
-      (eq @key.type "aes256-gcm96")
-      (eq @key.type "chacha20-poly1305")
-      (eq @key.type "aes128-gcm96")
-    )
-  }}
+{{else if (eq @tab "versions")}}
+  {{#if (or (eq @key.type "aes256-gcm96") (eq @key.type "chacha20-poly1305") (eq @key.type "aes128-gcm96"))}}
     {{#each-in @key.keys as |version creationTimestamp|}}
       <div class="linked-block list-item-row no-destination" data-test-transit-key-version-row={{version}}>
         <div class="columns is-mobile">
           <div class="column is-3">
             <div class="level level-left">
-              <Icon
-                @name="history"
-                class="has-text-grey-light is-padded"
-              />
+              <Icon @name="history" class="has-text-grey-light is-padded" />
               <strong class="has-padding is-size-5">Version {{version}}</strong>
             </div>
           </div>
           <div class="column is-4">
             <div class="td is-borderless">
               <small class="help has-text-grey">
-                {{date-from-now creationTimestamp addSuffix=true }}
+                {{date-from-now creationTimestamp addSuffix=true}}
               </small>
             </div>
           </div>
@@ -120,21 +121,18 @@
     {{/each-in}}
   {{else}}
     {{#each-in @key.keys as |version meta|}}
-    <div class="linked-block list-item-row" data-test-transit-key-version-row={{version}}>
+      <div class="linked-block list-item-row" data-test-transit-key-version-row={{version}}>
         <div class="columns is-mobile">
           <div class="column is-3">
             <div class="level level-left">
-              <Icon
-                @name="history"
-                class="has-text-grey-light is-padded"
-              />
+              <Icon @name="history" class="has-text-grey-light is-padded" />
               <strong class="has-padding is-size-5">Version {{version}}</strong>
             </div>
           </div>
           <div class="column is-4">
             <div class="td is-borderless">
               <small class="help has-text-grey">
-                {{date-from-now meta.creation_time addSuffix=true }}
+                {{date-from-now meta.creation_time addSuffix=true}}
               </small>
             </div>
           </div>
@@ -153,7 +151,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li class="action">
-                    <CopyButton @clipboardText={{meta.public_key}} @class="link button is-transparent" @buttonType="button" @success={{action (set-flash-message "Public key copied!")}}>
+                    <CopyButton
+                      @clipboardText={{meta.public_key}}
+                      @class="link button is-transparent"
+                      @buttonType="button"
+                      @success={{action (set-flash-message "Public key copied!")}}
+                    >
                       Copy Public Key
                     </CopyButton>
                   </li>
