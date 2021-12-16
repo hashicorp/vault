@@ -2,6 +2,7 @@ package awsauth
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -43,8 +44,17 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 
+	var autoDetectRegion bool
+	if autoDetectRaw, ok := m["auto_detect_region"]; ok {
+		var err error
+		autoDetectRegion, err = strconv.ParseBool(autoDetectRaw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse auto_detect: %w", err)
+		}
+	}
+
 	region := m["region"]
-	if region == "" {
+	if region == "" && !autoDetectRegion {
 		region = awsutil.DefaultRegion
 	}
 
@@ -73,8 +83,8 @@ func (h *CLIHandler) Help() string {
 Usage: vault login -method=aws [CONFIG K=V...]
 
   The AWS auth method allows users to authenticate with AWS IAM
-  credentials. The AWS IAM credentials may be specified in a number of ways,
-  listed in order of precedence below:
+  credentials. The AWS IAM credentials, and optionally the AWS region, may be 
+  specified in a number of ways, listed in order of precedence below:
 
     1. Explicitly via the command line (not recommended)
 
@@ -94,6 +104,11 @@ Usage: vault login -method=aws [CONFIG K=V...]
 
 Configuration:
 
+  auto_detect_region=<bool>
+      Enable region auto-detection if a region is not specified to avoid using
+      the CLI's preferred default region (us-east-1). Instead, it will auto detect
+      the region the order of preference numbered above.
+
   aws_access_key_id=<string>
       Explicit AWS access key ID
 
@@ -111,6 +126,10 @@ Configuration:
       via the -path flag in the "vault login" command, but it can be specified
       here as well. If specified here, it takes precedence over the value for
       -path. The default value is "aws".
+
+  region=<string>
+      Explicit AWS region to reach out to for authentication request signing.
+      Defaults to us-east-1 if not specified, unless auto_detect_region is enabled.
 
   role=<string>
       Name of the role to request a token against
