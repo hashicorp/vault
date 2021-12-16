@@ -40,8 +40,7 @@
       {{/if}}
       {{#if (eq @model.config.enabled 'Off')}}
         <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
-          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will
-        need to
+          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need to
           <LinkTo @route="vault.cluster.clients.edit">
             edit the configuration
           </LinkTo>
@@ -67,103 +66,13 @@
       <p class="is-8 has-text-grey has-bottom-margin-xl">
         This date is when client counting starts. Without this starting point, the data shown is not reliable.
       </p>
-      {{!-- ARG TODO replace with calendar widget --}}
-      {{#if this.isEditStartMonthOpen}}
-      {{!-- ARG TODO needs to be a modal I think --}}
-        
-      {{/if}}
-      {{!-- Some other toggle or dropdown. still thinking --}}
-      <CalendarWidget />
-      <div class="filter-title">Filters</div>
+      
+      <div class="calendar-title">Filters</div>
       <Toolbar>
-        <ToolbarActions>
-          <BasicDropdown
-            @class="popup-menu"
-            @horizontalPosition="auto-right"
-            @verticalPosition="below"
-            {{!-- @onClose={{action "clearWrappedData"}} --}}
-            as |D|
-          >
-            <D.trigger
-              data-test-popup-menu-trigger="true"
-              @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-              @tagName="button"
-            >
-            {{!-- ARG TODO hardcoded --}}
-              Jan 2021 - Apr 2021 
-              <Chevron @direction="down" @isButton={{true}} />
-            </D.trigger>
-            <D.content @class="popup-menu-content is-wide">
-              <nav class="box menu">
-                <ul class="menu-list">
-                  <li class="action">
-                    <CopyButton
-                      @class="link link-plain has-text-weight-semibold is-ghost"
-                      @clipboardText={{stringify @modelForData.secretData}}
-                      @success={{action (set-flash-message "JSON Copied!")}}
-                      data-test-copy-button
-                    >
-                      Copy JSON
-                    </CopyButton>
-                  </li>
-                  <li class="action">
-                    {{#if this.showWrapButton}}
-                      <button
-                        class="link link-plain has-text-weight-semibold is-ghost {{if isWrapping "is-loading"}}"
-                        type="button"
-                        {{on "click" this.handleWrapClick}}
-                        data-test-wrap-button
-                        disabled={{this.isWrapping}}
-                      >
-                        Wrap secret
-                      </button>
-                    {{else}}
-                      <MaskedInput
-                        @class="has-padding"
-                        @displayOnly={{true}}
-                        @allowCopy={{true}}
-                        @value={{this.wrappedData}}
-                        @success={{action "handleCopySuccess"}}
-                        @error={{action "handleCopyError"}}
-                      />
-                    {{/if}}
-                  </li>
-                </ul>
-              </nav>
-            </D.content>
-          </BasicDropdown>
-        </ToolbarActions>
         <ToolbarFilters>
-          {{!-- <NavigateInput
-            @enterpriseProduct="vault"
-            @filterFocusDidChange={{action "setFilterFocus"}}
-            @filterDidChange={{action "setFilter"}}
-            @filter={{this.filter}}
-            @filterMatchesKey={{filterMatchesKey}}
-            @firstPartialMatch={{firstPartialMatch}}
-            @baseKey={{get baseKey "id"}}
-            @shouldNavigateTree={{options.navigateTree}}
-            @placeholder={{options.searchPlaceholder}}
-            @mode={{if (eq tab 'certs') 'secrets-cert' 'secrets'}}
-            @data-test-nav-input={{true}}
-          /> --}}
-          {{!-- {{#if filterFocused}}
-            {{#if filterMatchesKey}}
-              {{#unless filterIsFolder}}
-                <p class="input-hint">
-                  <kbd>Enter</kbd> to view {{filter}}
-                </p>
-              {{/unless}}
-            {{/if}}
-            {{#if firstPartialMatch}}
-              <p class="input-hint">
-                <kbd>Tab</kbd> to autocomplete
-              </p>
-            {{/if}}
-          {{/if}} --}}
-        </ToolbarFilters>
-
-        
+          <CalendarWidget />
+          {{!-- ARG TODO more filters for auth and namespace here --}}
+        </ToolbarFilters>        
       </Toolbar>
     {{/if}}
     {{#if @isLoading}}

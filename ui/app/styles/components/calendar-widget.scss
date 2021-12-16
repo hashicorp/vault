@@ -1,9 +1,16 @@
 $dark-gray: #535f73;
-.filter-title {
+.calendar-content {
+  display: flex;
+}
+.calendar-title {
   color: $ui-gray-400;
   text-transform: uppercase;
   font-size: $size-7;
   font-weight: $font-weight-semibold;
+
+  &.popup-menu-item {
+    padding: $size-10 $size-8;
+  }
 }
 .calendar-widget-dropdown {
   @extend .button;

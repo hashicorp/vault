@@ -24,6 +24,8 @@ class CalendarWidget extends Component {
   currentYear = parseInt(format(this.currentDate, 'yyyy')); // integer
   currentMonth = parseInt(format(this.currentDate, 'M')); // integer
 
+  @tracked showCalendar = false;
+
   @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
@@ -230,6 +232,11 @@ class CalendarWidget extends Component {
       reverseMonthArray.unshift(e);
     });
     return reverseMonthArray;
+  }
+
+  @action
+  toggleShowCalendar() {
+    this.showCalendar = !this.showCalendar;
   }
 
   @action

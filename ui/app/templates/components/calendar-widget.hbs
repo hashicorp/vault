@@ -1,4 +1,3 @@
-<div class="calendar-title">Date range</div>
 <BasicDropdown
   @class="popup-menu"
   @horizontalPosition="auto-right"
@@ -6,66 +5,96 @@
   as |D|
 >
   <D.trigger
-    @class={{concat "calendar-widget-dropdown" (if D.isOpen " is-active")}}
+    data-test-popup-menu-trigger="true"
+    @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
     @tagName="button"
   >
-  {{!-- ARG global search string utils for this instead of creating a new helper --}}
-    {{replace-dash-forwardslash this.startDate}} - {{replace-dash-forwardslash this.endDate}} 
-    <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} /> 
+  {{!-- ARG TODO hardcoded --}}
+    {{!-- {{replace-dash-forwardslash this.startDate}} - {{replace-dash-forwardslash this.endDate}}  --}}
+    Jan 2021 - Apr 2021 
+    <Chevron @direction="down" @isButton={{true}} />
   </D.trigger>
-  <D.content @class="popup-menu-content">
-    <div class="calendar-widget-container">
-      <div class="select-year">
-        <p>{{this.displayYear}}</p>
-        <div class="icon-container">
-          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
-            <Chevron @direction="left" @size="s" class="has-text-grey" />
+  <D.content @class="popup-menu-content calendar-content">
+    <nav class="box menu">
+      <div class="calendar-title popup-menu-item">Date options</div>  
+      <ul class="menu-list">
+        <li class="action">
+          <button
+            class="link link-plain has-text-weight-semibold is-ghost {{if isWrapping "is-loading"}}"
+            type="button"
+            {{!-- {{on "click" this.handleWrapClick}} --}}
+          >
+            Current billing period
           </button>
-          <button type="button" class="button is-transparent" disabled={{this.disableFutureYear}} {{on "click" this.addYear}}>
-            <Chevron @direction="right" @size="s" class="has-text-grey" />
+        </li>
+        <li class="action">
+          <button
+            class="link link-plain has-text-weight-semibold is-ghost {{if isWrapping "is-loading"}}"
+            type="button"
+            {{on "click" this.toggleShowCalendar}}
+          >
+            <div class="level is-mobile">
+              <span class="level-left">Custom end month</span>
+              <Chevron class="has-text-grey-light level-right" />
+            </div>
           </button>
+        </li>
+      </ul>
+    </nav>
+    {{#if this.showCalendar}}
+      <div class="calendar-widget-container">
+        <div class="select-year">
+          <p>{{this.displayYear}}</p>
+          <div class="icon-container">
+            <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
+              <Chevron @direction="left" @size="s" class="has-text-grey" />
+            </button>
+            <button type="button" class="button is-transparent" disabled={{this.disableFutureYear}} {{on "click" this.addYear}}>
+              <Chevron @direction="right" @size="s" class="has-text-grey" />
+            </button>
+          </div>
+        </div>
+        <div class="select-months">
+          <p>SELECT MONTHS</p>
+          <ToolTip @horizontalPosition="center" @verticalPosition="above" as |T|>
+            <T.trigger>
+              <Icon 
+                @glyph="cancel-circle-outline"
+                class={{concat "level-right cancel-circle-icon" (if this.areMonthsSelected " is-active")}}
+                {{on "click" this.deselectMonths}}
+              />
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                Clear selected months
+              </div>
+            </T.content>
+          </ToolTip>
+        </div>
+        <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "1-" this.displayYear}}>January</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "2-" this.displayYear}}>February</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "3-" this.displayYear}}>March</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "4-" this.displayYear}}>April</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "5-" this.displayYear}}>May</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "6-" this.displayYear}}>June</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "7-" this.displayYear}}>July</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "8-" this.displayYear}}>August</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "9-" this.displayYear}}>September</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "10-" this.displayYear}}>October</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "11-" this.displayYear}}>November</div>
+          <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "12-" this.displayYear}}>December</div>
+        </div>
+        <div class="border-col"></div>
+        <div class="calendar-widget-nav month-nav">
+          <ul>
+            <li {{on "click" (fn this.quickSelectMonths 0)}}>Last month</li>
+            <li {{on "click" (fn this.quickSelectMonths 2)}}>Last 3 months</li>
+            <li {{on "click" (fn this.quickSelectMonths 5)}}>Last 6 months</li>
+            <li {{on "click" (fn this.quickSelectMonths 11)}}>Last 12 months</li>
+          </ul>
         </div>
       </div>
-      <div class="select-months">
-        <p>SELECT MONTHS</p>
-        <ToolTip @horizontalPosition="center" @verticalPosition="above" as |T|>
-          <T.trigger>
-            <Icon 
-              @glyph="cancel-circle-outline"
-              class={{concat "level-right cancel-circle-icon" (if this.areMonthsSelected " is-active")}}
-              {{on "click" this.deselectMonths}}
-            />
-          </T.trigger>
-          <T.content @class="tool-tip">
-            <div class="box">
-              Clear selected months
-            </div>
-          </T.content>
-        </ToolTip>
-      </div>
-      <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "1-" this.displayYear}}>January</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "2-" this.displayYear}}>February</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "3-" this.displayYear}}>March</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "4-" this.displayYear}}>April</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "5-" this.displayYear}}>May</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "6-" this.displayYear}}>June</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "7-" this.displayYear}}>July</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "8-" this.displayYear}}>August</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "9-" this.displayYear}}>September</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "10-" this.displayYear}}>October</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "11-" this.displayYear}}>November</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "12-" this.displayYear}}>December</div>
-      </div>
-      <div class="border-col"></div>
-      <div class="calendar-widget-nav month-nav">
-        <ul>
-          <li {{on "click" (fn this.quickSelectMonths 0)}}>Last month</li>
-          <li {{on "click" (fn this.quickSelectMonths 2)}}>Last 3 months</li>
-          <li {{on "click" (fn this.quickSelectMonths 5)}}>Last 6 months</li>
-          <li {{on "click" (fn this.quickSelectMonths 11)}}>Last 12 months</li>
-        </ul>
-      </div>
-    </div>
+  {{/if}}
   </D.content>
 </BasicDropdown>
