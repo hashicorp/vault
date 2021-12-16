@@ -11,6 +11,6 @@ export default create({
   name: fillable('[data-test-input="name"]'),
   pattern: fillable('[data-test-input="pattern"'),
   alphabet: fillable('[data-test-input="alphabet"'),
-  submit: clickable('[data-test-template-transform-create="true"]'),
+  submit: clickable('[data-test-template-transform-create]'),
   removeAlphabet: clickable('#alphabet [data-test-selected-list-button="delete"]'),
 });

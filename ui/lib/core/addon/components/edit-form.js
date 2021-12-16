@@ -54,7 +54,7 @@ export default Component.extend({
       });
       return;
     }
-    yield this.onSave({ saveType: method, model });
+    this.onSave({ saveType: method, model });
   })
     .drop()
     .withTestWaiter(),

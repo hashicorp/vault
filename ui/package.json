@@ -131,7 +131,7 @@
     "ember-radio-button": "^2.0.1",
     "ember-resolver": "^8.0.2",
     "ember-responsive": "^3.0.0-beta.3",
-    "ember-router-helpers": "^0.2.0",
+    "ember-router-helpers": "^0.4.0",
     "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon": "^4.0.0",
     "ember-source": "~3.24.0",

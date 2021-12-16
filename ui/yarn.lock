@@ -9879,7 +9879,7 @@ ember-cli-htmlbars@^1.1.1:
     json-stable-stringify "^1.0.0"
     strip-bom "^2.0.0"
 
-ember-cli-htmlbars@^2.0.1, ember-cli-htmlbars@^2.0.2:
+ember-cli-htmlbars@^2.0.1:
   version "2.0.5"
   resolved "https://registry.yarnpkg.com/ember-cli-htmlbars/-/ember-cli-htmlbars-2.0.5.tgz#b5a105429a6bce4f7c9c97b667e3b8926e31397f"
   integrity sha512-3f3PAxdnQ/fhQa8XP/3z4RLRgLHxV8j4Ln75aHbRdemOCjBa048KxL9l+acRLhCulbGQCMnLiIUIC89PAzLrcA==
@@ -10704,21 +10704,12 @@ ember-router-generator@^2.0.0:
     "@babel/traverse" "^7.4.5"
     recast "^0.18.1"
 
-ember-router-helpers@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/ember-router-helpers/-/ember-router-helpers-0.2.0.tgz#9e19d0cfe0cc99af315dae2ce8747b1abef1ff75"
-  integrity sha512-t2eGSwfiK+Ec2nZcPo3bR8NvmK9CxISupqrHEgMkeBpgtBX0sjoUzAewqz1nu3TTrcpkkrgxNiFQvkIpK6Zz+g==
+ember-router-helpers@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/ember-router-helpers/-/ember-router-helpers-0.4.0.tgz#6ef86cc75e38c3455ab916c78d5a38293e94c12f"
+  integrity sha512-DiPyncEAACKV/XcmYqUwh0iHBPvGW75Fw1uerDudblofXTtAH/+QzeE/0wK2G6MUBWKyn0HyIuLXE3pJm0zKFg==
   dependencies:
-    ember-cli-babel "^6.6.0"
-    ember-cli-htmlbars "^2.0.2"
-    ember-router-service-polyfill "^1.0.1"
-
-ember-router-service-polyfill@^1.0.1:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/ember-router-service-polyfill/-/ember-router-service-polyfill-1.0.3.tgz#506d7fbd7179951410b7ffe8db171540601d88b1"
-  integrity sha1-UG1/vXF5lRQQt//o2xcVQGAdiLE=
-  dependencies:
-    ember-cli-babel "^6.8.2"
+    ember-cli-babel "^7.20.0"
 
 ember-runtime-enumerable-includes-polyfill@^2.0.0:
   version "2.1.0"

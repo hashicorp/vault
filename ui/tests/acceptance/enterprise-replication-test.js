@@ -1,5 +1,5 @@
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -25,11 +25,14 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-confirm-button]');
 
     if (assert) {
-      assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
       assert.equal(
         flash.latestMessage,
         'This cluster is having replication disabled. Vault will be unavailable for a brief period and will resume service shortly.',
         'renders info flash when disabled'
+      );
+      assert.ok(
+        await waitUntil(() => currentURL() === '/vault/replication'),
+        'redirects to the replication page'
       );
     }
     await settled();
@@ -87,10 +90,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
-    await settled();
 
     // confirm that the details dashboard shows
-    assert.dom('[data-test-replication-dashboard]').exists();
+    assert.ok(await waitUntil(() => find('[data-test-replication-dashboard]')), 'details dashboard is shown');
 
     // add a secondary with a mount filter config
     await click('[data-test-replication-link="secondaries"]');
@@ -166,8 +168,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('button[type="submit"]');
 
     await pollCluster(this.owner);
+    await waitUntil(() => find('[data-test-empty-state-title]'));
     // empty state inside of know secondaries table
-    assert.dom('[data-test-empty-state-title]').exists();
     assert
       .dom('[data-test-empty-state-title]')
       .includesText(
@@ -324,7 +326,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click(enableButton);
 
-    await click('[data-test-replication-enable="true"]');
+    await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
     await settled();

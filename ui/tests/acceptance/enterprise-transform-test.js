@@ -176,6 +176,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await click('[data-test-edit-link]');
     assert.dom('.modal.is-active').exists('Confirmation modal appears');
     await rolesPage.modalConfirm();
+    await settled();
     assert.equal(
       currentURL(),
       `/vault/secrets/${backend}/edit/${transformation}`,
