@@ -103,11 +103,11 @@ module('Acceptance | auth', function (hooks) {
     this.clock.tick(authService.IDLE_TIMEOUT);
     authService.shouldRenew();
     await settled();
-    assert.dom('[data-test-allow-expiration="true"]').exists('shows expiration beacon');
+    assert.dom('[data-test-allow-expiration]').exists('shows expiration beacon');
 
     await visit('/vault/access');
 
-    assert.dom('[data-test-allow-expiration="true"]').doesNotExist('hides beacon when the api is used again');
+    assert.dom('[data-test-allow-expiration]').doesNotExist('hides beacon when the api is used again');
   });
 
   test('it shows the push notification warning only for okta auth method after submit', async function (assert) {

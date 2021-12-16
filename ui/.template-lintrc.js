@@ -13,5 +13,5 @@ module.exports = {
     'no-down-event-binding': 'warn',
     'self-closing-void-elements': 'off',
   },
-  ignore: ['lib/story-md'],
+  ignore: ['lib/story-md', 'tests/**'],
 };

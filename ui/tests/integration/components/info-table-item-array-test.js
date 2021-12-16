@@ -49,8 +49,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       />`);
 
     assert.dom('[data-test-info-table-item-array]').exists();
-    let noLinkString = document.querySelector('code').textContent;
-
+    let noLinkString = document.querySelector('code').textContent.trim();
     assert.equal(
       noLinkString.length,
       DISPLAY_ARRAY.toString().length,
