@@ -10,7 +10,6 @@
   display: grid;
   grid-template-columns: 1fr 0.3fr 1fr 1fr 1fr 0.3fr;
   grid-template-rows: 0.75fr 1fr 1fr 1fr 0.75;
-  height: 429px;
   width: 100%;
 }
 
@@ -18,7 +17,6 @@
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: 0.75fr 1fr 1fr 1fr 0.5;
-  height: 547px;
   width: 100%;
 }
 
@@ -65,7 +63,15 @@
   grid-column-end: 4;
   grid-row-start: 2;
   grid-row-end: 5;
+  margin-bottom: $spacing-s;
   box-shadow: inset 0 -1px 0 $vault-gray-200;
+
+  > h2 {
+    padding-left: $spacing-xm;
+  }
+  > p {
+    padding-left: $spacing-xm;
+  }
 }
 
 .chart-container-right {
@@ -73,7 +79,41 @@
   grid-column-end: 8;
   grid-row-start: 2;
   grid-row-end: 5;
+  margin-bottom: $spacing-s;
   box-shadow: inset 0 -1px 0 $vault-gray-200;
+
+  > h2 {
+    padding-left: $spacing-xm;
+  }
+  > p {
+    padding-left: $spacing-xm;
+  }
+}
+
+@media only screen and (max-width: 950px) {
+  .dual-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 0.75fr 1fr 1fr 0.75;
+    width: 100%;
+  }
+
+  .chart-container-left {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    margin-left: $spacing-xxl;
+    margin-right: $spacing-xxl;
+  }
+  .chart-container-right {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    margin-left: $spacing-xxl;
+    margin-right: $spacing-xxl;
+  }
 }
 
 .chart-subTitle {
@@ -96,7 +136,7 @@
 
 .timestamp {
   grid-column-start: 1;
-  grid-column-end: 2;
+  grid-column-end: 3;
   grid-row-start: 5;
   color: $ui-gray-500;
   font-size: $size-9;
@@ -105,8 +145,8 @@
 
 .legend-container {
   grid-row-start: 5;
-  grid-column-start: 3;
-  grid-column-end: 5;
+  grid-column-start: 1;
+  // grid-column-end: 5;
   height: $spacing-l;
   align-self: end;
   justify-self: center;

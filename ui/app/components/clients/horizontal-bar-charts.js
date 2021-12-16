@@ -132,7 +132,8 @@ export default class HorizontalBarChart extends Component {
       .paddingInner(0.765); // percent of the total width to reserve for padding between bars
 
     let chartSvg = select(element);
-    chartSvg.attr('viewBox', `0 0 710 ${(dataset.length + 1) * LINE_HEIGHT}`);
+    chartSvg.attr('width', '100%').attr('viewBox', `0 0 564 ${(dataset.length + 1) * LINE_HEIGHT}`);
+    // chartSvg.attr('viewBox', `0 0 700 300`);
 
     let groups = chartSvg
       .selectAll('g')
