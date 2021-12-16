@@ -106,8 +106,8 @@ Configuration:
 
   auto_detect_region=<bool>
       Enable region auto-detection if a region is not specified to avoid using
-      the CLI's preferred default region (us-east-1). Instead, it will auto detect
-      the region the order of preference numbered above.
+      the CLI's preferred default region (us-east-1). Instead, it will auto-detect
+      the region based on the order of preference described above.
 
   aws_access_key_id=<string>
       Explicit AWS access key ID
@@ -130,6 +130,7 @@ Configuration:
   region=<string>
       Explicit AWS region to reach out to for authentication request signing.
       Defaults to us-east-1 if not specified, unless auto_detect_region is enabled.
+      If specified, this value takes precedence over the auto_detect_region parameter.
 
   role=<string>
       Name of the role to request a token against
