@@ -33,6 +33,9 @@ SECRET_NAME=vault-server-tls
 
 # TMPDIR is a temporary working directory.
 TMPDIR=/tmp
+
+# CSR_NAME can be any name you want. It's the name of the CSR as seen by Kubernetes
+CSR_NAME=vault-csr
 ```
 
 1. Create a key for Kubernetes to sign.
@@ -45,8 +48,8 @@ TMPDIR=/tmp
 
    1. Create a file `${TMPDIR}/csr.conf` with the following contents:
 
-      ```
-      $ cat <<EOF >${TMPDIR}/csr.conf
+      ```bash
+      cat <<EOF >${TMPDIR}/csr.conf
       [req]
       req_extensions = v3_req
       distinguished_name = req_distinguished_name
@@ -57,10 +60,10 @@ TMPDIR=/tmp
       extendedKeyUsage = serverAuth
       subjectAltName = @alt_names
       [alt_names]
-      DNS.1 = ${SERVICE}
-      DNS.2 = ${SERVICE}.${NAMESPACE}
-      DNS.3 = ${SERVICE}.${NAMESPACE}.svc
-      DNS.4 = ${SERVICE}.${NAMESPACE}.svc.cluster.local
+      DNS.1 = *.${SERVICE}
+      DNS.2 = *.${SERVICE}.${NAMESPACE}
+      DNS.3 = *.${SERVICE}.${NAMESPACE}.svc
+      DNS.4 = *.${SERVICE}.${NAMESPACE}.svc.cluster.local
       IP.1 = 127.0.0.1
       EOF
       ```
@@ -68,32 +71,34 @@ TMPDIR=/tmp
    2. Create a CSR.
 
       ```bash
-      openssl req -new -key ${TMPDIR}/vault.key -subj "/CN=${SERVICE}.${NAMESPACE}.svc" -out ${TMPDIR}/server.csr -config ${TMPDIR}/csr.conf
+      openssl req -new \
+                  -key ${TMPDIR}/vault.key \
+                  -subj "/CN=system:node:${SERVICE}.${NAMESPACE}.svc;/O=system:nodes" \
+                  -out ${TMPDIR}/server.csr \
+                  -config ${TMPDIR}/csr.conf
       ```
 
 3. Create the certificate
 
    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
-      ```
-      $ export CSR_NAME=vault-csr
-      $ cat <<EOF >${TMPDIR}/csr.yaml
-      apiVersion: certificates.k8s.io/v1beta1
+      ```bash
+      cat <<EOF >${TMPDIR}/csr.yaml
+      apiVersion: certificates.k8s.io/v1
       kind: CertificateSigningRequest
       metadata:
         name: ${CSR_NAME}
       spec:
+        signerName: kubernetes.io/kubelet-serving
         groups:
         - system:authenticated
-        request: $(cat ${TMPDIR}/server.csr | base64 | tr -d '\n')
+        request: $(base64 ${TMPDIR}/server.csr | tr -d '\n')
         usages:
         - digital signature
         - key encipherment
         - server auth
       EOF
       ```
-
-      -> `CSR_NAME` can be any name you want. It's the name of the CSR as seen by Kubernetes
 
    2. Send the CSR to Kubernetes.
 
@@ -130,7 +135,9 @@ TMPDIR=/tmp
 3. Retrieve Kubernetes CA.
 
    ```bash
-   kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
+   kubectl get secret \
+     -o jsonpath="{.items[?(@.type==\"kubernetes.io/service-account-token\")].data['ca\.crt']}" \
+     | base64 --decode > ${TMPDIR}/vault.ca
    ```
 
 4. Create the namespace.
