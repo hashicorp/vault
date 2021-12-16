@@ -18,8 +18,9 @@
     "lint:js": "eslint . --cache",
     "lint:js:quiet": "eslint . --cache --quiet",
     "lint:js:fix": "eslint . --fix",
-    "fmt": "yarn run fmt-js && yarn run fmt-styles",
-    "fmt:js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write '{app,tests,config,lib}/**/*.js'",
+    "fmt": "npm-run-all --aggregate-output --continue-on-error --parallel fmt:*",
+    "fmt:js": "prettier --config .prettierrc.js --write '{app,tests,config,lib}/**/*.js'",
+    "fmt:hbs": "prettier --config .prettierrc.js --write '**/*.hbs'",
     "fmt:styles": "prettier --write app/styles/**/*.*",
     "start": "export VAULT_ADDR=http://localhost:8200; ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
@@ -37,7 +38,13 @@
   },
   "lint-staged": {
     "*.js": [
-      "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width 110 --write",
+      "prettier --config .prettierrc.js --write",
+      "eslint --quiet",
+      "git add"
+    ],
+    "*.hbs": [
+      "prettier --config .prettierrc.js --write",
+      "ember-template-lint --quiet",
       "git add"
     ],
     "*.scss": [
