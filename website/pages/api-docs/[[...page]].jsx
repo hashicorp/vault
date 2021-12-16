@@ -14,7 +14,6 @@ export default function DocsLayout(props) {
       product={{ name: productName, slug: productSlug }}
       baseRoute={basePath}
       staticProps={props}
-      showVersionSelect={process.env.ENABLE_VERSIONED_DOCS === 'true'}
     />
   )
 }
@@ -30,11 +29,9 @@ const { getStaticPaths, getStaticProps } = getStaticGenerationFunctions(
       }
     : {
         strategy: 'fs',
-        basePath: basePath,
         localContentDir: CONTENT_DIR,
         navDataFile: NAV_DATA_FILE,
         product: productSlug,
-        revalidate: false,
       }
 )
 
