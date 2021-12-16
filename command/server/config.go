@@ -541,7 +541,8 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
-	if err := result.parseConfig(list); err != nil {
+	entConfig := &(result.entConfig)
+	if err := entConfig.parseConfig(list); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
