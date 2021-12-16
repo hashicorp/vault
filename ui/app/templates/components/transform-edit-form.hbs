@@ -4,7 +4,7 @@
     <NamespaceReminder @mode={{this.mode}} @noun="transformation" />
     {{#each this.model.transformFieldAttrs as |attr|}}
       {{#if (or (eq attr.name "name") (eq attr.name "type"))}}
-        <label for {{attr.name}} class="is-label">
+        <label for={{attr.name}} class="is-label">
           {{attr.options.label}}
         </label>
         {{#if attr.options.subText}}
