@@ -44,7 +44,8 @@ const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
 // TRANSLATIONS:
-const TRANSLATE = { none: 0, left: -11, down: -56, xDown: 140 };
+const TRANSLATE = { left: -11 };
+const SVG_DIMENSIONS = { height: 190, width: 500 };
 
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '';
@@ -60,23 +61,22 @@ export default class TotalClientUsage extends Component {
 
     let yScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([0, 70]); // don't want 100% because will cut off
+      .range([0, 100]);
 
     let xScale = scaleBand()
       .domain(dataset.map(d => d.month))
-      .range([0, 500]) // set width to fix number of pixels
+      .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
 
     let chartSvg = select(element);
 
-    chartSvg.attr('viewBox', `-50 0 600 190`); // set aspect ratio
+    chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
-      .attr('transform', `translate(${TRANSLATE.none}, ${TRANSLATE.down})`)
       .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
     groups
@@ -90,10 +90,10 @@ export default class TotalClientUsage extends Component {
       .attr('y', data => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
 
     // MAKE AXES //
-    let svgChartSize = chartSvg.node().getBBox(); // getBBox will return the width and height of svg element
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([svgChartSize.height, 0]);
+      .range([`${SVG_DIMENSIONS.height}`, 0]);
+
     // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
     let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.
 
@@ -101,16 +101,16 @@ export default class TotalClientUsage extends Component {
     let yAxis = axisLeft(yAxisScale)
       .ticks(7)
       .tickPadding(10)
-      .tickSizeInner(-svgChartSize.width) // makes grid lines correct length
+      .tickSizeInner(-SVG_DIMENSIONS.width) // makes grid lines correct length
       .tickFormat(formatNumbers);
 
-    yAxis(chartSvg.append('g')); // .attr('transform', `translate(${TRANSLATE.none}, ${TRANSLATE.down})`));
+    yAxis(chartSvg.append('g'));
 
     // customize x-axis
-    let xAxisGenerator = axisBottom(xScale);
+    let xAxisGenerator = axisBottom(xScale).tickSize(0);
     let xAxis = chartSvg.append('g').call(xAxisGenerator);
 
-    xAxis.attr('transform', `translate(${TRANSLATE.none}, ${TRANSLATE.xDown})`);
+    xAxis.attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`);
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
@@ -129,7 +129,7 @@ export default class TotalClientUsage extends Component {
       .append('rect')
       .style('cursor', 'pointer')
       .attr('class', 'tooltip-rect')
-      .attr('height', `${svgChartSize.height}`)
+      .attr('height', '100%')
       .attr('width', '30px') // three times width
       .attr('y', '0') // start at bottom
       .attr('x', data => xScale(data.month)); // not data.data because this is not stacked data

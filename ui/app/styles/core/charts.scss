@@ -9,7 +9,7 @@
 .single-chart-grid {
   display: grid;
   grid-template-columns: 1fr 0.3fr 3.7fr;
-  grid-template-rows: 0.75fr 1fr 1fr 1fr 0.25fr;
+  grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
   width: 100%;
 }
 
@@ -49,7 +49,7 @@
   grid-row-start: 2;
   grid-row-end: span 3;
   justify-self: center;
-  max-height: 305px;
+  height: 341px;
   max-width: 730px;
 
   svg.chart {
@@ -94,19 +94,19 @@
 
 .chart-subTitle {
   grid-column-start: 1;
-  grid-column-end: 2;
+  grid-column-end: 3;
   grid-row-start: 2;
 }
 
 .data-details-top {
   grid-column-start: 1;
-  grid-column-end: 2;
+  grid-column-end: 3;
   grid-row-start: 3;
 }
 
 .data-details-bottom {
   grid-column-start: 1;
-  grid-column-end: 2;
+  grid-column-end: 3;
   grid-row-start: 4;
 }
 
