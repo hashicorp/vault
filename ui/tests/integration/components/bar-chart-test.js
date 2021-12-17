@@ -1,12 +1,12 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { findAll, render } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-module('Integration | Component | bar-chart', function(hooks) {
+module('Integration | Component | bar-chart', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     let dataset = [
       {
         namespace_id: 'root',
@@ -47,7 +47,7 @@ module('Integration | Component | bar-chart', function(hooks) {
     ];
 
     let flattenData = () => {
-      return dataset.map(d => {
+      return dataset.map((d) => {
         return {
           label: d['namespace_path'],
           non_entity_tokens: d['counts']['non_entity_tokens'],
@@ -63,9 +63,9 @@ module('Integration | Component | bar-chart', function(hooks) {
 
     await render(hbs`
       <BarChart 
-        @title={{title}}
-        @description={{description}}
-        @dataset={{dataset}}
+        @title={{this.title}}
+        @description={{this.description}}
+        @dataset={{this.dataset}}
         @mapLegend={{array
         (hash key="non_entity_tokens" label="Active direct tokens")
         (hash key="distinct_entities" label="Unique Entities")}}
@@ -80,6 +80,6 @@ module('Integration | Component | bar-chart', function(hooks) {
     assert
       .dom('[data-test-bar-chart] .chart-description')
       .hasText('Each namespaces client count includes clients in child namespaces.', 'displays description');
-    assert.equal(findAll('.data-bar').length, 8, 'bars render');
+    assert.dom('.data-bar').exists({ count: 8 }, 'bars render');
   });
 });

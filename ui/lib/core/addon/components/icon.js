@@ -30,10 +30,10 @@ export default Component.extend({
   },
 
   // favor flight icon set and fall back to structure icons if not found
-  isFlightIcon: computed('name', function() {
+  isFlightIcon: computed('name', function () {
     return this.name ? flightIconNames.includes(this.name) : false;
   }),
-  hsIconClass: computed('size', function() {
+  hsIconClass: computed('size', function () {
     return this.size === '24' ? 'hs-icon-xl' : 'hs-icon-l';
   }),
 });

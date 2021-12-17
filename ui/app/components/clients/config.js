@@ -50,7 +50,7 @@ export default class ConfigComponent extends Component {
     return content;
   }
 
-  @(task(function*() {
+  @(task(function* () {
     try {
       yield this.args.model.save();
     } catch (err) {

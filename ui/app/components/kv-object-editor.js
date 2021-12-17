@@ -51,15 +51,15 @@ export default Component.extend({
 
   kvData: null,
 
-  kvDataAsJSON: computed('kvData', 'kvData.[]', function() {
+  kvDataAsJSON: computed('kvData', 'kvData.[]', function () {
     return this.kvData.toJSON();
   }),
 
-  kvDataIsAdvanced: computed('kvData', 'kvData.[]', function() {
+  kvDataIsAdvanced: computed('kvData', 'kvData.[]', function () {
     return this.kvData.isAdvanced();
   }),
 
-  kvHasDuplicateKeys: computed('kvData', 'kvData.@each.name', function() {
+  kvHasDuplicateKeys: computed('kvData', 'kvData.@each.name', function () {
     let data = this.kvData;
     return data.uniqBy('name').length !== data.get('length');
   }),

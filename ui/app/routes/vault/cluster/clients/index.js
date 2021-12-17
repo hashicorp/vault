@@ -44,7 +44,7 @@ export default Route.extend(ClusterRoute, {
   },
 
   model(params) {
-    let config = this.store.queryRecord('clients/config', {}).catch(e => {
+    let config = this.store.queryRecord('clients/config', {}).catch((e) => {
       console.debug(e);
       // swallowing error so activity can show if no config permissions
       return {};
@@ -65,7 +65,7 @@ export default Route.extend(ClusterRoute, {
       // eslint-disable-next-line ember/no-controller-access-in-routes
       let controller = this.controllerFor('vault.cluster.clients.index');
       controller.set('currentlyLoading', true);
-      transition.promise.finally(function() {
+      transition.promise.finally(function () {
         controller.set('currentlyLoading', false);
       });
     },

@@ -23,10 +23,10 @@ export default Route.extend(UnloadModel, {
           responsePath: 'data.keys',
           page: Number(params?.page) || 1,
         })
-        .then(model => {
+        .then((model) => {
           return model;
         })
-        .catch(err => {
+        .catch((err) => {
           if (err.httpStatus === 404) {
             return [];
           } else {

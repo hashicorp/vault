@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled, triggerEvent } from '@ember/test-helpers';
+import { render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const VALUE = 'test value';
@@ -23,10 +23,10 @@ const routerService = Service.extend({
   },
 });
 
-module('Integration | Component | InfoTableRow', function(hooks) {
+module('Integration | Component | InfoTableRow', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('value', VALUE);
     this.set('label', LABEL);
     this.set('type', TYPE);
@@ -35,15 +35,15 @@ module('Integration | Component | InfoTableRow', function(hooks) {
     this.router = this.owner.lookup('service:router');
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.owner.unregister('service:store');
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<InfoTableRow
-        @value={{value}}
-        @label={{label}}
-        @defaultShown={{default}}
+        @value={{this.value}}
+        @label={{this.label}}
+        @defaultShown={{this.default}}
       />`);
 
     assert.dom('[data-test-component="info-table-row"]').exists();
@@ -55,37 +55,37 @@ module('Integration | Component | InfoTableRow', function(hooks) {
       .doesNotExist('does not render if no value and alwaysRender is false (even if default exists)');
   });
 
-  test('it renders a tooltip', async function(assert) {
+  test('it renders a tooltip', async function (assert) {
     this.set('tooltipText', 'Tooltip text!');
 
     await render(hbs`<InfoTableRow
-        @value={{value}}
-        @label={{label}}
-        @tooltipText={{tooltipText}}
+        @value={{this.value}}
+        @label={{this.label}}
+        @tooltipText={{this.tooltipText}}
       />`);
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
-    await settled();
+
     let tooltip = document.querySelector('div.box').textContent.trim();
     assert.equal(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
 
-  test('it should copy tooltip', async function(assert) {
+  test('it should copy tooltip', async function (assert) {
     assert.expect(4);
 
     this.set('isCopyable', false);
 
     await render(hbs`
       <InfoTableRow 
-        @label={{label}}
-        @value={{value}} 
+        @label={{this.label}}
+        @value={{this.value}} 
         @tooltipText="Foo bar"
-        @isTooltipCopyable={{isCopyable}}
+        @isTooltipCopyable={{this.isCopyable}}
       />
     `);
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
-    await settled();
+
     assert.dom('[data-test-tooltip-copy]').hasAttribute('disabled', '', 'Tooltip copy button is disabled');
     assert
       .dom('[data-test-tooltip-copy]')
@@ -95,38 +95,38 @@ module('Integration | Component | InfoTableRow', function(hooks) {
     assert.dom('[data-test-tooltip-copy]').hasClass('has-pointer', 'Pointer class applied to copy button');
   });
 
-  test('it renders a string with no link if isLink is true and the item type is not an array.', async function(assert) {
+  test('it renders a string with no link if isLink is true and the item type is not an array.', async function (assert) {
     // This could be changed in the component so that it adds a link for any item type, but right now it should only add a link if item type is an array.
     await render(hbs`<InfoTableRow
-        @value={{value}}
-        @label={{label}}
+        @value={{this.value}}
+        @label={{this.label}}
         @isLink={{true}}
       />`);
     assert.dom('[data-test-row-value]').hasText(VALUE, 'renders value in code element and not in a tag');
   });
 
-  test('it renders links if isLink is true and type is array', async function(assert) {
+  test('it renders links if isLink is true and type is array', async function (assert) {
     this.set('valueArray', ['valueArray']);
     await render(hbs`<InfoTableRow
-      @value={{valueArray}}
-      @label={{label}}
+      @value={{this.valueArray}}
+      @label={{this.label}}
       @isLink={{true}}
-      @type={{type}}
+      @type={{this.type}}
     />`);
 
     assert.dom('[data-test-item="array"]').hasText('valueArray', 'Confirm link with item value exist');
   });
 
-  test('it renders as expected if a label and/or value do not exist', async function(assert) {
+  test('it renders as expected if a label and/or value do not exist', async function (assert) {
     this.set('value', VALUE);
     this.set('label', '');
     this.set('default', '');
 
     await render(hbs`<InfoTableRow
-      @value={{value}}
-      @label={{label}}
+      @value={{this.value}}
+      @label={{this.label}}
       @alwaysRender={{true}}
-      @defaultShown={{default}}
+      @defaultShown={{this.default}}
     />`);
 
     assert.dom('div.column.is-one-quarter .flight-icon').exists('Renders a dash (-) for the label');
@@ -151,10 +151,10 @@ module('Integration | Component | InfoTableRow', function(hooks) {
     assert.equal(dashCount, 2, 'Renders dash (-) when both label and value do not exist (and no defaults)');
   });
 
-  test('block content overrides any passed in value content', async function(assert) {
+  test('block content overrides any passed in value content', async function (assert) {
     await render(hbs`<InfoTableRow
-      @value={{value}}
-      @label={{label}}
+      @value={{this.value}}
+      @label={{this.label}}
       @alwaysRender={{true}}>
       Block content is here 
       </InfoTableRow>`);

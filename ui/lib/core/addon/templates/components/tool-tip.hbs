@@ -1,29 +1,29 @@
-{{#basic-dropdown-hover
-  renderInPlace=renderInPlace
-  verticalPosition=verticalPosition
-  horizontalPosition=horizontalPosition
-  matchTriggerWidth=matchTriggerWidth
-  triggerComponent=triggerComponent
-  contentComponent=contentComponent
-  calculatePosition=calculatePosition
-  onOpen=onOpen
-  onClose=onClose
-  onFocus=onFocus
-  calculateInPlacePosition=calculateInPlacePosition
+<BasicDropdown
+  @renderInPlace={{this.renderInPlace}}
+  @verticalPosition={{this.verticalPosition}}
+  @horizontalPosition={{this.horizontalPosition}}
+  @matchTriggerWidth={{this.matchTriggerWidth}}
+  @triggerComponent={{this.triggerComponent}}
+  @contentComponent={{this.contentComponent}}
+  @calculatePosition={{this.calculatePosition}}
+  @onOpen={{this.onOpen}}
+  @onClose={{this.onClose}}
+  @onFocus={{this.onFocus}}
+  @calculateInPlacePosition={{this.calculateInPlacePosition}}
+  {{on "mousedown" this.prevent}}
+  {{on "mouseenter" this.open}}
+  {{on "mouseleave" this.closeLater}}
   as |dd|
-}}
-  {{yield (assign
-    dd
-    (hash
-      trigger=(component dd.trigger
-        onMouseDown=(action "prevent")
-        onMouseEnter=(action "open")
-        onMouseLeave=(action "close")
-      )
-      content=(component dd.content
-        onMouseEnter=(action "open")
-        onMouseLeave=(action "close")
+>
+  {{yield
+    (assign
+      dd
+      (hash
+        Trigger=(component
+          dd.Trigger onMouseDown=(action "prevent") onMouseEnter=(action "open") onMouseLeave=(action "close")
+        )
+        Content=(component dd.Content onMouseEnter=(action "open") onMouseLeave=(action "close"))
       )
     )
-  )}}
-{{/basic-dropdown-hover}}
+  }}
+</BasicDropdown>

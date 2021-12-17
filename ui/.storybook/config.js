@@ -7,8 +7,8 @@ function loadStories() {
   // automatically import all files ending in *.stories.js
   const appStories = require.context('../stories', true, /.stories.js$/);
   const addonAndRepoStories = require.context('../lib', true, /.stories.js$/);
-  appStories.keys().forEach(filename => appStories(filename));
-  addonAndRepoStories.keys().forEach(filename => addonAndRepoStories(filename));
+  appStories.keys().forEach((filename) => appStories(filename));
+  addonAndRepoStories.keys().forEach((filename) => addonAndRepoStories(filename));
 }
 
 addParameters({
@@ -16,7 +16,7 @@ addParameters({
   options: { theme },
 });
 
-addDecorator(storyFn => {
+addDecorator((storyFn) => {
   const { template, context } = storyFn();
 
   // flight icon sprite must be inserted into dom for icon lookup via use element

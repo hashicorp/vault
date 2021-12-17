@@ -28,7 +28,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
         pageFilter: params.pageFilter,
         responsePath: 'data.keys',
       })
-      .catch(err => {
+      .catch((err) => {
         // acls will never be empty, but sentinel policies can be
         if (err.httpStatus === 404 && this.policyType() !== 'acl') {
           return [];

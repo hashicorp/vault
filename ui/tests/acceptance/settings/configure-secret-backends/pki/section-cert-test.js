@@ -5,10 +5,10 @@ import page from 'vault/tests/pages/settings/configure-secret-backends/pki/secti
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | settings/configure/secrets/pki/cert', function(hooks) {
+module('Acceptance | settings/configure/secrets/pki/cert', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
@@ -69,7 +69,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     return path;
   };
 
-  test('cert config: generate', async function(assert) {
+  test('cert config: generate', async function (assert) {
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
@@ -94,7 +94,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     );
   });
 
-  test('EC cert config: generate', async function(assert) {
+  test('EC cert config: generate', async function (assert) {
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
@@ -105,7 +105,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     assert.dom('[data-test-warning]').exists('Info banner renders when unable to parse certificate metadata');
   });
 
-  test('cert config: upload', async function(assert) {
+  test('cert config: upload', async function (assert) {
     await mountAndNav(assert);
     await settled();
     assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
@@ -118,7 +118,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     );
   });
 
-  test('cert config: sign intermediate and set signed intermediate', async function(assert) {
+  test('cert config: sign intermediate and set signed intermediate', async function (assert) {
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();

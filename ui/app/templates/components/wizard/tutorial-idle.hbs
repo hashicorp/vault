@@ -1,9 +1,4 @@
-<WizardContent
-  @headerText="Welcome to Vault"
-  @glyph="tour"
-  @class="collapsed"
-  @hidePopup={{true}}
->
+<WizardContent @headerText="Welcome to Vault" @glyph="tour" @class="collapsed" @hidePopup={{true}}>
   <button type="button" class="button is-transparent icon dismiss-collapsed" {{action @onDismiss}}>
     <Icon @name="x" aria-label="Close" />
   </button>
