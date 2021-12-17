@@ -208,96 +208,96 @@ export default class HorizontalBarChart extends Component {
       select(elementA).attr(`${attr}`) === elementB.getAttribute(`${attr}`);
 
     // MOUSE AND CLICK EVENTS FOR DATA BARS
-    // actionBars
-    //   .on('click', function(chartData) {
-    //     if (handleClick) {
-    //       handleClick(chartData);
-    //     }
-    //   })
-    //   .on('mouseover', function() {
-    //     select(this).style('opacity', 1);
-    //     dataBars
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
-    //     // TODO: change to use modal instead of tooltip div
-    //     select('.chart-tooltip')
-    //       .transition()
-    //       .duration(200)
-    //       .style('opacity', 1);
-    //   })
-    //   .on('mouseout', function() {
-    //     select(this).style('opacity', 0);
-    //     select('.chart-tooltip').style('opacity', 0);
-    //     dataBars
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
-    //   })
-    //   .on('mousemove', function(chartData) {
-    //     select('.chart-tooltip')
-    //       .style('opacity', 1)
-    //       .style('max-width', '200px')
-    //       .style('left', `${event.pageX - 325}px`)
-    //       .style('top', `${event.pageY - 140}px`)
-    //       .text(
-    //         `${Math.round((chartData.total * 100) / 19000)}% of total client counts:
-    //         ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
-    //       `
-    //       );
-    //   });
+    actionBars
+      .on('click', function(chartData) {
+        if (handleClick) {
+          handleClick(chartData);
+        }
+      })
+      .on('mouseover', function() {
+        select(this).style('opacity', 1);
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+        // TODO: change to use modal instead of tooltip div
+        select('.chart-tooltip')
+          .transition()
+          .duration(200)
+          .style('opacity', 1);
+      })
+      .on('mouseout', function() {
+        select(this).style('opacity', 0);
+        select('.chart-tooltip').style('opacity', 0);
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+      })
+      .on('mousemove', function(chartData) {
+        select('.chart-tooltip')
+          .style('opacity', 1)
+          .style('max-width', '200px')
+          .style('left', `${event.pageX - 325}px`)
+          .style('top', `${event.pageY - 140}px`)
+          .text(
+            `${Math.round((chartData.total * 100) / 19000)}% of total client counts:
+            ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
+          `
+          );
+      });
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
-    // yLegendBars
-    //   .on('click', function(chartData) {
-    //     if (handleClick) {
-    //       handleClick(chartData);
-    //     }
-    //   })
-    //   .on('mouseover', function(chartData) {
-    //     dataBars
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
-    //     actionBarSelection
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('opacity', '1');
-    //     if (chartData.label.length >= CHAR_LIMIT) {
-    //       select('.chart-tooltip')
-    //         .transition()
-    //         .duration(200)
-    //         .style('opacity', 1);
-    //     }
-    //   })
-    //   .on('mouseout', function() {
-    //     select('.chart-tooltip').style('opacity', 0);
-    //     dataBars
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
-    //     actionBarSelection
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('opacity', '0');
-    //   })
-    //   .on('mousemove', function(chartData) {
-    //     if (chartData.label.length >= CHAR_LIMIT) {
-    //       select('.chart-tooltip')
-    //         .style('left', `${event.pageX - 300}px`)
-    //         .style('top', `${event.pageY - 100}px`)
-    //         .text(`${chartData.label}`)
-    //         .style('max-width', 'fit-content');
-    //     } else {
-    //       select('.chart-tooltip').style('opacity', 0);
-    //     }
-    //   });
+    yLegendBars
+      .on('click', function(chartData) {
+        if (handleClick) {
+          handleClick(chartData);
+        }
+      })
+      .on('mouseover', function(chartData) {
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '1');
+        if (chartData.label.length >= CHAR_LIMIT) {
+          select('.chart-tooltip')
+            .transition()
+            .duration(200)
+            .style('opacity', 1);
+        }
+      })
+      .on('mouseout', function() {
+        select('.chart-tooltip').style('opacity', 0);
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '0');
+      })
+      .on('mousemove', function(chartData) {
+        if (chartData.label.length >= CHAR_LIMIT) {
+          select('.chart-tooltip')
+            .style('left', `${event.pageX - 300}px`)
+            .style('top', `${event.pageY - 100}px`)
+            .text(`${chartData.label}`)
+            .style('max-width', 'fit-content');
+        } else {
+          select('.chart-tooltip').style('opacity', 0);
+        }
+      });
 
     // add client count total values to the right
     chartSvg
