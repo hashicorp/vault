@@ -144,7 +144,14 @@ Any valid URI is accepted, these values support globbing.`,
 				},
 			},
 
-			"allowed_other_sans": {
+			"allowed_uri_sans_template": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `If set, Allowed URI SANs can be specified using identity template policies.
+				Non-templated URI SANs are also permitted.`,
+				Default: false,
+			},
+
+			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -199,10 +206,11 @@ protection use. Defaults to false.`,
 
 			"key_bits": {
 				Type:    framework.TypeInt,
-				Default: 2048,
-				Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
+				Default: 0,
+				Description: `The number of bits to use. Allowed values are
+0 (universal default); with rsa key_type: 2048 (default), 3072, or
+4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
+ed25519.`,
 			},
 
 			"signature_bits": &framework.FieldSchema{
@@ -564,6 +572,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowSubdomains:               data.Get("allow_subdomains").(bool),
 		AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
+		AllowedURISANsTemplate:        data.Get("allowed_uri_sans_template").(bool),
 		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
 		AllowedURISANs:                data.Get("allowed_uri_sans").([]string),
@@ -615,17 +624,13 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
 	}
 
-	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
-		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
-	}
-
 	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
 		return logical.ErrorResponse(
 			`"ttl" value must be less than "max_ttl" value`,
 		), nil
 	}
 
-	if err := certutil.ValidateKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, &entry.SignatureBits); err != nil {
+	if entry.KeyBits, entry.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, entry.SignatureBits); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -786,6 +791,7 @@ type roleEntry struct {
 	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
 	AllowedURISANs                []string      `json:"allowed_uri_sans" mapstructure:"allowed_uri_sans"`
+	AllowedURISANsTemplate        bool          `json:"allowed_uri_sans_template"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
@@ -807,6 +813,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"allow_subdomains":                   r.AllowSubdomains,
 		"allow_glob_domains":                 r.AllowGlobDomains,
 		"allow_any_name":                     r.AllowAnyName,
+		"allowed_uri_sans_template":          r.AllowedURISANsTemplate,
 		"enforce_hostnames":                  r.EnforceHostnames,
 		"allow_ip_sans":                      r.AllowIPSANs,
 		"server_flag":                        r.ServerFlag,

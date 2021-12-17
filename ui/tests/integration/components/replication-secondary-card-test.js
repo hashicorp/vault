@@ -17,15 +17,15 @@ const REPLICATION_DETAILS = {
   ],
 };
 
-module('Integration | Component | replication-secondary-card', function(hooks) {
+module('Integration | Component | replication-secondary-card', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('title', TITLE);
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title={{title}} />`
     );
@@ -36,7 +36,7 @@ module('Integration | Component | replication-secondary-card', function(hooks) {
       .includesText(REPLICATION_DETAILS.connection_state, `shows the correct connection value`);
   });
 
-  test('it renders the Primary Cluster card when title is not Status', async function(assert) {
+  test('it renders the Primary Cluster card when title is not Status', async function (assert) {
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
     );
@@ -49,7 +49,7 @@ module('Integration | Component | replication-secondary-card', function(hooks) {
     assert.equal(url, expectedUrl, 'it renders a link to the primary cluster UI');
   });
 
-  test('it does not render a link to the primary cluster UI when the primary api address or known primaries are unknown', async function(assert) {
+  test('it does not render a link to the primary cluster UI when the primary api address or known primaries are unknown', async function (assert) {
     this.set('replicationDetails', {});
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
@@ -58,7 +58,7 @@ module('Integration | Component | replication-secondary-card', function(hooks) {
     assert.dom('[data-test-primary-link]').doesNotExist();
   });
 
-  test('it renders with emptyState if no knownPrimaryClusterAddrs are set', async function(assert) {
+  test('it renders with emptyState if no knownPrimaryClusterAddrs are set', async function (assert) {
     this.set('replicationDetails', []);
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
@@ -66,14 +66,14 @@ module('Integration | Component | replication-secondary-card', function(hooks) {
     assert.dom('[data-test-component="empty-state"]').exists();
   });
 
-  test('it renders tooltip with check-circle-outline when state is stream-wals', async function(assert) {
+  test('it renders tooltip with check-circle-outline when state is stream-wals', async function (assert) {
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title={{title}} />`
     );
     assert.dom('[data-test-glyph]').hasClass('has-text-success', `shows success icon`);
   });
 
-  test('it renders hasErrorMessage when state is idle', async function(assert) {
+  test('it renders hasErrorMessage when state is idle', async function (assert) {
     const stateError = {
       state: 'idle',
       connection_state: 'ready',
@@ -88,7 +88,7 @@ module('Integration | Component | replication-secondary-card', function(hooks) {
       .includesText('Please check your server logs.', 'show correct error message');
   });
 
-  test('it renders hasErrorMessage when connection is transient_failure', async function(assert) {
+  test('it renders hasErrorMessage when connection is transient_failure', async function (assert) {
     const connectionError = {
       state: 'stream-wals',
       connection_state: 'transient_failure',

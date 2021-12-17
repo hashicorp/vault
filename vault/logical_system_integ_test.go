@@ -9,13 +9,17 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	lplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
@@ -301,7 +305,6 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		if err != nil {
 			t.Fatalf("err:%v", err)
 		}
-
 	}
 
 	// Trigger a sha256 mismatch or missing plugin error
@@ -855,4 +858,41 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func TestSystemBackend_HAStatus(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	inm, err := inmem.NewTransactionalInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conf := &vault.CoreConfig{
+		Physical:   inm,
+		HAPhysical: inmha.(physical.HABackend),
+	}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	}
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.RetryUntil(t, 15*time.Second, func() error {
+		// Use standby deliberately to make sure it forwards
+		client := cluster.Cores[1].Client
+		resp, err := client.Sys().HAStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(resp.Nodes) != len(cluster.Cores) {
+			return fmt.Errorf("expected %d nodes, got %d", len(cluster.Cores), len(resp.Nodes))
+		}
+		return nil
+	})
 }

@@ -4,8 +4,8 @@ import { get, computed } from '@ember/object';
 import Component from '@ember/component';
 import layout from '../templates/components/replication-mode-summary';
 
-const replicationAttr = function(attr) {
-  return computed(`cluster.{dr,performance}.${attr}`, 'cluster', 'mode', function() {
+const replicationAttr = function (attr) {
+  return computed(`cluster.{dr,performance}.${attr}`, 'cluster', 'mode', function () {
     const { mode, cluster } = this;
     return get(cluster, `${mode}.${attr}`);
   });
@@ -25,7 +25,7 @@ export default Component.extend({
     'mode',
     'replicationEnabled',
     'version.hasPerfReplication',
-    function() {
+    function () {
       const display = this.display;
       const mode = this.mode;
       if (mode === 'performance' && display === 'menu' && this.version.hasPerfReplication === false) {
@@ -37,7 +37,7 @@ export default Component.extend({
       return null;
     }
   ),
-  target: computed('isPerformance', 'version.hasPerfReplication', function() {
+  target: computed('isPerformance', 'version.hasPerfReplication', function () {
     if (this.isPerformance && this.version.hasPerfReplication === false) {
       return '_blank';
     }
@@ -55,7 +55,7 @@ export default Component.extend({
   clusterIdDisplay: replicationAttr('clusterIdDisplay'),
   mode: null,
   cluster: null,
-  modeState: computed('cluster', 'mode', function() {
+  modeState: computed('cluster', 'mode', function () {
     const { cluster, mode } = this;
     const clusterState = cluster[mode].state;
     return clusterState;

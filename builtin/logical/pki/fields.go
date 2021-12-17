@@ -250,12 +250,13 @@ the private key!`,
 
 	fields["key_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
-		Default: 2048,
-		Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
+		Default: 0,
+		Description: `The number of bits to use. Allowed values are
+0 (universal default); with rsa key_type: 2048 (default), 3072, or
+4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
+ed25519.`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Value: 2048,
+			Value: 0,
 		},
 	}
 

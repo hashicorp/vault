@@ -288,6 +288,20 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			},
 		},
 		{
+			name: "valid token request with empty nonce in authorize request",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					delete(req.Data, "nonce")
+					return req
+				}(),
+				tokenReq: testTokenReq(s, "", clientID, clientSecret),
+			},
+		},
+		{
 			name: "valid token request",
 			args: args{
 				clientReq:     testClientReq(s),
@@ -404,9 +418,39 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			require.Equal(t, "Bearer", tokenRes.TokenType)
 			require.NotEmpty(t, tokenRes.AccessToken)
 			require.NotEmpty(t, tokenRes.IDToken)
-			require.NotEmpty(t, tokenRes.ExpiresIn)
+			require.Equal(t, int64(86400), tokenRes.ExpiresIn)
 			require.Empty(t, tokenRes.Error)
 			require.Empty(t, tokenRes.ErrorDescription)
+
+			// Parse the claims from the ID token payload
+			parts := strings.Split(tokenRes.IDToken, ".")
+			require.Equal(t, 3, len(parts))
+			payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+			require.NoError(t, err)
+			claims := make(map[string]interface{})
+			require.NoError(t, json.Unmarshal(payload, &claims))
+
+			// Assert that reserved claims are present in the ID token.
+			// Optional reserved claims are asserted on conditionally.
+			for _, c := range reservedClaims {
+				switch c {
+				case "nonce":
+					// nonce must equal the nonce provided in the authorize request (including empty)
+					require.EqualValues(t, tt.args.authorizeReq.Data[c], claims[c])
+
+				case "auth_time":
+					// auth_time must exist if max_age provided in the authorize request
+					if _, ok := tt.args.authorizeReq.Data["max_age"]; ok {
+						require.EqualValues(t, creationTime.Unix(), claims[c])
+					} else {
+						require.Empty(t, claims[c])
+					}
+
+				default:
+					// other reserved claims must be present in all cases
+					require.NotEmpty(t, claims[c])
+				}
+			}
 		})
 	}
 }
@@ -580,21 +624,6 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthInvalidRequest,
 		},
 		{
-			name: "invalid authorize request with missing nonce",
-			args: args{
-				entityID:      entityID,
-				clientReq:     testClientReq(s),
-				providerReq:   testProviderReq(s, clientID),
-				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq: func() *logical.Request {
-					req := testAuthorizeReq(s, clientID)
-					req.Data["nonce"] = ""
-					return req
-				}(),
-			},
-			wantErr: ErrAuthInvalidRequest,
-		},
-		{
 			name: "invalid authorize request with request parameter provided",
 			args: args{
 				entityID:      entityID,
@@ -682,6 +711,20 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				}(),
 			},
 			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "valid authorize request with empty nonce",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					delete(req.Data, "nonce")
+					return req
+				}(),
+			},
 		},
 		{
 			name: "active re-authentication required with token creation time exceeding max_age requirement",
@@ -842,7 +885,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 }
 
 // setupOIDCCommon creates all of the resources needed to test a Vault OIDC provider.
-// Returns the entity ID, group ID, and client ID to be used in tests.
+// Returns the entity ID, group ID, client ID, client secret to be used in tests.
 func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, string, string) {
 	t.Helper()
 	ctx := namespace.RootContext(nil)

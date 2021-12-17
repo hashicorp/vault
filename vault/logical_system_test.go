@@ -2283,7 +2283,7 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 			t.Fatal("no sum key found in returned data")
 		}
 		if sum.(string) != expected {
-			t.Fatal("mismatched hashes")
+			t.Fatalf("mismatched hashes: got: %s, expect: %s", sum.(string), expected)
 		}
 	}
 
@@ -2308,6 +2308,20 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 	// Test returning as base64
 	req.Data["format"] = "base64"
 	doRequest(req, false, "2dOA8puXrWodkumH2D+loCZTMB4QBt0rzVGvpZqRR+nK7a+JUhq8DwtoKtzUf7USuDQ8g0oy8yb+m+8AVCzohw==")
+
+	// Test SHA-3
+	req.Data["format"] = "hex"
+	req.Data["algorithm"] = "sha3-224"
+	doRequest(req, false, "ced91e69d89c837e87cff960bd64fd9b9f92325fb9add8988d33d007")
+
+	req.Data["algorithm"] = "sha3-256"
+	doRequest(req, false, "e4bd866ec3fa52df3b7842aa97b448bc859a7606cefcdad1715847f4b82a6c93")
+
+	req.Data["algorithm"] = "sha3-384"
+	doRequest(req, false, "715cd38cbf8d0bab426b6a084d649760be555dd64b34de6db148a3fbf2cd2aa5d8b03eb6eda73a3e9a8769c00b4c2113")
+
+	req.Data["algorithm"] = "sha3-512"
+	doRequest(req, false, "f7cac5ad830422a5408b36a60a60620687be180765a3e2895bc3bdbd857c9e08246c83064d4e3612f0cb927f3ead208413ab98624bf7b0617af0f03f62080976")
 
 	// Test bad input/format/algorithm
 	req.Data["format"] = "base92"

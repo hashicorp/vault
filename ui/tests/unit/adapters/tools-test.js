@@ -2,10 +2,10 @@ import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Adapter | tools', function(hooks) {
+module('Unit | Adapter | tools', function (hooks) {
   setupTest(hooks);
 
-  test('wrapping api urls', function(assert) {
+  test('wrapping api urls', function (assert) {
     let url, method, options;
     let adapter = this.owner.factoryFor('adapter:tools').create({
       ajax: (...args) => {
@@ -38,7 +38,7 @@ module('Unit | Adapter | tools', function(hooks) {
     assert.deepEqual({ data, clientToken }, options, 'wrapping:rewrap options OK');
   });
 
-  test('tools api urls', function(assert) {
+  test('tools api urls', function (assert) {
     let url, method;
     let adapter = this.owner.factoryFor('adapter:tools').create({
       ajax: (...args) => {

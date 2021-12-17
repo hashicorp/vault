@@ -3,21 +3,21 @@ import { setupTest } from 'ember-qunit';
 import testCases from './_test-cases';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
-module('Unit | Adapter | identity/entity-alias', function(hooks) {
+module('Unit | Adapter | identity/entity-alias', function (hooks) {
   setupTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = apiStub();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
   const cases = testCases('identit/entity-alias');
 
-  cases.forEach(testCase => {
-    test(`entity-alias#${testCase.adapterMethod}`, function(assert) {
+  cases.forEach((testCase) => {
+    test(`entity-alias#${testCase.adapterMethod}`, function (assert) {
       assert.expect(2);
       let adapter = this.owner.lookup('adapter:identity/entity-alias');
       adapter[testCase.adapterMethod](...testCase.args);

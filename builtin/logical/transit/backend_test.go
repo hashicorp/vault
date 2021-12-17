@@ -989,6 +989,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               false,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -1009,6 +1010,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               true,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err = b.HandleRequest(context.Background(), req)

@@ -35,7 +35,7 @@ async function processLines(input, eachLine = () => {}) {
   }
 }
 
-(async function() {
+(async function () {
   try {
     let vault = run(
       'vault',
@@ -49,7 +49,7 @@ async function processLines(input, eachLine = () => {}) {
       ],
       false
     );
-    processLines(vault.stdout, function(line) {
+    processLines(vault.stdout, function (line) {
       if (written) {
         output = null;
         return;
@@ -71,7 +71,7 @@ async function processLines(input, eachLine = () => {}) {
         fs.writeFile(
           path.join(process.cwd(), 'tests/helpers/vault-keys.js'),
           `export default ${JSON.stringify({ unseal, root }, null, 2)}`,
-          err => {
+          (err) => {
             if (err) throw err;
           }
         );

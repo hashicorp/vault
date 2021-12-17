@@ -4,21 +4,21 @@ import { render, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-module('Integration | Component | ttl-form', function(hooks) {
+module('Integration | Component | ttl-form', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.changeSpy = sinon.spy();
     this.set('onChange', this.changeSpy);
   });
 
-  test('it shows no initial time and initial unit of s when not time or unit passed in', async function(assert) {
+  test('it shows no initial time and initial unit of s when not time or unit passed in', async function (assert) {
     await render(hbs`<TtlForm @onChange={{onChange}} />`);
     assert.dom('[data-test-ttlform-value]').hasValue('');
     assert.dom('[data-test-select="ttl-unit"]').hasValue('s');
   });
 
-  test('it calls the change fn with the correct values', async function(assert) {
+  test('it calls the change fn with the correct values', async function (assert) {
     await render(hbs`<TtlForm @onChange={{onChange}} @unit="m" />`);
 
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'unit value initially shows m (minutes)');
@@ -33,7 +33,7 @@ module('Integration | Component | ttl-form', function(hooks) {
     );
   });
 
-  test('it correctly shows initial unit', async function(assert) {
+  test('it correctly shows initial unit', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`

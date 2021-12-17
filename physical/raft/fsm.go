@@ -168,13 +168,9 @@ func (f *FSM) openDBFile(dbPath string) error {
 		}
 	}
 
-	freelistType, noFreelistSync := freelistOptions()
+	opts := boltOptions()
 	start := time.Now()
-	boltDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{
-		Timeout:        1 * time.Second,
-		FreelistType:   freelistType,
-		NoFreelistSync: noFreelistSync,
-	})
+	boltDB, err := bolt.Open(dbPath, 0o600, opts)
 	if err != nil {
 		return err
 	}

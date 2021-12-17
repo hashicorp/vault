@@ -7,7 +7,7 @@ import {
   logErrorFromInput,
 } from 'vault/lib/console-helpers';
 
-module('Unit | Lib | console helpers', function() {
+module('Unit | Lib | console helpers', function () {
   const testCommands = [
     {
       name: 'write with data',
@@ -102,14 +102,14 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testCommands.forEach(function(testCase) {
-    test(`#parseCommand: ${testCase.name}`, function(assert) {
+  testCommands.forEach(function (testCase) {
+    test(`#parseCommand: ${testCase.name}`, function (assert) {
       let result = parseCommand(testCase.command);
       assert.deepEqual(result, testCase.expected);
     });
   });
 
-  test('#parseCommand: invalid commands', function(assert) {
+  test('#parseCommand: invalid commands', function (assert) {
     let command = 'vault kv get foo';
     let result = parseCommand(command);
     assert.equal(result, false, 'parseCommand returns false by default');
@@ -179,8 +179,8 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testExtractCases.forEach(function(testCase) {
-    test(`#extractDataAndFlags: ${testCase.name}`, function(assert) {
+  testExtractCases.forEach(function (testCase) {
+    test(`#extractDataAndFlags: ${testCase.name}`, function (assert) {
       let { data, flags } = extractDataAndFlags(...testCase.input);
       assert.deepEqual(data, testCase.expected.data, 'has expected data');
       assert.deepEqual(flags, testCase.expected.flags, 'has expected flags');
@@ -357,8 +357,8 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testResponseCases.forEach(function(testCase) {
-    test(`#logFromResponse: ${testCase.name}`, function(assert) {
+  testResponseCases.forEach(function (testCase) {
+    test(`#logFromResponse: ${testCase.name}`, function (assert) {
       let data = logFromResponse(...testCase.args);
       assert.deepEqual(data, testCase.expectedData);
     });
@@ -402,8 +402,8 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testErrorCases.forEach(function(testCase) {
-    test(`#logFromError: ${testCase.name}`, function(assert) {
+  testErrorCases.forEach(function (testCase) {
+    test(`#logFromError: ${testCase.name}`, function (assert) {
       let data = logFromError(...testCase.args);
       assert.deepEqual(
         data,
@@ -426,8 +426,8 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testCommandCases.forEach(function(testCase) {
-    test(`#logErrorFromInput: ${testCase.name}`, function(assert) {
+  testCommandCases.forEach(function (testCase) {
+    test(`#logErrorFromInput: ${testCase.name}`, function (assert) {
       let data = logErrorFromInput(...testCase.args);
 
       assert.deepEqual(
