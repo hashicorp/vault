@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
+	"github.com/shirou/gopsutil/host"
 )
 
 const (
@@ -826,6 +827,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
 		entryConfig["allowed_response_headers"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
+		entryConfig["allowed_managed_keys"] = rawVal.([]string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -1019,6 +1023,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.AllowedResponseHeaders) > 0 {
 		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
+	}
+	if len(apiConfig.AllowedManagedKeys) > 0 {
+		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
 	// Create the mount entry
@@ -1299,6 +1306,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
 		resp.Data["allowed_response_headers"] = rawVal.([]string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
+		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
 	if len(mountEntry.Options) > 0 {
@@ -1609,6 +1620,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
+		AllowedManagedKeys := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AllowedManagedKeys
+		mountEntry.Config.AllowedManagedKeys = AllowedManagedKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AllowedManagedKeys = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of allowed_managed_keys successful", "path", path)
+		}
+	}
+
 	var err error
 	var resp *logical.Response
 	var options map[string]string
@@ -1896,6 +1933,7 @@ func expandStringValsWithCommas(configMap map[string]interface{}) error {
 		"audit_non_hmac_response_keys",
 		"passthrough_request_headers",
 		"allowed_response_headers",
+		"allowed_managed_keys",
 	}
 	for _, paramName := range configParamNameSlice {
 		if raw, ok := configMap[paramName]; ok {
@@ -2051,6 +2089,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.AllowedResponseHeaders) > 0 {
 		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
+	}
+	if len(apiConfig.AllowedManagedKeys) > 0 {
+		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
 	// Create the mount entry
@@ -2985,7 +3026,16 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
-		return logical.ErrorResponse("streaming not supported"), nil
+		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
+		// access the underlying functionality
+		nw, ok := w.ResponseWriter.(logical.WrappingResponseWriter)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
+		flusher, ok = nw.Wrapped().(http.Flusher)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
 	}
 
 	isJson := b.Core.LogFormat() == "json"
@@ -4070,6 +4120,43 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 	return nil
 }
 
+func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// We're always the leader if we're handling this request.
+	h, _ := host.Info()
+	nodes := []HAStatusNode{
+		{
+			Hostname:       h.Hostname,
+			APIAddress:     b.Core.redirectAddr,
+			ClusterAddress: b.Core.ClusterAddr(),
+			ActiveNode:     true,
+		},
+	}
+
+	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
+		lastEcho := peerNode.LastEcho
+		nodes = append(nodes, HAStatusNode{
+			Hostname:       peerNode.Hostname,
+			APIAddress:     peerNode.APIAddress,
+			ClusterAddress: peerNode.ClusterAddress,
+			LastEcho:       &lastEcho,
+		})
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"nodes": nodes,
+		},
+	}, nil
+}
+
+type HAStatusNode struct {
+	Hostname       string     `json:"hostname"`
+	APIAddress     string     `json:"api_address"`
+	ClusterAddress string     `json:"cluster_address"`
+	ActiveNode     bool       `json:"active_node"`
+	LastEcho       *time.Time `json:"last_echo"`
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4557,6 +4644,13 @@ This path responds to the following HTTP methods.
 		`Enable or disable audit backends.`,
 		`
 Enable a new audit backend or disable an existing backend.
+		`,
+	},
+
+	"ha-status": {
+		"Provides information about the nodes in an HA cluster.",
+		`
+		Provides the list of hosts known to the active node and when they were last heard from.
 		`,
 	},
 

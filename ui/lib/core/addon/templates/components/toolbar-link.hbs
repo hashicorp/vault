@@ -1,20 +1,36 @@
-<LinkTo
+{{#let (component "link-to"
   class="toolbar-link"
-  @params={{params}}
-  data-test-secret-edit={{data-test-secret-edit}}
-  data-test-secondary-add={{data-test-secondary-add}}
-  data-test-configure-link={{data-test-configure-link}}
-  data-test-alias-edit-link={{data-test-alias-edit-link}}
-  data-test-entity-edit-link={{data-test-entity-edit-link}}
-  data-test-replication-link={{data-test-replication-link}}
-  data-test-entity-merge-link={{data-test-entity-merge-link}}
-  data-test-backend-view-link={{data-test-backend-view-link}}
-  data-test-entity-create-link={{data-test-entity-create-link}}
-  data-test-policy-create-link={{data-test-policy-create-link}}
-  data-test-policy-edit-toggle={{data-test-policy-edit-toggle}}
-  data-test-secret-backend-configure={{data-test-secret-backend-configure}}
-  ...attributes
->
-  {{yield}}
-  <Icon @glyph={{glyph}} />
-</LinkTo>
+  disabled=disabled
+  params=params
+  data-test-secret-edit=data-test-secret-edit
+  data-test-secondary-add=data-test-secondary-add
+  data-test-configure-link=data-test-configure-link
+  data-test-alias-edit-link=data-test-alias-edit-link
+  data-test-entity-edit-link=data-test-entity-edit-link
+  data-test-replication-link=data-test-replication-link
+  data-test-entity-merge-link=data-test-entity-merge-link
+  data-test-backend-view-link=data-test-backend-view-link
+  data-test-entity-create-link=data-test-entity-create-link
+  data-test-policy-create-link=data-test-policy-create-link
+  data-test-policy-edit-toggle=data-test-policy-edit-toggle
+  data-test-secret-backend-configure=data-test-secret-backend-configure
+) as |LinkToComponent|}}
+  {{#if (and disabled disabledTooltip)}}
+    <ToolTip @verticalPosition="above" as |T|>
+      <T.trigger tabindex="-1">
+        <LinkToComponent ...attributes>
+          {{yield}} <Icon @glyph={{glyph}} data-test-icon={{glyph}} />
+        </LinkToComponent>
+      </T.trigger>
+      <T.content @class="tool-tip smaller-font">
+        <div class="box" data-test-disabled-tooltip>
+          {{disabledTooltip}}
+        </div>
+      </T.content>
+    </ToolTip>
+  {{else}}
+    <LinkToComponent ...attributes>
+      {{yield}} <Icon @glyph={{glyph}} data-test-icon={{glyph}} />
+    </LinkToComponent>
+  {{/if}}
+{{/let}}
