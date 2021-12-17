@@ -145,11 +145,10 @@ export default class TotalClientUsage extends Component {
       //   .node();
       let node = chartSvg
         .selectAll('rect.data-bar')
-        // filter for the top data bar
+        // filter for the top data bar (so y-coord !== 0) with matching month
         .filter(data => data[0] !== 0 && data.data.month === this.hoveredLabel)
         .node();
-      console.log(node);
-      this.tooltipTarget = node; // grab the second node from the list of 24 rects
+      this.tooltipTarget = node; // grab the node from the list of rects
     });
   }
 
