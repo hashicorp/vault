@@ -5,7 +5,7 @@ import { decamelize } from '@ember/string';
 import { parsePkiCert } from '../helpers/parse-pki-cert';
 
 export default RESTSerializer.extend({
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
@@ -22,7 +22,7 @@ export default RESTSerializer.extend({
 
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
-      let ret = payload.data.keys.map(key => {
+      let ret = payload.data.keys.map((key) => {
         let model = {
           id_for_nav: `cert/${key}`,
           id: key,

@@ -6,7 +6,7 @@ export default create({
   logout: visitable('/vault/logout'),
   submit: clickable('[data-test-auth-submit]'),
   tokenInput: fillable('[data-test-token]'),
-  login: async function(token) {
+  login: async function (token) {
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();

@@ -11,7 +11,7 @@ export default Controller.extend({
   pageFilter: null,
   filter: null,
 
-  disableMethod: task(function*(method) {
+  disableMethod: task(function* (method) {
     const { type, path } = method;
     try {
       yield method.destroyRecord();

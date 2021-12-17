@@ -35,14 +35,14 @@ export default class DiffVersionSelector extends Component {
     let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.args.model.currentVersion}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
-      .then(response => response.data)
+      .then((response) => response.data)
       .catch(() => null);
   }
   get rightSideDataInit() {
     let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.rightSideVersionInit}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
-      .then(response => response.data)
+      .then((response) => response.data)
       .catch(() => null);
   }
   get rightSideVersionInit() {

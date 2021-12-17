@@ -30,10 +30,10 @@ const storeService = Service.extend({
   },
 });
 
-module('Integration | Component | control group success', function(hooks) {
+module('Integration | Component | control group success', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:control-group', controlGroupService);
@@ -51,7 +51,7 @@ module('Integration | Component | control group success', function(hooks) {
     requestEntity: { id: 'requestor', name: 'entity8509' },
     reload: sinon.stub(),
   };
-  test('render with saved token', async function(assert) {
+  test('render with saved token', async function (assert) {
     let response = {
       uiParams: { url: '/foo' },
       token: 'token',
@@ -68,7 +68,7 @@ module('Integration | Component | control group success', function(hooks) {
     });
   });
 
-  test('render without token', async function(assert) {
+  test('render without token', async function (assert) {
     this.set('model', MODEL);
     await render(hbs`{{control-group-success model=model}}`);
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');

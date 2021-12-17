@@ -176,6 +176,29 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 	return certEntry, nil
 }
 
+// Given a URI SAN, verify that it is allowed.
+func validateURISAN(b *backend, data *inputBundle, uri string) bool {
+	valid := false
+	for _, allowed := range data.role.AllowedURISANs {
+		if data.role.AllowedURISANsTemplate {
+			isTemplate, _ := framework.ValidateIdentityTemplate(allowed)
+			if isTemplate && data.req.EntityID != "" {
+				tmpAllowed, err := framework.PopulateIdentityTemplate(allowed, data.req.EntityID, b.System())
+				if err != nil {
+					continue
+				}
+				allowed = tmpAllowed
+			}
+		}
+		validURI := glob.Glob(allowed, uri)
+		if validURI {
+			valid = true
+			break
+		}
+	}
+	return valid
+}
+
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
@@ -956,15 +979,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 
 				// validate uri sans
 				for _, uri := range csr.URIs {
-					valid := false
-					for _, allowed := range data.role.AllowedURISANs {
-						validURI := glob.Glob(allowed, uri.String())
-						if validURI {
-							valid = true
-							break
-						}
-					}
-
+					valid := validateURISAN(b, data, uri.String())
 					if !valid {
 						return nil, errutil.UserError{
 							Err: fmt.Sprintf(
@@ -986,15 +1001,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				}
 
 				for _, uri := range uriAlt {
-					valid := false
-					for _, allowed := range data.role.AllowedURISANs {
-						validURI := glob.Glob(allowed, uri)
-						if validURI {
-							valid = true
-							break
-						}
-					}
-
+					valid := validateURISAN(b, data, uri)
 					if !valid {
 						return nil, errutil.UserError{
 							Err: fmt.Sprintf(

@@ -31,7 +31,7 @@ export default Component.extend({
   type: null,
   disabled: false,
   disabledTooltip: null,
-  glyph: computed('type', function() {
+  glyph: computed('type', function () {
     return this.type == 'add' ? 'plus' : 'chevron-right';
   }),
 });

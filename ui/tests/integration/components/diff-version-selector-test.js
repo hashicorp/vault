@@ -1,7 +1,7 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, settled } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 const VERSIONS = [
@@ -13,10 +13,10 @@ const VERSIONS = [
   },
 ];
 
-module('Integration | Component | diff-version-selector', function(hooks) {
+module('Integration | Component | diff-version-selector', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     this.set(
       'model',
       EmberObject.create({
@@ -31,7 +31,7 @@ module('Integration | Component | diff-version-selector', function(hooks) {
     assert.equal(leftSideVersion, 'Version 2', 'left side toolbar defaults to currentVersion');
 
     await click('[data-test-popup-menu-trigger="left-version"]');
-    await settled();
+
     assert.dom('[data-test-leftSide-version="1"]').exists('leftside shows both versions');
     assert.dom('[data-test-leftSide-version="2"]').exists('leftside shows both versions');
   });

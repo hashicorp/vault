@@ -24,7 +24,7 @@ export default Route.extend({
   },
 
   getDatabaseCredential(backend, secret, roleType = '') {
-    return this.store.queryRecord('database/credential', { backend, secret, roleType }).catch(error => {
+    return this.store.queryRecord('database/credential', { backend, secret, roleType }).catch((error) => {
       if (error instanceof ControlGroupError) {
         throw error;
       }

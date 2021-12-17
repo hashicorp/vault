@@ -17,7 +17,3 @@ func TestLoadConfigFile_json2(t *testing.T) {
 func TestParseEntropy(t *testing.T) {
 	testParseEntropy(t, true)
 }
-
-func TestKmsLibraryFailsForNonHSMBinary(t *testing.T) {
-	testKmsLibraryFailsForNonHSMBinary(t)
-}

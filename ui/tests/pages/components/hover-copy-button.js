@@ -1,5 +1,5 @@
 import { attribute, clickable, isVisible, focusable, text } from 'ember-cli-page-object';
-import { triggerEvent, focus, settled } from '@ember/test-helpers';
+import { triggerEvent, focus } from '@ember/test-helpers';
 
 export default {
   async focusContainer() {
@@ -15,6 +15,5 @@ export default {
 
   async mouseEnter() {
     await triggerEvent('[data-test-tooltip-trigger]', 'mouseenter');
-    await settled();
   },
 };

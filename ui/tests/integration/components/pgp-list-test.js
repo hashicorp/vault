@@ -12,10 +12,10 @@ const fileEvent = () => {
   return ['change', { files: [file] }];
 };
 
-module('Integration | Component | pgp list', function(hooks) {
+module('Integration | Component | pgp list', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     this.set('listLength', 0);
     await render(hbs`<PgpList @listLength={{listLength}} />`);
     assert.dom('[data-test-empty-text]').exists('shows the empty state');
@@ -29,7 +29,7 @@ module('Integration | Component | pgp list', function(hooks) {
       .exists({ count: 2 }, 'renders multiple pgp-file components when length is updated');
   });
 
-  test('onDataUpdate is called properly', async function(assert) {
+  test('onDataUpdate is called properly', async function (assert) {
     this.set('spy', sinon.spy());
     let event = fileEvent();
 
@@ -48,7 +48,7 @@ module('Integration | Component | pgp list', function(hooks) {
     );
   });
 
-  test('sparse filling of multiple files, then shortening', async function(assert) {
+  test('sparse filling of multiple files, then shortening', async function (assert) {
     this.set('spy', sinon.spy());
     this.set('listLength', 3);
 
@@ -89,7 +89,7 @@ module('Integration | Component | pgp list', function(hooks) {
     );
   });
 
-  test('sparse filling of multiple files, then lengthening', async function(assert) {
+  test('sparse filling of multiple files, then lengthening', async function (assert) {
     this.set('spy', sinon.spy());
     this.set('listLength', 3);
 
@@ -129,7 +129,7 @@ module('Integration | Component | pgp list', function(hooks) {
     );
   });
 
-  test('it should render correct amount of file components on listLength change', async function(assert) {
+  test('it should render correct amount of file components on listLength change', async function (assert) {
     assert.expect(4);
 
     this.set('listLength', null);
@@ -139,7 +139,7 @@ module('Integration | Component | pgp list', function(hooks) {
         @listLength={{this.listLength}}
       />
     `);
-    [1, 5, 3, 0].forEach(count => {
+    [1, 5, 3, 0].forEach((count) => {
       this.set('listLength', count);
       if (count) {
         assert

@@ -1,26 +1,26 @@
-<div class="has-top-margin-xl has-bottom-margin-s"
-  data-test-table-rows>
-  {{#if (eq clusterMode 'secondary')}}
-    {{info-table-row
-      label='secondary_id'
-      helperText="The ID of the secondary activation token used to enable replication."
-      value=secondaryId}}
+<div class="has-top-margin-xl has-bottom-margin-s" data-test-table-rows>
+  {{#if (eq this.clusterMode "secondary")}}
+    <InfoTableRow
+      @label="secondary_id"
+      @helperText="The ID of the secondary activation token used to enable replication."
+      @value={{this.secondaryId}}
+    />
   {{else}}
-    {{info-table-row
-      label='primary_cluster_addr'
-      helperText='The configuration of the cluster. This was set when replication was enabled.'
-      value=primaryClusterAddr
-    }}
+    <InfoTableRow
+      @label="primary_cluster_addr"
+      @helperText="The configuration of the cluster. This was set when replication was enabled."
+      @value={{this.primaryClusterAddr}}
+    />
   {{/if}}
-  {{info-table-row
-    label="Merkle root index"
-    helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
-    value=merkleRoot}}
-  {{info-table-row
-    label="Mode"
-    value=clusterMode}}
-  {{info-table-row
-    label="Replication set"
-    helperText="The ID for the group of clusters communicating for this replication mode"
-    value=clusterId}}
+  <InfoTableRow
+    @label="Merkle root index"
+    @helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
+    @value={{this.merkleRoot}}
+  />
+  <InfoTableRow @label="Mode" @value={{this.clusterMode}} />
+  <InfoTableRow
+    @label="Replication set"
+    @helperText="The ID for the group of clusters communicating for this replication mode"
+    @value={{this.clusterId}}
+  />
 </div>

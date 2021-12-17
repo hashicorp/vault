@@ -54,7 +54,7 @@ export default Model.extend(KeyMixin, Validations, {
     helperTextDisabled: 'A secret’s version must be manually deleted.',
     helperTextEnabled: 'Delete all new versions of this secret after',
   }),
-  fields: computed(function() {
+  fields: computed(function () {
     return expandAttributeMeta(this, ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter']);
   }),
   secretDataPath: lazyCapabilities(apiPath`${'engineId'}/data/${'id'}`, 'engineId', 'id'),

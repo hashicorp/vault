@@ -12,7 +12,7 @@ export default Route.extend({
     if (backend.isV2KV) {
       let canRead = await this.store
         .findRecord('capabilities', `${backend.id}/config`)
-        .then(response => response.canRead);
+        .then((response) => response.canRead);
       // only set these config params if they can read the config endpoint.
       if (canRead) {
         // design wants specific default to show that can't be set in the model
