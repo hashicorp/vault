@@ -9,8 +9,8 @@ import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
 const consoleComponent = create(consoleClass);
 const component = create(authForm);
 const jwtComponent = create(jwtForm);

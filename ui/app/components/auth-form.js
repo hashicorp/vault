@@ -8,6 +8,8 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
+
 const BACKENDS = supportedAuthBackends();
 
 /**
@@ -159,44 +161,48 @@ export default Component.extend(DEFAULTS, {
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
-  unwrapToken: task(function* (token) {
-    // will be using the Token Auth Method, so set it here
-    this.set('selectedAuth', 'token');
-    let adapter = this.store.adapterFor('tools');
-    try {
-      let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
-      this.set('token', response.auth.client_token);
-      this.send('doSubmit');
-    } catch (e) {
-      this.set('error', `Token unwrap failed: ${e.errors[0]}`);
-    }
-  }).withTestWaiter(),
+  unwrapToken: task(
+    waitFor(function* (token) {
+      // will be using the Token Auth Method, so set it here
+      this.set('selectedAuth', 'token');
+      let adapter = this.store.adapterFor('tools');
+      try {
+        let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
+        this.set('token', response.auth.client_token);
+        this.send('doSubmit');
+      } catch (e) {
+        this.set('error', `Token unwrap failed: ${e.errors[0]}`);
+      }
+    })
+  ),
 
-  fetchMethods: task(function* () {
-    let store = this.store;
-    try {
-      let methods = yield store.findAll('auth-method', {
-        adapterOptions: {
-          unauthenticated: true,
-        },
-      });
-      this.set(
-        'methods',
-        methods.map((m) => {
-          const method = m.serialize({ includeId: true });
-          return {
-            ...method,
-            mountDescription: method.description,
-          };
-        })
-      );
-      next(() => {
-        store.unloadAll('auth-method');
-      });
-    } catch (e) {
-      this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
-    }
-  }).withTestWaiter(),
+  fetchMethods: task(
+    waitFor(function* () {
+      let store = this.store;
+      try {
+        let methods = yield store.findAll('auth-method', {
+          adapterOptions: {
+            unauthenticated: true,
+          },
+        });
+        this.set(
+          'methods',
+          methods.map((m) => {
+            const method = m.serialize({ includeId: true });
+            return {
+              ...method,
+              mountDescription: method.description,
+            };
+          })
+        );
+        next(() => {
+          store.unloadAll('auth-method');
+        });
+      } catch (e) {
+        this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
+      }
+    })
+  ),
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
@@ -217,38 +223,40 @@ export default Component.extend(DEFAULTS, {
     this.set('error', `${message}${errors.join('.')}`);
   },
 
-  authenticate: task(function* (backendType, data) {
-    let clusterId = this.cluster.id;
-    try {
-      if (backendType === 'okta') {
-        this.delayAuthMessageReminder.perform();
-      }
-      let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
-
-      let { isRoot, namespace } = authResponse;
-      let transition;
-      let { redirectTo } = this;
-      if (redirectTo) {
-        // reset the value on the controller because it's bound here
-        this.set('redirectTo', '');
-        // here we don't need the namespace because it will be encoded in redirectTo
-        transition = this.router.transitionTo(redirectTo);
-      } else {
-        transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
-      }
-      // returning this w/then because if we keep it
-      // in the task, it will get cancelled when the component in un-rendered
-      yield transition.followRedirects().then(() => {
-        if (isRoot) {
-          this.flashMessages.warning(
-            'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-          );
+  authenticate: task(
+    waitFor(function* (backendType, data) {
+      let clusterId = this.cluster.id;
+      try {
+        if (backendType === 'okta') {
+          this.delayAuthMessageReminder.perform();
         }
-      });
-    } catch (e) {
-      this.handleError(e);
-    }
-  }).withTestWaiter(),
+        let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
+
+        let { isRoot, namespace } = authResponse;
+        let transition;
+        let { redirectTo } = this;
+        if (redirectTo) {
+          // reset the value on the controller because it's bound here
+          this.set('redirectTo', '');
+          // here we don't need the namespace because it will be encoded in redirectTo
+          transition = this.router.transitionTo(redirectTo);
+        } else {
+          transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
+        }
+        // returning this w/then because if we keep it
+        // in the task, it will get cancelled when the component in un-rendered
+        yield transition.followRedirects().then(() => {
+          if (isRoot) {
+            this.flashMessages.warning(
+              'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+            );
+          }
+        });
+      } catch (e) {
+        this.handleError(e);
+      }
+    })
+  ),
 
   delayAuthMessageReminder: task(function* () {
     if (Ember.testing) {

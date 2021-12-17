@@ -3,6 +3,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
+import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
   flashMessages: service(),
@@ -49,21 +50,21 @@ export default Component.extend({
     return `Successfully ${action} ${typeDisplay}.`;
   },
 
-  save: task(function* () {
-    let model = this.model;
-    let message = this.getMessage(model);
+  save: task(
+    waitFor(function* () {
+      let model = this.model;
+      let message = this.getMessage(model);
 
-    try {
-      yield model.save();
-    } catch (err) {
-      // err will display via model state
-      return;
-    }
-    this.flashMessages.success(message);
-    yield this.onSave({ saveType: 'save', model });
-  })
-    .drop()
-    .withTestWaiter(),
+      try {
+        yield model.save();
+      } catch (err) {
+        // err will display via model state
+        return;
+      }
+      this.flashMessages.success(message);
+      yield this.onSave({ saveType: 'save', model });
+    })
+  ).drop(),
 
   willDestroy() {
     this._super(...arguments);

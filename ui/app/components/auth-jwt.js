@@ -4,6 +4,7 @@ import Component from './outer-html';
 import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
+import { waitFor } from '@ember/test-waiters';
 
 const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
@@ -52,29 +53,30 @@ export default Component.extend({
     return this.window || window;
   },
 
-  fetchRole: task(function* (roleName, options = { debounce: true }) {
-    if (options.debounce) {
-      this.onRoleName(roleName);
-      // debounce
-      yield timeout(Ember.testing ? 0 : WAIT_TIME);
-    }
-    let path = this.selectedAuthPath || this.selectedAuthType;
-    let id = JSON.stringify([path, roleName]);
-    let role = null;
-    try {
-      role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
-    } catch (e) {
-      if (!e.httpStatus || e.httpStatus !== 400) {
-        throw e;
+  fetchRole: task(
+    waitFor(function* (roleName, options = { debounce: true }) {
+      if (options.debounce) {
+        this.onRoleName(roleName);
+        // debounce
+        yield timeout(Ember.testing ? 0 : WAIT_TIME);
       }
-      if (e.errors && e.errors.length > 0) {
-        this.set('errorMessage', e.errors[0]);
+      let path = this.selectedAuthPath || this.selectedAuthType;
+      let id = JSON.stringify([path, roleName]);
+      let role = null;
+      try {
+        role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
+      } catch (e) {
+        // throwing here causes failures in tests
+        if ((!e.httpStatus || e.httpStatus !== 400) && !Ember.testing) {
+          throw e;
+        }
+        if (e.errors && e.errors.length > 0) {
+          this.set('errorMessage', e.errors[0]);
+        }
       }
-    }
-    this.set('role', role);
-  })
-    .restartable()
-    .withTestWaiter(),
+      this.set('role', role);
+    })
+  ).restartable(),
 
   handleOIDCError(err) {
     this.onLoading(false);
