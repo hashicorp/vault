@@ -11,7 +11,7 @@ import (
 	"time"
 
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 )
@@ -43,6 +43,15 @@ func TestInitialize(t *testing.T) {
 			},
 		},
 		"contained_db set": {
+			dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"contained_db":   true,
+				},
+				VerifyConnection: true,
+			},
+		},
+		"contained_db set string": {
 			dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
