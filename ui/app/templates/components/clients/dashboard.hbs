@@ -256,7 +256,7 @@
                   <button
                     type="button"
                     class="link"
-                    onclick={{queue (action "selectMonth" month) (action D.actions.close)}}
+                    onclick={{queue (action "selectStartMonth" month) (action D.actions.close)}}
                     >
                     {{month}}
                   </button>
@@ -287,7 +287,7 @@
                   <button
                     type="button"
                     class="link"
-                    onclick={{queue (action "selectYear" year) (action D.actions.close)}}
+                    onclick={{queue (action "selectStartYear" year) (action D.actions.close)}}
                     >
                     {{year}}
                   </button>
@@ -302,8 +302,7 @@
       <button
         type="button"
         class="button is-primary"
-        {{on "click" (fn this.handleEditStartMonth this.month this.year (action (mut this.isEditStartMonthOpen) false))}}
-        {{!-- ARG TODO require month and year selected --}}
+        onclick={{queue (action "handleEditStartMonth" this.startMonth this.startYear) (action (mut this.isEditStartMonthOpen) false)}}
         disabled={{if (and this.startMonth this.startYear) false true}} 
       >
         Save
@@ -311,7 +310,7 @@
       <button
         type="button"
         class="button is-secondary"
-        {{on "click" (action (mut this.isEditStartMonthOpen) false)}}
+        onclick={{queue (action "handleEditStartMonth" 0 0) (action (mut this.isEditStartMonthOpen) false)}}
       >
         Cancel
       </button>

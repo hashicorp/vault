@@ -72,39 +72,39 @@ export default class Dashboard extends Component {
   }
 
   // Create namespaces data for csv format
-  get getCsvData() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
-    }
-    let results = '',
-      namespaces = this.args.model.activity.byNamespace,
-      fields = ['Namespace path', 'Active clients', 'Unique entities', 'Non-entity tokens'];
+  // get getCsvData() {
+  //   if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
+  //     return null;
+  //   }
+  //   let results = '',
+  //     namespaces = this.args.model.activity.byNamespace,
+  //     fields = ['Namespace path', 'Active clients', 'Unique entities', 'Non-entity tokens'];
 
-    results = fields.join(',') + '\n';
+  //   results = fields.join(',') + '\n';
 
-    namespaces.forEach(function(item) {
-      let path = item.namespace_path !== '' ? item.namespace_path : 'root',
-        total = item.counts.clients,
-        unique = item.counts.distinct_entities,
-        non_entity = item.counts.non_entity_tokens;
+  //   namespaces.forEach(function(item) {
+  //     let path = item.namespace_path !== '' ? item.namespace_path : 'root',
+  //       total = item.counts.clients,
+  //       unique = item.counts.distinct_entities,
+  //       non_entity = item.counts.non_entity_tokens;
 
-      results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
-    });
-    return results;
-  }
+  //     results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
+  //   });
+  //   return results;
+  // }
 
   // Return csv filename with start and end dates
-  get getCsvFileName() {
-    let defaultFileName = `clients-by-namespace`,
-      startDate =
-        this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
-      endDate =
-        this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
-    if (startDate && endDate) {
-      defaultFileName += `-${startDate}-${endDate}`;
-    }
-    return defaultFileName;
-  }
+  // get getCsvFileName() {
+  //   let defaultFileName = `clients-by-namespace`,
+  //     startDate =
+  //       this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
+  //     endDate =
+  //       this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
+  //   if (startDate && endDate) {
+  //     defaultFileName += `-${startDate}-${endDate}`;
+  //   }
+  //   return defaultFileName;
+  // }
 
   // Get the namespace by matching the path from the namespace list
   getNamespace(path) {
@@ -116,31 +116,35 @@ export default class Dashboard extends Component {
     });
   }
 
-  @action
-  handleEditStartMonth(month, year) {
-    // ARG TODO do something here.
-    console.log(month, year, 'eventually do something here');
+  // query Data functions
+  async queryData(range) {
+    // todo figure out what range should look like.
+    // this fires off method on the adapter to query data and return it. await the data's return
   }
 
+  // Edit Start Date modal actions
+  @action
+  handleEditStartMonth(month, year) {
+    if (!month && !year) {
+      // reset and do nothing. They pressed cancel
+      this.startMonth = this.startYear = null;
+      return;
+    }
+    // if no endDate selected, default to 12 months range
+    // create range.
+    // then send to queryData this.queryData(range)
+  }
   @action
   toggleEditStartMonth() {
     this.isEditStartMonthOpen = !this.isEditStartMonthOpen;
   }
-
   @action
-  selectMonth(month) {
-    // ARG TODO set the month selected
-    //maybe do validation here
+  selectStartMonth(month) {
     this.startMonth = month;
-    console.log(month);
   }
-
   @action
-  selectYear(year) {
-    // ARG TODO set the year selected
-    //maybe do validation here
+  selectStartYear(year) {
     this.startYear = year;
-    console.log(year);
   }
 
   @action

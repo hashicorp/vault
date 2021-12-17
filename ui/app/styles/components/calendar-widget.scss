@@ -41,35 +41,14 @@ $dark-gray: #535f73;
 .select-year {
   grid-area: select-year;
   margin-left: 24px;
+  margin-top: 10px;
   font-weight: $font-weight-bold;
   display: flex;
   justify-content: space-between;
   align-items: first baseline;
 
-  .icon-container {
+  > .padding-right {
     padding-right: 26px;
-  }
-}
-
-.select-months {
-  grid-area: select-months;
-  margin-left: 26px;
-  color: $ui-gray-400;
-  font-weight: $font-weight-semibold;
-  font-size: 13px;
-
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-end;
-
-  .cancel-circle-icon {
-    color: $ui-gray-200;
-    margin-left: 10px;
-    padding-top: 1px;
-
-    &.is-active {
-      color: lighten($blue-500, 10%);
-    }
   }
 }
 
@@ -115,11 +94,10 @@ $dark-gray: #535f73;
   display: grid;
   grid-template-areas:
     'select-year'
-    'select-months'
     'calendar-widget';
   grid-template-columns: 1fr;
-  grid-template-rows: 0.7fr 0.2fr 3fr;
-  box-shadow: 0 0 0 1.5px $ui-gray-200;
+  grid-template-rows: 0.7fr 3fr;
+  box-shadow: $box-shadow, $box-shadow-middle;
   background-color: white;
   border-radius: 2px;
 }
