@@ -1,6 +1,10 @@
 $dark-gray: #535f73;
 .calendar-content {
   display: flex;
+
+  > .menu {
+    margin-bottom: 0px;
+  }
 }
 .calendar-title {
   color: $ui-gray-400;
@@ -102,10 +106,6 @@ $dark-gray: #535f73;
   }
 }
 
-.month-nav {
-  grid-area: month-nav;
-}
-
 .border-col {
   grid-area: border-col;
   background-color: $ui-gray-200;
@@ -114,15 +114,14 @@ $dark-gray: #535f73;
 .calendar-widget-container {
   display: grid;
   grid-template-areas:
-    'select-year border-col . '
-    'select-months border-col .'
-    'calendar-widget border-col month-nav';
-  grid-template-columns: 2fr 0.01fr 1fr;
+    'select-year'
+    'select-months'
+    'calendar-widget';
+  grid-template-columns: 1fr;
   grid-template-rows: 0.7fr 0.2fr 3fr;
   box-shadow: 0 0 0 1.5px $ui-gray-200;
   background-color: white;
   border-radius: 2px;
-  padding: 14px 0px 14px 14px;
 }
 
 .calendar-widget-grid {
@@ -131,20 +130,4 @@ $dark-gray: #535f73;
   grid-template-rows: repeat(2, 1fr);
   grid-gap: 0.5rem;
   padding: 7px 28px 28px 28px;
-}
-
-.calendar-widget-nav {
-  text-align: center;
-  line-height: 35px;
-  padding-top: 7px;
-  font-weight: $font-weight-semibold;
-  ul > li {
-    color: $blue-500 !important;
-
-    &.is-active,
-    &:hover {
-      background-color: $ui-gray-100;
-      cursor: pointer;
-    }
-  }
 }
