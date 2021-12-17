@@ -27,9 +27,9 @@ import { stack } from 'd3-shape';
 const DATA = [
   { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
   { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
-  { month: 'March', directEntities: 700, nonEntityTokens: 125, total: 825 },
+  { month: 'March', directEntities: 4300, nonEntityTokens: 700, total: 5000 },
   { month: 'April', directEntities: 1550, nonEntityTokens: 229, total: 1779 },
-  { month: 'May', directEntities: 1560, nonEntityTokens: 124, total: 1684 },
+  { month: 'May', directEntities: 5560, nonEntityTokens: 124, total: 5684 },
   { month: 'June', directEntities: 1570, nonEntityTokens: 142, total: 1712 },
   { month: 'July', directEntities: 300, nonEntityTokens: 112, total: 412 },
   { month: 'August', directEntities: 1610, nonEntityTokens: 130, total: 1740 },
@@ -43,13 +43,15 @@ const DATA = [
 const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
-const AXES_MARGIN = { xLeft: 10, xDown: 290 }; // makes space for y-axis legend
-const TRANSLATE = { none: 0, right: 10, down: -30 };
+// TRANSLATIONS:
+const TRANSLATE = { left: -11 };
+const SVG_DIMENSIONS = { height: 190, width: 500 };
 
 export default class TotalClientUsage extends Component {
   @tracked tooltipTarget = '';
   @tracked hoveredLabel = '';
   @tracked trackingTest = 0;
+
   @action
   registerListener(element) {
     // Define the chart
@@ -60,23 +62,22 @@ export default class TotalClientUsage extends Component {
 
     let yScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([0, 80]); // don't want 100% because will cut off
+      .range([0, 100]);
 
     let xScale = scaleBand()
       .domain(dataset.map(d => d.month))
-      .range([0, 700]) // set width to fix number of pixels
+      .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
 
     let chartSvg = select(element);
 
-    chartSvg.attr('viewBox', `0 5 725 305`); // set aspect ratio
+    chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
-      .attr('transform', `translate(${TRANSLATE.right}, ${TRANSLATE.down})`)
       .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
     groups
@@ -85,48 +86,46 @@ export default class TotalClientUsage extends Component {
       .enter()
       .append('rect')
       .attr('width', '7px')
+      .attr('class', 'data-bar')
       .attr('height', stackedData => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data.month)) // uses destructuring because was data.data.month
       .attr('y', data => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
 
     // MAKE AXES //
-    let svgChartSize = chartSvg.node().getBBox(); // getBBox will return the width and height of svg element
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([svgChartSize.height + -TRANSLATE.down, 0]);
+      .range([`${SVG_DIMENSIONS.height}`, 0]);
 
     // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
     let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.
 
     // customize y-axis
     let yAxis = axisLeft(yAxisScale)
-      .ticks(6)
+      .ticks(7)
       .tickPadding(10)
-      .tickSizeInner(-svgChartSize.width) // makes grid lines correct length
+      .tickSizeInner(-SVG_DIMENSIONS.width) // makes grid lines correct length
       .tickFormat(formatNumbers);
 
-    yAxis(
-      chartSvg
-        .append('g')
-        .attr('transform', `translate(${TRANSLATE.right})`)
-        .attr('class', 'axes-lines')
-    );
+    yAxis(chartSvg.append('g'));
 
     // customize x-axis
-    let xAxisGenerator = axisBottom(xScale);
+    let xAxisGenerator = axisBottom(xScale).tickSize(0);
     let xAxis = chartSvg.append('g').call(xAxisGenerator);
 
-    xAxis
-      .attr('transform', `translate(${TRANSLATE.right}, ${AXES_MARGIN.xDown})`)
-      .attr('class', 'axes-lines');
+    xAxis.attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`);
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
     // creating wider area for tooltip hover
-    let greyBars = chartSvg.append('g').attr('transform', `translate(${TRANSLATE.none}, ${TRANSLATE.down})`);
+    let greyBars = chartSvg
+      .append('g')
+      .attr('transform', `translate(${TRANSLATE.left})`)
+      .style('fill', `${BACKGROUND_BAR_COLOR}`)
+      .style('opacity', '0')
+      .style('mix-blend-mode', 'multiply');
 
     let tooltipRect = greyBars
-      .selectAll('.tooltip-rect')
+      .selectAll('rect')
       .data(dataset)
       .enter()
       .append('rect')
@@ -135,19 +134,21 @@ export default class TotalClientUsage extends Component {
       .attr('height', '100%')
       .attr('width', '30px') // three times width
       .attr('y', '0') // start at bottom
-      .attr('x', data => xScale(data.month)) // not data.data because this is not stacked data
-      .style('fill', `${BACKGROUND_BAR_COLOR}`)
-      .style('opacity', '0')
-      .style('mix-blend-mode', 'multiply');
+      .attr('x', data => xScale(data.month)); // not data.data because this is not stacked data
 
     // for tooltip
     tooltipRect.on('mouseover', data => {
       this.hoveredLabel = data.month;
+      // let node = chartSvg
+      //   .selectAll('rect.tooltip-rect')
+      //   .filter(data => data.month === this.hoveredLabel)
+      //   .node();
       let node = chartSvg
-        .selectAll('rect.tooltip-rect')
-        .filter(data => data.month === this.hoveredLabel)
+        .selectAll('rect.data-bar')
+        // filter for the top data bar (so y-coord !== 0) with matching month
+        .filter(data => data[0] !== 0 && data.data.month === this.hoveredLabel)
         .node();
-      this.tooltipTarget = node; // grab the second node from the list of 24 rects
+      this.tooltipTarget = node; // grab the node from the list of rects
     });
   }
 

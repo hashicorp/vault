@@ -25,9 +25,9 @@ import { max, maxIndex } from 'd3-array';
 // TODO: Move constants to helper
 
 // SIZING CONSTANTS
-const CHART_MARGIN = { top: 10, left: 137 }; // makes space for y-axis legend
-const TRANSLATE = { down: 16 };
-const CHAR_LIMIT = 18; // character count limit for y-axis labels to trigger truncating
+const CHART_MARGIN = { top: 10, left: 95 }; // makes space for y-axis legend
+const TRANSLATE = { down: 13 };
+const CHAR_LIMIT = 15; // character count limit for y-axis labels to trigger truncating
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 // COLOR THEME:
@@ -37,7 +37,7 @@ const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
 const SAMPLE_DATA = [
   {
-    label: 'namespace80/',
+    label: 'longlongsuperlongnamespace80/',
     non_entity_tokens: 1696,
     distinct_entities: 1652,
     total: 3348,
@@ -117,6 +117,7 @@ export default class HorizontalBarChart extends Component {
     // each array contains coordinates for each data bar
     let stackFunction = stack().keys(this.chartLegend.map(l => l.key));
     let dataset = args[0];
+    // let dataset = SAMPLE_DATA;
     let stackedData = stackFunction(dataset);
     let labelKey = this.labelKey;
     let handleClick = this.args.onClick;
@@ -131,7 +132,8 @@ export default class HorizontalBarChart extends Component {
       .paddingInner(0.765); // percent of the total width to reserve for padding between bars
 
     let chartSvg = select(element);
-    chartSvg.attr('viewBox', `0 0 710 ${(dataset.length + 1) * LINE_HEIGHT}`);
+    chartSvg.attr('width', '100%').attr('viewBox', `0 0 564 ${(dataset.length + 1) * LINE_HEIGHT}`);
+    // chartSvg.attr('viewBox', `0 0 700 300`);
 
     let groups = chartSvg
       .selectAll('g')
@@ -241,7 +243,7 @@ export default class HorizontalBarChart extends Component {
           .style('left', `${event.pageX - 325}px`)
           .style('top', `${event.pageY - 140}px`)
           .text(
-            `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
+            `${Math.round((chartData.total * 100) / 19000)}% of total client counts:
             ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
           `
           );

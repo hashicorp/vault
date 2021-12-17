@@ -2,25 +2,22 @@
   border: $light-border;
   border-radius: $radius-large;
   padding: $spacing-l $spacing-l $spacing-s $spacing-l;
-  height: 547px; // TODO amend for specific chart heights
-  width: 100%;
-
-  // ARG TODO we can manage this using css grid
-  // > div.is-border {
-  //   border: 0.3px solid $ui-gray-200;
-  //   margin-bottom: $spacing-xxs;
-  // }
+  margin-bottom: $spacing-m;
 }
-.single-chart {
+
+// GRID LAYOUT //
+.single-chart-grid {
   display: grid;
-  grid-template-columns: 1fr 0.3fr 1fr 1fr 1fr 1fr;
-  grid-template-rows: repeat(5, 1fr);
+  grid-template-columns: 1fr 0.3fr 3.7fr;
+  grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
+  width: 100%;
 }
 
-.double-chart {
+.dual-chart-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: repeat(5, 1fr);
+  grid-template-rows: 0.7fr 1fr 1fr 1fr 0.3fr;
+  width: 100%;
 }
 
 .chart-header {
@@ -29,20 +26,6 @@
   grid-row-start: 1;
   box-shadow: inset 0 -1px 0 $vault-gray-200;
   margin-bottom: $spacing-xl;
-
-  .chart-title {
-    font-size: $size-5;
-    font-weight: $font-weight-bold;
-    line-height: normal;
-    margin-bottom: $spacing-xs;
-  }
-}
-
-p.chart-description {
-  font-size: $size-8;
-  font-weight: $font-weight-normal;
-  color: $ui-gray-700;
-  margin-bottom: $spacing-xs;
 }
 
 .has-export {
@@ -53,7 +36,6 @@ p.chart-description {
     text-align: right;
     > button {
       font-size: $size-8;
-
       &:hover {
         text-decoration: underline;
       }
@@ -61,13 +43,14 @@ p.chart-description {
   }
 }
 
-.chart-container {
+.chart-container-wide {
   grid-column-start: 3;
-  grid-column-end: span col6-end;
+  grid-column-end: 4;
   grid-row-start: 2;
   grid-row-end: span 3;
-
-  padding: $spacing-m 0;
+  justify-self: center;
+  height: 341px;
+  max-width: 730px;
 
   svg.chart {
     width: 100%;
@@ -80,11 +63,15 @@ p.chart-description {
   grid-column-end: 4;
   grid-row-start: 2;
   grid-row-end: 5;
+  padding-bottom: $spacing-xl;
+  margin-bottom: $spacing-s;
   box-shadow: inset 0 -1px 0 $vault-gray-200;
 
-  h2.chart-title {
-    font-size: $size-5;
-    font-weight: $font-weight-bold;
+  > h2 {
+    padding-left: $spacing-xm;
+  }
+  > p {
+    padding-left: $spacing-xm;
   }
 }
 
@@ -93,67 +80,34 @@ p.chart-description {
   grid-column-end: 8;
   grid-row-start: 2;
   grid-row-end: 5;
+  padding-bottom: $spacing-xl;
+  margin-bottom: $spacing-s;
   box-shadow: inset 0 -1px 0 $vault-gray-200;
 
-  h2.chart-title {
-    font-size: $size-5;
-    font-weight: $font-weight-bold;
+  > h2 {
+    padding-left: $spacing-xm;
+  }
+  > p {
+    padding-left: $spacing-xm;
   }
 }
 
-.horizontal-bar-chart {
-  .tick > text {
-    font-weight: $font-weight-semibold;
-    font-size: $size-8;
-  }
-  > div.legend {
-    height: $spacing-l;
-    margin-top: $spacing-xs;
-    float: right;
-  }
-}
-
-.data-subTitle {
+.chart-subTitle {
   grid-column-start: 1;
   grid-column-end: 3;
   grid-row-start: 2;
-  font-size: $size-5;
-  font-weight: $font-weight-bold;
-  margin-bottom: $spacing-l;
-
-  > p {
-    font-size: $size-8;
-    font-weight: $font-weight-normal;
-  }
 }
 
-.data-one {
+.data-details-top {
   grid-column-start: 1;
   grid-column-end: 3;
   grid-row-start: 3;
-  font-size: $size-6;
-  font-weight: $font-weight-bold;
-  margin-bottom: $spacing-l;
-
-  > p {
-    font-size: $size-4;
-    font-weight: $font-weight-normal;
-    margin-top: $spacing-xs;
-  }
 }
 
-.data-two {
+.data-details-bottom {
   grid-column-start: 1;
   grid-column-end: 3;
   grid-row-start: 4;
-  font-size: $size-6;
-  font-weight: $font-weight-bold;
-
-  > p {
-    font-size: $size-4;
-    font-weight: $font-weight-normal;
-    margin-top: $spacing-xs;
-  }
 }
 
 .timestamp {
@@ -165,13 +119,66 @@ p.chart-description {
   align-self: end;
 }
 
+.legend-center {
+  grid-row-start: 5;
+  grid-column-start: 3;
+  grid-column-end: 5;
+  align-self: center;
+  justify-self: center;
+  font-size: $size-9;
+}
+
+.legend-right {
+  grid-row-start: 4;
+  grid-column-start: 3;
+  grid-column-end: 3;
+  align-self: end;
+  justify-self: center;
+  font-size: $size-9;
+}
+
+// FONT STYLES //
+
+h2.chart-title {
+  font-weight: $font-weight-bold;
+  font-size: $size-5;
+  line-height: $spacing-l;
+}
+
+p.chart-description {
+  color: $ui-gray-700;
+  font-size: $body-size;
+  line-height: $spacing-xm;
+  margin-bottom: $spacing-xs;
+}
+
+p.chart-subtext {
+  color: $ui-gray-500;
+  font-size: $size-9;
+  line-height: $body-size;
+  margin-top: $spacing-xs;
+}
+
+h3.data-details {
+  font-weight: $font-weight-bold;
+  font-size: $size-9;
+  line-height: $body-size;
+  margin-bottom: $spacing-xs;
+}
+
+p.data-details {
+  font-weight: $font-weight-normal;
+  font-size: $size-4;
+}
+
+// MISC STYLES
+
 .light-dot {
   background-color: #bfd4ff;
   height: 10px;
   width: 10px;
   border-radius: 50%;
   display: inline-block;
-  padding-right: 10px;
 }
 
 .dark-dot {
@@ -182,14 +189,9 @@ p.chart-description {
   display: inline-block;
 }
 
-.legend-container {
-  grid-row-start: 5;
-  grid-column-start: 3;
-  grid-column-end: 4;
-  height: $spacing-l;
-  align-self: center;
-  justify-self: center;
-  font-size: $size-9;
+.legend-label {
+  padding-left: $spacing-xs;
+  padding-right: $spacing-xl;
 }
 
 .chart-tooltip {
@@ -212,15 +214,60 @@ p.chart-description {
   left: calc(50% - 5px);
 }
 
-.axes-lines {
+.has-grid {
   g > text {
     color: $ui-gray-500;
-    font-weight: $font-weight-semibold;
-    font-size: $size-8;
+    font-size: $size-9;
   }
 
   g > line {
-    color: $ui-gray-300;
+    // TODO: mix-blend doesn't work in firefox browser?
     mix-blend-mode: darken;
+    color: $ui-gray-300;
+  }
+}
+
+.is-horizontal {
+  .tick > text {
+    font-weight: $font-weight-semibold;
+    font-size: $size-9;
+  }
+}
+
+// RESPONSIVE STYLING //
+
+@media only screen and (max-width: 950px) {
+  .dual-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 0.2fr 0.75fr 0.75fr 0.2fr;
+    width: 100%;
+  }
+
+  .chart-container-left {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    margin-left: $spacing-xxl;
+    margin-right: $spacing-xxl;
+  }
+  .chart-container-right {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    margin-left: $spacing-xxl;
+    margin-right: $spacing-xxl;
+  }
+
+  .legend-center {
+    grid-column-start: 1;
+    grid-row-start: 4;
+  }
+
+  .timestamp {
+    grid-column-start: 1;
+    grid-row-start: 4;
   }
 }
