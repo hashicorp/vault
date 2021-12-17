@@ -1,4 +1,4 @@
-import { settled, currentRouteName, click } from '@ember/test-helpers';
+import { settled, currentRouteName, click, waitUntil, find } from '@ember/test-helpers';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 import page from 'vault/tests/pages/access/identity/create';
 import showPage from 'vault/tests/pages/access/identity/show';
@@ -28,7 +28,7 @@ export const testCRUD = async (name, itemType, assert) => {
     `${itemType}: lists the entity in the entity list`
   );
   await indexPage.items.filterBy('name', name)[0].menu();
-  await settled();
+  await waitUntil(() => find('[data-test-item-delete]'));
   await indexPage.delete();
   await settled();
   await indexPage.confirmDelete();
