@@ -553,11 +553,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 				break
 			}
 			if token == nil {
-<<<<<<< HEAD
 				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
-=======
-				return logical.ErrorResponse("bad token"), logical.ErrPermissionDenied
->>>>>>> e0c79e367d978f6f7b7cf61be52417c686cb386d
 			}
 			_, nsID := namespace.SplitIDFromString(token.(string))
 			if nsID != "" {
