@@ -2,8 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -62,17 +60,6 @@ const (
 	// standby fragment before sending it to the active node.
 	// Estimates as 8KiB / 64 bytes = 128
 	activityFragmentStandbyCapacity = 128
-
-	// Delimiter between the string fields used to generate a client
-	// ID for tokens without entities. This is the 0 character, which
-	// is a non-printable string. Please see unicode.IsPrint for details.
-	clientIDTWEDelimiter = rune('\x00')
-
-	// Delimiter between each policy in the sorted policies used to
-	// generate a client ID for tokens without entities. This is the 127
-	// character, which is a non-printable string. Please see unicode.IsPrint
-	// for details.
-	sortedPoliciesTWEDelimiter = rune('\x7F')
 
 	// trackedTWESegmentPeriod is a time period of a little over a month, and represents
 	// the amount of time that needs to pass after a 1.9 or later upgrade to result in
@@ -1591,74 +1578,29 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 }
 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
-// and returns the corresponding Client ID.
 // This currently occurs on token usage only.
-func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) string {
+func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry, clientID string, isTWE bool) {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
 	if !a.enabled {
 		a.fragmentLock.RUnlock()
-		return ""
+		return
 	}
 	a.fragmentLock.RUnlock()
 
 	// Do not count wrapping tokens in client count
 	if IsWrappingToken(entry) {
-		return ""
+		return
 	}
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
-		return ""
+		return
 	}
 
 	// Parse an entry's client ID and add it to the activity log
-	clientID, isTWE := a.CreateClientID(entry)
 	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE)
-	return clientID
-}
-
-// CreateClientID returns the client ID, and a boolean which is false if the clientID
-// has an entity, and true otherwise
-func (a *ActivityLog) CreateClientID(entry *logical.TokenEntry) (string, bool) {
-	var clientIDInputBuilder strings.Builder
-
-	// if entry has an associated entity ID, return it
-	if entry.EntityID != "" {
-		return entry.EntityID, false
-	}
-
-	// The entry is associated with a TWE (token without entity). In this case
-	// we must create a client ID by calculating the following formula:
-	// clientID = SHA256(sorted policies + namespace)
-
-	// Step 1: Copy entry policies to a new struct
-	sortedPolicies := make([]string, len(entry.Policies))
-	copy(sortedPolicies, entry.Policies)
-
-	// Step 2: Sort and join copied policies
-	sort.Strings(sortedPolicies)
-	for _, pol := range sortedPolicies {
-		clientIDInputBuilder.WriteRune(sortedPoliciesTWEDelimiter)
-		clientIDInputBuilder.WriteString(pol)
-	}
-
-	// Step 3: Add namespace ID
-	clientIDInputBuilder.WriteRune(clientIDTWEDelimiter)
-	clientIDInputBuilder.WriteString(entry.NamespaceID)
-
-	if clientIDInputBuilder.Len() == 0 {
-		a.logger.Error("vault token with no entity ID, policies, or namespace was recorded " +
-			"in the activity log")
-		return "", true
-	}
-	// Step 4: Remove the first character in the string, as it's an unnecessary delimiter
-	clientIDInput := clientIDInputBuilder.String()[1:]
-
-	// Step 5: Hash the sum
-	hashed := sha256.Sum256([]byte(clientIDInput))
-	return base64.StdEncoding.EncodeToString(hashed[:]), true
 }
 
 func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {

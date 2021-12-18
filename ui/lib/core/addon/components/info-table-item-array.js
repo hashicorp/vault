@@ -33,7 +33,7 @@ export default Component.extend({
   displayArray: null,
   wildcardInDisplayArray: false,
   store: service(),
-  displayArrayAmended: computed('displayArray', function() {
+  displayArrayAmended: computed('displayArray', function () {
     let { displayArray } = this;
     if (!displayArray) {
       return;
@@ -46,15 +46,15 @@ export default Component.extend({
     return displayArray;
   }),
 
-  checkWildcardInArray: task(function*() {
+  checkWildcardInArray: task(function* () {
     if (!this.displayArray) {
       return;
     }
-    let filteredArray = yield this.displayArray.filter(item => isWildcardString(item));
+    let filteredArray = yield this.displayArray.filter((item) => isWildcardString(item));
     this.set('wildcardInDisplayArray', filteredArray.length > 0 ? true : false);
   }).on('didInsertElement'),
 
-  fetchOptions: task(function*() {
+  fetchOptions: task(function* () {
     if (this.isLink && this.modelType) {
       let queryOptions = {};
 
@@ -67,8 +67,8 @@ export default Component.extend({
     }
   }).on('didInsertElement'),
 
-  formatOptions: function(options) {
-    let allOptions = options.toArray().map(option => {
+  formatOptions: function (options) {
+    let allOptions = options.toArray().map((option) => {
       return option.id;
     });
     this.set('allOptions', allOptions);

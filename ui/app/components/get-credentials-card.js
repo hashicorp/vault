@@ -28,7 +28,7 @@ export default class GetCredentialsCard extends Component {
   @tracked secret = '';
 
   @action
-  async transitionToCredential() {
+  transitionToCredential() {
     const role = this.role;
     const secret = this.secret;
     if (role) {

@@ -1,5 +1,5 @@
 import keys from 'vault/lib/keycodes';
-import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
+import argTokenizer from './arg-tokenizer';
 import { parse } from 'shell-quote';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
@@ -56,7 +56,7 @@ export function parseCommand(command, shouldThrow) {
   let flags = [];
   let data = [];
 
-  rest.forEach(arg => {
+  rest.forEach((arg) => {
     if (arg.startsWith('-')) {
       flags.push(arg);
     } else {
@@ -66,7 +66,7 @@ export function parseCommand(command, shouldThrow) {
           .split(/=(.+)/)
           // if there were quotes, there's an empty string as the last member in the array that we don't want,
           // so filter it out
-          .filter(str => str !== '')
+          .filter((str) => str !== '')
           // glue the data back together
           .join('=');
         data.push(strippedArg);

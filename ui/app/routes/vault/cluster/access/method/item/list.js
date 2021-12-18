@@ -28,7 +28,7 @@ export default Route.extend(ListRoute, {
         type: itemType,
         id: authMethodPath,
       })
-      .catch(err => {
+      .catch((err) => {
         if (err.httpStatus === 404) {
           return [];
         } else {
@@ -54,10 +54,10 @@ export default Route.extend(ListRoute, {
     const { apiPath, authMethodPath, itemType, methodModel } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
     controller.set('methodModel', methodModel);
-    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then(paths => {
+    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then((paths) => {
       controller.set(
         'paths',
-        paths.paths.filter(path => path.navigation && path.itemType.includes(itemType))
+        paths.paths.filter((path) => path.navigation && path.itemType.includes(itemType))
       );
     });
   },

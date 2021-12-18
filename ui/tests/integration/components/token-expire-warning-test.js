@@ -4,10 +4,10 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { addMinutes } from 'date-fns';
 
-module('Integration | Component | token-expire-warning', function(hooks) {
+module('Integration | Component | token-expire-warning', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders a warning when the token is expired', async function(assert) {
+  test('it renders a warning when the token is expired', async function (assert) {
     const expirationDate = Date.now();
     this.set('expirationDate', expirationDate);
 
@@ -16,7 +16,7 @@ module('Integration | Component | token-expire-warning', function(hooks) {
     assert.dom().includesText('Your auth token expired on');
   });
 
-  test('it does not render a warning when the token is not expired', async function(assert) {
+  test('it does not render a warning when the token is not expired', async function (assert) {
     const expirationDate = addMinutes(Date.now(), 30);
     this.set('expirationDate', expirationDate);
 

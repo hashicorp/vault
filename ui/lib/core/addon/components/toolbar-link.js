@@ -31,11 +31,7 @@ export default Component.extend({
   type: null,
   disabled: false,
   disabledTooltip: null,
-  glyph: computed('type', function() {
-    if (this.type == 'add') {
-      return 'plus-plain';
-    } else {
-      return 'chevron-right';
-    }
+  glyph: computed('type', function () {
+    return this.type == 'add' ? 'plus' : 'chevron-right';
   }),
 });

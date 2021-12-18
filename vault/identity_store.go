@@ -250,8 +250,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// storage entry is non-nil, its an indication of an update. In this
 		// case, entities in the updated bucket needs to be reinserted into
 		// MemDB.
-		entityIDs := make([]string, 0, len(bucket.Items))
+		var entityIDs []string
 		if bucket != nil {
+			entityIDs = make([]string, 0, len(bucket.Items))
 			for _, item := range bucket.Items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {

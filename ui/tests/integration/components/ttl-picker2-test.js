@@ -4,10 +4,10 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | ttl-picker2', function(hooks) {
+module('Integration | Component | ttl-picker2', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders time and unit inputs when TTL enabled', async function(assert) {
+  test('it renders time and unit inputs when TTL enabled', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -20,7 +20,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.dom('[data-test-ttl-unit]').exists('TTL Picker unit select exists');
   });
 
-  test('it does not show time and unit inputs when TTL disabled', async function(assert) {
+  test('it does not show time and unit inputs when TTL disabled', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -33,7 +33,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.dom('[data-test-ttl-unit]').doesNotExist('TTL Picker unit select exists');
   });
 
-  test('it passes the appropriate data to onChange when toggled on', async function(assert) {
+  test('it passes the appropriate data to onChange when toggled on', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -57,7 +57,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     );
   });
 
-  test('it keeps seconds value when unit is changed', async function(assert) {
+  test('it keeps seconds value when unit is changed', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -92,7 +92,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'unit value shows as m (minutes)');
   });
 
-  test('it recalculates seconds when unit is changed and recalculateSeconds is on', async function(assert) {
+  test('it recalculates seconds when unit is changed and recalculateSeconds is on', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -116,7 +116,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     );
   });
 
-  test('it sets default value to time and unit passed', async function(assert) {
+  test('it sets default value to time and unit passed', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -133,7 +133,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.ok(changeSpy.notCalled, 'it does not call onChange after render when changeOnInit is not set');
   });
 
-  test('it is disabled on init if initialEnabled is false', async function(assert) {
+  test('it is disabled on init if initialEnabled is false', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -151,7 +151,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit is minutes after toggle');
   });
 
-  test('it is enabled on init if initialEnabled is true', async function(assert) {
+  test('it is enabled on init if initialEnabled is true', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -169,7 +169,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.dom('[data-test-ttl-unit]').doesNotExist('Unit no longer shows after toggle');
   });
 
-  test('it is enabled on init if initialEnabled evals to truthy', async function(assert) {
+  test('it is enabled on init if initialEnabled evals to truthy', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -185,7 +185,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit matches what is passed in');
   });
 
-  test('it calls onChange on init when rendered if changeOnInit is true', async function(assert) {
+  test('it calls onChange on init when rendered if changeOnInit is true', async function (assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`

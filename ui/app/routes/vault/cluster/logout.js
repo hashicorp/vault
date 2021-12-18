@@ -12,7 +12,7 @@ export default Route.extend(ModelBoundaryRoute, {
   permissions: service(),
   namespaceService: service('namespace'),
 
-  modelTypes: computed(function() {
+  modelTypes: computed(function () {
     return ['secret', 'secret-engine'];
   }),
 

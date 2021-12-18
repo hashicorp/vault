@@ -5,26 +5,23 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
-{{#unless (or (eq model.httpStatus 400) (eq model.httpStatus 404))}}
-  {{model.message}}
+{{! template-lint-configure simple-unless "warn" }}
+{{#unless (or (eq this.model.httpStatus 400) (eq this.model.httpStatus 404))}}
+  {{this.model.message}}
 {{/unless}}
 
-{{#if (eq model.httpStatus 400)}}
-  <AlertBanner
-    @type="danger"
-    @message="{{model.keyId}} is not a valid lease ID"
-  />
-{{else if (eq model.httpStatus 404)}}
+{{#if (eq this.model.httpStatus 400)}}
+  <AlertBanner @type="danger" @message="{{this.model.keyId}} is not a valid lease ID" />
+{{else if (eq this.model.httpStatus 404)}}
   <EmptyState
     @title="No leases with that ID"
-    @message="Unable to find lease for the ID &quot;{{model.keyId}}&quot;. Try going back to the lookup and re-entering the ID."
+    @message="Unable to find lease for the ID &quot;{{this.model.keyId}}&quot;. Try going back to the lookup and re-entering the ID."
   >
     <LinkTo @route="vault.cluster.access.leases" class="link">
       Back to lookup
     </LinkTo>
   </EmptyState>
-{{else if (eq model.httpStatus 403)}}
+{{else if (eq this.model.httpStatus 403)}}
   <EmptyState
     @title="You don't have access to a lease with that ID"
     @message="If you think you've reached this page in error, please contact your administrator."
@@ -34,10 +31,7 @@
     </LinkTo>
   </EmptyState>
 {{else}}
-  {{#each model.errors as |error|}}
-    <AlertBanner
-      @type="danger"
-      @message={{error}}
-    />
+  {{#each this.model.errors as |error|}}
+    <AlertBanner @type="danger" @message={{error}} />
   {{/each}}
 {{/if}}

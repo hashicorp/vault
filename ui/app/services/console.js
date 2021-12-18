@@ -31,7 +31,7 @@ export default Service.extend({
     return getOwner(this).lookup('adapter:console');
   },
   commandHistory: filterBy('log', 'type', 'command'),
-  log: computed(function() {
+  log: computed(function () {
     return [];
   }),
   commandIndex: null,

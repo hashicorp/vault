@@ -108,7 +108,9 @@ func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, d
 	if err != nil {
 		return nil, err
 	}
-
+	for i := range entries {
+		entries[i] = denormalizeSerial(entries[i])
+	}
 	return logical.ListResponse(entries), nil
 }
 
