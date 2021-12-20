@@ -5,6 +5,7 @@
         <p class="chart-description">{{@description}}</p>
     </div>
     
+    {{!-- LINE CHART HERE --}}
     <div class="chart-container-wide" {{on "mouseleave" (fn this.removeTooltip)}}>
       <svg class="chart has-grid"
         {{did-insert this.renderChart}}
@@ -33,11 +34,8 @@
   </div>
 
   <div class="single-chart-grid">
-    
-    <div class="chart-container-wide" {{on "mouseleave" (fn this.removeTooltip)}}>
-      <svg class="chart has-grid"
-        {{did-insert this.renderChart}}
-      ></svg>
+    <div class="chart-container-wide">
+      <Clients::VerticalBarChart @dataset={{@barChartData}}/>
     </div>
 
     <div class="chart-subTitle">
@@ -64,22 +62,4 @@
       <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
     </div>
   </div>
-  
-
-  {{!-- TOOLTIP --}}
-  
-  {{#if this.tooltipTarget}}  
-  {{!-- Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 --}}
-  {{!-- Component must be in curly bracket notation --}}
-    {{#modal-dialog
-      tagName='div'
-      tetherTarget=this.tooltipTarget
-      targetAttachment='bottom middle'
-      attachment='bottom middle'
-      offset='40px 0'
-    }}
-      <p class="chart-tooltip">{{this.hoveredLabel}}</p>
-      <div class="chart-tooltip-arrow" />
-    {{/modal-dialog}}
-  {{/if}}
 </div>
