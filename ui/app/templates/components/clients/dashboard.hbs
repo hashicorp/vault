@@ -140,6 +140,8 @@
           @title="Vault client counts"
           @description="A unique active client is any user or service that interacts with Vault. They are made up of direct entities and non-entity tokens. As Vault’s primary billing metric, your total client count is the number for which you will be charged at the end of your billing period."
           @chartLegend={{this.chartLegend}}
+          @barChartData={{this.verticalBarChartData}}
+          @lineChartData={{this.lineChartData}}
         />
 
         <Clients::HorizontalBarCharts
@@ -160,6 +162,8 @@
           @description="This data can be used to understand how many total clients are using Vault each month for the time period selected above."
           @subTitle="Total monthly clients"
           @subText="Each unique client is counted once per month. This can help with capacity planning."
+          {{!-- yield bar chart component?!  --}}
+          @dataset={{this.verticalBarChartData}}
           @chartLegend={{this.chartLegend}}
           @dataOne="Average total clients per month"
           @dataOneData="100"

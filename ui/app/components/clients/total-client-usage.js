@@ -23,22 +23,6 @@ import { stack } from 'd3-shape';
  * @param {string} [param1=defaultValue] - param1 is...
  */
 
-// ARG TODO pull in data
-const DATA = [
-  { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
-  { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
-  { month: 'March', directEntities: 4300, nonEntityTokens: 700, total: 5000 },
-  { month: 'April', directEntities: 1550, nonEntityTokens: 229, total: 1779 },
-  { month: 'May', directEntities: 5560, nonEntityTokens: 124, total: 5684 },
-  { month: 'June', directEntities: 1570, nonEntityTokens: 142, total: 1712 },
-  { month: 'July', directEntities: 300, nonEntityTokens: 112, total: 412 },
-  { month: 'August', directEntities: 1610, nonEntityTokens: 130, total: 1740 },
-  { month: 'September', directEntities: 1900, nonEntityTokens: 222, total: 2122 },
-  { month: 'October', directEntities: 500, nonEntityTokens: 166, total: 666 },
-  { month: 'November', directEntities: 480, nonEntityTokens: 132, total: 612 },
-  { month: 'December', directEntities: 980, nonEntityTokens: 202, total: 1182 },
-];
-
 // COLOR THEME:
 const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
@@ -53,10 +37,9 @@ export default class TotalClientUsage extends Component {
   @tracked trackingTest = 0;
 
   @action
-  registerListener(element) {
+  registerListener(element, args) {
     // Define the chart
-    let dataset = DATA; // will be data passed in as argument
-
+    let dataset = args[0];
     let stackFunction = stack().keys(['directEntities', 'nonEntityTokens']);
     let stackedData = stackFunction(dataset);
 

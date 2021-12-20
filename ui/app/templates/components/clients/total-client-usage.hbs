@@ -7,7 +7,7 @@
   </div>
   <div class="chart-container-wide" {{on "mouseleave" (fn this.removeTooltip)}}>
     <svg class="chart has-grid"
-      {{did-insert this.registerListener}}
+      {{did-insert this.registerListener @dataset}}
     ></svg>
   </div>
 
