@@ -321,7 +321,7 @@ The following templated policy allow to read the path associated with the
 Kubernetes service account namespace of the identity:
 
 ```ruby
-path "secrets/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.service_account_namespace}}/*" {
+path "secret/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.service_account_namespace}}/*" {
   capabilities = ["read"]
 }
 ```
