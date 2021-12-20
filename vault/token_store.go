@@ -2419,6 +2419,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		explicitEntityID = entity.ID
 	}
 
+	if data.EntityAlias == "" {
+		return logical.ErrorResponse("no 'entity_alias' value supplied"), logical.ErrInvalidRequest
+	}
+
 	// Setup the token entry
 	te := logical.TokenEntry{
 		Parent: req.ClientToken,
