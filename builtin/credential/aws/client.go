@@ -3,6 +3,8 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -13,7 +15,27 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/net/http/httpproxy"
 )
+
+// httpClient returns a cleanhttp.Client with the HTTPS proxy possibly
+// overriden by the configuration set by the user.
+func httpClient(httpProxy string) *http.Client {
+	transport := cleanhttp.DefaultTransport()
+	cfg := httpproxy.FromEnvironment()
+	if httpProxy != "" {
+		cfg.HTTPProxy = httpProxy
+		cfg.HTTPSProxy = httpProxy
+	}
+	proxyFunc := cfg.ProxyFunc()
+	transport.Proxy = func(r *http.Request) (*url.URL, error) {
+		return proxyFunc(r.URL)
+	}
+
+	return &http.Client{
+		Transport: transport,
+	}
+}
 
 // getRawClientConfig creates a aws-sdk-go config, which is used to create client
 // that can interact with AWS API. This builds credentials in the following
@@ -36,6 +58,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 
 	endpoint := aws.String("")
 	var maxRetries int = aws.UseServiceDefaultRetries
+	var httpProxy string
 	if config != nil {
 		// Override the defaults with configured values.
 		switch {
@@ -55,9 +78,10 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		maxRetries = config.MaxRetries
+		httpProxy = config.HTTPProxy
 	}
 
-	credsConfig.HTTPClient = cleanhttp.DefaultClient()
+	credsConfig.HTTPClient = httpClient(httpProxy)
 
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
@@ -71,7 +95,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 	return &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(region),
-		HTTPClient:  cleanhttp.DefaultClient(),
+		HTTPClient:  httpClient(httpProxy),
 		Endpoint:    endpoint,
 		MaxRetries:  aws.Int(maxRetries),
 	}, nil

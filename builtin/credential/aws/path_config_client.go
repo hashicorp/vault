@@ -53,6 +53,12 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Description: "The region ID for the sts_endpoint, if set.",
 			},
 
+			"http_proxy": {
+				Type:    framework.TypeString,
+				Default: "",
+				Description: "The proxy to use for the AWS API calls.",
+			},
+
 			"iam_server_id_header_value": {
 				Type:        framework.TypeString,
 				Default:     "",
@@ -146,6 +152,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"iam_endpoint":               clientConfig.IAMEndpoint,
 			"sts_endpoint":               clientConfig.STSEndpoint,
 			"sts_region":                 clientConfig.STSRegion,
+			"http_proxy":                clientConfig.HTTPProxy,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
 			"allowed_sts_header_values":  clientConfig.AllowedSTSHeaderValues,
@@ -259,6 +266,14 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		}
 	}
 
+	httpsProxyStr, ok := data.GetOk("http_proxy")
+	if ok {
+		if configEntry.HTTPProxy != httpsProxyStr.(string) {
+			changedCreds = true
+			configEntry.HTTPProxy = httpsProxyStr.(string)
+		}
+	}
+
 	headerValStr, ok := data.GetOk("iam_server_id_header_value")
 	if ok {
 		if configEntry.IAMServerIdHeaderValue != headerValStr.(string) {
@@ -341,6 +356,7 @@ type clientConfig struct {
 	IAMEndpoint            string   `json:"iam_endpoint"`
 	STSEndpoint            string   `json:"sts_endpoint"`
 	STSRegion              string   `json:"sts_region"`
+	HTTPProxy             string   `json:"http_proxy"`
 	IAMServerIdHeaderValue string   `json:"iam_server_id_header_value"`
 	AllowedSTSHeaderValues []string `json:"allowed_sts_header_values"`
 	MaxRetries             int      `json:"max_retries"`
