@@ -62,8 +62,13 @@ export default class Dashboard extends Component {
     });
   }
 
-  // TODO: dataset for vertical bar chart (manage in serializer?)
-  get verticalBarChartData() {
+  // TODO: dataset for line chart
+  get lineChartData() {
+    return 'hi';
+  }
+
+  // TODO: dataset for new monthly clients vertical bar chart (manage in serializer?)
+  get newMonthlyClients() {
     return [
       { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
       { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
@@ -80,9 +85,22 @@ export default class Dashboard extends Component {
     ];
   }
 
-  // TODO: dataset for line chart
-  get lineChartData() {
-    return 'hi';
+  // TODO: dataset for vault usage vertical bar chart (manage in serializer?)
+  get totalClientUsage() {
+    return [
+      { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
+      { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
+      { month: 'March', directEntities: 4300, nonEntityTokens: 700, total: 5000 },
+      { month: 'April', directEntities: 1550, nonEntityTokens: 229, total: 1779 },
+      { month: 'May', directEntities: 5560, nonEntityTokens: 124, total: 5684 },
+      { month: 'June', directEntities: 1570, nonEntityTokens: 142, total: 1712 },
+      { month: 'July', directEntities: 300, nonEntityTokens: 112, total: 412 },
+      { month: 'August', directEntities: 1610, nonEntityTokens: 130, total: 1740 },
+      { month: 'September', directEntities: 1900, nonEntityTokens: 222, total: 2122 },
+      { month: 'October', directEntities: 500, nonEntityTokens: 166, total: 666 },
+      { month: 'November', directEntities: 480, nonEntityTokens: 132, total: 612 },
+      { month: 'December', directEntities: 980, nonEntityTokens: 202, total: 1182 },
+    ];
   }
 
   // Create namespaces data for csv format
