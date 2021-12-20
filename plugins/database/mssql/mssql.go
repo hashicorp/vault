@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	_ "github.com/denisenkom/go-mssqldb"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
@@ -98,19 +99,13 @@ func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template - did you reference a field that isn't available? : %w", err)
 	}
 
-	containedDB := false
-	containedDBRaw, err := strutil.GetString(req.Config, "contained_db")
-	if err != nil {
-		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve contained_db: %w", err)
-	}
-	if containedDBRaw != "" {
-		containedDB, err = strconv.ParseBool(containedDBRaw)
+	if v, ok := req.Config["contained_db"]; ok {
+		containedDB, err := parseutil.ParseBool(v)
 		if err != nil {
-			return dbplugin.InitializeResponse{}, fmt.Errorf("parsing error: incorrect boolean operator provided for contained_db: %w", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf(`invalid value for "contained_db": %w`, err)
 		}
+		m.containedDB = containedDB
 	}
-
-	m.containedDB = containedDB
 
 	resp := dbplugin.InitializeResponse{
 		Config: newConf,
