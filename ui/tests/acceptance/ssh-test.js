@@ -86,7 +86,10 @@ module('Acceptance | ssh secret backend', function (hooks) {
     // default has generate CA checked so we just submit the form
     await click('[data-test-ssh-input="configure-submit"]');
 
-    assert.ok(findAll('[data-test-ssh-input="public-key"]').length, 'a public key is fetched');
+    assert.ok(
+      await waitUntil(() => findAll('[data-test-ssh-input="public-key"]').length),
+      'a public key is fetched'
+    );
     await click('[data-test-backend-view-link]');
 
     assert.equal(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);

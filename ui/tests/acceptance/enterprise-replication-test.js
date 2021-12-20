@@ -130,6 +130,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('#no-filtering');
 
     await click('[data-test-config-save]');
+    await settled(); // eslint-disable-line
 
     assert.equal(
       flash.latestMessage,
