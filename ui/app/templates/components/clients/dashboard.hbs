@@ -144,18 +144,19 @@
           @barChartData={{this.newMonthlyClients}}
         />
 
-        <Clients::HorizontalBarCharts
+        <Clients::Attribution
           @title="Attribution"
           @description="This data can be used to understand where unique clients are originating. These are total unique clients for the time period selected above. In each case, we will show the top ten."
           @subText="This data shows the top ten namespaces by client count. They are identified by their path. To see all namespaces, export this data."
-          @dataset={{this.barChartDataset}}
+          @newClientsData={{this.barChartDataset}}
+          @totalClientsData={{this.barChartDataset}}
           @chartLegend={{this.chartLegend}}
           {{!-- Make these variables getters in dashboard.js depending on whether client counts are namespace vs auth method? --}}
           @newClientsDescription="New client count numbers description"
           @totalDescription="Total client count numbers description"
         >
           Export attribution data
-        </Clients::HorizontalBarCharts>
+        </Clients::Attribution>
         
         <Clients::TotalClientUsage
           @title="Vault usage"

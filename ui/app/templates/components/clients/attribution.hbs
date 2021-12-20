@@ -16,19 +16,19 @@
   <div class="chart-container-left">
     <h2 class="chart-title"> New Clients </h2>
     <p class="chart-description">{{@newClientsDescription}}</p>
-    <svg class="chart is-horizontal"
-      {{did-insert this.renderChart @dataset}} 
-      {{did-update this.renderChart @dataset}} >
-    </svg>
+    <Clients::HorizontalBarChart 
+      @dataset={{@newClientsData}} 
+      @chartLegend={{@chartLegend}}
+    />
   </div>
 
   <div class="chart-container-right">
     <h2 class="chart-title"> Total monthly clients </h2>
     <p class="chart-description"> {{@totalDescription}} </p>
-    <svg class="chart is-horizontal"
-      {{did-insert this.renderChart @dataset}} 
-      {{did-update this.renderChart @dataset}} >
-    </svg>
+    <Clients::HorizontalBarChart 
+      @dataset={{@totalClientsData}}
+      @chartLegend={{@chartLegend}}  
+    />
   </div>
 
   <div class="timestamp">
