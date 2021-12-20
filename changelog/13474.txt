@@ -1,0 +1,3 @@
+```release-note:bug
+core/token: properly returns an error response if 'entity_alias' field is left empty when attempting to create a token.
+```
