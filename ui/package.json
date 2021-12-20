@@ -24,6 +24,7 @@
     "fmt:styles": "prettier --write app/styles/**/*.*",
     "start": "export VAULT_ADDR=http://localhost:8200; ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
+    "start:mirage": "start () { MIRAGE_DEV_HANDLER=$1 yarn run start; }; start",
     "test": "npm-run-all lint:js:quiet lint:hbs:quiet && node scripts/start-vault.js",
     "test:oss": "yarn run test -f='!enterprise'",
     "test:browserstack": "export CI=true; node scripts/start-vault.js --browserstack",
