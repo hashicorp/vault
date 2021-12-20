@@ -1,0 +1,20 @@
+<svg class="chart has-grid" {{on "mouseleave" (fn this.removeTooltip)}}
+{{did-insert this.registerListener @dataset}}>
+</svg>
+
+{{!-- TOOLTIP --}}
+  
+{{#if this.tooltipTarget}}  
+{{!-- Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 --}}
+{{!-- Component must be in curly bracket notation --}}
+  {{#modal-dialog
+    tagName='div'
+    tetherTarget=this.tooltipTarget
+    targetAttachment='bottom middle'
+    attachment='bottom middle'
+    offset='40px 0'
+  }}
+    <p class="chart-tooltip">{{this.hoveredLabel}}</p>
+    <div class="chart-tooltip-arrow" />
+  {{/modal-dialog}}
+{{/if}}
