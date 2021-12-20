@@ -284,7 +284,9 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 // the input and existing resource prior to performing the JSON merge operation
 // using the MergePatch function from the json-patch library. The preprocessor
 // is an arbitrary func that can be provided to further process the input. The
-// MergePatch function accepts and returns byte arrays.
+// MergePatch function accepts and returns byte arrays. Null values will unset
+// fields defined within the input's FieldData (as if they were never specified)
+// and remove user-specified keys that exist within a map field.
 func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
 	var err error
 
