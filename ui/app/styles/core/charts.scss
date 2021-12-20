@@ -6,6 +6,13 @@
 }
 
 // GRID LAYOUT //
+.stacked-charts {
+  display: grid;
+  width: 100%;
+  // grid-template-columns: 1fr;
+  // grid-template-rows: 1fr;
+}
+
 .single-chart-grid {
   display: grid;
   grid-template-columns: 1fr 0.3fr 3.7fr;

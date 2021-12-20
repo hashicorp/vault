@@ -6,8 +6,8 @@ import { format } from 'date-fns';
 export default class Dashboard extends Component {
   maxNamespaces = 10;
   chartLegend = [
-    { key: 'distinct_entities', label: 'Direct entities' },
-    { key: 'non_entity_tokens', label: 'Active direct tokens' },
+    { key: 'distinct_entities', label: 'unique entities' },
+    { key: 'non_entity_tokens', label: 'non-entity tokens' },
   ];
   @tracked selectedNamespace = null;
 

@@ -136,6 +136,12 @@
         {{!-- ARG TODO end of part that goes to Running Client --}}
         {{#if this.showGraphs}}
         {{!-- ARG TODO chart playground --}}
+        <Clients::ClientCountsRange
+          @title="Vault client counts"
+          @description="A unique active client is any user or service that interacts with Vault. They are made up of direct entities and non-entity tokens. As Vault’s primary billing metric, your total client count is the number for which you will be charged at the end of your billing period."
+          @chartLegend={{this.chartLegend}}
+        />
+
         <Clients::HorizontalBarCharts
           @title="Attribution"
           @description="This data can be used to understand where unique clients are originating. These are total unique clients for the time period selected above. In each case, we will show the top ten."
