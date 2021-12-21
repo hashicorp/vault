@@ -35,68 +35,6 @@ const BAR_COLOR_DEFAULT = ['#BFD4FF', '#1563FF'];
 const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
-const SAMPLE_DATA = [
-  {
-    label: 'longlongsuperlongnamespace80/',
-    non_entity_tokens: 1696,
-    distinct_entities: 1652,
-    total: 3348,
-  },
-  {
-    label: 'namespace12/',
-    non_entity_tokens: 1568,
-    distinct_entities: 1663,
-    total: 3231,
-  },
-  {
-    label: 'namespace44/',
-    non_entity_tokens: 1511,
-    distinct_entities: 1708,
-    total: 3219,
-  },
-  {
-    label: 'namespace36/',
-    non_entity_tokens: 1574,
-    distinct_entities: 1553,
-    total: 3127,
-  },
-  {
-    label: 'namespace2/',
-    non_entity_tokens: 1784,
-    distinct_entities: 1333,
-    total: 3117,
-  },
-  {
-    label: 'namespace82/',
-    non_entity_tokens: 1245,
-    distinct_entities: 1702,
-    total: 2947,
-  },
-  {
-    label: 'namespace28/',
-    non_entity_tokens: 1579,
-    distinct_entities: 1364,
-    total: 2943,
-  },
-  {
-    label: 'namespace60/',
-    non_entity_tokens: 1962,
-    distinct_entities: 929,
-    total: 2891,
-  },
-  {
-    label: 'namespace5/',
-    non_entity_tokens: 1448,
-    distinct_entities: 1418,
-    total: 2866,
-  },
-  {
-    label: 'namespace67/',
-    non_entity_tokens: 1758,
-    distinct_entities: 1065,
-    total: 2823,
-  },
-];
 export default class HorizontalBarChart extends Component {
   get labelKey() {
     return this.args.labelKey || 'label';
