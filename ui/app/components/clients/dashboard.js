@@ -86,7 +86,7 @@ export default class Dashboard extends Component {
   }
 
   // TODO: dataset for vault usage vertical bar chart (manage in serializer?)
-  get totalClientUsage() {
+  get monthlyUsage() {
     return [
       { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
       { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
