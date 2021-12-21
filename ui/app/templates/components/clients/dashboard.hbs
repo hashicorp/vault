@@ -136,7 +136,7 @@
         {{!-- ARG TODO end of part that goes to Running Client --}}
         {{#if this.showGraphs}}
         {{!-- ARG TODO chart playground --}}
-        <Clients::ClientCountsRange
+        <Clients::RunningTotals
           @title="Vault client counts"
           @description="An active client is any user or service that interacts with Vault. They are made up of unique entities and non-entity tokens. The total client count number is an important consideration for Vault billing."
           @chartLegend={{this.chartLegend}}
