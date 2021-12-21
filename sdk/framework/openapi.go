@@ -200,7 +200,7 @@ var (
 	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
 	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)             // Match an options set, e.g. "a|b|c"
 	nonWordRe        = regexp.MustCompile(`[^\w]+`)                  // Match a sequence of non-word characters
-	altRoots         = regexp.MustCompile(`\(((\w*)[\||\)])+\/`)     // Paths that start with alts, e.g. "(creds|sts)/(?P<name>regex)"
+	altRootsRe       = regexp.MustCompile(`\(((\w*)[\||\)])+\/`)     // Paths that start with alts, e.g. "(creds|sts)/(?P<name>regex)"
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
@@ -467,7 +467,7 @@ func expandPattern(pattern string) []string {
 
 	// recursively operate on each pattern after determining a set of unique roots is present,
 	// e.g. "(rootOne|rootTwo)/(?P<name>regex)" should yield "rootOne/{name}", "rootTwo/{name}"
-	rootMatch := altRoots.FindAllString(pattern, -1)
+	rootMatch := altRootsRe.FindAllString(pattern, -1)
 	if len(rootMatch) > 0 {
 		m := strings.Replace(rootMatch[0][1:], ")/", "", -1)
 		if m != "" {
