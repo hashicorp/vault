@@ -687,6 +687,8 @@ github.com/hashicorp/vault-plugin-auth-gcp v0.9.1 h1:DNwSe1Sk53olEaB7vSipyBNRB5i
 github.com/hashicorp/vault-plugin-auth-gcp v0.9.1/go.mod h1:Z+mj9fAqzXfDNxLmMoSS8NheVK7ugLvD8sTHO1GXfCA=
 github.com/hashicorp/vault-plugin-auth-jwt v0.9.5 h1:QSLS0FD7qgUIE//lPErYlw49maV2Zm+7Pyt3Wa61MB8=
 github.com/hashicorp/vault-plugin-auth-jwt v0.9.5/go.mod h1:3KxfehLIM7zH19+O8jHJ/QJsLGRzSKRqjsesOJmBuoI=
+github.com/hashicorp/vault-plugin-auth-jwt v0.9.6 h1:rn4YWCBaQcANoOJ3fzeR42MgIdaKZyPT+8uqpirCS+4=
+github.com/hashicorp/vault-plugin-auth-jwt v0.9.6/go.mod h1:3KxfehLIM7zH19+O8jHJ/QJsLGRzSKRqjsesOJmBuoI=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0 h1:QxW0gRevydrNfRvo1qI6p0jQkhedLUgiWqpCN36RXoQ=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0/go.mod h1:h+7pLm4Z2EeKHOGPefX0bGzdUQCMBUlvM/BpSMNgTFw=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0 h1:X/eXFuJqVW8YN73ohTaI5YyCwcjd6C3mpnMv/elkNrw=
