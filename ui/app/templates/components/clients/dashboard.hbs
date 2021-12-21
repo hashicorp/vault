@@ -150,10 +150,10 @@
           @totalClientsData={{this.barChartDataset}}
           @chartLegend={{this.chartLegend}}
         >
-          Export attribution data
+          <button type="button"> Export attribution data </button>
         </Clients::Attribution>
         
-        <Clients::TotalClientUsage
+        <Clients::MonthlyUsage
           @title="Vault usage"
           @description="This data can be used to understand how many total clients are using Vault each month for the time period selected above."
           @chartLegend={{this.chartLegend}}
