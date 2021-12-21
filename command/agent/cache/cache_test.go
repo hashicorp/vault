@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
@@ -359,6 +360,7 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 	}
 
 	wg := &sync.WaitGroup{}
+	var asyncErr *multierror.Error
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func(i int) {
@@ -368,19 +370,24 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 				"key": key,
 			})
 			if err != nil {
-				t.Fatal(err)
+				multierror.Append(asyncErr, err)
+				return
 			}
 			secret, err := testClient.Logical().Read(key)
 			if err != nil {
-				t.Fatal(err)
+				multierror.Append(asyncErr, err)
+				return
 			}
 			if secret == nil || secret.Data["key"].(string) != key {
-				t.Fatal(fmt.Sprintf("failed to read value for key: %q", key))
+				multierror.Append(asyncErr, fmt.Errorf("failed to read value for key: %q", key))
 			}
 		}(i)
 
 	}
 	wg.Wait()
+	if err := asyncErr.ErrorOrNil(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {

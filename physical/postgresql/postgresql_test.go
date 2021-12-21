@@ -180,13 +180,6 @@ const maxTries = 3
 func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
 	t.Log("Skipping testPostgresSQLLockTTL portion of test.")
 	return
-
-	for tries := 1; tries <= maxTries; tries++ {
-		// Try this several times.  If the test environment is too slow the lock can naturally lapse
-		if attemptLockTTLTest(t, ha, tries) {
-			break
-		}
-	}
 }
 
 func attemptLockTTLTest(t *testing.T, ha physical.HABackend, tries int) bool {

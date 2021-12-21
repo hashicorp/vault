@@ -2,11 +2,13 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -101,7 +103,7 @@ func TestACL_Capabilities(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
 		policy := []*Policy{{Name: "root"}}
-		ctx := namespace.RootContext(nil)
+		ctx := namespace.RootContext(context.TODO())
 		acl, err := NewACL(ctx, policy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -159,7 +161,7 @@ func testACLRoot(t *testing.T, ns *namespace.Namespace) {
 	// Create the root policy ACL. Always create on root namespace regardless of
 	// which namespace to ACL check on.
 	policy := []*Policy{{Name: "root"}}
-	acl, err := NewACL(namespace.RootContext(nil), policy)
+	acl, err := NewACL(namespace.RootContext(context.TODO()), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -293,7 +295,7 @@ func TestACL_Layered(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		acl, err := NewACL(namespace.RootContext(nil), []*Policy{policy1, policy2})
+		acl, err := NewACL(namespace.RootContext(context.TODO()), []*Policy{policy1, policy2})
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -822,7 +824,7 @@ func TestACL_CreationRace(t *testing.T) {
 
 	var wg sync.WaitGroup
 	stopTime := time.Now().Add(20 * time.Second)
-
+	var asyncErr *multierror.Error
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
 		go func() {
@@ -833,13 +835,16 @@ func TestACL_CreationRace(t *testing.T) {
 				}
 				_, err := NewACL(namespace.RootContext(nil), []*Policy{policy})
 				if err != nil {
-					t.Fatalf("err: %v", err)
+					multierror.Append(asyncErr, fmt.Errorf("err: %v", err))
 				}
 			}
 		}()
 	}
 
 	wg.Wait()
+	if err := asyncErr.ErrorOrNil(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 var tokenCreationPolicy = `

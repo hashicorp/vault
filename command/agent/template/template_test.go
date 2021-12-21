@@ -326,7 +326,8 @@ func TestServerRun(t *testing.T) {
 				templatesToRender = append(templatesToRender, templateTest.template)
 			}
 
-			ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+			ctx, cf := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cf()
 			sc := ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				AgentConfig: &config.Config{

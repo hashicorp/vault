@@ -56,7 +56,7 @@ docker-dev: prep
 docker-dev-ui: prep
 	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
-# test runs the unit tests and vets the code
+# test runs the unit tests
 test: prep
 	@CGO_ENABLED=$(CGO_ENABLED) \
 	VAULT_ADDR= \
@@ -93,12 +93,11 @@ cover:
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
-		| grep -v '.*github.com/hashicorp/vault$$' \
-		| xargs $(GO_CMD) vet ; if [ $$? -eq 1 ]; then \
+	@$(GO_CMD) vet ./...; if [ $$? -ne 0 ]; then \
 			echo ""; \
 			echo "Vet found suspicious constructs. Please check the reported constructs"; \
 			echo "and fix them if necessary before submitting the code for reviewal."; \
+			exit 1; \
 		fi
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder

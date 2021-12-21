@@ -589,7 +589,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			}()
 
 			ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
-
+			defer ctxCancel()
 			// We are calling the callback function synchronously here while we
 			// have the lock. So set it to nil and restore the callback when we
 			// finish.

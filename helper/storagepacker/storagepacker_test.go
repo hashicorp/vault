@@ -175,7 +175,7 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 	}
 
 	if !proto.Equal(&itemDecoded, entity) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v\n", entity, itemDecoded)
+		t.Fatalf("bad: expected: %#v\nactual: %#v\n", entity, &itemDecoded)
 	}
 }
 

@@ -406,7 +406,8 @@ func assertDeepEqual(t *testing.T, a, b *options.ClientOptions) {
 func createDBUser(t testing.TB, connURL, db, username, password string) {
 	t.Helper()
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cf := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cf()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		t.Fatal(err)
@@ -430,7 +431,8 @@ func assertCredsExist(t testing.TB, username, password, connURL string) {
 
 	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cf := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cf()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		t.Fatalf("Failed to connect to mongo: %s", err)
@@ -447,7 +449,8 @@ func assertCredsDoNotExist(t testing.TB, username, password, connURL string) {
 
 	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cf := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cf()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		return // Creds don't exist as expected

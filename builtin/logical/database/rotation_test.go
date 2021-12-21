@@ -914,7 +914,8 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 }
 
 func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cf := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cf()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		t.Fatal(err)

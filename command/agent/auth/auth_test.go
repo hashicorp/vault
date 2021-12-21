@@ -72,7 +72,7 @@ func TestAuthHandler(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
-
+	defer cancelFunc()
 	ah := NewAuthHandler(&AuthHandlerConfig{
 		Logger: logger.Named("auth.handler"),
 		Client: client,

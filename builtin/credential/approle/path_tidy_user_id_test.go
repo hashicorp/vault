@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -114,6 +115,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	start := time.Now()
+	var asyncErr *multierror.Error
 	for time.Now().Sub(start) < 10*time.Second {
 		if time.Now().Sub(start) > 100*time.Millisecond && atomic.LoadUint32(b.tidySecretIDCASGuard) == 0 {
 			_, err = b.tidySecretID(context.Background(), &logical.Request{
@@ -133,7 +135,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 			}
 			resp, err := b.HandleRequest(context.Background(), roleSecretIDReq)
 			if err != nil || (resp != nil && resp.IsError()) {
-				t.Fatalf("err:%v resp:%#v", err, resp)
+				multierror.Append(asyncErr, fmt.Errorf("err:%v resp:%#v", err, resp))
 			}
 		}()
 
@@ -159,6 +161,9 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	logger.Info("wrote entries", "count", count)
 
 	wg.Wait()
+	if err := asyncErr.ErrorOrNil(); err != nil {
+		t.Fatal(err)
+	}
 	// Let tidy finish
 	for atomic.LoadUint32(b.tidySecretIDCASGuard) != 0 {
 		time.Sleep(100 * time.Millisecond)
