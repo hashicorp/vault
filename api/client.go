@@ -20,9 +20,9 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
-	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -880,8 +880,10 @@ func (c *Client) SetReadYourWrites(preventStaleReads bool) {
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
 
-	if preventStaleReads && c.replicationStateStore == nil {
-		c.replicationStateStore = &replicationStateStore{}
+	if preventStaleReads {
+		if c.replicationStateStore == nil {
+			c.replicationStateStore = &replicationStateStore{}
+		}
 	} else {
 		c.replicationStateStore = nil
 	}
