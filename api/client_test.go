@@ -991,7 +991,6 @@ func TestClient_SetReadYourWrites(t *testing.T) {
 	tests := []struct {
 		name   string
 		config *Config
-		multi  bool
 		calls  []bool
 	}{
 		{
