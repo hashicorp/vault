@@ -200,6 +200,7 @@ var (
 	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
 	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)             // Match an options set, e.g. "a|b|c"
 	nonWordRe        = regexp.MustCompile(`[^\w]+`)                  // Match a sequence of non-word characters
+	altRoots         = regexp.MustCompile(`\(((\w*)[\||\)])+\/`)     // Paths that start with alts, e.g. "(creds|sts)/(?P<name>regex)"
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
@@ -463,6 +464,21 @@ func specialPathMatch(path string, specialPaths []string) bool {
 // and changing named parameters into their {openapi} equivalents.
 func expandPattern(pattern string) []string {
 	var paths []string
+
+	// recursively operate on each pattern after determining a set of unique roots is present,
+	// e.g. "(rootOne|rootTwo)/(?P<name>regex)" should yield "rootOne/{name}", "rootTwo/{name}"
+	rootMatch := altRoots.FindAllString(pattern, -1)
+	if len(rootMatch) > 0 {
+		m := strings.Replace(rootMatch[0][1:], ")/", "", -1)
+		if m != "" {
+			var expandedRoots []string
+			suffix := strings.Replace(pattern, rootMatch[0], "", -1)
+			for _, root := range strings.Split(m, "|") {
+				expandedRoots = append(expandedRoots, expandPattern(root+"/"+suffix)...)
+			}
+			return expandedRoots
+		}
+	}
 
 	// GenericNameRegex adds a regex that complicates our parsing. It is much easier to
 	// detect and remove it now than to compensate for in the other regexes.
