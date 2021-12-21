@@ -3,6 +3,21 @@
 
 Changelog preview coming soon!
 
+## 1.9.2
+### December 21, 2021
+
+CHANGES:
+
+* go: Update go version to 1.17.5 [[GH-13408](https://github.com/hashicorp/vault/pull/13408)]
+
+IMPROVEMENTS:
+
+* auth/jwt: The Authorization Code flow makes use of the Proof Key for Code Exchange (PKCE) extension. [[GH-13365](https://github.com/hashicorp/vault/pull/13365)]
+
+BUG FIXES:
+
+* ui: Fix client count current month data not showing unless monthly history data exists [[GH-13396](https://github.com/hashicorp/vault/pull/13396)]
+
 ## 1.9.1
 ### December 9, 2021
 
@@ -228,6 +243,13 @@ of dirty pages in the merkle tree at time of checkpoint creation. [[GH-2093](htt
 * ui: fix missing navbar items on login to namespace [[GH-12478](https://github.com/hashicorp/vault/pull/12478)]
 * ui: update bar chart when model changes [[GH-12622](https://github.com/hashicorp/vault/pull/12622)]
 * ui: updating database TTL picker help text. [[GH-12212](https://github.com/hashicorp/vault/pull/12212)]
+
+## 1.8.7
+### December 21, 2021
+
+CHANGES:
+
+* go: Update go version to 1.16.12 [[GH-13422](https://github.com/hashicorp/vault/pull/13422)]
 
 ## 1.8.6
 ### December 9, 2021
@@ -507,6 +529,18 @@ BUG FIXES:
 * ui: fix control group access for database credential [[GH-12024](https://github.com/hashicorp/vault/pull/12024)]
 * ui: fix issue where select-one option was not showing in secrets database role creation [[GH-11294](https://github.com/hashicorp/vault/pull/11294)]
 * ui: fix oidc login with Safari [[GH-11884](https://github.com/hashicorp/vault/pull/11884)]
+
+## 1.7.8
+### December 21, 2021
+
+CHANGES:
+
+* go: Update go version to 1.16.12 [[GH-13422](https://github.com/hashicorp/vault/pull/13422)]
+
+BUG FIXES:
+
+* auth/aws: Fixes ec2 login no longer supporting DSA signature verification [[GH-12340](https://github.com/hashicorp/vault/pull/12340)]
+* identity: Fix a panic on arm64 platform when doing identity I/O. [[GH-12371](https://github.com/hashicorp/vault/pull/12371)]
 
 ## 1.7.7
 ### December 9, 2021
