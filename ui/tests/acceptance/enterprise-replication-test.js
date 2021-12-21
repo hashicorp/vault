@@ -130,6 +130,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('#no-filtering');
 
     await click('[data-test-config-save]');
+    await settled(); // eslint-disable-line
 
     assert.equal(
       flash.latestMessage,
@@ -234,7 +235,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
-
+    await settled(); // eslint-disable-line
     await pollCluster(this.owner);
     await visit('/vault/replication-dr-promote/details');
 
