@@ -138,7 +138,7 @@
         {{!-- ARG TODO chart playground --}}
         <Clients::ClientCountsRange
           @title="Vault client counts"
-          @description="A unique active client is any user or service that interacts with Vault. They are made up of direct entities and non-entity tokens. As Vault’s primary billing metric, your total client count is the number for which you will be charged at the end of your billing period."
+          @description="An active client is any user or service that interacts with Vault. They are made up of unique entities and non-entity tokens. The total client count number is an important consideration for Vault billing."
           @chartLegend={{this.chartLegend}}
           @lineChartData={{this.lineChartData}}
           @barChartData={{this.newMonthlyClients}}
@@ -146,8 +146,6 @@
 
         <Clients::Attribution
           @title="Attribution"
-          @description="This data can be used to understand where unique clients are originating. These are total unique clients for the time period selected above. In each case, we will show the top ten."
-          @subText="This data shows the top ten namespaces by client count. They are identified by their path. To see all namespaces, export this data."
           @newClientsData={{this.barChartDataset}}
           @totalClientsData={{this.barChartDataset}}
           @chartLegend={{this.chartLegend}}

@@ -2,20 +2,18 @@
   <div class="chart-header has-export">
     <div class="header-left">
       <h2 class="chart-title">{{@title}}</h2>
-        {{#if @description}}
-          <p class="chart-description">{{@description}}</p>
-        {{/if}}
+        <p class="chart-description">{{this.chartText.description}}</p>
     </div> 
     <div class="header-right">
-      {{#if @dataset}}
+      {{#if @totalClientsData}}
         {{yield}}
       {{/if}}
     </div>
   </div>
 
   <div class="chart-container-left">
-    <h2 class="chart-title">New Clients</h2>
-    <p class="chart-description">New client count numbers description</p>
+    <h2 class="chart-title">New clients</h2>
+    <p class="chart-description">{{this.chartText.newCopy}}</p>
       <Clients::HorizontalBarChart 
         @dataset={{@newClientsData}} 
         @chartLegend={{@chartLegend}}
@@ -23,8 +21,8 @@
   </div>
 
   <div class="chart-container-right">
-    <h2 class="chart-title">Total monthly clients</h2>
-    <p class="chart-description">Total client count numbers description</p>
+    <h2 class="chart-title">Total clients</h2>
+    <p class="chart-description">{{this.chartText.totalCopy}}</p>
       <Clients::HorizontalBarChart 
         @dataset={{@totalClientsData}}
         @chartLegend={{@chartLegend}}  
