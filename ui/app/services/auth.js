@@ -326,7 +326,27 @@ export default Service.extend({
     const adapter = this.clusterAdapter();
 
     let resp = await adapter.authenticate(options);
-    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.namespaceService.path);
+    const mfa_enforcement = resp.auth?.mfa_enforcement;
+
+    if (mfa_enforcement) {
+      const usesPasscode = mfa_enforcement.mfa_constraints.findBy('uses_passcode');
+      if (usesPasscode) {
+        return { mfa_enforcement };
+      }
+      // silently make request to validate endpoint when passcode is not required
+      resp = await adapter.mfaValidate(mfa_enforcement);
+    }
+
+    return this.authSuccess(options, resp.auth || resp.data);
+  },
+
+  async totpValidate({ mfa_enforcement, ...options }, passcode) {
+    const resp = await this.clusterAdapter().mfaValidate(mfa_enforcement, passcode);
+    return this.authSuccess(options, resp.auth || resp.data);
+  },
+
+  async authSuccess(options, response) {
+    const authData = await this.persistAuthData(options, response, this.namespaceService.path);
     await this.permissions.getPaths.perform();
     return authData;
   },
