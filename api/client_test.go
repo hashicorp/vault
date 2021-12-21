@@ -986,3 +986,69 @@ func TestClient_ReadYourWrites(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_SetReadYourWrites(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *Config
+		calls  []bool
+	}{
+		{
+			name:   "false",
+			config: &Config{},
+			calls:  []bool{false},
+		},
+		{
+			name:   "true",
+			config: &Config{},
+			calls:  []bool{true},
+		},
+		{
+			name:   "multi-false",
+			config: &Config{},
+			calls:  []bool{false, false},
+		},
+		{
+			name:   "multi-true",
+			config: &Config{},
+			calls:  []bool{true, true},
+		},
+		{
+			name:   "multi-mix",
+			config: &Config{},
+			calls:  []bool{false, true, false, true},
+		},
+	}
+
+	assertSetReadYourRights := func(t *testing.T, c *Client, v bool, s *replicationStateStore) {
+		t.Helper()
+		c.SetReadYourWrites(v)
+		if c.config.ReadYourWrites != v {
+			t.Fatalf("expected config.ReadYourWrites %#v, actual %#v", v, c.config.ReadYourWrites)
+		}
+		if !reflect.DeepEqual(s, c.replicationStateStore) {
+			t.Fatalf("expected replicationStateStore %#v, actual %#v", s, c.replicationStateStore)
+		}
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				config: tt.config,
+			}
+			for i, v := range tt.calls {
+				var expectStateStore *replicationStateStore
+				if v {
+					if c.replicationStateStore == nil {
+						c.replicationStateStore = &replicationStateStore{
+							store: []string{},
+						}
+					}
+					c.replicationStateStore.store = append(c.replicationStateStore.store,
+						fmt.Sprintf("%s-%d", tt.name, i))
+					expectStateStore = c.replicationStateStore
+				}
+				assertSetReadYourRights(t, c, v, expectStateStore)
+			}
+		})
+	}
+}
