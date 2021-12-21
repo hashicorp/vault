@@ -21,6 +21,7 @@ jobs:
           BACKPORT_TARGET_TEMPLATE: "stable-{{.target}}"
           GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Backport changes labeled website to latest release branch
+        if: always()
         run: |
           resp=$(curl -f -s "https://api.github.com/repos/$GITHUB_REPOSITORY/releases?per_page=100")
           ret="$?"
@@ -37,7 +38,7 @@ jobs:
           target="${latest_version#v}"
           # replace patch version with "x"
           target="${target%.*}.x"
-          
+
           export BACKPORT_TARGET_TEMPLATE="release/$target"
           backport-assistant backport
         env:
