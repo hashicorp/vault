@@ -2,11 +2,11 @@ package awsauth
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -47,7 +47,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	var autoDetectRegion bool
 	if autoDetectRaw, ok := m["auto_detect_region"]; ok {
 		var err error
-		autoDetectRegion, err = strconv.ParseBool(autoDetectRaw)
+		autoDetectRegion, err = parseutil.ParseBool(autoDetectRaw)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse auto_detect: %w", err)
 		}
