@@ -1,3 +1,18 @@
+## 1.9.2
+### December 21, 2021
+
+CHANGES:
+
+* go: Update go version to 1.17.5 [[GH-13408](https://github.com/hashicorp/vault/pull/13408)]
+
+IMPROVEMENTS:
+
+* auth/jwt: The Authorization Code flow makes use of the Proof Key for Code Exchange (PKCE) extension. [[GH-13365](https://github.com/hashicorp/vault/pull/13365)]
+
+BUG FIXES:
+
+* ui: Fix client count current month data not showing unless monthly history data exists [[GH-13396](https://github.com/hashicorp/vault/pull/13396)]
+
 ## 1.9.1
 ### December 9, 2021
 
