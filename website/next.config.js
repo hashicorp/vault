@@ -5,7 +5,7 @@ const redirects = require('./redirects.next')
 // prevent indexing for preview.vaultproject.io
 let customHeaders = []
 const robotsHeader = { key: 'X-Robots-Tag', value: 'noindex' }
-if (process.env.VERCEL_GIT_COMMIT_REF == 'main') {
+if (process.env.VERCEL_GIT_COMMIT_REF == 'stable-website-preview') {
   customHeaders.push(
     {
       source: '/',
