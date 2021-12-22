@@ -43,7 +43,8 @@ export default class VerticalBarChart extends Component {
 
     let yScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([0, 100]);
+      .range([0, 100])
+      .nice();
 
     let xScale = scaleBand()
       .domain(dataset.map(d => d.month))
@@ -75,7 +76,8 @@ export default class VerticalBarChart extends Component {
     // MAKE AXES //
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([`${SVG_DIMENSIONS.height}`, 0]);
+      .range([`${SVG_DIMENSIONS.height}`, 0])
+      .nice();
 
     // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
     let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.

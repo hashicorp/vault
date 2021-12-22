@@ -64,7 +64,20 @@ export default class Dashboard extends Component {
 
   // TODO: dataset for line chart
   get lineChartData() {
-    return 'hi';
+    return [
+      { month: '1/21', clients: 100 },
+      { month: '2/21', clients: 300 },
+      { month: '3/21', clients: 300 },
+      { month: '4/21', clients: 300 },
+      { month: '5/21', clients: 300 },
+      { month: '6/21', clients: 300 },
+      { month: '7/21', clients: 300 },
+      { month: '8/21', clients: 350 },
+      { month: '9/21', clients: 400 },
+      { month: '10/21', clients: 450 },
+      { month: '11/21', clients: 500 },
+      { month: '12/21', clients: 1000 },
+    ];
   }
 
   // TODO: dataset for new monthly clients vertical bar chart (manage in serializer?)
