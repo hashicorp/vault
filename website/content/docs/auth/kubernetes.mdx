@@ -197,10 +197,7 @@ import (
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.
-//
-// As the client, all we need to do is pass along the JWT token representing our application's Kubernetes Service Account in our login request to Vault.
-//
-// For a more in-depth setup explanation, please see the full version of this code in the hashicorp/vault-examples repo.
+// For a more in-depth setup explanation, please see the relevant readme in the hashicorp/vault-examples repo.
 func getSecretWithKubernetesAuth() (string, error) {
 	// If set, the VAULT_ADDR environment variable will be the address that your pod uses to communicate with Vault.
 	config := vault.DefaultConfig() // modify for more granular configuration
@@ -254,6 +251,60 @@ func getSecretWithKubernetesAuth() (string, error) {
 	}
 
 	return value, nil
+}
+```
+</CodeBlockConfig>
+
+<CodeBlockConfig lineNumbers>
+
+```cs
+using System;
+using System.IO;
+using VaultSharp;
+using VaultSharp.V1.AuthMethods;
+using VaultSharp.V1.AuthMethods.Kubernetes;
+using VaultSharp.V1.Commons;
+
+namespace Examples
+{
+    public class KubernetesAuthExample 
+    {
+        const string DefaultTokenPath = "path/to/service-account-token";
+
+        // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.
+        // For a more in-depth setup explanation, please see the relevant readme in the hashicorp/vault-examples repo.
+        public string GetSecretWithK8s()
+        {
+            var vaultAddr = Environment.GetEnvironmentVariable("VAULT_ADDR");
+            if(String.IsNullOrEmpty(vaultAddr))
+            {
+                throw new System.ArgumentNullException("Vault Address");
+            }
+
+            var roleName = Environment.GetEnvironmentVariable("VAULT_ROLE");
+            if(String.IsNullOrEmpty(roleName))
+            {
+                throw new System.ArgumentNullException("Vault Role Name");
+            }
+
+            // Get the path to service account token or fall back on default path
+            string pathToToken = String.IsNullOrEmpty(Environment.GetEnvironmentVariable("SA_TOKEN_PATH")) ? DefaultTokenPath : Environment.GetEnvironmentVariable("SA_TOKEN_PATH");
+            string jwt = File.ReadAllText(pathToToken); 
+
+            IAuthMethodInfo authMethod = new KubernetesAuthMethodInfo(roleName, jwt);
+            var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
+
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings); 
+
+            // We can retrieve the secret after creating our VaultClient object
+            Secret<SecretData> kv2Secret = null;
+            kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
+            
+            var password = kv2Secret.Data.Data["password"];
+            
+            return password.ToString();
+        }
+    }
 }
 ```
 </CodeBlockConfig>

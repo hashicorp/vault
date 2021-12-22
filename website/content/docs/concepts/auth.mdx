@@ -115,7 +115,7 @@ leased token associated with your identity to renew it.
 
 The following code snippet demonstrates how to renew auth tokens.
 
-<CodeTabs heading="gcp auth example">
+<CodeTabs heading="token renewal example">
 
 <CodeBlockConfig lineNumbers>
 
@@ -173,40 +173,46 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret) error {
 
 	for {
 		select {
-		// `DoneCh` will return if renewal fails, or if the remaining lease duration is
-   // under a built-in threshold and either renewing is not extending it or
-  // renewing is disabled.  In any case, the caller needs to attempt to log in again.
-  case err := <-watcher.DoneCh():
-   if err != nil {
-    log.Printf("Failed to renew token: %v. Re-attempting login.", err)
-    return nil
-   }
-   log.Printf("Token can no longer be renewed. Re-attempting login.")
-   return nil
+		// `DoneCh` will return if renewal fails, or if the remaining lease
+		// duration is under a built-in threshold and either renewing is not
+		// extending it or renewing is disabled. In any case, the caller
+		// needs to attempt to log in again.
+		case err := <-watcher.DoneCh():
+			if err != nil {
+				log.Printf("Failed to renew token: %v. Re-attempting login.", err)
+				return nil
+			}
+			// This occurs once the token has reached max TTL.
+			log.Printf("Token can no longer be renewed. Re-attempting login.")
+			return nil
 
-  // Successfully completed renewal
-  case renewal := <-watcher.RenewCh():
-   log.Printf("Successfully renewed: %#v", renewal)
-   }
- }
+		// Successfully completed renewal
+		case renewal := <-watcher.RenewCh():
+			log.Printf("Successfully renewed: %#v", renewal)
+		}
+	}
 }
 
 func login(client *vault.Client) (*vault.Secret, error) {
- // WARNING: A plaintext password like this is obviously insecure.
- // See the files starting in auth-* in the hashicorp/vault-examples repo for full examples of how to securely log in to Vault using various auth methods.
- // This is just demonstrating the basic idea that a *vault.Secret is returned by a call to an auth method's /login API endpoint.
- resp, err := client.Logical().Write("auth/userpass/login/my-user", map[string]interface{}{"password": "my-password"})
- if err != nil {
-  return nil, err
- }
- if resp == nil || resp.Auth == nil || resp.Auth.ClientToken == "" {
-  return nil, fmt.Errorf("login response did not return client token")
- }
+	// WARNING: A plaintext password like this is obviously insecure.
+	// See the hashicorp/vault-examples repo for full examples of how to securely
+	// log in to Vault using various auth methods. This function is just
+	// demonstrating the basic idea that a *vault.Secret is returned by
+	// the login call.
+	userpassAuth, err := auth.NewUserpassAuth("my-user", &auth.Password{FromString: "my-password"})
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize userpass auth method: %w", err)
+	}
 
- // have the client use that token for all Vault calls from now on
- client.SetToken(resp.Auth.ClientToken)
+	authInfo, err := client.Auth().Login(context.TODO(), userpassAuth)
+	if err != nil {
+		return nil, fmt.Errorf("unable to login to userpass auth method: %w", err)
+	}
+	if authInfo == nil {
+		return nil, fmt.Errorf("no auth info was returned after login")
+	}
 
- return resp, nil
+	return authInfo, nil
 }
 ```
 
