@@ -5,9 +5,10 @@ import { max } from 'd3-array';
 // eslint-disable-next-line no-unused-vars
 import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
-import { scaleLinear, scaleBand, scalePoint } from 'd3-scale';
+import { scaleLinear, scalePoint } from 'd3-scale';
 import { format } from 'd3-format';
 import { line } from 'd3-shape';
+import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS } from '../../utils/chart-helpers';
 
 /**
  * @module LineChart
@@ -22,15 +23,6 @@ import { line } from 'd3-shape';
  * @param {string} [param1=defaultValue] - param1 is...
  */
 
-// COLOR THEME:
-const LINE_COLOR = '#1563FF';
-const DOT_COLOR = '#BFD4FF';
-const BACKGROUND_BAR_COLOR = '#EBEEF2';
-
-// TRANSLATIONS:
-const TRANSLATE = { left: -11 };
-const SVG_DIMENSIONS = { height: 190, width: 500 };
-
 export default class LineChart extends Component {
   @tracked tooltipTarget = '';
   @tracked hoveredLabel = '';
@@ -39,18 +31,20 @@ export default class LineChart extends Component {
   renderChart(element, args) {
     let dataset = args[0];
     let chartSvg = select(element);
+    let yMaxValue = max(dataset.map(d => d.clients)); // TODO will need to recalculate when we get the data
+    let xMaxValue = dataset.map(d => d.month);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     let yScale = scaleLinear()
-      .domain([0, max(dataset.map(d => d.clients))]) // TODO will need to recalculate when you get the data
+      .domain([0, yMaxValue])
       .range([0, 100]);
 
     let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map(d => d.clients))]) // TODO will need to recalculate when you get the data
+      .domain([0, yMaxValue]) // TODO will need to recalculate when you get the data
       .range([SVG_DIMENSIONS.height, 0]);
 
     let xScale = scalePoint() //use scaleTime()?
-      .domain(dataset.map(d => d.month))
+      .domain(xMaxValue)
       .range([0, SVG_DIMENSIONS.width])
       .padding(0.2);
 
@@ -72,16 +66,16 @@ export default class LineChart extends Component {
       .x(d => xScale(d.month))
       .y(d => yAxisScale(d.clients));
 
-    // PATH
+    // LINE (PATH) BETWEEN DOTS
     chartSvg
       .append('g')
       .append('path')
       .attr('fill', 'none')
-      .attr('stroke', LINE_COLOR)
+      .attr('stroke', LIGHT_AND_DARK_BLUE[1])
       .attr('stroke-width', 0.5)
       .attr('d', lineGenerator(dataset));
 
-    // PLOT POINTS
+    // CIRCLES
     chartSvg
       .append('g')
       .selectAll('circle')
@@ -92,8 +86,8 @@ export default class LineChart extends Component {
       .attr('cy', d => `${100 - yScale(d.clients)}%`)
       .attr('cx', d => xScale(d.month))
       .attr('r', 3.5)
-      .attr('fill', DOT_COLOR)
-      .attr('stroke', LINE_COLOR)
+      .attr('fill', LIGHT_AND_DARK_BLUE[0])
+      .attr('stroke', LIGHT_AND_DARK_BLUE[1])
       .attr('stroke-width', 1.5);
   }
 

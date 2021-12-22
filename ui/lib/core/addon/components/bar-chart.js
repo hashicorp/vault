@@ -40,6 +40,7 @@ import { stack } from 'd3-shape';
 import { select, event, selectAll } from 'd3-selection';
 // eslint-disable-next-line no-unused-vars
 import { transition } from 'd3-transition';
+import { GREY } from '../../../../app/utils/chart-helpers';
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 137 }; // makes space for y-axis legend
@@ -47,9 +48,8 @@ const CHAR_LIMIT = 18; // character count limit for y-axis labels to trigger tru
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 // COLOR THEME:
-const BAR_COLOR_DEFAULT = ['#BFD4FF', '#8AB1FF'];
+const LIGHT_AND_DARK_BLUE = ['#BFD4FF', '#8AB1FF'];
 const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
-const BACKGROUND_BAR_COLOR = '#EBEEF2';
 const TOOLTIP_BACKGROUND = '#525761';
 
 class BarChartComponent extends Component {
@@ -121,7 +121,7 @@ class BarChartComponent extends Component {
       .append('g')
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
-      .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
+      .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
 
     let yAxis = axisLeft(yScale).tickSize(0);
     yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
@@ -159,7 +159,7 @@ class BarChartComponent extends Component {
       .attr('height', `${LINE_HEIGHT}px`)
       .attr('x', '0')
       .attr('y', chartData => yScale(chartData[labelKey]))
-      .style('fill', `${BACKGROUND_BAR_COLOR}`)
+      .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
@@ -208,7 +208,7 @@ class BarChartComponent extends Component {
           .filter(function() {
             return compareAttributes(this, event.target, 'y');
           })
-          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
       })
       .on('mousemove', function(chartData) {
         select('.chart-tooltip')
@@ -254,7 +254,7 @@ class BarChartComponent extends Component {
           .filter(function() {
             return compareAttributes(this, event.target, 'y');
           })
-          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
         actionBarSelection
           .filter(function() {
             return compareAttributes(this, event.target, 'y');
@@ -302,7 +302,7 @@ class BarChartComponent extends Component {
         .attr('cx', `${xCoordinate}%`)
         .attr('cy', '50%')
         .attr('r', 6)
-        .style('fill', `${BAR_COLOR_DEFAULT[i]}`);
+        .style('fill', `${LIGHT_AND_DARK_BLUE[i]}`);
       legendSvg
         .append('text')
         .attr('x', `${xCoordinate + 2}%`)

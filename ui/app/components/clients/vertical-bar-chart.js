@@ -8,6 +8,7 @@ import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { format } from 'd3-format';
 import { stack } from 'd3-shape';
+import { GREY, LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, TRANSLATE } from '../../utils/chart-helpers';
 
 /**
  * @module VerticalBarChart
@@ -21,14 +22,6 @@ import { stack } from 'd3-shape';
  * @param {string} [optionalParam] - optionalParam is...
  * @param {string} [param1=defaultValue] - param1 is...
  */
-
-// COLOR THEME:
-const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
-const BACKGROUND_BAR_COLOR = '#EBEEF2';
-
-// TRANSLATIONS:
-const TRANSLATE = { left: -11 };
-const SVG_DIMENSIONS = { height: 190, width: 500 };
 
 export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
@@ -60,7 +53,7 @@ export default class VerticalBarChart extends Component {
       .data(stackedData)
       .enter()
       .append('g')
-      .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
+      .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
 
     groups
       .selectAll('rect')
@@ -82,20 +75,16 @@ export default class VerticalBarChart extends Component {
     // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
     let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.
 
-    // customize y-axis
     let yAxis = axisLeft(yAxisScale)
       .ticks(7)
       .tickPadding(10)
-      .tickSizeInner(-SVG_DIMENSIONS.width) // makes grid lines correct length
+      .tickSizeInner(-SVG_DIMENSIONS.width)
       .tickFormat(formatNumbers);
 
+    let xAxis = axisBottom(xScale).tickSize(0);
+
     yAxis(chartSvg.append('g'));
-
-    // customize x-axis
-    let xAxisGenerator = axisBottom(xScale).tickSize(0);
-    let xAxis = chartSvg.append('g').call(xAxisGenerator);
-
-    xAxis.attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`);
+    xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
@@ -103,7 +92,7 @@ export default class VerticalBarChart extends Component {
     let greyBars = chartSvg
       .append('g')
       .attr('transform', `translate(${TRANSLATE.left})`)
-      .style('fill', `${BACKGROUND_BAR_COLOR}`)
+      .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 

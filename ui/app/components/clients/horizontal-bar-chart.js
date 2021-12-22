@@ -6,6 +6,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
+import { GREY, LIGHT_AND_DARK_BLUE } from '../../utils/chart-helpers';
 
 /**
  * @module HorizontalBarChart
@@ -29,11 +30,6 @@ const CHART_MARGIN = { top: 10, left: 95 }; // makes space for y-axis legend
 const TRANSLATE = { down: 13 };
 const CHAR_LIMIT = 15; // character count limit for y-axis labels to trigger truncating
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
-
-// COLOR THEME:
-const BAR_COLOR_DEFAULT = ['#BFD4FF', '#1563FF'];
-const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
-const BACKGROUND_BAR_COLOR = '#EBEEF2';
 
 export default class HorizontalBarChart extends Component {
   get labelKey() {
@@ -82,7 +78,7 @@ export default class HorizontalBarChart extends Component {
       .append('g')
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
-      .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
+      .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
 
     let yAxis = axisLeft(yScale).tickSize(0);
     yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
@@ -122,7 +118,7 @@ export default class HorizontalBarChart extends Component {
       .attr('height', `${LINE_HEIGHT}px`)
       .attr('x', '0')
       .attr('y', chartData => yScale(chartData[labelKey]))
-      .style('fill', `${BACKGROUND_BAR_COLOR}`)
+      .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
@@ -172,7 +168,7 @@ export default class HorizontalBarChart extends Component {
           .filter(function() {
             return compareAttributes(this, event.target, 'y');
           })
-          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
       })
       .on('mousemove', function(chartData) {
         select('.chart-tooltip')
@@ -218,7 +214,7 @@ export default class HorizontalBarChart extends Component {
           .filter(function() {
             return compareAttributes(this, event.target, 'y');
           })
-          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
         actionBarSelection
           .filter(function() {
             return compareAttributes(this, event.target, 'y');
