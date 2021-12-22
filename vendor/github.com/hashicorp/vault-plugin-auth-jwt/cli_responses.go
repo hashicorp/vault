@@ -449,7 +449,7 @@ func formpostHTML(path, code, state string) string {
       </div>
     </div>
 	<script>
-		window.opener.postMessage({ path: "%s", code: "%s", state: "%s"}, window.origin);
+		window.opener.postMessage({ source: 'oidc-callback', path: "%s", code: "%s", state: "%s"}, window.origin);
 	</script>
   </body>
 </html>
