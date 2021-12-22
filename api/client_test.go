@@ -1109,7 +1109,7 @@ func TestClient_SetCloneToken(t *testing.T) {
 			var expected bool
 			for _, v := range tt.calls {
 				actual := c.CloneToken()
-				if expected != c.CloneToken() {
+				if expected != actual {
 					t.Fatalf("expected %v, actual %v", expected, actual)
 				}
 
