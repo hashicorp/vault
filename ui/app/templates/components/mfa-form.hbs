@@ -1,0 +1,31 @@
+<div class="auth-form">
+  <div class="box is-marginless is-shadowless">
+    <p>
+      Multi-factor authentication is enabled for your account. Enter your authentication code to log in.
+    </p>
+    <form id="auth-form" {{on "submit" this.submit}}>
+      <div class="field has-top-margin-l">
+        <label for="passcode" class="is-label">Authentication code</label>
+        <div class="control">
+          <Input
+            id="passcode"
+            name="passcode"
+            class="input"
+            autocomplete="off"
+            spellcheck="false"
+            autofocus="true"
+            @value={{this.passcode}}
+          />
+        </div>
+      </div>
+      <button
+        id="validate"
+        type="submit"
+        disabled={{this.validate.isRunning}}
+        class="button is-primary {{if this.validate.isRunning "is-loading"}}"
+      >
+        Verify
+      </button>
+    </form>
+  </div>
+</div>
