@@ -2,29 +2,34 @@ package shamir
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
+	"time"
 )
+
+const MaxAttempts = 10
+const MaxWaitInBetweenRetries = time.Second * 2
 
 func TestSplit_invalid(t *testing.T) {
 	secret := []byte("test")
 
-	if _, err := Split(secret, 0, 0); err == nil {
+	if _, err := retrySplit(MaxAttempts, MaxWaitInBetweenRetries, secret, 0, 0); err == nil {
 		t.Fatalf("expect error")
 	}
 
-	if _, err := Split(secret, 2, 3); err == nil {
+	if _, err := retrySplit(MaxAttempts, MaxWaitInBetweenRetries, secret, 2, 3); err == nil {
 		t.Fatalf("expect error")
 	}
 
-	if _, err := Split(secret, 1000, 3); err == nil {
+	if _, err := retrySplit(MaxAttempts, MaxWaitInBetweenRetries, secret, 1000, 3); err == nil {
 		t.Fatalf("expect error")
 	}
 
-	if _, err := Split(secret, 10, 1); err == nil {
+	if _, err := retrySplit(MaxAttempts, MaxWaitInBetweenRetries, secret, 10, 1); err == nil {
 		t.Fatalf("expect error")
 	}
 
-	if _, err := Split(nil, 3, 2); err == nil {
+	if _, err := retrySplit(MaxAttempts, MaxWaitInBetweenRetries, nil, 3, 2); err == nil {
 		t.Fatalf("expect error")
 	}
 }
@@ -32,7 +37,7 @@ func TestSplit_invalid(t *testing.T) {
 func TestSplit(t *testing.T) {
 	secret := []byte("test")
 
-	out, err := Split(secret, 5, 3)
+	out, err := retrySplit(MaxAttempts, MaxWaitInBetweenRetries, secret, 5, 3)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -84,7 +89,7 @@ func TestCombine_invalid(t *testing.T) {
 func TestCombine(t *testing.T) {
 	secret := []byte("test")
 
-	out, err := Split(secret, 5, 3)
+	out, err := retrySplit(MaxAttempts, MaxWaitInBetweenRetries, secret, 5, 3)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -154,7 +159,7 @@ func TestField_Divide(t *testing.T) {
 }
 
 func TestPolynomial_Random(t *testing.T) {
-	p, err := makePolynomial(42, 2)
+	p, err := retryMakePolynomial(MaxAttempts, MaxWaitInBetweenRetries, 42, 2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -165,7 +170,7 @@ func TestPolynomial_Random(t *testing.T) {
 }
 
 func TestPolynomial_Eval(t *testing.T) {
-	p, err := makePolynomial(42, 1)
+	p, err := retryMakePolynomial(MaxAttempts, MaxWaitInBetweenRetries, 42, 1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -183,7 +188,7 @@ func TestPolynomial_Eval(t *testing.T) {
 
 func TestInterpolate_Rand(t *testing.T) {
 	for i := 0; i < 256; i++ {
-		p, err := makePolynomial(uint8(i), 2)
+		p, err := retryMakePolynomial(MaxAttempts, MaxWaitInBetweenRetries, uint8(i), 2)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -195,4 +200,43 @@ func TestInterpolate_Rand(t *testing.T) {
 			t.Fatalf("Bad: %v %d", out, i)
 		}
 	}
+}
+
+// retryMakePolynomial retries makePolynomial() for maxAttempts and sleeping for sleep duration.
+// Need to handcode this for test to pass. Other solution is to import Retry packages from
+// github.com/GoogleCloudPlatform/golang-samples/internal/testutil. These packages bring in a lot of external dependencies
+// Hence handcoding our two retry functions for makePolynomial() and Split()
+// go generics is badly needed here
+func retryMakePolynomial(maxAttempts int, sleep time.Duration, intercept, degree uint8) (polynomial, error) {
+	var p polynomial
+	var err error
+	for i := 0; i < maxAttempts; i++ {
+		p, err = makePolynomial(intercept, degree)
+		switch err {
+		case ErrZeroShare, ErrNonUniqueShare:
+			time.Sleep(sleep)
+		case nil:
+			return p, nil
+		default:
+			return p, err
+		}
+	}
+	return p, fmt.Errorf("max retries %d exceed for", maxAttempts)
+}
+
+func retrySplit(maxAttempts int, sleep time.Duration, secret []byte, parts, threshold int) ([][]byte, error) {
+	var splits [][]byte
+	var err error
+	for i := 0; i < maxAttempts; i++ {
+		splits, err = Split(secret, parts, threshold)
+		switch err {
+		case ErrZeroShare, ErrNonUniqueShare:
+			time.Sleep(sleep)
+		case nil:
+			return splits, nil
+		default:
+			return splits, err
+		}
+	}
+	return splits, fmt.Errorf("max retries %d exceed for", maxAttempts)
 }
