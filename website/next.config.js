@@ -1,6 +1,23 @@
 const withHashicorp = require('@hashicorp/platform-nextjs-plugin')
 const redirects = require('./redirects.next')
 
+// add a X-Robots-Tag noindex HTTP header
+// prevent indexing for preview.vaultproject.io
+let customHeaders = []
+const robotsHeader = { key: 'X-Robots-Tag', value: 'noindex' }
+if (process.env.VERCEL_GIT_COMMIT_REF == 'main') {
+  customHeaders.push(
+    {
+      source: '/',
+      headers: [robotsHeader],
+    },
+    {
+      source: '/:all*',
+      headers: [robotsHeader],
+    }
+  )
+}
+
 module.exports = withHashicorp({
   dato: {
     // This token is safe to be in this public repository, it only has access to content that is publicly viewable on the website
@@ -17,6 +34,9 @@ module.exports = withHashicorp({
     },
   ],
   redirects: () => redirects,
+  headers() {
+    return Promise.resolve(customHeaders)
+  },
   env: {
     HASHI_ENV: process.env.HASHI_ENV || 'development',
     SEGMENT_WRITE_KEY: 'OdSFDq9PfujQpmkZf03dFpcUlywme4sC',
