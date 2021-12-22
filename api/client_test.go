@@ -420,6 +420,7 @@ func TestClone(t *testing.T) {
 		name    string
 		config  *Config
 		headers *http.Header
+		token   string
 	}{
 		{
 			name:   "default",
@@ -440,6 +441,13 @@ func TestClone(t *testing.T) {
 			config: &Config{
 				ReadYourWrites: true,
 			},
+		},
+		{
+			name: "cloneToken",
+			config: &Config{
+				CloneToken: true,
+			},
+			token: "cloneToken",
 		},
 	}
 
@@ -473,6 +481,10 @@ func TestClone(t *testing.T) {
 
 			if tt.headers != nil {
 				client1.SetHeaders(*tt.headers)
+			}
+
+			if tt.token != "" {
+				client1.SetToken(tt.token)
 			}
 
 			client2, err := client1.Clone()
@@ -522,6 +534,23 @@ func TestClone(t *testing.T) {
 			}
 			if tt.config.ReadYourWrites && client1.replicationStateStore == nil {
 				t.Fatalf("replicationStateStore is nil")
+			}
+			if tt.config.CloneToken {
+				if tt.token == "" {
+					t.Fatalf("test requires a non-empty token")
+				}
+				if client1.config.CloneToken != client2.config.CloneToken {
+					t.Fatalf("config.CloneToken doesn't match: %v vs %v", client1.config.CloneToken, client2.config.CloneToken)
+				}
+				if client1.token != client2.token {
+					t.Fatalf("tokens do not match: %v vs %v", client1.token, client2.token)
+				}
+			} else {
+				// assumes `VAULT_TOKEN` is unset or has an empty value.
+				expected := ""
+				if client2.token != expected {
+					t.Fatalf("expected clone's token %q, actual %q", expected, client2.token)
+				}
 			}
 			if !reflect.DeepEqual(client1.replicationStateStore, client2.replicationStateStore) {
 				t.Fatalf("expected replicationStateStore %v, actual %v", client1.replicationStateStore,
@@ -1048,6 +1077,48 @@ func TestClient_SetReadYourWrites(t *testing.T) {
 					expectStateStore = c.replicationStateStore
 				}
 				assertSetReadYourRights(t, c, v, expectStateStore)
+			}
+		})
+	}
+}
+
+func TestClient_SetCloneToken(t *testing.T) {
+	tests := []struct {
+		name  string
+		calls []bool
+	}{
+		{
+			name:  "false",
+			calls: []bool{false},
+		},
+		{
+			name:  "true",
+			calls: []bool{true},
+		},
+		{
+			name:  "multi",
+			calls: []bool{true, false, true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				config: &Config{},
+			}
+
+			var expected bool
+			for _, v := range tt.calls {
+				actual := c.CloneToken()
+				if expected != c.CloneToken() {
+					t.Fatalf("expected %v, actual %v", expected, actual)
+				}
+
+				expected = v
+				c.SetCloneToken(expected)
+				actual = c.CloneToken()
+				if actual != expected {
+					t.Fatalf("SetCloneToken(): expected %v, actual %v", expected, actual)
+				}
 			}
 		})
 	}
