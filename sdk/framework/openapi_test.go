@@ -199,7 +199,9 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 		{"^plugins/catalog/(?P<type>auth|database|secret)/?$", []string{
 			"plugins/catalog/{type}",
 		}},
-		{"(creds|sts)/" + GenericNameRegex("name"), []string{"creds/{name}", "sts/{name}"}},
+		{"(pathOne|pathTwo)/" + GenericNameRegex("name"), []string{"pathOne/{name}", "pathTwo/{name}"}},
+		{"(pathOne|path-2|Path_3)/" + GenericNameRegex("name"),
+			[]string{"Path_3/{name}", "path-2/{name}", "pathOne/{name}"}},
 	}
 
 	for i, test := range tests {

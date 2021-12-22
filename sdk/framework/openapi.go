@@ -200,7 +200,7 @@ var (
 	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
 	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)             // Match an options set, e.g. "a|b|c"
 	nonWordRe        = regexp.MustCompile(`[^\w]+`)                  // Match a sequence of non-word characters
-	altRootsRe       = regexp.MustCompile(`\(((\w*)[\||\)])+\/`)     // Paths that start with alts, e.g. "(creds|sts)/(?P<name>regex)"
+	altRootsRe       = regexp.MustCompile(`^\([\w-_|]+\)`)           // Pattern starting with alts, e.g. "(root1|root2)/(?P<name>regex)"
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
@@ -465,19 +465,21 @@ func specialPathMatch(path string, specialPaths []string) bool {
 func expandPattern(pattern string) []string {
 	var paths []string
 
-	// recursively operate on each pattern after determining a set of unique roots is present,
-	// e.g. "(rootOne|rootTwo)/(?P<name>regex)" should yield "rootOne/{name}", "rootTwo/{name}"
-	rootMatch := altRootsRe.FindAllString(pattern, -1)
-	if len(rootMatch) > 0 {
-		m := strings.Replace(rootMatch[0][1:], ")/", "", -1)
-		if m != "" {
-			var expandedRoots []string
-			suffix := strings.Replace(pattern, rootMatch[0], "", -1)
-			for _, root := range strings.Split(m, "|") {
-				expandedRoots = append(expandedRoots, expandPattern(root+"/"+suffix)...)
-			}
-			return expandedRoots
+	// Determine if the pattern starts with an alt for multiple roots
+	// example (root1|root2)/(?P<name>regex) -> (root1|root2)
+	roots := altRootsRe.FindString(pattern)
+	if roots != "" {
+		var expandedRoots []string
+		// capture original suffix
+		// example (root1|root2)/(?P<name>regex) -> /(?P<name>regex)
+		suffix := strings.TrimPrefix(pattern, roots)
+		roots = roots[1 : len(roots)-1]
+		for _, root := range strings.Split(roots, "|") {
+			// call expandPattern on each root+suffix
+			// example (root1|root2)/(?P<name>regex) -> expandPattern(root1/(?P<name>regex))...
+			expandedRoots = append(expandedRoots, expandPattern(root+suffix)...)
 		}
+		return expandedRoots
 	}
 
 	// GenericNameRegex adds a regex that complicates our parsing. It is much easier to
