@@ -191,16 +191,16 @@ var OASStdRespNoContent = &OASResponse{
 var optRe = regexp.MustCompile(`(?U)\([^(]*\)\?|\(/\(\?P<[^(]*\)\)\?`)
 
 var (
-	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)   // Capture required parameters, e.g. "(?P<name>regex)"
-	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)          // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
-	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                 // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-	cleanCharsRe     = regexp.MustCompile("[()^$?]")                 // Set of regex characters that will be stripped during cleaning
-	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                 // Path suffix patterns that will be stripped during cleaning
-	wsRe             = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
-	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
-	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)             // Match an options set, e.g. "a|b|c"
-	nonWordRe        = regexp.MustCompile(`[^\w]+`)                  // Match a sequence of non-word characters
-	altRootsRe       = regexp.MustCompile(`^\([\w-_|]+\)`)           // Pattern starting with alts, e.g. "(root1|root2)/(?P<name>regex)"
+	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)                // Capture required parameters, e.g. "(?P<name>regex)"
+	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)                       // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
+	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                              // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+	cleanCharsRe     = regexp.MustCompile("[()^$?]")                              // Set of regex characters that will be stripped during cleaning
+	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                              // Path suffix patterns that will be stripped during cleaning
+	wsRe             = regexp.MustCompile(`\s+`)                                  // Match whitespace, to be compressed during cleaning
+	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`)              // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
+	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)                          // Match an options set, e.g. "a|b|c"
+	nonWordRe        = regexp.MustCompile(`[^\w]+`)                               // Match a sequence of non-word characters
+	altRootsRe       = regexp.MustCompile(`^\(([\w\-_]+(?:\|[\w\-_]+)+)\)(/.*)$`) // Pattern starting with alts, e.g. "(root1|root2)/(?P<name>regex)"
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
@@ -465,19 +465,13 @@ func specialPathMatch(path string, specialPaths []string) bool {
 func expandPattern(pattern string) []string {
 	var paths []string
 
-	// Determine if the pattern starts with an alt for multiple roots
-	// example (root1|root2)/(?P<name>regex) -> (root1|root2)
-	roots := altRootsRe.FindString(pattern)
-	if roots != "" {
+	// Determine if the pattern starts with an alternation for multiple roots
+	// example (root1|root2)/(?P<name>regex) -> match['(root1|root2)/(?P<name>regex)','root1|root2','/(?P<name>regex)']
+	match := altRootsRe.FindStringSubmatch(pattern)
+	if len(match) == 3 {
 		var expandedRoots []string
-		// capture original suffix
-		// example (root1|root2)/(?P<name>regex) -> /(?P<name>regex)
-		suffix := strings.TrimPrefix(pattern, roots)
-		roots = roots[1 : len(roots)-1]
-		for _, root := range strings.Split(roots, "|") {
-			// call expandPattern on each root+suffix
-			// example (root1|root2)/(?P<name>regex) -> expandPattern(root1/(?P<name>regex))...
-			expandedRoots = append(expandedRoots, expandPattern(root+suffix)...)
+		for _, root := range strings.Split(match[1], "|") {
+			expandedRoots = append(expandedRoots, expandPattern(root+match[2])...)
 		}
 		return expandedRoots
 	}
