@@ -41,7 +41,6 @@ export default class VerticalBarChart extends Component {
   registerListener(element, args) {
     // Define the chart
     let dataset = args[0];
-    console.log(this.chartLegend);
     let stackFunction = stack().keys(this.chartLegend.map(l => l.key));
     let stackedData = stackFunction(dataset);
 

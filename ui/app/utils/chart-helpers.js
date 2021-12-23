@@ -12,5 +12,5 @@ export const SVG_DIMENSIONS = { height: 190, width: 500 };
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
 export function formatNumbers(number) {
   // replace SI prefix of 'G' for billions to 'B'
-  format('.2s')(number).replace('G', 'B');
+  return format('.1s')(number).replace('G', 'B');
 }
