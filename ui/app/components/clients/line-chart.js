@@ -89,13 +89,27 @@ export default class LineChart extends Component {
       .attr('stroke', LIGHT_AND_DARK_BLUE[1])
       .attr('stroke-width', 1.5);
 
-    let linePlots = chartSvg.selectAll('.data-plot');
+    // LARGER HOVER CIRCLES
+    chartSvg
+      .append('g')
+      .selectAll('circle')
+      .data(dataset)
+      .enter()
+      .append('circle')
+      .attr('class', 'hover-circle')
+      .style('cursor', 'pointer')
+      .style('opacity', '0')
+      .attr('cy', d => `${100 - yScale(d.clients)}%`)
+      .attr('cx', d => xScale(d.month))
+      .attr('r', 10);
+
+    let hoverCircles = chartSvg.selectAll('.hover-circle');
 
     // MOUSE EVENT FOR TOOLTIP
-    linePlots.on('mouseover', data => {
+    hoverCircles.on('mouseover', data => {
       let hoveredMonth = data.month;
       this.tooltipText = `${hoveredMonth} ${data.clients}`;
-      let node = linePlots.filter(plot => plot.month === hoveredMonth).node();
+      let node = hoverCircles.filter(plot => plot.month === hoveredMonth).node();
       this.tooltipTarget = node;
     });
   }
