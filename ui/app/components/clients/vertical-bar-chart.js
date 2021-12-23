@@ -39,12 +39,14 @@ export default class VerticalBarChart extends Component {
 
   @action
   registerListener(element, args) {
-    // Define the chart
     let dataset = args[0];
+    // TODO pull out lines 44 - scales into helper? b/c same as line chart?
     let stackFunction = stack().keys(this.chartLegend.map(l => l.key));
     let stackedData = stackFunction(dataset);
+    let chartSvg = select(element);
+    chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
-    // TODO pull out into helper? b/c same as line bar chart?
+    // DEFINE DATA BAR SCALES
     let yScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
       .range([0, 100])
@@ -55,18 +57,14 @@ export default class VerticalBarChart extends Component {
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
 
-    let chartSvg = select(element);
-
-    chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
-
-    let groups = chartSvg
+    let dataBars = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
       .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
 
-    groups
+    dataBars
       .selectAll('rect')
       .data(stackedData => stackedData)
       .enter()
@@ -96,7 +94,7 @@ export default class VerticalBarChart extends Component {
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
-    // creating wider area for tooltip hover
+    // WIDER SELECTION AREA FOR TOOLTIP HOVER
     let greyBars = chartSvg
       .append('g')
       .attr('transform', `translate(${TRANSLATE.left})`)
@@ -116,7 +114,7 @@ export default class VerticalBarChart extends Component {
       .attr('y', '0') // start at bottom
       .attr('x', data => xScale(data.month)); // not data.data because this is not stacked data
 
-    // for tooltip
+    // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', data => {
       this.hoveredLabel = data.month;
       // let node = chartSvg

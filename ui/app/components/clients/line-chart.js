@@ -33,6 +33,7 @@ export default class LineChart extends Component {
     let chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
+    // DEFINE AXES SCALES
     let yScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.clients))])
       .range([0, 100]);
@@ -46,6 +47,7 @@ export default class LineChart extends Component {
       .range([0, SVG_DIMENSIONS.width])
       .padding(0.2);
 
+    // CUSTOMIZE AND APPEND AXES
     let yAxis = axisLeft(yAxisScale)
       .ticks(7)
       .tickPadding(10)
@@ -56,13 +58,14 @@ export default class LineChart extends Component {
 
     yAxis(chartSvg.append('g'));
     xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
-    chartSvg.selectAll('.domain').remove(); // remove domain lines
 
+    chartSvg.selectAll('.domain').remove();
+
+    // PATH BETWEEN PLOT POINTS
     let lineGenerator = line()
       .x(d => xScale(d.month))
       .y(d => yAxisScale(d.clients));
 
-    // LINE (PATH) BETWEEN DOTS
     chartSvg
       .append('g')
       .append('path')
@@ -71,8 +74,8 @@ export default class LineChart extends Component {
       .attr('stroke-width', 0.5)
       .attr('d', lineGenerator(dataset));
 
-    // CIRCLES
-    chartSvg
+    // PLOT POINTS
+    let plotPoints = chartSvg
       .append('g')
       .selectAll('circle')
       .data(dataset)
@@ -85,6 +88,17 @@ export default class LineChart extends Component {
       .attr('fill', LIGHT_AND_DARK_BLUE[0])
       .attr('stroke', LIGHT_AND_DARK_BLUE[1])
       .attr('stroke-width', 1.5);
+
+    // MOUSE EVENT FOR TOOLTIP
+    plotPoints.on('mouseover', data => {
+      this.hoveredLabel = data.month;
+      console.log(data.month);
+      // let node = chartSvg
+      //   .selectAll('rect.data-bar')
+      //   .filter(data => data[0] !== 0 && data.data.month === this.hoveredLabel)
+      //   .node();
+      // this.tooltipTarget = node; // grab the node from the list of rects
+    });
   }
 
   @action removeTooltip() {
