@@ -14,7 +14,11 @@
     attachment='bottom middle'
     offset='35px 0'
   }}
-    <p class="chart-tooltip">{{this.tooltipText}}</p>
+    <div class="chart-tooltip">
+      <h4>{{this.tooltipMonth}}</h4>
+      <p>{{this.tooltipTotal}}</p>
+      <p>{{this.tooltipNew}}</p>
+    </div>
     <div class="chart-tooltip-arrow" />
   {{/modal-dialog}}
 {{/if}}

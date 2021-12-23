@@ -65,18 +65,18 @@ export default class Dashboard extends Component {
   // TODO: dataset for line chart
   get lineChartData() {
     return [
-      { month: '1/21', clients: 100 },
-      { month: '2/21', clients: 300 },
-      { month: '3/21', clients: 300 },
-      { month: '4/21', clients: 300 },
-      { month: '5/21', clients: 300 },
-      { month: '6/21', clients: 300 },
-      { month: '7/21', clients: 300 },
-      { month: '8/21', clients: 350 },
-      { month: '9/21', clients: 400 },
-      { month: '10/21', clients: 450 },
-      { month: '11/21', clients: 500 },
-      { month: '12/21', clients: 1000 },
+      { month: '1/21', clients: 100, new: 100 },
+      { month: '2/21', clients: 300, new: 200 },
+      { month: '3/21', clients: 300, new: 0 },
+      { month: '4/21', clients: 300, new: 0 },
+      { month: '5/21', clients: 300, new: 0 },
+      { month: '6/21', clients: 300, new: 0 },
+      { month: '7/21', clients: 300, new: 0 },
+      { month: '8/21', clients: 350, new: 50 },
+      { month: '9/21', clients: 400, new: 50 },
+      { month: '10/21', clients: 450, new: 50 },
+      { month: '11/21', clients: 500, new: 50 },
+      { month: '12/21', clients: 1000, new: 1000 },
     ];
   }
 

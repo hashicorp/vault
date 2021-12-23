@@ -204,9 +204,13 @@ p.data-details {
 .chart-tooltip {
   background-color: $ui-gray-700;
   color: white;
-  font-size: 0.929rem;
-  padding: 10px;
-  border-radius: 4px;
+  width: 117px;
+  font-size: $size-9;
+  padding: 6px;
+  border-radius: $radius-large;
+  > h4 {
+    font-weight: $font-weight-bold;
+  }
 }
 
 .chart-tooltip-arrow {

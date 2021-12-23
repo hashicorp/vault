@@ -25,7 +25,9 @@ import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/
 
 export default class LineChart extends Component {
   @tracked tooltipTarget = '';
-  @tracked tooltipText = '';
+  @tracked tooltipMonth = '';
+  @tracked tooltipTotal = '';
+  @tracked tooltipNew = '';
 
   @action
   renderChart(element, args) {
@@ -107,9 +109,10 @@ export default class LineChart extends Component {
 
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', data => {
-      let hoveredMonth = data.month;
-      this.tooltipText = `${hoveredMonth} ${data.clients}`;
-      let node = hoverCircles.filter(plot => plot.month === hoveredMonth).node();
+      this.tooltipMonth = data.month;
+      this.tooltipTotal = `${data.clients} total clients`;
+      this.tooltipNew = `${data.new} new clients`;
+      let node = hoverCircles.filter(plot => plot.month === data.month).node();
       this.tooltipTarget = node;
     });
   }
