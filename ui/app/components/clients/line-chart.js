@@ -25,7 +25,7 @@ import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/
 
 export default class LineChart extends Component {
   @tracked tooltipTarget = '';
-  @tracked hoveredLabel = '';
+  @tracked tooltipText = '';
 
   @action
   renderChart(element, args) {
@@ -74,8 +74,8 @@ export default class LineChart extends Component {
       .attr('stroke-width', 0.5)
       .attr('d', lineGenerator(dataset));
 
-    // PLOT POINTS
-    let plotPoints = chartSvg
+    // LINE PLOTS (CIRCLES)
+    chartSvg
       .append('g')
       .selectAll('circle')
       .data(dataset)
@@ -89,15 +89,14 @@ export default class LineChart extends Component {
       .attr('stroke', LIGHT_AND_DARK_BLUE[1])
       .attr('stroke-width', 1.5);
 
+    let linePlots = chartSvg.selectAll('.data-plot');
+
     // MOUSE EVENT FOR TOOLTIP
-    plotPoints.on('mouseover', data => {
-      this.hoveredLabel = data.month;
-      console.log(data.month);
-      // let node = chartSvg
-      //   .selectAll('rect.data-bar')
-      //   .filter(data => data[0] !== 0 && data.data.month === this.hoveredLabel)
-      //   .node();
-      // this.tooltipTarget = node; // grab the node from the list of rects
+    linePlots.on('mouseover', data => {
+      let hoveredMonth = data.month;
+      this.tooltipText = `${hoveredMonth} ${data.clients}`;
+      let node = linePlots.filter(plot => plot.month === hoveredMonth).node();
+      this.tooltipTarget = node;
     });
   }
 
