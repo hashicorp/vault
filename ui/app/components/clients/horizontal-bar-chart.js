@@ -6,7 +6,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { GREY, LIGHT_AND_DARK_BLUE } from '../../utils/chart-helpers';
+import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE } from '../../utils/chart-helpers';
 
 /**
  * @module HorizontalBarChart

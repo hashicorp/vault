@@ -40,7 +40,6 @@ import { stack } from 'd3-shape';
 import { select, event, selectAll } from 'd3-selection';
 // eslint-disable-next-line no-unused-vars
 import { transition } from 'd3-transition';
-import { GREY } from '../../../../app/utils/chart-helpers';
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 137 }; // makes space for y-axis legend
@@ -51,7 +50,7 @@ const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 const LIGHT_AND_DARK_BLUE = ['#BFD4FF', '#8AB1FF'];
 const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
 const TOOLTIP_BACKGROUND = '#525761';
-
+const GREY = '#EBEEF2';
 class BarChartComponent extends Component {
   get labelKey() {
     return this.args.labelKey || 'label';

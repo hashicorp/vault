@@ -83,36 +83,36 @@ export default class Dashboard extends Component {
   // TODO: dataset for new monthly clients vertical bar chart (manage in serializer?)
   get newMonthlyClients() {
     return [
-      { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
-      { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
-      { month: 'March', directEntities: 4300, nonEntityTokens: 700, total: 5000 },
-      { month: 'April', directEntities: 1550, nonEntityTokens: 229, total: 1779 },
-      { month: 'May', directEntities: 5560, nonEntityTokens: 124, total: 5684 },
-      { month: 'June', directEntities: 1570, nonEntityTokens: 142, total: 1712 },
-      { month: 'July', directEntities: 300, nonEntityTokens: 112, total: 412 },
-      { month: 'August', directEntities: 1610, nonEntityTokens: 130, total: 1740 },
-      { month: 'September', directEntities: 1900, nonEntityTokens: 222, total: 2122 },
-      { month: 'October', directEntities: 500, nonEntityTokens: 166, total: 666 },
-      { month: 'November', directEntities: 480, nonEntityTokens: 132, total: 612 },
-      { month: 'December', directEntities: 980, nonEntityTokens: 202, total: 1182 },
+      { month: 'January', distinct_entities: 1000, non_entity_tokens: 322, total: 1322 },
+      { month: 'February', distinct_entities: 1500, non_entity_tokens: 122, total: 1622 },
+      { month: 'March', distinct_entities: 4300, non_entity_tokens: 700, total: 5000 },
+      { month: 'April', distinct_entities: 1550, non_entity_tokens: 229, total: 1779 },
+      { month: 'May', distinct_entities: 5560, non_entity_tokens: 124, total: 5684 },
+      { month: 'June', distinct_entities: 1570, non_entity_tokens: 142, total: 1712 },
+      { month: 'July', distinct_entities: 300, non_entity_tokens: 112, total: 412 },
+      { month: 'August', distinct_entities: 1610, non_entity_tokens: 130, total: 1740 },
+      { month: 'September', distinct_entities: 1900, non_entity_tokens: 222, total: 2122 },
+      { month: 'October', distinct_entities: 500, non_entity_tokens: 166, total: 666 },
+      { month: 'November', distinct_entities: 480, non_entity_tokens: 132, total: 612 },
+      { month: 'December', distinct_entities: 980, non_entity_tokens: 202, total: 1182 },
     ];
   }
 
   // TODO: dataset for vault usage vertical bar chart (manage in serializer?)
   get monthlyUsage() {
     return [
-      { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
-      { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
-      { month: 'March', directEntities: 4300, nonEntityTokens: 700, total: 5000 },
-      { month: 'April', directEntities: 1550, nonEntityTokens: 229, total: 1779 },
-      { month: 'May', directEntities: 5560, nonEntityTokens: 124, total: 5684 },
-      { month: 'June', directEntities: 1570, nonEntityTokens: 142, total: 1712 },
-      { month: 'July', directEntities: 300, nonEntityTokens: 112, total: 412 },
-      { month: 'August', directEntities: 1610, nonEntityTokens: 130, total: 1740 },
-      { month: 'September', directEntities: 1900, nonEntityTokens: 222, total: 2122 },
-      { month: 'October', directEntities: 500, nonEntityTokens: 166, total: 666 },
-      { month: 'November', directEntities: 480, nonEntityTokens: 132, total: 612 },
-      { month: 'December', directEntities: 980, nonEntityTokens: 202, total: 1182 },
+      { month: 'January', distinct_entities: 1000, non_entity_tokens: 322, total: 1322 },
+      { month: 'February', distinct_entities: 1500, non_entity_tokens: 122, total: 1622 },
+      { month: 'March', distinct_entities: 4300, non_entity_tokens: 700, total: 5000 },
+      { month: 'April', distinct_entities: 1550, non_entity_tokens: 229, total: 1779 },
+      { month: 'May', distinct_entities: 5560, non_entity_tokens: 124, total: 5684 },
+      { month: 'June', distinct_entities: 1570, non_entity_tokens: 142, total: 1712 },
+      { month: 'July', distinct_entities: 300, non_entity_tokens: 112, total: 412 },
+      { month: 'August', distinct_entities: 1610, non_entity_tokens: 130, total: 1740 },
+      { month: 'September', distinct_entities: 1900, non_entity_tokens: 222, total: 2122 },
+      { month: 'October', distinct_entities: 500, non_entity_tokens: 166, total: 666 },
+      { month: 'November', distinct_entities: 480, non_entity_tokens: 132, total: 612 },
+      { month: 'December', distinct_entities: 980, non_entity_tokens: 202, total: 1182 },
     ];
   }
 

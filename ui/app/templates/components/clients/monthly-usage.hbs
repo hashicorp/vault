@@ -7,7 +7,10 @@
   </div>
  
   <div class="chart-container-wide">
-    <Clients::VerticalBarChart @dataset={{@verticalBarChartData}}/>
+    <Clients::VerticalBarChart 
+      @dataset={{@verticalBarChartData}}
+      @chartLegend={{@chartLegend}}
+    />
   </div>
 
   <div class="chart-subTitle">

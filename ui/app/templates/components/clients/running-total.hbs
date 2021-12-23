@@ -32,7 +32,10 @@
 
   <div class="single-chart-grid">
     <div class="chart-container-wide">
-      <Clients::VerticalBarChart @dataset={{@barChartData}} />
+      <Clients::VerticalBarChart 
+        @dataset={{@barChartData}}
+        @chartLegend={{@chartLegend}}
+      />
     </div>
 
     <div class="chart-subTitle">

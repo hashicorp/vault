@@ -6,10 +6,16 @@ import { max } from 'd3-array';
 import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scaleBand } from 'd3-scale';
-import { format } from 'd3-format';
 import { stack } from 'd3-shape';
-import { GREY, LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, TRANSLATE } from '../../utils/chart-helpers';
+import {
+  GREY,
+  LIGHT_AND_DARK_BLUE,
+  SVG_DIMENSIONS,
+  TRANSLATE,
+  formatNumbers,
+} from '../../utils/chart-helpers';
 
+// TODO fill out below
 /**
  * @module VerticalBarChart
  * VerticalBarChart components are used to...
@@ -27,13 +33,19 @@ export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked hoveredLabel = '';
 
+  get chartLegend() {
+    return this.args.chartLegend;
+  }
+
   @action
   registerListener(element, args) {
     // Define the chart
     let dataset = args[0];
-    let stackFunction = stack().keys(['directEntities', 'nonEntityTokens']);
+    console.log(this.chartLegend);
+    let stackFunction = stack().keys(this.chartLegend.map(l => l.key));
     let stackedData = stackFunction(dataset);
 
+    // TODO pull out into helper? b/c same as line bar chart?
     let yScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
       .range([0, 100])
@@ -71,9 +83,6 @@ export default class VerticalBarChart extends Component {
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
       .range([`${SVG_DIMENSIONS.height}`, 0])
       .nice();
-
-    // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
-    let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.
 
     let yAxis = axisLeft(yAxisScale)
       .ticks(7)

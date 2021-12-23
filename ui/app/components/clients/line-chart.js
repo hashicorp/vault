@@ -6,10 +6,10 @@ import { max } from 'd3-array';
 import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scalePoint } from 'd3-scale';
-import { format } from 'd3-format';
 import { line } from 'd3-shape';
-import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS } from '../../utils/chart-helpers';
+import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/chart-helpers';
 
+// TODO fill out below
 /**
  * @module LineChart
  * LineChart components are used to...
@@ -31,24 +31,20 @@ export default class LineChart extends Component {
   renderChart(element, args) {
     let dataset = args[0];
     let chartSvg = select(element);
-    let yMaxValue = max(dataset.map(d => d.clients)); // TODO will need to recalculate when we get the data
-    let xMaxValue = dataset.map(d => d.month);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     let yScale = scaleLinear()
-      .domain([0, yMaxValue])
+      .domain([0, max(dataset.map(d => d.clients))])
       .range([0, 100]);
 
     let yAxisScale = scaleLinear()
-      .domain([0, yMaxValue]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map(d => d.clients))]) // TODO will need to recalculate when you get the data
       .range([SVG_DIMENSIONS.height, 0]);
 
-    let xScale = scalePoint() //use scaleTime()?
-      .domain(xMaxValue)
+    let xScale = scalePoint() // use scaleTime()?
+      .domain(dataset.map(d => d.month))
       .range([0, SVG_DIMENSIONS.width])
       .padding(0.2);
-
-    let formatNumbers = number => format('.1s')(number).replace('G', 'B'); // replace SI sign of 'G' for billions to 'B'
 
     let yAxis = axisLeft(yAxisScale)
       .ticks(7)
