@@ -27,3 +27,6 @@
 
 /website/content/                         @taoism4504
 /website/content/docs/plugin-portal.mdx   @taoism4504  @acahn
+
+/ui/app/components/auth-jwt.js         @austingebauer
+/ui/app/routes/vault/cluster/oidc-*.js @austingebauer
