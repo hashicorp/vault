@@ -30,6 +30,10 @@ export default class LineChart extends Component {
   @tracked tooltipTotal = '';
   @tracked tooltipNew = '';
 
+  @action removeTooltip() {
+    this.tooltipTarget = null;
+  }
+
   @action
   renderChart(element, args) {
     let dataset = args[0];
@@ -116,9 +120,5 @@ export default class LineChart extends Component {
       let node = hoverCircles.filter(plot => plot.month === data.month).node();
       this.tooltipTarget = node;
     });
-  }
-
-  @action removeTooltip() {
-    this.tooltipTarget = null;
   }
 }

@@ -50,6 +50,10 @@ export default class HorizontalBarChart extends Component {
     return this.args.dataset[maxIndex(this.args.dataset, d => d.total)];
   }
 
+  @action removeTooltip() {
+    this.tooltipTarget = null;
+  }
+
   @action
   renderChart(element, args) {
     // chart legend tells stackFunction how to stack/organize data
@@ -179,41 +183,44 @@ export default class HorizontalBarChart extends Component {
       });
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
-    // yLegendBars
-    //   .on('click', function(chartData) {
-    //     if (handleClick) {
-    //       handleClick(chartData);
-    //     }
-    //   })
-    //   .on('mouseover', function(data) {
-    //     dataBars
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
-    //     actionBarSelection
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('opacity', '1');
-    //     if (data.label.length >= CHAR_LIMIT) {
-    //       let hoveredElement = yLegendBars.filter( bar => bar.label === data.label).node()
-    //       this.tooltipTarget = hoveredElement
-    //       this.tooltipText = data.label
-    //     }
-    //   })
-    //   .on('mouseout', function() {
-    //     dataBars
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
-    //     actionBarSelection
-    //       .filter(function() {
-    //         return compareAttributes(this, event.target, 'y');
-    //       })
-    //       .style('opacity', '0');
-    //   });
+    yLegendBars
+      .on('click', function(chartData) {
+        if (handleClick) {
+          handleClick(chartData);
+        }
+      })
+      .on('mouseover', data => {
+        if (data.label.length >= CHAR_LIMIT) {
+          let hoveredElement = yLegendBars.filter(bar => bar.label === data.label).node();
+          this.tooltipTarget = hoveredElement;
+          this.tooltipText = data.label;
+        } else {
+          this.tooltipTarget = null;
+        }
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '1');
+      })
+      .on('mouseout', function() {
+        this.tooltipTarget = null;
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '0');
+      });
 
     // add client count total values to the right
     chartSvg
@@ -231,9 +238,5 @@ export default class HorizontalBarChart extends Component {
       .attr('alignment-baseline', 'middle')
       .attr('x', chartData => `${xScale(chartData.total)}%`)
       .attr('y', chartData => yScale(chartData.label));
-  }
-
-  @action removeTooltip() {
-    this.tooltipTarget = null;
   }
 }
