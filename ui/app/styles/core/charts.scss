@@ -204,12 +204,21 @@ p.data-details {
 .chart-tooltip {
   background-color: $ui-gray-700;
   color: white;
-  width: 117px;
   font-size: $size-9;
   padding: 6px;
   border-radius: $radius-large;
-  > h4 {
+
+  .line-chart {
+    width: 117px;
+  }
+
+  .bold {
     font-weight: $font-weight-bold;
+  }
+  .vertical-chart {
+    text-align: center;
+    flex-wrap: nowrap;
+    width: fit-content;
   }
 }
 

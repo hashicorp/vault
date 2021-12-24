@@ -31,7 +31,9 @@ import {
 
 export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
-  @tracked hoveredLabel = '';
+  @tracked tooltipTotal = '';
+  @tracked uniqueEntities = '';
+  @tracked nonEntityTokens = '';
 
   get chartLegend() {
     return this.args.chartLegend;
@@ -116,7 +118,10 @@ export default class VerticalBarChart extends Component {
 
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', data => {
-      this.hoveredLabel = data.month;
+      let hoveredMonth = data.month;
+      this.tooltipTotal = `${data.total} total clients`;
+      this.uniqueEntities = `${data.distinct_entities} unique entities`;
+      this.nonEntityTokens = `${data.non_entity_tokens} non-entity tokens`;
       // let node = chartSvg
       //   .selectAll('rect.tooltip-rect')
       //   .filter(data => data.month === this.hoveredLabel)
@@ -124,7 +129,7 @@ export default class VerticalBarChart extends Component {
       let node = chartSvg
         .selectAll('rect.data-bar')
         // filter for the top data bar (so y-coord !== 0) with matching month
-        .filter(data => data[0] !== 0 && data.data.month === this.hoveredLabel)
+        .filter(data => data[0] !== 0 && data.data.month === hoveredMonth)
         .node();
       this.tooltipTarget = node; // grab the node from the list of rects
     });

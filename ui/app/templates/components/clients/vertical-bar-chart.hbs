@@ -14,7 +14,11 @@
     attachment='bottom middle'
     offset='40px 0'
   }}
-    <p class="chart-tooltip">{{this.hoveredLabel}}</p>
+    <div class="chart-tooltip vertical-chart">
+      <p>{{this.tooltipTotal}}</p>
+      <p>{{this.uniqueEntities}}</p>
+      <p>{{this.nonEntityTokens}}</p>
+    </div>
     <div class="chart-tooltip-arrow" />
   {{/modal-dialog}}
 {{/if}}
