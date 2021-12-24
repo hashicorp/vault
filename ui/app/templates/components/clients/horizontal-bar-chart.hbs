@@ -1,4 +1,21 @@
-<svg class="chart is-horizontal"
+<svg class="chart is-horizontal" {{on "mouseleave" (fn this.removeTooltip)}}
   {{did-insert this.renderChart @dataset}} 
   {{did-update this.renderChart @dataset}} >
 </svg>
+
+{{#if this.tooltipTarget}}  
+{{!-- Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 --}}
+{{!-- Component must be in curly bracket notation --}}
+  {{#modal-dialog
+    tagName='div'
+    tetherTarget=this.tooltipTarget
+    targetAttachment='bottom middle'
+    attachment='bottom middle'
+    offset='35px 0'
+  }}
+    <div class="chart-tooltip horizontal-chart">
+      <p>{{this.tooltipText}}</p>
+    </div>
+    <div class="chart-tooltip-arrow" />
+  {{/modal-dialog}}
+{{/if}}

@@ -24,6 +24,7 @@ import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/
  */
 
 export default class LineChart extends Component {
+  // TODO make just one tracked variable tooltipText?
   @tracked tooltipTarget = '';
   @tracked tooltipMonth = '';
   @tracked tooltipTotal = '';

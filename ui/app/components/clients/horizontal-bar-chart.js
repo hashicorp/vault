@@ -7,6 +7,9 @@ import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
 import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE } from '../../utils/chart-helpers';
+import { tracked } from '@glimmer/tracking';
+import OidcConsentBlockComponent from '../oidc-consent-block';
+import attachCapabilities from '../../lib/attach-capabilities';
 
 /**
  * @module HorizontalBarChart
@@ -32,6 +35,9 @@ const CHAR_LIMIT = 15; // character count limit for y-axis labels to trigger tru
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 export default class HorizontalBarChart extends Component {
+  @tracked tooltipTarget = '';
+  @tracked tooltipText = '';
+
   get labelKey() {
     return this.args.labelKey || 'label';
   }
@@ -138,8 +144,9 @@ export default class HorizontalBarChart extends Component {
 
     let dataBars = chartSvg.selectAll('rect.data-bar');
     let actionBarSelection = chartSvg.selectAll('rect.action-bar');
+
     let compareAttributes = (elementA, elementB, attr) =>
-      select(elementA).attr(`${attr}`) === elementB.getAttribute(`${attr}`);
+      select(elementA).attr(`${attr}`) === select(elementB).attr(`${attr}`);
 
     // MOUSE AND CLICK EVENTS FOR DATA BARS
     actionBars
@@ -148,90 +155,65 @@ export default class HorizontalBarChart extends Component {
           handleClick(chartData);
         }
       })
-      .on('mouseover', function() {
-        select(this).style('opacity', 1);
+      .on('mouseover', data => {
+        let hoveredElement = actionBars.filter(bar => bar.label === data.label).node();
+        this.tooltipTarget = hoveredElement;
+        this.tooltipText = `${Math.round((data.total * 100) / 19000)}% of total client counts:
+        ${data.non_entity_tokens} non-entity tokens, ${data.distinct_entities} unique entities.`;
+
+        select(hoveredElement).style('opacity', 1);
+
         dataBars
           .filter(function() {
-            return compareAttributes(this, event.target, 'y');
+            return compareAttributes(this, hoveredElement, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
-        // TODO: change to use modal instead of tooltip div
-        select('.chart-tooltip')
-          .transition()
-          .duration(200)
-          .style('opacity', 1);
       })
       .on('mouseout', function() {
         select(this).style('opacity', 0);
-        select('.chart-tooltip').style('opacity', 0);
         dataBars
           .filter(function() {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
-      })
-      .on('mousemove', function(chartData) {
-        select('.chart-tooltip')
-          .style('opacity', 1)
-          .style('max-width', '200px')
-          .style('left', `${event.pageX - 325}px`)
-          .style('top', `${event.pageY - 140}px`)
-          .text(
-            `${Math.round((chartData.total * 100) / 19000)}% of total client counts:
-            ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
-          `
-          );
       });
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
-    yLegendBars
-      .on('click', function(chartData) {
-        if (handleClick) {
-          handleClick(chartData);
-        }
-      })
-      .on('mouseover', function(chartData) {
-        dataBars
-          .filter(function() {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
-        actionBarSelection
-          .filter(function() {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('opacity', '1');
-        if (chartData.label.length >= CHAR_LIMIT) {
-          select('.chart-tooltip')
-            .transition()
-            .duration(200)
-            .style('opacity', 1);
-        }
-      })
-      .on('mouseout', function() {
-        select('.chart-tooltip').style('opacity', 0);
-        dataBars
-          .filter(function() {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
-        actionBarSelection
-          .filter(function() {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('opacity', '0');
-      })
-      .on('mousemove', function(chartData) {
-        if (chartData.label.length >= CHAR_LIMIT) {
-          select('.chart-tooltip')
-            .style('left', `${event.pageX - 300}px`)
-            .style('top', `${event.pageY - 100}px`)
-            .text(`${chartData.label}`)
-            .style('max-width', 'fit-content');
-        } else {
-          select('.chart-tooltip').style('opacity', 0);
-        }
-      });
+    // yLegendBars
+    //   .on('click', function(chartData) {
+    //     if (handleClick) {
+    //       handleClick(chartData);
+    //     }
+    //   })
+    //   .on('mouseover', function(data) {
+    //     dataBars
+    //       .filter(function() {
+    //         return compareAttributes(this, event.target, 'y');
+    //       })
+    //       .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+    //     actionBarSelection
+    //       .filter(function() {
+    //         return compareAttributes(this, event.target, 'y');
+    //       })
+    //       .style('opacity', '1');
+    //     if (data.label.length >= CHAR_LIMIT) {
+    //       let hoveredElement = yLegendBars.filter( bar => bar.label === data.label).node()
+    //       this.tooltipTarget = hoveredElement
+    //       this.tooltipText = data.label
+    //     }
+    //   })
+    //   .on('mouseout', function() {
+    //     dataBars
+    //       .filter(function() {
+    //         return compareAttributes(this, event.target, 'y');
+    //       })
+    //       .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
+    //     actionBarSelection
+    //       .filter(function() {
+    //         return compareAttributes(this, event.target, 'y');
+    //       })
+    //       .style('opacity', '0');
+    //   });
 
     // add client count total values to the right
     chartSvg
@@ -249,5 +231,9 @@ export default class HorizontalBarChart extends Component {
       .attr('alignment-baseline', 'middle')
       .attr('x', chartData => `${xScale(chartData.total)}%`)
       .attr('y', chartData => yScale(chartData.label));
+  }
+
+  @action removeTooltip() {
+    this.tooltipTarget = null;
   }
 }
