@@ -532,7 +532,7 @@ func TestLogical_AuditPort(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	auditLogFile, err := ioutil.TempFile("", "httppatch")
+	auditLogFile, err := ioutil.TempFile("", "auditport")
 	if err != nil {
 		t.Fatal(err)
 	}
