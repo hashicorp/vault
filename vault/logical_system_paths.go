@@ -1593,7 +1593,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 			Pattern: "policies/password/?$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
+				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordList,
 					Summary:  "List the existing password policies.",
 				},
