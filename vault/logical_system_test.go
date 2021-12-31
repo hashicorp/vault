@@ -1950,6 +1950,11 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 	if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
 		t.Fatalf("bad: %v", resp)
 	}
+
+	bytes := resp.Data["value_base64"].([]byte)
+	if bytes[0] != 'G' {
+		t.Fatalf("entry should be gzipped compressed: %v", bytes)
+	}
 }
 
 func TestSystemBackend_rawRead_Protected(t *testing.T) {
@@ -1997,6 +2002,49 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 
 	// Note: since the upgrade code is gone that upgraded from 0.1, we can't
 	// simply parse this out directly via GetPolicy, so the test now ends here.
+}
+
+func TestSystemBackend_rawReadWrite_base64(t *testing.T) {
+	_, b, _ := testCoreSystemBackendRaw(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
+	req.Data["value_base64"] = base64.StdEncoding.EncodeToString([]byte(`path "secret/" { policy = "read" }`))
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Read via raw API
+	req = logical.TestRequest(t, logical.ReadOperation, "raw/sys/policy/test")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.HasPrefix(resp.Data["value"].(string), "path") {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_rawReadWrite_invalidBase64(t *testing.T) {
+	_, b, _ := testCoreSystemBackendRaw(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
+	req.Data["value_base64"] = "invalid base64"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("no error")
+	}
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !resp.IsError() {
+		t.Fatalf("response is not error: %v", resp)
+	}
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {

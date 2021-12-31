@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -89,6 +90,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"value": string(outputBytes),
+			"value_base64": entry.Value,
 		},
 	}
 	return resp, nil
@@ -110,10 +112,22 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	value := data.Get("value").(string)
+	value := []byte(data.Get("value").(string))
+	if len(value) == 0 {
+		valueBase64 := data.Get("value_base64").(string)
+		if valueBase64 != "" {
+			valueBytes, err := base64.StdEncoding.DecodeString(valueBase64)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			}
+
+			value = valueBytes
+		}
+	}
+
 	entry := &logical.StorageEntry{
 		Key:   path,
-		Value: []byte(value),
+		Value: value,
 	}
 	if err := b.barrier.Put(ctx, entry); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -185,6 +199,9 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 					Type: framework.TypeString,
 				},
 				"value": {
+					Type: framework.TypeString,
+				},
+				"value_base64": {
 					Type: framework.TypeString,
 				},
 			},

@@ -39,7 +39,8 @@ $ curl \
 
 ```json
 {
-  "value": "{'foo':'bar'}"
+  "value": "{'foo':'bar'}",
+  "value_base64": "eydmb28nOidiYXInfQ=="
 }
 ```
 
@@ -59,6 +60,9 @@ mount system.
   This is specified as part of the URL.
 
 - `value` `(string: <required>)` – Specifies the value of the key.
+
+- `value_base64` `(string: <optional>)` – Specifies the value of the key encoded
+  in base64. Used only if value is left out.
 
 ### Sample Payload
 
