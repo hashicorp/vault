@@ -90,6 +90,7 @@ func (b *BaseCommand) PredictVaultAvailableMounts() complete.Predictor {
 		"pki",
 		"plugin",
 		"rabbitmq",
+		"redis",
 		"ssh",
 		"totp",
 		"transit",

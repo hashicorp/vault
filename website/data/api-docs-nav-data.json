@@ -219,6 +219,10 @@
         "path": "secret/rabbitmq"
       },
       {
+        "title": "Redis",
+        "path": "secret/redis"
+      },
+      {
         "title": "SSH",
         "path": "secret/ssh"
       },

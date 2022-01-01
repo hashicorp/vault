@@ -64,6 +64,7 @@ vault secrets enable openldap
 vault secrets enable pki
 vault secrets enable postgresql
 vault secrets enable rabbitmq
+vault secrets enable redis
 vault secrets enable ssh
 vault secrets enable terraform
 vault secrets enable totp

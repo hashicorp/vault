@@ -1069,6 +1069,10 @@
         "path": "secrets/rabbitmq"
       },
       {
+        "title": "Redis",
+        "path": "secrets/redis"
+      },
+      {
         "title": "SSH",
         "routes": [
           {

@@ -42,6 +42,7 @@ import (
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
 	logicalPostgres "github.com/hashicorp/vault/builtin/logical/postgresql"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
+	logicalRedis "github.com/hashicorp/vault/builtin/logical/redis"
 	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
 	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
@@ -130,6 +131,7 @@ func newRegistry() *registry {
 			"pki":          logicalPki.Factory,
 			"postgresql":   logicalPostgres.Factory, // Deprecated
 			"rabbitmq":     logicalRabbit.Factory,
+			"redis":        logicalRedis.Factory,
 			"ssh":          logicalSsh.Factory,
 			"terraform":    logicalTerraform.Factory,
 			"totp":         logicalTotp.Factory,
