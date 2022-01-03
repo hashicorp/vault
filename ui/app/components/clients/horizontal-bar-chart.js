@@ -8,8 +8,6 @@ import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
 import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE } from '../../utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
-import OidcConsentBlockComponent from '../oidc-consent-block';
-import attachCapabilities from '../../lib/attach-capabilities';
 
 /**
  * @module HorizontalBarChart
@@ -64,7 +62,6 @@ export default class HorizontalBarChart extends Component {
     // let dataset = SAMPLE_DATA;
     let stackedData = stackFunction(dataset);
     let labelKey = this.labelKey;
-    let handleClick = this.args.onClick;
 
     let xScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))])
@@ -152,13 +149,8 @@ export default class HorizontalBarChart extends Component {
     let compareAttributes = (elementA, elementB, attr) =>
       select(elementA).attr(`${attr}`) === select(elementB).attr(`${attr}`);
 
-    // MOUSE AND CLICK EVENTS FOR DATA BARS
+    // MOUSE EVENTS FOR DATA BARS
     actionBars
-      .on('click', function(chartData) {
-        if (handleClick) {
-          handleClick(chartData);
-        }
-      })
       .on('mouseover', data => {
         let hoveredElement = actionBars.filter(bar => bar.label === data.label).node();
         this.tooltipTarget = hoveredElement;
@@ -184,11 +176,6 @@ export default class HorizontalBarChart extends Component {
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
     yLegendBars
-      .on('click', function(chartData) {
-        if (handleClick) {
-          handleClick(chartData);
-        }
-      })
       .on('mouseover', data => {
         if (data.label.length >= CHAR_LIMIT) {
           let hoveredElement = yLegendBars.filter(bar => bar.label === data.label).node();
