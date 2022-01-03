@@ -6,81 +6,67 @@ import { max } from 'd3-array';
 import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scaleBand } from 'd3-scale';
-import { format } from 'd3-format';
 import { stack } from 'd3-shape';
+import {
+  GREY,
+  LIGHT_AND_DARK_BLUE,
+  SVG_DIMENSIONS,
+  TRANSLATE,
+  formatNumbers,
+} from '../../utils/chart-helpers';
 
+// TODO fill out below
 /**
- * ARG TODO fill out
- * @module TotalClientUsage
- * TotalClientUsage components are used to...
+ * @module VerticalBarChart
+ * VerticalBarChart components are used to...
  *
  * @example
  * ```js
- * <TotalClientUsage @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <VerticalBarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
  * ```
  * @param {object} requiredParam - requiredParam is...
  * @param {string} [optionalParam] - optionalParam is...
  * @param {string} [param1=defaultValue] - param1 is...
  */
 
-// ARG TODO pull in data
-const DATA = [
-  { month: 'January', directEntities: 1000, nonEntityTokens: 322, total: 1322 },
-  { month: 'February', directEntities: 1500, nonEntityTokens: 122, total: 1622 },
-  { month: 'March', directEntities: 4300, nonEntityTokens: 700, total: 5000 },
-  { month: 'April', directEntities: 1550, nonEntityTokens: 229, total: 1779 },
-  { month: 'May', directEntities: 5560, nonEntityTokens: 124, total: 5684 },
-  { month: 'June', directEntities: 1570, nonEntityTokens: 142, total: 1712 },
-  { month: 'July', directEntities: 300, nonEntityTokens: 112, total: 412 },
-  { month: 'August', directEntities: 1610, nonEntityTokens: 130, total: 1740 },
-  { month: 'September', directEntities: 1900, nonEntityTokens: 222, total: 2122 },
-  { month: 'October', directEntities: 500, nonEntityTokens: 166, total: 666 },
-  { month: 'November', directEntities: 480, nonEntityTokens: 132, total: 612 },
-  { month: 'December', directEntities: 980, nonEntityTokens: 202, total: 1182 },
-];
-
-// COLOR THEME:
-const BAR_COLOR_DEFAULT = ['#8AB1FF', '#1563FF'];
-const BACKGROUND_BAR_COLOR = '#EBEEF2';
-
-// TRANSLATIONS:
-const TRANSLATE = { left: -11 };
-const SVG_DIMENSIONS = { height: 190, width: 500 };
-
-export default class TotalClientUsage extends Component {
+export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
-  @tracked hoveredLabel = '';
-  @tracked trackingTest = 0;
+  @tracked tooltipTotal = '';
+  @tracked uniqueEntities = '';
+  @tracked nonEntityTokens = '';
+
+  get chartLegend() {
+    return this.args.chartLegend;
+  }
 
   @action
-  registerListener(element) {
-    // Define the chart
-    let dataset = DATA; // will be data passed in as argument
-
-    let stackFunction = stack().keys(['directEntities', 'nonEntityTokens']);
+  registerListener(element, args) {
+    let dataset = args[0];
+    // TODO pull out lines 44 - scales into helper? b/c same as line chart?
+    let stackFunction = stack().keys(this.chartLegend.map(l => l.key));
     let stackedData = stackFunction(dataset);
+    let chartSvg = select(element);
+    chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
+    // DEFINE DATA BAR SCALES
     let yScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([0, 100]);
+      .range([0, 100])
+      .nice();
 
     let xScale = scaleBand()
       .domain(dataset.map(d => d.month))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
 
-    let chartSvg = select(element);
-
-    chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
-
-    let groups = chartSvg
+    let dataBars = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
-      .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
+      .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
 
-    groups
+    dataBars
       .selectAll('rect')
       .data(stackedData => stackedData)
       .enter()
@@ -94,33 +80,27 @@ export default class TotalClientUsage extends Component {
     // MAKE AXES //
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
-      .range([`${SVG_DIMENSIONS.height}`, 0]);
+      .range([`${SVG_DIMENSIONS.height}`, 0])
+      .nice();
 
-    // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
-    let formatNumbers = number => format('.2s')(number).replace('G', 'B'); // for billions to replace G with B.
-
-    // customize y-axis
     let yAxis = axisLeft(yAxisScale)
       .ticks(7)
       .tickPadding(10)
-      .tickSizeInner(-SVG_DIMENSIONS.width) // makes grid lines correct length
+      .tickSizeInner(-SVG_DIMENSIONS.width)
       .tickFormat(formatNumbers);
 
+    let xAxis = axisBottom(xScale).tickSize(0);
+
     yAxis(chartSvg.append('g'));
-
-    // customize x-axis
-    let xAxisGenerator = axisBottom(xScale).tickSize(0);
-    let xAxis = chartSvg.append('g').call(xAxisGenerator);
-
-    xAxis.attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`);
+    xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
-    // creating wider area for tooltip hover
+    // WIDER SELECTION AREA FOR TOOLTIP HOVER
     let greyBars = chartSvg
       .append('g')
       .attr('transform', `translate(${TRANSLATE.left})`)
-      .style('fill', `${BACKGROUND_BAR_COLOR}`)
+      .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
@@ -136,9 +116,12 @@ export default class TotalClientUsage extends Component {
       .attr('y', '0') // start at bottom
       .attr('x', data => xScale(data.month)); // not data.data because this is not stacked data
 
-    // for tooltip
+    // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', data => {
-      this.hoveredLabel = data.month;
+      let hoveredMonth = data.month;
+      this.tooltipTotal = `${data.total} total clients`;
+      this.uniqueEntities = `${data.distinct_entities} unique entities`;
+      this.nonEntityTokens = `${data.non_entity_tokens} non-entity tokens`;
       // let node = chartSvg
       //   .selectAll('rect.tooltip-rect')
       //   .filter(data => data.month === this.hoveredLabel)
@@ -146,7 +129,7 @@ export default class TotalClientUsage extends Component {
       let node = chartSvg
         .selectAll('rect.data-bar')
         // filter for the top data bar (so y-coord !== 0) with matching month
-        .filter(data => data[0] !== 0 && data.data.month === this.hoveredLabel)
+        .filter(data => data[0] !== 0 && data.data.month === hoveredMonth)
         .node();
       this.tooltipTarget = node; // grab the node from the list of rects
     });

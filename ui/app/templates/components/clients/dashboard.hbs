@@ -136,25 +136,30 @@
         {{!-- ARG TODO end of part that goes to Running Client --}}
         {{#if this.showGraphs}}
         {{!-- ARG TODO chart playground --}}
-        <Clients::HorizontalBarCharts
-          @title="Attribution"
-          @description="This data can be used to understand where unique clients are originating. These are total unique clients for the time period selected above. In each case, we will show the top ten."
-          @subText="This data shows the top ten namespaces by client count. They are identified by their path. To see all namespaces, export this data."
-          @dataset={{this.barChartDataset}}
+        <Clients::RunningTotal
+          @title="Vault client counts"
+          @description="An active client is any user or service that interacts with Vault. They are made up of unique entities and non-entity tokens. The total client count number is an important consideration for Vault billing."
           @chartLegend={{this.chartLegend}}
-          {{!-- Make these variables getters in dashboard.js depending on whether client counts are namespace vs auth method? --}}
-          @newClientsDescription="New client count numbers description"
-          @totalDescription="Total client count numbers description"
+          @lineChartData={{this.lineChartData}}
+          @barChartData={{this.newMonthlyClients}}
+        />
+
+        <Clients::Attribution
+          @title="Attribution"
+          @newClientsData={{this.barChartDataset}}
+          @totalClientsData={{this.barChartDataset}}
+          @chartLegend={{this.chartLegend}}
         >
-          Export attribution data
-        </Clients::HorizontalBarCharts>
+          <button type="button"> Export attribution data </button>
+        </Clients::Attribution>
         
-        <Clients::TotalClientUsage
+        <Clients::MonthlyUsage
           @title="Vault usage"
           @description="This data can be used to understand how many total clients are using Vault each month for the time period selected above."
+          @chartLegend={{this.chartLegend}}
+          @verticalBarChartData={{this.monthlyUsage}}
           @subTitle="Total monthly clients"
           @subText="Each unique client is counted once per month. This can help with capacity planning."
-          @chartLegend={{this.chartLegend}}
           @dataOne="Average total clients per month"
           @dataOneData="100"
           @dataTwo="Average new clients per month"

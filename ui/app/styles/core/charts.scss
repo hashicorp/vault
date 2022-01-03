@@ -6,6 +6,13 @@
 }
 
 // GRID LAYOUT //
+.stacked-charts {
+  display: grid;
+  width: 100%;
+  // grid-template-columns: 1fr;
+  // grid-template-rows: 1fr;
+}
+
 .single-chart-grid {
   display: grid;
   grid-template-columns: 1fr 0.3fr 3.7fr;
@@ -197,9 +204,28 @@ p.data-details {
 .chart-tooltip {
   background-color: $ui-gray-700;
   color: white;
-  font-size: 0.929rem;
-  padding: 10px;
-  border-radius: 4px;
+  font-size: $size-9;
+  padding: 6px;
+  border-radius: $radius-large;
+
+  .bold {
+    font-weight: $font-weight-bold;
+  }
+
+  .line-chart {
+    width: 117px;
+  }
+
+  .vertical-chart {
+    text-align: center;
+    flex-wrap: nowrap;
+    width: fit-content;
+  }
+
+  .horizontal-chart {
+    width: 200px;
+    padding: $spacing-s;
+  }
 }
 
 .chart-tooltip-arrow {
