@@ -935,6 +935,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// them, until one of the attempt succeeds.
 		for _, leaderInfo := range leaderInfos {
 			switch {
+			case leaderInfo.LeaderAPIAddr == c.redirectAddr:
+				c.logger.Trace("skipping retry_join leader_api_addr referring to self", "leader_api_addr", leaderInfo.LeaderAPIAddr)
+
 			case leaderInfo.LeaderAPIAddr != "" && leaderInfo.AutoJoin != "":
 				c.logger.Error("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
 
@@ -963,7 +966,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
 				for _, ip := range clusterIPs {
-					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "["){
+					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
 						// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
 						ip = fmt.Sprintf("[%s]", ip)
 					}
