@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/calendar-widget';
 import { setComponentTemplate } from '@ember/component';
-import { format, sub, isWithinInterval, isBefore } from 'date-fns';
+import { format } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -34,8 +34,8 @@ class CalendarWidget extends Component {
   @tracked areMonthsSelected = false;
   @tracked mouseClickCount = 0;
   @tracked clickRange = []; // the range of months by individually selecting them
-  @tracked startDate; // the older time e.g. 10/2020
-  @tracked endDate; // the newer time e.g. 11/2021
+  @tracked startDate = this.currentDate;
+  @tracked endDate; // ARG TODO: For now, until you return the data from the parent
   @tracked firstClick;
   @tracked secondClick;
 
@@ -118,11 +118,10 @@ class CalendarWidget extends Component {
     // select month
     this.addClass(e.target, 'is-selected');
     // when ready send to handleQuery
-    // let endMonthSelected = e.target.id;
-    //   this.args.handleQuery(endMonthSelected);
-    console.log(month, year);
+    let endMonthSelected = e.target.id;
+    this.args.handleQuery(endMonthSelected); // ARG TODO might need to change format, you have options
+    this.endDate = endMonthSelected; // ARG TODO will likely have to modify?
     this.toggleShowCalendar();
-    // close the calendar widget and change the header year
   }
 
   @action

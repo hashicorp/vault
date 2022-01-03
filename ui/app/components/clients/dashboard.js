@@ -127,6 +127,7 @@ export default class Dashboard extends Component {
 
   // query Data functions
   async handleQueryData(range) {
+    console.log(range, 'RANGE');
     // todo figure out what range should look like.
     // this fires off method on the adapter to query data and return it. await the data's return
   }
