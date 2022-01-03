@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Backport changes to stable-website
         run: |
-          backport-assistant backport -automerge
+          backport-assistant backport -automerge -merge-method=squash
         env:
           BACKPORT_LABEL_REGEXP: "backport/(?P<target>website)"
           BACKPORT_TARGET_TEMPLATE: "stable-{{.target}}"
