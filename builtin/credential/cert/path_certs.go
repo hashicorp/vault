@@ -114,6 +114,14 @@ formatted as "oid:value". Expects the extension value to be some type of ASN1 en
 All values much match. Supports globbing on "value".`,
 			},
 
+			"allowed_metadata_extensions": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or array of oid extensions.
+Upon successfull authentication, these extensions will be added as metadata if they are present
+in the certificate. The metadata key will be the string consisting of the oid numbers
+separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.`,
+			},
+
 			"display_name": {
 				Type: framework.TypeString,
 				Description: `The display name to use for clients using this
@@ -243,6 +251,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"allowed_uri_sans":             cert.AllowedURISANs,
 		"allowed_organizational_units": cert.AllowedOrganizationalUnits,
 		"required_extensions":          cert.RequiredExtensions,
+		"allowed_metadata_extensions":  cert.AllowedMetadataExtensions,
 	}
 	cert.PopulateTokenData(data)
 
@@ -308,6 +317,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	if requiredExtensionsRaw, ok := d.GetOk("required_extensions"); ok {
 		cert.RequiredExtensions = requiredExtensionsRaw.([]string)
+	}
+	if allowedMetadataExtensionsRaw, ok := d.GetOk("allowed_metadata_extensions"); ok {
+		cert.AllowedMetadataExtensions = allowedMetadataExtensionsRaw.([]string)
 	}
 
 	// Get tokenutil fields
@@ -424,6 +436,7 @@ type CertEntry struct {
 	AllowedURISANs             []string
 	AllowedOrganizationalUnits []string
 	RequiredExtensions         []string
+	AllowedMetadataExtensions  []string
 	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
 }
 
