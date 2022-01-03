@@ -21,6 +21,15 @@ export default class Dashboard extends Component {
   @tracked selectedNamespace = null;
   @tracked startMonth = null;
   @tracked startYear = null;
+  @tracked startDate = null;
+  @tracked endDate = null;
+
+  constructor() {
+    super(...arguments);
+    // these will come in from the endpoint or are passed in for now I'm hardcoding?
+    this.startDate = 'Jan-2021';
+    this.endDate = 'April-2021';
+  }
 
   // Determine if we have client count data based on the current tab
   get hasClientData() {
@@ -117,7 +126,7 @@ export default class Dashboard extends Component {
   }
 
   // query Data functions
-  async queryData(range) {
+  async handleQueryData(range) {
     // todo figure out what range should look like.
     // this fires off method on the adapter to query data and return it. await the data's return
   }

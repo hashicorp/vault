@@ -55,7 +55,7 @@ $dark-gray: #535f73;
 .calendar-widget {
   grid-area: calendar-widget;
 
-  > div {
+  > button {
     &.is-month-list {
       background-color: white;
       color: black;
