@@ -26,9 +26,11 @@ export default class Dashboard extends Component {
 
   constructor() {
     super(...arguments);
-    // these will come in from the endpoint or are passed in for now I'm hardcoding?
-    this.startDate = 'Jan-2021';
-    this.endDate = 'April-2021';
+    // ARG TODO will need to get start date from config?
+    let date = new Date();
+    date.setMonth(date.getMonth() - 12); // by default start date is 12 months from now
+    console.log(date, 'DATE');
+    this.startDate = format(date, 'MMMM yyyy');
   }
 
   // Determine if we have client count data based on the current tab
@@ -126,8 +128,8 @@ export default class Dashboard extends Component {
   }
 
   // query Data functions
-  async handleQueryData(range) {
-    console.log(range, 'RANGE');
+  async handleEndMonth(endTime) {
+    console.log(endTime, 'RANGE');
     // todo figure out what range should look like.
     // this fires off method on the adapter to query data and return it. await the data's return
   }

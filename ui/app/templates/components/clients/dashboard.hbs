@@ -72,9 +72,8 @@
         <ToolbarFilters>
           <CalendarWidget 
             @startDate={{this.startDate}}
-            @endDate={{this.endDate}}
             {{!-- method to send to child and respond with new date and query's the adapter refreshing the page --}}
-            @handleQuery={{this.handleQueryData}} 
+            @handleEndMonth={{this.handleEndMonth}}
           />
           {{!-- ARG TODO more filters for auth and namespace here --}}
         </ToolbarFilters>        
