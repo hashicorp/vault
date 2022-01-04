@@ -74,37 +74,10 @@ class CalendarWidget extends Component {
   }
 
   isObsoleteYear() {
-    return this.displayYear === this.currentYear - 4; // won't display more than 5 years ago
+    // do not allow them to choose a end year before the this.args.startDate
+    let startYear = this.args.startDate.split(' ')[1];
+    return this.displayYear.toString() === startYear; // if on startYear then don't let them click back to the year prior
   }
-
-  // calculateEndDate() {
-  //   let date = new Date(); // need to modify this variable so we're defining it here and not globally
-  //   date.setMonth(date.getMonth() - 1);
-  //   return format(date, 'MM-yyyy');
-  // }
-
-  // calculateLastMonth() {
-  //   return sub(this.currentDate, { months: 1 });
-  // }
-
-  // calculateStartDate(quickSelectNumber) {
-  //   let date = new Date(); // need to modify this variable so we're defining it here and not globally
-  //   // will never query the same month that you are in, always subtract a month to get the N months prior
-  //   date.setMonth(date.getMonth() - (quickSelectNumber ? quickSelectNumber : 11) - 1); // defaults to one year selected (11 months) if no quickSelectNumber
-  //   return format(date, 'MM-yyyy');
-  // }
-
-  // idToDateObject(id) {
-  //   let reverse = id
-  //     .split('-')
-  //     .reverse()
-  //     .join(', ');
-  //   return new Date(reverse);
-  // }
-
-  // dateObjectToHandleQueryParam(dateObject) {
-  //   return format(dateObject, 'MM-yyyy');
-  // }
 
   removeClass(element, classString) {
     element.classList.remove(classString);
@@ -127,10 +100,22 @@ class CalendarWidget extends Component {
       // clear all is-readOnly classes and start over.
       this.removeClass(e, 'is-readOnly');
 
-      let elementMonthId = parseInt(e.id.split('-')[0]);
+      let elementMonthId = parseInt(e.id.split('-')[0]); // dependent on the shape of the element id
+      // for current year
       if (this.currentMonth <= elementMonthId) {
         // only disable months when current year is selected
         if (this.isCurrentYear()) {
+          e.classList.add('is-readOnly');
+        }
+      }
+      // compare for startYear view
+      if (this.displayYear.toString() === this.args.startDate.split(' ')[1]) {
+        // if they are on the view where the start year equals the display year, check which months should not show.
+        let startMonth = this.args.startDate.split(' ')[0]; // returns month name e.g. January
+        // return the index of the startMonth
+        let startMonthIndex = MONTH_MAPPING.indexOf(startMonth);
+        // then add readOnly class to any month less than the startMonth index.
+        if (startMonthIndex > elementMonthId) {
           e.classList.add('is-readOnly');
         }
       }
