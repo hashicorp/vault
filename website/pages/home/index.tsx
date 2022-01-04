@@ -70,14 +70,14 @@ export default function Homepage({ data }): React.ReactElement {
         description={introDescription}
         features={introFeatures}
         video={{
-          youtubeId: _introVideo.youtubeId,
-          thumbnail: _introVideo.thumbnail.url,
-          heading: _introVideo.heading,
-          description: _introVideo.description,
+          youtubeId: _introVideo?.youtubeId,
+          thumbnail: _introVideo?.thumbnail?.url,
+          heading: _introVideo?.heading,
+          description: _introVideo?.description,
           person: {
-            name: _introVideo.personName,
-            description: _introVideo.personDescription,
-            avatar: _introVideo.personAvatar?.url,
+            name: _introVideo?.personName,
+            description: _introVideo?.personDescription,
+            avatar: _introVideo?.personAvatar?.url,
           },
         }}
       />

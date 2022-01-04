@@ -10,18 +10,19 @@ import IoHomeFeature, { IoHomeFeatureProps } from 'components/io-home-feature'
 import s from './style.module.css'
 
 interface IoHomeIntroProps {
+  isInternalLink: (link: string) => boolean
   brand: Products
   heading: string
   description: string
   features?: Array<IoHomeFeatureProps>
   offerings?: {
-    image: {
+    image?: {
       src: string
       width: number
       height: number
       alt: string
     }
-    list: Array<{
+    list?: Array<{
       heading: string
       description: string
     }>
@@ -34,6 +35,7 @@ interface IoHomeIntroProps {
 }
 
 export default function IoHomeIntro({
+  isInternalLink,
   brand,
   heading,
   description,
@@ -73,6 +75,7 @@ export default function IoHomeIntro({
               <li key={index}>
                 <div className={s.container}>
                   <IoHomeFeature
+                    isInternalLink={isInternalLink}
                     image={{
                       url: feature.image.url,
                       alt: feature.image.alt,
@@ -132,18 +135,14 @@ export default function IoHomeIntro({
         </div>
       ) : null}
 
-      {video ? (
+      {video.youtubeId && video.thumbnail ? (
         <div className={s.video}>
           <IoVideoCallout
             youtubeId={video.youtubeId}
             thumbnail={video.thumbnail}
             heading={video.heading}
             description={video.description}
-            person={{
-              name: video.person.name,
-              description: video.person.description,
-              avatar: video.person.avatar,
-            }}
+            person={video.person}
           />
         </div>
       ) : null}

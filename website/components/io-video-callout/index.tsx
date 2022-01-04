@@ -11,7 +11,7 @@ export interface IoHomeVideoCalloutProps {
   thumbnail: string
   heading: string
   description: string
-  person: {
+  person?: {
     avatar: string
     name: string
     description: string
@@ -52,8 +52,12 @@ export default function IoVideoCallout({
                 </div>
               ) : null}
               <div>
-                <p className={s.personName}>{person.name}</p>
-                <p className={s.personDescription}>{person.description}</p>
+                {person.name ? (
+                  <p className={s.personName}>{person.name}</p>
+                ) : null}
+                {person.description ? (
+                  <p className={s.personDescription}>{person.description}</p>
+                ) : null}
               </div>
             </div>
           )}
