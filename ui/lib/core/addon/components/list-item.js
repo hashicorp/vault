@@ -12,7 +12,7 @@ export default Component.extend({
   componentName: null,
   hasMenu: true,
 
-  callMethod: task(function*(method, model, successMessage, failureMessage, successCallback = () => {}) {
+  callMethod: task(function* (method, model, successMessage, failureMessage, successCallback = () => {}) {
     let flash = this.flashMessages;
     try {
       yield model[method]();

@@ -10,8 +10,8 @@ const hasFeatureMethod = (context, featureKey) => {
   }
   return features.includes(featureKey);
 };
-const hasFeature = featureKey => {
-  return computed('features', 'features.[]', function() {
+const hasFeature = (featureKey) => {
+  return computed('features', 'features.[]', function () {
     return hasFeatureMethod(this, featureKey);
   });
 };
@@ -47,7 +47,7 @@ export default Service.extend({
     this.set('_features', resp.features);
   },
 
-  getVersion: task(function*() {
+  getVersion: task(function* () {
     if (this.version) {
       return;
     }
@@ -56,7 +56,7 @@ export default Service.extend({
     return;
   }),
 
-  getFeatures: task(function*() {
+  getFeatures: task(function* () {
     if (this.features?.length || this.isOSS) {
       return;
     }
@@ -69,10 +69,10 @@ export default Service.extend({
     }
   }).keepLatest(),
 
-  fetchVersion: function() {
+  fetchVersion: function () {
     return this.getVersion.perform();
   },
-  fetchFeatures: function() {
+  fetchFeatures: function () {
     return this.getFeatures.perform();
   },
 });

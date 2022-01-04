@@ -129,7 +129,9 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	SetupSecureTLS(context.Background(), consulConf, conf, logger, false)
+	if err := SetupSecureTLS(context.Background(), consulConf, conf, logger, false); err != nil {
+		return nil, fmt.Errorf("client setup failed: %w", err)
+	}
 
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)

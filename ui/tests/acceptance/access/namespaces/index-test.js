@@ -6,19 +6,19 @@ import page from 'vault/tests/pages/access/namespaces/index';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 
-module('Acceptance | Enterprise | /access/namespaces', function(hooks) {
+module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     return logout.visit();
   });
 
-  test('it navigates to namespaces page', async function(assert) {
+  test('it navigates to namespaces page', async function (assert) {
     assert.expect(1);
     await page.visit();
     assert.equal(
@@ -28,7 +28,7 @@ module('Acceptance | Enterprise | /access/namespaces', function(hooks) {
     );
   });
 
-  test('it should render correct number of namespaces', async function(assert) {
+  test('it should render correct number of namespaces', async function (assert) {
     assert.expect(3);
     await page.visit();
     const store = this.owner.lookup('service:store');

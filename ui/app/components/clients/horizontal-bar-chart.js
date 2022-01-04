@@ -45,7 +45,7 @@ export default class HorizontalBarChart extends Component {
   }
 
   get topNamespace() {
-    return this.args.dataset[maxIndex(this.args.dataset, d => d.total)];
+    return this.args.dataset[maxIndex(this.args.dataset, (d) => d.total)];
   }
 
   @action removeTooltip() {
@@ -57,18 +57,18 @@ export default class HorizontalBarChart extends Component {
     // chart legend tells stackFunction how to stack/organize data
     // creates an array of data for each key name
     // each array contains coordinates for each data bar
-    let stackFunction = stack().keys(this.chartLegend.map(l => l.key));
+    let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     let dataset = args[0];
     // let dataset = SAMPLE_DATA;
     let stackedData = stackFunction(dataset);
     let labelKey = this.labelKey;
 
     let xScale = scaleLinear()
-      .domain([0, max(dataset.map(d => d.total))])
+      .domain([0, max(dataset.map((d) => d.total))])
       .range([0, 75]); // 25% reserved for margins
 
     let yScale = scaleBand()
-      .domain(dataset.map(d => d[labelKey]))
+      .domain(dataset.map((d) => d[labelKey]))
       .range([0, dataset.length * LINE_HEIGHT])
       .paddingInner(0.765); // percent of the total width to reserve for padding between bars
 
@@ -92,8 +92,8 @@ export default class HorizontalBarChart extends Component {
 
     chartSvg.select('.domain').remove();
 
-    let truncate = selection =>
-      selection.text(string =>
+    let truncate = (selection) =>
+      selection.text((string) =>
         string.length < CHAR_LIMIT ? string : string.slice(0, CHAR_LIMIT - 3) + '...'
       );
 
@@ -102,14 +102,14 @@ export default class HorizontalBarChart extends Component {
     groups
       .selectAll('rect')
       // iterate through the stacked data and chart respectively
-      .data(stackedData => stackedData)
+      .data((stackedData) => stackedData)
       .enter()
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', chartData => `${xScale(chartData[1] - chartData[0]) - 0.25}%`)
+      .attr('width', (chartData) => `${xScale(chartData[1] - chartData[0]) - 0.25}%`)
       .attr('height', yScale.bandwidth())
-      .attr('x', chartData => `${xScale(chartData[0])}%`)
+      .attr('x', (chartData) => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
       .attr('rx', 3)
       .attr('ry', 3);
@@ -124,7 +124,7 @@ export default class HorizontalBarChart extends Component {
       .attr('width', '100%')
       .attr('height', `${LINE_HEIGHT}px`)
       .attr('x', '0')
-      .attr('y', chartData => yScale(chartData[labelKey]))
+      .attr('y', (chartData) => yScale(chartData[labelKey]))
       .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
@@ -139,7 +139,7 @@ export default class HorizontalBarChart extends Component {
       .attr('width', CHART_MARGIN.left)
       .attr('height', `${LINE_HEIGHT}px`)
       .attr('x', '0')
-      .attr('y', chartData => yScale(chartData[labelKey]))
+      .attr('y', (chartData) => yScale(chartData[labelKey]))
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
@@ -151,8 +151,8 @@ export default class HorizontalBarChart extends Component {
 
     // MOUSE EVENTS FOR DATA BARS
     actionBars
-      .on('mouseover', data => {
-        let hoveredElement = actionBars.filter(bar => bar.label === data.label).node();
+      .on('mouseover', (data) => {
+        let hoveredElement = actionBars.filter((bar) => bar.label === data.label).node();
         this.tooltipTarget = hoveredElement;
         this.tooltipText = `${Math.round((data.total * 100) / 19000)}% of total client counts:
         ${data.non_entity_tokens} non-entity tokens, ${data.distinct_entities} unique entities.`;
@@ -160,15 +160,15 @@ export default class HorizontalBarChart extends Component {
         select(hoveredElement).style('opacity', 1);
 
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, hoveredElement, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
       })
-      .on('mouseout', function() {
+      .on('mouseout', function () {
         select(this).style('opacity', 0);
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
@@ -176,34 +176,34 @@ export default class HorizontalBarChart extends Component {
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
     yLegendBars
-      .on('mouseover', data => {
+      .on('mouseover', (data) => {
         if (data.label.length >= CHAR_LIMIT) {
-          let hoveredElement = yLegendBars.filter(bar => bar.label === data.label).node();
+          let hoveredElement = yLegendBars.filter((bar) => bar.label === data.label).node();
           this.tooltipTarget = hoveredElement;
           this.tooltipText = data.label;
         } else {
           this.tooltipTarget = null;
         }
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         actionBarSelection
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('opacity', '1');
       })
-      .on('mouseout', function() {
+      .on('mouseout', function () {
         this.tooltipTarget = null;
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
         actionBarSelection
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('opacity', '0');
@@ -217,13 +217,13 @@ export default class HorizontalBarChart extends Component {
       .data(dataset)
       .enter()
       .append('text')
-      .text(d => d.total)
+      .text((d) => d.total)
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
       .attr('alignment-baseline', 'middle')
-      .attr('x', chartData => `${xScale(chartData.total)}%`)
-      .attr('y', chartData => yScale(chartData.label));
+      .attr('x', (chartData) => `${xScale(chartData.total)}%`)
+      .attr('y', (chartData) => yScale(chartData.label));
   }
 }

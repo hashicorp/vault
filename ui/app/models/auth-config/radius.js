@@ -9,7 +9,7 @@ export default AuthConfig.extend({
   host: attr('string'),
   secret: attr('string'),
 
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       {
         default: ['host', 'secret'],

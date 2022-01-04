@@ -30,7 +30,7 @@ export default {
   commonNameIsPresent: isPresent('[data-test-row-value="Common name"]'),
   uploadCert: clickable('[data-test-input="uploadPemBundle"]'),
   enterCertAsText: clickable('[data-test-text-toggle]'),
-  pemBundle: fillable('[data-test-text-file-textarea="true"]'),
+  pemBundle: fillable('[data-test-text-file-textarea]'),
   commonName: fillable('[data-test-input="commonName"]'),
   toggleOptions: clickable('[data-test-toggle-group="Options"]'),
   keyType: fillable('[data-test-input="keyType"]'),
@@ -41,31 +41,17 @@ export default {
 
   async generateCA(commonName = 'PKI CA', type = 'root') {
     if (type === 'intermediate') {
-      return await this.replaceCA()
-        .commonName(commonName)
-        .caType('intermediate')
-        .submit();
+      return await this.replaceCA().commonName(commonName).caType('intermediate').submit();
     }
-    return await this.replaceCA()
-      .commonName(commonName)
-      .submit();
+    return await this.replaceCA().commonName(commonName).submit();
   },
 
   async generateCAKeyTypeEC(commonName = 'PKI CA EC') {
-    return await this.replaceCA()
-      .commonName(commonName)
-      .toggleOptions()
-      .keyType('ec')
-      .keyBits(256)
-      .submit();
+    return await this.replaceCA().commonName(commonName).toggleOptions().keyType('ec').keyBits(256).submit();
   },
 
   async uploadCA(pem) {
-    return await this.replaceCA()
-      .uploadCert()
-      .enterCertAsText()
-      .pemBundle(pem)
-      .submit();
+    return await this.replaceCA().uploadCert().enterCertAsText().pemBundle(pem).submit();
   },
 
   async signIntermediate(commonName) {

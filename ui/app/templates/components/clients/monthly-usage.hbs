@@ -5,24 +5,21 @@
       <p class="chart-description">{{@description}}</p>
     {{/if}}
   </div>
- 
+
   <div class="chart-container-wide">
-    <Clients::VerticalBarChart 
-      @dataset={{@verticalBarChartData}}
-      @chartLegend={{@chartLegend}}
-    />
+    <Clients::VerticalBarChart @dataset={{@verticalBarChartData}} @chartLegend={{@chartLegend}} />
   </div>
 
   <div class="chart-subTitle">
-     <h2 class="chart-title">{{@subTitle}}</h2>
-     <p class="chart-subtext">{{@subText}}</p>
+    <h2 class="chart-title">{{@subTitle}}</h2>
+    <p class="chart-subtext">{{@subText}}</p>
   </div>
 
   <div class="data-details-top">
     <h3 class="data-details">{{@dataOne}}</h3>
     <p class="data-details">{{@dataOneData}}</p>
   </div>
-  
+
   <div class="data-details-bottom">
     <h3 class="data-details">{{@dataTwo}}</h3>
     <p class="data-details">{{@dataTwoData}}</p>
@@ -31,7 +28,7 @@
   <div class="timestamp">
     Updated Nov 15 2021, 4:07:32 pm
   </div>
-  
+
   <div class="legend-right">
     <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
     <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>

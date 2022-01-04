@@ -1,13 +1,13 @@
-<form {{action (perform save model) on="submit"}}>
-  <MessageError @model={{model}} data-test-edit-form-error />
-  <div class="{{if this.includeBox 'box is-sideless is-fullwidth is-marginless'}}">
+<form {{action (perform this.save this.model) on="submit"}}>
+  <MessageError @model={{this.model}} data-test-edit-form-error />
+  <div class={{if this.includeBox "box is-sideless is-fullwidth is-marginless"}}>
     <NamespaceReminder @mode="save" />
-    {{#if (or model.fields model.attrs)}}
-      {{#each (or model.fields model.attrs) as |attr|}}
-        <FormField data-test-field @attr={{attr}} @model={{model}} @mode={{@mode}} />
+    {{#if (or this.model.fields this.model.attrs)}}
+      {{#each (or this.model.fields this.model.attrs) as |attr|}}
+        <FormField data-test-field @attr={{attr}} @model={{this.model}} @mode={{@mode}} />
       {{/each}}
-    {{else if model.fieldGroups}}
-      <FormFieldGroups @model={{model}} @mode={{@mode}} />
+    {{else if this.model.fieldGroups}}
+      <FormFieldGroups @model={{this.model}} @mode={{@mode}} />
     {{/if}}
   </div>
   <FormSaveButtons
@@ -16,5 +16,5 @@
     @canceLinkParams={{@canceLinkParams}}
     @includeBox={{this.includeBox}}
     @onCancel={{@onCancel}}
-    />
+  />
 </form>

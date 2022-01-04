@@ -1,8 +1,8 @@
 /* eslint-env node */
 'use strict';
 
-module.exports = function(environment) {
-  var ENV = {
+module.exports = function (environment) {
+  let ENV = {
     modulePrefix: 'vault',
     environment: environment,
     rootURL: '/ui/',

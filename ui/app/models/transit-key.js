@@ -89,24 +89,24 @@ export default Model.extend({
     set(this, 'derived', val);
   },
 
-  supportedActions: computed('type', function() {
+  supportedActions: computed('type', function () {
     return Object.keys(ACTION_VALUES)
-      .filter(name => {
+      .filter((name) => {
         const { isSupported } = ACTION_VALUES[name];
         return typeof isSupported === 'boolean' || get(this, isSupported);
       })
-      .map(name => {
+      .map((name) => {
         const { description, glyph } = ACTION_VALUES[name];
         return { name, description, glyph };
       });
   }),
 
-  canDelete: computed('deletionAllowed', 'lastLoadTS', function() {
+  canDelete: computed('deletionAllowed', 'lastLoadTS', function () {
     const deleteAttrChanged = Boolean(this.changedAttributes().deletionAllowed);
     return this.deletionAllowed && deleteAttrChanged === false;
   }),
 
-  keyVersions: computed('validKeyVersions', function() {
+  keyVersions: computed('validKeyVersions', function () {
     let maxVersion = Math.max(...this.validKeyVersions);
     let versions = [];
     while (maxVersion > 0) {
@@ -121,18 +121,18 @@ export default Model.extend({
     'keyVersions',
     'latestVersion',
     'minDecryptionVersion',
-    function() {
+    function () {
       const { keyVersions, minDecryptionVersion } = this;
 
       return keyVersions
-        .filter(version => {
+        .filter((version) => {
           return version >= minDecryptionVersion;
         })
         .reverse();
     }
   ),
 
-  keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function() {
+  keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function () {
     let { minEncryptionVersion, latestVersion } = this;
     let minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
     let versions = [];
@@ -143,11 +143,11 @@ export default Model.extend({
     return versions;
   }),
 
-  validKeyVersions: computed('keys', function() {
+  validKeyVersions: computed('keys', function () {
     return Object.keys(this.keys);
   }),
 
-  exportKeyTypes: computed('exportable', 'supportsEncryption', 'supportsSigning', 'type', function() {
+  exportKeyTypes: computed('exportable', 'supportsEncryption', 'supportsSigning', 'type', function () {
     let types = ['hmac'];
     if (this.supportsSigning) {
       types.unshift('signing');

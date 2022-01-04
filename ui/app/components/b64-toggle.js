@@ -82,7 +82,7 @@ export default Component.extend({
    * @private
    * @type boolean
    */
-  valuesMatch: computed('value', '_value', function() {
+  valuesMatch: computed('value', '_value', function () {
     const { value, _value } = this;
     const anyBlank = isBlank(value) || isBlank(_value);
     return !anyBlank && value === _value;
@@ -99,6 +99,7 @@ export default Component.extend({
   },
 
   didReceiveAttrs() {
+    this._super();
     // if there's no value, reset encoding
     if (this.value === '') {
       set(this, 'currentEncoding', UTF8);

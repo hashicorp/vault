@@ -4,15 +4,15 @@ import { SUDO_PATHS, SUDO_PATH_PREFIXES } from 'vault/models/capabilities';
 
 import { run } from '@ember/runloop';
 
-module('Unit | Model | capabilities', function(hooks) {
+module('Unit | Model | capabilities', function (hooks) {
   setupTest(hooks);
 
-  test('it exists', function(assert) {
+  test('it exists', function (assert) {
     let model = run(() => this.owner.lookup('service:store').createRecord('capabilities'));
     assert.ok(!!model);
   });
 
-  test('it reads capabilities', function(assert) {
+  test('it reads capabilities', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: 'foo',
@@ -26,7 +26,7 @@ module('Unit | Model | capabilities', function(hooks) {
     assert.notOk(model.get('canDelete'));
   });
 
-  test('it allows everything if root is present', function(assert) {
+  test('it allows everything if root is present', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: 'foo',
@@ -40,7 +40,7 @@ module('Unit | Model | capabilities', function(hooks) {
     assert.ok(model.get('canList'));
   });
 
-  test('it denies everything if deny is present', function(assert) {
+  test('it denies everything if deny is present', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: 'foo',
@@ -54,7 +54,7 @@ module('Unit | Model | capabilities', function(hooks) {
     assert.notOk(model.get('canList'));
   });
 
-  test('it requires sudo on sudo paths', function(assert) {
+  test('it requires sudo on sudo paths', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: SUDO_PATHS[0],
@@ -68,7 +68,7 @@ module('Unit | Model | capabilities', function(hooks) {
     assert.notOk(model.get('canList'));
   });
 
-  test('it requires sudo on sudo paths prefixes', function(assert) {
+  test('it requires sudo on sudo paths prefixes', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: SUDO_PATH_PREFIXES[0] + '/foo',
@@ -82,7 +82,7 @@ module('Unit | Model | capabilities', function(hooks) {
     assert.notOk(model.get('canList'));
   });
 
-  test('it does not require sudo on sys/leases/revoke if update capability is present and path is not fully a sudo prefix', function(assert) {
+  test('it does not require sudo on sys/leases/revoke if update capability is present and path is not fully a sudo prefix', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: 'sys/leases/revoke',
@@ -96,7 +96,7 @@ module('Unit | Model | capabilities', function(hooks) {
     assert.notOk(model.get('canList'));
   });
 
-  test('it requires sudo on prefix path even if capability is present', function(assert) {
+  test('it requires sudo on prefix path even if capability is present', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: SUDO_PATH_PREFIXES[0] + '/aws',
@@ -110,7 +110,7 @@ module('Unit | Model | capabilities', function(hooks) {
     assert.notOk(model.get('canList'));
   });
 
-  test('it does not require sudo on prefix path if both update and sudo capabilities are present', function(assert) {
+  test('it does not require sudo on prefix path if both update and sudo capabilities are present', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: SUDO_PATH_PREFIXES[0] + '/aws',

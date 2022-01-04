@@ -15,10 +15,10 @@ const emptyObject = {};
 
 const nonEmptyObject = { thing: 0 };
 
-module('Integration | Helper | is-empty-value', function(hooks) {
+module('Integration | Helper | is-empty-value', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it is truthy if the value evaluated is undefined and no default', async function(assert) {
+  test('it is truthy if the value evaluated is undefined and no default', async function (assert) {
     this.set('inputValue', undefined);
     this.set('defaultValue', false);
 
@@ -27,7 +27,7 @@ module('Integration | Helper | is-empty-value', function(hooks) {
     assert.dom(this.element).hasText('Empty');
   });
 
-  test('it is truthy if the value evaluated is an empty string and no default', async function(assert) {
+  test('it is truthy if the value evaluated is an empty string and no default', async function (assert) {
     this.set('inputValue', '');
     this.set('defaultValue', false);
 
@@ -36,7 +36,7 @@ module('Integration | Helper | is-empty-value', function(hooks) {
     assert.dom(this.element).hasText('Empty');
   });
 
-  test('it is truthy if the value evaluated is an empty object and no default', async function(assert) {
+  test('it is truthy if the value evaluated is an empty object and no default', async function (assert) {
     this.set('inputValue', emptyObject);
     this.set('defaultValue', false);
 
@@ -45,7 +45,7 @@ module('Integration | Helper | is-empty-value', function(hooks) {
     assert.dom(this.element).hasText('Empty');
   });
 
-  test('it is falsy if the value evaluated is not an empty object and no default', async function(assert) {
+  test('it is falsy if the value evaluated is not an empty object and no default', async function (assert) {
     this.set('inputValue', nonEmptyObject);
     this.set('defaultValue', false);
 
@@ -54,7 +54,7 @@ module('Integration | Helper | is-empty-value', function(hooks) {
     assert.dom(this.element).hasText('Full');
   });
 
-  test('it is falsy if the value evaluated is empty but a default exists', async function(assert) {
+  test('it is falsy if the value evaluated is empty but a default exists', async function (assert) {
     this.set('defaultValue', 'Some default');
     this.set('inputValue', emptyObject);
 

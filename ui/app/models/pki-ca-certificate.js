@@ -5,7 +5,7 @@ import Certificate from './pki-certificate';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default Certificate.extend({
-  DISPLAY_FIELDS: computed(function() {
+  DISPLAY_FIELDS: computed(function () {
     return [
       'csr',
       'certificate',
@@ -100,7 +100,7 @@ export default Certificate.extend({
     label: 'Province/State',
   }),
 
-  fieldDefinition: computed('caType', 'uploadPemBundle', function() {
+  fieldDefinition: computed('caType', 'uploadPemBundle', function () {
     const type = this.caType;
     const isUpload = this.uploadPemBundle;
     let groups = [{ default: ['caType', 'uploadPemBundle'] }];

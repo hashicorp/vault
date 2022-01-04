@@ -43,19 +43,19 @@ export default class VerticalBarChart extends Component {
   registerListener(element, args) {
     let dataset = args[0];
     // TODO pull out lines 44 - scales into helper? b/c same as line chart?
-    let stackFunction = stack().keys(this.chartLegend.map(l => l.key));
+    let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     let stackedData = stackFunction(dataset);
     let chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     // DEFINE DATA BAR SCALES
     let yScale = scaleLinear()
-      .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.total))]) // TODO will need to recalculate when you get the data
       .range([0, 100])
       .nice();
 
     let xScale = scaleBand()
-      .domain(dataset.map(d => d.month))
+      .domain(dataset.map((d) => d.month))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
 
@@ -68,18 +68,18 @@ export default class VerticalBarChart extends Component {
 
     dataBars
       .selectAll('rect')
-      .data(stackedData => stackedData)
+      .data((stackedData) => stackedData)
       .enter()
       .append('rect')
       .attr('width', '7px')
       .attr('class', 'data-bar')
-      .attr('height', stackedData => `${yScale(stackedData[1] - stackedData[0])}%`)
+      .attr('height', (stackedData) => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data.month)) // uses destructuring because was data.data.month
-      .attr('y', data => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
+      .attr('y', (data) => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
 
     // MAKE AXES //
     let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map(d => d.total))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.total))]) // TODO will need to recalculate when you get the data
       .range([`${SVG_DIMENSIONS.height}`, 0])
       .nice();
 
@@ -114,10 +114,10 @@ export default class VerticalBarChart extends Component {
       .attr('height', '100%')
       .attr('width', '30px') // three times width
       .attr('y', '0') // start at bottom
-      .attr('x', data => xScale(data.month)); // not data.data because this is not stacked data
+      .attr('x', (data) => xScale(data.month)); // not data.data because this is not stacked data
 
     // MOUSE EVENT FOR TOOLTIP
-    tooltipRect.on('mouseover', data => {
+    tooltipRect.on('mouseover', (data) => {
       let hoveredMonth = data.month;
       this.tooltipTotal = `${data.total} total clients`;
       this.uniqueEntities = `${data.distinct_entities} unique entities`;
@@ -129,7 +129,7 @@ export default class VerticalBarChart extends Component {
       let node = chartSvg
         .selectAll('rect.data-bar')
         // filter for the top data bar (so y-coord !== 0) with matching month
-        .filter(data => data[0] !== 0 && data.data.month === hoveredMonth)
+        .filter((data) => data[0] !== 0 && data.data.month === hoveredMonth)
         .node();
       this.tooltipTarget = node; // grab the node from the list of rects
     });

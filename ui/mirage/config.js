@@ -1,6 +1,6 @@
 // const EXPIRY_DATE = '2021-05-12T23:20:50.52Z';
 // ARG TODO need to uncomment and put back to normal before final push
-export default function() {
+export default function () {
   this.namespace = 'v1';
 
   // this.get('sys/internal/counters/activity', function(db) {
@@ -31,7 +31,7 @@ export default function() {
   //   };
   // });
 
-  this.get('/sys/internal/counters/activity', function() {
+  this.get('/sys/internal/counters/activity', function () {
     return {
       data: {
         start_time: '2019-11-01T00:00:00Z',
@@ -309,7 +309,7 @@ export default function() {
     };
   });
 
-  this.get('/sys/internal/counters/activity/monthly', function() {
+  this.get('/sys/internal/counters/activity/monthly', function () {
     return {
       data: {
         by_namespace: [

@@ -68,8 +68,8 @@ class BarChartComponent extends Component {
     if (!this.args.mapLegend || !Array.isArray(this.args.mapLegend)) {
       return false;
     } else {
-      let legendKeys = this.args.mapLegend.map(obj => Object.keys(obj));
-      return legendKeys.map(array => array.includes('key', 'label')).every(element => element === true);
+      let legendKeys = this.args.mapLegend.map((obj) => Object.keys(obj));
+      return legendKeys.map((array) => array.includes('key', 'label')).every((element) => element === true);
     }
   }
 
@@ -80,7 +80,7 @@ class BarChartComponent extends Component {
     let totalCount = args[1];
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
-    let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
+    let stackFunction = stack().keys(this.mapLegend.map((l) => l.key));
     // creates an array of data for each map legend key
     // each array contains coordinates for each data bar
     let stackedData = stackFunction(dataset);
@@ -98,11 +98,11 @@ class BarChartComponent extends Component {
       .style('border-radius', '4px');
 
     let xScale = scaleLinear()
-      .domain([0, max(dataset.map(d => d.total))])
+      .domain([0, max(dataset.map((d) => d.total))])
       .range([0, 75]); // 25% reserved for margins
 
     let yScale = scaleBand()
-      .domain(dataset.map(d => d[labelKey]))
+      .domain(dataset.map((d) => d[labelKey]))
       .range([0, dataset.length * LINE_HEIGHT])
       .paddingInner(0.765); // percent of the total width to reserve for padding between bars
 
@@ -125,8 +125,8 @@ class BarChartComponent extends Component {
     let yAxis = axisLeft(yScale).tickSize(0);
     yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
 
-    let truncate = selection =>
-      selection.text(string =>
+    let truncate = (selection) =>
+      selection.text((string) =>
         string.length < CHAR_LIMIT ? string : string.slice(0, CHAR_LIMIT - 3) + '...'
       );
 
@@ -135,14 +135,14 @@ class BarChartComponent extends Component {
     groups
       .selectAll('rect')
       // iterate through the stacked data and chart respectively
-      .data(stackedData => stackedData)
+      .data((stackedData) => stackedData)
       .enter()
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', chartData => `${xScale(chartData[1] - chartData[0]) - 0.25}%`)
+      .attr('width', (chartData) => `${xScale(chartData[1] - chartData[0]) - 0.25}%`)
       .attr('height', yScale.bandwidth())
-      .attr('x', chartData => `${xScale(chartData[0])}%`)
+      .attr('x', (chartData) => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
       .attr('rx', 3)
       .attr('ry', 3);
@@ -157,7 +157,7 @@ class BarChartComponent extends Component {
       .attr('width', '100%')
       .attr('height', `${LINE_HEIGHT}px`)
       .attr('x', '0')
-      .attr('y', chartData => yScale(chartData[labelKey]))
+      .attr('y', (chartData) => yScale(chartData[labelKey]))
       .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
@@ -172,7 +172,7 @@ class BarChartComponent extends Component {
       .attr('width', CHART_MARGIN.left)
       .attr('height', `${LINE_HEIGHT}px`)
       .attr('x', '0')
-      .attr('y', chartData => yScale(chartData[labelKey]))
+      .attr('y', (chartData) => yScale(chartData[labelKey]))
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
@@ -183,33 +183,30 @@ class BarChartComponent extends Component {
 
     // handles click and mouseover/out/move event for data bars
     actionBars
-      .on('click', function(chartData) {
+      .on('click', function (chartData) {
         if (handleClick) {
           handleClick(chartData);
         }
       })
-      .on('mouseover', function() {
+      .on('mouseover', function () {
         select(this).style('opacity', 1);
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
-        select('.chart-tooltip')
-          .transition()
-          .duration(200)
-          .style('opacity', 1);
+        select('.chart-tooltip').transition().duration(200).style('opacity', 1);
       })
-      .on('mouseout', function() {
+      .on('mouseout', function () {
         select(this).style('opacity', 0);
         select('.chart-tooltip').style('opacity', 0);
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
       })
-      .on('mousemove', function(chartData) {
+      .on('mousemove', function (chartData) {
         select('.chart-tooltip')
           .style('opacity', 1)
           .style('max-width', '200px')
@@ -224,43 +221,40 @@ class BarChartComponent extends Component {
 
     // handles mouseover/out/move event for y-axis legend
     yLegendBars
-      .on('click', function(chartData) {
+      .on('click', function (chartData) {
         if (handleClick) {
           handleClick(chartData);
         }
       })
-      .on('mouseover', function(chartData) {
+      .on('mouseover', function (chartData) {
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         actionBarSelection
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('opacity', '1');
         if (chartData.label.length >= CHAR_LIMIT) {
-          select('.chart-tooltip')
-            .transition()
-            .duration(200)
-            .style('opacity', 1);
+          select('.chart-tooltip').transition().duration(200).style('opacity', 1);
         }
       })
-      .on('mouseout', function() {
+      .on('mouseout', function () {
         select('.chart-tooltip').style('opacity', 0);
         dataBars
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${LIGHT_AND_DARK_BLUE[i]}`);
         actionBarSelection
-          .filter(function() {
+          .filter(function () {
             return compareAttributes(this, event.target, 'y');
           })
           .style('opacity', '0');
       })
-      .on('mousemove', function(chartData) {
+      .on('mousemove', function (chartData) {
         if (chartData.label.length >= CHAR_LIMIT) {
           select('.chart-tooltip')
             .style('left', `${event.pageX - 300}px`)
@@ -279,14 +273,14 @@ class BarChartComponent extends Component {
       .data(dataset)
       .enter()
       .append('text')
-      .text(d => d.total)
+      .text((d) => d.total)
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
       .attr('alignment-baseline', 'mathematical')
-      .attr('x', chartData => `${xScale(chartData.total)}%`)
-      .attr('y', chartData => yScale(chartData.label));
+      .attr('x', (chartData) => `${xScale(chartData.total)}%`)
+      .attr('y', (chartData) => yScale(chartData.label));
 
     chartSvg.select('.domain').remove();
 

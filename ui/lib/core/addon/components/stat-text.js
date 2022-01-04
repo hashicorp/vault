@@ -15,7 +15,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/stat-text';
 import { setComponentTemplate } from '@ember/component';
-
+/* eslint ember/no-empty-glimmer-component-classes: 'warn' */
 class StatTextComponent extends Component {}
 
 export default setComponentTemplate(layout, StatTextComponent);

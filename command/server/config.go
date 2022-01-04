@@ -569,16 +569,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
-	// Parse KMSLibraries sections if any
-	if o := list.Filter("kms_library"); len(o.Items) > 0 {
-		delete(result.UnusedKeys, "kms_library")
-		if err := parseKmsLibraries(result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'kms_library': %w", err)
-		}
-	}
-
-	entConfig := &(result.entConfig)
-	if err := entConfig.parseConfig(list); err != nil {
+	if err := result.parseConfig(list); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 

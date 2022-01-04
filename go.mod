@@ -93,8 +93,8 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.9.2
 	github.com/hashicorp/vault-plugin-auth-centrify v0.10.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.10.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.11.2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.11.3
+	github.com/hashicorp/vault-plugin-auth-gcp v0.11.3
+	github.com/hashicorp/vault-plugin-auth-jwt v0.11.4
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.3
 	github.com/hashicorp/vault-plugin-auth-oci v0.9.0
@@ -106,14 +106,14 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.11.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-azure v0.11.2
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.11.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211123171606-16933c88368a
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.3.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
-	github.com/hashicorp/vault/api v1.3.0
+	github.com/hashicorp/vault/api v1.3.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.3.0

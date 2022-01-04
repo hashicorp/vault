@@ -28,7 +28,7 @@ export default Component.extend({
   classNames: ['message-inline'],
   classNameBindings: ['sizeSmall:size-small', 'paddingTop:padding-top', 'isMarginless:is-marginless'],
 
-  textClass: computed('type', function() {
+  textClass: computed('type', function () {
     if (this.type == 'danger') {
       return messageTypes([this.type]).glyphClass;
     }
@@ -36,7 +36,7 @@ export default Component.extend({
     return;
   }),
 
-  alertType: computed('type', function() {
+  alertType: computed('type', function () {
     return messageTypes([this.type]);
   }),
 });
