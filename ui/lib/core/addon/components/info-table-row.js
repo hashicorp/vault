@@ -48,6 +48,8 @@ export default Component.extend({
     return typeOf(this.value) === 'boolean';
   }),
 
+  shouldRender: or('value', 'alwaysRender'),
+
   valueIsEmpty: computed('value', function () {
     let { value } = this;
     if (typeOf(value) === 'array' && value.length === 0) {

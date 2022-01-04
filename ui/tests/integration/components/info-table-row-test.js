@@ -76,9 +76,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('isCopyable', false);
 
     await render(hbs`
-      <InfoTableRow 
+      <InfoTableRow
         @label={{this.label}}
-        @value={{this.value}} 
+        @value={{this.value}}
         @tooltipText="Foo bar"
         @isTooltipCopyable={{this.isCopyable}}
       />
@@ -156,10 +156,20 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @value={{this.value}}
       @label={{this.label}}
       @alwaysRender={{true}}>
-      Block content is here 
+      Block content is here
       </InfoTableRow>`);
 
     let block = document.querySelector('[data-test-value-div]').textContent.trim();
     assert.equal(block, 'Block content is here', 'renders block passed through');
+  });
+
+  test('Row renders when block content even if alwaysRender = false', async function (assert) {
+    await render(hbs`<InfoTableRow
+      @alwaysRender={{false}}>
+      Block content
+    </InfoTableRow>`);
+
+    let block = document.querySelector('[data-test-value-div]').textContent.trim();
+    assert.equal(block, 'Block content', 'renders block');
   });
 });

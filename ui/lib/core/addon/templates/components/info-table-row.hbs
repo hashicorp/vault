@@ -1,4 +1,4 @@
-{{#if (or this.alwaysRender this.value)}}
+{{#if (or (has-block) this.shouldRender)}}
   <div class="column is-one-quarter" data-test-label-div>
     {{#if this.label}}
       {{#if this.hasLabelOverflow}}
