@@ -70,7 +70,7 @@ func getFormat(data *framework.FieldData) string {
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(ctx context.Context, req *logical.Request) (*certutil.CAInfoBundle, error) {
+func (b *backend) fetchCAInfo(ctx context.Context, req *logical.Request) (*certutil.CAInfoBundle, error) {
 	bundleEntry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
@@ -91,6 +91,14 @@ func fetchCAInfo(ctx context.Context, req *logical.Request) (*certutil.CAInfoBun
 
 	if parsedBundle.Certificate == nil {
 		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+	}
+
+	if parsedBundle.PrivateKey == nil {
+		// This may be a managed key
+		err = fetchManagedKey(ctx, b, parsedBundle)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
 	}
 
 	caInfo := &certutil.CAInfoBundle{*parsedBundle, nil}

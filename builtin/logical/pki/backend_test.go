@@ -823,10 +823,10 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTL:        12 * time.Hour,
-		KeyType:       "rsa",
-		KeyBits:       2048,
-		RequireCN:     true,
+		MaxTTL:    12 * time.Hour,
+		KeyType:   "rsa",
+		KeyBits:   2048,
+		RequireCN: true,
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
@@ -2337,7 +2337,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signingBundle, err := fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
+	signingBundle, err := b.fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
 	if err != nil {
 		t.Fatal(err)
 	}
