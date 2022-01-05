@@ -1,0 +1,3 @@
+```release-note:feature
+**UI Client Count improvements: Adding new charting and filtering features alongside the new additions to the client count API.
+```
