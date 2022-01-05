@@ -1,4 +1,4 @@
-{{#if (or (has-block) this.shouldRender)}}
+{{#if (or (has-block) this.isVisible)}}
   <div class="column is-one-quarter" data-test-label-div>
     {{#if this.label}}
       {{#if this.hasLabelOverflow}}
