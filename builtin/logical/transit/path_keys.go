@@ -135,7 +135,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	autoRotateInterval := time.Second * time.Duration(d.Get("auto_rotate_interval").(int))
 
 	if autoRotateInterval != 0 && autoRotateInterval < time.Hour {
-		return logical.ErrorResponse("auto rotate interval must be at least an hour"), nil
+		return logical.ErrorResponse("auto rotate interval must be 0 to disable or at least an hour"), nil
 	}
 
 	if !derived && convergent {
