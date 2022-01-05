@@ -1,3 +1,4 @@
+{{! template-lint-disable  }}
 {{#if this.shouldUseFallback}}
   {{component
     this.fallbackComponent
@@ -20,21 +21,20 @@
   {{#if this.subText}}
     <p class="sub-text">{{this.subText}}</p>
   {{/if}}
-  {{! template-lint-configure simple-unless "warn" }}
-  {{#unless (gte this.selectedOptions.length this.selectLimit)}}
-    <PowerSelectWithCreate
-      @options={{this.options}}
-      @search={{this.search}}
-      @onChange={{action "selectOption"}}
-      @onCreate={{action "createOption"}}
-      @placeholderComponent={{component "search-select-placeholder"}}
-      @renderInPlace={{true}}
-      @searchField="searchText"
-      @verticalPosition="below"
-      @showCreateWhen={{action "hideCreateOptionOnSameID"}}
-      @buildSuggestion={{action "constructSuggestion"}}
+  {{#unless (gte selectedOptions.length selectLimit)}}
+    {{#power-select-with-create
+      options=options
+      search=search
+      onchange=(action "selectOption")
+      oncreate=(action "createOption")
+      placeholderComponent=(component "search-select-placeholder")
+      renderInPlace=true
+      searchField="searchText"
+      verticalPosition="below"
+      showCreateWhen=(action "hideCreateOptionOnSameID")
+      buildSuggestion=(action "constructSuggestion")
       as |option|
-    >
+    }}
       {{#if this.shouldRenderName}}
         {{option.name}}
         <small class="search-select-list-key" data-test-smaller-id="true">
@@ -43,7 +43,7 @@
       {{else}}
         {{option.id}}
       {{/if}}
-    </PowerSelectWithCreate>
+    {{/power-select-with-create}}
   {{/unless}}
   <ul class="search-select-list">
     {{#each this.selectedOptions as |selected|}}
