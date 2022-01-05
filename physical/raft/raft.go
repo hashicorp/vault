@@ -40,6 +40,8 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 // EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
+var getMmapFlags = func(string) int { return 0 }
+
 // Verify RaftBackend satisfies the correct interfaces
 var (
 	_ physical.Backend       = (*RaftBackend)(nil)
@@ -364,9 +366,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		opts := boltOptions()
+		dbPath := filepath.Join(path, "raft.db")
+		opts := boltOptions(dbPath)
 		raftOptions := raftboltdb.Options{
-			Path:        filepath.Join(path, "raft.db"),
+			Path:        dbPath,
 			BoltOptions: opts,
 		}
 		store, err := raftboltdb.New(raftOptions)
@@ -1649,11 +1652,12 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 
 // boltOptions returns a bolt.Options struct, suitable for passing to
 // bolt.Open(), pre-configured with all of our preferred defaults.
-func boltOptions() *bolt.Options {
+func boltOptions(path string) *bolt.Options {
 	o := &bolt.Options{
 		Timeout:        1 * time.Second,
 		FreelistType:   bolt.FreelistMapType,
 		NoFreelistSync: true,
+		MmapFlags:      getMmapFlags(path),
 	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
