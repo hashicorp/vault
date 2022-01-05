@@ -27,7 +27,6 @@ const getActivityParams = ({ tab, start, end }) => {
       }
     }
   }
-  params.tab = tab;
   return params;
 };
 
