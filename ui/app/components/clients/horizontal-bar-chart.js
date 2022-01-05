@@ -11,20 +11,17 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module HorizontalBarChart
- * HorizontalBarChart components are used to display data in the form of a horizontal, stacked bar chart with accompanying legend and tooltip.
+ * HorizontalBarChart components are used to display data in the form of a horizontal, stacked bar chart with accompanying tooltip.
  *
  * @example
  * ```js
- * <HorizontalBarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <HorizontalBarChart @dataset={{@dataset}} @chartLegend={{@chartLegend}}/>
  * ```
- * @param {object} dataset - dataset for the chart
- * @param {array} chartLegend - array of objects with key names 'key' and 'label' for the chart legend
- * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis (i.e. 'namespace_path')
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {array} dataset - dataset for the chart, must be an array of flattened objects
+ * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 
 // TODO: delete original bar chart component
-// TODO: Move constants to helper
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 95 }; // makes space for y-axis legend
@@ -59,7 +56,6 @@ export default class HorizontalBarChart extends Component {
     // each array contains coordinates for each data bar
     let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     let dataset = args[0];
-    // let dataset = SAMPLE_DATA;
     let stackedData = stackFunction(dataset);
     let labelKey = this.labelKey;
 

@@ -15,18 +15,16 @@ import {
   formatNumbers,
 } from '../../utils/chart-helpers';
 
-// TODO fill out below
 /**
  * @module VerticalBarChart
- * VerticalBarChart components are used to...
+ * VerticalBarChart components are used to display stacked data in a vertical bar chart with accompanying tooltip
  *
  * @example
  * ```js
- * <VerticalBarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <VerticalBarChart @dataset={dataset} @chartLegend={chartLegend} />
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {array} dataset - dataset for the chart, must be an array of flattened objects
+ * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 
 export default class VerticalBarChart extends Component {

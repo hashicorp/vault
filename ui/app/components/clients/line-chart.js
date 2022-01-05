@@ -9,18 +9,15 @@ import { scaleLinear, scalePoint } from 'd3-scale';
 import { line } from 'd3-shape';
 import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/chart-helpers';
 
-// TODO fill out below
 /**
  * @module LineChart
- * LineChart components are used to...
+ * LineChart components are used to display data in a line plot with accompanying tooltip
  *
  * @example
  * ```js
- * <LineChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <LineChart @dataset={dataset} />
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {array} dataset - dataset is an array of objects
  */
 
 export default class LineChart extends Component {
