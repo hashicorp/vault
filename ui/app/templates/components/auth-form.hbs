@@ -162,7 +162,7 @@
         >
           Sign In
         </button>
-        {{#if this.authenticate.isRunning}}
+        {{#if (and this.delayAuthMessageReminder.isIdle this.showLoading)}}
           <AlertInline
             @paddingTop={{true}}
             @sizeSmall={{true}}

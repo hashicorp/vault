@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
@@ -6,7 +7,7 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
 const BACKENDS = supportedAuthBackends();
@@ -225,6 +226,7 @@ export default Component.extend(DEFAULTS, {
     waitFor(function* (backendType, data) {
       let clusterId = this.cluster.id;
       try {
+        this.delayAuthMessageReminder.perform();
         const authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
         this.onSuccess(authResponse, backendType, data);
       } catch (e) {
@@ -232,6 +234,15 @@ export default Component.extend(DEFAULTS, {
       }
     })
   ),
+
+  delayAuthMessageReminder: task(function* () {
+    if (Ember.testing) {
+      this.showLoading = true;
+      yield timeout(0);
+    } else {
+      yield timeout(5000);
+    }
+  }),
 
   actions: {
     doSubmit() {
