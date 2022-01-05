@@ -14,18 +14,32 @@
             autocomplete="off"
             spellcheck="false"
             autofocus="true"
+            disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
             @value={{this.passcode}}
           />
         </div>
       </div>
+      {{#if this.newCodeDelay.isRunning}}
+        <div>
+          <AlertInline
+            @type="danger"
+            @sizeSmall={{true}}
+            @message="This code is invalid. Please wait until a new code is available."
+          />
+        </div>
+      {{/if}}
       <button
         id="validate"
         type="submit"
-        disabled={{this.validate.isRunning}}
+        disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
         class="button is-primary {{if this.validate.isRunning "is-loading"}}"
       >
         Verify
       </button>
+      {{#if this.newCodeDelay.isRunning}}
+        <Icon @name="delay" class="has-text-grey" />
+        <span class="has-text-grey is-v-centered">{{this.countdown}}</span>
+      {{/if}}
     </form>
   </div>
 </div>

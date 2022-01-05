@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 /**
  * @module MfaForm
  * The MfaForm component is used to enter a passcode when mfa is required to login
@@ -20,6 +20,7 @@ export default class MfaForm extends Component {
   @service auth;
 
   @tracked passcode;
+  @tracked countdown;
 
   @task *validate() {
     try {
@@ -29,8 +30,17 @@ export default class MfaForm extends Component {
       );
       this.args.onSuccess(response);
     } catch (error) {
-      console.log(error);
-      // do something
+      // for now treat all errors as incorrect code
+      this.newCodeDelay.perform();
+    }
+  }
+
+  @task *newCodeDelay() {
+    this.passcode = null;
+    this.countdown = 30;
+    while (this.countdown) {
+      yield timeout(1000);
+      this.countdown--;
     }
   }
 
