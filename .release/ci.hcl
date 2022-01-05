@@ -3,17 +3,13 @@ schema = "1"
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "CRF6FFKEW" // #vault-releases
+    notification_channel = "C01A3A54G0L" // TODO: change back to #vault-releases
   }
   github {
     organization = "hashicorp"
     repository = "vault"
     release_branches = [
-      "main",
-      "release/1.6.x",
-      "release/1.7.x",
-      "release/1.8.x",
-      "release/1.9.x"
+        "enable-security-scan"
     ]
   }
 }
@@ -59,12 +55,27 @@ event "quality-tests" {
   }
 }
 
-event "security-scan" {
+event "security-scan-binaries" {
   depends = ["quality-tests"]
-  action "security-scan" {
+  action "security-scan-binaries" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
-    workflow = "security-scan"
+    workflow = "security-scan-binaries"
+    config = "security-scan.hcl"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
+
+event "security-scan-containers" {
+  depends = ["security-scan-binaries"]
+  action "security-scan-containers" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "security-scan-containers"
+    config = "security-scan.hcl"
   }
 
   notification {
@@ -73,7 +84,7 @@ event "security-scan" {
 }
 
 event "notarize-darwin-amd64" {
-  depends = ["security-scan"]
+  depends = ["security-scan-containers"]
   action "notarize-darwin-amd64" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
