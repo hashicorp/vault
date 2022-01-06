@@ -139,6 +139,7 @@
     "ember-svg-jar": "^2.1.0",
     "ember-template-lint": "^3.14.0",
     "ember-test-selectors": "^2.1.0",
+    "ember-tether": "^2.0.1",
     "ember-truth-helpers": "^2.1.0",
     "ember-wormhole": "^0.5.5",
     "escape-string-regexp": "^2.0.0",
