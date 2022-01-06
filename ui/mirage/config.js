@@ -22,7 +22,16 @@ export default function () {
     };
   });
 
-  this.get('/sys/internal/ui/feature-flags', () => {
+  this.get('/sys/internal/ui/feature-flags', function (db) {
+    const featuresResponse = db.features.first();
+    return {
+      data: {
+        feature_flags: featuresResponse ? featuresResponse.feature_flags : null,
+      },
+    };
+  });
+
+  this.get('/sys/internal/counters/activity', function () {
     return {
       data: {
         start_time: '2019-11-01T00:00:00Z',
