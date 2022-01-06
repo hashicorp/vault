@@ -1,5 +1,5 @@
-{{#if (or this.isVisible (has-block))}}
-  <div class="info-table-row" data-test-component="info-table-row">
+{{#if (or (has-block) this.isVisible)}}
+  <div class="info-table-row" data-test-component="info-table-row" ...attributes>
     <div
       class="column is-one-quarter {{if this.hasLabelOverflow "label-overflow"}}"
       data-test-label-div
@@ -29,7 +29,7 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex" data-test-value-div={{@label}}>
+    <div class="column is-flex foobar" data-test-value-div={{@label}}>
       {{#if (has-block)}}
         {{yield}}
       {{else if this.valueIsBoolean}}
@@ -37,7 +37,7 @@
           <Icon class="icon-true" @name="check-circle" data-test-boolean-true />
           Yes
         {{else}}
-          <Icon @name="x-square" class="icon-false" />
+          <Icon @name="x-square" class="icon-false" data-test-boolean-false />
           No
         {{/if}}
         {{! alwaysRender is still true }}

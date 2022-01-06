@@ -165,12 +165,19 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
   test('Row renders when block content even if alwaysRender = false', async function (assert) {
     await render(hbs`<InfoTableRow
+      @label={{this.label}}
       @alwaysRender={{false}}>
       Block content
     </InfoTableRow>`);
+    assert.dom('[data-test-value-div]').exists('renders block');
+    assert.dom('[data-test-value-div]').hasText('Block content', 'renders block');
+  });
 
-    let block = document.querySelector('[data-test-value-div]').textContent.trim();
-    assert.equal(block, 'Block content', 'renders block');
+  test('Row does not render empty block content when alwaysRender = false', async function (assert) {
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @alwaysRender={{false}} />`);
+    assert.dom('[data-test-component="info-table-row"]').doesNotExist();
   });
 
   test('Has dashed label if none provided', async function (assert) {
@@ -228,7 +235,17 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     assert.dom('[data-test-boolean-true]').exists('check icon exists');
     assert.dom('[data-test-value-div]').hasText('Yes', 'Renders yes text');
     this.set('value', false);
-    assert.dom('[data-test-icon="x-square"]').exists('x icon exists');
+    assert.dom('[data-test-boolean-false]').exists('x icon exists');
     assert.dom('[data-test-value-div]').hasText('No', 'renders no text');
+  });
+  test('Renders data-test attrs passed from parent', async function (assert) {
+    this.set('value', true);
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      data-test-foo-bar
+    />`);
+
+    assert.dom('[data-test-foo-bar]').exists();
   });
 });
