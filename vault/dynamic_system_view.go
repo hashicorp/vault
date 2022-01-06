@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -368,4 +371,49 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	}
 
 	return passPolicy.Generate(ctx, nil)
+}
+
+// handshakeConfigs are used to just do a basic handshake between
+// a plugin and host. If the handshake fails, a user friendly error is shown.
+// This prevents users from executing bad plugins or executing a plugin
+// directory. It is a UX feature, not a security feature.
+var handshakeConfig = plugin.HandshakeConfig{
+	ProtocolVersion:  5,
+	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
+	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
+}
+
+func (d dynamicSystemView) GetPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
+	// TODO(JM): Case where multiplexed client exists, but we need to create a new entry
+	// for the connection
+
+	// pluginSets is the map of plugins we can dispense.
+	// TODO(JM): add multiplexingSupport
+	pluginSets := map[int]plugin.PluginSet{
+		5: {
+			"database": new(dbplugin.GRPCDatabasePlugin),
+		},
+	}
+
+	c, err := pluginRunner.RunConfig(ctx,
+		pluginutil.Runner(d),
+		pluginutil.PluginSets(pluginSets),
+		pluginutil.HandshakeConfig(handshakeConfig),
+		pluginutil.Logger(logger),
+		pluginutil.MetadataMode(isMetadataMode),
+		pluginutil.AutoMTLS(true),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(JM): Case where the multiplexed client doesn't exist and we need to create
+	// an entry on the map.
+
+	return client, nil
 }

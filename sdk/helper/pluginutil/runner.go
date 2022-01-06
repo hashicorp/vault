@@ -31,6 +31,12 @@ type LookRunnerUtil interface {
 	RunnerUtil
 }
 
+type PluginClient interface {
+	Close() error
+	Dispense(string) (interface{}, error)
+	Ping() error
+}
+
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
