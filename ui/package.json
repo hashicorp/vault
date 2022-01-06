@@ -77,7 +77,6 @@
     "codemirror": "^5.58.2",
     "columnify": "^1.5.4",
     "cool-checkboxes-for-bulma.io": "^1.1.0",
-    "d3-array": "^3.1.1",
     "d3-axis": "^1.0.8",
     "d3-ease": "^1.0.5",
     "d3-scale": "^1.0.7",
@@ -125,7 +124,6 @@
     "ember-load-initializers": "^2.1.2",
     "ember-maybe-import-regenerator": "^0.1.6",
     "ember-maybe-in-element": "^2.0.3",
-    "ember-modal-dialog": "^3.0.3",
     "ember-page-title": "^6.0.3",
     "ember-power-select-with-create": "0.9.0",
     "ember-promise-helpers": "^1.0.9",
@@ -140,7 +138,6 @@
     "ember-svg-jar": "^2.1.0",
     "ember-template-lint": "^3.14.0",
     "ember-test-selectors": "^2.1.0",
-    "ember-tether": "^2.0.1",
     "ember-truth-helpers": "^2.1.0",
     "ember-wormhole": "^0.5.5",
     "escape-string-regexp": "^2.0.0",
@@ -231,7 +228,6 @@
     ]
   },
   "dependencies": {
-    "d3-format": "^3.1.0",
     "faker": "^5.5.3",
     "handlebars": "^4.3.0",
     "highlight.js": "^10.4.1",
