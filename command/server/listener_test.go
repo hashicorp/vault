@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"testing"
+
 )
 
 type testListenerConnFn func(net.Listener) (net.Conn, error)
@@ -15,7 +16,8 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 	go func() {
 		server, err := ln.Accept()
 		if err != nil {
-			t.Fatalf("err: %s", err)
+			t.Errorf("err: %s", err)
+			return
 		}
 		if certName != "" {
 			tlsConn := server.(*tls.Conn)
@@ -63,5 +65,17 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 	<-copyCh
 	if buf.String() != "foo" {
 		t.Fatalf("bad: %v", buf.String())
+	}
+}
+
+
+func TestProfilingUnauthenticatedInFlightAccess(t *testing.T) {
+
+	config, err := LoadConfigFile("./test-fixtures/unauth_in_flight_access.hcl")
+	if err != nil {
+		t.Fatalf("Error encountered when loading config %+v", err)
+	}
+	if !config.Listeners[0].InFlightRequestLogging.UnauthenticatedInFlightAccess {
+		t.Fatalf("failed to read UnauthenticatedInFlightAccess")
 	}
 }

@@ -14,12 +14,12 @@ export default function HcpCalloutSection({
     <div className={styles.hcpCalloutSection} id={id}>
       {header ? (
         <div className={styles.header}>
-          <h2>{header}</h2>
+          <h2 className="g-type-display-2">{header}</h2>
         </div>
       ) : null}
       <div className={styles.content}>
         <div className={styles.info}>
-          <h1>{title}</h1>
+          <h1 className="g-type-display-1">{title}</h1>
           <span className={styles.chin}>{chin}</span>
           <p className={styles.description}>{description}</p>
           <div className={styles.links}>

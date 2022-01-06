@@ -1140,6 +1140,14 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			algo = crypto.SHA384
 		case HashTypeSHA2512:
 			algo = crypto.SHA512
+		case HashTypeSHA3224:
+			algo = crypto.SHA3_224
+		case HashTypeSHA3256:
+			algo = crypto.SHA3_256
+		case HashTypeSHA3384:
+			algo = crypto.SHA3_384
+		case HashTypeSHA3512:
+			algo = crypto.SHA3_512
 		default:
 			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
@@ -1311,6 +1319,14 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 			algo = crypto.SHA384
 		case HashTypeSHA2512:
 			algo = crypto.SHA512
+		case HashTypeSHA3224:
+			algo = crypto.SHA3_224
+		case HashTypeSHA3256:
+			algo = crypto.SHA3_256
+		case HashTypeSHA3384:
+			algo = crypto.SHA3_384
+		case HashTypeSHA3512:
+			algo = crypto.SHA3_512
 		default:
 			return false, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
@@ -1697,7 +1713,7 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 	// Verify and Decrypt
 	plain, err := aead.Open(nil, nonce, trueCT, opts.AdditionalData)
 	if err != nil {
-		return nil, err
+		return nil, errutil.UserError{Err: err.Error()}
 	}
 	return plain, nil
 }

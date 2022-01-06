@@ -10,7 +10,7 @@ export default Mixin.create({
 
   // uses Ember.on so that we don't have to worry about calling _super if
   // didInsertElement is overridden
-  focusOnInsert: on('didInsertElement', function() {
+  focusOnInsert: on('didInsertElement', function () {
     schedule('afterRender', this, 'focusOnInsertFocus');
   }),
 

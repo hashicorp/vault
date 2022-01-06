@@ -81,8 +81,12 @@ func TestPlugin_lifecycle(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanupReqs := []*logical.Request{}
-			defer cleanup(t, b, cleanupReqs)
+			var cleanupReqs []*logical.Request
+			defer func() {
+				// Do not defer cleanup directly so that we can populate the
+				// slice before the function gets executed.
+				cleanup(t, b, cleanupReqs)
+			}()
 
 			// /////////////////////////////////////////////////////////////////
 			// Configure
@@ -173,7 +177,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 			// Create static role
 			staticRoleName := "static-role"
 			req = &logical.Request{
-				Operation: logical.UpdateOperation,
+				Operation: logical.CreateOperation,
 				Path:      fmt.Sprintf("static-roles/%s", staticRoleName),
 				Storage:   config.StorageView,
 				Data: map[string]interface{}{

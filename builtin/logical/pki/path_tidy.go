@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -15,7 +16,7 @@ import (
 
 func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "tidy",
+		Pattern: "tidy$",
 		Fields: map[string]*framework.FieldSchema{
 			"tidy_cert_store": {
 				Type: framework.TypeBool,
@@ -45,8 +46,11 @@ Defaults to 72 hours.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathTidyWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.pathTidyWrite,
+				ForwardPerformanceStandby:   true,
+			},
 		},
 
 		HelpSynopsis:    pathTidyHelpSyn,
@@ -54,12 +58,21 @@ Defaults to 72 hours.`,
 	}
 }
 
-func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// If we are a performance standby forward the request to the active node
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
-		return nil, logical.ErrReadOnly
+func pathTidyStatus(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "tidy-status$",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.pathTidyStatusRead,
+				ForwardPerformanceStandby:   true,
+			},
+		},
+		HelpSynopsis:    pathTidyStatusHelpSyn,
+		HelpDescription: pathTidyStatusHelpDesc,
 	}
+}
 
+func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
@@ -86,6 +99,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	go func() {
 		defer atomic.StoreUint32(b.tidyCASGuard, 0)
 
+		b.tidyStatusStart(safetyBuffer, tidyCertStore, tidyRevokedCerts || tidyRevocationList)
+
 		// Don't cancel when the original client request goes away
 		ctx = context.Background()
 
@@ -98,7 +113,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 					return fmt.Errorf("error fetching list of certs: %w", err)
 				}
 
-				for _, serial := range serials {
+				serialCount := len(serials)
+				metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_total_entries"}, float32(serialCount))
+				for i, serial := range serials {
+					b.tidyStatusMessage(fmt.Sprintf("Tidying certificate store: checking entry %d of %d", i, serialCount))
+					metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_current_entry"}, float32(i))
+
 					certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
 					if err != nil {
 						return fmt.Errorf("error fetching certificate %q: %w", serial, err)
@@ -109,6 +129,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return fmt.Errorf("error deleting nil entry with serial %s: %w", serial, err)
 						}
+						b.tidyStatusIncCertStoreCount()
 						continue
 					}
 
@@ -117,6 +138,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return fmt.Errorf("error deleting entry with nil value with serial %s: %w", serial, err)
 						}
+						b.tidyStatusIncCertStoreCount()
 						continue
 					}
 
@@ -129,6 +151,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return fmt.Errorf("error deleting serial %q from storage: %w", serial, err)
 						}
+						b.tidyStatusIncCertStoreCount()
 					}
 				}
 			}
@@ -144,8 +167,14 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 					return fmt.Errorf("error fetching list of revoked certs: %w", err)
 				}
 
+				revokedSerialsCount := len(revokedSerials)
+				metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries"}, float32(revokedSerialsCount))
+
 				var revInfo revocationInfo
-				for _, serial := range revokedSerials {
+				for i, serial := range revokedSerials {
+					b.tidyStatusMessage(fmt.Sprintf("Tidying revoked certificates: checking certificate %d of %d", i, len(revokedSerials)))
+					metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_current_entry"}, float32(i))
+
 					revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 					if err != nil {
 						return fmt.Errorf("unable to fetch revoked cert with serial %q: %w", serial, err)
@@ -156,6 +185,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return fmt.Errorf("error deleting nil revoked entry with serial %s: %w", serial, err)
 						}
+						b.tidyStatusIncRevokedCertCount()
 						continue
 					}
 
@@ -164,6 +194,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return fmt.Errorf("error deleting revoked entry with nil value with serial %s: %w", serial, err)
 						}
+						b.tidyStatusIncRevokedCertCount()
 						continue
 					}
 
@@ -189,6 +220,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 							return fmt.Errorf("error deleting serial %q from store when tidying revoked: %w", serial, err)
 						}
 						rebuildCRL = true
+						b.tidyStatusIncRevokedCertCount()
 					}
 				}
 
@@ -204,13 +236,130 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 		if err := doTidy(); err != nil {
 			logger.Error("error running tidy", "error", err)
-			return
+			b.tidyStatusStop(err)
+		} else {
+			b.tidyStatusStop(nil)
 		}
 	}()
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
+}
+
+func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
+	// but only if the PKI backend is not a local mount.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
+		return nil, logical.ErrReadOnly
+	}
+
+	b.tidyStatusLock.RLock()
+	defer b.tidyStatusLock.RUnlock()
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"safety_buffer":              nil,
+			"tidy_cert_store":            nil,
+			"tidy_revoked_certs":         nil,
+			"state":                      "Inactive",
+			"error":                      nil,
+			"time_started":               nil,
+			"time_finished":              nil,
+			"message":                    nil,
+			"cert_store_deleted_count":   nil,
+			"revoked_cert_deleted_count": nil,
+		},
+	}
+
+	if b.tidyStatus.state == tidyStatusInactive {
+		return resp, nil
+	}
+
+	resp.Data["safety_buffer"] = b.tidyStatus.safetyBuffer
+	resp.Data["tidy_cert_store"] = b.tidyStatus.tidyCertStore
+	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
+	resp.Data["time_started"] = b.tidyStatus.timeStarted
+	resp.Data["message"] = b.tidyStatus.message
+	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
+	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
+
+	switch(b.tidyStatus.state) {
+	case tidyStatusStarted:
+		resp.Data["state"] = "Running"
+	case tidyStatusFinished:
+		resp.Data["state"] = "Finished"
+		resp.Data["time_finished"] = b.tidyStatus.timeFinished
+		resp.Data["message"] = nil
+	case tidyStatusError:
+		resp.Data["state"] = "Error"
+		resp.Data["time_finished"] = b.tidyStatus.timeFinished
+		resp.Data["error"] = b.tidyStatus.err.Error()
+		// Don't clear the message so that it serves as a hint about when
+		// the error ocurred.
+	}
+
+	return resp, nil
+}
+
+func (b *backend) tidyStatusStart(safetyBuffer int, tidyCertStore, tidyRevokedCerts bool) {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus = &tidyStatus{
+		safetyBuffer:     safetyBuffer,
+		tidyCertStore:    tidyCertStore,
+		tidyRevokedCerts: tidyRevokedCerts,
+		state:            tidyStatusStarted,
+		timeStarted:      time.Now(),
+	}
+
+	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, float32(b.tidyStatus.timeStarted.Unix()))
+}
+
+func (b *backend) tidyStatusStop(err error) {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.timeFinished = time.Now()
+	b.tidyStatus.err = err
+	if err == nil {
+		b.tidyStatus.state = tidyStatusFinished
+	} else {
+		b.tidyStatus.state = tidyStatusError
+	}
+
+	metrics.MeasureSince([]string{"secrets", "pki", "tidy", "duration"}, b.tidyStatus.timeStarted)
+	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, 0)
+	metrics.IncrCounter([]string{"secrets", "pki", "tidy", "cert_store_deleted_count"}, float32(b.tidyStatus.certStoreDeletedCount))
+	metrics.IncrCounter([]string{"secrets", "pki", "tidy", "revoked_cert_deleted_count"}, float32(b.tidyStatus.revokedCertDeletedCount))
+
+	if err != nil {
+		metrics.IncrCounter([]string{"secrets", "pki", "tidy", "failure"}, 1)
+	} else {
+		metrics.IncrCounter([]string{"secrets", "pki", "tidy", "success"}, 1)
+	}
+}
+
+func (b *backend) tidyStatusMessage(msg string) {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.message = msg
+}
+
+func (b *backend) tidyStatusIncCertStoreCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.certStoreDeletedCount++
+}
+
+func (b *backend) tidyStatusIncRevokedCertCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.revokedCertDeletedCount++
 }
 
 const pathTidyHelpSyn = `
@@ -238,4 +387,26 @@ certificate/revocation information of each certificate being held in
 certificate storage or in revocation information will then be checked. If the
 current time, minus the value of 'safety_buffer', is greater than the
 expiration, it will be removed.
+`
+
+const pathTidyStatusHelpSyn = `
+Returns the status of the tidy operation.
+`
+
+const pathTidyStatusHelpDesc = `
+This is a read only endpoint that returns information about the current tidy
+operation, or the most recent if none is currently running.
+
+The result includes the following fields:
+* 'safety_buffer': the value of this parameter when initiating the tidy operation
+* 'tidy_cert_store': the value of this parameter when initiating the tidy operation
+* 'tidy_revoked_certs': the value of this parameter when initiating the tidy operation
+* 'state': one of "Inactive", "Running", "Finished", "Error"
+* 'error': the error message, if the operation ran into an error
+* 'time_started': the time the operation started
+* 'time_finished': the time the operation finished
+* 'message': One of "Tidying certificate store: checking entry N of TOTAL" or
+  "Tidying revoked certificates: checking certificate N of TOTAL"
+* 'cert_store_deleted_count': The number of certificate storage entries deleted
+* 'revoked_cert_deleted_count': The number of revoked certificate entries deleted
 `

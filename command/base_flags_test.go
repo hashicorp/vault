@@ -27,14 +27,14 @@ func Test_BoolPtr(t *testing.T) {
 	require.True(t, boolPtr.Get())
 
 	var boolPtrFalseDefault BoolPtr
-	value = newBoolPtrValue(new(bool), &boolPtrFalseDefault, false)
+	_ = newBoolPtrValue(new(bool), &boolPtrFalseDefault, false)
 
 	require.True(t, boolPtrFalseDefault.IsSet())
 	require.False(t, boolPtrFalseDefault.Get())
 
 	var boolPtrTrueDefault BoolPtr
 	defTrue := true
-	value = newBoolPtrValue(&defTrue, &boolPtrTrueDefault, false)
+	_ = newBoolPtrValue(&defTrue, &boolPtrTrueDefault, false)
 
 	require.True(t, boolPtrTrueDefault.IsSet())
 	require.True(t, boolPtrTrueDefault.Get())

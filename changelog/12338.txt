@@ -1,0 +1,3 @@
+```release-note: bug
+api: Fixes storage APIs returning incorrect error when parsing responses
+```

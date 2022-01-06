@@ -287,7 +287,7 @@ func assertNoCreds(t testing.TB, address string, port int, username, password st
 		if err != nil {
 			return nil
 		}
-		return err
+		return nil
 	}
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = timeout

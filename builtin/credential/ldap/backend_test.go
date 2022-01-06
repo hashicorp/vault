@@ -500,12 +500,104 @@ func TestBackend_basic_authbind(t *testing.T) {
 	})
 }
 
-func TestBackend_basic_authbind_upndomain(t *testing.T) {
+func TestBackend_basic_authbind_userfilter(t *testing.T) {
+
 	b := factory(t)
 	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
+
+	//Add a liberal user filter, allowing to log in with either cn or email
+	cfg.UserFilter = "(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))"
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Create engineers group with no policies
+			testAccStepGroup(t, "engineers", ""),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			// Authenticate with cn attribute
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
+			// Authenticate with mail attribute
+			testAccStepLoginNoAttachedPolicies(t, "hermes@planetexpress.com", "hermes"),
+		},
+	})
+
+	//A filter giving the same DN makes the entity_id the same
+	entity_id := ""
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Create engineers group with no policies
+			testAccStepGroup(t, "engineers", ""),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			// Authenticate with cn attribute
+			testAccStepLoginReturnsSameEntity(t, "hermes conrad", "hermes", &entity_id),
+			// Authenticate with mail attribute
+			testAccStepLoginReturnsSameEntity(t, "hermes@planetexpress.com", "hermes", &entity_id),
+		},
+	})
+
+	//Missing entity alias attribute means access denied
+	cfg.UserAttr = "inexistent"
+	cfg.UserFilter = "(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))"
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Authenticate with mail attribute will find DN but missing attribute means access denied
+			testAccStepLoginFailure(t, "hermes@planetexpress.com", "hermes"),
+		},
+	})
+	cfg.UserAttr = "cn"
+
+	//UPNDomain has precedence over userfilter, for backward compatibility
 	cfg.UPNDomain = "planetexpress.com"
 
+	addUPNAttributeToLDAPSchemaAndUser(t, cfg, "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com", "professor@planetexpress.com")
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			testAccStepLoginNoAttachedPolicies(t, "professor", "professor"),
+		},
+	})
+
+	cfg.UPNDomain = ""
+
+	//Add a strict user filter, rejecting login of bureaucrats
+	cfg.UserFilter = "(&({{.UserAttr}}={{.Username}})(!(employeeType=Bureaucrat)))"
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Authenticate with cn attribute
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	//Login fails when multiple user match search filter (using an incorrect filter on purporse)
+	cfg.UserFilter = "(objectClass=*)"
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			//testAccStepConfigUrl(t, cfg),
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			// Authenticate with cn attribute
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+}
+
+func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry, testUserDN string, testUserUPN string) {
 	// Setup connection
 	client := &ldaputil.Client{
 		Logger: hclog.New(&hclog.LoggerOptions{
@@ -543,13 +635,22 @@ func TestBackend_basic_authbind_upndomain(t *testing.T) {
 	}
 
 	// Modify professor user and add userPrincipalName attribute
-	profDN := "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com"
-	modifyUserReq := goldap.NewModifyRequest(profDN, nil)
+	modifyUserReq := goldap.NewModifyRequest(testUserDN, nil)
 	modifyUserReq.Add("objectClass", []string{"PrincipalNameClass"})
-	modifyUserReq.Add("userPrincipalName", []string{"professor@planetexpress.com"})
+	modifyUserReq.Add("userPrincipalName", []string{testUserUPN})
 	if err := conn.Modify(modifyUserReq); err != nil {
 		t.Fatal(err)
 	}
+
+}
+
+func TestBackend_basic_authbind_upndomain(t *testing.T) {
+	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+	cfg.UPNDomain = "planetexpress.com"
+
+	addUPNAttributeToLDAPSchemaAndUser(t, cfg, "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com", "professor@planetexpress.com")
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
@@ -647,6 +748,11 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 						t.Errorf("Default mismatch: userattr. Expected: '%s', received :'%s'", defaultUserAttr, cfg["userattr"])
 					}
 
+					defaultUserFilter := "({{.UserAttr}}={{.Username}})"
+					if cfg["userfilter"] != defaultUserFilter {
+						t.Errorf("Default mismatch: userfilter. Expected: '%s', received :'%s'", defaultUserFilter, cfg["userfilter"])
+					}
+
 					defaultDenyNullBind := true
 					if cfg["deny_null_bind"] != defaultDenyNullBind {
 						t.Errorf("Default mismatch: deny_null_bind. Expected: '%t', received :'%s'", defaultDenyNullBind, cfg["deny_null_bind"])
@@ -667,6 +773,7 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 			"url":                  cfg.Url,
 			"userattr":             cfg.UserAttr,
 			"userdn":               cfg.UserDN,
+			"userfilter":           cfg.UserFilter,
 			"groupdn":              cfg.GroupDN,
 			"groupattr":            cfg.GroupAttr,
 			"binddn":               cfg.BindDN,
@@ -855,6 +962,20 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 	}
 }
 
+func testAccStepLoginReturnsSameEntity(t *testing.T, user string, pass string, entity_id *string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
+		Check: logicaltest.TestCheckAuthEntityId(entity_id),
+	}
+}
+
 func testAccStepLoginNoAttachedPolicies(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -866,6 +987,19 @@ func testAccStepLoginNoAttachedPolicies(t *testing.T, user string, pass string) 
 
 		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
 		Check: logicaltest.TestCheckAuth([]string{"abc", "default", "xyz"}),
+	}
+}
+
+func testAccStepLoginFailure(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		ErrorOk: true,
 	}
 }
 
@@ -955,6 +1089,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"url":                    cfg.Url,
 			"userattr":               cfg.UserAttr,
 			"userdn":                 cfg.UserDN,
+			"userfilter":             cfg.UserFilter,
 			"groupdn":                cfg.GroupDN,
 			"groupattr":              cfg.GroupAttr,
 			"binddn":                 cfg.BindDN,
@@ -990,6 +1125,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 		ConfigEntry: &ldaputil.ConfigEntry{
 			Url:                      cfg.Url,
 			UserAttr:                 cfg.UserAttr,
+			UserFilter:               cfg.UserFilter,
 			UserDN:                   cfg.UserDN,
 			GroupDN:                  cfg.GroupDN,
 			GroupAttr:                cfg.GroupAttr,

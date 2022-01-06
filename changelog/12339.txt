@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Only delete quotas on primary cluster.
+```

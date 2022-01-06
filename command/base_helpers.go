@@ -261,13 +261,13 @@ func humanDuration(d time.Duration) string {
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
 func humanDurationInt(i interface{}) interface{} {
-	switch i.(type) {
+	switch i := i.(type) {
 	case int:
-		return humanDuration(time.Duration(i.(int)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case int64:
-		return humanDuration(time.Duration(i.(int64)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case json.Number:
-		if i, err := i.(json.Number).Int64(); err == nil {
+		if i, err := i.Int64(); err == nil {
 			return humanDuration(time.Duration(i) * time.Second)
 		}
 	}

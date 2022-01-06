@@ -42,7 +42,7 @@ export default Certificate.extend({
     editType: 'stringArray',
   }),
 
-  fieldGroups: computed('useCsrValues', function() {
+  fieldGroups: computed('useCsrValues', function () {
     const options = [
       {
         Options: [

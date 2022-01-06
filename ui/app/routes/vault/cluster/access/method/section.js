@@ -23,6 +23,9 @@ export default Route.extend({
     this._super(...arguments);
     controller.set('section', section);
     let method = this.modelFor('vault.cluster.access.method');
-    controller.set('paths', method.paths.paths.filter(path => path.navigation));
+    controller.set(
+      'paths',
+      method.paths.paths.filter((path) => path.navigation)
+    );
   },
 });

@@ -48,7 +48,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 
-		quotaResp, err := core.ApplyRateLimitQuota(&quotas.Request{
+		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
 			MountPath:     strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path),

@@ -3,13 +3,16 @@ package database
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/mock"
 )
 
 var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_period"}
@@ -43,7 +46,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 		"connection_url":    connURL,
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
-		"allowed_roles":     []string{"*"},
+		"allowed_roles":     []string{"plugin-role-test"},
 		"name":              "plugin-test",
 	}
 	req := &logical.Request{
@@ -61,6 +64,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	// ordering, so each case cleans up by deleting the role
 	testCases := map[string]struct {
 		account  map[string]interface{}
+		path     string
 		expected map[string]interface{}
 		err      error
 	}{
@@ -69,6 +73,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				"username":        dbUser,
 				"rotation_period": "5400s",
 			},
+			path: "plugin-role-test",
 			expected: map[string]interface{}{
 				"username":        dbUser,
 				"rotation_period": float64(5400),
@@ -78,7 +83,16 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			account: map[string]interface{}{
 				"username": dbUser,
 			},
-			err: errors.New("rotation_period is required to create static accounts"),
+			path: "plugin-role-test",
+			err:  errors.New("rotation_period is required to create static accounts"),
+		},
+		"disallowed role config": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": "5400s",
+			},
+			path: "disallowed-role",
+			err:  errors.New("\"disallowed-role\" is not an allowed role"),
 		},
 	}
 
@@ -94,9 +108,11 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				data[k] = v
 			}
 
+			path := "static-roles/" + tc.path
+
 			req := &logical.Request{
 				Operation: logical.CreateOperation,
-				Path:      "static-roles/plugin-role-test",
+				Path:      path,
 				Storage:   config.StorageView,
 				Data:      data,
 			}
@@ -513,6 +529,135 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected error, got none")
+	}
+}
+
+func TestWALsStillTrackedAfterUpdate(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	generateWALFromFailedRotation(t, b, storage, mockDB, "hashicorp")
+	requireWALs(t, storage, 1)
+
+	resp, err := b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/hashicorp",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"username":        "hashicorp",
+			"dn":              "uid=hashicorp,ou=users,dc=hashicorp,dc=com",
+			"rotation_period": "600s",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+	walIDs := requireWALs(t, storage, 1)
+
+	// Now when we trigger a manual rotate, it should use the WAL's new password
+	// which will tell us that the in-memory structure still kept track of the
+	// WAL in addition to it still being in storage.
+	wal, err := b.findStaticWAL(ctx, storage, walIDs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	rotateRole(t, b, storage, mockDB, "hashicorp")
+	role, err := b.StaticRole(ctx, storage, "hashicorp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if role.StaticAccount.Password != wal.NewPassword {
+		t.Fatal()
+	}
+	requireWALs(t, storage, 0)
+}
+
+func TestWALsDeletedOnRoleCreationFailed(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	for i := 0; i < 3; i++ {
+		mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+			Return(v5.UpdateUserResponse{}, errors.New("forced error")).
+			Once()
+		resp, err := b.HandleRequest(ctx, &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      "static-roles/hashicorp",
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"username":        "hashicorp",
+				"db_name":         "mockv5",
+				"rotation_period": "5s",
+			},
+		})
+		if err == nil {
+			t.Fatal("expected error from DB")
+		}
+		if !strings.Contains(err.Error(), "forced error") {
+			t.Fatal("expected forced error message", resp, err)
+		}
+	}
+
+	requireWALs(t, storage, 0)
+}
+
+func TestWALsDeletedOnRoleDeletion(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	// Create the roles
+	roleNames := []string{"hashicorp", "2"}
+	for _, roleName := range roleNames {
+		createRole(t, b, storage, mockDB, roleName)
+	}
+
+	// Fail to rotate the roles
+	for _, roleName := range roleNames {
+		generateWALFromFailedRotation(t, b, storage, mockDB, roleName)
+	}
+
+	// Should have 2 WALs hanging around
+	requireWALs(t, storage, 2)
+
+	// Delete one of the static roles
+	resp, err := b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "static-roles/hashicorp",
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+
+	// 1 WAL should be cleared by the delete
+	requireWALs(t, storage, 1)
+}
+
+func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/" + roleName,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"username":        roleName,
+			"db_name":         "mockv5",
+			"rotation_period": "86400s",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
 	}
 }
 

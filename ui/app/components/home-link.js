@@ -19,11 +19,11 @@ import { computed } from '@ember/object';
 export default Component.extend({
   tagName: '',
 
-  text: computed(function() {
+  text: computed(function () {
     return 'home';
   }),
 
-  computedClasses: computed('classNames', function() {
+  computedClasses: computed('classNames', function () {
     return this.classNames.join(' ');
   }),
 });

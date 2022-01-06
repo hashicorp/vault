@@ -6,7 +6,7 @@ export default ApplicationAdapter.extend({
   },
 
   findRecord(store, type, id) {
-    return this.ajax(this.url(id), 'GET').then(resp => {
+    return this.ajax(this.url(id), 'GET').then((resp) => {
       resp.id = id;
       return resp;
     });

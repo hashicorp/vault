@@ -97,7 +97,7 @@ export default TtlForm.extend({
     }
   },
 
-  unitOptions: computed(function() {
+  unitOptions: computed(function () {
     return [
       { label: 'seconds', value: 's' },
       { label: 'minutes', value: 'm' },
@@ -121,7 +121,7 @@ export default TtlForm.extend({
     'helperTextEnabled',
     'helperTextSet',
     'helperTextUnset',
-    function() {
+    function () {
       return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
     }
   ),

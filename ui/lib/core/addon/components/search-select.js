@@ -39,7 +39,7 @@ export default Component.extend({
   store: service(),
 
   onChange: () => {},
-  inputValue: computed(function() {
+  inputValue: computed(function () {
     return [];
   }),
   allOptions: null, // list of options including matched
@@ -62,17 +62,16 @@ export default Component.extend({
     }
     this.set('oldOptions', options);
   },
-  formatOptions: function(options) {
-    options = options.toArray().map(option => {
+  formatOptions: function (options) {
+    options = options.toArray().map((option) => {
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
-    let allOptions = options.toArray().map(option => {
+    let allOptions = options.toArray().map((option) => {
       return option.id;
     });
     this.set('allOptions', allOptions); // used by filter-wildcard helper
-
-    let formattedOptions = this.selectedOptions.map(option => {
+    let formattedOptions = this.selectedOptions.map((option) => {
       let matchingOption = options.findBy('id', option);
       options.removeObject(matchingOption);
       return {
@@ -87,7 +86,7 @@ export default Component.extend({
     }
     this.set('options', options);
   },
-  fetchOptions: task(function*() {
+  fetchOptions: task(function* () {
     if (!this.models) {
       if (this.options) {
         this.formatOptions(this.options);
@@ -126,7 +125,7 @@ export default Component.extend({
   }).on('didInsertElement'),
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      this.onChange(Array.from(this.selectedOptions, option => option.id));
+      this.onChange(Array.from(this.selectedOptions, (option) => option.id));
     } else {
       this.onChange(this.selectedOptions);
     }
@@ -158,7 +157,7 @@ export default Component.extend({
     },
     hideCreateOptionOnSameID(id, options) {
       if (options && options.length && options.firstObject.groupName) {
-        return !options.some(group => group.options.findBy('id', id));
+        return !options.some((group) => group.options.findBy('id', id));
       }
       let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
       if (this.disallowNewItems && !existingOption) {

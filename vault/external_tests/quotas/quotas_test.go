@@ -231,7 +231,7 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
 	want := int32(ideal + 1)
 	require.NotZerof(t, numFail, "expected some requests to fail; numSuccess: %d, elapsed: %d", numSuccess, elapsed)
-	require.Lessf(t, numSuccess, want, "too many successful requests;numSuccess: %d, numFail: %d, elapsed: %d", want, numSuccess, numFail, elapsed)
+	require.LessOrEqualf(t, numSuccess, want, "too many successful requests;numSuccess: %d, numFail: %d, elapsed: %d", numSuccess, numFail, elapsed)
 
 	// allow time (1s) for rate limit to refill before updating the quota config
 	time.Sleep(time.Second)

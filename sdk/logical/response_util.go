@@ -146,6 +146,10 @@ func AdjustErrorStatusCode(status *int, err error) {
 		*status = http.StatusServiceUnavailable
 	}
 
+	if errwrap.Contains(err, consts.ErrAPILocked.Error()) {
+		*status = http.StatusServiceUnavailable
+	}
+
 	// Adjust status code on
 	if errwrap.Contains(err, "http: request body too large") {
 		*status = http.StatusRequestEntityTooLarge

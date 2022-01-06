@@ -783,6 +783,9 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	if err != nil {
 		t.Fatal(err)
 	}
+	if entry == nil {
+		t.Fatal("nil value")
+	}
 
 	decompressedBytes, uncompressed, err := compressutil.Decompress(entry.Value)
 	if err != nil {

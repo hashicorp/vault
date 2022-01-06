@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix a panic when trying to write a key > 32KB
+```

@@ -21,7 +21,7 @@ export default Route.extend(ListRoute, {
         page: params.page,
         pageFilter: params.pageFilter,
       })
-      .catch(err => {
+      .catch((err) => {
         if (err.httpStatus === 404) {
           return [];
         } else {

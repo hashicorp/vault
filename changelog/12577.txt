@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: namespace search in client count views
+```

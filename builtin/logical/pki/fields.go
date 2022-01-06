@@ -228,6 +228,11 @@ this value.`,
 more than one, specify alternative names in
 the alt_names map using OID 2.5.4.5.`,
 	}
+	fields["not_after"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Set the not after field of the certificate with specified date value.
+                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
 
 	return fields
 }
@@ -245,12 +250,25 @@ the private key!`,
 
 	fields["key_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
-		Default: 2048,
-		Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
+		Default: 0,
+		Description: `The number of bits to use. Allowed values are
+0 (universal default); with rsa key_type: 2048 (default), 3072, or
+4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
+ed25519.`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Value: 2048,
+			Value: 0,
+		},
+	}
+
+	fields["signature_bits"] = &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 0,
+		Description: `The number of bits to use in the signature
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 0,
 		},
 	}
 
@@ -258,8 +276,8 @@ the key_type.`,
 		Type:    framework.TypeString,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
-and "ec" are the only valid values.`,
-		AllowedValues: []interface{}{"rsa", "ec"},
+"ec" and "ed25519" are the only valid values.`,
+		AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "rsa",
 		},

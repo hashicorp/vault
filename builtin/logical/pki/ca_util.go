@@ -33,6 +33,7 @@ func (b *backend) getGenerationParams(
 		TTL:                  time.Duration(data.Get("ttl").(int)) * time.Second,
 		KeyType:              data.Get("key_type").(string),
 		KeyBits:              data.Get("key_bits").(int),
+		SignatureBits:        data.Get("signature_bits").(int),
 		AllowLocalhost:       true,
 		AllowAnyName:         true,
 		AllowIPSANs:          true,
@@ -49,12 +50,8 @@ func (b *backend) getGenerationParams(
 		PostalCode:           data.Get("postal_code").([]string),
 	}
 
-	if role.KeyType == "rsa" && role.KeyBits < 2048 {
-		errorResp = logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported")
-		return
-	}
-
-	if err := certutil.ValidateKeyTypeLength(role.KeyType, role.KeyBits); err != nil {
+	var err error
+	if role.KeyBits, role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(role.KeyType, role.KeyBits, role.SignatureBits); err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 	}
 
