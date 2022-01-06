@@ -1,7 +1,7 @@
 import Component from '@ember/component';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import { computed, get } from '@ember/object';
+import { computed } from '@ember/object';
 import { singularize } from 'ember-inflector';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
@@ -157,12 +157,7 @@ export default Component.extend({
     }
   },
   filter(options, searchText) {
-    let matcher;
-    if (this.searchField) {
-      matcher = (option, text) => defaultMatcher(get(option, this.searchField), text);
-    } else {
-      matcher = (option, text) => defaultMatcher(option, text);
-    }
+    const matcher = (option, text) => defaultMatcher(option.searchText, text);
     return filterOptions(options || [], searchText, matcher);
   },
   // -----
@@ -197,7 +192,6 @@ export default Component.extend({
       this.addCreateOption(term, newOptions);
       return newOptions;
     },
-    // -----
     selectOrCreate(selection) {
       if (selection && selection.__isSuggestion__) {
         const name = selection.__value__;
@@ -208,5 +202,6 @@ export default Component.extend({
       }
       this.handleChange();
     },
+    // -----
   },
 });
