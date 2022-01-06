@@ -37,7 +37,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
-	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -582,14 +581,6 @@ type Core struct {
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
 	versionTimestamps map[string]time.Time
-
-	multiplexedClients map[string]*MultiplexedClient
-}
-
-type MultiplexedClient struct {
-	sync.Mutex
-
-	connections map[string]v5.Database
 }
 
 func (c *Core) HAState() consts.HAState {

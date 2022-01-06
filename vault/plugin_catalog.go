@@ -12,8 +12,10 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
-	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -36,7 +38,21 @@ type PluginCatalog struct {
 	catalogView     *BarrierView
 	directory       string
 
+	multiplexedClients map[string]*MultiplexedClient
+
 	lock sync.RWMutex
+}
+
+type MultiplexedClient struct {
+	sync.Mutex
+
+	client *plugin.Client
+
+	connections map[string]pluginutil.PluginClient
+}
+
+type Multiplexer interface {
+	MultiplexingSupport() bool
 }
 
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
@@ -59,12 +75,79 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	return nil
 }
 
+// handshakeConfigs are used to just do a basic handshake between
+// a plugin and host. If the handshake fails, a user friendly error is shown.
+// This prevents users from executing bad plugins or executing a plugin
+// directory. It is a UX feature, not a security feature.
+var handshakeConfig = plugin.HandshakeConfig{
+	ProtocolVersion:  5,
+	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
+	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
+}
+
+func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
+	id, err := base62.Random(10)
+	if err != nil {
+		return nil, err
+	}
+	// Case where multiplexed client exists, but we need to create a
+	// new entry for the connection
+	if mpc, ok := c.multiplexedClients[pluginRunner.Name]; ok {
+		return mpc.connections[id], nil
+	}
+
+	// pluginSets is the map of plugins we can dispense.
+	// TODO(JM): add multiplexingSupport
+	pluginSets := map[int]plugin.PluginSet{
+		5: {
+			"database": new(dbplugin.GRPCDatabasePlugin),
+		},
+	}
+
+	// TODO(JM): pass sys instead of nil?
+	gpClient, err := pluginRunner.RunConfig(ctx,
+		pluginutil.Runner(nil),
+		pluginutil.PluginSets(pluginSets),
+		pluginutil.HandshakeConfig(handshakeConfig),
+		pluginutil.Logger(logger),
+		pluginutil.MetadataMode(isMetadataMode),
+		pluginutil.AutoMTLS(true),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// client, err := gpClient.Client()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// TODO(JM): Case where the multiplexed client doesn't exist and we need to
+	// create an entry on the map.
+	mpc := &MultiplexedClient{
+		client:      gpClient,
+		connections: make(map[string]pluginutil.PluginClient),
+	}
+	// TODO(JM): gRPClient?
+
+	if c.multiplexedClients == nil {
+		c.multiplexedClients = make(map[string]*MultiplexedClient)
+	}
+
+	c.multiplexedClients[pluginRunner.Name] = mpc
+
+	// TODO(JM): mpc.DispensePlugin()?
+	// get us a Database plugin?
+
+	return mpc.connections[id], nil
+}
+
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
-	err := isDatabasePlugin(ctx, plugin)
+	err := c.isDatabasePlugin(ctx, plugin)
 	if err == nil {
 		return consts.PluginTypeDatabase, nil
 	}
@@ -105,10 +188,11 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	return consts.PluginTypeUnknown, nil
 }
 
-func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
+func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
-	v5Client, err := v5.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	// TODO(JM): pass in sys?
+	v5Client, err := c.getPluginClient(ctx, plugin, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()
