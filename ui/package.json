@@ -124,6 +124,7 @@
     "ember-load-initializers": "^2.1.2",
     "ember-maybe-import-regenerator": "^0.1.6",
     "ember-maybe-in-element": "^2.0.3",
+    "ember-modal-dialog": "^3.0.3",
     "ember-page-title": "^6.0.3",
     "ember-power-select-with-create": "0.9.0",
     "ember-promise-helpers": "^1.0.9",

@@ -10512,6 +10512,13 @@ ember-get-config@^0.2.2:
     broccoli-file-creator "^1.1.1"
     ember-cli-babel "^6.3.0"
 
+ember-ignore-children-helper@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/ember-ignore-children-helper/-/ember-ignore-children-helper-1.0.1.tgz#f7c4aa17afb9c5685e1d4dcdb61c7b138ca7cdc3"
+  integrity sha512-AgKkrvd1/hIBWdLn42gITlweVsALUGPYF9fMpQ2IDqp7QnRmtO8ocRbZEmMddPDWY9Xu7W5qO2f35rbD7OSpYw==
+  dependencies:
+    ember-cli-babel "^6.8.2"
+
 ember-in-element-polyfill@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/ember-in-element-polyfill/-/ember-in-element-polyfill-1.0.1.tgz#143504445bb4301656a2eaad42644d684f5164dd"
@@ -10563,6 +10570,17 @@ ember-maybe-in-element@^2.0.2, ember-maybe-in-element@^2.0.3:
     ember-cli-htmlbars "^5.2.0"
     ember-cli-version-checker "^5.1.1"
     ember-in-element-polyfill "^1.0.1"
+
+ember-modal-dialog@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/ember-modal-dialog/-/ember-modal-dialog-3.0.3.tgz#4dd1c699fef02953f21e2b2b290cca380a6317dd"
+  integrity sha512-a3WHPIZMbnM4GDZdyNseClUIKWcI6AZuhXdNpw0XbfKzpocW2vAqhwLmQ17Fo+W5mCwQXU131DAROFWeOP68xQ==
+  dependencies:
+    ember-cli-babel "^7.23.0"
+    ember-cli-htmlbars "^3.0.0"
+    ember-cli-version-checker "^2.1.0"
+    ember-ignore-children-helper "^1.0.1"
+    ember-wormhole "^0.5.5"
 
 ember-modifier-manager-polyfill@^1.1.0, ember-modifier-manager-polyfill@^1.2.0:
   version "1.2.0"
