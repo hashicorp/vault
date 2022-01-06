@@ -10868,6 +10868,15 @@ ember-test-selectors@^2.1.0:
     ember-cli-babel "^6.8.2"
     ember-cli-version-checker "^3.1.2"
 
+ember-tether@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/ember-tether/-/ember-tether-2.0.1.tgz#29cab1463c43ebc22c836887b25d9b5106231366"
+  integrity sha512-ECjmFVqo58YK6SmrBW77hmp1wE76n9azl3H6oMvYOXLA4FraOB4xhuk/VCV/XPbG0p1bArKepGjxM8Qbu8g0Lw==
+  dependencies:
+    ember-auto-import "^1.2.19"
+    ember-cli-babel "^7.1.2"
+    tether "^1.4.0"
+
 ember-text-measurer@^0.6.0:
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/ember-text-measurer/-/ember-text-measurer-0.6.0.tgz#140eda044fd7d4d7f60f654dd30da79c06922b2e"
@@ -20180,6 +20189,11 @@ testem@^3.2.0:
     tap-parser "^7.0.0"
     tmp "0.0.33"
     xmldom "^0.6.0"
+
+tether@^1.4.0:
+  version "1.4.7"
+  resolved "https://registry.yarnpkg.com/tether/-/tether-1.4.7.tgz#d56a818590d8fe72e387f77a67f93ab96d8e1fb2"
+  integrity sha512-Z0J1aExjoFU8pybVkQAo/vD2wfSO63r+XOPfWQMC5qtf1bI7IWqNk4MiyBcgvvnY8kqnY06dVdvwTK2S3PU/Fw==
 
 text-encoder-lite@2.0.0:
   version "2.0.0"
