@@ -388,17 +388,9 @@ import (
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 )
 
-// Fetches a key-value secret (kv-v2) after authenticating to Vault via GCP IAM,
-// one of two auth methods used to authenticate with GCP (the other is GCE auth).
-//
-// A role must first be created in Vault bound to the IAM user's service account you wish to authenticate with, like so:
-// 	vault write auth/gcp/role/dev-role-iam \
-//     	type="iam" \
-//     	policies="dev-policy" \
-//     	bound_service_accounts="my-service@my-project.iam.gserviceaccount.com"
-// Your Vault instance must also be configured with GCP credentials to perform API calls to IAM, like so:
-// 	vault write auth/gcp/config credentials=@path/to/server/creds.json
-// Learn more at https://www.vaultproject.io/docs/auth/gcp
+// Fetches a key-value secret (kv-v2) after authenticating to Vault
+// via GCP IAM, one of two auth methods used to authenticate with
+// GCP (the other is GCE auth).
 func getSecretWithGCPAuthIAM() (string, error) {
 	config := vault.DefaultConfig() // modify for more granular configuration
 
@@ -452,41 +444,6 @@ func getSecretWithGCPAuthIAM() (string, error) {
 	return value, nil
 }
 
-// generate signed JWT token from GCP IAM
-func signJWT() (*credentialspb.SignJwtResponse, error) {
-	svcAccountEmail := fmt.Sprintf("%s@%s.iam.gserviceaccount.com", os.Getenv("GCP_SERVICE_ACCOUNT_NAME"), os.Getenv("GOOGLE_CLOUD_PROJECT"))
-
-	ctx := context.Background()
-	iamClient, err := credentials.NewIamCredentialsClient(ctx) // can pass option.WithCredentialsFile("path/to/creds.json") as second param if GOOGLE_APPLICATION_CREDENTIALS env var not set
-	if err != nil {
-		return nil, fmt.Errorf("unable to initialize IAM credentials client: %w", err)
-	}
-	defer iamClient.Close()
-
-	resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", svcAccountEmail)
-	jwtPayload := map[string]interface{}{
-		"aud": "vault/dev-role-iam", // the name of the role in Vault that was created with this IAM service account bound to it
-		"sub": svcAccountEmail,
-		"exp": time.Now().Add(time.Minute * 10).Unix(),
-	}
-
-	payloadBytes, err := json.Marshal(jwtPayload)
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshal jwt payload to json: %w", err)
-	}
-
-	signJWTReq := &credentialspb.SignJwtRequest{
-		Name:    resourceName,
-		Payload: string(payloadBytes),
-	}
-
-	jwtResp, err := iamClient.SignJwt(ctx, signJWTReq)
-	if err != nil {
-		return nil, fmt.Errorf("unable to sign JWT: %w", err)
-	}
-
-	return jwtResp, nil
-}
 ```
 
 </CodeBlockConfig>
@@ -511,19 +468,11 @@ using Data = Google.Apis.Iam.v1.Data;
 
 namespace Examples
 {
-    public class GCPAuthExample
+    public class GCPAuthExample 
     {
         /// <summary>
         /// Fetches a key-value secret (kv-v2) after authenticating to Vault via GCP IAM,
         /// one of two auth methods used to authenticate with GCP (the other is GCE auth).
-        ///
-        /// A role must first be created in Vault bound to the IAM user's service account you wish to authenticate with, like so:
-        ///     	type="iam" \
-        ///     	policies="dev-policy" \
-        ///     	bound_service_accounts="my-service@my-project.iam.gserviceaccount.com"
-        /// Your Vault instance must also be configured with GCP credentials to perform API calls to IAM, like so:
-        ///     vault write auth/gcp/config credentials=@path/to/server/creds.json
-        /// Learn more at https://www.vaultproject.io/docs/auth/gcp
         /// </summary>
         public string GetSecretGcp()
         {
@@ -533,10 +482,10 @@ namespace Examples
                 throw new System.ArgumentNullException("Vault Address");
             }
 
-            var roleName = Environment.GetEnvironmentVariable("GCP_ROLE");
+            var roleName = Environment.GetEnvironmentVariable("VAULT_ROLE");
             if(String.IsNullOrEmpty(roleName))
             {
-                throw new System.ArgumentNullException("GCP Role Name");
+                throw new System.ArgumentNullException("Vault Role Name");
             }
 
             // Learn about authenticating to GCS with service account credentials at https://cloud.google.com/docs/authentication/production
@@ -546,18 +495,18 @@ namespace Examples
             }
 
             var jwt = SignJWT();
-
+ 
             IAuthMethodInfo authMethod = new GoogleCloudAuthMethodInfo(roleName, jwt);
             var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
 
-            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings); 
 
             // We can retrieve the secret after creating our VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-
+            
             var password = kv2Secret.Data.Data["password"];
-
+            
             return password.ToString();
         }
 
@@ -577,7 +526,7 @@ namespace Examples
             });
 
             string svcEmail = $"{svcAcctName}@{gcpProjName}.iam.gserviceaccount.com";
-            string name = $"projects/-/serviceAccounts/{svcEmail}";
+            string name = $"projects/-/serviceAccounts/{svcEmail}";  
 
             TimeSpan currentTime = (DateTime.UtcNow - new DateTime(1970, 1, 1));
             int expiration = (int)(currentTime.TotalSeconds) + 900;
@@ -593,7 +542,7 @@ namespace Examples
             ProjectsResource.ServiceAccountsResource.SignJwtRequest request = iamService.Projects.ServiceAccounts.SignJwt(requestBody, name);
 
             Data.SignJwtResponse response = request.Execute();
-
+            
             return JsonConvert.SerializeObject(response.SignedJwt).Replace("\"", "");
         }
 

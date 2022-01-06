@@ -98,7 +98,11 @@
       {
         "title": "Identity",
         "path": "concepts/identity"
-        },
+      },
+      {
+        "title": "OIDC Provider",
+        "path": "concepts/oidc-provider"
+      },
       {
         "title": "Response Wrapping",
         "path": "concepts/response-wrapping"
@@ -1011,7 +1015,16 @@
       },
       {
         "title": "Identity",
-        "path": "secrets/identity"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
       },
       {
         "title": "MongoDB Atlas",
