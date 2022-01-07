@@ -9,9 +9,28 @@ export default class Dashboard extends Component {
     { key: 'distinct_entities', label: 'unique entities' },
     { key: 'non_entity_tokens', label: 'non-entity tokens' },
   ];
-  @tracked selectedNamespace = null;
+  // For startDate Modal
+  months = Array.from({ length: 12 }, (item, i) => {
+    return new Date(0, i).toLocaleString('en-US', { month: 'long' });
+  });
+  years = Array.from({ length: 5 }, (item, i) => {
+    return new Date().getFullYear() - i;
+  });
 
   @tracked barChartSelection = false;
+  @tracked isEditStartMonthOpen = false;
+  @tracked startDate = null;
+  @tracked startMonth = null;
+  @tracked startYear = null;
+  @tracked selectedNamespace = null;
+
+  constructor() {
+    super(...arguments);
+    // ARG TODO will need to get start date from config?
+    let date = new Date();
+    date.setMonth(date.getMonth() - 12); // by default start date is 12 months from now
+    this.startDate = format(date, 'MMMM yyyy');
+  }
 
   // Determine if we have client count data based on the current tab
   get hasClientData() {
@@ -151,6 +170,10 @@ export default class Dashboard extends Component {
     return defaultFileName;
   }
 
+  async handleEndMonth() {
+    // ARG TOOD consume param: endTime from calendar-widget fire off new network request
+  }
+
   // Get the namespace by matching the path from the namespace list
   getNamespace(path) {
     return this.args.model.activity.byNamespace.find((ns) => {
@@ -159,6 +182,28 @@ export default class Dashboard extends Component {
       }
       return ns.namespace_path === path;
     });
+  }
+
+  @action
+  handleEditStartMonth(month, year) {
+    if (!month && !year) {
+      // reset and do nothing. They pressed cancel
+      this.startMonth = this.startYear = null;
+      return;
+    }
+    // if no endDate selected, default to 12 months range
+    // create range.
+    // then send to queryData this.queryData(range)
+  }
+  @action
+  toggleEditStartMonth() {
+    this.isEditStartMonthOpen = !this.isEditStartMonthOpen;
+  }
+
+  @action
+  resetData() {
+    this.barChartSelection = false;
+    this.selectedNamespace = null;
   }
 
   @action
@@ -175,8 +220,13 @@ export default class Dashboard extends Component {
   }
 
   @action
-  resetData() {
-    this.barChartSelection = false;
-    this.selectedNamespace = null;
+  selectStartMonth(month) {
+    console.log(month, 'HELLOW');
+    this.startMonth = month;
+  }
+
+  @action
+  selectStartYear(year) {
+    this.startYear = year;
   }
 }

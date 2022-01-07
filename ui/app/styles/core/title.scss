@@ -11,6 +11,10 @@
     color: $black;
     text-decoration: none;
   }
+
+  &.title-has-bottom-margin-xs {
+    margin-bottom: $spacing-xs;
+  }
 }
 
 .form-section .title {

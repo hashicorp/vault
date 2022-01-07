@@ -1,0 +1,281 @@
+<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+  <D.Trigger
+    data-test-popup-menu-trigger="true"
+    class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+    @htmlTag="button"
+  >
+    {{@startDate}}
+    -
+    {{this.endDateDisplay}}
+    <Chevron @direction="down" @isButton={{true}} />
+  </D.Trigger>
+  <D.Content class="popup-menu-content calendar-content">
+    <nav class="box menu">
+      <div class="calendar-title popup-menu-item">Date options</div>
+      <ul class="menu-list">
+        <li class="action">
+          <button class="link link-plain has-text-weight-semibold is-ghost" type="button">
+            Current billing period
+          </button>
+        </li>
+        <li class="action">
+          <button
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            {{on "click" this.toggleShowCalendar}}
+          >
+            <div class="level is-mobile">
+              <span class="level-left">Custom end month</span>
+              <Chevron class="has-text-grey-light level-right" />
+            </div>
+          </button>
+        </li>
+        <li class="action">
+          <button
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            {{on "click" this.toggleSingleMonth}}
+          >
+            <div class="level is-mobile">
+              <span class="level-left">Single Month</span>
+              <Chevron class="has-text-grey-light level-right" />
+            </div>
+          </button>
+        </li>
+      </ul>
+    </nav>
+    {{#if this.showCalendar}}
+      <div class="calendar-widget-container">
+        <div class="select-year">
+          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
+            <Chevron @direction="left" @size="s" class="has-text-grey" />
+          </button>
+          <p>{{this.displayYear}}</p>
+          <button
+            type="button"
+            class="button is-transparent padding-right"
+            disabled={{this.disableFutureYear}}
+            {{on "click" this.addYear}}
+          >
+            <Chevron @direction="right" @size="s" class="has-text-grey" />
+          </button>
+        </div>
+        <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 0 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "1-" this.displayYear}}
+          >
+            January
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 1 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "2-" this.displayYear}}
+          >
+            February
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 2 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "3-" this.displayYear}}
+          >
+            March
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 3 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "4-" this.displayYear}}
+          >
+            April
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 4 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "5-" this.displayYear}}
+          >
+            May
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 5 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "6-" this.displayYear}}
+          >
+            June
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 6 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "7-" this.displayYear}}
+          >
+            July
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 7 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "8-" this.displayYear}}
+          >
+            August
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 8 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "9-" this.displayYear}}
+          >
+            September
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 9 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "10-" this.displayYear}}
+          >
+            October
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 10 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "11-" this.displayYear}}
+          >
+            November
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectEndMonth 11 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "12-" this.displayYear}}
+          >
+            December
+          </button>
+        </div>
+      </div>
+    {{/if}}
+
+    {{#if this.showSingleMonth}}
+      <div class="calendar-widget-container">
+        <div class="select-year">
+          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
+            <Chevron @direction="left" @size="s" class="has-text-grey" />
+          </button>
+          <p>{{this.displayYear}}</p>
+          <button
+            type="button"
+            class="button is-transparent padding-right"
+            disabled={{this.disableFutureYear}}
+            {{on "click" this.addYear}}
+          >
+            <Chevron @direction="right" @size="s" class="has-text-grey" />
+          </button>
+        </div>
+        <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 0 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "0-" this.displayYear "-single"}}
+          >
+            January
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 1 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "1-" this.displayYear "-single"}}
+          >
+            February
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 2 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "2-" this.displayYear "-single"}}
+          >
+            March
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 3 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "3-" this.displayYear "-single"}}
+          >
+            April
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 4 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "4-" this.displayYear "-single"}}
+          >
+            May
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 5 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "5-" this.displayYear "-single"}}
+          >
+            June
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 6 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "6-" this.displayYear "-single"}}
+          >
+            July
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 7 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "7-" this.displayYear "-single"}}
+          >
+            August
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 8 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "8-" this.displayYear "-single"}}
+          >
+            September
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 9 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "9-" this.displayYear "-single"}}
+          >
+            October
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 10 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "10-" this.displayYear "-single"}}
+          >
+            November
+          </button>
+          <button
+            type="button"
+            {{on "click" (fn this.selectSingleMonth 11 this.displayYear)}}
+            class="is-month-list"
+            id={{concat "11-" this.displayYear "-single"}}
+          >
+            December
+          </button>
+        </div>
+      </div>
+    {{/if}}
+  </D.Content>
+</BasicDropdown>
