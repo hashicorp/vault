@@ -1,0 +1,2 @@
+```release-note:improvement
+auth/kubernetes: Added support for short-lived tokens for Kubernetes 1.21+ compatibility
