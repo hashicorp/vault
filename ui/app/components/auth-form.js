@@ -205,23 +205,6 @@ export default Component.extend(DEFAULTS, {
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
-  handleError(e, prefixMessage = true) {
-    this.set('loading', false);
-    let errors;
-    if (e.errors) {
-      errors = e.errors.map((error) => {
-        if (error.detail) {
-          return error.detail;
-        }
-        return error;
-      });
-    } else {
-      errors = [e];
-    }
-    let message = prefixMessage ? 'Authentication failed: ' : '';
-    this.set('error', `${message}${errors.join('.')}`);
-  },
-
   authenticate: task(
     waitFor(function* (backendType, data) {
       let clusterId = this.cluster.id;
@@ -230,7 +213,10 @@ export default Component.extend(DEFAULTS, {
         const authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
         this.onSuccess(authResponse, backendType, data);
       } catch (e) {
-        this.handleError(e);
+        this.set('loading', false);
+        if (!this.auth.mfaError) {
+          this.set('error', `Authentication failed: ${this.auth.handleError(e)}`);
+        }
       }
     })
   ),
@@ -275,11 +261,10 @@ export default Component.extend(DEFAULTS, {
       return this.authenticate.unlinked().perform(backend.type, data);
     },
     handleError(e) {
-      if (e) {
-        this.handleError(e, false);
-      } else {
-        this.set('error', null);
-      }
+      this.setProperties({
+        loading: false,
+        error: e ? this.auth.handleError(e) : null,
+      });
     },
   },
 });

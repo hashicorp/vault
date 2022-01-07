@@ -1,0 +1,15 @@
+<div class="has-top-margin-xxl">
+  <EmptyState
+    @title={{this.title}}
+    @message={{this.description}}
+    @icon="alert-circle"
+    @bottomBorder={{true}}
+    @subTitle={{join ". " this.auth.mfaErrors}}
+    class="is-box-shadowless"
+  >
+    <button type="button" class="button is-ghost is-transparent" {{on "click" this.onClose}} data-test-go-back>
+      <Icon @name="chevron-left" />
+      Go back
+    </button>
+  </EmptyState>
+</div>

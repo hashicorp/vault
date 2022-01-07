@@ -14,9 +14,10 @@ import { task, timeout } from 'ember-concurrency';
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
+const TOTP_NOT_CONFIGURED = 'TOTP mfa required but not configured';
 const BACKENDS = supportedAuthBackends();
 
-export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
+export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX, TOTP_NOT_CONFIGURED };
 
 export default Service.extend({
   permissions: service(),
@@ -24,6 +25,8 @@ export default Service.extend({
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   isRenewing: false,
+  mfaErrors: null,
+
   init() {
     this._super(...arguments);
     this.checkForRootToken();
@@ -324,17 +327,35 @@ export default Service.extend({
   async authenticate(/*{clusterId, backend, data}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
+    let resp;
 
-    let resp = await adapter.authenticate(options);
+    try {
+      resp = await adapter.authenticate(options);
+    } catch (e) {
+      // check for totp not configured mfa error before throwing
+      const errors = this.handleError(e);
+      // stubbing error - verify once API is finalized
+      if (errors.includes(TOTP_NOT_CONFIGURED)) {
+        this.set('mfaErrors', errors);
+      }
+      throw e;
+    }
+
     const mfa_enforcement = resp.auth?.mfa_enforcement;
-
     if (mfa_enforcement) {
       const usesPasscode = mfa_enforcement.mfa_constraints.findBy('uses_passcode');
       if (usesPasscode) {
         return { mfa_enforcement };
       }
       // silently make request to validate endpoint when passcode is not required
-      resp = await adapter.mfaValidate(mfa_enforcement);
+      try {
+        resp = await adapter.mfaValidate(mfa_enforcement);
+      } catch (e) {
+        // it's not clear in the auth-form component whether mfa validation is taking place for non-totp method
+        // since mfa errors display a screen rather than flash message handle separately
+        this.set('mfaErrors', this.handleError(e));
+        throw e;
+      }
     }
 
     return this.authSuccess(options, resp.auth || resp.data);
@@ -349,6 +370,18 @@ export default Service.extend({
     const authData = await this.persistAuthData(options, response, this.namespaceService.path);
     await this.permissions.getPaths.perform();
     return authData;
+  },
+
+  handleError(e) {
+    if (e.errors) {
+      return e.errors.map((error) => {
+        if (error.detail) {
+          return error.detail;
+        }
+        return error;
+      });
+    }
+    return [e];
   },
 
   getAuthType() {

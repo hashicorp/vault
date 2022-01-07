@@ -8,6 +8,10 @@ export default function (server) {
   const mfaEnforcement = {};
   // passthrough original request, cache response and return mfa stub
   const passthroughLogin = (schema, req) => {
+    // test totp not configured scenario
+    if (req.params.user === 'totp-na') {
+      return new Response(400, {}, { errors: ['TOTP mfa required but not configured'] });
+    }
     const xhr = req.passthrough();
     xhr.onreadystatechange = () => {
       if (xhr.readyState === 4 && xhr.status < 300) {
@@ -83,6 +87,6 @@ export default function (server) {
         return new Response(500, {}, { errors: ['Mirage Handler Error: /sys/mfa/validate'] });
       }
     },
-    { timing: 3000 }
+    { timing: 1000 }
   );
 }

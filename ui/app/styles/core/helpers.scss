@@ -19,6 +19,9 @@
 .is-borderless {
   border: none !important;
 }
+.is-box-shadowless {
+  box-shadow: none !important;
+}
 .is-relative {
   position: relative;
 }
@@ -179,6 +182,9 @@
 }
 .has-top-margin-xl {
   margin-top: $spacing-xl;
+}
+.has-top-margin-xxl {
+  margin-top: $spacing-xxl;
 }
 .has-border-bottom-light {
   border-radius: 0;

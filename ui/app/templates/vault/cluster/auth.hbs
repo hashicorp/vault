@@ -1,4 +1,7 @@
-<SplashPage as |Page|>
+<SplashPage @hasAltContent={{this.auth.mfaErrors}} as |Page|>
+  <Page.altContent>
+    <MfaError @onClose={{fn (mut this.mfaAuthData) null}} />
+  </Page.altContent>
   <Page.header>
     {{#if this.oidcProvider}}
       <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
