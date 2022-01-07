@@ -38,7 +38,7 @@ export default BaseAdapter.extend({
 
   serialize(snapshot) {
     // the endpoint here won't allow sending `operation_all` and `operation_none` at the same time or with
-    // other values, so we manually check for them and send an abbreviated object
+    // other operation_ values, so we manually check for them and send an abbreviated object
     let json = snapshot.serialize();
     let keys = snapshot.record.nonOperationFields.map(decamelize);
     let nonOperationFields = getProperties(json, keys);
