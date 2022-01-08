@@ -713,15 +713,15 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 // getRaftChallenge is a helper function used by the raft join process for adding a
 // node to a cluster: it contacts the given node and initiates the bootstrap
 // challenge, returning the result or an error.
-func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo, leaderAddr string) (*raftInformation, error) {
+func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformation, error) {
 	if leaderInfo == nil {
 		return nil, errors.New("raft leader information is nil")
 	}
-	if len(leaderAddr) == 0 {
+	if len(leaderInfo.LeaderAPIAddr) == 0 {
 		return nil, errors.New("raft leader address not provided")
 	}
 
-	c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderAddr)
+	c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderInfo.LeaderAPIAddr)
 
 	// Create an API client to interact with the leader node
 	transport := cleanhttp.DefaultPooledTransport()
@@ -757,7 +757,7 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo, leaderAddr stri
 		return nil, fmt.Errorf("failed to create api client: %w", config.Error)
 	}
 
-	config.Address = leaderAddr
+	config.Address = leaderInfo.LeaderAPIAddr
 	config.HttpClient = client
 	config.MaxRetries = 0
 
@@ -888,102 +888,90 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, fmt.Errorf("failed to create auto-join discovery: %w", err)
 	}
 
-	join := func(retry bool) error {
-		joinLeader := func(ctx context.Context, leaderInfo *raft.LeaderJoinInfo, leaderAddr string) error {
-			raftInfo, err := c.getRaftChallenge(leaderInfo, leaderAddr)
-			if err != nil {
+	retryFailures := leaderInfos[0].Retry
+	answerChallenge := func(ctx context.Context, raftInfo *raftInformation) error {
+		// If we're using Shamir and using raft for both physical and HA, we
+		// need to block until the node is unsealed, unless retry is set to
+		// false.
+		if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
+			c.raftInfo = raftInfo
+			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
 			}
 
-			// If we're using Shamir and using raft for both physical and HA, we
-			// need to block until the node is unsealed, unless retry is set to
-			// false.
-			if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
-				c.raftInfo = raftInfo
-				if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
-					return err
-				}
-
-				if !retry {
-					return nil
-				}
-
-				// Wait until unseal keys are supplied
-				c.raftInfo.joinInProgress = true
-				if atomic.LoadUint32(c.postUnsealStarted) != 1 {
-					return errors.New("waiting for unseal keys to be supplied")
-				}
+			if !retryFailures {
+				return nil
 			}
 
-			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
-				return fmt.Errorf("failed to send answer to raft leader node: %w", err)
-			}
-
-			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
-				// Reset the state
-				c.raftInfo = nil
-
-				// In case of Shamir unsealing, inform the unseal process that raft join is completed
-				close(c.raftJoinDoneCh)
-			}
-
-			c.logger.Info("successfully joined the raft cluster", "leader_addr", leaderInfo.LeaderAPIAddr)
-			return nil
-		}
-		// Each join try goes through all the possible leader nodes and attempts to join
-		// them, until one of the attempt succeeds.
-		for _, leaderInfo := range leaderInfos {
-			switch {
-			case leaderInfo.LeaderAPIAddr != "" && leaderInfo.AutoJoin != "":
-				c.logger.Error("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
-
-			case leaderInfo.LeaderAPIAddr != "":
-				if err := joinLeader(ctx, leaderInfo, leaderInfo.LeaderAPIAddr); err != nil {
-					c.logger.Warn("join attempt failed", "error", err)
-				} else {
-					// successfully joined leader
-					return nil
-				}
-
-			case leaderInfo.AutoJoin != "":
-				scheme := leaderInfo.AutoJoinScheme
-				if scheme == "" {
-					// default to HTTPS when no scheme is provided
-					scheme = "https"
-				}
-				port := leaderInfo.AutoJoinPort
-				if port == 0 {
-					// default to 8200 when no port is provided
-					port = 8200
-				}
-				// Addrs returns either IPv4 or IPv6 address sans scheme or port
-				clusterIPs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
-				if err != nil {
-					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
-				}
-				for _, ip := range clusterIPs {
-					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
-						// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
-						ip = fmt.Sprintf("[%s]", ip)
-					}
-					u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
-					if err := joinLeader(ctx, leaderInfo, u); err != nil {
-						c.logger.Warn("join attempt failed", "error", err)
-					} else {
-						// successfully joined leader
-						return nil
-					}
-				}
-
-			default:
-				c.logger.Error("join attempt failed", "error", errors.New("must provide leader address or auto-join metadata"))
+			// Wait until unseal keys are supplied
+			c.raftInfo.joinInProgress = true
+			if atomic.LoadUint32(c.postUnsealStarted) != 1 {
+				return errors.New("waiting for unseal keys to be supplied")
 			}
 		}
 
-		return errors.New("failed to join any raft leader node")
+		raftInfo.nonVoter = nonVoter
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
+			return fmt.Errorf("failed to send answer to raft leader node: %w", err)
+		}
+
+		if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
+			// Reset the state
+			c.raftInfo = nil
+
+			// In case of Shamir unsealing, inform the unseal process that raft join is completed
+			close(c.raftJoinDoneCh)
+		}
+
+		c.logger.Info("successfully joined the raft cluster", "leader_addr", raftInfo.leaderClient.Address())
+		return nil
 	}
 
-	switch leaderInfos[0].Retry {
+	join := func(retry bool) error {
+		init, err := c.InitializedLocally(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check if core is initialized: %w", err)
+		}
+		if init {
+			return nil
+		}
+		challengeCh := make(chan *raftInformation)
+		leaderInfos, err := c.raftLeaderInfos(leaderInfos, disco)
+		if err != nil {
+			return err
+		}
+		var wg sync.WaitGroup
+		for i := range leaderInfos {
+			wg.Add(1)
+			go func(joinInfo *raft.LeaderJoinInfo) {
+				defer wg.Done()
+				raftInfo, err := c.getRaftChallenge(joinInfo)
+				if err != nil {
+					c.Logger().Trace("failed to get raft challenge", "leader_addr", joinInfo.LeaderAPIAddr, "error", err)
+					return
+				}
+				challengeCh <- raftInfo
+			}(leaderInfos[i])
+		}
+		go func() {
+			wg.Wait()
+			close(challengeCh)
+		}()
+
+		select {
+		case <-ctx.Done():
+		case raftInfo := <-challengeCh:
+			if raftInfo != nil {
+				err = answerChallenge(ctx, raftInfo)
+				if err == nil {
+					return nil
+				}
+			}
+		}
+		return fmt.Errorf("timed out on raft join: %w", ctx.Err())
+	}
+
+	switch retryFailures {
 	case true:
 		go func() {
 			for {
@@ -1011,6 +999,51 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	}
 
 	return true, nil
+}
+
+// raftLeaderInfos uses go-discover to expand leaderInfos to include any auto-join results
+func (c *Core) raftLeaderInfos(leaderInfos []*raft.LeaderJoinInfo, disco *discover.Discover) ([]*raft.LeaderJoinInfo, error) {
+	var ret []*raft.LeaderJoinInfo
+	for _, leaderInfo := range leaderInfos {
+		switch {
+		case leaderInfo.LeaderAPIAddr != "" && leaderInfo.AutoJoin != "":
+			c.logger.Error("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
+
+		case leaderInfo.LeaderAPIAddr != "":
+			ret = append(ret, leaderInfo)
+
+		case leaderInfo.AutoJoin != "":
+			scheme := leaderInfo.AutoJoinScheme
+			if scheme == "" {
+				// default to HTTPS when no scheme is provided
+				scheme = "https"
+			}
+			port := leaderInfo.AutoJoinPort
+			if port == 0 {
+				// default to 8200 when no port is provided
+				port = 8200
+			}
+			// Addrs returns either IPv4 or IPv6 address, without scheme or port
+			clusterIPs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
+			if err != nil {
+				c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
+			}
+			for _, ip := range clusterIPs {
+				if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
+					// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
+					ip = fmt.Sprintf("[%s]", ip)
+				}
+				u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
+				info := *leaderInfo
+				info.LeaderAPIAddr = u
+				ret = append(ret, &info)
+			}
+
+		default:
+			c.logger.Error("join attempt failed", "error", errors.New("must provide leader address or auto-join metadata"))
+		}
+	}
+	return ret, nil
 }
 
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
