@@ -58,11 +58,11 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 	// Do not allow the username or password template pattern to be used as
 	// part of the user-supplied username or password
-	if c.DisableEscaping &&
-		(strings.Contains(c.Username, "{{username}}") ||
-			strings.Contains(c.Username, "{{password}}") ||
-			strings.Contains(c.Password, "{{username}}") ||
-			strings.Contains(c.Password, "{{password}}")) {
+	if strings.Contains(c.Username, "{{username}}") ||
+		strings.Contains(c.Username, "{{password}}") ||
+		strings.Contains(c.Password, "{{username}}") ||
+		strings.Contains(c.Password, "{{password}}") {
+
 		return nil, fmt.Errorf("username and/or password cannot contain the template variables")
 	}
 
