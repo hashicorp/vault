@@ -710,6 +710,104 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 	return nil
 }
 
+// getRaftChallenge is a helper function used by the raft join process for adding a
+// node to a cluster: it contacts the given node and initiates the bootstrap
+// challenge, returning the result or an error.
+func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo, leaderAddr string) (*raftInformation, error) {
+	if leaderInfo == nil {
+		return nil, errors.New("raft leader information is nil")
+	}
+	if len(leaderAddr) == 0 {
+		return nil, errors.New("raft leader address not provided")
+	}
+
+	c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderAddr)
+
+	// Create an API client to interact with the leader node
+	transport := cleanhttp.DefaultPooledTransport()
+
+	var err error
+	if leaderInfo.TLSConfig == nil && (len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0) {
+		leaderInfo.TLSConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create TLS config: %w", err)
+		}
+		leaderInfo.TLSConfig.ServerName = leaderInfo.LeaderTLSServerName
+	}
+	if leaderInfo.TLSConfig == nil && leaderInfo.LeaderTLSServerName != "" {
+		leaderInfo.TLSConfig, err = tlsutil.SetupTLSConfig(map[string]string{"address": leaderInfo.LeaderTLSServerName}, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create TLS config: %w", err)
+		}
+	}
+
+	if leaderInfo.TLSConfig != nil {
+		transport.TLSClientConfig = leaderInfo.TLSConfig.Clone()
+		if err := http2.ConfigureTransport(transport); err != nil {
+			return nil, fmt.Errorf("failed to configure TLS: %w", err)
+		}
+	}
+
+	client := &http.Client{
+		Transport: transport,
+	}
+
+	config := api.DefaultConfig()
+	if config.Error != nil {
+		return nil, fmt.Errorf("failed to create api client: %w", config.Error)
+	}
+
+	config.Address = leaderAddr
+	config.HttpClient = client
+	config.MaxRetries = 0
+
+	apiClient, err := api.NewClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create api client: %w", err)
+	}
+
+	// Attempt to join the leader by requesting for the bootstrap challenge
+	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+		"server_id": c.getRaftBackend().NodeID(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error during raft bootstrap init call: %w", err)
+	}
+	if secret == nil {
+		return nil, errors.New("could not retrieve raft bootstrap package")
+	}
+
+	var sealConfig SealConfig
+	err = mapstructure.Decode(secret.Data["seal_config"], &sealConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if sealConfig.Type != c.seal.BarrierType() {
+		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
+	}
+
+	challengeB64, ok := secret.Data["challenge"]
+	if !ok {
+		return nil, errors.New("error during raft bootstrap call, no challenge given")
+	}
+	challengeRaw, err := base64.StdEncoding.DecodeString(challengeB64.(string))
+	if err != nil {
+		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
+	}
+
+	eBlob := &wrapping.EncryptedBlobInfo{}
+	if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
+		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
+	}
+
+	return &raftInformation{
+		challenge:           eBlob,
+		leaderClient:        apiClient,
+		leaderBarrierConfig: &sealConfig,
+	}, nil
+}
+
 func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
 	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
@@ -791,116 +889,18 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	}
 
 	join := func(retry bool) error {
-		joinLeader := func(leaderInfo *raft.LeaderJoinInfo, leaderAddr string) error {
-			if leaderInfo == nil {
-				return errors.New("raft leader information is nil")
-			}
-			if len(leaderAddr) == 0 {
-				return errors.New("raft leader address not provided")
-			}
-
-			init, err := c.InitializedLocally(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to check if core is initialized: %w", err)
-			}
-
-			if init && !isRaftHAOnly {
-				c.logger.Info("returning from raft join as the node is initialized")
-				return nil
-			}
-
-			c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderAddr)
-
-			// Create an API client to interact with the leader node
-			transport := cleanhttp.DefaultPooledTransport()
-
-			if leaderInfo.TLSConfig == nil && (len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0) {
-				leaderInfo.TLSConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
-				if err != nil {
-					return fmt.Errorf("failed to create TLS config: %w", err)
-				}
-				leaderInfo.TLSConfig.ServerName = leaderInfo.LeaderTLSServerName
-			}
-			if leaderInfo.TLSConfig == nil && leaderInfo.LeaderTLSServerName != "" {
-				leaderInfo.TLSConfig, err = tlsutil.SetupTLSConfig(map[string]string{"address": leaderInfo.LeaderTLSServerName}, "")
-				if err != nil {
-					return fmt.Errorf("failed to create TLS config: %w", err)
-				}
-			}
-
-			if leaderInfo.TLSConfig != nil {
-				transport.TLSClientConfig = leaderInfo.TLSConfig.Clone()
-				if err := http2.ConfigureTransport(transport); err != nil {
-					return fmt.Errorf("failed to configure TLS: %w", err)
-				}
-			}
-
-			client := &http.Client{
-				Transport: transport,
-			}
-
-			config := api.DefaultConfig()
-			if config.Error != nil {
-				return fmt.Errorf("failed to create api client: %w", config.Error)
-			}
-
-			config.Address = leaderAddr
-			config.HttpClient = client
-			config.MaxRetries = 0
-
-			apiClient, err := api.NewClient(config)
-			if err != nil {
-				return fmt.Errorf("failed to create api client: %w", err)
-			}
-
-			// Attempt to join the leader by requesting for the bootstrap challenge
-			secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-				"server_id": raftBackend.NodeID(),
-			})
-			if err != nil {
-				return fmt.Errorf("error during raft bootstrap init call: %w", err)
-			}
-			if secret == nil {
-				return errors.New("could not retrieve raft bootstrap package")
-			}
-
-			var sealConfig SealConfig
-			err = mapstructure.Decode(secret.Data["seal_config"], &sealConfig)
+		joinLeader := func(ctx context.Context, leaderInfo *raft.LeaderJoinInfo, leaderAddr string) error {
+			raftInfo, err := c.getRaftChallenge(leaderInfo, leaderAddr)
 			if err != nil {
 				return err
-			}
-
-			if sealConfig.Type != c.seal.BarrierType() {
-				return fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
-			}
-
-			challengeB64, ok := secret.Data["challenge"]
-			if !ok {
-				return errors.New("error during raft bootstrap call, no challenge given")
-			}
-			challengeRaw, err := base64.StdEncoding.DecodeString(challengeB64.(string))
-			if err != nil {
-				return fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
-			}
-
-			eBlob := &wrapping.EncryptedBlobInfo{}
-			if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
-				return fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
-			}
-
-			raftInfo := &raftInformation{
-				challenge:           eBlob,
-				leaderClient:        apiClient,
-				leaderBarrierConfig: &sealConfig,
-				nonVoter:            nonVoter,
 			}
 
 			// If we're using Shamir and using raft for both physical and HA, we
 			// need to block until the node is unsealed, unless retry is set to
 			// false.
-			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
+			if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
 				c.raftInfo = raftInfo
-				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
+				if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 					return err
 				}
 
@@ -930,7 +930,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			c.logger.Info("successfully joined the raft cluster", "leader_addr", leaderInfo.LeaderAPIAddr)
 			return nil
 		}
-
 		// Each join try goes through all the possible leader nodes and attempts to join
 		// them, until one of the attempt succeeds.
 		for _, leaderInfo := range leaderInfos {
@@ -939,7 +938,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				c.logger.Error("join attempt failed", "error", errors.New("cannot provide both leader address and auto-join metadata"))
 
 			case leaderInfo.LeaderAPIAddr != "":
-				if err := joinLeader(leaderInfo, leaderInfo.LeaderAPIAddr); err != nil {
+				if err := joinLeader(ctx, leaderInfo, leaderInfo.LeaderAPIAddr); err != nil {
 					c.logger.Warn("join attempt failed", "error", err)
 				} else {
 					// successfully joined leader
@@ -963,12 +962,12 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
 				for _, ip := range clusterIPs {
-					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "["){
+					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
 						// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
 						ip = fmt.Sprintf("[%s]", ip)
 					}
 					u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
-					if err := joinLeader(leaderInfo, u); err != nil {
+					if err := joinLeader(ctx, leaderInfo, u); err != nil {
 						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
