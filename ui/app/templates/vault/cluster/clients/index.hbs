@@ -7,6 +7,7 @@
 </PageHeader>
 
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
+  {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
   <nav class="tabs">
     <ul>
       {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
@@ -62,5 +63,6 @@
   </Toolbar>
   <Clients::Config @model={{this.model.config}} @isLoading={{this.currentlyLoading}} />
 {{else}}
+  {{!-- <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} /> --}}
   <Clients::History @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
 {{/if}}

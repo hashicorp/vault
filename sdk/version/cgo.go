@@ -1,4 +1,4 @@
-// +build cgo
+//go:build cgo
 
 package version
 

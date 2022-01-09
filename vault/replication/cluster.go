@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package replication
 
