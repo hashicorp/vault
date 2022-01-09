@@ -27,6 +27,11 @@ system.
 - `path` `(string: <required>)` – Specifies the raw path in the storage backend.
   This is specified as part of the URL.
 
+- `compressed` `(bool: true)` - Attempt to decompress the value.
+
+- `encoding` `(string: "")` - Specifies the encoding of the returned data. Defaults to no encoding.
+  "base64" returns the value encoded in base64.
+
 ### Sample Request
 
 ```shell-session
@@ -40,7 +45,6 @@ $ curl \
 ```json
 {
   "value": "{'foo':'bar'}",
-  "value_base64": "eydmb28nOidiYXInfQ=="
 }
 ```
 
@@ -61,8 +65,13 @@ mount system.
 
 - `value` `(string: <required>)` – Specifies the value of the key.
 
-- `value_base64` `(string: <optional>)` – Specifies the value of the key encoded
-  in base64. Used only if value is left out.
+- `compressed` `(bool: false)` - Update using the compressed form of `value`. Defaults to false.
+
+- `compression_type` `(string: "")` - Specifies the type of compression if `compressed` is true.
+  Supported values are 'gzip', 'lzw', 'lz4', 'snappy'.  Must be set if `compressed` is true.
+
+- `encoding` `(string: "")` - Specifies the encoding of `value`. Defaults to no encoding.
+  Use "base64" if `value` is encoded in base64.
 
 ### Sample Payload
 

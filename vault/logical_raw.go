@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -47,6 +48,14 @@ func NewRawBackend(core *Core) *RawBackend {
 func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
+	// Preserve pre-existing behavior to decompress if `compressed` is missing
+	compressed := true
+	if d, ok := data.GetOk("compressed"); ok {
+		compressed = d.(bool)
+	}
+
+	encoding := data.Get("encoding").(string)
+
 	if b.recoveryMode {
 		b.logger.Info("reading", "path", path)
 	}
@@ -73,24 +82,31 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 		return nil, nil
 	}
 
-	// Run this through the decompression helper to see if it's been compressed.
-	// If the input contained the compression canary, `outputBytes` will hold
-	// the decompressed data. If the input was not compressed, then `outputBytes`
-	// will be nil.
-	outputBytes, _, err := compressutil.Decompress(entry.Value)
-	if err != nil {
-		return handleErrorNoReadOnlyForward(err)
+	valueBytes := entry.Value
+	if compressed {
+		// Run this through the decompression helper to see if it's been compressed.
+		// If the input contained the compression canary, `valueBytes` will hold
+		// the decompressed data. If the input was not compressed, then `valueBytes`
+		// will be nil.
+		valueBytes, _, err = compressutil.Decompress(entry.Value)
+		if err != nil {
+			return handleErrorNoReadOnlyForward(err)
+		}
+
+		// `valueBytes` is nil if the input is uncompressed. In that case set it to the original input.
+		if valueBytes == nil {
+			valueBytes = entry.Value
+		}
 	}
 
-	// `outputBytes` is nil if the input is uncompressed. In that case set it to the original input.
-	if outputBytes == nil {
-		outputBytes = entry.Value
+	var value interface{} = string(valueBytes)
+	if encoding == "base64" {
+		value = valueBytes
 	}
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"value": string(outputBytes),
-			"value_base64": entry.Value,
+			"value": value,
 		},
 	}
 	return resp, nil
@@ -99,6 +115,10 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 // handleRawWrite is used to write directly to the barrier
 func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+	compressed := data.Get("compressed").(bool)
+	compressionType := data.Get("compression_type").(string)
+
+	encoding := data.Get("encoding").(string)
 
 	if b.recoveryMode {
 		b.logger.Info("writing", "path", path)
@@ -112,16 +132,49 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	value := []byte(data.Get("value").(string))
-	if len(value) == 0 {
-		valueBase64 := data.Get("value_base64").(string)
-		if valueBase64 != "" {
-			valueBytes, err := base64.StdEncoding.DecodeString(valueBase64)
-			if err != nil {
-				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-			}
+	v := data.Get("value").(string)
+	value := []byte(v)
+	if encoding == "base64" {
+		var err error
+		value, err = base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+	}
 
-			value = valueBytes
+	if compressed {
+		var config *compressutil.CompressionConfig
+		switch compressionType {
+		case compressutil.CompressionTypeLZ4:
+			config = &compressutil.CompressionConfig{
+				Type: compressutil.CompressionTypeLZ4,
+			}
+			break
+		case compressutil.CompressionTypeLZW:
+			config = &compressutil.CompressionConfig{
+				Type: compressutil.CompressionTypeLZW,
+			}
+			break
+		case compressutil.CompressionTypeGzip:
+			config = &compressutil.CompressionConfig{
+				Type:                 compressutil.CompressionTypeGzip,
+				GzipCompressionLevel: gzip.BestCompression,
+			}
+			break
+		case compressutil.CompressionTypeSnappy:
+			config = &compressutil.CompressionConfig{
+				Type: compressutil.CompressionTypeSnappy,
+			}
+			break
+		default:
+			err := fmt.Sprintf("invalid compression type '%s'", compressionType)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+
+		var err error
+		value, err = compressutil.Compress(value, config)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
 	}
 
@@ -129,6 +182,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 		Key:   path,
 		Value: value,
 	}
+
 	if err := b.barrier.Put(ctx, entry); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -201,7 +255,13 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				"value": {
 					Type: framework.TypeString,
 				},
-				"value_base64": {
+				"compressed": {
+					Type: framework.TypeBool,
+				},
+				"encoding": {
+					Type: framework.TypeString,
+				},
+				"compression_type": {
 					Type: framework.TypeString,
 				},
 			},

@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -1940,21 +1941,123 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 }
 
 func TestSystemBackend_rawRead_Compressed(t *testing.T) {
-	b := testSystemBackendRaw(t)
+	t.Run("basic", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
 
-	req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
-		t.Fatalf("bad: %v", resp)
-	}
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
 
-	bytes := resp.Data["value_base64"].([]byte)
-	if bytes[0] != 'G' {
-		t.Fatalf("entry should be gzipped compressed: %v", bytes)
-	}
+	t.Run("base64", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"encoding": "base64",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+			t.Fatalf("value is a not an array of bytes")
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), "{\"type\":\"mounts\"") {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compressed_false", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if fmt.Sprintf("%T", resp.Data["value"]) != "string" {
+			t.Fatalf("value is a not a string")
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].(string)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compressed_false_base64", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+			t.Fatalf("value is a not an array of bytes")
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("uncompressed_entry_with_prefix_byte", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/test_raw")
+		req.Data = map[string]interface{}{
+			"value": "414c1e7f-0a9a-49e0-9fc4-61af329d0724",
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("expected error if trying to read uncompressed entry with prefix byte")
+		}
+		if !resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+		if resp.Data["value"].(string) != "414c1e7f-0a9a-49e0-9fc4-61af329d0724" {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
 }
 
 func TestSystemBackend_rawRead_Protected(t *testing.T) {
@@ -2005,46 +2108,155 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 }
 
 func TestSystemBackend_rawReadWrite_base64(t *testing.T) {
-	_, b, _ := testCoreSystemBackendRaw(t)
+	t.Run("basic", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
-	req.Data["value_base64"] = base64.StdEncoding.EncodeToString([]byte(`path "secret/" { policy = "read" }`))
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
+		req.Data["value"] = base64.StdEncoding.EncodeToString([]byte(`path "secret/" { policy = "read" }`))
+		req.Data["encoding"] = "base64"
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
 
-	// Read via raw API
-	req = logical.TestRequest(t, logical.ReadOperation, "raw/sys/policy/test")
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !strings.HasPrefix(resp.Data["value"].(string), "path") {
-		t.Fatalf("bad: %v", resp)
-	}
+		// Read via raw API
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/sys/policy/test")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !strings.HasPrefix(resp.Data["value"].(string), "path") {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
+		req.Data["value"] = "invalid base64"
+		req.Data["encoding"] = "base64"
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error")
+		}
+
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
 }
 
-func TestSystemBackend_rawReadWrite_invalidBase64(t *testing.T) {
-	_, b, _ := testCoreSystemBackendRaw(t)
+func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
+	t.Run("compressed", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
-	req.Data["value_base64"] = "invalid base64"
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil {
-		t.Fatalf("no error")
-	}
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("unexpected error: %v", err)
-	}
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data["value"] = mounts
+		req.Data["compressed"] = true
+		req.Data["compression_type"] = compressutil.CompressionTypeGzip
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	if !resp.IsError() {
-		t.Fatalf("response is not error: %v", resp)
-	}
+		// Read back and check gzip was applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+			t.Fatalf("value is a not an array of bytes")
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("uncompressed", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data["value"] = mounts
+		req.Data["compressed"] = false
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+			t.Fatalf("value is a not an array of bytes")
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), "{\"type\":\"mounts\"") {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid_compression_type", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data["value"] = mounts
+		req.Data["compressed"] = true
+		req.Data["compression_type"] = "invalid_type"
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {
