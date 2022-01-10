@@ -1067,19 +1067,9 @@ workflows:
         requires:
         - pre-flight-checks
     - test-go-race:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-race-remote-docker:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - website-docker-image:
