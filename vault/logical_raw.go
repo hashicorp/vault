@@ -166,6 +166,25 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 				Type: compressutil.CompressionTypeSnappy,
 			}
 			break
+		case "":
+			// Check if it is an existing value with compression applied, if so, use the same compression
+			entry, err := b.barrier.Get(ctx, path)
+			if err != nil {
+				return handleErrorNoReadOnlyForward(err)
+			}
+			if entry == nil {
+				err := fmt.Sprintf("cannot figure out compression type because entry does not exist")
+				return logical.ErrorResponse(err), logical.ErrInvalidRequest
+			}
+			_, compressionType, _, _ := compressutil.DecompressWithCanary(entry.Value)
+			if compressionType == "" {
+				err := fmt.Sprintf("cannot figure out compression type")
+				return logical.ErrorResponse(err), logical.ErrInvalidRequest
+			}
+			config = &compressutil.CompressionConfig{
+				Type:                 compressionType,
+				GzipCompressionLevel: gzip.BestCompression,
+			}
 		default:
 			err := fmt.Sprintf("invalid compression type '%s'", compressionType)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest

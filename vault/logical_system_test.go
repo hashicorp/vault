@@ -2195,6 +2195,45 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 		}
 	})
 
+	t.Run("compressed_infer_type", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data["value"] = mounts
+		req.Data["compressed"] = true
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+			t.Fatalf("value is a not an array of bytes")
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
 	t.Run("uncompressed", func(t *testing.T) {
 		b := testSystemBackendRaw(t)
 
@@ -2248,6 +2287,49 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 		req.Data["value"] = mounts
 		req.Data["compressed"] = true
 		req.Data["compression_type"] = "invalid_type"
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("invalid_compression_infer_type_non_existent_entry", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/non_existent")
+		req.Data["value"] = "{}"
+		req.Data["compressed"] = true
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("invalid_compression_infer_type_non_compressed_data", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/test")
+		req.Data["value"] = "{}"
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if resp.IsError() {
+			t.Fatalf("response is an error: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/test")
+		req.Data["value"] = "{}"
+		req.Data["compressed"] = true
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != logical.ErrInvalidRequest {
 			t.Fatalf("unexpected error: %v", err)
