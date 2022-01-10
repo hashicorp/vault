@@ -185,15 +185,10 @@ export default class Dashboard extends Component {
   }
 
   @action
-  handleEditStartMonth(month, year) {
-    if (!month && !year) {
-      // reset and do nothing. They pressed cancel
-      this.startMonth = this.startYear = null;
-      return;
-    }
+  handleEditStartMonth() {
+    // ARG TODO will need to handle the action when the click save on the modal and you are given a new start Month, via month and year in params,
     // if no endDate selected, default to 12 months range
-    // ARG TODO create range.
-    // then send to queryData this.queryData(range)
+    // then send range to queryData this.queryData(range)
   }
 
   // ARG TODO this might be a carry over from history, will need to confirm

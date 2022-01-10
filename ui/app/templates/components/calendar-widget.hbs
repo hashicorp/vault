@@ -65,102 +65,16 @@
           </button>
         </div>
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 0 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "0-" this.displayYear}}
-          >
-            January
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 1 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "1-" this.displayYear}}
-          >
-            February
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 2 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "2-" this.displayYear}}
-          >
-            March
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 3 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "3-" this.displayYear}}
-          >
-            April
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 4 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "4-" this.displayYear}}
-          >
-            May
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 5 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "5-" this.displayYear}}
-          >
-            June
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 6 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "6-" this.displayYear}}
-          >
-            July
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 7 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "7-" this.displayYear}}
-          >
-            August
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 8 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "8-" this.displayYear}}
-          >
-            September
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 9 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "9-" this.displayYear}}
-          >
-            October
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 10 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "10-" this.displayYear}}
-          >
-            November
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectEndMonth 11 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "11-" this.displayYear}}
-          >
-            December
-          </button>
+          {{#each this.arrayOfMonths as |month index|}}
+            <button
+              type="button"
+              {{on "click" (fn this.selectEndMonth index this.displayYear)}}
+              class="is-month-list"
+              id={{concat index "-" this.displayYear}}
+            >
+              {{month}}
+            </button>
+          {{/each}}
         </div>
       </div>
     {{/if}}
@@ -182,102 +96,16 @@
           </button>
         </div>
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 0 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "0-" this.displayYear "-single"}}
-          >
-            January
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 1 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "1-" this.displayYear "-single"}}
-          >
-            February
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 2 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "2-" this.displayYear "-single"}}
-          >
-            March
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 3 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "3-" this.displayYear "-single"}}
-          >
-            April
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 4 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "4-" this.displayYear "-single"}}
-          >
-            May
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 5 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "5-" this.displayYear "-single"}}
-          >
-            June
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 6 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "6-" this.displayYear "-single"}}
-          >
-            July
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 7 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "7-" this.displayYear "-single"}}
-          >
-            August
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 8 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "8-" this.displayYear "-single"}}
-          >
-            September
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 9 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "9-" this.displayYear "-single"}}
-          >
-            October
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 10 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "10-" this.displayYear "-single"}}
-          >
-            November
-          </button>
-          <button
-            type="button"
-            {{on "click" (fn this.selectSingleMonth 11 this.displayYear)}}
-            class="is-month-list"
-            id={{concat "11-" this.displayYear "-single"}}
-          >
-            December
-          </button>
+          {{#each this.arrayOfMonths as |month index|}}
+            <button
+              type="button"
+              {{on "click" (fn this.selectSingleMonth index this.displayYear)}}
+              class="is-month-list"
+              id={{concat index "-" this.displayYear "-single"}}
+            >
+              {{month}}
+            </button>
+          {{/each}}
         </div>
       </div>
     {{/if}}

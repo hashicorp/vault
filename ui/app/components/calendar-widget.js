@@ -19,26 +19,24 @@ import { tracked } from '@glimmer/tracking';
  *
  * ```
  */
-
-const MONTH_MAPPING = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
 class CalendarWidget extends Component {
+  arrayOfMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
   currentDate = new Date();
   currentYear = this.currentDate.getFullYear(); // integer
-  currentMonth = parseInt(format(this.currentDate, 'M')) - 1; // integer and zero index
+  currentMonth = parseInt(this.currentDate.getMonth()); // integer and zero index
 
   @tracked allMonthsNodeList = [];
   @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
@@ -104,7 +102,7 @@ class CalendarWidget extends Component {
         // if they are on the view where the start year equals the display year, check which months should not show.
         let startMonth = this.args.startDate.split(' ')[0]; // returns month name e.g. January
         // return the index of the startMonth
-        let startMonthIndex = MONTH_MAPPING.indexOf(startMonth);
+        let startMonthIndex = this.arrayOfMonths.indexOf(startMonth);
         // then add readOnly class to any month less than the startMonth index.
         if (startMonthIndex > elementMonthId) {
           e.classList.add('is-readOnly');
@@ -121,15 +119,15 @@ class CalendarWidget extends Component {
     this.showSingleMonth = false;
   }
   @action
-  selectEndMonth(month, year, e) {
+  selectEndMonth(month, year, element) {
     // select month
-    this.addClass(e.target, 'is-selected');
+    this.addClass(element.target, 'is-selected');
     // API requires start and end time as EPOCH or RFC3339 timestamp
     let endMonthSelected = formatRFC3339(new Date(year, month));
     this.args.handleEndMonth(endMonthSelected);
-    let monthName = MONTH_MAPPING.find((e, index) => {
+    let monthName = this.arrayOfMonths.find((element, index) => {
       if (index === month) {
-        return e;
+        return element;
       }
     });
     this.endDateDisplay = `${monthName} ${year}`;
@@ -137,14 +135,14 @@ class CalendarWidget extends Component {
   }
 
   @action
-  selectSingleMonth(month, year, e) {
+  selectSingleMonth(month, year, element) {
     // select month
-    this.addClass(e.target, 'is-selected');
+    this.addClass(element.target, 'is-selected');
     // API requires start and end time as EPOCH or RFC3339 timestamp
     // let singleMonthSelected = formatRFC3339(new Date(year, month));
     // ARG TODO unsure on what we're going to do yet with date. Depends on API.
     // this.args.handleEndMonth(singleMonthSelected);
-    // let monthName = MONTH_MAPPING.find((e, index) => {
+    // let monthName = this.arrayOfMonths.find((e, index) => {
     //   if (index === month) {
     //     return e;
     //   }

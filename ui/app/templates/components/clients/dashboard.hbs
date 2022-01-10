@@ -40,7 +40,7 @@
         </EmptyState>
       {{/if}}
       {{! Calendar widget and Start Month picker }}
-      <h1 data-test-client-count-title class="title is-6 title-has-bottom-margin-xs">
+      <h1 data-test-client-count-title class="title is-6 has-bottom-margin-xs">
         Billing start month
       </h1>
       <div class="is-flex-align-baseline">
@@ -165,7 +165,7 @@
             <Chevron @direction="down" @isButton={{true}} />
           </D.Trigger>
           <D.Content class="popup-menu-content is-wide">
-            <nav class="box menu">
+            <nav class="box menu overflow">
               <ul class="menu-list">
                 {{#each this.months as |month|}}
                   <button
