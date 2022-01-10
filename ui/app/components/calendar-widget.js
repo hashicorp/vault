@@ -40,20 +40,13 @@ class CalendarWidget extends Component {
   currentYear = this.currentDate.getFullYear(); // integer
   currentMonth = parseInt(format(this.currentDate, 'M')) - 1; // integer and zero index
 
-  @tracked showCalendar = false;
-  @tracked showSingleMonth = false;
-
+  @tracked allMonthsNodeList = [];
   @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
-  @tracked preselectRangeOfMonths = null; // the number of months selected by the quickSelect options (e.g. last month, last 3 months, etc.)
-  @tracked allMonthsNodeList = [];
-  @tracked areMonthsSelected = false;
-  @tracked mouseClickCount = 0;
-  @tracked clickRange = []; // the range of months by individually selecting them
   @tracked endDateDisplay;
-  @tracked firstClick;
-  @tracked secondClick;
+  @tracked showCalendar = false;
+  @tracked showSingleMonth = false;
 
   constructor() {
     super(...arguments);
@@ -64,7 +57,6 @@ class CalendarWidget extends Component {
   }
 
   // HELPER FUNCTIONS (alphabetically) //
-
   addClass(element, classString) {
     element.classList.add(classString);
   }
@@ -83,8 +75,7 @@ class CalendarWidget extends Component {
     element.classList.remove(classString);
   }
 
-  // ACTIONS //
-
+  // ACTIONS (alphabetically) //
   @action
   addYear() {
     this.displayYear = this.displayYear + 1;
@@ -122,10 +113,9 @@ class CalendarWidget extends Component {
     });
   }
 
-  // action to parent Dashboard
   @action
   selectCurrentBillingPeriod() {
-    // ARG TOOD send to dashboard the select current billing period. It may know this it's just a boolean to select that and fire off a network request.
+    // ARG TOOD send to dashboard the select current billing period. The parent may know this it's just a boolean.
     // Turn the calendars off if they are showing.
     this.showCalendar = false;
     this.showSingleMonth = false;

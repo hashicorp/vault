@@ -63,6 +63,6 @@
   </Toolbar>
   <Clients::Config @model={{this.model.config}} @isLoading={{this.currentlyLoading}} />
 {{else}}
-  <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
-  {{!-- <Clients::History @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} /> --}}
+  {{!-- <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} /> --}}
+  <Clients::History @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
 {{/if}}

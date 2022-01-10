@@ -26,7 +26,7 @@ export default class Dashboard extends Component {
 
   constructor() {
     super(...arguments);
-    // ARG TODO will need to get start date from config?
+    // ARG TODO will need to get startDate from license endpoint
     let date = new Date();
     date.setMonth(date.getMonth() - 12); // by default start date is 12 months from now
     this.startDate = format(date, 'MMMM yyyy');
@@ -192,14 +192,11 @@ export default class Dashboard extends Component {
       return;
     }
     // if no endDate selected, default to 12 months range
-    // create range.
+    // ARG TODO create range.
     // then send to queryData this.queryData(range)
   }
-  @action
-  toggleEditStartMonth() {
-    this.isEditStartMonthOpen = !this.isEditStartMonthOpen;
-  }
 
+  // ARG TODO this might be a carry over from history, will need to confirm
   @action
   resetData() {
     this.barChartSelection = false;
