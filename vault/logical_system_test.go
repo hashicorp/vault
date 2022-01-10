@@ -1975,6 +1975,23 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid_encoding", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"encoding": "invalid_encoding",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
 	t.Run("compressed_false", func(t *testing.T) {
 		b := testSystemBackendRaw(t)
 
@@ -2133,12 +2150,32 @@ func TestSystemBackend_rawReadWrite_base64(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid", func(t *testing.T) {
+	t.Run("invalid_value", func(t *testing.T) {
 		_, b, _ := testCoreSystemBackendRaw(t)
 
 		req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
 		req.Data["value"] = "invalid base64"
 		req.Data["encoding"] = "base64"
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error")
+		}
+
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("invalid_encoding", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
+		req.Data["value"] = "text"
+		req.Data["encoding"] = "invalid_encoding"
 		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
 			t.Fatalf("no error")

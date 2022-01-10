@@ -55,6 +55,9 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 	}
 
 	encoding := data.Get("encoding").(string)
+	if encoding != "" && encoding != "base64" {
+		return logical.ErrorResponse("invalid encoding '%s'", encoding), logical.ErrInvalidRequest
+	}
 
 	if b.recoveryMode {
 		b.logger.Info("reading", "path", path)
@@ -119,6 +122,9 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 	compressionType := data.Get("compression_type").(string)
 
 	encoding := data.Get("encoding").(string)
+	if encoding != "" && encoding != "base64" {
+		return logical.ErrorResponse("invalid encoding '%s'", encoding), logical.ErrInvalidRequest
+	}
 
 	if b.recoveryMode {
 		b.logger.Info("writing", "path", path)
