@@ -38,7 +38,7 @@ const MONTH_MAPPING = [
 class CalendarWidget extends Component {
   currentDate = new Date();
   currentYear = this.currentDate.getFullYear(); // integer
-  currentMonth = parseInt(format(this.currentDate, 'M')); // integer
+  currentMonth = parseInt(format(this.currentDate, 'M')) - 1; // integer and zero index
 
   @tracked showCalendar = false;
   @tracked showSingleMonth = false;
@@ -167,11 +167,13 @@ class CalendarWidget extends Component {
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
+    this.showSingleMonth = false;
   }
 
   @action
   toggleSingleMonth() {
     this.showSingleMonth = !this.showSingleMonth;
+    this.showCalendar = false;
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);
