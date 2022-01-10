@@ -31,7 +31,7 @@ func ServeConfig(db Database) *plugin.ServeConfig {
 	}
 
 	conf := &plugin.ServeConfig{
-		HandshakeConfig:  handshakeConfig,
+		HandshakeConfig:  HandshakeConfig,
 		VersionedPlugins: pluginSets,
 		GRPCServer:       plugin.DefaultGRPCServer,
 	}

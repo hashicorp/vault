@@ -218,7 +218,7 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 }
 
 func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
-	c, err := d.core.pluginCatalog.getPluginClient(ctx, pluginRunner, logger, isMetadataMode, d)
+	c, err := d.core.pluginCatalog.getPluginClient(ctx, d, pluginRunner, logger, isMetadataMode)
 	if err != nil {
 		return nil, err
 	}

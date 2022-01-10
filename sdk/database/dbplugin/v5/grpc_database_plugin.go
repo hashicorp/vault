@@ -12,7 +12,7 @@ import (
 // a plugin and host. If the handshake fails, a user friendly error is shown.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
-var handshakeConfig = plugin.HandshakeConfig{
+var HandshakeConfig = plugin.HandshakeConfig{
 	ProtocolVersion:  5,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",

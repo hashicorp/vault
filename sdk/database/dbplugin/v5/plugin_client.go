@@ -19,6 +19,14 @@ type DatabasePluginClient struct {
 	Database
 }
 
+// pluginSets is the map of plugins we can dispense.
+// TODO(JM): add multiplexingSupport
+var PluginSets = map[int]plugin.PluginSet{
+	5: {
+		"database": new(GRPCDatabasePlugin),
+	},
+}
+
 // This wraps the Close call and ensures we both close the database connection
 // and kill the plugin.
 func (dc *DatabasePluginClient) Close() error {

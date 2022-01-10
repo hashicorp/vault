@@ -14,8 +14,8 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-secure-stdlib/base62"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -77,17 +77,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	return nil
 }
 
-// handshakeConfigs are used to just do a basic handshake between
-// a plugin and host. If the handshake fails, a user friendly error is shown.
-// This prevents users from executing bad plugins or executing a plugin
-// directory. It is a UX feature, not a security feature.
-var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  5,
-	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
-	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
-}
-
-func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool, sys pluginutil.RunnerUtil) (plugin.ClientProtocol, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
@@ -98,18 +88,10 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		return mpc.connections[id], nil
 	}
 
-	// pluginSets is the map of plugins we can dispense.
-	// TODO(JM): add multiplexingSupport
-	pluginSets := map[int]plugin.PluginSet{
-		5: {
-			"database": new(dbplugin.GRPCDatabasePlugin),
-		},
-	}
-
 	client, err := pluginRunner.RunConfig(ctx,
 		pluginutil.Runner(sys),
-		pluginutil.PluginSets(pluginSets),
-		pluginutil.HandshakeConfig(handshakeConfig),
+		pluginutil.PluginSets(v5.PluginSets),
+		pluginutil.HandshakeConfig(v5.HandshakeConfig),
 		pluginutil.Logger(logger),
 		pluginutil.MetadataMode(isMetadataMode),
 		pluginutil.AutoMTLS(true),
@@ -189,7 +171,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
-	v5Client, err := c.getPluginClient(ctx, plugin, log.NewNullLogger(), true, nil)
+	v5Client, err := c.getPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()
