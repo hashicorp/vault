@@ -124,6 +124,13 @@ class CalendarWidget extends Component {
 
   // action to parent Dashboard
   @action
+  selectCurrentBillingPeriod() {
+    // ARG TOOD send to dashboard the select current billing period. It may know this it's just a boolean to select that and fire off a network request.
+    // Turn the calendars off if they are showing.
+    this.showCalendar = false;
+    this.showSingleMonth = false;
+  }
+  @action
   selectEndMonth(month, year, e) {
     // select month
     this.addClass(e.target, 'is-selected');

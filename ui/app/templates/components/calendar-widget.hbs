@@ -14,7 +14,11 @@
       <div class="calendar-title popup-menu-item">Date options</div>
       <ul class="menu-list">
         <li class="action">
-          <button class="link link-plain has-text-weight-semibold is-ghost" type="button">
+          <button
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            {{on "click" this.selectCurrentBillingPeriod}}
+          >
             Current billing period
           </button>
         </li>

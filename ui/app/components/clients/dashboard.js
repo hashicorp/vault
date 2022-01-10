@@ -221,7 +221,6 @@ export default class Dashboard extends Component {
 
   @action
   selectStartMonth(month) {
-    console.log(month, 'HELLOW');
     this.startMonth = month;
   }
 
