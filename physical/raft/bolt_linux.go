@@ -13,6 +13,9 @@ func init() {
 }
 
 func getMmapFlagsLinux(dbPath string) int {
+	if os.Getenv("VAULT_RAFT_DISABLE_MAP_POPULATE") != "" {
+		return 0
+	}
 	stat, err := os.Stat(dbPath)
 	if err != nil {
 		return 0
