@@ -932,7 +932,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		if err != nil {
 			return fmt.Errorf("failed to check if core is initialized: %w", err)
 		}
-		if init {
+		if init && !isRaftHAOnly {
+			c.logger.Info("returning from raft join as the node is initialized")
 			return nil
 		}
 		challengeCh := make(chan *raftInformation)
