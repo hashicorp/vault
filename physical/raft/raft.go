@@ -845,6 +845,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 
+	if opts.StartAsLeader {
+		raftConfig.HeartbeatTimeout = 5 * time.Millisecond // minimum allowed by raft lib
+		raftConfig.LeaderLeaseTimeout = raftConfig.HeartbeatTimeout
+	}
 	b.logger.Info("creating Raft", "config", fmt.Sprintf("%#v", raftConfig))
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
