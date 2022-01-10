@@ -32,27 +32,7 @@ func (dc *DatabasePluginClient) Close() error {
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
-	// pluginSets is the map of plugins we can dispense.
-	pluginSets := map[int]plugin.PluginSet{
-		5: {
-			"database": new(GRPCDatabasePlugin),
-		},
-	}
-
-	client, err := pluginRunner.RunConfig(ctx,
-		pluginutil.Runner(sys),
-		pluginutil.PluginSets(pluginSets),
-		pluginutil.HandshakeConfig(handshakeConfig),
-		pluginutil.Logger(logger),
-		pluginutil.MetadataMode(isMetadataMode),
-		pluginutil.AutoMTLS(true),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Connect via RPC
-	rpcClient, err := client.Client()
+	rpcClient, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +55,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 
 	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
-		client:   client,
 		Database: db,
 	}, nil
 }

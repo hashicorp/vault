@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -46,9 +47,10 @@ type PluginCatalog struct {
 type MultiplexedClient struct {
 	sync.Mutex
 
-	client *plugin.Client
+	clientConn *grpc.ClientConn
+	client     *plugin.Client
 
-	connections map[string]pluginutil.PluginClient
+	connections map[string]plugin.ClientProtocol
 }
 
 type Multiplexer interface {
@@ -85,7 +87,7 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool, sys pluginutil.RunnerUtil) (plugin.ClientProtocol, error) {
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
@@ -104,9 +106,8 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		},
 	}
 
-	// TODO(JM): pass sys instead of nil?
-	gpClient, err := pluginRunner.RunConfig(ctx,
-		pluginutil.Runner(nil),
+	client, err := pluginRunner.RunConfig(ctx,
+		pluginutil.Runner(sys),
 		pluginutil.PluginSets(pluginSets),
 		pluginutil.HandshakeConfig(handshakeConfig),
 		pluginutil.Logger(logger),
@@ -117,16 +118,16 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		return nil, err
 	}
 
-	// client, err := gpClient.Client()
-	// if err != nil {
-	// 	return nil, err
-	// }
+	rpcClient, err := client.Client()
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO(JM): Case where the multiplexed client doesn't exist and we need to
 	// create an entry on the map.
 	mpc := &MultiplexedClient{
-		client:      gpClient,
-		connections: make(map[string]pluginutil.PluginClient),
+		client:      client,
+		connections: make(map[string]plugin.ClientProtocol),
 	}
 	// TODO(JM): gRPClient?
 
@@ -134,11 +135,8 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		c.multiplexedClients = make(map[string]*MultiplexedClient)
 	}
 
+	mpc.connections[id] = rpcClient
 	c.multiplexedClients[pluginRunner.Name] = mpc
-
-	// TODO(JM): mpc.DispensePlugin()?
-	// get us a Database plugin?
-
 	return mpc.connections[id], nil
 }
 
@@ -191,8 +189,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
-	// TODO(JM): pass in sys?
-	v5Client, err := c.getPluginClient(ctx, plugin, log.NewNullLogger(), true)
+	v5Client, err := c.getPluginClient(ctx, plugin, log.NewNullLogger(), true, nil)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()

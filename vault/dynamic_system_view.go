@@ -6,6 +6,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -216,8 +217,8 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	return resp.WrapInfo, nil
 }
 
-func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
-	c, err := d.core.pluginCatalog.getPluginClient(ctx, pluginRunner, logger, isMetadataMode)
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
+	c, err := d.core.pluginCatalog.getPluginClient(ctx, pluginRunner, logger, isMetadataMode, d)
 	if err != nil {
 		return nil, err
 	}

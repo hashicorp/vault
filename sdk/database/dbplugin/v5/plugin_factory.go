@@ -45,11 +45,6 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		if err != nil {
 			return nil, err
 		}
-		c, err := sys.NewPluginClient(ctx, pluginRunner, namedLogger, false)
-		if err != nil {
-			return nil, err
-		}
-		_ = c
 
 		// Switch on the underlying database client type to get the transport
 		// method.
