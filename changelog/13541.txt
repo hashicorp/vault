@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/redis: Vault can now generates credentials for Redis.
+```
