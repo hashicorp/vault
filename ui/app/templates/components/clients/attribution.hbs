@@ -1,0 +1,34 @@
+<div class="chart-wrapper dual-chart-grid">
+  <div class="chart-header has-export">
+    <div class="header-left">
+      <h2 class="chart-title">{{@title}}</h2>
+      <p class="chart-description">{{this.chartText.description}}</p>
+    </div>
+    <div class="header-right">
+      {{#if @totalClientsData}}
+        {{yield}}
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="chart-container-left">
+    <h2 class="chart-title">New clients</h2>
+    <p class="chart-description">{{this.chartText.newCopy}}</p>
+    <Clients::HorizontalBarChart @dataset={{@newClientsData}} @chartLegend={{@chartLegend}} />
+  </div>
+
+  <div class="chart-container-right">
+    <h2 class="chart-title">Total clients</h2>
+    <p class="chart-description">{{this.chartText.totalCopy}}</p>
+    <Clients::HorizontalBarChart @dataset={{@totalClientsData}} @chartLegend={{@chartLegend}} />
+  </div>
+
+  <div class="timestamp">
+    Updated Nov 15 2021, 4:07:32 pm
+  </div>
+
+  <div class="legend-center">
+    <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+    <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+  </div>
+</div>
