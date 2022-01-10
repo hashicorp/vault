@@ -141,8 +141,8 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 // If the first byte isn't a canary byte, then the utility returns a boolean
 // value indicating that the input was not compressed.
 func Decompress(data []byte) ([]byte, bool, error) {
-	bytes, _, compressed, err := DecompressWithCanary(data)
-	return bytes, compressed, err
+	bytes, _, notCompressed, err := DecompressWithCanary(data)
+	return bytes, notCompressed, err
 }
 
 // DecompressWithCanary checks if the first byte in the input matches the canary byte.
