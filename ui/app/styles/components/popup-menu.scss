@@ -109,7 +109,7 @@
   flex-shrink: 1;
 }
 
-// when you need to limit the height and add a scroll add "scroll" class to the child nav element
+// when you need to limit the height and have dropdown scroll in child nav element
 .popup-menu-content > nav.scroll {
   height: 200px;
   overflow-y: scroll;
