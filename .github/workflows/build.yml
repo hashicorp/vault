@@ -4,10 +4,8 @@ on:
   push:
     # Sequence of patterns matched against refs/heads
     branches:    
-      
-      - enable-security-scan
       # Push events on main branch
-      # - main
+      - main
 
 env:
   PKG_NAME: "vault"

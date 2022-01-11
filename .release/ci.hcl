@@ -3,13 +3,17 @@ schema = "1"
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "C01A3A54G0L" // TODO: change back to #vault-releases
+    notification_channel = "CRF6FFKEW" // #vault-releases
   }
   github {
     organization = "hashicorp"
     repository = "vault"
     release_branches = [
-        "enable-security-scan"
+      "main",
+      "release/1.6.x",
+      "release/1.7.x",
+      "release/1.8.x",
+      "release/1.9.x",
     ]
   }
 }
