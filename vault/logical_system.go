@@ -1624,10 +1624,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
-		AllowedManagedKeys := rawVal.([]string)
+		allowedManagedKeys := rawVal.([]string)
 
 		oldVal := mountEntry.Config.AllowedManagedKeys
-		mountEntry.Config.AllowedManagedKeys = AllowedManagedKeys
+		mountEntry.Config.AllowedManagedKeys = allowedManagedKeys
 
 		// Update the mount table
 		var err error

@@ -64,6 +64,10 @@
   display: flex;
   align-items: center;
 }
+.is-flex-align-baseline {
+  display: flex;
+  align-items: baseline;
+}
 .is-flex-1 {
   flex-grow: 1;
 }

@@ -23,6 +23,7 @@ const disableReplication = async (type, assert) => {
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
     await fillIn('[data-test-confirmation-modal-input="disable"]', typeDisplay);
     await click('[data-test-confirm-button]');
+    await settled(); // eslint-disable-line
 
     if (assert) {
       assert.equal(
@@ -130,6 +131,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('#no-filtering');
 
     await click('[data-test-config-save]');
+    await settled(); // eslint-disable-line
 
     assert.equal(
       flash.latestMessage,
@@ -234,7 +236,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
-
+    await settled(); // eslint-disable-line
     await pollCluster(this.owner);
     await visit('/vault/replication-dr-promote/details');
 

@@ -3,7 +3,9 @@
     @htmlTag={{if (eq this.type "replication") "span" "button"}}
     class={{if (eq this.type "replication") "" "button is-transparent"}}
   >
-    <Icon @name={{this.glyphName}} aria-label={{this.ariaLabel}} />
+    <span class="status-indicator-color">
+      <Icon @name={{this.glyphName}} aria-label={{this.ariaLabel}} />
+    </span>
     <div class="status-menu-label">
       {{this.label}}
     </div>

@@ -30,11 +30,11 @@
                       (not leftSideSecretVersion.deleted)
                     )
                   }}
-                    <Icon @glyph="check-circle-outline" class="has-text-success is-pulled-right" />
+                    <Icon @name="check-circle" class="has-text-success is-pulled-right" />
                   {{else if leftSideSecretVersion.destroyed}}
-                    <Icon @glyph="cancel-square-fill" class="has-text-danger is-pulled-right" />
+                    <Icon @name="x-square" class="has-text-danger is-pulled-right" />
                   {{else if leftSideSecretVersion.deleted}}
-                    <Icon @glyph="cancel-square-fill" class="has-text-grey is-pulled-right" />
+                    <Icon @name="x-square" class="has-text-grey is-pulled-right" />
                   {{/if}}
                 </button>
               </li>
@@ -74,11 +74,11 @@
                       (not rightSideSecretVersion.deleted)
                     )
                   }}
-                    <Icon @glyph="check-circle-outline" class="has-text-success is-pulled-right" />
+                    <Icon @name="check-circle" class="has-text-success is-pulled-right" />
                   {{else if rightSideSecretVersion.destroyed}}
-                    <Icon @glyph="cancel-square-fill" class="has-text-danger is-pulled-right" />
+                    <Icon @name="x-square" class="has-text-danger is-pulled-right" />
                   {{else if rightSideSecretVersion.deleted}}
-                    <Icon @glyph="cancel-square-fill" class="has-text-grey is-pulled-right" />
+                    <Icon @name="x-square" class="has-text-grey is-pulled-right" />
                   {{/if}}
                 </button>
               </li>
@@ -91,7 +91,7 @@
     {{#if this.statesMatch}}
       <div class="diff-status">
         <span>States match</span>
-        <Icon @glyph="check-circle-fill" class="has-text-success" />
+        <Icon @name="check-circle-fill" class="has-text-success" />
       </div>
     {{/if}}
   </div>
