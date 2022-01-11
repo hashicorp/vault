@@ -37,271 +37,322 @@ export default function () {
         start_time: '2019-11-01T00:00:00Z',
         end_time: '2020-10-31T23:59:59Z',
         total: {
+          _comment1: 'total client counts',
+          clients: 300,
+          _comment2: 'following 2 fields are deprecated',
           distinct_entities: 200,
           non_entity_tokens: 100,
-          clients: 300,
         },
         by_namespace: [
           {
-            _comment: 'by_namespace will remain as it is',
+            namespace_id: 'root',
+            namespace_path: '',
+            counts: {
+              distinct_entities: 110,
+              non_entity_tokens: 35,
+              clients: 145,
+            },
+            mounts: [
+              {
+                path: 'auth/aws/login',
+                counts: {
+                  clients: 44,
+                  entity_clients: 30,
+                  non_entity_clients: 14,
+                },
+              },
+              {
+                path: 'auth/approle/login',
+                counts: {
+                  clients: 51,
+                  entity_clients: 35,
+                  non_entity_clients: 16,
+                },
+              },
+            ],
+          },
+          {
+            namespace_id: 'DochC',
+            namespace_path: 'ns1',
+            counts: {
+              distinct_entities: 90,
+              non_entity_tokens: 65,
+              clients: 155,
+            },
+            mounts: [
+              {
+                path: 'auth/aws/login',
+                counts: {
+                  clients: 65,
+                  entity_clients: 50,
+                  non_entity_clients: 15,
+                },
+              },
+              {
+                path: 'auth/approle/login',
+                counts: {
+                  clients: 80,
+                  entity_clients: 60,
+                  non_entity_clients: 20,
+                },
+              },
+            ],
           },
         ],
         months: [
           {
-            'jan/2022': {
+            month_year: 'January_2022',
+            counts: {
+              clients: 150,
+              entity_clients: 100,
+              non_entity_clients: 50,
+            },
+            namespaces: [
+              {
+                id: 'root',
+                path: '',
+                counts: {
+                  clients: 75,
+                  entity_clients: 50,
+                  non_entity_clients: 25,
+                },
+                mounts: [
+                  {
+                    path: 'auth/aws/login',
+                    counts: {
+                      clients: 37,
+                      entity_clients: 25,
+                      non_entity_clients: 12,
+                    },
+                  },
+                  {
+                    path: 'auth/approle/login',
+                    counts: {
+                      clients: 38,
+                      entity_clients: 25,
+                      non_entity_clients: 13,
+                    },
+                  },
+                ],
+              },
+              {
+                id: 'ns1',
+                path: '',
+                counts: {
+                  clients: 75,
+                  entity_clients: 50,
+                  non_entity_clients: 25,
+                },
+                mounts: [
+                  {
+                    path: 'auth/aws/login',
+                    counts: {
+                      clients: 30,
+                      entity_clients: 20,
+                      non_entity_clients: 10,
+                    },
+                  },
+                  {
+                    path: 'auth/approle/login',
+                    counts: {
+                      clients: 45,
+                      entity_clients: 30,
+                      non_entity_clients: 15,
+                    },
+                  },
+                ],
+              },
+            ],
+            new_clients: {
               counts: {
-                distinct_entities: 100,
-                non_entity_tokens: 50,
-                clients: 150,
+                clients: 40,
+                entity_clients: 30,
+                non_entity_clients: 10,
               },
               namespaces: [
                 {
                   id: 'root',
                   path: '',
                   counts: {
-                    distinct_entities: 50,
-                    non_entity_tokens: 25,
-                    clients: 75,
+                    clients: 20,
+                    entity_clients: 15,
+                    non_entity_clients: 5,
                   },
                   mounts: [
                     {
                       path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 25,
-                        non_entity_tokens: 12,
-                        clients: 37,
+                        clients: 7,
+                        entity_clients: 5,
+                        non_entity_clients: 2,
                       },
                     },
                     {
-                      path: 'auth/approle/login',
+                      path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 25,
-                        non_entity_tokens: 13,
-                        clients: 38,
+                        clients: 13,
+                        entity_clients: 10,
+                        non_entity_clients: 3,
                       },
                     },
                   ],
                 },
                 {
-                  namespace_id: 'ns1',
-                  namespace_path: '',
+                  id: 'ns1',
+                  path: '',
                   counts: {
-                    distinct_entities: 50,
-                    non_entity_tokens: 25,
-                    clients: 75,
+                    clients: 20,
+                    entity_clients: 15,
+                    non_entity_clients: 5,
                   },
                   mounts: [
                     {
-                      mount_path: 'auth/aws/login',
+                      path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 20,
-                        non_entity_tokens: 10,
-                        clients: 30,
+                        clients: 11,
+                        entity_clients: 10,
+                        non_entity_clients: 1,
                       },
                     },
                     {
-                      mount_path: 'auth/approle/login',
+                      path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 30,
-                        non_entity_tokens: 15,
-                        clients: 45,
+                        clients: 9,
+                        entity_clients: 5,
+                        non_entity_clients: 4,
                       },
                     },
                   ],
                 },
               ],
-              new: {
-                counts: {
-                  distinct_entities: 30,
-                  non_entity_tokens: 10,
-                  clients: 40,
-                },
-                namespaces: [
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 15,
-                      non_entity_tokens: 5,
-                      clients: 20,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 5,
-                          non_entity_tokens: 2,
-                          clients: 7,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 10,
-                          non_entity_tokens: 3,
-                          clients: 13,
-                        },
-                      },
-                    ],
-                  },
-                  {
-                    namespace_id: 'ns1',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 15,
-                      non_entity_tokens: 5,
-                      clients: 20,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 10,
-                          non_entity_tokens: 1,
-                          clients: 11,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 5,
-                          non_entity_tokens: 4,
-                          clients: 9,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
             },
           },
           {
-            'feb/2022': {
+            month_year: 'February_2022',
+            counts: {
+              _comment: 'total monthly clients',
+              clients: 150,
+              entity_clients: 100,
+              non_entity_clients: 50,
+            },
+            namespaces: [
+              {
+                id: 'root',
+                path: '',
+                counts: {
+                  clients: 70,
+                  entity_clients: 60,
+                  non_entity_clients: 10,
+                },
+                mounts: [
+                  {
+                    path: 'auth/aws/login',
+                    counts: {
+                      clients: 35,
+                      entity_clients: 30,
+                      non_entity_clients: 5,
+                    },
+                  },
+                  {
+                    path: 'auth/approle/login',
+                    counts: {
+                      clients: 35,
+                      entity_clients: 30,
+                      non_entity_clients: 5,
+                    },
+                  },
+                ],
+              },
+              {
+                id: 'ns1',
+                path: '',
+                counts: {
+                  clients: 80,
+                  entity_clients: 40,
+                  non_entity_clients: 40,
+                },
+                mounts: [
+                  {
+                    path: 'auth/aws/login',
+                    counts: {
+                      clients: 40,
+                      entity_clients: 20,
+                      non_entity_clients: 20,
+                    },
+                  },
+                  {
+                    path: 'auth/approle/login',
+                    counts: {
+                      clients: 40,
+                      entity_clients: 20,
+                      non_entity_clients: 20,
+                    },
+                  },
+                ],
+              },
+            ],
+            new_clients: {
               counts: {
-                _comment: 'total monthly clients',
-                distinct_entities: 100,
-                non_entity_tokens: 50,
-                clients: 150,
+                clients: 25,
+                entity_clients: 20,
+                non_entity_clients: 5,
               },
               namespaces: [
                 {
-                  namespace_id: 'root',
-                  namespace_path: '',
+                  id: 'root',
+                  path: '',
                   counts: {
-                    distinct_entities: 60,
-                    non_entity_tokens: 10,
-                    clients: 70,
+                    clients: 13,
+                    entity_clients: 10,
+                    non_entity_clients: 3,
                   },
                   mounts: [
                     {
-                      mount_path: 'auth/aws/login',
+                      path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 30,
-                        non_entity_tokens: 5,
-                        clients: 35,
+                        clients: 6,
+                        entity_clients: 5,
+                        non_entity_clients: 1,
                       },
                     },
                     {
-                      mount_path: 'auth/approle/login',
+                      path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 30,
-                        non_entity_tokens: 5,
-                        clients: 35,
+                        clients: 7,
+                        entity_clients: 5,
+                        non_entity_clients: 2,
                       },
                     },
                   ],
                 },
                 {
-                  namespace_id: 'ns1',
-                  namespace_path: '',
+                  id: 'ns1',
+                  path: '',
                   counts: {
-                    distinct_entities: 40,
-                    non_entity_tokens: 40,
-                    clients: 80,
+                    clients: 12,
+                    entity_clients: 10,
+                    non_entity_clients: 2,
                   },
                   mounts: [
                     {
-                      mount_path: 'auth/aws/login',
+                      path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 20,
-                        non_entity_tokens: 20,
-                        clients: 40,
+                        clients: 7,
+                        entity_clients: 5,
+                        non_entity_clients: 2,
                       },
                     },
                     {
-                      mount_path: 'auth/approle/login',
+                      path: 'auth/aws/login',
                       counts: {
-                        distinct_entities: 20,
-                        non_entity_tokens: 20,
-                        clients: 40,
+                        clients: 5,
+                        entity_clients: 5,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
                 },
               ],
-              new: {
-                counts: {
-                  distinct_entities: 20,
-                  non_entity_tokens: 5,
-                  clients: 25,
-                },
-                namespaces: [
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 10,
-                      non_entity_tokens: 3,
-                      clients: 13,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 5,
-                          non_entity_tokens: 1,
-                          clients: 6,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 5,
-                          non_entity_tokens: 2,
-                          clients: 7,
-                        },
-                      },
-                    ],
-                  },
-                  {
-                    namespace_id: 'ns1',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 10,
-                      non_entity_tokens: 2,
-                      clients: 12,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 5,
-                          non_entity_tokens: 2,
-                          clients: 7,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/aws/login',
-                        counts: {
-                          distinct_entities: 5,
-                          non_entity_tokens: 0,
-                          clients: 5,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
             },
           },
         ],
