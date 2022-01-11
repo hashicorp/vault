@@ -17,11 +17,13 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     return 'keymgmt/key';
   }
 
-  url(backend, id, type = 'READ') {
+  url(backend, id, type) {
     const url = `${this.buildURL()}/${backend}/key`;
     if (id) {
       if (type === 'ROTATE') {
         return url + '/' + encodePath(id) + '/rotate';
+      } else if (type === 'PROVIDERS') {
+        return url + '/' + encodePath(id) + '/kms';
       }
       return url + '/' + encodePath(id);
     }
@@ -60,5 +62,21 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
         backend,
       },
     };
+  }
+
+  async getProvider(backend, name) {
+    // TODO: Handle no permissions
+    const resp = await this.ajax(this.url(backend, name, 'PROVIDERS'), 'GET');
+    // TODO: Get distribution
+    return resp.data.keys ? resp.data.keys[0] : null;
+  }
+
+  async queryRecord(store, type, query) {
+    const { id, backend } = query;
+    const keyData = await this.ajax(this.url(backend, id), 'GET');
+    keyData.data.id = id;
+    keyData.data.backend = backend;
+    const provider = await this.getProvider(backend, id);
+    return { ...keyData, provider };
   }
 }
