@@ -31,7 +31,7 @@ var PluginSets = map[int]plugin.PluginSet{
 // and kill the plugin.
 func (dc *DatabasePluginClient) Close() error {
 	err := dc.Database.Close()
-	dc.client.Kill()
+	// dc.client.Kill() // TODO(JM): can we do this in PluginCatalog?
 
 	return err
 }
@@ -64,5 +64,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
 		Database: db,
+		// client:   client, // TODO(JM): need to set a client so we can call Kill()
 	}, nil
 }

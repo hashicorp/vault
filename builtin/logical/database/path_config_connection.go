@@ -317,6 +317,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
+		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
 
 		initReq := v5.InitializeRequest{
 			Config:           config.ConnectionDetails,
@@ -365,6 +366,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
+		if resp.Warnings == nil {
+			return nil, nil
+		}
 		return resp, nil
 	}
 }
