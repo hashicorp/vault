@@ -191,7 +191,8 @@ $ curl \
 
 ## Partial Month Client Count
 
-This endpoint returns the number of clients for the current month, as the sum of active entities and non-entity tokens.
+This endpoint returns the number of clients per namespace, as the sum of clients calculated from the use 
+of active entities and non-entity tokens.
 An "active entity" is a distinct entity that has created one or more tokens in the given time period.
 A "non-entity token" is a token with no attached entity ID.
 
@@ -224,8 +225,37 @@ $ curl \
   "renewable": false,
   "lease_duration": 0,
   "data": {
-    "distinct_entities": 100,
-    "non_entity_tokens": 120,
+    "by_namespace":[
+      {
+        "namespace_id":"0lHBL",
+        "namespace_path":"ns1/",
+        "counts":{
+           "distinct_entities":0,
+           "non_entity_tokens":100,
+           "clients":100
+        } 
+      },
+      {
+        "namespace_id":"RxD81",
+        "namespace_path":"ns2/",
+        "counts":{
+          "distinct_entities":5,
+          "non_entity_tokens":15,
+          "clients":20
+        }
+      },
+      {
+        "namespace_id":"root",
+        "namespace_path":"",
+        "counts":{
+          "distinct_entities":85,
+          "non_entity_tokens":15,
+          "clients":100
+        }
+      }
+    ],
+    "distinct_entities": 90,
+    "non_entity_tokens": 130,
     "clients": 220
   },
   "wrap_info": null,
