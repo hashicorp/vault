@@ -2,7 +2,6 @@ import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 function pickKeys(obj, picklist) {
-  console.log('Picking keys from', obj, picklist);
   const data = {};
   return Object.keys(obj).forEach((key) => {
     if (picklist.indexOf(key) >= 0) {
@@ -30,12 +29,12 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     return url;
   }
 
-  updateKey(backend, name, serialized) {
+  _updateKey(backend, name, serialized) {
     let data = pickKeys(serialized, ['deletion_allowed', 'min_enabled_version']);
     return this.ajax(this.url(backend, name), 'PUT', { data });
   }
 
-  createKey(backend, name, serialized) {
+  _createKey(backend, name, serialized) {
     // Only type is allowed on create
     let data = pickKeys(serialized, ['type']);
     return this.ajax(this.url(backend, name), 'POST', { data });
@@ -46,13 +45,13 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     const name = snapshot.attr('name');
     const backend = snapshot.attr('backend');
     // Keys must be created and then updated
-    await this.createKey(backend, name, data);
+    await this._createKey(backend, name, data);
     if (snapshot.attr('deletionAllowed')) {
       try {
-        await this.updateKey(backend, name, data);
+        await this._updateKey(backend, name, data);
       } catch (e) {
-        console.debug(e);
-        throw new Error(`Key ${name} was created, but not all settings were saved. ${e.message}`);
+        // TODO: Test how this works with UI
+        throw new Error(`Key ${name} was created, but not all settings were saved`);
       }
     }
     return {
@@ -65,10 +64,22 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   }
 
   async getProvider(backend, name) {
-    // TODO: Handle no permissions
-    const resp = await this.ajax(this.url(backend, name, 'PROVIDERS'), 'GET');
-    // TODO: Get distribution
-    return resp.data.keys ? resp.data.keys[0] : null;
+    try {
+      const resp = await this.ajax(this.url(backend, name, 'PROVIDERS'), 'GET', {
+        data: {
+          list: true,
+        },
+      });
+      // TODO: Get distribution
+      return resp.data.keys ? resp.data.keys[0] : null;
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        return null;
+      }
+      // TODO: Handle no permissions
+      console.error(e);
+      return null;
+    }
   }
 
   async queryRecord(store, type, query) {
@@ -78,5 +89,22 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     keyData.data.backend = backend;
     const provider = await this.getProvider(backend, id);
     return { ...keyData, provider };
+  }
+
+  async query(store, type, query) {
+    const { backend } = query;
+    return this.ajax(this.url(backend), 'GET', {
+      data: {
+        list: true,
+      },
+    }).then((res) => {
+      res.backend = backend;
+      return res;
+    });
+  }
+
+  rotateKey(backend, id) {
+    // TODO: re-fetch record data after
+    return this.ajax(this.url(backend, id, 'ROTATE'), 'PUT');
   }
 }

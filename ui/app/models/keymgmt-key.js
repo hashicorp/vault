@@ -22,11 +22,16 @@ export default class KeymgmtKeyModel extends Model {
 
   @attr('number', {
     defaultValue: 0,
+    defaultShown: 'All versions enabled',
   })
   minEnabledVersion;
 
   @attr('array')
-  keys;
+  versions;
+
+  // The following are calculated in serializer
+  @attr('date')
+  created;
 
   @attr('date', {
     defaultShown: 'Not yet rotated',
@@ -36,18 +41,18 @@ export default class KeymgmtKeyModel extends Model {
   // The following are from endpoints other than the main read one
   @attr('string') provider;
 
-  get hasKeys() {
-    return this.keys.length > 0;
+  get hasVersions() {
+    return this.versions.length > 1;
   }
 
-  get fields() {
-    // Create and update have different fields. On create, must create and then update
-    // const updateFields = ['minEnabledVersion', 'deletionAllowed'];
+  get createFields() {
     const createFields = ['name', 'type', 'deletionAllowed'];
-    // const showFields = ['name', 'type', 'deletionAllowed', 'latestVersion', 'minEnabledVersion', 'keys'];
     return expandAttributeMeta(this, createFields);
   }
 
+  get updateFields() {
+    return expandAttributeMeta(this, ['minEnabledVersion', 'deletionAllowed']);
+  }
   get showFields() {
     return expandAttributeMeta(this, [
       'name',
