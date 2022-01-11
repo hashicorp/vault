@@ -10,19 +10,19 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
 
-module('Acceptance | kv2 diff view', function(hooks) {
+module('Acceptance | kv2 diff view', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function() {
+  hooks.beforeEach(async function () {
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
-  test('it shows correct diff status based on versions', async function(assert) {
+  test('it shows correct diff status based on versions', async function (assert) {
     const secretPath = `my-secret`;
 
     await consoleComponent.runCommands([
@@ -39,31 +39,30 @@ module('Acceptance | kv2 diff view', function(hooks) {
     await editPage.createSecret(secretPath, 'version1', 'hello');
     await settled();
     await click('[data-test-popup-menu-trigger="version"]');
-    await settled();
+
     assert.dom('[data-test-view-diff]').doesNotExist('does not show diff view with only one version');
     // add another version
     await click('[data-test-secret-edit="true"]');
-    await settled();
 
     let secondKey = document.querySelectorAll('[data-test-secret-key]')[1];
     let secondValue = document.querySelectorAll('.masked-value')[1];
     await fillIn(secondKey, 'version2');
     await fillIn(secondValue, 'world!');
     await click('[data-test-secret-save]');
-    await settled();
+
     await click('[data-test-popup-menu-trigger="version"]');
-    await settled();
+
     assert.dom('[data-test-view-diff]').exists('does show diff view with two versions');
 
     await click('[data-test-view-diff]');
-    await settled();
+
     let diffBetweenVersion2and1 = document.querySelector('.jsondiffpatch-added').innerText;
     assert.equal(diffBetweenVersion2and1, 'version2"world!"', 'shows the correct added part');
 
     await click('[data-test-popup-menu-trigger="right-version"]');
-    await settled();
+
     await click('[data-test-rightSide-version="2"]');
-    await settled();
+
     assert.dom('.diff-status').exists('shows States Match');
   });
 });

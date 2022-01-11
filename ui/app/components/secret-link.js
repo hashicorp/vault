@@ -30,7 +30,7 @@ export default Component.extend({
   queryParams: null,
   ariaLabel: null,
 
-  linkParams: computed('mode', 'secret', 'queryParams', function() {
+  linkParams: computed('mode', 'secret', 'queryParams', function () {
     let data = { mode: this.mode, secret: this.secret, queryParams: this.queryParams };
     return linkParams(data);
   }),

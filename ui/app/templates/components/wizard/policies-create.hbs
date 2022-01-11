@@ -1,3 +1,4 @@
+{{! template-lint-disable quotes }}
 <WizardContent @headerText="Policies" @glyph="tour">
   <WizardSection
     @headerText="Creating a policy"
@@ -8,8 +9,6 @@
     <p>
       Let's use "<code>my-new-policy</code>" for your policy name. Copy the policy below to try it out:
     </p>
-<pre><code>path "secret/foo" {
-  capabilities = ["read"]
-}</code></pre>
+    <pre><code>path "secret/foo" { capabilities = ["read"] }</code></pre>
   </WizardSection>
 </WizardContent>

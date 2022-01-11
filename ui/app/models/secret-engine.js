@@ -68,7 +68,7 @@ export default Model.extend(Validations, {
     helperTextEnabled: 'Delete all new versions of this secret after',
   }),
 
-  modelTypeForKV: computed('engineType', 'options.version', function() {
+  modelTypeForKV: computed('engineType', 'options.version', function () {
     let type = this.engineType;
     let version = this.options?.version;
     let modelType = 'secret';
@@ -80,7 +80,7 @@ export default Model.extend(Validations, {
 
   isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
 
-  formFields: computed('engineType', 'options.version', function() {
+  formFields: computed('engineType', 'options.version', function () {
     let type = this.engineType;
     let version = this.options?.version;
     let fields = [
@@ -102,7 +102,7 @@ export default Model.extend(Validations, {
     return fields;
   }),
 
-  formFieldGroups: computed('engineType', function() {
+  formFieldGroups: computed('engineType', function () {
     let type = this.engineType;
     let defaultGroup;
     // KV has specific config options it adds on the enable engine. https://www.vaultproject.io/api/secret/kv/kv-v2#configure-the-kv-engine
@@ -142,25 +142,25 @@ export default Model.extend(Validations, {
     return [defaultGroup, optionsGroup];
   }),
 
-  attrs: computed('formFields', function() {
+  attrs: computed('formFields', function () {
     return expandAttributeMeta(this, this.formFields);
   }),
 
-  fieldGroups: computed('formFieldGroups', function() {
+  fieldGroups: computed('formFieldGroups', function () {
     return fieldToAttrs(this, this.formFieldGroups);
   }),
 
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
-  engineType: computed('type', function() {
+  engineType: computed('type', function () {
     return (this.type || '').replace(/^ns_/, '');
   }),
 
-  shouldIncludeInList: computed('engineType', function() {
+  shouldIncludeInList: computed('engineType', function () {
     return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
   }),
 
-  localDisplay: computed('local', function() {
+  localDisplay: computed('local', function () {
     return this.local ? 'local' : 'replicated';
   }),
 

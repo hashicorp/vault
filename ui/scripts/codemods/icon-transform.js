@@ -6,7 +6,7 @@
  * above will run transform on all files in templates directory
  */
 
-module.exports = env => {
+module.exports = (env) => {
   const {
     syntax: { builders },
   } = env;

@@ -15,7 +15,7 @@ const routerService = Service.extend({
   },
 });
 
-module('Integration | Component | client count config', function(hooks) {
+module('Integration | Component | client count config', function (hooks) {
   setupRenderingTest(hooks);
 
   const createAttr = (name, type, options) => {
@@ -26,7 +26,7 @@ module('Integration | Component | client count config', function(hooks) {
     };
   };
 
-  const generateModel = overrides => {
+  const generateModel = (overrides) => {
     return {
       enabled: 'On',
       retentionMonths: 24,
@@ -42,14 +42,14 @@ module('Integration | Component | client count config', function(hooks) {
     };
   };
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
     let model = generateModel();
     this.model = model;
   });
 
-  test('it shows the table with the correct rows by default', async function(assert) {
+  test('it shows the table with the correct rows by default', async function (assert) {
     await render(hbs`<Clients::Config @model={{model}} />`);
 
     assert.dom('[data-test-pricing-metrics-config-table]').exists('Pricing metrics config table exists');
@@ -69,7 +69,7 @@ module('Integration | Component | client count config', function(hooks) {
     );
   });
 
-  test('TODO: it shows the config edit form when mode = edit', async function(assert) {
+  test('TODO: it shows the config edit form when mode = edit', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Config @model={{model}} @mode="edit" />
@@ -80,7 +80,7 @@ module('Integration | Component | client count config', function(hooks) {
     assert.equal(fields.length, 3, 'renders 3 fields');
   });
 
-  test('it shows a modal with correct messaging when disabling', async function(assert) {
+  test('it shows a modal with correct messaging when disabling', async function (assert) {
     // Simulates the model when enabled value has been changed from On to Off
     const simModel = generateModel({
       enabled: 'Off',
@@ -102,7 +102,7 @@ module('Integration | Component | client count config', function(hooks) {
     assert.dom('.modal.is-active').doesNotExist('Modal goes away');
   });
 
-  test('it shows a modal with correct messaging when enabling', async function(assert) {
+  test('it shows a modal with correct messaging when enabling', async function (assert) {
     // Simulates the model when enabled value has been changed from On to Off
     const simModel = generateModel({
       changedAttributes: () => ({ enabled: ['Off', 'On'] }),
@@ -123,7 +123,7 @@ module('Integration | Component | client count config', function(hooks) {
     assert.dom('.modal.is-active').doesNotExist('Modal goes away');
   });
 
-  test('it does not show a modal on save if enable left unchanged', async function(assert) {
+  test('it does not show a modal on save if enable left unchanged', async function (assert) {
     // Simulates the model when something other than enabled changed
     const simModel = generateModel({
       changedAttributes: () => ({ defaultReportMonths: [24, '48'] }),

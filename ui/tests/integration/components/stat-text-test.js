@@ -3,16 +3,16 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-module('Integration | Component | StatText', function(hooks) {
+module('Integration | Component | StatText', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<StatText />`);
 
     assert.dom('[data-test-stat-text-container]').exists('renders element');
   });
 
-  test('it renders passed in attributes', async function(assert) {
+  test('it renders passed in attributes', async function (assert) {
     this.set('label', 'A Label');
     this.set('value', 'A value');
     this.set('size', 'l');

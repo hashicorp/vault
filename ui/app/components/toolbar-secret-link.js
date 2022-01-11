@@ -21,7 +21,7 @@ import OuterHTML from './outer-html';
 import { computed } from '@ember/object';
 
 export default OuterHTML.extend({
-  glyph: computed('type', function() {
+  glyph: computed('type', function () {
     if (this.type == 'add') {
       return 'plus';
     } else {

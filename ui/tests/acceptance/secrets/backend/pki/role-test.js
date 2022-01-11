@@ -7,14 +7,14 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | secrets/pki/create', function(hooks) {
+module('Acceptance | secrets/pki/create', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  skip('it creates a role and redirects', async function(assert) {
+  skip('it creates a role and redirects', async function (assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();
@@ -41,7 +41,6 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     await settled();
     await visit(`/vault/secrets/${path}/credentials/role?action=sign`);
 
-    await settled();
     assert.equal(
       currentRouteName(),
       'vault.cluster.secrets.backend.credentials',
@@ -57,7 +56,7 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');
   });
 
-  test('it deletes a role', async function(assert) {
+  test('it deletes a role', async function (assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();
