@@ -305,7 +305,7 @@ module('Acceptance | transit', function (hooks) {
       // wait for capabilities
 
       assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
-      await settled();
+      await waitUntil(() => find('[data-test-confirm-action-trigger]'));
       await click('[data-test-confirm-action-trigger]');
 
       await click('[data-test-confirm-button]');
