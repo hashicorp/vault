@@ -373,7 +373,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			BoltOptions: &bolt.Options{
 				FreelistType:   freelistType,
 				NoFreelistSync: noFreelistSync,
-				MmapFlags:       getMmapFlags(dbPath),
+				MmapFlags:      getMmapFlags(dbPath),
 			},
 		}
 		store, err := raftboltdb.New(raftOptions)
