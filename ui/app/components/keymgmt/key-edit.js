@@ -59,7 +59,7 @@ export default class KeymgmtKeyEdit extends Component {
   @action
   rotateKey(id) {
     const backend = this.args.model.get('backend');
-    let adapter = this.store.adapterFor('keymgmt-key');
+    let adapter = this.store.adapterFor('keymgmt/key');
     adapter
       .rotateKey(backend, id)
       .then(() => {

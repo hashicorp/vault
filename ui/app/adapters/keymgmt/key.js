@@ -1,4 +1,4 @@
-import ApplicationAdapter from './application';
+import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 function pickKeys(obj, picklist) {
@@ -11,10 +11,6 @@ function pickKeys(obj, picklist) {
 }
 export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
-  pathForType() {
-    console.log('***** pathForType *******');
-    return 'keymgmt/key';
-  }
 
   url(backend, id, type) {
     const url = `${this.buildURL()}/${backend}/key`;

@@ -1,4 +1,4 @@
-import ApplicationSerializer from './application';
+import ApplicationSerializer from '../application';
 
 export default class KeymgmtKeySerializer extends ApplicationSerializer {
   normalizeItems(payload) {
