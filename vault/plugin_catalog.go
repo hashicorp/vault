@@ -38,8 +38,12 @@ type PluginCatalog struct {
 	builtinRegistry BuiltinRegistry
 	catalogView     *BarrierView
 	directory       string
+	logger          log.Logger
 
-	// multiplexedClients holds plugin clients by plugin name
+	// multiplexedClients holds plugin processes by plugin name
+	// This allows a single grpc connection to communicate with multiple
+	// databases. Each database configuration using the same plugin will be
+	// routed to the existing plugin process.
 	multiplexedClients map[string]*MultiplexedClient
 
 	lock sync.RWMutex
@@ -48,15 +52,15 @@ type PluginCatalog struct {
 type MultiplexedClient struct {
 	sync.Mutex
 
-	// ClientConn represents a virtual connection to a conceptual endpoint, to
+	// clientConn represents a virtual connection to a conceptual endpoint, to
 	// perform RPCs
 	// TODO(JM): Is this only needed to inject the ID into the context?
 	clientConn *grpc.ClientConn
 
-	// client handles the lifecycle of a plugin application
+	// client handles the lifecycle of a plugin process
 	client *plugin.Client
 
-	// connections holds the connections for a given plugin by ID
+	// connections holds the database connections by ID.
 	connections map[string]plugin.ClientProtocol
 }
 
@@ -70,6 +74,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		builtinRegistry: c.builtinRegistry,
 		catalogView:     NewBarrierView(c.barrier, pluginCatalogPath),
 		directory:       c.pluginDirectory,
+		logger:          c.logger,
 	}
 
 	// Run upgrade if untyped plugins exist
@@ -90,15 +95,17 @@ func (c *PluginCatalog) removeMultiplexedClient(ctx context.Context, name, id st
 		return
 	}
 
-	c.multiplexedClients[name].client.Kill() // TODO(JM): remove this in dbplugin?
+	// TODO(JM): This leaves child process behind after vault exits
+	c.multiplexedClients[name].client.Kill()
+
 	delete(c.multiplexedClients[name].connections, id)
 	if len(c.multiplexedClients[name].connections) == 0 {
 		delete(c.multiplexedClients, name)
 	}
 }
 
-func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
-	logger.Debug("begin getPluginClient")
+func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
+	c.logger.Debug("begin getPluginClient")
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, "", err
@@ -108,7 +115,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 		pluginutil.Runner(sys),
 		pluginutil.PluginSets(v5.PluginSets),
 		pluginutil.HandshakeConfig(v5.HandshakeConfig),
-		pluginutil.Logger(logger),
+		pluginutil.Logger(namedLogger),
 		pluginutil.MetadataMode(isMetadataMode),
 		pluginutil.AutoMTLS(true),
 	)
@@ -124,13 +131,16 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	// Case where multiplexed client exists, but we need to create a
 	// new entry for the connection
 	if mpc, ok := c.multiplexedClients[pluginRunner.Name]; ok {
-		logger.Debug("muxed client exists", "id", id)
+		c.logger.Debug("muxed client exists", "id", id)
+
+		// set the ClientProtocol connection for the given ID
 		mpc.connections[id] = rpcClient
+
 		return mpc.connections[id], id, nil
 	}
-	logger.Debug("muxed client does not exist", "id", id)
+	c.logger.Debug("muxed client does not exist", "id", id)
 
-	// TODO(JM): Case where the multiplexed client doesn't exist and we need to
+	// Case where the multiplexed client doesn't exist and we need to
 	// create an entry on the map.
 	mpc := &MultiplexedClient{
 		client:      client,
@@ -147,7 +157,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	// set the ClientProtocol connection for the given ID
 	mpc.connections[id] = rpcClient
 
-	logger.Debug("end getPluginClient")
+	c.logger.Debug("end getPluginClient")
 
 	return mpc.connections[id], id, nil
 }

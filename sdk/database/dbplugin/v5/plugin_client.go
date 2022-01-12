@@ -10,10 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
-// DatabasePluginClient embeds a databasePluginRPCClient and wraps it's Close
-// method to also call Kill() on the plugin.Client.
 type DatabasePluginClient struct {
-	client *plugin.Client
+	id string
 	sync.Mutex
 
 	Database
@@ -27,18 +25,8 @@ var PluginSets = map[int]plugin.PluginSet{
 	},
 }
 
-// This wraps the Close call and ensures we both close the database connection
-// and kill the plugin.
-func (dc *DatabasePluginClient) Close() error {
-	err := dc.Database.Close()
-	// dc.client.Kill() // TODO(JM): can we do this in PluginCatalog?
-
-	return err
-}
-
 // NewPluginClient returns a databaseRPCClient with a connection to a running
-// plugin. The client is wrapped in a DatabasePluginClient object to ensure the
-// plugin is killed on call of Close().
+// plugin.
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
 	rpcClient, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
 	if err != nil {
@@ -64,6 +52,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
 		Database: db,
-		// client:   client, // TODO(JM): need to set a client so we can call Kill()
+		id:       "",
 	}, nil
 }
