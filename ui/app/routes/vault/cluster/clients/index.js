@@ -43,20 +43,44 @@ export default Route.extend(ClusterRoute, {
     },
   },
 
-  model(params) {
+  async getLicense() {
+    try {
+      return await this.store.queryRecord('license', {});
+    } catch (e) {
+      // ARG TODO handle
+      return e;
+    }
+  },
+
+  async getNewInitActivity(start_time) {
+    try {
+      return await this.store.queryRecord('clients/newInitActivity', { start_time });
+    } catch (e) {
+      // ARG TODO handle
+      return e;
+    }
+  },
+
+  // ARG POC
+  async model(params) {
     let config = this.store.queryRecord('clients/config', {}).catch((e) => {
       console.debug(e);
       // swallowing error so activity can show if no config permissions
       return {};
     });
     const activityParams = getActivityParams(params);
-    let activity = this.store.queryRecord('clients/activity', activityParams);
+    let activity = this.store.queryRecord('clients/activity', activityParams); // ARG TODO should async await and try catch
+    let license = await this.getLicense();
+    let newInitActivity = await this.getNewInitActivity(license.startTime);
+    // ARG TODO this is the new pattern, while keeping the old. On index load, hit sys/license/status to check for a startTime and return it.
 
     return hash({
-      queryStart: params.start,
-      queryEnd: params.end,
+      queryStart: params.start, // ARG TODO will remove
+      queryEnd: params.end, // ARG TODO will remove
       activity,
+      newInitActivity,
       config,
+      startTime: license.startTime,
     });
   },
 

@@ -27,18 +27,6 @@
         This dashboard will surface Vault client usage over time. Clients represent anything that has authenticated to or
         communicated with Vault. Documentation is available here.
       </p>
-      {{#if (eq @model.config.enabled "Off")}}
-        <EmptyState
-          @title="Tracking is disabled"
-          @message="Tracking is disabled and data is not being collected. To turn it on edit the configuration."
-        >
-          {{#if @model.config.configPath.canUpdate}}
-            <LinkTo @route="vault.cluster.clients.edit">
-              Go to configuration
-            </LinkTo>
-          {{/if}}
-        </EmptyState>
-      {{/if}}
       {{! Calendar widget and Start Month picker }}
       <h1 data-test-client-count-title class="title is-6 has-bottom-margin-xs">
         Billing start month
@@ -52,14 +40,6 @@
       <p class="is-8 has-text-grey has-bottom-margin-xl">
         This date is when client counting starts. Without this starting point, the data shown is not reliable.
       </p>
-      <div class="calendar-title">Filters</div>
-      <Toolbar>
-        <ToolbarFilters>
-          <CalendarWidget @startDate={{this.startDate}} @handleEndMonth={{this.handleEndMonth}} />
-          {{! ARG TODO more filters for auth and namespace here }}
-        </ToolbarFilters>
-      </Toolbar>
-    {{else}}
       {{#if (eq @model.config.enabled "Off")}}
         <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
           Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
@@ -70,162 +50,148 @@
           to enable tracking again.
         </AlertBanner>
       {{/if}}
-      <h1 data-test-client-count-title class="title is-4 has-bottom-margin-s">
-        Monthly history
-        {{! ARG TODO change }}
-      </h1>
-      <p class="has-bottom-margin-s">
-        This data is presented by full month. If there is data missing, it's possible that tracking was turned off at the
-        time. Vault will only show data for contiguous blocks of time during which tracking was on.
-      </p>
-      {{! TODO remove once you remove the monthly view }}
-      <PricingMetricsDates
-        @queryStart={{@model.queryStart}}
-        @queryEnd={{@model.queryEnd}}
-        @resultStart={{@model.activity.startTime}}
-        @resultEnd={{@model.activity.endTime}}
-        @defaultSpan={{or @model.config.defaultReportMonths 12}}
-        @retentionMonths={{@model.config.retentionMonths}}
-      />
-    {{/if}}
-    {{#if @isLoading}}
-      <LayoutLoading />
-    {{else}}
-      {{#if this.hasClientData}}
-        {{! ARG TODO end of part that goes to Running Client }}
-        {{#if this.showGraphs}}
-          {{! ARG TODO chart playground }}
-          <Clients::RunningTotal
-            @title="Vault client counts"
-            @description="An active client is any user or service that interacts with Vault. They are made up of unique entities and non-entity tokens. The total client count number is an important consideration for Vault billing."
-            @chartLegend={{this.chartLegend}}
-            @lineChartData={{this.lineChartData}}
-            @barChartData={{this.newMonthlyClients}}
-          />
+      {{! check for startTime otherwise emptyState}}
+      {{#if @model.startTime}}
+        <div class="calendar-title">Filters</div>
+        <Toolbar>
+          <ToolbarFilters>
+            <CalendarWidget
+              @startDate={{this.startDate}}
+              @handleEndMonth={{this.handleEndMonth}}
+              @endDate={{@model.newInitActivity.endTime}}
+            />
+            {{! ARG TODO more filters for auth and namespace here }}
+          </ToolbarFilters>
+        </Toolbar>
+        {{#if @isLoading}}
+          <LayoutLoading />
+        {{else}}
+          {{#if this.hasClientData}}
+            <Clients::RunningTotal
+              @title="Vault client counts"
+              @description="An active client is any user or service that interacts with Vault. They are made up of unique entities and non-entity tokens. The total client count number is an important consideration for Vault billing."
+              @chartLegend={{this.chartLegend}}
+              @lineChartData={{this.lineChartData}}
+              @barChartData={{this.newMonthlyClients}}
+            />
 
-          <Clients::Attribution
-            @title="Attribution"
-            @newClientsData={{this.barChartDataset}}
-            @totalClientsData={{this.barChartDataset}}
-            @chartLegend={{this.chartLegend}}
-          >
-            <button type="button"> Export attribution data </button>
-          </Clients::Attribution>
+            <Clients::Attribution
+              @title="Attribution"
+              @newClientsData={{this.barChartDataset}}
+              @totalClientsData={{this.barChartDataset}}
+              @chartLegend={{this.chartLegend}}
+            >
+              <button type="button"> Export attribution data </button>
+            </Clients::Attribution>
 
-          <Clients::MonthlyUsage
-            @title="Vault usage"
-            @description="This data can be used to understand how many total clients are using Vault each month for the time period selected above."
-            @chartLegend={{this.chartLegend}}
-            @verticalBarChartData={{this.monthlyUsage}}
-            @subTitle="Total monthly clients"
-            @subText="Each unique client is counted once per month. This can help with capacity planning."
-            @dataOne="Average total clients per month"
-            @dataOneData="100"
-            @dataTwo="Average new clients per month"
-            @dataTwoData="4"
-          />
-        {{/if}}
-      {{else}}
-        {{! ARG TODO change current to dashboard }}
-        {{#if (eq @tab "current")}}
-          {{#if (eq @model.config.enabled "On")}}
-            <EmptyState
-              @title="No data received"
-              @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+            <Clients::MonthlyUsage
+              @title="Vault usage"
+              @description="This data can be used to understand how many total clients are using Vault each month for the time period selected above."
+              @chartLegend={{this.chartLegend}}
+              @verticalBarChartData={{this.monthlyUsage}}
+              @subTitle="Total monthly clients"
+              @subText="Each unique client is counted once per month. This can help with capacity planning."
+              @dataOne="Average total clients per month"
+              @dataOneData="100"
+              @dataTwo="Average new clients per month"
+              @dataTwoData="4"
             />
           {{/if}}
-        {{else}}
-          <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
+      {{else}}
+        <EmptyState
+          @title="No billing start date found"
+          @message="In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate."
+        />
       {{/if}}
+
+      {{! Modal for startDate picker }}
+      <Modal
+        @title="Edit start month"
+        @onClose={{action (mut this.isEditStartMonthOpen) false}}
+        @isActive={{this.isEditStartMonthOpen}}
+        @showCloseButton={{true}}
+      >
+        <section class="modal-card-body">
+          <p class="has-bottom-margin-s">
+            This date is when client counting starts, or the point at which clients become unique. Without this starting
+            point, the data shown is not reliable.
+          </p>
+          <p class="has-bottom-margin-s"><strong>Billing contract start month</strong></p>
+          <div class="modal-radio-button">
+            <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+              <D.Trigger
+                data-test-popup-menu-trigger="true"
+                class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+                @htmlTag="button"
+              >
+                {{or this.startMonth "Month"}}
+                <Chevron @direction="down" @isButton={{true}} />
+              </D.Trigger>
+              <D.Content class="popup-menu-content is-wide">
+                <nav class="box menu scroll">
+                  <ul class="menu-list">
+                    {{#each this.months as |month|}}
+                      <button
+                        type="button"
+                        class="link"
+                        onclick={{queue (action "selectStartMonth" month) (action D.actions.close)}}
+                      >
+                        {{month}}
+                      </button>
+                    {{/each}}
+                  </ul>
+                </nav>
+              </D.Content>
+            </BasicDropdown>
+            <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+              <D.Trigger
+                data-test-popup-menu-trigger="true"
+                class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+                @htmlTag="button"
+              >
+                {{or this.startYear "Year"}}
+                <Chevron @direction="down" @isButton={{true}} />
+              </D.Trigger>
+              <D.Content class="popup-menu-content is-wide">
+                <nav class="box menu">
+                  <ul class="menu-list">
+                    {{#each this.years as |year|}}
+                      <button
+                        type="button"
+                        class="link"
+                        onclick={{queue (action "selectStartYear" year) (action D.actions.close)}}
+                      >
+                        {{year}}
+                      </button>
+                    {{/each}}
+                  </ul>
+                </nav>
+              </D.Content>
+            </BasicDropdown>
+          </div>
+        </section>
+        <footer class="modal-card-foot modal-card-foot-outlined">
+          <button
+            type="button"
+            class="button is-primary"
+            onclick={{queue
+              (action "handleEditStartMonth" this.startMonth this.startYear)
+              (action (mut this.isEditStartMonthOpen) false)
+            }}
+            disabled={{if (and this.startMonth this.startYear) false true}}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            class="button is-secondary"
+            onclick={{queue (action "handleEditStartMonth" 0 0) (action (mut this.isEditStartMonthOpen) false)}}
+          >
+            Cancel
+          </button>
+        </footer>
+      </Modal>
     {{/if}}
   </div>
-
-  {{! Modal for startDate picker }}
-  <Modal
-    @title="Edit start month"
-    @onClose={{action (mut this.isEditStartMonthOpen) false}}
-    @isActive={{this.isEditStartMonthOpen}}
-    @showCloseButton={{true}}
-  >
-    <section class="modal-card-body">
-      <p class="has-bottom-margin-s">
-        This date is when client counting starts, or the point at which clients become unique. Without this starting point,
-        the data shown is not reliable.
-      </p>
-      <p class="has-bottom-margin-s"><strong>Billing contract start month</strong></p>
-      <div class="modal-radio-button">
-        <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-          <D.Trigger
-            data-test-popup-menu-trigger="true"
-            class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-            @htmlTag="button"
-          >
-            {{or this.startMonth "Month"}}
-            <Chevron @direction="down" @isButton={{true}} />
-          </D.Trigger>
-          <D.Content class="popup-menu-content is-wide">
-            <nav class="box menu scroll">
-              <ul class="menu-list">
-                {{#each this.months as |month|}}
-                  <button
-                    type="button"
-                    class="link"
-                    onclick={{queue (action "selectStartMonth" month) (action D.actions.close)}}
-                  >
-                    {{month}}
-                  </button>
-                {{/each}}
-              </ul>
-            </nav>
-          </D.Content>
-        </BasicDropdown>
-        <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-          <D.Trigger
-            data-test-popup-menu-trigger="true"
-            class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-            @htmlTag="button"
-          >
-            {{or this.startYear "Year"}}
-            <Chevron @direction="down" @isButton={{true}} />
-          </D.Trigger>
-          <D.Content class="popup-menu-content is-wide">
-            <nav class="box menu">
-              <ul class="menu-list">
-                {{#each this.years as |year|}}
-                  <button
-                    type="button"
-                    class="link"
-                    onclick={{queue (action "selectStartYear" year) (action D.actions.close)}}
-                  >
-                    {{year}}
-                  </button>
-                {{/each}}
-              </ul>
-            </nav>
-          </D.Content>
-        </BasicDropdown>
-      </div>
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button is-primary"
-        onclick={{queue
-          (action "handleEditStartMonth" this.startMonth this.startYear)
-          (action (mut this.isEditStartMonthOpen) false)
-        }}
-        disabled={{if (and this.startMonth this.startYear) false true}}
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        class="button is-secondary"
-        onclick={{queue (action "handleEditStartMonth" 0 0) (action (mut this.isEditStartMonthOpen) false)}}
-      >
-        Cancel
-      </button>
-    </footer>
-  </Modal>
 {{/if}}

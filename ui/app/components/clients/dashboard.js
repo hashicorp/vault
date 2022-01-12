@@ -41,15 +41,6 @@ export default class Dashboard extends Component {
     return this.args.model.activity && this.args.model.activity.total;
   }
 
-  // Show namespace graph only if we have more than 1
-  get showGraphs() {
-    return (
-      this.args.model.activity &&
-      this.args.model.activity.byNamespace &&
-      this.args.model.activity.byNamespace.length > 1
-    );
-  }
-
   // Construct the namespace model for the search select component
   get searchDataset() {
     if (!this.args.model.activity || !this.args.model.activity.byNamespace) {

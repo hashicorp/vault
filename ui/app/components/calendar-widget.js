@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/calendar-widget';
 import { setComponentTemplate } from '@ember/component';
-import { format, formatRFC3339 } from 'date-fns';
+import { format, formatRFC3339, parseISO } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -51,7 +51,8 @@ class CalendarWidget extends Component {
     // ARG TODO we need to return the config's duration if not default to 12 months to calculate, now it's 12 months
     let date = new Date();
     date.setMonth(date.getMonth() - 1); // by default you calculate the end month as the month prior to the current month.
-    this.endDateDisplay = format(date, 'MMMM yyyy');
+    let endDate = parseISO(this.args.endDate);
+    this.endDateDisplay = format(endDate, 'MMMM yyyy');
   }
 
   // HELPER FUNCTIONS (alphabetically) //

@@ -24,7 +24,7 @@
         </li>
         <li class="action">
           <button
-            class="link link-plain has-text-weight-semibold is-ghost"
+            class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
             type="button"
             {{on "click" this.toggleShowCalendar}}
           >
@@ -36,7 +36,7 @@
         </li>
         <li class="action">
           <button
-            class="link link-plain has-text-weight-semibold is-ghost"
+            class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showSingleMonth " is-active")}}
             type="button"
             {{on "click" this.toggleSingleMonth}}
           >
