@@ -16,6 +16,7 @@
             autofocus="true"
             disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
             @value={{this.passcode}}
+            data-test-mfa-passcode={{true}}
           />
         </div>
       </div>
@@ -33,12 +34,13 @@
         type="submit"
         disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
         class="button is-primary {{if this.validate.isRunning "is-loading"}}"
+        data-test-mfa-validate
       >
         Verify
       </button>
       {{#if this.newCodeDelay.isRunning}}
         <Icon @name="delay" class="has-text-grey" />
-        <span class="has-text-grey is-v-centered">{{this.countdown}}</span>
+        <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>
       {{/if}}
     </form>
   </div>

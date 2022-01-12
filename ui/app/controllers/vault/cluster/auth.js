@@ -68,7 +68,6 @@ export default Controller.extend({
 
   actions: {
     onAuthResponse(authResponse, backend, data) {
-      console.log(authResponse);
       const { mfa_enforcement } = authResponse;
       // mfa methods handled by the backend are validated immediately in the auth service
       // mfa_enforcement returned for totp only
