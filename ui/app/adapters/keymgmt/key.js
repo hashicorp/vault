@@ -3,11 +3,12 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 function pickKeys(obj, picklist) {
   const data = {};
-  return Object.keys(obj).forEach((key) => {
+  Object.keys(obj).forEach((key) => {
     if (picklist.indexOf(key) >= 0) {
       data[key] = obj[key];
     }
   });
+  return data;
 }
 export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -25,7 +26,14 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     return url;
   }
 
+  urlForDeleteRecord(store, type, snapshot) {
+    const name = snapshot.attr('name');
+    const backend = snapshot.attr('backend');
+    return this.url(backend, name);
+  }
+
   _updateKey(backend, name, serialized) {
+    // Only these two attributes are allowed to be updated
     let data = pickKeys(serialized, ['deletion_allowed', 'min_enabled_version']);
     return this.ajax(this.url(backend, name), 'PUT', { data });
   }
@@ -57,6 +65,13 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
         backend,
       },
     };
+  }
+
+  async updateRecord(store, type, snapshot) {
+    const data = store.serializerFor(type.modelName).serialize(snapshot);
+    const name = snapshot.attr('name');
+    const backend = snapshot.attr('backend');
+    return this._updateKey(backend, name, data);
   }
 
   async getProvider(backend, name) {

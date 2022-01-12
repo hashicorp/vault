@@ -16,13 +16,20 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} [tab=details] - Options are "details" or "versions" for the show mode only
  */
 
+const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
+const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class KeymgmtKeyEdit extends Component {
   @service store;
+  @service router;
   @service flashMessages;
   @tracked isDeleteModalOpen = false;
 
   get mode() {
     return this.args.mode || 'show';
+  }
+
+  get keyAdapter() {
+    return this.store.adapterFor('keymgmt/key');
   }
 
   @action
@@ -39,7 +46,15 @@ export default class KeymgmtKeyEdit extends Component {
   @action
   updateKey(evt) {
     evt.preventDefault();
-    this.args.model.save();
+    const name = this.args.model.name;
+    this.args.model
+      .save()
+      .then(() => {
+        this.router.transitionTo(SHOW_ROUTE, name);
+      })
+      .catch((e) => {
+        this.flashMessages.danger(e.errors.join('. '));
+      });
   }
 
   @action
@@ -49,17 +64,28 @@ export default class KeymgmtKeyEdit extends Component {
   }
 
   @action
-  deleteKey(id) {
-    // TODO: delete action
-    console.log('delete key', id);
-    // TODO: Redirect
-    this.isDeleteModalOpen = false;
+  deleteKey() {
+    const secret = this.args.model;
+    const backend = secret.backend;
+    console.log({ secret });
+    secret
+      .destroyRecord()
+      .then(() => {
+        try {
+          this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'key' } });
+        } catch (e) {
+          console.debug(e);
+        }
+      })
+      .catch((e) => {
+        this.flashMessages.danger(e.errors?.join('. '));
+      });
   }
 
   @action
   rotateKey(id) {
     const backend = this.args.model.get('backend');
-    let adapter = this.store.adapterFor('keymgmt/key');
+    const adapter = this.keyAdapter;
     adapter
       .rotateKey(backend, id)
       .then(() => {

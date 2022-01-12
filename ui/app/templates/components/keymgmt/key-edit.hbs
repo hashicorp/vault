@@ -5,9 +5,9 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq @mode "create")}}
-        Create Key
+        Create key
       {{else if (eq @mode "edit")}}
-        Edit Key
+        Edit key
       {{else}}
         {{@model.id}}
       {{/if}}
@@ -15,31 +15,33 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq @mode "show")}}
-  <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+{{#if (eq this.mode "show")}}
+  <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-keymgmt-key-toolbar>
     <nav class="tabs">
       <ul>
         <LinkTo
-          @route="vault.cluster.keymgmt"
-          {{! @route="vault.cluster.secrets.backend.show" }}
+          @route="vault.cluster.secrets.backend.show"
+          @model={{@model.id}}
           {{! template-lint-disable no-unknown-arguments-for-builtin-components }}
           @tagName="li"
-          @activeClass={{if (eq @tab "details") "is-active"}}
+          @query={{hash tab=""}}
+          @activeClass={{if (not-eq @tab "versions") "is-active"}}
           data-test-tab="Details"
         >
-          <LinkTo @route="vault.cluster.keymgmt">
+          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab=""}}>
             Details
           </LinkTo>
         </LinkTo>
         <LinkTo
-          @route="vault.cluster.keymgmt"
+          @route="vault.cluster.secrets.backend.show"
+          @model={{@model.id}}
           @query={{hash tab="versions"}}
           {{! template-lint-disable no-unknown-arguments-for-builtin-components }}
           @tagName="li"
           @activeClass={{if (eq @tab "versions") "is-active"}}
           data-test-tab="Versions"
         >
-          <LinkTo @route="vault.cluster.keymgmt">
+          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="versions"}}>
             Versions
           </LinkTo>
         </LinkTo>
@@ -78,18 +80,20 @@
       >
         Rotate key
       </ConfirmAction>
-      {{!-- <ToolbarSecretLink @secret={{@model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
+      <ToolbarSecretLink
+        @secret={{@model.id}}
+        @mode="edit"
+        @replace={{true}}
+        @queryParams={{query-params itemType="key"}}
+        @data-test-edit-link={{true}}
+      >
         Edit key
-      </ToolbarSecretLink> --}}
+      </ToolbarSecretLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
 
-{{#if (eq this.mode "list")}}
-  {{#each @model as |item|}}
-    <p>{{item.name}}</p>
-  {{/each}}
-{{else if (eq this.mode "create")}}
+{{#if (eq this.mode "create")}}
   <form {{on "submit" this.createKey}}>
     {{#each @model.createFields as |attr|}}
       <FormField @attr={{attr}} @model={{@model}} />
@@ -105,7 +109,7 @@
   </form>
 {{else if (eq @tab "versions")}}
   {{#each @model.versions as |version|}}
-    <div class="list-item-row" data-test-view-only-list-item>
+    <div class="list-item-row" data-test-keymgmt-key-version>
       <div class="columns is-mobile">
         <div class="column is-3 has-text-weight-bold">
           <Icon @name="history" class="has-text-grey-light" />
@@ -117,7 +121,7 @@
         <div class="column is-6 is-flex-center">
           {{#if (eq @model.minEnabledVersion version.id)}}
             <Icon @name="check-circle-fill" class="has-text-success" />
-            Current mininum enabled version
+            <span data-test-keymgmt-key-current-min>Current mininum enabled version</span>
           {{/if}}
         </div>
       </div>
@@ -145,6 +149,7 @@
       <EmptyState
         @title="Key not distributed"
         @message="When this key is distributed to a destination, those details will appear here."
+        data-test-keymgmt-dist-empty-state
       >
         {{! TODO: Distribute link
         <LinkTo @route="vault.cluster.secrets.backend.distribute">
