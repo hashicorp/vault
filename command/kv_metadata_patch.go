@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -15,7 +16,7 @@ var (
 	_ cli.CommandAutocomplete = (*KVMetadataPutCommand)(nil)
 )
 
-type KVMetadataPutCommand struct {
+type KVMetadataPatchCommand struct {
 	*BaseCommand
 
 	flagMaxVersions        int
@@ -25,36 +26,36 @@ type KVMetadataPutCommand struct {
 	testStdin              io.Reader // for tests
 }
 
-func (c *KVMetadataPutCommand) Synopsis() string {
-	return "Sets or updates key settings in the KV store"
+func (c *KVMetadataPatchCommand) Synopsis() string {
+	return "Patches key settings in the KV store"
 }
 
-func (c *KVMetadataPutCommand) Help() string {
+func (c *KVMetadataPatchCommand) Help() string {
 	helpText := `
-Usage: vault metadata kv put [options] KEY
+Usage: vault metadata kv patch [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
 
   Create a key in the key-value store with no data:
 
-      $ vault kv metadata put secret/foo
+      $ vault kv metadata patch secret/foo
 
   Set a max versions setting on the key:
 
-      $ vault kv metadata put -max-versions=5 secret/foo
+      $ vault kv metadata patch -max-versions=5 secret/foo
 
   Set delete-version-after on the key:
 
-      $ vault kv metadata put -delete-version-after=3h25m19s secret/foo
+      $ vault kv metadata patch -delete-version-after=3h25m19s secret/foo
 
   Require Check-and-Set for this key:
 
-      $ vault kv metadata put -cas-required secret/foo
+      $ vault kv metadata patch -cas-required secret/foo
 
   Set custom metadata on the key:
 
-      $ vault kv metadata put -custom-metadata=foo=abc -custom-metadata=bar=123 secret/foo
+      $ vault kv metadata patch -custom-metadata=foo=abc -custom-metadata=bar=123 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -62,7 +63,7 @@ Usage: vault metadata kv put [options] KEY
 	return strings.TrimSpace(helpText)
 }
 
-func (c *KVMetadataPutCommand) Flags() *FlagSets {
+func (c *KVMetadataPatchCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// Common Options
@@ -76,9 +77,9 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	})
 
 	f.BoolPtrVar(&BoolPtrVar{
-		Name:    "cas-required",
-		Target:  &c.flagCASRequired,
-		Usage:   `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
+		Name:   "cas-required",
+		Target: &c.flagCASRequired,
+		Usage:  `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
 	})
 
 	f.DurationVar(&DurationVar{
@@ -95,25 +96,25 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	})
 
 	f.StringMapVar(&StringMapVar{
-		Name: "custom-metadata",
-		Target: &c.flagCustomMetadata,
+		Name:    "custom-metadata",
+		Target:  &c.flagCustomMetadata,
 		Default: map[string]string{},
-		Usage: "Specifies arbitrary version-agnostic key=value metadata meant to describe a secret." +
-			"This can be specified multiple times to add multiple pieces of metadata.",
+		Usage: `Specifies arbitrary version-agnostic key=value metadata meant to describe a secret.
+		This can be specified multiple times to add multiple pieces of metadata.`,
 	})
 
 	return set
 }
 
-func (c *KVMetadataPutCommand) AutocompleteArgs() complete.Predictor {
+func (c *KVMetadataPatchCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *KVMetadataPutCommand) AutocompleteFlags() complete.Flags {
+func (c *KVMetadataPatchCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *KVMetadataPutCommand) Run(args []string) int {
+func (c *KVMetadataPatchCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -139,6 +140,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
+
 	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -150,32 +152,35 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	}
 
 	path = addPrefixToVKVPath(path, mountPath, "metadata")
+
 	data := map[string]interface{}{}
 
 	if c.flagMaxVersions >= 0 {
 		data["max_versions"] = c.flagMaxVersions
 	}
 
-	if c.flagDeleteVersionAfter >= 0 {
-		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
-	}
-
 	if c.flagCASRequired.IsSet() {
 		data["cas_required"] = c.flagCASRequired.Get()
+	}
+
+	if c.flagDeleteVersionAfter >= 0 {
+		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
 	}
 
 	if len(c.flagCustomMetadata) > 0 {
 		data["custom_metadata"] = c.flagCustomMetadata
 	}
 
-	secret, err := client.Logical().Write(path, data)
+	secret, err := client.Logical().JSONMergePatch(context.Background(), path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
 		return 2
 	}
+
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
