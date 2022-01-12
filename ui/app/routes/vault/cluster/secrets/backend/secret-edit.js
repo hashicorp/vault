@@ -103,6 +103,7 @@ export default Route.extend(UnloadModelRoute, {
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
+      keymgmt: 'keymgmt-key',
       generic: backendModel.get('modelTypeForKV'),
     };
     return types[type];
