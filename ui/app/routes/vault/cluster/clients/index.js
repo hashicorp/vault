@@ -80,7 +80,7 @@ export default Route.extend(ClusterRoute, {
       activity,
       newInitActivity,
       config,
-      startTime: license.startTime,
+      startDate: license.startTime,
     });
   },
 

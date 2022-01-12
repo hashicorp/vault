@@ -32,7 +32,7 @@
         Billing start month
       </h1>
       <div class="is-flex-align-baseline">
-        <p class="is-size-6">January 2021</p>
+        <p class="is-size-6">{{this.startDateDisplay}}</p>
         <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
           Edit
         </button>
@@ -50,13 +50,13 @@
           to enable tracking again.
         </AlertBanner>
       {{/if}}
-      {{! check for startTime otherwise emptyState}}
-      {{#if @model.startTime}}
+      {{! check for startDate otherwise emptyState}}
+      {{#if @model.startDate}}
         <div class="calendar-title">Filters</div>
         <Toolbar>
           <ToolbarFilters>
             <CalendarWidget
-              @startDate={{this.startDate}}
+              @startDate={{this.startDateDisplay}}
               @handleEndMonth={{this.handleEndMonth}}
               @endDate={{@model.newInitActivity.endTime}}
             />

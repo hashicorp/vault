@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 export default class Dashboard extends Component {
   maxNamespaces = 10;
@@ -19,17 +19,15 @@ export default class Dashboard extends Component {
 
   @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
-  @tracked startDate = null;
+  @tracked startDateDisplay = null;
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
 
   constructor() {
     super(...arguments);
-    // ARG TODO will need to get startDate from license endpoint
-    let date = new Date();
-    date.setMonth(date.getMonth() - 12); // by default start date is 12 months from now
-    this.startDate = format(date, 'MMMM yyyy');
+    let startDate = parseISO(this.args.model.startDate);
+    this.startDateDisplay = format(startDate, 'MMMM yyyy');
   }
 
   // Determine if we have client count data based on the current tab

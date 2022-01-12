@@ -48,9 +48,6 @@ class CalendarWidget extends Component {
 
   constructor() {
     super(...arguments);
-    // ARG TODO we need to return the config's duration if not default to 12 months to calculate, now it's 12 months
-    let date = new Date();
-    date.setMonth(date.getMonth() - 1); // by default you calculate the end month as the month prior to the current month.
     let endDate = parseISO(this.args.endDate);
     this.endDateDisplay = format(endDate, 'MMMM yyyy');
   }
