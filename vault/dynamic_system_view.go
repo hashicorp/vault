@@ -218,8 +218,6 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 }
 
 func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
-	d.core.logger.Debug("begin dynamicSystemView.NewPluginClient")
-
 	// TODO(JM): how should this ID be managed? Should it be returned from here?
 	c, id, err := d.core.pluginCatalog.getPluginClient(ctx, d, pluginRunner, logger, isMetadataMode)
 	if err != nil {
@@ -227,7 +225,6 @@ func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pl
 	}
 	d.core.logger.Debug("new plugin connection created", "id", id)
 
-	d.core.logger.Debug("end dynamicSystemView.NewPluginClient")
 	return c, nil
 }
 

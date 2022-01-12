@@ -104,46 +104,18 @@ func (c *PluginCatalog) removeMultiplexedClient(ctx context.Context, name, id st
 	}
 }
 
-func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
-	c.logger.Debug("begin getPluginClient")
-	id, err := base62.Random(10)
-	if err != nil {
-		return nil, "", err
+func (c *PluginCatalog) getMultiplexedClient(pluginName string) *MultiplexedClient {
+	if mpc, ok := c.multiplexedClients[pluginName]; ok {
+		c.logger.Debug("muxed client exists", "pluginName", pluginName)
+
+		return mpc
 	}
+	c.logger.Debug("muxed client does not exist", "pluginName", pluginName)
+	return c.newMultiplexedClient(pluginName)
+}
 
-	client, err := pluginRunner.RunConfig(ctx,
-		pluginutil.Runner(sys),
-		pluginutil.PluginSets(v5.PluginSets),
-		pluginutil.HandshakeConfig(v5.HandshakeConfig),
-		pluginutil.Logger(namedLogger),
-		pluginutil.MetadataMode(isMetadataMode),
-		pluginutil.AutoMTLS(true),
-	)
-	if err != nil {
-		return nil, "", err
-	}
-
-	rpcClient, err := client.Client()
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Case where multiplexed client exists, but we need to create a
-	// new entry for the connection
-	if mpc, ok := c.multiplexedClients[pluginRunner.Name]; ok {
-		c.logger.Debug("muxed client exists", "id", id)
-
-		// set the ClientProtocol connection for the given ID
-		mpc.connections[id] = rpcClient
-
-		return mpc.connections[id], id, nil
-	}
-	c.logger.Debug("muxed client does not exist", "id", id)
-
-	// Case where the multiplexed client doesn't exist and we need to
-	// create an entry on the map.
+func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClient {
 	mpc := &MultiplexedClient{
-		client:      client,
 		connections: make(map[string]plugin.ClientProtocol),
 	}
 
@@ -152,13 +124,45 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	}
 
 	// set the MultiplexedClient for the given plugin name
-	c.multiplexedClients[pluginRunner.Name] = mpc
+	c.multiplexedClients[pluginName] = mpc
+
+	return mpc
+}
+
+func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
+	c.logger.Debug("begin PluginCatalog.getPluginClient")
+	id, err := base62.Random(10)
+	if err != nil {
+		return nil, "", err
+	}
+
+	mpc := c.getMultiplexedClient(pluginRunner.Name)
+
+	if mpc.client == nil {
+		client, err := pluginRunner.RunConfig(ctx,
+			pluginutil.Runner(sys),
+			pluginutil.PluginSets(v5.PluginSets),
+			pluginutil.HandshakeConfig(v5.HandshakeConfig),
+			pluginutil.Logger(namedLogger),
+			pluginutil.MetadataMode(isMetadataMode),
+			pluginutil.AutoMTLS(true),
+		)
+		if err != nil {
+			return nil, "", err
+		}
+
+		mpc.client = client
+	}
+
+	rpcClient, err := mpc.client.Client()
+	if err != nil {
+		return nil, "", err
+	}
 
 	// set the ClientProtocol connection for the given ID
 	mpc.connections[id] = rpcClient
 
-	c.logger.Debug("end getPluginClient")
-
+	c.logger.Debug("end PluginCatalog.getPluginClient")
 	return mpc.connections[id], id, nil
 }
 
