@@ -198,7 +198,7 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 	}
 
 	// Retrieve all keys and loop over them to check if they need to be rotated.
-	keys, err := req.Storage.List(ctx, "policy")
+	keys, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return err
 	}
