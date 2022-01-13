@@ -50,10 +50,10 @@
             "name": "list",
             "description": "Must be set to `true`",
             "required": true,
-            "enum": ["true"],
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": ["true"]
             }
           }
         ]

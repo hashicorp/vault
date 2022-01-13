@@ -128,13 +128,12 @@ type OASOperation struct {
 }
 
 type OASParameter struct {
-	Name        string        `json:"name"`
-	Description string        `json:"description,omitempty"`
-	In          string        `json:"in"`
-	Schema      *OASSchema    `json:"schema,omitempty"`
-	Required    bool          `json:"required,omitempty"`
-	Enum        []interface{} `json:"enum,omitempty"`
-	Deprecated  bool          `json:"deprecated,omitempty"`
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	In          string     `json:"in"`
+	Schema      *OASSchema `json:"schema,omitempty"`
+	Required    bool       `json:"required,omitempty"`
+	Deprecated  bool       `json:"deprecated,omitempty"`
 }
 
 type OASRequestBody struct {
@@ -376,9 +375,8 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 					Name:        "list",
 					Description: "Must be set to `true`",
 					Required:    true,
-					Enum:        []interface{}{"true"},
 					In:          "query",
-					Schema:      &OASSchema{Type: "string"},
+					Schema:      &OASSchema{Type: "string", Enum: []interface{}{"true"}},
 				})
 			} else if opType == logical.ReadOperation && operations[logical.ListOperation] != nil {
 				// Accepts both Read and List
