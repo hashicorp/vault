@@ -132,6 +132,12 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
+	// track of the name of the TLS certs and keys when OutputCurlString is set.
+	// Cloning a client will also not clone those values.
+	curlCACert, curlCAPath        string
+	curlClientCert, curlClientKey string
+
 	// SRVLookup enables the client to lookup the host through DNS SRV lookup
 	SRVLookup bool
 
@@ -244,11 +250,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 			return err
 		}
 		foundClientCert = true
+		c.curlClientCert = t.ClientCert
+		c.curlClientKey = t.ClientKey
 	case t.ClientCert != "" || t.ClientKey != "":
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || t.CAPath != "" {
+		c.curlCACert = t.CACert
+		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
 			CAFile: t.CACert,
 			CAPath: t.CAPath,
@@ -1109,6 +1119,10 @@ START:
 		LastOutputStringError = &OutputStringError{
 			Request:       req,
 			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
+			ClientCert:    c.config.curlClientCert,
+			ClientKey:     c.config.curlClientKey,
+			ClientCACert:  c.config.curlCACert,
+			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
 	}
