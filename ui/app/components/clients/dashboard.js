@@ -24,6 +24,11 @@ export default class Dashboard extends Component {
   @tracked startYear = null;
   @tracked selectedNamespace = null;
 
+  // conditionals for filtering HBS file
+  // TODO update values depending on data returned from API
+  @tracked isDateRange = true; // false when viewing single month (true on init b/c defaults to billing period)
+  @tracked isAllNamespaces = true; // false when filtered down to auth methods (mounts)
+
   constructor() {
     super(...arguments);
     // ARG TODO will need to get startDate from license endpoint
