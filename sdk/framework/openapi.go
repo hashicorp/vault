@@ -128,12 +128,13 @@ type OASOperation struct {
 }
 
 type OASParameter struct {
-	Name        string     `json:"name"`
-	Description string     `json:"description,omitempty"`
-	In          string     `json:"in"`
-	Schema      *OASSchema `json:"schema,omitempty"`
-	Required    bool       `json:"required,omitempty"`
-	Deprecated  bool       `json:"deprecated,omitempty"`
+	Name        string        `json:"name"`
+	Description string        `json:"description,omitempty"`
+	In          string        `json:"in"`
+	Schema      *OASSchema    `json:"schema,omitempty"`
+	Required    bool          `json:"required,omitempty"`
+	Enum        []interface{} `json:"enum,omitempty"`
+	Deprecated  bool          `json:"deprecated,omitempty"`
 }
 
 type OASRequestBody struct {
@@ -368,8 +369,19 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				}
 			}
 
-			// LIST is represented as GET with a `list` query parameter
-			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
+			// LIST is represented as GET with a `list` query parameter.
+			if opType == logical.ListOperation {
+				// Only accepts List (due to the above skipping of ListOperations that also have ReadOperations)
+				op.Parameters = append(op.Parameters, OASParameter{
+					Name:        "list",
+					Description: "Must be set to `true`",
+					Required:    true,
+					Enum:        []interface{}{"true"},
+					In:          "query",
+					Schema:      &OASSchema{Type: "string"},
+				})
+			} else if opType == logical.ReadOperation && operations[logical.ListOperation] != nil {
+				// Accepts both Read and List
 				op.Parameters = append(op.Parameters, OASParameter{
 					Name:        "list",
 					Description: "Return a list if `true`",
