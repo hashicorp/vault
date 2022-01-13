@@ -67,7 +67,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     };
   }
 
-  async updateRecord(store, type, snapshot) {
+  updateRecord(store, type, snapshot) {
     const data = store.serializerFor(type.modelName).serialize(snapshot);
     const name = snapshot.attr('name');
     const backend = snapshot.attr('backend');

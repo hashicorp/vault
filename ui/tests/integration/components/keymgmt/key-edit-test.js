@@ -29,8 +29,6 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
   });
 
   test('it renders show view as default', async function (assert) {
-    // this.set('model', model);
-
     await render(hbs`<Keymgmt::KeyEdit @model={{model}} @tab={{tab}} /><div id="modal-wormhole" />`);
     assert.dom('[data-test-secret-header]').hasText('Unicorns', 'Shows key name');
     assert.dom('[data-test-keymgmt-key-toolbar]').exists('Subnav toolbar exists');
