@@ -6,8 +6,7 @@ export default Application.extend({
   },
   queryRecord(store, type, query) {
     let url = this.urlForQuery(null, type);
-    // ARG query has startTime:
-    // API accepts start and end as query params
+    // Query has startTime defined. The API will return the endTime if none is provided.
     return this.ajax(url, 'GET', { data: query }).then((resp) => {
       let response = resp || {};
       // if the response is a 204 it has no request id
