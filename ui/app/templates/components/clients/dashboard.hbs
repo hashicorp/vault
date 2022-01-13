@@ -176,7 +176,7 @@
             type="button"
             class="button is-primary"
             onclick={{queue
-              (action "handleEditStartMonth" this.startMonth this.startYear)
+              (action "handleCounterQuery" this.startMonth this.startYear)
               (action (mut this.isEditStartMonthOpen) false)
             }}
             disabled={{if (and this.startMonth this.startYear) false true}}
@@ -186,7 +186,7 @@
           <button
             type="button"
             class="button is-secondary"
-            onclick={{queue (action "handleEditStartMonth" 0 0) (action (mut this.isEditStartMonthOpen) false)}}
+            onclick={{queue (action "handleCounterQuery" 0 0) (action (mut this.isEditStartMonthOpen) false)}}
           >
             Cancel
           </button>

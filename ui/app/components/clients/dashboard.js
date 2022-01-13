@@ -1,9 +1,24 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, formatRFC3339 } from 'date-fns';
 
 export default class Dashboard extends Component {
+  arrayOfMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
   maxNamespaces = 10;
   chartLegend = [
     { key: 'distinct_entities', label: 'unique entities' },
@@ -16,6 +31,8 @@ export default class Dashboard extends Component {
   years = Array.from({ length: 5 }, (item, i) => {
     return new Date().getFullYear() - i;
   });
+
+  @service store;
 
   @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
@@ -174,10 +191,12 @@ export default class Dashboard extends Component {
   }
 
   @action
-  handleEditStartMonth() {
-    // ARG TODO will need to handle the action when the click save on the modal and you are given a new start Month, via month and year in params,
-    // if no endDate selected, default to 12 months range
-    // then send range to queryData this.queryData(range)
+  handleCounterQuery(month, year) {
+    let startMonthIndex = this.arrayOfMonths.indexOf(month);
+    let start_time = formatRFC3339(new Date(year, startMonthIndex));
+
+    let adapter = this.store.adapterFor('clients/clients/new-init-activity');
+    adapter.queryRecord({ start_time });
   }
 
   // ARG TODO this might be a carry over from history, will need to confirm

@@ -68,15 +68,17 @@ export default Route.extend(ClusterRoute, {
       // swallowing error so activity can show if no config permissions
       return {};
     });
-    const activityParams = getActivityParams(params);
-    let activity = this.store.queryRecord('clients/activity', activityParams); // ARG TODO should async await and try catch
-    let license = await this.getLicense();
-    let newInitActivity = await this.getNewInitActivity(license.startTime);
-    // ARG TODO this is the new pattern, while keeping the old. On index load, hit sys/license/status to check for a startTime and return it.
+
+    let license = await this.getLicense(); // get default start_time
+    let newInitActivity = await this.getNewInitActivity(license.startTime); // returns client counts using license start time, displays the default data.
+    let activityParams = getActivityParams(params); // ARG TODO will remove once API is complete & it's safe to remove old functionality
+    let activity = this.store.queryRecord('clients/activity', activityParams); // ARG TODO will remove once API is complete & it's safe to remove old functionality
 
     return hash({
-      queryStart: params.start, // ARG TODO will remove
-      queryEnd: params.end, // ARG TODO will remove
+      // ARG TODO will remove "hash" once remove "activity," which currently relies on it.
+      // ARG TODO remove hash if not returning promise
+      queryStart: params.start, // ARG will remove once API complete
+      queryEnd: params.end, // ARG will remove once API complete
       activity,
       newInitActivity,
       config,
