@@ -40,7 +40,7 @@ export default class Attribution extends Component {
   }
 
   get clientCountBreakdown() {
-    return this.isAllNamespaces ? 'Namespace path' : 'Auth method mount';
+    return this.isAllNamespaces ? 'Namespace' : 'Auth method';
   }
 
   get chartText() {
@@ -57,7 +57,7 @@ export default class Attribution extends Component {
     } else if (!this.isAllNamespaces) {
       return {
         description:
-          'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where new clients and total clients are originating. Authentication methods are organized by path.',
+          'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.',
         newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients 
         ${dateText === 'date range' ? ' over time.' : '.'}`,
         totalCopy: `The total clients used by the auth method for this ${dateText}. This number is useful for identifying overall usage volume. `,

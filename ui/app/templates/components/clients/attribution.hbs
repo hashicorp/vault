@@ -24,12 +24,12 @@
     </div>
 
     <div class="data-details-top">
-      <h3 class="data-details">Top namespace</h3>
+      <h3 class="data-details">Top {{lowercase this.clientCountBreakdown}}</h3>
       <p class="data-details">ns/1</p>
     </div>
 
     <div class="data-details-bottom">
-      <h3 class="data-details">Clients in namespace</h3>
+      <h3 class="data-details">Clients in {{lowercase this.clientCountBreakdown}}</h3>
       <p class="data-details">1,512</p>
     </div>
   {{else if (and @newClientsData (not @isDateRange))}}
