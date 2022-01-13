@@ -1,0 +1,33 @@
+<div class="chart-wrapper">
+  <div class="chart-header has-bottom-margin-l">
+    <h2 class="chart-title">{{@month}}</h2>
+  </div>
+
+  <div class="stat-text-flex-wrapper">
+    <div class="column-left">
+      <StatText
+        @label="New clients"
+        @value={{2376}}
+        @size="l"
+        @subText="This is the number of clients which were created in Vault for the first time in the selected month."
+      />
+      <div class="has-top-margin-l is-flex-start has-gap">
+        <StatText @label={{capitalize @chartLegend.0.label}} @value={{521}} @size="m" />
+        <StatText @label={{capitalize @chartLegend.1.label}} @value={{1855}} @size="m" />
+      </div>
+    </div>
+
+    <div class="column-right">
+      <StatText
+        @label="Total monthly clients"
+        @value={{3013}}
+        @size="l"
+        @subText="This is the number of total clients which used Vault for the given month, both new and previous."
+      />
+      <div class="has-top-margin-l is-flex-start has-gap">
+        <StatText @label={{capitalize @chartLegend.0.label}} @value={{521}} @size="m" />
+        <StatText @label={{capitalize @chartLegend.1.label}} @value={{1855}} @size="m" />
+      </div>
+    </div>
+  </div>
+</div>
