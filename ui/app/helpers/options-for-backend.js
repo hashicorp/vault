@@ -83,6 +83,33 @@ const SECRET_BACKENDS = {
       },
     ],
   },
+  keymgmt: {
+    displayName: 'Key Management',
+    navigateTree: false,
+    listItemPartial: 'secret-list/item',
+    tabs: [
+      {
+        name: 'key',
+        label: 'Keys',
+        searchPlaceholder: 'Filter keys',
+        item: 'key',
+        create: 'Create key',
+        editComponent: 'keymgmt/key-edit',
+      },
+      /* TODO: Add this tab
+      {
+        name: 'provider',
+        modelPrefix: '/',
+        label: 'Providers',
+        searchPlaceholder: 'Filter providers',
+        item: 'provider',
+        create: 'Create provider',
+        tab: 'provider',
+        editComponent: 'keymgmt/provider-edit',
+      },
+      */
+    ],
+  },
   transform: {
     displayName: 'Transformation',
     navigateTree: false,
