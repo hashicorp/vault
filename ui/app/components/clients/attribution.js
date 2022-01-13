@@ -30,7 +30,7 @@ import { tracked } from '@glimmer/tracking';
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
 
-  // TODO should this be a getter? It will be updated from parent component's filter bar
+  // TODO CMB should this be a getter? It will be updated from parent component's filter bar
   get isDateRange() {
     return this.args.isDateRange;
   }
@@ -71,6 +71,7 @@ export default class Attribution extends Component {
     }
   }
 
+  // TODO CMB update with proper data format when we have
   get getCsvData() {
     let results = '',
       data,
@@ -80,7 +81,7 @@ export default class Attribution extends Component {
       fields = [`${this.clientCountBreakdown}`, 'Active clients', 'Unique entities', 'Non-entity tokens'];
     } else {
       data = this.args.newClientsData;
-      // will need add a column for new clients
+      // TODO CMB will need add a column for NEW clients
       fields = [`${this.clientCountBreakdown}`, 'Active clients', 'Unique entities', 'Non-entity tokens'];
     }
 
@@ -96,7 +97,7 @@ export default class Attribution extends Component {
     });
     return results;
   }
-  // Return csv filename with start and end dates
+  // TODO CMB - confirm with design file name structure
   get getCsvFileName() {
     return this.args.activityDateRange
       ? `clients-by-${this.clientCountBreakdown}-${this.args.activityDateRange}`

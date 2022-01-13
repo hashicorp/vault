@@ -24,10 +24,10 @@ export default class Dashboard extends Component {
   @tracked startYear = null;
   @tracked selectedNamespace = null;
 
-  // conditionals for filtering HBS file
-  // TODO update values depending on data returned from API
-  @tracked isDateRange = true; // false when viewing single month (true on init b/c defaults to billing period)
-  @tracked isAllNamespaces = true; // false when filtered down to auth methods (mounts)
+  // filtering conditionals for HBS file
+  // set initially based on response received from API & update based on filters
+  @tracked isDateRange;
+  @tracked isAllNamespaces; // false when filtered down to auth methods (mounts)
 
   constructor() {
     super(...arguments);
