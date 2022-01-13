@@ -194,14 +194,14 @@ for your server at `path/to/plugins`:
 
 ## Azure Debug Logs
 
-The Azure auth plugin supports debug logging which includes additional information 
+The Azure auth plugin supports debug logging which includes additional information
 about requests and responses from the Azure API.
 
 To enable the Azure debug logs, set the following environment variable on the Vault
 server:
 
 ```shell
-AZURE_SDK_GO_LOGGING=debug
+AZURE_GO_SDK_LOG_LEVEL=DEBUG
 ```
 
 ## API
@@ -230,14 +230,6 @@ import (
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault via Azure authentication.
 // This example assumes you have a configured Azure AD Application.
-// Learn more about Azure authentication prerequisites: https://www.vaultproject.io/docs/auth/azure
-//
-// A role must first be created in Vault bound to the resource groups and subscription ids:
-// 	vault write auth/azure/role/dev-role \
-//     policies="dev-policy"
-//     bound_subscription_ids=$AZURE_SUBSCRIPTION_ID \
-//     bound_resource_groups=test-rg \
-//     ttl=24h
 func getSecretWithAzureAuth() (string, error) {
 	config := vault.DefaultConfig() // modify for more granular configuration
 
@@ -282,6 +274,7 @@ func getSecretWithAzureAuth() (string, error) {
 
 	return value, nil
 }
+
 ```
 </CodeBlockConfig>
 
@@ -317,14 +310,6 @@ namespace Examples
         /// <summary>
         /// Fetches a key-value secret (kv-v2) after authenticating to Vault via Azure authentication.
         /// This example assumes you have a configured Azure AD Application.
-        /// Learn more about Azure authentication prerequisites: https://www.vaultproject.io/docs/auth/azure
-        ///
-        /// A role must first be created in Vault bound to the resource groups and subscription ids:
-        /// 	vault write auth/azure/role/dev-role \
-        ///     policies="dev-policy"
-        ///     bound_subscription_ids=$AZURE_SUBSCRIPTION_ID \
-        ///     bound_resource_groups=test-rg \
-        ///     ttl=24h
         /// </summary>
         public string GetSecretWithAzureAuth()
         {

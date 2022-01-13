@@ -60,7 +60,8 @@
   }
 }
 
-.empty-state-icon > .hs-icon {
+.empty-state-icon > .hs-icon,
+.empty-state-icon > .flight-icon {
   float: left;
   margin-right: $spacing-xs;
 }

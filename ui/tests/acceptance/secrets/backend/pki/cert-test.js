@@ -8,10 +8,10 @@ import configPage from 'vault/tests/pages/settings/configure-secret-backends/pki
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | secrets/pki/list?tab=certs', function(hooks) {
+module('Acceptance | secrets/pki/list?tab=certs', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
   // important for this comment to stay here otherwise the formatting mangles the CSR
@@ -50,13 +50,12 @@ elRplAzrMF4=
     return path;
   };
 
-  test('it issues a cert', async function(assert) {
+  test('it issues a cert', async function (assert) {
     await setup(assert);
     await settled();
     await generatePage.issueCert('foo');
     await settled();
-    let countMaskedFonts = document.querySelectorAll('.masked-font').length;
-    assert.equal(countMaskedFonts, 3); // certificate, issuing ca, and private key
+    assert.dom('.masked-font').exists({ count: 3 }, 'renders 3 masked rows');
     let firstUnMaskButton = document.querySelectorAll('.masked-input-toggle')[0];
     await click(firstUnMaskButton);
     assert.dom('.masked-value').hasTextContaining('-----BEGIN CERTIFICATE-----');
@@ -66,7 +65,7 @@ elRplAzrMF4=
     assert.notOk(generatePage.commonNameValue, 'the form is cleared');
   });
 
-  test('it signs a csr', async function(assert) {
+  test('it signs a csr', async function (assert) {
     await setup(assert, 'sign');
     await settled();
     await generatePage.sign('common', CSR);
@@ -76,7 +75,7 @@ elRplAzrMF4=
     assert.dom('.masked-value').hasTextContaining('-----BEGIN CERTIFICATE-----');
   });
 
-  test('it views a cert', async function(assert) {
+  test('it views a cert', async function (assert) {
     const path = await setup(assert);
     await generatePage.issueCert('foo');
     await settled();

@@ -5,10 +5,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-module('Integration | Component | regex-validator', function(hooks) {
+module('Integration | Component | regex-validator', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders input and validation messages', async function(assert) {
+  test('it renders input and validation messages', async function (assert) {
     let attr = EmberObject.create({
       name: 'example',
     });

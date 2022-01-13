@@ -1,4 +1,4 @@
-// +build 386 arm
+//go:build 386 || arm
 
 package raft
 

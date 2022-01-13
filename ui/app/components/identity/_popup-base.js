@@ -32,7 +32,7 @@ export default Component.extend({
           this.onSuccess();
           this.flashMessages.success(this.successMessage(...messageArgs));
         })
-        .catch(e => {
+        .catch((e) => {
           this.onError(...messageArgs);
           this.flashMessages.success(this.errorMessage(e, ...messageArgs));
         });

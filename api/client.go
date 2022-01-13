@@ -20,9 +20,9 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
-	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -138,6 +138,9 @@ type Config struct {
 	// CloneHeaders ensures that the source client's headers are copied to
 	// its clone.
 	CloneHeaders bool
+
+	// CloneToken from parent.
+	CloneToken bool
 
 	// ReadYourWrites ensures isolated read-after-write semantics by
 	// providing discovered cluster replication states in each request.
@@ -547,6 +550,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
+	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
@@ -873,6 +877,26 @@ func (c *Client) CloneHeaders() bool {
 	return c.config.CloneHeaders
 }
 
+// SetCloneToken from parent
+func (c *Client) SetCloneToken(cloneToken bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.CloneToken = cloneToken
+}
+
+// CloneToken gets the configured CloneToken value.
+func (c *Client) CloneToken() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.CloneToken
+}
+
 // SetReadYourWrites to prevent reading stale cluster replication state.
 func (c *Client) SetReadYourWrites(preventStaleReads bool) {
 	c.modifyLock.Lock()
@@ -880,8 +904,10 @@ func (c *Client) SetReadYourWrites(preventStaleReads bool) {
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
 
-	if preventStaleReads && c.replicationStateStore == nil {
-		c.replicationStateStore = &replicationStateStore{}
+	if preventStaleReads {
+		if c.replicationStateStore == nil {
+			c.replicationStateStore = &replicationStateStore{}
+		}
 	} else {
 		c.replicationStateStore = nil
 	}
@@ -930,6 +956,7 @@ func (c *Client) Clone() (*Client, error) {
 		AgentAddress:     config.AgentAddress,
 		SRVLookup:        config.SRVLookup,
 		CloneHeaders:     config.CloneHeaders,
+		CloneToken:       config.CloneToken,
 		ReadYourWrites:   config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
@@ -939,6 +966,10 @@ func (c *Client) Clone() (*Client, error) {
 
 	if config.CloneHeaders {
 		client.SetHeaders(c.Headers().Clone())
+	}
+
+	if config.CloneToken {
+		client.SetToken(c.token)
 	}
 
 	client.replicationStateStore = c.replicationStateStore

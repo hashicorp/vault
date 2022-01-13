@@ -6,7 +6,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const M = Model.extend({
   idPrefix: 'template/',
-  idForNav: computed('id', 'idPrefix', function() {
+  idForNav: computed('id', 'idPrefix', function () {
     let modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
@@ -32,7 +32,7 @@ const M = Model.extend({
     selectLimit: 1,
   }),
 
-  attrs: computed(function() {
+  attrs: computed(function () {
     let keys = ['name', 'pattern', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),

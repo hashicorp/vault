@@ -7,40 +7,62 @@
 </PageHeader>
 
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
+  {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
   <nav class="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='current' start=null end=null}} @tagName="li" @activeClass="is-active">
-        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='current' start=null end=null}} data-test-usage-tab={{true}}>
+      {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
+      <LinkTo
+        @route="vault.cluster.clients.index"
+        @query={{hash tab="current" start=null end=null}}
+        @tagName="li"
+        @activeClass="is-active"
+      >
+        <LinkTo
+          @route="vault.cluster.clients.index"
+          @query={{hash tab="current" start=null end=null}}
+          data-test-usage-tab={{true}}
+        >
           Current month
         </LinkTo>
       </LinkTo>
-      <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='history'}} @tagName="li" @activeClass="is-active">
-        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='history'}} data-test-usage-tab={{true}}>
+      <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="history"}} @tagName="li" @activeClass="is-active">
+        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="history"}} data-test-usage-tab={{true}}>
           Monthly history
         </LinkTo>
       </LinkTo>
-      {{#if model.config.configPath.canRead}}
-        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='config' start=null end=null}} @tagName="li" @activeClass="is-active">
-          <LinkTo @route="vault.cluster.clients.index" @query={{hash tab='config' start=null end=null}} data-test-configuration-tab={{true}}>
+      {{#if this.model.config.configPath.canRead}}
+        <LinkTo
+          @route="vault.cluster.clients.index"
+          @query={{hash tab="config" start=null end=null}}
+          @tagName="li"
+          @activeClass="is-active"
+        >
+          <LinkTo
+            @route="vault.cluster.clients.index"
+            @query={{hash tab="config" start=null end=null}}
+            data-test-configuration-tab={{true}}
+          >
             Configuration
           </LinkTo>
         </LinkTo>
       {{/if}}
+      {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
     </ul>
   </nav>
 </div>
 
-{{#if (eq tab "config")}}
+{{#if (eq this.tab "config")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if model.config.configPath.canUpdate}}
+      {{#if this.model.config.configPath.canUpdate}}
         <LinkTo @route="vault.cluster.clients.edit" class="toolbar-link">
           Edit configuration
         </LinkTo>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  <Clients::Config @model={{model.config}} @isLoading={{this.currentlyLoading}} />
+  <Clients::Config @model={{this.model.config}} @isLoading={{this.currentlyLoading}} />
 {{else}}
-  <Clients::History @tab={{tab}} @model={{model}} @isLoading={{this.currentlyLoading}} />
+  {{!-- <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} /> --}}
+  <Clients::History @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
 {{/if}}

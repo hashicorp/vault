@@ -23,14 +23,14 @@ export default Component.extend({
   title: null,
   showCloseButton: false,
   type: null,
-  glyph: computed('type', function() {
+  glyph: computed('type', function () {
     const modalType = this.type;
     if (!modalType) {
       return;
     }
     return messageTypes([this.type]);
   }),
-  modalClass: computed('type', function() {
+  modalClass: computed('type', function () {
     const modalType = this.type;
     if (!modalType) {
       return 'modal';

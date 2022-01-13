@@ -12,14 +12,14 @@ const SearchFilterPlugin = () => {
         // map over the options and filter out operations where the path doesn't match what's typed
         return (
           taggedOps
-            .map(tagObj => {
-              let operations = tagObj.get('operations').filter(operationObj => {
+            .map((tagObj) => {
+              let operations = tagObj.get('operations').filter((operationObj) => {
                 return operationObj.get('path').includes(phrase);
               });
               return tagObj.set('operations', operations);
             })
             // then traverse again and remove the top level item if there are no operations left after filtering
-            .filter(tagObj => !!tagObj.get('operations').size)
+            .filter((tagObj) => !!tagObj.get('operations').size)
         );
       },
     },
@@ -42,13 +42,13 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
     // we don't have any models defined currently
     defaultModelsExpandDepth: -1,
     defaultModelExpandDepth: 1,
-    requestInterceptor: req => {
+    requestInterceptor: (req) => {
       // we need to add vault authorization header
       // and namepace headers for things to work properly
       req.headers['X-Vault-Token'] = componentInstance.auth.currentToken;
 
       let namespace = componentInstance.namespaceService.path;
-      if (namespace && !APP.NAMESPACE_ROOT_URLS.some(str => req.url.includes(str))) {
+      if (namespace && !APP.NAMESPACE_ROOT_URLS.some((str) => req.url.includes(str))) {
         req.headers['X-Vault-Namespace'] = namespace;
       }
       // we want to link to the right JSON in swagger UI so

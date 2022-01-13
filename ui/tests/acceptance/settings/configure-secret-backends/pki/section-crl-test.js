@@ -5,14 +5,14 @@ import page from 'vault/tests/pages/settings/configure-secret-backends/pki/secti
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | settings/configure/secrets/pki/crl', function(hooks) {
+module('Acceptance | settings/configure/secrets/pki/crl', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it saves crl config', async function(assert) {
+  test('it saves crl config', async function (assert) {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await settled();

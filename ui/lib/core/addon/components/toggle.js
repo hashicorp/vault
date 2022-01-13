@@ -27,10 +27,10 @@ export default Component.extend({
   name: '',
   size: 'normal',
   status: 'normal',
-  safeId: computed('name', function() {
+  safeId: computed('name', function () {
     return `toggle-${this.name.replace(/\W/g, '')}`;
   }),
-  inputClasses: computed('size', 'status', function() {
+  inputClasses: computed('size', 'status', function () {
     const sizeClass = `is-${this.size}`;
     const statusClass = `is-${this.status}`;
     return `toggle ${statusClass} ${sizeClass}`;

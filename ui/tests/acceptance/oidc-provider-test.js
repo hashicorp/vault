@@ -26,7 +26,7 @@ const USER_TOKEN_TEMPLATE = `{
 const GROUP_TOKEN_TEMPLATE = `{
   "groups": {{identity.entity.groups.names}}
 }`;
-const oidcEntity = async function(name, policy) {
+const oidcEntity = async function (name, policy) {
   await consoleComponent.runCommands([
     `write sys/policies/acl/${name} policy=${btoa(policy)}`,
     `write identity/entity name="${OIDC_USER}" policies="${name}" metadata="email=vault@hashicorp.com" metadata="phone_number=123-456-7890"`,
@@ -35,7 +35,7 @@ const oidcEntity = async function(name, policy) {
   return consoleComponent.lastLogOutput;
 };
 
-const oidcGroup = async function(entityId) {
+const oidcGroup = async function (entityId) {
   await consoleComponent.runCommands([
     `write identity/group name="engineering" member_entity_ids="${entityId}"`,
     `read -field=id identity/group/name/engineering`,
@@ -43,7 +43,7 @@ const oidcGroup = async function(entityId) {
   return consoleComponent.lastLogOutput;
 };
 
-const authAccessor = async function(path = 'userpass') {
+const authAccessor = async function (path = 'userpass') {
   await enablePage.enable('userpass', path);
   await consoleComponent.runCommands([
     `write auth/${path}/users/end-user password="${USER_PASSWORD}"`,
@@ -52,7 +52,7 @@ const authAccessor = async function(path = 'userpass') {
   return consoleComponent.lastLogOutput;
 };
 
-const entityAlias = async function(entityId, accessor, groupId) {
+const entityAlias = async function (entityId, accessor, groupId) {
   const userTokenTemplate = btoa(USER_TOKEN_TEMPLATE);
   const groupTokenTemplate = btoa(GROUP_TOKEN_TEMPLATE);
 
@@ -65,7 +65,7 @@ const entityAlias = async function(entityId, accessor, groupId) {
   ]);
   return consoleComponent.lastLogOutput.includes('Success');
 };
-const setupWebapp = async function(redirect) {
+const setupWebapp = async function (redirect) {
   let webappName = `my-webapp-${new Date().getTime()}`;
   await consoleComponent.runCommands([
     `write identity/oidc/client/${webappName} redirect_uris="${redirect}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
@@ -77,7 +77,7 @@ const setupWebapp = async function(redirect) {
   }
   return output;
 };
-const setupProvider = async function(clientId) {
+const setupProvider = async function (clientId) {
   let providerName = `my-provider-${new Date().getTime()}`;
   await consoleComponent.runCommands(
     `write identity/oidc/provider/${providerName} allowed_client_ids="${clientId}" scopes="user,groups"`
@@ -104,7 +104,7 @@ const getAuthzUrl = (providerName, redirect, clientId, params) => {
   return `/vault/identity/oidc/provider/${providerName}/authorize${queryString}`;
 };
 
-const setupOidc = async function() {
+const setupOidc = async function () {
   const callback = 'http://127.0.0.1:8251/callback';
   const entityId = await oidcEntity('oidc', OIDC_POLICY);
   const groupId = await oidcGroup(entityId);
@@ -121,22 +121,22 @@ const setupOidc = async function() {
   };
 };
 
-module('Acceptance | oidc provider', function(hooks) {
+module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function() {
+  hooks.beforeEach(async function () {
     await logout.visit();
     return authPage.login();
   });
 
-  test('OIDC Provider logs in and redirects correctly', async function(assert) {
+  test('OIDC Provider logs in and redirects correctly', async function (assert) {
     let { providerName, callback, clientId, authMethodPath } = await setupOidc();
 
     await logout.visit();
     await settled();
     let url = getAuthzUrl(providerName, callback, clientId);
-    visit(url);
-    await settled();
+    await visit(url);
+
     assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth when no token');
     assert.ok(
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
@@ -162,12 +162,12 @@ module('Acceptance | oidc provider', function(hooks) {
     );
   });
 
-  test('OIDC Provider redirects to auth if current token and prompt = login', async function(assert) {
+  test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = await setupOidc();
     await settled();
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'login' });
-    visit(url);
-    await settled();
+    await visit(url);
+
     assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth when no token');
     assert.notOk(
       currentURL().includes('prompt=login'),
@@ -184,7 +184,7 @@ module('Acceptance | oidc provider', function(hooks) {
     );
   });
 
-  test('OIDC Provider shows consent form when prompt = consent', async function(assert) {
+  test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = await setupOidc();
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
     await logout.visit();
@@ -192,8 +192,8 @@ module('Acceptance | oidc provider', function(hooks) {
     await authFormComponent.username(OIDC_USER);
     await authFormComponent.password(USER_PASSWORD);
     await authFormComponent.login();
-    visit(url);
-    await settled();
+    await visit(url);
+
     assert.notOk(
       currentURL().startsWith('/vault/auth'),
       'Does not redirect to auth because user is already logged in'
