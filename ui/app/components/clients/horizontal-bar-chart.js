@@ -21,7 +21,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 
-// TODO: delete original bar chart component
+// TODO CMB: delete original bar chart component
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 95 }; // makes space for y-axis legend

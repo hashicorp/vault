@@ -75,6 +75,10 @@
   display: flex !important;
   justify-content: flex-end;
 }
+.is-flex-start {
+  display: flex !important;
+  justify-content: flex-start;
+}
 .is-flex-full {
   flex-basis: 100%;
 }

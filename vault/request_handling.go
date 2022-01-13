@@ -464,7 +464,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	// backends. Basically, it's all just terrible, so don't allow it.
 	if strings.HasSuffix(req.Path, "/") &&
 		(req.Operation == logical.UpdateOperation ||
-			req.Operation == logical.CreateOperation) {
+			req.Operation == logical.CreateOperation ||
+			req.Operation == logical.PatchOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 

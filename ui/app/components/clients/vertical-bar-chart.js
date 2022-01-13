@@ -40,7 +40,6 @@ export default class VerticalBarChart extends Component {
   @action
   registerListener(element, args) {
     let dataset = args[0];
-    // TODO pull out lines 44 - scales into helper? b/c same as line chart?
     let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     let stackedData = stackFunction(dataset);
     let chartSvg = select(element);

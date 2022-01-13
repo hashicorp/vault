@@ -108,7 +108,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.11.2
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.11.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211123171606-16933c88368a
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20220112155832-c2eb38b5f5b6
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.3.0
@@ -116,7 +116,7 @@ require (
 	github.com/hashicorp/vault/api v1.3.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.3.0
+	github.com/hashicorp/vault/sdk v0.3.1-0.20220112143259-b48602fdb885
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

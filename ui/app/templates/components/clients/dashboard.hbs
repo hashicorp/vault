@@ -76,13 +76,14 @@
             />
 
             <Clients::Attribution
-              @title="Attribution"
               @newClientsData={{this.barChartDataset}}
               @totalClientsData={{this.barChartDataset}}
               @chartLegend={{this.chartLegend}}
-            >
-              <button type="button"> Export attribution data </button>
-            </Clients::Attribution>
+              @isDateRange={{this.isDateRange}}
+              @isAllNamespaces={{this.isAllNamespaces}}
+              {{! TODO this should be on the model?}}
+              @activityDateRange="January 2021 - December 2021"
+            />
 
             <Clients::MonthlyUsage
               @title="Vault usage"
