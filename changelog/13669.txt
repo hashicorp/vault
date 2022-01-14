@@ -1,0 +1,3 @@
+```release-note:bug
+auth/ldap: Fix upndomain bug causing alias name to change
+```
