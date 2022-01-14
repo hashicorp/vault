@@ -101,8 +101,8 @@ func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[st
 	return info, nil
 }
 
-func (s *gRPCSystemViewClient) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
-	return nil, fmt.Errorf("cannot call NewPluginClient from a plugin backend")
+func (s *gRPCSystemViewClient) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
+	return nil, "", fmt.Errorf("cannot call NewPluginClient from a plugin backend")
 }
 
 func (s *gRPCSystemViewClient) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {

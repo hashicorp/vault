@@ -7,11 +7,11 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 type DatabasePluginClient struct {
-	id string
 	sync.Mutex
 
 	Database
@@ -28,7 +28,7 @@ var PluginSets = map[int]plugin.PluginSet{
 // NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin.
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
-	rpcClient, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
+	rpcClient, id, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,18 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var db Database
 	switch raw.(type) {
 	case gRPCClient:
-		db = raw.(gRPCClient)
+
+		gRPCClient := raw.(gRPCClient)
+
+		gc := rpcClient.(*plugin.GRPCClient)
+		// Wrap clientConn with our implementation and get rid of middleware
+		// and then cast it back
+		cc := &databaseClientConn{
+			ClientConn: gc.Conn,
+			id:         id,
+		}
+		gRPCClient.client = proto.NewDatabaseClient(cc)
+		db = gRPCClient
 	default:
 		return nil, errors.New("unsupported client type")
 	}
@@ -52,6 +63,5 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
 		Database: db,
-		id:       "",
 	}, nil
 }

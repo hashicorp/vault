@@ -95,40 +95,49 @@ func (c *PluginCatalog) removeMultiplexedClient(ctx context.Context, name, id st
 		return
 	}
 
-	// TODO(JM): This leaves child process behind after vault exits
-	c.multiplexedClients[name].client.Kill()
-
 	delete(c.multiplexedClients[name].connections, id)
+	c.logger.Debug("deleted multiplexedClients connection entry", "id", id)
+
 	if len(c.multiplexedClients[name].connections) == 0 {
+		// TODO(JM): This leaves child process behind after vault exits
+		c.multiplexedClients[name].client.Kill()
 		delete(c.multiplexedClients, name)
+		c.logger.Debug("deleted multiplexedClients plugin entry", "name", name)
 	}
 }
 
 func (c *PluginCatalog) getMultiplexedClient(pluginName string) *MultiplexedClient {
 	if mpc, ok := c.multiplexedClients[pluginName]; ok {
-		c.logger.Debug("muxed client exists", "pluginName", pluginName)
+		c.logger.Debug("MultiplexedClient exists", "pluginName", pluginName)
 
 		return mpc
 	}
-	c.logger.Debug("muxed client does not exist", "pluginName", pluginName)
+
+	c.logger.Debug("MultiplexedClient does not exist", "pluginName", pluginName)
+
 	return c.newMultiplexedClient(pluginName)
 }
 
 func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClient {
+	if c.multiplexedClients == nil {
+		c.multiplexedClients = make(map[string]*MultiplexedClient)
+		c.logger.Debug("created multiplexedClients map")
+	}
+
 	mpc := &MultiplexedClient{
 		connections: make(map[string]plugin.ClientProtocol),
 	}
 
-	if c.multiplexedClients == nil {
-		c.multiplexedClients = make(map[string]*MultiplexedClient)
-	}
-
 	// set the MultiplexedClient for the given plugin name
 	c.multiplexedClients[pluginName] = mpc
+	c.logger.Debug("set the MultiplexedClient for", "pluginName", pluginName)
 
 	return mpc
 }
 
+// getPluginClient returns a client for managing the lifecycle of a plugin
+// process and an ID for a newly created entry in the MultiplexedClients'
+// connections map.
 func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
 	c.logger.Debug("begin PluginCatalog.getPluginClient")
 	id, err := base62.Random(10)
@@ -139,6 +148,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	mpc := c.getMultiplexedClient(pluginRunner.Name)
 
 	if mpc.client == nil {
+		// create a new plugin process
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.Runner(sys),
 			pluginutil.PluginSets(v5.PluginSets),
@@ -154,6 +164,8 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 		mpc.client = client
 	}
 
+	// Get the protocol client for this connection.
+	// Subsequent calls to this will return the same client.
 	rpcClient, err := mpc.client.Client()
 	if err != nil {
 		return nil, "", err
@@ -163,7 +175,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	mpc.connections[id] = rpcClient
 
 	c.logger.Debug("end PluginCatalog.getPluginClient")
-	return mpc.connections[id], id, nil
+	return rpcClient, id, nil
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the

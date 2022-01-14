@@ -8,6 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -17,6 +18,25 @@ type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
 
 	impl Database
+}
+
+func getMultiplexIDFromContext(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("missing plugin multiplexing metadata")
+	}
+
+	multiplexIDs := md[multiplexingCtxKey]
+	if len(multiplexIDs) != 1 {
+		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
+	}
+
+	multiplexID := multiplexIDs[0]
+	if multiplexID == "" {
+		return "", fmt.Errorf("empty multiplex ID in metadata")
+	}
+
+	return multiplexID, nil
 }
 
 // Initialize the database plugin

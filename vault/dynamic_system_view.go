@@ -217,15 +217,15 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	return resp.WrapInfo, nil
 }
 
-func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
 	// TODO(JM): how should this ID be managed? Should it be returned from here?
 	c, id, err := d.core.pluginCatalog.getPluginClient(ctx, d, pluginRunner, logger, isMetadataMode)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	d.core.logger.Debug("new plugin connection created", "id", id)
 
-	return c, nil
+	return c, id, nil
 }
 
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
