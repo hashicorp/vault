@@ -2120,96 +2120,96 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 0,
+                entity_clients: 0,
+                non_entity_clients: 0,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
-                        non_entity_clients: 813,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
-                        non_entity_clients: 113,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
-                        non_entity_clients: 45,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
-                        non_entity_clients: 168,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
-                        non_entity_clients: 1,
+                        clients: -3,
+                        entity_clients: -3,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
-                        non_entity_clients: 3,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -2218,88 +2218,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 682,
-                    entity_clients: 663,
-                    non_entity_clients: 19,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/u2r0G',
                       counts: {
-                        clients: 247,
-                        entity_clients: 37,
-                        non_entity_clients: 210,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/mKqBV',
                       counts: {
-                        clients: 336,
-                        entity_clients: 320,
-                        non_entity_clients: 16,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/nGOa2',
                       counts: {
-                        clients: 22,
-                        entity_clients: 3,
-                        non_entity_clients: 19,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/46UKX',
                       counts: {
-                        clients: 67,
-                        entity_clients: 58,
-                        non_entity_clients: 9,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/WHW73',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
+                        clients: -2,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/KcO46',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/y2vSv',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/VNy4X',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/cEDV9',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/CZTaj',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -2309,88 +2309,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1413,
-                    entity_clients: 996,
-                    non_entity_clients: 417,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/uMGBU',
                       counts: {
-                        clients: 690,
-                        entity_clients: 237,
-                        non_entity_clients: 453,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/8YJO3',
                       counts: {
-                        clients: 685,
-                        entity_clients: 394,
-                        non_entity_clients: 291,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/Ro774',
                       counts: {
-                        clients: 21,
-                        entity_clients: 8,
-                        non_entity_clients: 13,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/ZIpjT',
                       counts: {
-                        clients: 6,
-                        entity_clients: 2,
-                        non_entity_clients: 4,
+                        clients: -1,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/jdRjF',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
-                        non_entity_clients: 2,
+                        clients: -1,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/yyBoC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/WLxYp',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SNM6V',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vNHtH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/EqmlO',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -2685,95 +2685,95 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 86,
+                entity_clients: 42,
+                non_entity_clients: 44,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 79,
+                    entity_clients: 40,
+                    non_entity_clients: 39,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
+                        clients: 43,
+                        entity_clients: 19,
                         non_entity_clients: 813,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
+                        clients: 19,
+                        entity_clients: 15,
                         non_entity_clients: 113,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
+                        clients: 9,
+                        entity_clients: 6,
                         non_entity_clients: 45,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
+                        clients: 4,
+                        entity_clients: 2,
                         non_entity_clients: 168,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
+                        clients: 4,
+                        entity_clients: 2,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -2783,88 +2783,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 768,
-                    entity_clients: 742,
-                    non_entity_clients: 26,
+                    clients: 4,
+                    entity_clients: 3,
+                    non_entity_clients: 1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/lDz9c',
                       counts: {
-                        clients: 599,
-                        entity_clients: 207,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 392,
                       },
                     },
                     {
                       path: 'auth/method/GtbUu',
                       counts: {
-                        clients: 38,
-                        entity_clients: 6,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 32,
                       },
                     },
                     {
                       path: 'auth/method/WCyYz',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/j227p',
                       counts: {
-                        clients: 64,
-                        entity_clients: 13,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 51,
                       },
                     },
                     {
                       path: 'auth/method/9V6aN',
                       counts: {
-                        clients: 51,
-                        entity_clients: 21,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 30,
                       },
                     },
                     {
                       path: 'auth/method/USYOd',
                       counts: {
-                        clients: 7,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 5,
                       },
                     },
                     {
                       path: 'auth/method/8pfWr',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/0L511',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/6d0rw',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/ECHpZ',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -2874,88 +2874,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1413,
-                    entity_clients: 996,
-                    non_entity_clients: 417,
+                    clients: 3,
+                    entity_clients: 2,
+                    non_entity_clients: 1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/uMGBU',
                       counts: {
-                        clients: 690,
-                        entity_clients: 237,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 453,
                       },
                     },
                     {
                       path: 'auth/method/8YJO3',
                       counts: {
-                        clients: 685,
-                        entity_clients: 394,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 291,
                       },
                     },
                     {
                       path: 'auth/method/Ro774',
                       counts: {
-                        clients: 21,
-                        entity_clients: 8,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 13,
                       },
                     },
                     {
                       path: 'auth/method/ZIpjT',
                       counts: {
-                        clients: 6,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 4,
                       },
                     },
                     {
                       path: 'auth/method/jdRjF',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/yyBoC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/WLxYp',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SNM6V',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vNHtH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/EqmlO',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -3250,95 +3250,95 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 164,
+                entity_clients: 42,
+                non_entity_clients: 122,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1413,
-                    entity_clients: 996,
-                    non_entity_clients: 417,
+                    clients: 154,
+                    entity_clients: 129,
+                    non_entity_clients: 25,
                   },
                   mounts: [
                     {
                       path: 'auth/method/uMGBU',
                       counts: {
-                        clients: 690,
-                        entity_clients: 237,
+                        clients: 114,
+                        entity_clients: 84,
                         non_entity_clients: 453,
                       },
                     },
                     {
                       path: 'auth/method/8YJO3',
                       counts: {
-                        clients: 685,
-                        entity_clients: 394,
+                        clients: 33,
+                        entity_clients: 25,
                         non_entity_clients: 291,
                       },
                     },
                     {
                       path: 'auth/method/Ro774',
                       counts: {
-                        clients: 21,
-                        entity_clients: 8,
+                        clients: 4,
+                        entity_clients: 2,
                         non_entity_clients: 13,
                       },
                     },
                     {
                       path: 'auth/method/ZIpjT',
                       counts: {
-                        clients: 6,
-                        entity_clients: 2,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 4,
                       },
                     },
                     {
                       path: 'auth/method/jdRjF',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/yyBoC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/WLxYp',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SNM6V',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vNHtH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/EqmlO',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -3348,88 +3348,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1268,
-                    entity_clients: 563,
-                    non_entity_clients: 705,
+                    clients: 6,
+                    entity_clients: 3,
+                    non_entity_clients: 3,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qT4Wl',
                       counts: {
-                        clients: 1076,
-                        entity_clients: 57,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 1019,
                       },
                     },
                     {
                       path: 'auth/method/Vhu56',
                       counts: {
-                        clients: 23,
-                        entity_clients: 12,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 11,
                       },
                     },
                     {
                       path: 'auth/method/PCc58',
                       counts: {
-                        clients: 110,
-                        entity_clients: 81,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 29,
                       },
                     },
                     {
                       path: 'auth/method/nPP4c',
                       counts: {
-                        clients: 12,
-                        entity_clients: 5,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 7,
                       },
                     },
                     {
                       path: 'auth/method/LY3am',
                       counts: {
-                        clients: 8,
-                        entity_clients: 5,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/McQ4X',
                       counts: {
-                        clients: 6,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/NpjhH',
                       counts: {
-                        clients: 28,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 24,
                       },
                     },
                     {
                       path: 'auth/method/ToKO8',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/wfApH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/L9uWV',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -3439,88 +3439,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1180,
-                    entity_clients: 925,
-                    non_entity_clients: 255,
+                    clients: 4,
+                    entity_clients: 2,
+                    non_entity_clients: 2,
                   },
                   mounts: [
                     {
                       path: 'auth/method/xYL0l',
                       counts: {
-                        clients: 854,
-                        entity_clients: 659,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 195,
                       },
                     },
                     {
                       path: 'auth/method/CwWM7',
                       counts: {
-                        clients: 197,
-                        entity_clients: 109,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 88,
                       },
                     },
                     {
                       path: 'auth/method/swCd0',
                       counts: {
-                        clients: 76,
-                        entity_clients: 18,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 58,
                       },
                     },
                     {
                       path: 'auth/method/0CZTs',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/9v04G',
                       counts: {
-                        clients: 33,
-                        entity_clients: 21,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 12,
                       },
                     },
                     {
                       path: 'auth/method/6hAlO',
                       counts: {
-                        clients: 11,
-                        entity_clients: 10,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/ydSdP',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/i0CTY',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/nevwU',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/k2jYC',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -3815,95 +3815,95 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 9,
+                entity_clients: 5,
+                non_entity_clients: 4,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 7,
+                    entity_clients: 6,
+                    non_entity_clients: 1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 813,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 113,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 45,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 168,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -3913,88 +3913,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1180,
-                    entity_clients: 925,
-                    non_entity_clients: 255,
+                    clients: 1,
+                    entity_clients: 1,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/xYL0l',
                       counts: {
-                        clients: 854,
-                        entity_clients: 659,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 195,
                       },
                     },
                     {
                       path: 'auth/method/CwWM7',
                       counts: {
-                        clients: 197,
-                        entity_clients: 109,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 88,
                       },
                     },
                     {
                       path: 'auth/method/swCd0',
                       counts: {
-                        clients: 76,
-                        entity_clients: 18,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 58,
                       },
                     },
                     {
                       path: 'auth/method/0CZTs',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/9v04G',
                       counts: {
-                        clients: 33,
-                        entity_clients: 21,
+                        clients: -1,
+                        entity_clients: 0,
                         non_entity_clients: 12,
                       },
                     },
                     {
                       path: 'auth/method/6hAlO',
                       counts: {
-                        clients: 11,
-                        entity_clients: 10,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/ydSdP',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/i0CTY',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/nevwU',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/k2jYC',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -4004,88 +4004,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1174,
-                    entity_clients: 935,
-                    non_entity_clients: 239,
+                    clients: 1,
+                    entity_clients: 1,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/RCpUn',
                       counts: {
-                        clients: 702,
-                        entity_clients: 257,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 445,
                       },
                     },
                     {
                       path: 'auth/method/S0O4t',
                       counts: {
-                        clients: 441,
-                        entity_clients: 63,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 378,
                       },
                     },
                     {
                       path: 'auth/method/QqXfg',
                       counts: {
-                        clients: 12,
-                        entity_clients: 9,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/CSSoi',
                       counts: {
-                        clients: 8,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 4,
                       },
                     },
                     {
                       path: 'auth/method/klonh',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: -1,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/JyhFQ',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/S66CH',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/6pBz3',
                       counts: {
-                        clients: 4,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/qHCZa',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/I6OpF',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -4380,96 +4380,96 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 0,
+                entity_clients: 0,
+                non_entity_clients: 0,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
-                        non_entity_clients: 813,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
-                        non_entity_clients: 113,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
-                        non_entity_clients: 45,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
-                        non_entity_clients: 168,
+                        clients: -1,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
-                        non_entity_clients: 1,
+                        clients: -1,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
-                        non_entity_clients: 3,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -4478,61 +4478,13 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1180,
-                    entity_clients: 925,
-                    non_entity_clients: 255,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/xYL0l',
-                      counts: {
-                        clients: 854,
-                        entity_clients: 659,
-                        non_entity_clients: 195,
-                      },
-                    },
-                    {
-                      path: 'auth/method/CwWM7',
-                      counts: {
-                        clients: 197,
-                        entity_clients: 109,
-                        non_entity_clients: 88,
-                      },
-                    },
-                    {
-                      path: 'auth/method/swCd0',
-                      counts: {
-                        clients: 76,
-                        entity_clients: 18,
-                        non_entity_clients: 58,
-                      },
-                    },
-                    {
-                      path: 'auth/method/0CZTs',
-                      counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
-                      },
-                    },
-                    {
-                      path: 'auth/method/9v04G',
-                      counts: {
-                        clients: 33,
-                        entity_clients: 21,
-                        non_entity_clients: 12,
-                      },
-                    },
-                    {
-                      path: 'auth/method/6hAlO',
-                      counts: {
-                        clients: 11,
-                        entity_clients: 10,
-                        non_entity_clients: 1,
-                      },
-                    },
-                    {
-                      path: 'auth/method/ydSdP',
                       counts: {
                         clients: 1,
                         entity_clients: 1,
@@ -4540,26 +4492,74 @@ export default function (server) {
                       },
                     },
                     {
+                      path: 'auth/method/CwWM7',
+                      counts: {
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/swCd0',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/0CZTs',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/9v04G',
+                      counts: {
+                        clients: -2,
+                        entity_clients: -2,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/6hAlO',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/ydSdP',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
                       path: 'auth/method/i0CTY',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/nevwU',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/k2jYC',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -4569,88 +4569,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1174,
-                    entity_clients: 935,
-                    non_entity_clients: 239,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: -1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/RCpUn',
                       counts: {
-                        clients: 702,
-                        entity_clients: 257,
-                        non_entity_clients: 445,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/S0O4t',
                       counts: {
-                        clients: 441,
-                        entity_clients: 63,
-                        non_entity_clients: 378,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/QqXfg',
                       counts: {
-                        clients: 12,
-                        entity_clients: 9,
-                        non_entity_clients: 3,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/CSSoi',
                       counts: {
-                        clients: 8,
-                        entity_clients: 4,
-                        non_entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/klonh',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: -3,
+                        entity_clients: -1,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/JyhFQ',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/S66CH',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/6pBz3',
                       counts: {
-                        clients: 4,
-                        entity_clients: 2,
-                        non_entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/qHCZa',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/I6OpF',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -4945,95 +4945,95 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 65,
+                entity_clients: 15,
+                non_entity_clients: 50,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 41,
+                    entity_clients: 39,
+                    non_entity_clients: 2,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
+                        clients: 21,
+                        entity_clients: 12,
                         non_entity_clients: 813,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
+                        clients: 12,
+                        entity_clients: 3,
                         non_entity_clients: 113,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
+                        clients: 3,
+                        entity_clients: 2,
                         non_entity_clients: 45,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
+                        clients: 3,
+                        entity_clients: 1,
                         non_entity_clients: 168,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -5043,88 +5043,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1268,
-                    entity_clients: 563,
-                    non_entity_clients: 705,
+                    clients: 14,
+                    entity_clients: 13,
+                    non_entity_clients: 1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qT4Wl',
                       counts: {
-                        clients: 1076,
-                        entity_clients: 57,
+                        clients: 8,
+                        entity_clients: 2,
                         non_entity_clients: 1019,
                       },
                     },
                     {
                       path: 'auth/method/Vhu56',
                       counts: {
-                        clients: 23,
-                        entity_clients: 12,
+                        clients: 3,
+                        entity_clients: 1,
                         non_entity_clients: 11,
                       },
                     },
                     {
                       path: 'auth/method/PCc58',
                       counts: {
-                        clients: 110,
-                        entity_clients: 81,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 29,
                       },
                     },
                     {
                       path: 'auth/method/nPP4c',
                       counts: {
-                        clients: 12,
-                        entity_clients: 5,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 7,
                       },
                     },
                     {
                       path: 'auth/method/LY3am',
                       counts: {
-                        clients: 8,
-                        entity_clients: 5,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/McQ4X',
                       counts: {
-                        clients: 6,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/NpjhH',
                       counts: {
-                        clients: 28,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 24,
                       },
                     },
                     {
                       path: 'auth/method/ToKO8',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/wfApH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/L9uWV',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -5134,47 +5134,47 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1151,
-                    entity_clients: 408,
-                    non_entity_clients: 743,
+                    clients: 10,
+                    entity_clients: 6,
+                    non_entity_clients: 4,
                   },
                   mounts: [
                     {
                       path: 'auth/method/my50c',
                       counts: {
-                        clients: 342,
-                        entity_clients: 179,
+                        clients: 6,
+                        entity_clients: 1,
                         non_entity_clients: 163,
                       },
                     },
                     {
                       path: 'auth/method/D8zfa',
                       counts: {
-                        clients: 681,
-                        entity_clients: 292,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 389,
                       },
                     },
                     {
                       path: 'auth/method/w2xnA',
                       counts: {
-                        clients: 29,
-                        entity_clients: 17,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 12,
                       },
                     },
                     {
                       path: 'auth/method/FwR7Z',
                       counts: {
-                        clients: 40,
-                        entity_clients: 4,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 36,
                       },
                     },
                     {
                       path: 'auth/method/wwNCu',
                       counts: {
-                        clients: 3,
+                        clients: 1,
                         entity_clients: 1,
                         non_entity_clients: 2,
                       },
@@ -5182,40 +5182,40 @@ export default function (server) {
                     {
                       path: 'auth/method/vv2O6',
                       counts: {
-                        clients: 48,
-                        entity_clients: 32,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 16,
                       },
                     },
                     {
                       path: 'auth/method/zRqUm',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/Yez2v',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SBBJ2',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/NNSCC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -5510,96 +5510,96 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 0,
+                entity_clients: 0,
+                non_entity_clients: 0,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
-                        non_entity_clients: 813,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
-                        non_entity_clients: 113,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
-                        non_entity_clients: 45,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
-                        non_entity_clients: 168,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
-                        non_entity_clients: 1,
+                        clients: -1,
+                        entity_clients: -1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
-                        non_entity_clients: 3,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -5608,77 +5608,13 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1268,
-                    entity_clients: 563,
-                    non_entity_clients: 705,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qT4Wl',
-                      counts: {
-                        clients: 1076,
-                        entity_clients: 57,
-                        non_entity_clients: 1019,
-                      },
-                    },
-                    {
-                      path: 'auth/method/Vhu56',
-                      counts: {
-                        clients: 23,
-                        entity_clients: 12,
-                        non_entity_clients: 11,
-                      },
-                    },
-                    {
-                      path: 'auth/method/PCc58',
-                      counts: {
-                        clients: 110,
-                        entity_clients: 81,
-                        non_entity_clients: 29,
-                      },
-                    },
-                    {
-                      path: 'auth/method/nPP4c',
-                      counts: {
-                        clients: 12,
-                        entity_clients: 5,
-                        non_entity_clients: 7,
-                      },
-                    },
-                    {
-                      path: 'auth/method/LY3am',
-                      counts: {
-                        clients: 8,
-                        entity_clients: 5,
-                        non_entity_clients: 3,
-                      },
-                    },
-                    {
-                      path: 'auth/method/McQ4X',
-                      counts: {
-                        clients: 6,
-                        entity_clients: 4,
-                        non_entity_clients: 2,
-                      },
-                    },
-                    {
-                      path: 'auth/method/NpjhH',
-                      counts: {
-                        clients: 28,
-                        entity_clients: 4,
-                        non_entity_clients: 24,
-                      },
-                    },
-                    {
-                      path: 'auth/method/ToKO8',
-                      counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
-                      },
-                    },
-                    {
-                      path: 'auth/method/wfApH',
                       counts: {
                         clients: 1,
                         entity_clients: 1,
@@ -5686,11 +5622,75 @@ export default function (server) {
                       },
                     },
                     {
+                      path: 'auth/method/Vhu56',
+                      counts: {
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/PCc58',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/nPP4c',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/LY3am',
+                      counts: {
+                        clients: -2,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/McQ4X',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/NpjhH',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/ToKO8',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
+                      path: 'auth/method/wfApH',
+                      counts: {
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
+                      },
+                    },
+                    {
                       path: 'auth/method/L9uWV',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -5699,89 +5699,89 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1151,
-                    entity_clients: 408,
-                    non_entity_clients: 743,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/my50c',
                       counts: {
-                        clients: 342,
-                        entity_clients: 179,
-                        non_entity_clients: 163,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/D8zfa',
                       counts: {
-                        clients: 681,
-                        entity_clients: 292,
-                        non_entity_clients: 389,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/w2xnA',
                       counts: {
-                        clients: 29,
-                        entity_clients: 17,
-                        non_entity_clients: 12,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/FwR7Z',
                       counts: {
-                        clients: 40,
-                        entity_clients: 4,
-                        non_entity_clients: 36,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/wwNCu',
                       counts: {
-                        clients: 3,
-                        entity_clients: 1,
-                        non_entity_clients: 2,
+                        clients: -2,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vv2O6',
                       counts: {
-                        clients: 48,
-                        entity_clients: 32,
-                        non_entity_clients: 16,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/zRqUm',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
-                        non_entity_clients: 3,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/Yez2v',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SBBJ2',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/NNSCC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -6075,95 +6075,95 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 123,
+                entity_clients: 6,
+                non_entity_clients: 117,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 62,
+                    entity_clients: 37,
+                    non_entity_clients: 25,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
+                        clients: 57,
+                        entity_clients: 26,
                         non_entity_clients: 813,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 113,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 45,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 168,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -6173,88 +6173,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1369,
-                    entity_clients: 829,
-                    non_entity_clients: 540,
+                    clients: 31,
+                    entity_clients: 20,
+                    non_entity_clients: 11,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qcuLl',
                       counts: {
-                        clients: 553,
-                        entity_clients: 300,
+                        clients: 27,
+                        entity_clients: 24,
                         non_entity_clients: 253,
                       },
                     },
                     {
                       path: 'auth/method/KGWiS',
                       counts: {
-                        clients: 89,
-                        entity_clients: 63,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 26,
                       },
                     },
                     {
                       path: 'auth/method/iM8pi',
                       counts: {
-                        clients: 387,
-                        entity_clients: 261,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 126,
                       },
                     },
                     {
                       path: 'auth/method/IeyA4',
                       counts: {
-                        clients: 315,
-                        entity_clients: 262,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 53,
                       },
                     },
                     {
                       path: 'auth/method/KGFfV',
                       counts: {
-                        clients: 20,
-                        entity_clients: 9,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 11,
                       },
                     },
                     {
                       path: 'auth/method/23AQk',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/PqTWe',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/pPSo1',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/HMu5H',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/xpOk3',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -6264,88 +6264,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1173,
-                    entity_clients: 810,
-                    non_entity_clients: 363,
+                    clients: 30,
+                    entity_clients: 21,
+                    non_entity_clients: 9,
                   },
                   mounts: [
                     {
                       path: 'auth/method/XQUrA',
                       counts: {
-                        clients: 233,
-                        entity_clients: 69,
+                        clients: 15,
+                        entity_clients: 5,
                         non_entity_clients: 164,
                       },
                     },
                     {
                       path: 'auth/method/1p6HR',
                       counts: {
-                        clients: 454,
-                        entity_clients: 162,
+                        clients: 7,
+                        entity_clients: 4,
                         non_entity_clients: 292,
                       },
                     },
                     {
                       path: 'auth/method/qRjoJ',
                       counts: {
-                        clients: 49,
-                        entity_clients: 2,
+                        clients: 6,
+                        entity_clients: 1,
                         non_entity_clients: 47,
                       },
                     },
                     {
                       path: 'auth/method/x9QQB',
                       counts: {
-                        clients: 122,
-                        entity_clients: 89,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 33,
                       },
                     },
                     {
                       path: 'auth/method/rezK4',
                       counts: {
-                        clients: 119,
-                        entity_clients: 74,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 45,
                       },
                     },
                     {
                       path: 'auth/method/qWNSS',
                       counts: {
-                        clients: 106,
-                        entity_clients: 42,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 64,
                       },
                     },
                     {
                       path: 'auth/method/OmQEf',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/PhoAy',
                       counts: {
-                        clients: 9,
-                        entity_clients: 8,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/aUuyM',
                       counts: {
-                        clients: 47,
-                        entity_clients: 32,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 15,
                       },
                     },
                     {
                       path: 'auth/method/kUj1S',
                       counts: {
-                        clients: 32,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 31,
                       },
                     },
@@ -6731,95 +6731,95 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 977,
+                entity_clients: 280,
+                non_entity_clients: 697,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1413,
-                    entity_clients: 996,
-                    non_entity_clients: 417,
+                    clients: 725,
+                    entity_clients: 416,
+                    non_entity_clients: 309,
                   },
                   mounts: [
                     {
                       path: 'auth/method/uMGBU',
                       counts: {
-                        clients: 690,
-                        entity_clients: 237,
+                        clients: 281,
+                        entity_clients: 48,
                         non_entity_clients: 453,
                       },
                     },
                     {
                       path: 'auth/method/8YJO3',
                       counts: {
-                        clients: 685,
-                        entity_clients: 394,
+                        clients: 252,
+                        entity_clients: 142,
                         non_entity_clients: 291,
                       },
                     },
                     {
                       path: 'auth/method/Ro774',
                       counts: {
-                        clients: 21,
-                        entity_clients: 8,
+                        clients: 93,
+                        entity_clients: 43,
                         non_entity_clients: 13,
                       },
                     },
                     {
                       path: 'auth/method/ZIpjT',
                       counts: {
-                        clients: 6,
-                        entity_clients: 2,
+                        clients: 86,
+                        entity_clients: 19,
                         non_entity_clients: 4,
                       },
                     },
                     {
                       path: 'auth/method/jdRjF',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
+                        clients: 13,
+                        entity_clients: 5,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/yyBoC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/WLxYp',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SNM6V',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vNHtH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/EqmlO',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -6829,88 +6829,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1268,
-                    entity_clients: 563,
-                    non_entity_clients: 705,
+                    clients: 178,
+                    entity_clients: 99,
+                    non_entity_clients: 79,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qT4Wl',
                       counts: {
-                        clients: 1076,
-                        entity_clients: 57,
+                        clients: 76,
+                        entity_clients: 69,
                         non_entity_clients: 1019,
                       },
                     },
                     {
                       path: 'auth/method/Vhu56',
                       counts: {
-                        clients: 23,
-                        entity_clients: 12,
+                        clients: 64,
+                        entity_clients: 38,
                         non_entity_clients: 11,
                       },
                     },
                     {
                       path: 'auth/method/PCc58',
                       counts: {
-                        clients: 110,
-                        entity_clients: 81,
+                        clients: 20,
+                        entity_clients: 12,
                         non_entity_clients: 29,
                       },
                     },
                     {
                       path: 'auth/method/nPP4c',
                       counts: {
-                        clients: 12,
-                        entity_clients: 5,
+                        clients: 15,
+                        entity_clients: 12,
                         non_entity_clients: 7,
                       },
                     },
                     {
                       path: 'auth/method/LY3am',
                       counts: {
-                        clients: 8,
-                        entity_clients: 5,
+                        clients: 3,
+                        entity_clients: 1,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/McQ4X',
                       counts: {
-                        clients: 6,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/NpjhH',
                       counts: {
-                        clients: 28,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 24,
                       },
                     },
                     {
                       path: 'auth/method/ToKO8',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/wfApH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/L9uWV',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -6920,88 +6920,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1180,
-                    entity_clients: 925,
-                    non_entity_clients: 255,
+                    clients: 40,
+                    entity_clients: 28,
+                    non_entity_clients: 12,
                   },
                   mounts: [
                     {
                       path: 'auth/method/xYL0l',
                       counts: {
-                        clients: 854,
-                        entity_clients: 659,
+                        clients: 24,
+                        entity_clients: 9,
                         non_entity_clients: 195,
                       },
                     },
                     {
                       path: 'auth/method/CwWM7',
                       counts: {
-                        clients: 197,
-                        entity_clients: 109,
+                        clients: 10,
+                        entity_clients: 8,
                         non_entity_clients: 88,
                       },
                     },
                     {
                       path: 'auth/method/swCd0',
                       counts: {
-                        clients: 76,
-                        entity_clients: 18,
+                        clients: 4,
+                        entity_clients: 2,
                         non_entity_clients: 58,
                       },
                     },
                     {
                       path: 'auth/method/0CZTs',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/9v04G',
                       counts: {
-                        clients: 33,
-                        entity_clients: 21,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 12,
                       },
                     },
                     {
                       path: 'auth/method/6hAlO',
                       counts: {
-                        clients: 11,
-                        entity_clients: 10,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/ydSdP',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/i0CTY',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/nevwU',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/k2jYC',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -7011,40 +7011,40 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1174,
-                    entity_clients: 935,
-                    non_entity_clients: 239,
+                    clients: 34,
+                    entity_clients: 21,
+                    non_entity_clients: 13,
                   },
                   mounts: [
                     {
                       path: 'auth/method/RCpUn',
                       counts: {
-                        clients: 702,
-                        entity_clients: 257,
+                        clients: 27,
+                        entity_clients: 14,
                         non_entity_clients: 445,
                       },
                     },
                     {
                       path: 'auth/method/S0O4t',
                       counts: {
-                        clients: 441,
-                        entity_clients: 63,
+                        clients: 4,
+                        entity_clients: 1,
                         non_entity_clients: 378,
                       },
                     },
                     {
                       path: 'auth/method/QqXfg',
                       counts: {
-                        clients: 12,
-                        entity_clients: 9,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/CSSoi',
                       counts: {
-                        clients: 8,
-                        entity_clients: 4,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 4,
                       },
                     },
@@ -7059,40 +7059,40 @@ export default function (server) {
                     {
                       path: 'auth/method/JyhFQ',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/S66CH',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/6pBz3',
                       counts: {
-                        clients: 4,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/qHCZa',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/I6OpF',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -7478,95 +7478,95 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 190,
+                entity_clients: 87,
+                non_entity_clients: 103,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 127,
+                    entity_clients: 119,
+                    non_entity_clients: 8,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
+                        clients: 108,
+                        entity_clients: 69,
                         non_entity_clients: 813,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
+                        clients: 9,
+                        entity_clients: 1,
                         non_entity_clients: 113,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
+                        clients: 5,
+                        entity_clients: 4,
                         non_entity_clients: 45,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
+                        clients: 3,
+                        entity_clients: 2,
                         non_entity_clients: 168,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -7576,88 +7576,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1028,
-                    entity_clients: 292,
-                    non_entity_clients: 736,
+                    clients: 40,
+                    entity_clients: 39,
+                    non_entity_clients: 1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/824CE',
                       counts: {
-                        clients: 50,
-                        entity_clients: 47,
+                        clients: 35,
+                        entity_clients: 10,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/r2zb4',
                       counts: {
-                        clients: 593,
-                        entity_clients: 98,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 495,
                       },
                     },
                     {
                       path: 'auth/method/1zfD6',
                       counts: {
-                        clients: 37,
-                        entity_clients: 29,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 8,
                       },
                     },
                     {
                       path: 'auth/method/L14lj',
                       counts: {
-                        clients: 7,
-                        entity_clients: 2,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 5,
                       },
                     },
                     {
                       path: 'auth/method/cTsw9',
                       counts: {
-                        clients: 291,
-                        entity_clients: 88,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 203,
                       },
                     },
                     {
                       path: 'auth/method/3KTWZ',
                       counts: {
-                        clients: 14,
-                        entity_clients: 7,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 7,
                       },
                     },
                     {
                       path: 'auth/method/Douf5',
                       counts: {
-                        clients: 8,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 7,
                       },
                     },
                     {
                       path: 'auth/method/30eez',
                       counts: {
-                        clients: 19,
-                        entity_clients: 11,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 8,
                       },
                     },
                     {
                       path: 'auth/method/xSSJz',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/pR3x7',
                       counts: {
-                        clients: 6,
-                        entity_clients: 5,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -7667,88 +7667,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1413,
-                    entity_clients: 996,
-                    non_entity_clients: 417,
+                    clients: 21,
+                    entity_clients: 15,
+                    non_entity_clients: 6,
                   },
                   mounts: [
                     {
                       path: 'auth/method/uMGBU',
                       counts: {
-                        clients: 690,
-                        entity_clients: 237,
+                        clients: 10,
+                        entity_clients: 2,
                         non_entity_clients: 453,
                       },
                     },
                     {
                       path: 'auth/method/8YJO3',
                       counts: {
-                        clients: 685,
-                        entity_clients: 394,
+                        clients: 4,
+                        entity_clients: 3,
                         non_entity_clients: 291,
                       },
                     },
                     {
                       path: 'auth/method/Ro774',
                       counts: {
-                        clients: 21,
-                        entity_clients: 8,
+                        clients: 3,
+                        entity_clients: 1,
                         non_entity_clients: 13,
                       },
                     },
                     {
                       path: 'auth/method/ZIpjT',
                       counts: {
-                        clients: 6,
-                        entity_clients: 2,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 4,
                       },
                     },
                     {
                       path: 'auth/method/jdRjF',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/yyBoC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/WLxYp',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SNM6V',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vNHtH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/EqmlO',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -7758,88 +7758,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1268,
-                    entity_clients: 563,
-                    non_entity_clients: 705,
+                    clients: 2,
+                    entity_clients: 1,
+                    non_entity_clients: 1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qT4Wl',
                       counts: {
-                        clients: 1076,
-                        entity_clients: 57,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 1019,
                       },
                     },
                     {
                       path: 'auth/method/Vhu56',
                       counts: {
-                        clients: 23,
-                        entity_clients: 12,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 11,
                       },
                     },
                     {
                       path: 'auth/method/PCc58',
                       counts: {
-                        clients: 110,
-                        entity_clients: 81,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 29,
                       },
                     },
                     {
                       path: 'auth/method/nPP4c',
                       counts: {
-                        clients: 12,
-                        entity_clients: 5,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 7,
                       },
                     },
                     {
                       path: 'auth/method/LY3am',
                       counts: {
-                        clients: 8,
-                        entity_clients: 5,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/McQ4X',
                       counts: {
-                        clients: 6,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/NpjhH',
                       counts: {
-                        clients: 28,
-                        entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 24,
                       },
                     },
                     {
                       path: 'auth/method/ToKO8',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/wfApH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/L9uWV',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -8225,96 +8225,96 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 0,
+                entity_clients: 0,
+                non_entity_clients: 0,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
-                        entity_clients: 4,
-                        non_entity_clients: 813,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
-                        non_entity_clients: 113,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
-                        non_entity_clients: 45,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
-                        non_entity_clients: 168,
+                        clients: -1,
+                        entity_clients: -1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
-                        non_entity_clients: 1,
+                        clients: -1,
+                        entity_clients: -1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
-                        non_entity_clients: 3,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
-                        non_entity_clients: 6,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -8323,89 +8323,89 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1028,
-                    entity_clients: 292,
-                    non_entity_clients: 736,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/824CE',
                       counts: {
-                        clients: 50,
-                        entity_clients: 47,
-                        non_entity_clients: 3,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/r2zb4',
                       counts: {
-                        clients: 593,
-                        entity_clients: 98,
-                        non_entity_clients: 495,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/1zfD6',
                       counts: {
-                        clients: 37,
-                        entity_clients: 29,
-                        non_entity_clients: 8,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/L14lj',
                       counts: {
-                        clients: 7,
-                        entity_clients: 2,
-                        non_entity_clients: 5,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/cTsw9',
                       counts: {
-                        clients: 291,
-                        entity_clients: 88,
-                        non_entity_clients: 203,
+                        clients: -3,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/3KTWZ',
                       counts: {
-                        clients: 14,
-                        entity_clients: 7,
-                        non_entity_clients: 7,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/Douf5',
                       counts: {
-                        clients: 8,
-                        entity_clients: 1,
-                        non_entity_clients: 7,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/30eez',
                       counts: {
-                        clients: 19,
-                        entity_clients: 11,
-                        non_entity_clients: 8,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/xSSJz',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/pR3x7',
                       counts: {
-                        clients: 6,
-                        entity_clients: 5,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -8414,88 +8414,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1413,
-                    entity_clients: 996,
-                    non_entity_clients: 417,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/uMGBU',
                       counts: {
-                        clients: 690,
-                        entity_clients: 237,
-                        non_entity_clients: 453,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/8YJO3',
                       counts: {
-                        clients: 685,
-                        entity_clients: 394,
-                        non_entity_clients: 291,
+                        clients: 1,
+                        entity_clients: 1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/Ro774',
                       counts: {
-                        clients: 21,
-                        entity_clients: 8,
-                        non_entity_clients: 13,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/ZIpjT',
                       counts: {
-                        clients: 6,
-                        entity_clients: 2,
-                        non_entity_clients: 4,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/jdRjF',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
-                        non_entity_clients: 2,
+                        clients: -2,
+                        entity_clients: -1,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/yyBoC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/WLxYp',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SNM6V',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vNHtH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/EqmlO',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -8505,89 +8505,89 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1268,
-                    entity_clients: 563,
-                    non_entity_clients: 705,
+                    clients: 0,
+                    entity_clients: 0,
+                    non_entity_clients: -1,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qT4Wl',
                       counts: {
-                        clients: 1076,
-                        entity_clients: 57,
-                        non_entity_clients: 1019,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/Vhu56',
                       counts: {
-                        clients: 23,
-                        entity_clients: 12,
-                        non_entity_clients: 11,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/PCc58',
                       counts: {
-                        clients: 110,
-                        entity_clients: 81,
-                        non_entity_clients: 29,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/nPP4c',
                       counts: {
-                        clients: 12,
-                        entity_clients: 5,
-                        non_entity_clients: 7,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/LY3am',
                       counts: {
-                        clients: 8,
-                        entity_clients: 5,
-                        non_entity_clients: 3,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/McQ4X',
                       counts: {
-                        clients: 6,
-                        entity_clients: 4,
-                        non_entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/NpjhH',
                       counts: {
-                        clients: 28,
-                        entity_clients: 4,
-                        non_entity_clients: 24,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/ToKO8',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/wfApH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/L9uWV',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
-                        non_entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
+                        non_entity_clients: 0,
                       },
                     },
                   ],
@@ -8972,22 +8972,22 @@ export default function (server) {
             ],
             new_clients: {
               counts: {
-                clients: 10,
-                entity_clients: 7,
-                non_entity_clients: 3,
+                clients: 36,
+                entity_clients: 35,
+                non_entity_clients: 1,
               },
               namespaces: [
                 {
                   counts: {
-                    clients: 1516,
-                    entity_clients: 966,
-                    non_entity_clients: 550,
+                    clients: 14,
+                    entity_clients: 11,
+                    non_entity_clients: 3,
                   },
                   mounts: [
                     {
                       path: 'auth/method/cdZ64',
                       counts: {
-                        clients: 817,
+                        clients: 6,
                         entity_clients: 4,
                         non_entity_clients: 813,
                       },
@@ -8995,72 +8995,72 @@ export default function (server) {
                     {
                       path: 'auth/method/UpXi1',
                       counts: {
-                        clients: 385,
-                        entity_clients: 272,
+                        clients: 5,
+                        entity_clients: 3,
                         non_entity_clients: 113,
                       },
                     },
                     {
                       path: 'auth/method/6OzPw',
                       counts: {
-                        clients: 93,
-                        entity_clients: 48,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 45,
                       },
                     },
                     {
                       path: 'auth/method/PkimI',
                       counts: {
-                        clients: 172,
-                        entity_clients: 4,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 168,
                       },
                     },
                     {
                       path: 'auth/method/7ecN2',
                       counts: {
-                        clients: 25,
-                        entity_clients: 24,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/AYdDo',
                       counts: {
-                        clients: 3,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/kS9h6',
                       counts: {
-                        clients: 4,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/dIoMU',
                       counts: {
-                        clients: 8,
-                        entity_clients: 2,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/eXB1u',
                       counts: {
-                        clients: 7,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 6,
                       },
                     },
                     {
                       path: 'auth/method/SQ8Ty',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
@@ -9070,88 +9070,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 963,
-                    entity_clients: 160,
-                    non_entity_clients: 803,
+                    clients: 11,
+                    entity_clients: 9,
+                    non_entity_clients: 2,
                   },
                   mounts: [
                     {
                       path: 'auth/method/KPlRb',
                       counts: {
-                        clients: 671,
-                        entity_clients: 325,
+                        clients: 5,
+                        entity_clients: 1,
                         non_entity_clients: 346,
                       },
                     },
                     {
                       path: 'auth/method/199gy',
                       counts: {
-                        clients: 270,
-                        entity_clients: 185,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 85,
                       },
                     },
                     {
                       path: 'auth/method/UDpxk',
                       counts: {
-                        clients: 6,
-                        entity_clients: 3,
+                        clients: 2,
+                        entity_clients: 1,
                         non_entity_clients: 3,
                       },
                     },
                     {
                       path: 'auth/method/bmgSl',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/oyWlP',
                       counts: {
-                        clients: 6,
-                        entity_clients: 4,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/z7Uka',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/ftNn7',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/pvdQ7',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/DsnIn',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/E1YLg',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -9161,88 +9161,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1413,
-                    entity_clients: 996,
-                    non_entity_clients: 417,
+                    clients: 10,
+                    entity_clients: 8,
+                    non_entity_clients: 2,
                   },
                   mounts: [
                     {
                       path: 'auth/method/uMGBU',
                       counts: {
-                        clients: 690,
-                        entity_clients: 237,
+                        clients: 4,
+                        entity_clients: 1,
                         non_entity_clients: 453,
                       },
                     },
                     {
                       path: 'auth/method/8YJO3',
                       counts: {
-                        clients: 685,
-                        entity_clients: 394,
+                        clients: 3,
+                        entity_clients: 1,
                         non_entity_clients: 291,
                       },
                     },
                     {
                       path: 'auth/method/Ro774',
                       counts: {
-                        clients: 21,
-                        entity_clients: 8,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 13,
                       },
                     },
                     {
                       path: 'auth/method/ZIpjT',
                       counts: {
-                        clients: 6,
-                        entity_clients: 2,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 4,
                       },
                     },
                     {
                       path: 'auth/method/jdRjF',
                       counts: {
-                        clients: 5,
-                        entity_clients: 3,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 2,
                       },
                     },
                     {
                       path: 'auth/method/yyBoC',
                       counts: {
-                        clients: 2,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 1,
                       },
                     },
                     {
                       path: 'auth/method/WLxYp',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/SNM6V',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/vNHtH',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/EqmlO',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
@@ -9252,88 +9252,88 @@ export default function (server) {
                 },
                 {
                   counts: {
-                    clients: 1369,
-                    entity_clients: 829,
-                    non_entity_clients: 540,
+                    clients: 1,
+                    entity_clients: 1,
+                    non_entity_clients: 0,
                   },
                   mounts: [
                     {
                       path: 'auth/method/qcuLl',
                       counts: {
-                        clients: 553,
-                        entity_clients: 300,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 253,
                       },
                     },
                     {
                       path: 'auth/method/KGWiS',
                       counts: {
-                        clients: 89,
-                        entity_clients: 63,
+                        clients: 1,
+                        entity_clients: 1,
                         non_entity_clients: 26,
                       },
                     },
                     {
                       path: 'auth/method/iM8pi',
                       counts: {
-                        clients: 387,
-                        entity_clients: 261,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 126,
                       },
                     },
                     {
                       path: 'auth/method/IeyA4',
                       counts: {
-                        clients: 315,
-                        entity_clients: 262,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 53,
                       },
                     },
                     {
                       path: 'auth/method/KGFfV',
                       counts: {
-                        clients: 20,
-                        entity_clients: 9,
+                        clients: -1,
+                        entity_clients: -1,
                         non_entity_clients: 11,
                       },
                     },
                     {
                       path: 'auth/method/23AQk',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/PqTWe',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/pPSo1',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/HMu5H',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
                     {
                       path: 'auth/method/xpOk3',
                       counts: {
-                        clients: 1,
-                        entity_clients: 1,
+                        clients: 0,
+                        entity_clients: 0,
                         non_entity_clients: 0,
                       },
                     },
