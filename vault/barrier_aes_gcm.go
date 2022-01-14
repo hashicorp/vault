@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -959,10 +960,13 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain []byte) ([]byte, error) {
 	// Allocate the output buffer with room for tern, version byte,
 	// nonce, GCM tag and the plaintext
-	capacity := termSize + 1 + gcm.NonceSize() + gcm.Overhead() + len(plain)
-	if capacity < 0 {
+
+	extra := termSize + 1 + gcm.NonceSize() + gcm.Overhead()
+	if len(plain) > math.MaxInt-extra {
 		return nil, ErrPlaintextTooLarge
 	}
+
+	capacity := len(plain) + extra
 	size := termSize + 1 + gcm.NonceSize()
 	out := make([]byte, size, capacity)
 
