@@ -13,7 +13,7 @@ export default Application.extend({
   },
   // called from components
   queryClientActivity(start_time, end_time) {
-    // do not query without start_time, otherwise will show default of last year and that is not what we want as it's not reflective of billing
+    // do not query without start_time. Otherwise returns last year data, which is not reflective of billing data.
     if (start_time) {
       let url = `${this.buildURL()}/internal/counters/activity`;
       let queryParams = {};

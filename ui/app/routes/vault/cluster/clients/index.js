@@ -61,7 +61,7 @@ export default Route.extend(ClusterRoute, {
     }
   },
 
-  // ARG POC
+  // ARG TODO will need to remove activity and replace with newInitActivity once API is complete
   async model(params) {
     let config = this.store.queryRecord('clients/config', {}).catch((e) => {
       console.debug(e);
@@ -70,13 +70,12 @@ export default Route.extend(ClusterRoute, {
     });
 
     let license = await this.getLicense(); // get default start_time
-    let newInitActivity = await this.getNewInitActivity(license.startTime); // returns client counts using license start time, displays the default data.
-    let activityParams = getActivityParams(params); // ARG TODO will remove once API is complete & it's safe to remove old functionality
-    let activity = this.store.queryRecord('clients/activity', activityParams); // ARG TODO will remove once API is complete & it's safe to remove old functionality
+    let newInitActivity = await this.getNewInitActivity(license.startTime); // returns client counts using license start_time.
+    let activityParams = getActivityParams(params);
+    let activity = this.store.queryRecord('clients/activity', activityParams);
 
     return hash({
       // ARG TODO will remove "hash" once remove "activity," which currently relies on it.
-      // ARG TODO remove hash if not returning promise
       queryStart: params.start, // ARG will remove once API complete
       queryEnd: params.end, // ARG will remove once API complete
       activity,
