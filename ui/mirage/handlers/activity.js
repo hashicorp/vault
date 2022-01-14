@@ -2,6 +2,7 @@ export default function (server) {
   // 1.10 API response
   server.get('/sys/internal/counters/activity', function () {
     return {
+      request_id: '26be5ab9-dcac-9237-ec12-269a8ca647d5',
       data: {
         start_time: '2019-11-01T00:00:00Z',
         end_time: '2020-10-31T23:59:59Z',

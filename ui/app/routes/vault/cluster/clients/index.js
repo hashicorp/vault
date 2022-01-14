@@ -82,7 +82,8 @@ export default Route.extend(ClusterRoute, {
       activity,
       newInitActivity,
       config,
-      startDate: license.startTime,
+      endTime: newInitActivity.endTime,
+      startTime: license.startTime,
     });
   },
 

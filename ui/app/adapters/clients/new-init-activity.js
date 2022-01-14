@@ -1,11 +1,8 @@
 import Application from '../application';
 
 export default Application.extend({
-  pathForType() {
-    return 'internal/counters/activity';
-  },
   queryRecord(store, type, query) {
-    let url = this.urlForQuery(null, type);
+    let url = `${this.buildURL()}/internal/counters/activity`;
     // Query has startTime defined. The API will return the endTime if none is provided.
     return this.ajax(url, 'GET', { data: query }).then((resp) => {
       let response = resp || {};
@@ -13,5 +10,21 @@ export default Application.extend({
       response.id = response.request_id || 'no-data';
       return response;
     });
+  },
+  // called from components
+  queryClientActivity(start_time, end_time) {
+    // do not query without start_time, otherwise will show default of last year and that is not what we want as it's not reflective of billing
+    if (start_time) {
+      let url = `${this.buildURL()}/internal/counters/activity`;
+      let queryParams = {};
+      if (!end_time) {
+        queryParams = { data: { start_time } };
+      } else {
+        queryParams = { data: { start_time, end_time } };
+      }
+      return this.ajax(url, 'GET', queryParams).then((resp) => {
+        return resp;
+      });
+    }
   },
 });

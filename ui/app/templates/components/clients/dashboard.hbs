@@ -32,7 +32,7 @@
         Billing start month
       </h1>
       <div class="is-flex-align-baseline">
-        <p class="is-size-6">{{this.startDateDisplay}}</p>
+        <p class="is-size-6">{{this.startTimeDisplay}}</p>
         <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
           Edit
         </button>
@@ -50,15 +50,15 @@
           to enable tracking again.
         </AlertBanner>
       {{/if}}
-      {{! check for startDate otherwise emptyState}}
-      {{#if @model.startDate}}
+      {{! check for @startTime otherwise emptyState}}
+      {{#if @model.startTime}}
         <div class="calendar-title">Filters</div>
         <Toolbar>
           <ToolbarFilters>
             <CalendarWidget
-              @startDate={{this.startDateDisplay}}
-              @handleEndMonth={{this.handleEndMonth}}
-              @endDate={{@model.newInitActivity.endTime}}
+              @startTimeDisplay={{this.startTimeDisplay}}
+              @handleClientActivityQuery={{this.handleClientActivityQuery}}
+              @endTimeDisplay={{this.endTimeDisplay}}
             />
             {{! ARG TODO more filters for auth and namespace here }}
           </ToolbarFilters>
@@ -106,7 +106,7 @@
         />
       {{/if}}
 
-      {{! Modal for startDate picker }}
+      {{! Modal for startTime picker }}
       <Modal
         @title="Edit start month"
         @onClose={{action (mut this.isEditStartMonthOpen) false}}
@@ -177,7 +177,7 @@
             type="button"
             class="button is-primary"
             onclick={{queue
-              (action "handleCounterQuery" this.startMonth this.startYear)
+              (action "handleClientActivityQuery" this.startMonth this.startYear "startTime")
               (action (mut this.isEditStartMonthOpen) false)
             }}
             disabled={{if (and this.startMonth this.startYear) false true}}
@@ -187,7 +187,7 @@
           <button
             type="button"
             class="button is-secondary"
-            onclick={{queue (action "handleCounterQuery" 0 0) (action (mut this.isEditStartMonthOpen) false)}}
+            onclick={{queue (action "handleClientActivityQuery" 0 0) (action (mut this.isEditStartMonthOpen) false)}}
           >
             Cancel
           </button>
