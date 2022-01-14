@@ -101,7 +101,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 
 	if cfg.UPNDomain != "" {
-		auth.Alias.Metadata["upn_domain_username"] = effectiveUsername
+		auth.Alias.Metadata = map[string]string{
+			"upn_domain_username": effectiveUsername,
+		}
 	}
 
 	cfg.PopulateTokenAuth(auth)
