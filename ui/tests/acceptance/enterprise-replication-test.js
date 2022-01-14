@@ -117,10 +117,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-mount-filter-link]');
 
     assert.equal(currentURL(), `/vault/replication/performance/secondaries/config/show/${secondaryName}`);
-    assert.ok(
-      find('[data-test-mount-config-mode]').textContent.trim().toLowerCase().includes(mode),
-      'show page renders the correct mode'
-    );
+    assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
     assert
       .dom('[data-test-mount-config-paths]')
       .includesText(mountPath, 'show page renders the correct mount path');
