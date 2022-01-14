@@ -44,6 +44,7 @@ export default class HistoryComponent extends Component {
 
   // Construct the namespace model for the bar chart component
   get barChartDataset() {
+    console.log(this.args.model.activity);
     if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
