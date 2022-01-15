@@ -78,8 +78,6 @@ export default ApplicationSerializer.extend({
       monthlyTotalClients: monthlyTotals,
       monthlyNewClients: monthlyNew,
     };
-
-    console.log(transformedPayload);
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 });
