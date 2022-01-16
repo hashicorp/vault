@@ -41,10 +41,12 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agent/winsvc"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
@@ -68,6 +70,9 @@ type AgentCommand struct {
 	logWriter io.Writer
 	logGate   *gatedwriter.Writer
 	logger    log.Logger
+
+	// Telemetry object
+	metricsHelper *metricsutil.MetricsHelper
 
 	cleanupGuard sync.Once
 
@@ -340,6 +345,21 @@ func (c *AgentCommand) Run(args []string) int {
 	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+
+	// telemetry configuration
+	inmemMetrics, _, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
+		Config:      config.Telemetry,
+		Ui:          c.UI,
+		ServiceName: "vault",
+		DisplayName: "Vault",
+		UserAgent:   useragent.String(),
+		ClusterName: config.ClusterName,
+	})
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
+		return 1
+	}
+	c.metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
@@ -703,6 +723,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
 			mux.Handle("/", muxHandler)
 
 			scheme := "https://"
@@ -996,4 +1017,40 @@ func getServiceAccountJWT(tokenFile string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(token)), nil
+}
+
+func (c *AgentCommand) handleMetrics() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			logical.RespondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			logical.RespondError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		format := r.Form.Get("format")
+		if format == "" {
+			format = metricsutil.FormatFromRequest(&logical.Request{
+				Headers: r.Header,
+			})
+		}
+
+		resp := c.metricsHelper.ResponseForFormat(format)
+
+		status := resp.Data[logical.HTTPStatusCode].(int)
+		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
+		switch v := resp.Data[logical.HTTPRawBody].(type) {
+		case string:
+			w.WriteHeader((status))
+			w.Write([]byte(v))
+		case []byte:
+			w.WriteHeader(status)
+			w.Write(v)
+		default:
+			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))
+		}
+	})
 }
