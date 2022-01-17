@@ -933,9 +933,12 @@ func TestTokenStore_HandleRequest_Renew_Revoke_Accessor(t *testing.T) {
 
 	// Revoking the token using the accessor should be idempotent since
 	// auth/token/revoke is
-	_, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+	if len(resp.Warnings) != 1 {
+		t.Fatalf("Was expecting 1 warning, got %d", len(resp.Warnings))
 	}
 
 	time.Sleep(200 * time.Millisecond)

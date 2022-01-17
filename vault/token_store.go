@@ -748,7 +748,6 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 			continue
 		}
 		if aEntry == nil {
-			resp.AddWarning("Found an accessor entry that could not be successfully decoded: invalid accessor")
 			continue
 		}
 
@@ -2205,7 +2204,9 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 	if aEntry == nil {
-		return nil, nil
+		resp := &logical.Response{}
+		resp.AddWarning("No token found with this accessor")
+		return resp, nil
 	}
 
 	te, err := ts.Lookup(ctx, aEntry.TokenID)
