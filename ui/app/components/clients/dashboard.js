@@ -208,6 +208,9 @@ export default class Dashboard extends Component {
 
   @action
   async handleClientActivityQuery(month, year, dateType) {
+    if (dateType === 'cancel') {
+      return;
+    }
     // dateType is either startTime or endTime
     let monthIndex = this.arrayOfMonths.indexOf(month);
     if (dateType === 'startTime') {

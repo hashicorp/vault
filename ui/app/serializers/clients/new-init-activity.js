@@ -1,3 +1,3 @@
 import ApplicationSerializer from '../application';
 
-export default ApplicationSerializer.extend({});
+export default class newInitActivity extends ApplicationSerializer {}
