@@ -368,8 +368,18 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				}
 			}
 
-			// LIST is represented as GET with a `list` query parameter
-			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
+			// LIST is represented as GET with a `list` query parameter.
+			if opType == logical.ListOperation {
+				// Only accepts List (due to the above skipping of ListOperations that also have ReadOperations)
+				op.Parameters = append(op.Parameters, OASParameter{
+					Name:        "list",
+					Description: "Must be set to `true`",
+					Required:    true,
+					In:          "query",
+					Schema:      &OASSchema{Type: "string", Enum: []interface{}{"true"}},
+				})
+			} else if opType == logical.ReadOperation && operations[logical.ListOperation] != nil {
+				// Accepts both Read and List
 				op.Parameters = append(op.Parameters, OASParameter{
 					Name:        "list",
 					Description: "Return a list if `true`",
