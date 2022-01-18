@@ -1,6 +1,8 @@
 import ApplicationSerializer from '../application';
 import { format } from 'date-fns';
 
+// TODO CMB: add before and after example of serializer
+
 export default ApplicationSerializer.extend({
   // abstracting like this may not work as the order does matter in how the charts display
   // whatever is first will be the bottom/left bar, second will be top/right bar
@@ -48,7 +50,7 @@ export default ApplicationSerializer.extend({
     if (isNew) {
       return payload.map((m) => {
         return {
-          month: format(new Date(m.month_year), 'M/yy'),
+          month: format(new Date(m.timestamp), 'M/yy'), // format month as '1/22'
           distinct_entities: m['new_clients']['counts']['entity_clients'],
           non_entity_tokens: m['new_clients']['counts']['non_entity_clients'],
           total: m['new_clients']['counts']['clients'],
@@ -57,7 +59,7 @@ export default ApplicationSerializer.extend({
     } else {
       return payload.map((m) => {
         return {
-          month: format(new Date(m.month_year), 'M/yy'),
+          month: format(new Date(m.timestamp), 'M/yy'),
           distinct_entities: m['counts']['entity_clients'],
           non_entity_tokens: m['counts']['non_entity_clients'],
           total: m['counts']['clients'],
@@ -67,11 +69,14 @@ export default ApplicationSerializer.extend({
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    // conditionals to see if .months, if new_totals exist?
+    // needs to accept both /monthly and /activity payloads
     let byNamespace = this.flattenByNamespace(payload.data.by_namespace);
     let monthlyTotals = this.flattenByMonths(payload.data.months);
-    let monthlyNew = this.flattenByMonths(payload.data.months, true);
-
+    let monthlyNew = this.flattenByMonths(payload.data.months, { isNew: true });
+    // replace & delete old keys on payload
     delete payload.by_namespace;
+    delete payload.months;
     let transformedPayload = {
       ...payload,
       flattenedByNamespace: byNamespace,
