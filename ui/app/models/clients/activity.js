@@ -1,7 +1,5 @@
 import Model, { attr } from '@ember-data/model';
 
-// TODO CMB add model attrs here
-
 export default Model.extend({
   total: attr('object'),
   byNamespace: attr('array'),
