@@ -1655,6 +1655,8 @@ func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts Sym
 		if err != nil {
 			return nil, errutil.InternalError{Err: err.Error()}
 		}
+	} else if len(nonce) != aead.NonceSize() {
+		return nil, errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long but given %d bytes", aead.NonceSize(), len(nonce))}
 	}
 
 	// Encrypt and tag with AEAD
