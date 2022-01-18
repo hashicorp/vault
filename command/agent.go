@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -343,8 +342,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	var namespace string
+	var templateNamespace string
 	if config.AutoAuth != nil {
+		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+			client.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
@@ -371,19 +374,9 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 		}
 
-		// Check if a default namespace has been set
-		mountPath := config.AutoAuth.Method.MountPath
-		if cns := config.AutoAuth.Method.Namespace; cns != "" {
-			namespace = cns
-			// Only set this value if the env var is empty, otherwise we end up with a nested namespace
-			if ens := os.Getenv(api.EnvVaultNamespace); ens == "" {
-				mountPath = path.Join(cns, mountPath)
-			}
-		}
-
 		authConfig := &auth.AuthConfig{
 			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
-			MountPath: mountPath,
+			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
 		switch config.AutoAuth.Method.Type {
@@ -794,7 +787,7 @@ func (c *AgentCommand) Run(args []string) int {
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
 			AgentConfig:   config,
-			Namespace:     namespace,
+			Namespace:     templateNamespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
 
