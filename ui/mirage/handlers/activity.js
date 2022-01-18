@@ -1837,7 +1837,7 @@ export default function (server) {
         ],
         months: [
           {
-            timestamp: 'January_2022',
+            timestamp: '2022-01-01T08:00:00.000Z',
             counts: {
               clients: 3611,
               entity_clients: 671,
@@ -2402,7 +2402,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'February_2022',
+            timestamp: '2022-02-01T08:00:00.000Z',
             counts: {
               clients: 3697,
               entity_clients: 1664,
@@ -2967,7 +2967,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'March_2022',
+            timestamp: '2022-03-01T08:00:00.000Z',
             counts: {
               clients: 3861,
               entity_clients: 1251,
@@ -3532,7 +3532,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'April_2022',
+            timestamp: '2022-04-01T07:00:00.000Z',
             counts: {
               clients: 3870,
               entity_clients: 1399,
@@ -4097,7 +4097,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'May_2022',
+            timestamp: '2022-05-01T07:00:00.000Z',
             counts: {
               clients: 3870,
               entity_clients: 416,
@@ -4662,7 +4662,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'June_2022',
+            timestamp: '2022-06-01T07:00:00.000Z',
             counts: {
               clients: 3935,
               entity_clients: 1852,
@@ -5227,7 +5227,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'July_2022',
+            timestamp: '2022-07-01T07:00:00.000Z',
             counts: {
               clients: 3935,
               entity_clients: 969,
@@ -5792,7 +5792,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'August_2022',
+            timestamp: '2022-08-01T07:00:00.000Z',
             counts: {
               clients: 4058,
               entity_clients: 1170,
@@ -6357,7 +6357,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'September_2022',
+            timestamp: '2022-09-01T07:00:00.000Z',
             counts: {
               clients: 5035,
               entity_clients: 2168,
@@ -7104,7 +7104,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'October_2022',
+            timestamp: '2022-10-01T07:00:00.000Z',
             counts: {
               clients: 5225,
               entity_clients: 859,
@@ -7851,7 +7851,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'November_2022',
+            timestamp: '2022-11-01T07:00:00.000Z',
             counts: {
               clients: 5225,
               entity_clients: 2432,
@@ -8598,7 +8598,7 @@ export default function (server) {
             },
           },
           {
-            timestamp: 'December_2022',
+            timestamp: '2022-12-01T08:00:00.000Z',
             counts: {
               clients: 5261,
               entity_clients: 2152,
