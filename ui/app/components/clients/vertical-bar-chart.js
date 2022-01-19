@@ -116,7 +116,7 @@ export default class VerticalBarChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
       let hoveredMonth = data.month;
-      this.tooltipTotal = `${data.total} total clients`;
+      this.tooltipTotal = `${data.total} ${data.new_clients ? 'total' : 'new'} clients`;
       this.uniqueEntities = `${data.distinct_entities} unique entities`;
       this.nonEntityTokens = `${data.non_entity_tokens} non-entity tokens`;
       // let node = chartSvg
