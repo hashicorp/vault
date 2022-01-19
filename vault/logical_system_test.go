@@ -1949,7 +1949,7 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
+		if !strings.HasPrefix(resp.Data["value"].(string), `{"type":"mounts"`) {
 			t.Fatalf("bad: %v", resp)
 		}
 	})
@@ -1967,10 +1967,10 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		}
 
 		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
-			t.Fatalf("value is a not an array of bytes")
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
-		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), "{\"type\":\"mounts\"") {
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), `{"type":"mounts"`) {
 			t.Fatalf("bad: %v", resp)
 		}
 	})
@@ -2005,7 +2005,7 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		}
 
 		if fmt.Sprintf("%T", resp.Data["value"]) != "string" {
-			t.Fatalf("value is a not a string")
+			t.Fatalf("value is a not a string, it is %T", resp.Data["value"])
 		}
 
 		if !strings.HasPrefix(string(resp.Data["value"].(string)), string(compressutil.CompressionCanaryGzip)) {
@@ -2028,7 +2028,7 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		}
 
 		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
-			t.Fatalf("value is a not an array of bytes")
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
 		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
@@ -2252,7 +2252,7 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 		}
 
 		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
-			t.Fatalf("value is a not an array of bytes")
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
 		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
@@ -2291,7 +2291,7 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 		}
 
 		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
-			t.Fatalf("value is a not an array of bytes")
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
 		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
@@ -2332,10 +2332,10 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 		}
 
 		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
-			t.Fatalf("value is a not an array of bytes")
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
-		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), "{\"type\":\"mounts\"") {
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), `{"type":"mounts"`) {
 			t.Fatalf("bad: %v", resp)
 		}
 	})

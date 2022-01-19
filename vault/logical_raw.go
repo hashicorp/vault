@@ -103,6 +103,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 	}
 
 	var value interface{} = string(valueBytes)
+	// Golang docs (https://pkg.go.dev/encoding/json#Marshal), []byte encodes as a base64-encoded string
 	if encoding == "base64" {
 		value = valueBytes
 	}
@@ -151,7 +152,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if req.Operation == UpdateCapability {
+	if req.Operation == logical.UpdateOperation {
 		// Check if this is an existing value with compression applied, if so, use the same compression (or no compression)
 		entry, err := b.barrier.Get(ctx, path)
 		if err != nil {

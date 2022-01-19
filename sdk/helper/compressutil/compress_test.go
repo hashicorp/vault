@@ -93,7 +93,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		}
 
 		if compressionType != test.compressionConfig.Type {
-			t.Fatalf("bad compressiontType value;\nexpected: %q\nactional: %q", test.compressionConfig.Type, compressionType)
+			t.Fatalf("bad compressionType value;\nexpected: %q\naction: %q", test.compressionConfig.Type, compressionType)
 		}
 	}
 }
