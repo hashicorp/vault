@@ -231,9 +231,9 @@ func DefaultConfig() *Config {
 	return config
 }
 
-// ConfigureTLS takes a set of TLS configurations and applies those to the
-// HTTP client.
-func (c *Config) ConfigureTLS(t *TLSConfig) error {
+// configureTLS is a lock free version of ConfigureTLS that can be used in
+// ReadEnvironment where the lock is already hold
+func (c *Config) configureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
@@ -286,6 +286,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	}
 
 	return nil
+}
+
+// ConfigureTLS takes a set of TLS configurations and applies those to the
+// HTTP client.
+func (c *Config) ConfigureTLS(t *TLSConfig) error {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	return c.configureTLS(t)
 }
 
 // ReadEnvironment reads configuration information from the environment. If
@@ -392,7 +401,7 @@ func (c *Config) ReadEnvironment() error {
 	c.SRVLookup = envSRVLookup
 	c.Limiter = limit
 
-	if err := c.ConfigureTLS(t); err != nil {
+	if err := c.configureTLS(t); err != nil {
 		return err
 	}
 
