@@ -16,7 +16,7 @@ export function extractDataAndFlags(method, data, flags) {
         let flagName = item.replace(/^-/, '');
         if (flagName === 'wrap-ttl') {
           flagName = 'wrapTTL';
-        } else if (method == 'write') {
+        } else if (method === 'write') {
           if (flagName === 'f' || flagName === '-force') {
             flagName = 'force';
           }
