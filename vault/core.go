@@ -1390,6 +1390,9 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if config == nil {
+		return nil, fmt.Errorf("failed to obtain seal/recovery configuration")
+	}
 
 	// Check if we don't have enough keys to unlock, proceed through the rest of
 	// the call only if we have met the threshold
@@ -2045,7 +2048,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 	if err := c.setupManagedKeyRegistry(); err != nil {
 		return err
-	  }
+	}
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
@@ -3041,7 +3044,7 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 
 	// there is only one writer to this map, so skip checking for errors
 	reqData := v.(InFlightReqData)
-	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+	c.logger.Log(logLevel, "completed_request", "client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
 func (c *Core) ReloadLogRequestsLevel() {

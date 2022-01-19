@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix how we report the cluster listener is done, prevents `bind: address already in use` errors.
+```
