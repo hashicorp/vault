@@ -578,6 +578,31 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 	}
 }
 
+// Case13: Incorrect input for nonce when we aren't in convergent encryption should fail the operation
+func TestTransit_BatchEncryptionCase13(t *testing.T) {
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "YmFkbm9uY2U="},
+	}
+
+	batchData := map[string]interface{}{
+		"batch_input": batchInput,
+	}
+	batchReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/my-key",
+		Storage:   s,
+		Data:      batchData,
+	}
+	_, err = b.HandleRequest(context.Background(), batchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // Test that the fast path function decodeBatchRequestItems behave like mapstructure.Decode() to decode []BatchRequestItem.
 func TestTransit_decodeBatchRequestItems(t *testing.T) {
 	tests := []struct {
