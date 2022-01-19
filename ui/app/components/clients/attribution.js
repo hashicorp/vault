@@ -35,16 +35,18 @@ export default class Attribution extends Component {
     return this.args.isDateRange;
   }
 
-  get isAllNamespaces() {
-    return this.args.isAllNamespaces;
+  get totalClientsData() {
+    if (!this.args.selectedNamespace) {
+      return this.args.topTenNamespaces;
+    } else if (this.args.selectedNamespace) {
+      return this.args.topTenNamespaces.find((ns) => ns.label === this.args.selectedNamespace).mounts;
+    } else {
+      return null;
+    }
   }
 
   get clientCountBreakdown() {
     return this.isAllNamespaces ? 'Namespace' : 'Auth method';
-  }
-
-  get mostClients() {
-    return this.args.totalClientsData[0] || this.args.newClientsData[0];
   }
 
   get chartText() {
@@ -73,6 +75,10 @@ export default class Attribution extends Component {
         totalCopy: 'There is a problem gathering data',
       };
     }
+  }
+
+  get topClientCounts() {
+    return this.totalClientsData[0] || this.newClientsData[0];
   }
 
   // TODO CMB update with proper data format when we have

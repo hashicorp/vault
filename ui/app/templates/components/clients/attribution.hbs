@@ -16,7 +16,7 @@
   {{! show single chart if data is from a range, show two charts if from a single month}}
   {{#if (eq @isDateRange true)}}
     <div class="chart-container-wide">
-      <Clients::HorizontalBarChart @dataset={{@totalClientsData}} @chartLegend={{@chartLegend}} />
+      <Clients::HorizontalBarChart @dataset={{this.totalClientsData}} @chartLegend={{@chartLegend}} />
     </div>
 
     <div class="chart-subTitle">
@@ -25,12 +25,12 @@
 
     <div class="data-details-top">
       <h3 class="data-details">Top {{lowercase this.clientCountBreakdown}}</h3>
-      <p class="data-details">{{this.mostClients.label}}</p>
+      <p class="data-details">{{this.topClientCounts.label}}</p>
     </div>
 
     <div class="data-details-bottom">
       <h3 class="data-details">Clients in {{lowercase this.clientCountBreakdown}}</h3>
-      <p class="data-details">{{this.mostClients.total}}</p>
+      <p class="data-details">{{this.topClientCounts.total}}</p>
     </div>
   {{else if (and @newClientsData (not @isDateRange))}}
     <div class="chart-container-left">
@@ -42,7 +42,7 @@
     <div class="chart-container-right">
       <h2 class="chart-title">Total clients</h2>
       <p class="chart-description">{{this.chartText.totalCopy}}</p>
-      <Clients::HorizontalBarChart @dataset={{@totalClientsData}} @chartLegend={{@chartLegend}} />
+      <Clients::HorizontalBarChart @dataset={{this.totalClientsData}} @chartLegend={{@chartLegend}} />
     </div>
   {{else}}
     <EmptyState />
@@ -72,7 +72,8 @@
       and non-entity tokens for the below date range.
     </p>
     <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE RANGE</p>
-    <p class="has-bottom-margin-s">{{@activityDateRange}}</p>
+    w
+    <p class="has-bottom-margin-s">{{@startTimeDisplay}} - {{@endTimeDisplay}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <DownloadCsv @label="Export" @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />
