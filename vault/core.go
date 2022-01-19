@@ -1368,6 +1368,9 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if config == nil {
+		return nil, fmt.Errorf("failed to obtain seal/recovery configuration")
+	}
 
 	// Check if we don't have enough keys to unlock, proceed through the rest of
 	// the call only if we have met the threshold
