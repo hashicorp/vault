@@ -96,12 +96,17 @@ respects the order of suites given in `tls_cipher_suites`.
 See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information.
 
 ## Known Issues
-- Existing Vault installations that use the [Identity Token
+
+### Identity Token Backend Key Rotations
+
+Existing Vault installations that use the [Identity Token
 backend](/api-docs/secret/identity/tokens) and have [named
 keys](/api-docs/secret/identity/tokens#create-a-named-key) generated will
 encounter a panic when any of those existing keys pass their
-`rotation_period`. This issue affects Vault 1.9.0, and is fixed in Vault 1.9.1. The
-workarounds for this issue are to either 1) delete any existing keys before the
-update, or 2) increase the rotation period to allow ample time for updating past
-1.9.0 before a rotation can occur. Workarounds are not necessary if an update to
-directly to 1.9.1 or above is performed.
+`rotation_period`. This issue affects Vault 1.9.0, and is fixed in Vault 1.9.1.
+Users should upgrade directly to 1.9.1 or above in order to avoid this panic.
+
+If a panic is encountered after an upgrade to Vault 1.9.0, the named key will be
+corrupted on storage and become unusable. In this case, the key will need to be
+deleted and re-created. A fix to fully mitigate this panic will be addressed on
+Vault 1.9.3.
