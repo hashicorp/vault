@@ -43,6 +43,10 @@ export default class Attribution extends Component {
     return this.isAllNamespaces ? 'Namespace' : 'Auth method';
   }
 
+  get mostClients() {
+    return this.args.totalClientsData[0] || this.args.newClientsData[0];
+  }
+
   get chartText() {
     let dateText = this.isDateRange ? 'date range' : 'month';
     if (this.isAllNamespaces) {
@@ -87,7 +91,6 @@ export default class Attribution extends Component {
 
     results = fields.join(',') + '\n';
     data.forEach(function (item) {
-      // debugger
       let path = item.label !== '' ? item.label : 'root',
         total = item.total,
         unique = item.distinct_entities,

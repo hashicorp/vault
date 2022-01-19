@@ -25,12 +25,12 @@
 
     <div class="data-details-top">
       <h3 class="data-details">Top {{lowercase this.clientCountBreakdown}}</h3>
-      <p class="data-details">ns/1</p>
+      <p class="data-details">{{this.mostClients.label}}</p>
     </div>
 
     <div class="data-details-bottom">
       <h3 class="data-details">Clients in {{lowercase this.clientCountBreakdown}}</h3>
-      <p class="data-details">1,512</p>
+      <p class="data-details">{{this.mostClients.total}}</p>
     </div>
   {{else if (and @newClientsData (not @isDateRange))}}
     <div class="chart-container-left">
