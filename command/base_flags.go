@@ -247,30 +247,13 @@ func (i *intValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	switch strconv.IntSize {
-	case 8:
-		if v >= math.MinInt8 && v <= math.MaxInt8 {
-			*i.target = int(v)
-			return nil
+	if strconv.IntSize == 32 {
+		if !(v >= math.MinInt32 && v <= math.MaxInt32) {
+			return fmt.Errorf("incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 		}
-	case 16:
-		if v >= math.MinInt16 && v <= math.MaxInt16 {
-			*i.target = int(v)
-			return nil
-		}
-	case 32:
-		if v >= math.MinInt32 && v <= math.MaxInt32 {
-			*i.target = int(v)
-			return nil
-		}
-
-	default:
-		*i.target = int(v)
-		return nil
-
 	}
-
-	return fmt.Errorf("incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int%d", v, strconv.IntSize)
+	*i.target = int(v)
+	return nil
 }
 
 func (i *intValue) Get() interface{} { return int(*i.target) }
@@ -396,29 +379,14 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	switch strconv.IntSize {
-	case 8:
-		if v > 0 && v <= math.MaxUint8 {
-			*i.target = uint(v)
-			return nil
+	if strconv.IntSize == 32 {
+		if !(v > 0 && v <= math.MaxUint32) {
+			return fmt.Errorf("incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 		}
-	case 16:
-		if v > 0 && v <= math.MaxUint16 {
-			*i.target = uint(v)
-			return nil
-		}
-	case 32:
-		if v > 0 && v <= math.MaxUint32 {
-			*i.target = uint(v)
-			return nil
-		}
-	default:
-		*i.target = uint(v)
-		return nil
-
 	}
+	*i.target = uint(v)
+	return nil
 
-	return fmt.Errorf("incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint%d", v, strconv.IntSize)
 }
 
 func (i *uintValue) Get() interface{} { return uint(*i.target) }
