@@ -63,27 +63,9 @@ module.exports = {
       ],
       protocol: 'browser',
     },
-    BS_IE_11: {
-      exe: 'node_modules/.bin/browserstack-launch',
-      args: [
-        '--os',
-        'Windows',
-        '--osv',
-        '8.1',
-        '--b',
-        'ie',
-        '--bv',
-        '11.0',
-        '-t',
-        '1200',
-        '--u',
-        '<url>&legacy=true',
-      ],
-      protocol: 'browser',
-    },
   },
   launch_in_dev: [],
-  launch_in_ci: ['BS_IE_11'],
+  launch_in_ci: ['BS_Safari_Current'],
   proxies: {
     '/v1': {
       target: 'http://localhost:9200',
