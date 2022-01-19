@@ -45,7 +45,7 @@ export default class Dashboard extends Component {
 
   // filtering conditionals for HBS file
   // set initially based on response received from API & update based on filters
-  @tracked isDateRange;
+  @tracked isDateRange = true;
   @tracked isAllNamespaces; // false when filtered down to auth methods (mounts)
 
   get startTimeDisplay() {
@@ -89,121 +89,47 @@ export default class Dashboard extends Component {
     });
   }
 
-  // Construct the namespace model for the bar chart component
-  get barChartDataset() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
+  // top level TOTAL client counts from response for given date range
+  get runningTotals() {
+    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.total) {
       return null;
     }
-    let dataset = this.args.model.activity.byNamespace.slice(0, this.maxNamespaces);
-    return dataset.map((d) => {
-      return {
-        label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
-        // the order here determines which data is the left bar and which is the right
-        distinct_entities: d['counts']['distinct_entities'],
-        non_entity_tokens: d['counts']['non_entity_tokens'],
-        total: d['counts']['clients'],
-      };
-    });
+    return this.args.model.newInitActivity.total;
   }
 
-  // TODO: dataset for line chart
-  get lineChartData() {
-    return [
-      { month: '1/21', clients: 100, new: 100 },
-      { month: '2/21', clients: 300, new: 200 },
-      { month: '3/21', clients: 300, new: 0 },
-      { month: '4/21', clients: 300, new: 0 },
-      { month: '5/21', clients: 300, new: 0 },
-      { month: '6/21', clients: 300, new: 0 },
-      { month: '7/21', clients: 300, new: 0 },
-      { month: '8/21', clients: 350, new: 50 },
-      { month: '9/21', clients: 400, new: 50 },
-      { month: '10/21', clients: 450, new: 50 },
-      { month: '11/21', clients: 500, new: 50 },
-      { month: '12/21', clients: 1000, new: 1000 },
-    ];
+  // TODO just here for testing right now, needs to be moved and set by filter
+  @tracked selectedNamespace = 'namespacelonglonglong4/';
+
+  // for horizontal chart in Attribution component
+  get topTenNamespaces() {
+    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byNamespace) {
+      return null;
+    }
+    return this.args.model.newInitActivity.byNamespace;
   }
 
-  // TODO: dataset for new monthly clients vertical bar chart (manage in serializer?)
+  // for vertical bar chart in MonthlyUsage component
+  get totalMonthlyClients() {
+    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byMonthTotalClients) {
+      return null;
+    }
+    return this.args.model.newInitActivity.byMonthTotalClients;
+  }
+
+  // for vertical bar chart in RunningTotal component
   get newMonthlyClients() {
-    return [
-      { month: 'January', distinct_entities: 1000, non_entity_tokens: 322, total: 1322 },
-      { month: 'February', distinct_entities: 1500, non_entity_tokens: 122, total: 1622 },
-      { month: 'March', distinct_entities: 4300, non_entity_tokens: 700, total: 5000 },
-      { month: 'April', distinct_entities: 1550, non_entity_tokens: 229, total: 1779 },
-      { month: 'May', distinct_entities: 5560, non_entity_tokens: 124, total: 5684 },
-      { month: 'June', distinct_entities: 1570, non_entity_tokens: 142, total: 1712 },
-      { month: 'July', distinct_entities: 300, non_entity_tokens: 112, total: 412 },
-      { month: 'August', distinct_entities: 1610, non_entity_tokens: 130, total: 1740 },
-      { month: 'September', distinct_entities: 1900, non_entity_tokens: 222, total: 2122 },
-      { month: 'October', distinct_entities: 500, non_entity_tokens: 166, total: 666 },
-      { month: 'November', distinct_entities: 480, non_entity_tokens: 132, total: 612 },
-      { month: 'December', distinct_entities: 980, non_entity_tokens: 202, total: 1182 },
-    ];
-  }
-
-  // TODO: dataset for vault usage vertical bar chart (manage in serializer?)
-  get monthlyUsage() {
-    return [
-      { month: 'January', distinct_entities: 1000, non_entity_tokens: 322, total: 1322 },
-      { month: 'February', distinct_entities: 1500, non_entity_tokens: 122, total: 1622 },
-      { month: 'March', distinct_entities: 4300, non_entity_tokens: 700, total: 5000 },
-      { month: 'April', distinct_entities: 1550, non_entity_tokens: 229, total: 1779 },
-      { month: 'May', distinct_entities: 5560, non_entity_tokens: 124, total: 5684 },
-      { month: 'June', distinct_entities: 1570, non_entity_tokens: 142, total: 1712 },
-      { month: 'July', distinct_entities: 300, non_entity_tokens: 112, total: 412 },
-      { month: 'August', distinct_entities: 1610, non_entity_tokens: 130, total: 1740 },
-      { month: 'September', distinct_entities: 1900, non_entity_tokens: 222, total: 2122 },
-      { month: 'October', distinct_entities: 500, non_entity_tokens: 166, total: 666 },
-      { month: 'November', distinct_entities: 480, non_entity_tokens: 132, total: 612 },
-      { month: 'December', distinct_entities: 980, non_entity_tokens: 202, total: 1182 },
-    ];
-  }
-
-  // Create namespaces data for csv format
-  get getCsvData() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
+    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byMonthNewClients) {
       return null;
     }
-    let results = '',
-      namespaces = this.args.model.activity.byNamespace,
-      fields = ['Namespace path', 'Active clients', 'Unique entities', 'Non-entity tokens'];
-
-    results = fields.join(',') + '\n';
-
-    namespaces.forEach(function (item) {
-      let path = item.namespace_path !== '' ? item.namespace_path : 'root',
-        total = item.counts.clients,
-        unique = item.counts.distinct_entities,
-        non_entity = item.counts.non_entity_tokens;
-
-      results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
-    });
-    return results;
+    return this.args.model.newInitActivity.byMonthNewClients;
   }
 
-  // Return csv filename with start and end dates
-  get getCsvFileName() {
-    //  ARG TODO the startTimes and such here need to change
-    let defaultFileName = `clients-by-namespace`,
-      startTime =
-        this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
-      endTime =
-        this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
-    if (startTime && endTime) {
-      defaultFileName += `-${startTime}-${endTime}`;
+  // for line chart in RunningTotal component
+  get newAndTotalMonthlyClients() {
+    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.months) {
+      return null;
     }
-    return defaultFileName;
-  }
-
-  // Get the namespace by matching the path from the namespace list
-  getNamespace(path) {
-    return this.args.model.activity.byNamespace.find((ns) => {
-      if (path === 'root') {
-        return ns.namespace_path === '';
-      }
-      return ns.namespace_path === path;
-    });
+    return this.args.model.newInitActivity.months;
   }
 
   @action
@@ -225,6 +151,7 @@ export default class Dashboard extends Component {
       let response = await this.adapter.queryClientActivity(this.startTime, this.endTime);
       // resets the endTime to what is returned on the response
       this.endTime = response.data.end_time;
+      // TODO CMB set tracked property isDateRange depending on dates from response
       return response;
       // ARG TODO this is the response you need to use to repopulate the chart data
     } catch (e) {
