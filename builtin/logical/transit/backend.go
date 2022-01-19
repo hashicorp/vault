@@ -234,7 +234,11 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("automatically rotating key", "key", key)
 			}
+			if !b.System().CachingDisabled() {
+				p.Lock(true)
+			}
 			err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
+			p.Unlock()
 			if err != nil {
 				errs = multierror.Append(errs, err)
 				continue
