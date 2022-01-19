@@ -1,0 +1,4 @@
+```release-note:improvement
+acl: The ACL templating system now supports referencing a token metadata attribute
+with `{{ token.metadata.<attribute key> }}`.
+```
