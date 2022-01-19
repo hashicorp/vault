@@ -548,18 +548,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	// generate current and next keys if creating a new key or changing algorithms
 	if key.Algorithm != prevAlgorithm {
-		signingKey, err := generateKeys(key.Algorithm)
+		err = key.generateAndSetKey(ctx, i.Logger(), req.Storage)
 		if err != nil {
 			return nil, err
 		}
-
-		key.SigningKey = signingKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
-
-		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
-			return nil, err
-		}
-		i.Logger().Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 
 		err = key.generateAndSetNextKey(ctx, i.Logger(), req.Storage)
 		if err != nil {
@@ -1010,6 +1002,24 @@ func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, temp
 		}
 	}
 
+	return nil
+}
+
+// generateAndSetKey will generate new signing and public key pairs and set
+// them as the SigningKey.
+func (k *namedKey) generateAndSetKey(ctx context.Context, logger hclog.Logger, s logical.Storage) error {
+	signingKey, err := generateKeys(k.Algorithm)
+	if err != nil {
+		return err
+	}
+
+	k.SigningKey = signingKey
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
+
+	if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
+		return err
+	}
+	logger.Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 	return nil
 }
 
@@ -1481,8 +1491,25 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 // namedKey.rotate(overrides) performs a key rotation on a namedKey.
 // verification_ttl can be overridden with an overrideVerificationTTL value >= 0
 func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.Storage, overrideVerificationTTL time.Duration) error {
-	verificationTTL := k.VerificationTTL
+	if k.SigningKey == nil {
+		logger.Debug("nil signing key detected on rotation")
+		err := k.generateAndSetKey(ctx, logger, s)
+		if err != nil {
+			return err
+		}
+	}
 
+	if k.NextSigningKey == nil {
+		logger.Debug("nil next signing key detected on rotation")
+		// keys will not have a NextSigningKey if they were generated before
+		// vault 1.9
+		err := k.generateAndSetNextKey(ctx, logger, s)
+		if err != nil {
+			return err
+		}
+	}
+
+	verificationTTL := k.VerificationTTL
 	if overrideVerificationTTL >= 0 {
 		verificationTTL = overrideVerificationTTL
 	}
@@ -1496,14 +1523,6 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 		}
 	}
 
-	if k.NextSigningKey == nil {
-		// keys will not have a NextSigningKey if they were generated before
-		// vault 1.9
-		err := k.generateAndSetNextKey(ctx, logger, s)
-		if err != nil {
-			return err
-		}
-	}
 	// do the rotation
 	k.SigningKey = k.NextSigningKey
 	k.NextRotation = now.Add(k.RotationPeriod)
