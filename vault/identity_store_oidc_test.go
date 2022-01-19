@@ -937,12 +937,32 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				numPublicKeys int
 			}{
 				{1, 2, 2},
-				{2, 3, 3},
-				{3, 3, 3},
-				{4, 3, 3},
-				{5, 3, 3},
-				{6, 3, 3},
-				{7, 3, 3},
+				{2, 2, 2},
+				{3, 2, 2},
+				{4, 2, 2},
+				{5, 2, 2},
+				{6, 2, 2},
+				{7, 2, 2},
+			},
+		},
+		{
+			// don't set SigningKey to ensure its non-existence can be handled
+			&namedKey{
+				name:            "test-key-nil-signing-key",
+				Algorithm:       "RS256",
+				VerificationTTL: 1 * cyclePeriod,
+				RotationPeriod:  1 * cyclePeriod,
+				KeyRing:         append([]*expireableKey{}, &expireableKey{KeyID: id}),
+				SigningKey:      nil,
+				NextSigningKey:  jwk,
+				NextRotation:    time.Now(),
+			},
+			[]struct {
+				cycle         int
+				numKeys       int
+				numPublicKeys int
+			}{
+				{1, 2, 2},
 			},
 		},
 	}
@@ -985,14 +1005,32 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		}
 
 		// measure collected samples
-		for i := range testSet.testCases {
+		for i, tc := range testSet.testCases {
 			namedKeySamples[i].DecodeJSON(&testSet.namedKey)
-			if len(testSet.namedKey.KeyRing) != testSet.testCases[i].numKeys {
-				t.Fatalf("At cycle: %d expected namedKey's KeyRing to be of length %d but was: %d", testSet.testCases[i].cycle, testSet.testCases[i].numKeys, len(testSet.namedKey.KeyRing))
+			actualKeyRingLen := len(testSet.namedKey.KeyRing)
+			if actualKeyRingLen < tc.numKeys {
+				t.Fatalf(
+					"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
+					testSet.namedKey.name,
+					tc.cycle,
+					tc.numKeys,
+					actualKeyRingLen,
+				)
 			}
-			if len(publicKeysSamples[i]) != testSet.testCases[i].numPublicKeys {
-				t.Fatalf("At cycle: %d expected public keys to be of length %d but was: %d", testSet.testCases[i].cycle, testSet.testCases[i].numPublicKeys, len(publicKeysSamples[i]))
+			actualPubKeysLen := len(publicKeysSamples[i])
+			if actualPubKeysLen < tc.numPublicKeys {
+				t.Fatalf(
+					"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
+					testSet.namedKey.name,
+					tc.cycle,
+					tc.numPublicKeys,
+					actualPubKeysLen,
+				)
 			}
+		}
+
+		if err := storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name); err != nil {
+			t.Fatalf("deleting from in mem storage failed")
 		}
 	}
 }
