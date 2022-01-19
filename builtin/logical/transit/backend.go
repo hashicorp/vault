@@ -101,6 +101,7 @@ type backend struct {
 	configMutex          sync.RWMutex
 	cacheSizeChanged     bool
 	checkAutoRotateAfter time.Time
+	autoRotateOnce       sync.Once
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
@@ -172,12 +173,20 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 // periodicFunc is a central collection of functions that run on an interval.
 // Anything that should be called regularly can be placed within this method.
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
-	err := b.autoRotateKeys(ctx, req)
-	if err != nil {
-		return err
+	// These operations ensure the auto-rotate only happens once simultaneously. It's an unlikely edge
+	// given the time scale, but a safeguard nonetheless.
+	var err error
+	didAutoRotate := false
+	autoRotateOnceFn := func() {
+		err = b.autoRotateKeys(ctx, req)
+		didAutoRotate = true
+	}
+	b.autoRotateOnce.Do(autoRotateOnceFn)
+	if didAutoRotate {
+		b.autoRotateOnce = sync.Once{}
 	}
 
-	return nil
+	return err
 }
 
 // autoRotateKeys retrieves all transit keys and rotates those which have an
