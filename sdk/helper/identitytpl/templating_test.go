@@ -34,6 +34,7 @@ func TestPopulate_Basic(t *testing.T) {
 		groupName           string
 		groupMetadata       map[string]string
 		groupMemberships    []string
+		tokenMetadata       map[string]string
 		now                 time.Time
 	}{
 		// time.* tests. Keep tests with time.Now() at the front to avoid false
@@ -377,6 +378,25 @@ func TestPopulate_Basic(t *testing.T) {
 			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
 			output:              `{}`,
 		},
+		{
+			name:          "token metadata",
+			input:         "{{token.metadata.hello}}",
+			output:        "world",
+			tokenMetadata: map[string]string{"hello": "world"},
+		},
+		{
+			name:          "token missing metadata",
+			input:         "{{token.metadata.foo}}",
+			tokenMetadata: map[string]string{"hello": "world"},
+			err:           errors.New("no value could be found for one of the template directives"),
+		},
+		{
+			name:          "token wrong mode",
+			input:         "{{token.metadata.foo}}",
+			output:        "",
+			tokenMetadata: nil,
+			err:           errors.New("no value could be found for one of the template directives"),
+		},
 	}
 
 	for _, test := range tests {
@@ -418,12 +438,20 @@ func TestPopulate_Basic(t *testing.T) {
 			}
 		}
 
+		var tokenEntry *logical.TokenEntry
+		if test.tokenMetadata != nil {
+			tokenEntry = &logical.TokenEntry{
+				Meta: test.tokenMetadata,
+			}
+		}
+
 		subst, out, err := PopulateString(PopulateStringInput{
 			Mode:              test.mode,
 			ValidityCheckOnly: test.validityCheckOnly,
 			String:            test.input,
 			Entity:            entity,
 			Groups:            groups,
+			TokenEntry:        tokenEntry,
 			NamespaceID:       "root",
 			Now:               test.now,
 		})

@@ -29,6 +29,7 @@ type PopulateStringInput struct {
 	ValidityCheckOnly bool
 	Entity            *logical.Entity
 	Groups            []*logical.Group
+	TokenEntry        *logical.TokenEntry
 	NamespaceID       string
 	Mode              int       // processing mode, ACLTemplate or JSONTemplating
 	Now               time.Time // optional, defaults to current time
@@ -345,6 +346,15 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		return strconv.FormatInt(result.Unix(), 10), nil
 	}
 
+	performTokenTemplating := func(trimmed string, te *logical.TokenEntry) (string, error) {
+		if strings.HasPrefix(trimmed, "metadata.") {
+			split := strings.SplitN(trimmed, ".", 2)
+			return p.templateHandler(te.Meta, split[1])
+		}
+
+		return "", ErrTemplateValueNotFound
+	}
+
 	switch {
 	case strings.HasPrefix(input, "identity.entity."):
 		if p.Entity == nil {
@@ -360,6 +370,9 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 
 	case strings.HasPrefix(input, "time."):
 		return performTimeTemplating(strings.TrimPrefix(input, "time."))
+
+	case strings.HasPrefix(input, "token.") && p.TokenEntry != nil:
+		return performTokenTemplating(strings.TrimPrefix(input, "token."), p.TokenEntry)
 	}
 
 	return "", ErrTemplateValueNotFound
