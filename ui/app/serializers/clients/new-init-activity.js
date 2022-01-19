@@ -68,21 +68,30 @@ export default ApplicationSerializer.extend({
     }
   },
 
+  formatTimestamp(payload) {
+    return payload.map((m) => {
+      let month = format(new Date(m.timestamp), 'M/yy');
+      return {
+        month,
+        ...m,
+      };
+    });
+  },
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     // conditionals to see if .months, if new_totals exist?
     // needs to accept both /monthly and /activity payloads
-    let byNamespace = this.flattenByNamespace(payload.data.by_namespace);
-    let monthlyTotals = this.flattenByMonths(payload.data.months);
-    let monthlyNew = this.flattenByMonths(payload.data.months, { isNew: true });
     // replace & delete old keys on payload
-    delete payload.by_namespace;
-    delete payload.months;
     let transformedPayload = {
       ...payload,
-      flattenedByNamespace: byNamespace,
-      monthlyTotalClients: monthlyTotals,
-      monthlyNewClients: monthlyNew,
+      // TODO CMB should these be nested under "data"?
+      months: this.formatTimestamp(payload.data.months),
+      by_namespace: this.flattenByNamespace(payload.data.by_namespace),
+      by_month_total_clients: this.flattenByMonths(payload.data.months),
+      by_month_new_clients: this.flattenByMonths(payload.data.months, { isNew: true }),
     };
+    delete payload.data.by_namespace;
+    delete payload.data.months;
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 });

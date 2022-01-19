@@ -39,11 +39,11 @@ export default class LineChart extends Component {
 
     // DEFINE AXES SCALES
     let yScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))])
+      .domain([0, max(dataset.map((d) => d.counts.clients))])
       .range([0, 100]);
 
     let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.counts.clients))])
       .range([SVG_DIMENSIONS.height, 0]);
 
     let xScale = scalePoint() // use scaleTime()?
@@ -68,7 +68,7 @@ export default class LineChart extends Component {
     // PATH BETWEEN PLOT POINTS
     let lineGenerator = line()
       .x((d) => xScale(d.month))
-      .y((d) => yAxisScale(d.clients));
+      .y((d) => yAxisScale(d.counts.clients));
 
     chartSvg
       .append('g')
@@ -86,7 +86,7 @@ export default class LineChart extends Component {
       .enter()
       .append('circle')
       .attr('class', 'data-plot')
-      .attr('cy', (d) => `${100 - yScale(d.clients)}%`)
+      .attr('cy', (d) => `${100 - yScale(d.counts.clients)}%`)
       .attr('cx', (d) => xScale(d.month))
       .attr('r', 3.5)
       .attr('fill', LIGHT_AND_DARK_BLUE[0])
@@ -103,7 +103,7 @@ export default class LineChart extends Component {
       .attr('class', 'hover-circle')
       .style('cursor', 'pointer')
       .style('opacity', '0')
-      .attr('cy', (d) => `${100 - yScale(d.clients)}%`)
+      .attr('cy', (d) => `${100 - yScale(d.counts.clients)}%`)
       .attr('cx', (d) => xScale(d.month))
       .attr('r', 10);
 
@@ -112,8 +112,8 @@ export default class LineChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
       this.tooltipMonth = data.month;
-      this.tooltipTotal = `${data.clients} total clients`;
-      this.tooltipNew = `${data.new} new clients`;
+      this.tooltipTotal = `${data.counts.clients} total clients`;
+      this.tooltipNew = `${data.new_clients.counts.clients} new clients`;
       let node = hoverCircles.filter((plot) => plot.month === data.month).node();
       this.tooltipTarget = node;
     });
