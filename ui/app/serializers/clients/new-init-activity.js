@@ -27,7 +27,6 @@ export default ApplicationSerializer.extend({
     let topTen = payload.slice(0, 10);
     return topTen.map((ns) => {
       let namespaceMounts = ns.mounts.map((m) => {
-        // debugger
         return {
           label: m['path'],
           distinct_entities: m['counts']['entity_clients'],
@@ -63,6 +62,7 @@ export default ApplicationSerializer.extend({
           distinct_entities: m['counts']['entity_clients'],
           non_entity_tokens: m['counts']['non_entity_clients'],
           total: m['counts']['clients'],
+          new_clients: m['new_clients']['counts']['clients'],
         };
       });
     }
