@@ -3,9 +3,8 @@ import { mean } from 'd3-array';
 
 /**
  * @module MonthlyUsage
- * MonthlyUsage components display the top 10 total client counts for namespaces or auth methods (mounts) during a billing period.
- * If view is filtered for a single month, two graphs display and show a breakdown of new and total client counts by namespace or auth method, respectively 
- *
+ * MonthlyUsage components show how many total clients use Vault each month. Displaying the average totals to the left of a stacked, vertical bar chart.
+ * 
  * @example
  * ```js
  *  <Clients::MonthlyUsage
