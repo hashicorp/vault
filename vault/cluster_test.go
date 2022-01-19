@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -93,7 +91,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	manualStepDownSleepPeriod = 5 * time.Second
 
 	cluster := NewTestCluster(t, nil, &TestClusterOptions{
-		NumCores: 1,
+		KeepStandbysSealed: true,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -157,11 +155,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	checkListenersFunc(true)
 
 	// After this period it should be active again
-	if err := TestWaitActiveWithError(cores[0].Core); err != nil {
-		buf := make([]byte, 32*1024*1024)
-		n := runtime.Stack(buf[:], true)
-		fmt.Println(string(buf[:n]))
-	}
+	TestWaitActive(t, cores[0].Core)
 	cores[0].getClusterListener().AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
 	checkListenersFunc(false)
 
