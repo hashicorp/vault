@@ -22,7 +22,7 @@
     <h3 class="data-details">Average total clients per month</h3>
     <p class="data-details">
       {{#if this.averageTotalClients}}
-        {{this.averageTotalClients}}
+        {{format-number this.averageTotalClients}}
       {{else}}
         <span class="has-text-danger is-size-8">
           <Icon @name="x-square-fill" />Average cannot be calculated
@@ -35,7 +35,7 @@
     <h3 class="data-details">Average new clients per month</h3>
     <p class="data-details">
       {{#if this.averageNewClients}}
-        {{this.averageNewClients}}
+        {{format-number this.averageNewClients}}
       {{else}}
         <span class="has-text-danger is-size-8">
           <Icon @name="x-square-fill" />Average cannot be calculated
