@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -12,6 +11,12 @@ import (
 	"time"
 
 	"github.com/posener/complete"
+)
+
+const (
+	MaxUint = ^uint(0)
+	MaxInt  = int(MaxUint >> 1)
+	MinInt  = -MaxInt - 1
 )
 
 // FlagExample is an interface which declares an example value.
@@ -247,13 +252,11 @@ func (i *intValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	if strconv.IntSize == 32 {
-		if !(v >= math.MinInt32 && v <= math.MaxInt32) {
-			return fmt.Errorf("incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
-		}
+	if v >= int64(MinInt) && v <= int64(MaxInt) {
+		*i.target = int(v)
+		return nil
 	}
-	*i.target = int(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
 func (i *intValue) Get() interface{} { return int(*i.target) }
@@ -379,13 +382,11 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	if strconv.IntSize == 32 {
-		if !(v > 0 && v <= math.MaxUint32) {
-			return fmt.Errorf("incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
-		}
+	if v > 0 && v <= uint64(MaxUint) {
+		*i.target = uint(v)
+		return nil
 	}
-	*i.target = uint(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 
 }
 
