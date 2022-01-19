@@ -44,7 +44,7 @@ $ curl \
 
 ```json
 {
-  "value": "{'foo':'bar'}",
+  "value": "{'foo':'bar'}"
 }
 ```
 
@@ -67,9 +67,9 @@ mount system.
 
 - `compressed` `(bool: false)` - Update using the compressed form of `value`. Defaults to false.
 
-- `compression_type` `(string: "")` - Specifies the type of compression if `compressed` is true.
-  Supported values are `gzip`, `lzw`, `lz4`, `snappy`, or `""`. If empty or omitted, uses the same compression type
-  if the value already exists and is compressed.
+- `compression_type` `(string: "")` - Create/update using the compressed form of `value`. Supported `compression_type`
+  values are `gzip`, `lzw`, `lz4`, `snappy`, or `""`. `""` means no compression is used. If omitted and key already exists,
+  update uses the same compression (or no compression) as the existing value.
 
 - `encoding` `(string: "")` - Specifies the encoding of `value`. Defaults to no encoding.
   Use "base64" if `value` is encoded in base64.

@@ -118,8 +118,11 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 // handleRawWrite is used to write directly to the barrier
 func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
-	compressed := data.Get("compressed").(bool)
-	compressionType := data.Get("compression_type").(string)
+	compressionType := ""
+	c, compressionTypeOk := data.GetOk("compression_type")
+	if compressionTypeOk {
+		compressionType = c.(string)
+	}
 
 	encoding := data.Get("encoding").(string)
 	if encoding != "" && encoding != "base64" {
@@ -148,7 +151,33 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if compressed {
+	if req.Operation == UpdateCapability {
+		// Check if this is an existing value with compression applied, if so, use the same compression (or no compression)
+		entry, err := b.barrier.Get(ctx, path)
+		if err != nil {
+			return handleErrorNoReadOnlyForward(err)
+		}
+		if entry == nil {
+			err := fmt.Sprintf("cannot figure out compression type because entry does not exist")
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+
+		// For cases where DecompressWithCanary errored, treat entry as non-compressed data.
+		_, existingCompressionType, _, _ := compressutil.DecompressWithCanary(entry.Value)
+
+		// Ensure compression_type matches existing entries' compression
+		// except allow writing non-compressed data over compressed data
+		if existingCompressionType != compressionType && compressionType != "" {
+			err := fmt.Sprintf("the entry uses a different compression scheme then compression_type")
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+
+		if !compressionTypeOk {
+			compressionType = existingCompressionType
+		}
+	}
+
+	if compressionType != "" {
 		var config *compressutil.CompressionConfig
 		switch compressionType {
 		case compressutil.CompressionTypeLZ4:
@@ -172,25 +201,6 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 				Type: compressutil.CompressionTypeSnappy,
 			}
 			break
-		case "":
-			// Check if it is an existing value with compression applied, if so, use the same compression
-			entry, err := b.barrier.Get(ctx, path)
-			if err != nil {
-				return handleErrorNoReadOnlyForward(err)
-			}
-			if entry == nil {
-				err := fmt.Sprintf("cannot figure out compression type because entry does not exist")
-				return logical.ErrorResponse(err), logical.ErrInvalidRequest
-			}
-			_, compressionType, _, _ := compressutil.DecompressWithCanary(entry.Value)
-			if compressionType == "" {
-				err := fmt.Sprintf("cannot figure out compression type")
-				return logical.ErrorResponse(err), logical.ErrInvalidRequest
-			}
-			config = &compressutil.CompressionConfig{
-				Type:                 compressionType,
-				GzipCompressionLevel: gzip.BestCompression,
-			}
 		default:
 			err := fmt.Sprintf("invalid compression type '%s'", compressionType)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
@@ -268,6 +278,16 @@ func (b *RawBackend) handleRawList(ctx context.Context, req *logical.Request, da
 	return logical.ListResponse(keys), nil
 }
 
+// existenceCheck checks if entry exists, used in handleRawWrite for update or create operations
+func (b *RawBackend) existenceCheck(ctx context.Context, request *logical.Request, data *framework.FieldData) (bool, error) {
+	path := data.Get("path").(string)
+	entry, err := b.barrier.Get(ctx, path)
+	if err != nil {
+		return false, err
+	}
+	return entry != nil, nil
+}
+
 func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -300,6 +320,10 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 					Callback: r.handleRawWrite,
 					Summary:  "Update the value of the key at the given path.",
 				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: r.handleRawWrite,
+					Summary:  "Create a key with value at the given path.",
+				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: r.handleRawDelete,
 					Summary:  "Delete the key with given path.",
@@ -310,6 +334,7 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				},
 			},
 
+			ExistenceCheck:  r.existenceCheck,
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		},
