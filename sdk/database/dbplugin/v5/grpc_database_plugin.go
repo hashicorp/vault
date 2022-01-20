@@ -14,15 +14,19 @@ import (
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var HandshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  5,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
 const multiplexingCtxKey string = "multiplex_id"
 
+// Factory is the factory function to create a dbplugin Database.
+type Factory func() (Database, error)
+
 type GRPCDatabasePlugin struct {
-	Impl Database
+	FactoryFunc         Factory
+	Impl                Database
+	multiplexingSupport bool
 
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
@@ -34,7 +38,9 @@ var (
 )
 
 func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
-	proto.RegisterDatabaseServer(s, gRPCServer{impl: d.Impl})
+	server := gRPCServer{factoryFunc: d.FactoryFunc, instances: make(map[string]Database)}
+
+	proto.RegisterDatabaseServer(s, server)
 	return nil
 }
 

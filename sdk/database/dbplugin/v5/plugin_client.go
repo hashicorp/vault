@@ -18,10 +18,12 @@ type DatabasePluginClient struct {
 }
 
 // pluginSets is the map of plugins we can dispense.
-// TODO(JM): add multiplexingSupport
 var PluginSets = map[int]plugin.PluginSet{
 	5: {
-		"database": new(GRPCDatabasePlugin),
+		"database": &GRPCDatabasePlugin{multiplexingSupport: false},
+	},
+	6: {
+		"database": &GRPCDatabasePlugin{multiplexingSupport: true},
 	},
 }
 

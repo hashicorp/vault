@@ -59,6 +59,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 	if err != nil {
 		return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
 	}
+	logger.Debug("got database plugin instance", "type", typeStr)
 
 	// Wrap with metrics middleware
 	db = &databaseMetricsMiddleware{

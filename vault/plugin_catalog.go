@@ -54,7 +54,6 @@ type MultiplexedClient struct {
 
 	// clientConn represents a virtual connection to a conceptual endpoint, to
 	// perform RPCs
-	// TODO(JM): Is this only needed to inject the ID into the context?
 	clientConn *grpc.ClientConn
 
 	// client handles the lifecycle of a plugin process
@@ -62,11 +61,6 @@ type MultiplexedClient struct {
 
 	// connections holds the database connections by ID.
 	connections map[string]plugin.ClientProtocol
-}
-
-// TODO(JM): should dbplugin.GRPCDatabasePlugin implement this?
-type Multiplexer interface {
-	MultiplexingSupport() bool
 }
 
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
@@ -139,7 +133,6 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 // process and an ID for a newly created entry in the MultiplexedClients'
 // connections map.
 func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
-	c.logger.Debug("begin PluginCatalog.getPluginClient")
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, "", err
@@ -148,7 +141,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	mpc := c.getMultiplexedClient(pluginRunner.Name)
 
 	if mpc.client == nil {
-		// create a new plugin process
+		c.logger.Debug("spawning a new plugin process")
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.Runner(sys),
 			pluginutil.PluginSets(v5.PluginSets),
@@ -174,7 +167,6 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	// set the ClientProtocol connection for the given ID
 	mpc.connections[id] = rpcClient
 
-	c.logger.Debug("end PluginCatalog.getPluginClient")
 	return rpcClient, id, nil
 }
 

@@ -10,10 +10,6 @@ import (
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
-	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
-	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
-	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
-	dbSnowflake "github.com/hashicorp/vault-plugin-database-snowflake"
 	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
 	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
@@ -45,14 +41,8 @@ import (
 	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
 	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
-	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
-	dbHana "github.com/hashicorp/vault/plugins/database/hana"
-	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
-	dbMongo "github.com/hashicorp/vault/plugins/database/mongodb"
-	dbMssql "github.com/hashicorp/vault/plugins/database/mssql"
-	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
-	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -62,10 +52,6 @@ import (
 var Registry = newRegistry()
 
 var addExternalPlugins = addExtPluginsImpl
-
-// BuiltinFactory is the func signature that should be returned by
-// the plugin's New() func.
-type BuiltinFactory func() (interface{}, error)
 
 func newRegistry() *registry {
 	reg := &registry{
@@ -91,25 +77,25 @@ func newRegistry() *registry {
 			"radius":     credRadius.Factory,
 			"userpass":   credUserpass.Factory,
 		},
-		databasePlugins: map[string]BuiltinFactory{
+		databasePlugins: map[string]dbplugin.Factory{
 			// These four plugins all use the same mysql implementation but with
 			// different username settings passed by the constructor.
-			"mysql-database-plugin":        dbMysql.New(dbMysql.DefaultUserNameTemplate),
-			"mysql-aurora-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
-			"mysql-rds-database-plugin":    dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
-			"mysql-legacy-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			// "mysql-database-plugin":        dbMysql.New(dbMysql.DefaultUserNameTemplate),
+			// "mysql-aurora-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			// "mysql-rds-database-plugin":    dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			// "mysql-legacy-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
 
-			"cassandra-database-plugin":     dbCass.New,
-			"couchbase-database-plugin":     dbCouchbase.New,
-			"elasticsearch-database-plugin": dbElastic.New,
-			"hana-database-plugin":          dbHana.New,
-			"influxdb-database-plugin":      dbInflux.New,
-			"mongodb-database-plugin":       dbMongo.New,
-			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
-			"mssql-database-plugin":         dbMssql.New,
-			"postgresql-database-plugin":    dbPostgres.New,
-			"redshift-database-plugin":      dbRedshift.New,
-			"snowflake-database-plugin":     dbSnowflake.New,
+			// "cassandra-database-plugin":     dbCass.New,
+			// "couchbase-database-plugin":     dbCouchbase.New,
+			// "elasticsearch-database-plugin": dbElastic.New,
+			// "hana-database-plugin":          dbHana.New,
+			// "influxdb-database-plugin":      dbInflux.New,
+			// "mongodb-database-plugin":       dbMongo.New,
+			// "mongodbatlas-database-plugin":  dbMongoAtlas.New,
+			// "mssql-database-plugin":         dbMssql.New,
+			"postgresql-database-plugin": dbPostgres.New,
+			// "redshift-database-plugin":      dbRedshift.New,
+			// "snowflake-database-plugin":     dbSnowflake.New,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":           logicalAd.Factory,
@@ -146,12 +132,12 @@ func addExtPluginsImpl(r *registry) {}
 
 type registry struct {
 	credentialBackends map[string]logical.Factory
-	databasePlugins    map[string]BuiltinFactory
+	databasePlugins    map[string]dbplugin.Factory
 	logicalBackends    map[string]logical.Factory
 }
 
-// Get returns the BuiltinFactory func for a particular backend plugin
-// from the plugins map.
+// Get returns the Factory func for a particular backend plugin from the
+// plugins map.
 func (r *registry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
 	switch pluginType {
 	case consts.PluginTypeCredential:
@@ -162,7 +148,7 @@ func (r *registry) Get(name string, pluginType consts.PluginType) (func() (inter
 		return toFunc(f), ok
 	case consts.PluginTypeDatabase:
 		f, ok := r.databasePlugins[name]
-		return f, ok
+		return toFunc(f), ok
 	default:
 		return nil, false
 	}

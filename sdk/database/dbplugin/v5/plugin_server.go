@@ -38,3 +38,32 @@ func ServeConfig(db Database) *plugin.ServeConfig {
 
 	return conf
 }
+
+func ServeMultiplex(factory func() (Database, error)) {
+	plugin.Serve(ServeConfigMultiplex(factory))
+}
+
+func ServeConfigMultiplex(factory func() (Database, error)) *plugin.ServeConfig {
+	err := pluginutil.OptionallyEnableMlock()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	// pluginSets is the map of plugins we can dispense.
+	pluginSets := map[int]plugin.PluginSet{
+		6: {
+			"database": &GRPCDatabasePlugin{
+				FactoryFunc: factory,
+			},
+		},
+	}
+
+	conf := &plugin.ServeConfig{
+		HandshakeConfig:  HandshakeConfig,
+		VersionedPlugins: pluginSets,
+		GRPCServer:       plugin.DefaultGRPCServer,
+	}
+
+	return conf
+}
