@@ -5,7 +5,7 @@ on:
     # Sequence of patterns matched against refs/heads
     branches:    
       # Push events on main branch
-      - main
+      - test-tags
 
 env:
   PKG_NAME: "vault"
@@ -208,6 +208,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
+          GO_TAGS: "${{ env.GO_TAGS }} netcgo"
         run: |
           mkdir dist out
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
