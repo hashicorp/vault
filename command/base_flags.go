@@ -10,13 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/posener/complete"
-)
-
-const (
-	MaxUint = ^uint(0)
-	MaxInt  = int(MaxUint >> 1)
-	MinInt  = -MaxInt - 1
 )
 
 // FlagExample is an interface which declares an example value.
@@ -252,7 +247,7 @@ func (i *intValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	if v >= int64(MinInt) && v <= int64(MaxInt) {
+	if v >= int64(consts.MinInt) && v <= int64(consts.MaxInt) {
 		*i.target = int(v)
 		return nil
 	}
@@ -382,7 +377,7 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	if v >= 0 && v <= uint64(MaxUint) {
+	if v >= 0 && v <= uint64(consts.MaxUint) {
 		*i.target = uint(v)
 		return nil
 	}
