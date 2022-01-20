@@ -118,6 +118,18 @@ func datasetAsPolicy(ds *Dataset) *Policy {
 	for _, accessBinding := range ds.Access {
 		var iamMember string
 
+		// Role mapping must be applied for datasets in order to properly
+		// detect when to change bindings (via RemoveBindings()) after a
+		// modification or deletion occurs. This is due to BigQuery
+		// access roles accepting both legacy (e.g., OWNER) and current
+		// (e.g., roles/bigquery.dataOwner) role references. The API will
+		// only return the legacy format, so this mapping allows us to properly
+		// diff the current and desired roles to set the access policy.
+		//
+		// See the access[].role description in the following document for details
+		// https://cloud.google.com/bigquery/docs/reference/rest/v2/datasets#Dataset
+		role := mapLegacyRoles(accessBinding.Role)
+
 		//NOTE: Can either have GroupByEmail or UserByEmail but not both
 		if accessBinding.GroupByEmail != "" {
 			iamMember = fmt.Sprintf("group:%s", accessBinding.GroupByEmail)
@@ -126,11 +138,11 @@ func datasetAsPolicy(ds *Dataset) *Policy {
 		} else {
 			iamMember = fmt.Sprintf("user:%s", accessBinding.UserByEmail)
 		}
-		if binding, ok := bindingMap[accessBinding.Role]; ok {
+		if binding, ok := bindingMap[role]; ok {
 			binding.Members = append(binding.Members, iamMember)
 		} else {
-			bindingMap[accessBinding.Role] = &Binding{
-				Role:    accessBinding.Role,
+			bindingMap[role] = &Binding{
+				Role:    role,
 				Members: []string{iamMember},
 			}
 		}
@@ -139,4 +151,28 @@ func datasetAsPolicy(ds *Dataset) *Policy {
 		policy.Bindings = append(policy.Bindings, v)
 	}
 	return policy
+}
+
+// mapLegacyRoles returns a current role name given a legacy role name.
+//
+// The following role mappings will be applied:
+// - OWNER -> roles/bigquery.dataOwner
+// - WRITER -> roles/bigquery.dataEditor
+// - READER -> roles/bigquery.dataViewer
+//
+// See the access[].role description in the following document for details
+// https://cloud.google.com/bigquery/docs/reference/rest/v2/datasets#Dataset
+//
+// Returns the given role if no mapping applies.
+func mapLegacyRoles(role string) string {
+	switch role {
+	case "OWNER":
+		return "roles/bigquery.dataOwner"
+	case "WRITER":
+		return "roles/bigquery.dataEditor"
+	case "READER":
+		return "roles/bigquery.dataViewer"
+	default:
+		return role
+	}
 }
