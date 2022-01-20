@@ -45,7 +45,7 @@ export default class Dashboard extends Component {
 
   // filtering conditionals for HBS file
   // set initially based on response received from API & update based on filters
-  @tracked isDateRange = false;
+  @tracked isDateRange = true; // rename to isSingleMonth ?
   @tracked isAllNamespaces; // false when filtered down to auth methods (mounts)
 
   get startTimeDisplay() {
@@ -98,14 +98,14 @@ export default class Dashboard extends Component {
   }
 
   // TODO just here for testing right now, needs to be moved and set by filter
-  @tracked selectedNamespace = 'namespacelonglonglong4/';
+  // @tracked selectedNamespace = 'namespacelonglonglong4/';
 
   // for horizontal chart in Attribution component
   get topTenNamespaces() {
     if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byNamespace) {
       return null;
     }
-    return this.args.model.months.byNamespace;
+    return this.args.model.newInitActivity.byNamespace;
   }
 
   // for line chart in RunningTotal component
