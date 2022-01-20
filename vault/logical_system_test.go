@@ -1966,7 +1966,7 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+		if _, ok := resp.Data["value"].([]byte); !ok {
 			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
@@ -2004,7 +2004,7 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		if fmt.Sprintf("%T", resp.Data["value"]) != "string" {
+		if _, ok := resp.Data["value"].(string); !ok {
 			t.Fatalf("value is a not a string, it is %T", resp.Data["value"])
 		}
 
@@ -2027,7 +2027,7 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+		if _, ok := resp.Data["value"].([]byte); !ok {
 			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
@@ -2251,7 +2251,7 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+		if _, ok := resp.Data["value"].([]byte); !ok {
 			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
@@ -2290,7 +2290,7 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+		if _, ok := resp.Data["value"].([]byte); !ok {
 			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
@@ -2331,7 +2331,7 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		if fmt.Sprintf("%T", resp.Data["value"]) != "[]uint8" {
+		if _, ok := resp.Data["value"].([]byte); !ok {
 			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
 		}
 
