@@ -60,6 +60,16 @@ The following are not parts of the Vault threat model:
   to inspect the memory state of a running Vault instance then the confidentiality
   of data may be compromised.
 
+- Protecting against flaws in external systems or services used by Vault.
+  Some authentication methods or secrets engines delegate sensitive operations to
+  systems external to Vault. If an attacker can compromise credentials or otherwise
+  exploit a vulnerability in these external systems, then the confidentiality or
+  integrity of data may be compromised.
+
+- Protecting against malicious plugins or code execution on the underlying host.
+  If an attacker can gain code execution or write privileges to the underlying host,
+  then the confidentiality or the integrity of data may be compromised.
+
 # External Threat Overview
 
 Given the architecture of Vault, there are 3 distinct systems we are concerned
@@ -128,8 +138,8 @@ notion of "sudo" privilege. As part of a policy, users may be granted "sudo"
 privileges to certain paths, so that they can still perform security sensitive
 operations without being granted global root access to Vault.
 
-Lastly, Vault supports using a [Two-man
-rule](https://en.wikipedia.org/wiki/Two-man_rule) for unsealing using [Shamir's
+Lastly, Vault supports using a [Two-person
+rule](https://en.wikipedia.org/wiki/Two-person_rule) for unsealing using [Shamir's
 Secret Sharing
 technique](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing). When Vault
 is started, it starts in a _sealed_ state. This means that the encryption key
