@@ -5,7 +5,7 @@ module.exports = {
   test_page: 'tests/index.html?hidepassed&nolint',
   tap_quiet_logs: true,
   disable_watching: true,
-  timeout: 1200,
+  timeout: 1500,
   browser_start_timeout: 2000,
   parallel: 4,
   launchers: {
