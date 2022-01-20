@@ -670,6 +670,9 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 	if err != nil {
 		return nil, err
 	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
+	}
 
 	d.Raw["token"] = aEntry.TokenID
 	return b.handleCapabilities(ctx, req, d)

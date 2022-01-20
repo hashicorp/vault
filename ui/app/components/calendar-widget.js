@@ -1,11 +1,9 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/calendar-widget';
 import { setComponentTemplate } from '@ember/component';
-import { format, formatRFC3339 } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
-// ARG TODO documentation takes start and end for handQuery
 /**
  * @module CalendarWidget
  * CalendarWidget components are used in the client counts metrics. It helps users understand the ranges they can select.
@@ -13,8 +11,9 @@ import { tracked } from '@glimmer/tracking';
  * @example
  * ```js
  * <CalendarWidget
- * @param {function} handleQuery - calls the parent pricing-metrics-dates handleQueryFromCalendar method which sends the data for the network request.
- * @param {object} startDate - The start date is calculated from the parent. This component is only responsible for modifying the end Date. ANd effecting single month.
+ * @param {string} endTimeDisplay - The display value of the endTime. Ex: January 2022.
+ * @param {string} startTimeDisplay - The display value of startTime that the parent manages. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.
+ * @param {function} handleClientActivityQuery - a function passed from parent. This component sends the month and year to the parent via this method which then calculates the new data.
  * />
  *
  * ```
@@ -42,17 +41,8 @@ class CalendarWidget extends Component {
   @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
-  @tracked endDateDisplay;
   @tracked showCalendar = false;
   @tracked showSingleMonth = false;
-
-  constructor() {
-    super(...arguments);
-    // ARG TODO we need to return the config's duration if not default to 12 months to calculate, now it's 12 months
-    let date = new Date();
-    date.setMonth(date.getMonth() - 1); // by default you calculate the end month as the month prior to the current month.
-    this.endDateDisplay = format(date, 'MMMM yyyy');
-  }
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -64,8 +54,8 @@ class CalendarWidget extends Component {
   }
 
   isObsoleteYear() {
-    // do not allow them to choose a end year before the this.args.startDate
-    let startYear = this.args.startDate.split(' ')[1];
+    // do not allow them to choose a end year before the this.args.startTimeDisplay
+    let startYear = this.args.startTimeDisplay.split(' ')[1];
     return this.displayYear.toString() === startYear; // if on startYear then don't let them click back to the year prior
   }
 
@@ -98,9 +88,9 @@ class CalendarWidget extends Component {
         }
       }
       // compare for startYear view
-      if (this.displayYear.toString() === this.args.startDate.split(' ')[1]) {
+      if (this.displayYear.toString() === this.args.startTimeDisplay.split(' ')[1]) {
         // if they are on the view where the start year equals the display year, check which months should not show.
-        let startMonth = this.args.startDate.split(' ')[0]; // returns month name e.g. January
+        let startMonth = this.args.startTimeDisplay.split(' ')[0]; // returns month name e.g. January
         // return the index of the startMonth
         let startMonthIndex = this.arrayOfMonths.indexOf(startMonth);
         // then add readOnly class to any month less than the startMonth index.
@@ -120,35 +110,17 @@ class CalendarWidget extends Component {
   }
   @action
   selectEndMonth(month, year, element) {
-    // select month
     this.addClass(element.target, 'is-selected');
-    // API requires start and end time as EPOCH or RFC3339 timestamp
-    let endMonthSelected = formatRFC3339(new Date(year, month));
-    this.args.handleEndMonth(endMonthSelected);
-    let monthName = this.arrayOfMonths.find((element, index) => {
-      if (index === month) {
-        return element;
-      }
-    });
-    this.endDateDisplay = `${monthName} ${year}`;
     this.toggleShowCalendar();
+    this.args.handleClientActivityQuery(month, year, 'endTime');
   }
 
   @action
   selectSingleMonth(month, year, element) {
     // select month
     this.addClass(element.target, 'is-selected');
-    // API requires start and end time as EPOCH or RFC3339 timestamp
-    // let singleMonthSelected = formatRFC3339(new Date(year, month));
-    // ARG TODO unsure on what we're going to do yet with date. Depends on API.
-    // this.args.handleEndMonth(singleMonthSelected);
-    // let monthName = this.arrayOfMonths.find((e, index) => {
-    //   if (index === month) {
-    //     return e;
-    //   }
-    // });
-    // this.endDateDisplay = `${monthName} ${year}`;
     this.toggleSingleMonth();
+    // ARG TODO similar to selectEndMonth
   }
 
   @action

@@ -928,12 +928,25 @@ func (c *Client) ReadYourWrites() bool {
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
-// clone.
+// clone. The headers are cloned based on the CloneHeaders property of the
+// source config
 //
 // Also, only the client's config is currently copied; this means items not in
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
+	return c.clone(c.config.CloneHeaders)
+}
+
+// CloneWithHeaders creates a new client similar to Clone, with the difference
+// being that the  headers are always cloned
+func (c *Client) CloneWithHeaders() (*Client, error) {
+	return c.clone(true)
+}
+
+// clone creates a new client, with the headers being cloned based on the
+// passed in cloneheaders boolean
+func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
 
@@ -964,7 +977,7 @@ func (c *Client) Clone() (*Client, error) {
 		return nil, err
 	}
 
-	if config.CloneHeaders {
+	if cloneHeaders {
 		client.SetHeaders(c.Headers().Clone())
 	}
 

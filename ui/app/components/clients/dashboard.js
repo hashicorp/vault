@@ -1,25 +1,44 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { format } from 'date-fns';
+import { format, formatRFC3339 } from 'date-fns';
 
 export default class Dashboard extends Component {
+  arrayOfMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
   maxNamespaces = 10;
   chartLegend = [
     { key: 'distinct_entities', label: 'unique entities' },
     { key: 'non_entity_tokens', label: 'non-entity tokens' },
   ];
-  // For startDate Modal
+
   months = Array.from({ length: 12 }, (item, i) => {
     return new Date(0, i).toLocaleString('en-US', { month: 'long' });
   });
   years = Array.from({ length: 5 }, (item, i) => {
     return new Date().getFullYear() - i;
   });
+  adapter = this.store.adapterFor('clients/new-init-activity');
+
+  @service store;
 
   @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
-  @tracked startDate = null;
+  @tracked startTime = this.args.model.startTime;
+  @tracked endTime = this.args.model.endTime;
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
@@ -29,12 +48,22 @@ export default class Dashboard extends Component {
   @tracked isDateRange;
   @tracked isAllNamespaces; // false when filtered down to auth methods (mounts)
 
-  constructor() {
-    super(...arguments);
-    // ARG TODO will need to get startDate from license endpoint
-    let date = new Date();
-    date.setMonth(date.getMonth() - 12); // by default start date is 12 months from now
-    this.startDate = format(date, 'MMMM yyyy');
+  get startTimeDisplay() {
+    if (!this.startTime) {
+      // otherwise will return date of new Date(null)
+      return null;
+    }
+    let formattedAsDate = new Date(this.startTime); // on init it's formatted as a Date object, but when modified by modal it's formatted as RFC3339
+    return format(formattedAsDate, 'MMMM yyyy');
+  }
+
+  get endTimeDisplay() {
+    if (!this.endTime) {
+      // otherwise will return date of new Date(null)
+      return null;
+    }
+    let formattedAsDate = new Date(this.endTime);
+    return format(formattedAsDate, 'MMMM yyyy');
   }
 
   // Determine if we have client count data based on the current tab
@@ -44,15 +73,6 @@ export default class Dashboard extends Component {
       return this.args.model.config?.enabled !== 'Off';
     }
     return this.args.model.activity && this.args.model.activity.total;
-  }
-
-  // Show namespace graph only if we have more than 1
-  get showGraphs() {
-    return (
-      this.args.model.activity &&
-      this.args.model.activity.byNamespace &&
-      this.args.model.activity.byNamespace.length > 1
-    );
   }
 
   // Construct the namespace model for the search select component
@@ -164,19 +184,16 @@ export default class Dashboard extends Component {
 
   // Return csv filename with start and end dates
   get getCsvFileName() {
+    //  ARG TODO the startTimes and such here need to change
     let defaultFileName = `clients-by-namespace`,
-      startDate =
+      startTime =
         this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
-      endDate =
+      endTime =
         this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
-    if (startDate && endDate) {
-      defaultFileName += `-${startDate}-${endDate}`;
+    if (startTime && endTime) {
+      defaultFileName += `-${startTime}-${endTime}`;
     }
     return defaultFileName;
-  }
-
-  async handleEndMonth() {
-    // ARG TOOD consume param: endTime from calendar-widget fire off new network request
   }
 
   // Get the namespace by matching the path from the namespace list
@@ -190,10 +207,29 @@ export default class Dashboard extends Component {
   }
 
   @action
-  handleEditStartMonth() {
-    // ARG TODO will need to handle the action when the click save on the modal and you are given a new start Month, via month and year in params,
-    // if no endDate selected, default to 12 months range
-    // then send range to queryData this.queryData(range)
+  async handleClientActivityQuery(month, year, dateType) {
+    if (dateType === 'cancel') {
+      return;
+    }
+    // dateType is either startTime or endTime
+    let monthIndex = this.arrayOfMonths.indexOf(month);
+    if (dateType === 'startTime') {
+      this.startTime = formatRFC3339(new Date(year, monthIndex));
+      this.endTime = null;
+    }
+    if (dateType === 'endTime') {
+      // this month comes in as an index
+      this.endTime = formatRFC3339(new Date(year, month));
+    }
+    try {
+      let response = await this.adapter.queryClientActivity(this.startTime, this.endTime);
+      // resets the endTime to what is returned on the response
+      this.endTime = response.data.end_time;
+      return response;
+      // ARG TODO this is the response you need to use to repopulate the chart data
+    } catch (e) {
+      // ARG TODO handle error
+    }
   }
 
   // ARG TODO this might be a carry over from history, will need to confirm
