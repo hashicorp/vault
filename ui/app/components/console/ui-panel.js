@@ -71,7 +71,7 @@ export default Component.extend({
     let [method, flagArray, path, dataArray] = serviceArgs;
 
     if (dataArray || flagArray) {
-      var { data, flags } = extractDataAndFlags(dataArray, flagArray);
+      var { data, flags } = extractDataAndFlags(method, dataArray, flagArray);
     }
 
     let inputError = logErrorFromInput(path, method, flags, dataArray);
