@@ -52,7 +52,7 @@ account provided to pods if no service account is defined.
 
 -> **Deprecated:** The `issuer` parameter has been deprecated as of Vault 1.9 and will be removed in a future release.
 
-You will likely need to set [`issuer`](/api-docs/auth/kubernetes#issuer) when
+If running Vault prior to version 1.9, you will likely need to set [`issuer`](/api-docs/auth/kubernetes#issuer) when
 configuring Kubernetes authentication for the Vault CSI Provider.
 Vault CSI Provider does not use the default token associated with service accounts.
 Instead, it creates a token with a short TTL whose lifetime is also bound to the
