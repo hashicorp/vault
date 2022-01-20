@@ -23,21 +23,25 @@ export default ApplicationSerializer.extend({
 
   // used for top 10 attribution charts
   flattenByNamespace(payload) {
-    // keys in the object created here must match the legend keys in dashboard.js ('distinct_entities')
+    // keys in the object created here must match the legend keys in dashboard.js ('entity_clients')
     let topTen = payload.slice(0, 10);
     return topTen.map((ns) => {
+      if (ns['namespace_path'] === '') ns['namespace_path'] = 'root';
+      // this may need to change when we have real data
+      // right now under months, namespaces have key value of "path" or "id", not "namespace_path"
+      let label = ns['namespace_path'] || ns['id'];
       let namespaceMounts = ns.mounts.map((m) => {
         return {
           label: m['path'],
-          distinct_entities: m['counts']['entity_clients'],
-          non_entity_tokens: m['counts']['non_entity_clients'],
+          entity_clients: m['counts']['entity_clients'],
+          non_entity_clients: m['counts']['non_entity_clients'],
           total: m['counts']['clients'],
         };
       });
       return {
-        label: ns['namespace_path'] === '' ? 'root' : ns['namespace_path'],
-        distinct_entities: ns['counts']['distinct_entities'],
-        non_entity_tokens: ns['counts']['non_entity_tokens'],
+        label,
+        entity_clients: ns['counts']['entity_clients'],
+        non_entity_clients: ns['counts']['non_entity_clients'],
         total: ns['counts']['clients'],
         mounts: namespaceMounts,
       };
@@ -45,24 +49,31 @@ export default ApplicationSerializer.extend({
   },
 
   // for vault usage - vertical bar chart
-  flattenByMonths(payload, isNew = false) {
-    if (isNew) {
+  flattenByMonths(payload, isNewClients = false) {
+    if (isNewClients) {
       return payload.map((m) => {
         return {
-          month: format(new Date(m.timestamp), 'M/yy'), // format month as '1/22'
-          distinct_entities: m['new_clients']['counts']['entity_clients'],
-          non_entity_tokens: m['new_clients']['counts']['non_entity_clients'],
+          month: format(new Date(m.timestamp), 'M/yy'),
+          entity_clients: m['new_clients']['counts']['entity_clients'],
+          non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
           total: m['new_clients']['counts']['clients'],
+          namespaces: this.flattenByNamespace(m['new_clients']['namespaces']),
         };
       });
     } else {
       return payload.map((m) => {
         return {
           month: format(new Date(m.timestamp), 'M/yy'),
-          distinct_entities: m['counts']['entity_clients'],
-          non_entity_tokens: m['counts']['non_entity_clients'],
+          entity_clients: m['counts']['entity_clients'],
+          non_entity_clients: m['counts']['non_entity_clients'],
           total: m['counts']['clients'],
-          new_clients: m['new_clients']['counts']['clients'],
+          namespaces: this.flattenByNamespace(m['namespaces']),
+          new_clients: {
+            entity_clients: m['new_clients']['counts']['entity_clients'],
+            non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
+            total: m['new_clients']['counts']['clients'],
+            namespaces: this.flattenByNamespace(m['new_clients']['namespaces']),
+          },
         };
       });
     }
@@ -85,11 +96,11 @@ export default ApplicationSerializer.extend({
     let transformedPayload = {
       ...payload,
       // TODO CMB should these be nested under "data"?
-      months: this.formatTimestamp(payload.data.months),
       by_namespace: this.flattenByNamespace(payload.data.by_namespace),
-      by_month_total_clients: this.flattenByMonths(payload.data.months),
-      by_month_new_clients: this.flattenByMonths(payload.data.months, { isNew: true }),
+      by_month: this.flattenByMonths(payload.data.months),
+      by_month_new_clients: this.flattenByMonths(payload.data.months, { isNewClients: true }),
     };
+
     delete payload.data.by_namespace;
     delete payload.data.months;
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);

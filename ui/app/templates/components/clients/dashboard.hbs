@@ -68,13 +68,13 @@
         {{else if this.hasClientData}}
           <Clients::RunningTotal
             @chartLegend={{this.chartLegend}}
-            @barChartData={{this.newMonthlyClients}}
-            @lineChartData={{this.newAndTotalMonthlyClients}}
+            @barChartData={{this.byMonthNewClients}}
+            @lineChartData={{this.byMonth}}
             @runningTotals={{this.runningTotals}}
           />
 
           <Clients::Attribution
-            @newClientsData={{this.barChartDataset}}
+            @byMonth={{this.byMonth}}
             @topTenNamespaces={{this.topTenNamespaces}}
             @selectedNamespace={{this.selectedNamespace}}
             @chartLegend={{this.chartLegend}}
@@ -83,7 +83,7 @@
             @endTimeDisplay={{this.endTimeDisplay}}
           />
 
-          <Clients::MonthlyUsage @chartLegend={{this.chartLegend}} @verticalBarChartData={{this.totalMonthlyClients}} />
+          <Clients::MonthlyUsage @chartLegend={{this.chartLegend}} @verticalBarChartData={{this.byMonth}} />
         {{/if}}
       {{else}}
         <EmptyState

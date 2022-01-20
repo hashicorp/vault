@@ -21,8 +21,8 @@ export default class Dashboard extends Component {
   ];
   maxNamespaces = 10;
   chartLegend = [
-    { key: 'distinct_entities', label: 'unique entities' },
-    { key: 'non_entity_tokens', label: 'non-entity tokens' },
+    { key: 'entity_clients', label: 'unique entities' },
+    { key: 'non_entity_clients', label: 'non-entity tokens' },
   ];
 
   months = Array.from({ length: 12 }, (item, i) => {
@@ -45,7 +45,7 @@ export default class Dashboard extends Component {
 
   // filtering conditionals for HBS file
   // set initially based on response received from API & update based on filters
-  @tracked isDateRange = true;
+  @tracked isDateRange = false;
   @tracked isAllNamespaces; // false when filtered down to auth methods (mounts)
 
   get startTimeDisplay() {
@@ -105,31 +105,24 @@ export default class Dashboard extends Component {
     if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byNamespace) {
       return null;
     }
-    return this.args.model.newInitActivity.byNamespace;
+    return this.args.model.months.byNamespace;
   }
 
+  // for line chart in RunningTotal component
   // for vertical bar chart in MonthlyUsage component
-  get totalMonthlyClients() {
-    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byMonthTotalClients) {
+  get byMonth() {
+    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byMonth) {
       return null;
     }
-    return this.args.model.newInitActivity.byMonthTotalClients;
+    return this.args.model.newInitActivity.byMonth;
   }
 
   // for vertical bar chart in RunningTotal component
-  get newMonthlyClients() {
+  get byMonthNewClients() {
     if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byMonthNewClients) {
       return null;
     }
     return this.args.model.newInitActivity.byMonthNewClients;
-  }
-
-  // for line chart in RunningTotal component
-  get newAndTotalMonthlyClients() {
-    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.months) {
-      return null;
-    }
-    return this.args.model.newInitActivity.months;
   }
 
   @action

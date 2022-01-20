@@ -5,7 +5,6 @@ export default class NewInitActivityModel extends Model {
   @attr('string') endTime;
   @attr('string') startTime;
   @attr('array') byNamespace;
-  @attr('array') byMonthTotalClients;
+  @attr('array') byMonth;
   @attr('array') byMonthNewClients;
-  @attr('array') months;
 }
