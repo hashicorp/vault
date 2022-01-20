@@ -31,15 +31,31 @@ export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
 
   // TODO CMB should this be a getter? It will be updated from parent component's filter bar
+  // may rename to isSingleMonth
   get isDateRange() {
     return this.args.isDateRange;
   }
 
-  get totalClientsData() {
+  get newClientsData() {
+    // TODO CMB update with real data  - may not be an array of one month
+    // the new namespace chart only renders if a single month is selected,
+    // this.args.byMonth is an array of months, want to return 0 indexed month (array should only have one month)
+    let data = this.args.byMonth[0].new_clients.namespaces;
     if (!this.args.selectedNamespace) {
-      return this.args.topTenNamespaces;
+      return data;
     } else if (this.args.selectedNamespace) {
-      return this.args.topTenNamespaces.find((ns) => ns.label === this.args.selectedNamespace).mounts;
+      return this.filterByNamespace(data);
+    } else {
+      return null;
+    }
+  }
+
+  get totalClientsData() {
+    let data = this.isDateRange ? this.args.topTenNamespaces : this.args.byMonth[0].namespaces;
+    if (!this.args.selectedNamespace) {
+      return data;
+    } else if (this.args.selectedNamespace) {
+      return this.filterByNamespace(data);
     } else {
       return null;
     }
@@ -99,8 +115,8 @@ export default class Attribution extends Component {
     data.forEach(function (item) {
       let path = item.label !== '' ? item.label : 'root',
         total = item.total,
-        unique = item.distinct_entities,
-        non_entity = item.non_entity_tokens;
+        unique = item.entity_clients,
+        non_entity = item.non_entity_clients;
 
       results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
     });
@@ -111,5 +127,10 @@ export default class Attribution extends Component {
     return this.args.activityDateRange
       ? `clients-by-${this.clientCountBreakdown}-${this.args.activityDateRange}`
       : `clients-by-${this.clientCountBreakdown}-${new Date()}`;
+  }
+
+  // HELPERS
+  filterByNamespace(data) {
+    return data.find((ns) => ns.label === this.args.selectedNamespace).mounts;
   }
 }

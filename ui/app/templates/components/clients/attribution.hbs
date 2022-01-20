@@ -32,11 +32,11 @@
       <h3 class="data-details">Clients in {{lowercase this.clientCountBreakdown}}</h3>
       <p class="data-details">{{this.topClientCounts.total}}</p>
     </div>
-  {{else if (and @newClientsData (not @isDateRange))}}
+  {{else if (and @byMonth (not @isDateRange))}}
     <div class="chart-container-left">
       <h2 class="chart-title">New clients</h2>
       <p class="chart-description">{{this.chartText.newCopy}}</p>
-      <Clients::HorizontalBarChart @dataset={{@newClientsData}} @chartLegend={{@chartLegend}} />
+      <Clients::HorizontalBarChart @dataset={{this.newClientsData}} @chartLegend={{@chartLegend}} />
     </div>
 
     <div class="chart-container-right">
