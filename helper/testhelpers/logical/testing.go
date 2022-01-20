@@ -468,8 +468,8 @@ func TestCheckAuthEntityId(entity_id *string) TestCheckFunc {
 	}
 }
 
-// TestCheckAuthEntityAlias is a helper to check that a request generated an
-// auth token with the expected alias data.
+// TestCheckAuthEntityAliasMetadataName is a helper to check that a request generated an
+// auth token with the expected alias metadata.
 func TestCheckAuthEntityAliasMetadataName(key string, value string) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		if resp == nil || resp.Auth == nil {
