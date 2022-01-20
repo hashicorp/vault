@@ -20,11 +20,13 @@ Each user may have multiple accounts with various identity providers, and Vault
 supports many of those providers to authenticate with Vault. Vault Identity can
 tie authentications from various auth methods to a single representation. This representation of a consolidated identity is called an **Entity** and their
 corresponding accounts with authentication providers can be mapped as
-**Aliases**. In essence, each entity is made up of zero or more aliases. 
+**Aliases**. In essence, each entity is made up of zero or more aliases. An entity cannot have more than one alias for
+a particular authentication backend.
 
 For example, a user with accounts in both GitHub and LDAP can be mapped to a
 single entity in Vault with two aliases, one of type GitHub and one of type
-LDAP.
+LDAP. Note however, if both aliases are created on the same auth mount, say
+a Github mount, both aliases cannot be mapped to the same entity.
 
 ![Entity  overview](/img/vault-identity-doc-1.png)
 
