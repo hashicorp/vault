@@ -17,6 +17,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -34,7 +35,6 @@ const (
 
 	autoRotateCheckInterval = 5 * time.Minute
 	legacyRotateReason      = "legacy rotation"
-	MaxInt                  = int(^uint(0) >> 1)
 )
 
 // Versions of the AESGCM storage methodology
@@ -963,7 +963,7 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 	// nonce, GCM tag and the plaintext
 
 	extra := termSize + 1 + gcm.NonceSize() + gcm.Overhead()
-	if len(plain) > MaxInt-extra {
+	if len(plain) > consts.MaxInt-extra {
 		return nil, ErrPlaintextTooLarge
 	}
 
