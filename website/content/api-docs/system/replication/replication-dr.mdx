@@ -340,6 +340,12 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 !> Only one performance primary should be active at a given time. Multiple primaries may
 result in data loss!
 
+~> It is not safe to replicate from a newer version of Vault to an older version.
+When upgrading replicated clusters, ensure that upstream clusters are always
+on older versions of Vault than downstream clusters. See
+[Upgrading Vault](/docs/upgrading#replication-installations) for an example.
+
+
 | Method | Path                                    |
 | :----- | :-------------------------------------- |
 | `POST` | `/sys/replication/dr/secondary/promote` |
