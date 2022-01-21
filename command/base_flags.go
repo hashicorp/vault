@@ -4,13 +4,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/posener/complete"
 )
 
@@ -247,7 +247,7 @@ func (i *intValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	if v >= int64(consts.MinInt) && v <= int64(consts.MaxInt) {
+	if v >= int64(math.MinInt) && v <= int64(math.MaxInt) {
 		*i.target = int(v)
 		return nil
 	}
@@ -377,7 +377,7 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-	if v >= 0 && v <= uint64(consts.MaxUint) {
+	if v >= 0 && v <= uint64(math.MaxUint) {
 		*i.target = uint(v)
 		return nil
 	}

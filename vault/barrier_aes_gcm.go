@@ -10,12 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -963,7 +962,7 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 	// nonce, GCM tag and the plaintext
 
 	extra := termSize + 1 + gcm.NonceSize() + gcm.Overhead()
-	if len(plain) > consts.MaxInt-extra {
+	if len(plain) > math.MaxInt-extra {
 		return nil, ErrPlaintextTooLarge
 	}
 
