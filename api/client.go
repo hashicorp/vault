@@ -132,6 +132,12 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
+	// track of the name of the TLS certs and keys when OutputCurlString is set.
+	// Cloning a client will also not clone those values.
+	curlCACert, curlCAPath        string
+	curlClientCert, curlClientKey string
+
 	// SRVLookup enables the client to lookup the host through DNS SRV lookup
 	SRVLookup bool
 
@@ -225,9 +231,9 @@ func DefaultConfig() *Config {
 	return config
 }
 
-// ConfigureTLS takes a set of TLS configurations and applies those to the
-// HTTP client.
-func (c *Config) ConfigureTLS(t *TLSConfig) error {
+// configureTLS is a lock free version of ConfigureTLS that can be used in
+// ReadEnvironment where the lock is already hold
+func (c *Config) configureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
@@ -244,11 +250,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 			return err
 		}
 		foundClientCert = true
+		c.curlClientCert = t.ClientCert
+		c.curlClientKey = t.ClientKey
 	case t.ClientCert != "" || t.ClientKey != "":
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || t.CAPath != "" {
+		c.curlCACert = t.CACert
+		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
 			CAFile: t.CACert,
 			CAPath: t.CAPath,
@@ -276,6 +286,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	}
 
 	return nil
+}
+
+// ConfigureTLS takes a set of TLS configurations and applies those to the
+// HTTP client.
+func (c *Config) ConfigureTLS(t *TLSConfig) error {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	return c.configureTLS(t)
 }
 
 // ReadEnvironment reads configuration information from the environment. If
@@ -382,7 +401,7 @@ func (c *Config) ReadEnvironment() error {
 	c.SRVLookup = envSRVLookup
 	c.Limiter = limit
 
-	if err := c.ConfigureTLS(t); err != nil {
+	if err := c.configureTLS(t); err != nil {
 		return err
 	}
 
@@ -1122,6 +1141,10 @@ START:
 		LastOutputStringError = &OutputStringError{
 			Request:       req,
 			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
+			ClientCert:    c.config.curlClientCert,
+			ClientKey:     c.config.curlClientKey,
+			ClientCACert:  c.config.curlCACert,
+			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
 	}

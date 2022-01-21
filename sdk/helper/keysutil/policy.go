@@ -374,6 +374,10 @@ type Policy struct {
 	// policy object.
 	StoragePrefix string `json:"storage_prefix"`
 
+	// AutoRotateInterval defines how frequently the key should automatically
+	// rotate. Setting this to zero disables automatic rotation for the key.
+	AutoRotateInterval time.Duration `json:"auto_rotate_interval"`
+
 	// versionPrefixCache stores caches of version prefix strings and the split
 	// version template.
 	versionPrefixCache sync.Map
