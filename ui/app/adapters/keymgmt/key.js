@@ -81,16 +81,32 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
           list: true,
         },
       });
-      // TODO: Get distribution
       return resp.data.keys ? resp.data.keys[0] : null;
     } catch (e) {
       if (e.httpStatus === 404) {
+        // No results, not distributed yet
         return null;
+      } else if (e.httpStatus === 403) {
+        return { permissionsError: true };
       }
-      // TODO: Handle no permissions
-      console.error(e);
-      return null;
+      // TODO: handle control group
+      throw e;
     }
+  }
+
+  getDistribution(backend, kms, key) {
+    const url = `${this.buildURL()}/${backend}/kms/${kms}/key/${key}`;
+    return this.ajax(url, 'GET')
+      .then((res) => {
+        return {
+          ...res.data,
+          purposeArray: res.data.purpose.split(','),
+        };
+      })
+      .catch(() => {
+        // TODO: handle control group
+        return null;
+      });
   }
 
   async queryRecord(store, type, query) {
@@ -99,7 +115,11 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     keyData.data.id = id;
     keyData.data.backend = backend;
     const provider = await this.getProvider(backend, id);
-    return { ...keyData, provider };
+    let distribution;
+    if (provider) {
+      distribution = await this.getDistribution(backend, provider, id);
+    }
+    return { ...keyData, provider, distribution };
   }
 
   async query(store, type, query) {

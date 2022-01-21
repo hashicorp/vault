@@ -39,7 +39,8 @@ export default class KeymgmtKeyModel extends Model {
   lastRotated;
 
   // The following are from endpoints other than the main read one
-  @attr('string') provider;
+  @attr() provider; // string, or object with permissions error
+  @attr() distribution;
 
   get hasVersions() {
     return this.versions.length > 1;
@@ -63,5 +64,18 @@ export default class KeymgmtKeyModel extends Model {
       'minEnabledVersion',
       'lastRotated',
     ]);
+  }
+
+  get distFields() {
+    return [
+      {
+        name: 'name',
+        type: 'string',
+        label: 'Distributed name',
+        subText: 'The name given to the key by the provider.',
+      },
+      { name: 'purpose', type: 'string', label: 'Key Purpose' },
+      { name: 'protection', type: 'string', subText: 'Where cryptographic operations are performed.' },
+    ];
   }
 }
