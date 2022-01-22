@@ -230,6 +230,29 @@ and consider if they're appropriate for your deployment.
 
   - `port` (`int: 8080`) - Configures the port the Vault Agent Injector listens on.
 
+  - `podDisruptionBudget` (`dictionary: {}`) - A disruption budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions.
+
+    ```yaml
+    podDisruptionBudget:
+      maxUnavailable: 1
+    ```
+
+  - `strategy` (`dictionary: {}`) - Strategy for updating the deployment. This can be a multi-line string or a YAML map.
+
+    ```yaml
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    # or
+    strategy: |
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    ```
+
 - `server` - Values that configure running a Vault server within Kubernetes.
 
   - `enabled` (`boolean: true`) - When set to `true`, the Vault server will be created.
@@ -341,6 +364,8 @@ and consider if they're appropriate for your deployment.
 
     - `host` (`string: "chart-example.local"`) - Sets the hostname for the Route.
 
+    - `tls` (`dictionary: {termination: passthrough}`) - TLS config that will be passed directly to the route's TLS config, which can be used to configure other termination methods that terminate TLS at the router.
+
   - `tls` - Values that configure the Ingress TLS rules.
 
     - `hosts` (`array: []`): List of the hosts defined in the Common Name of the TLS Certificate.
@@ -411,6 +436,8 @@ and consider if they're appropriate for your deployment.
       successThreshold: 1
       timeoutSeconds: 3
     ```
+
+  - `terminationGracePeriodSeconds` (`int: 10`) - Optional duration in seconds the pod needs to terminate gracefully. See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
 
   - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
 
@@ -857,7 +884,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-csi-provider"`) - The name of the Docker image for the Vault CSI Provider.
 
-    - `tag` (`string: "0.3.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
+    - `tag` (`string: "0.4.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists locally.
 
@@ -929,6 +956,8 @@ and consider if they're appropriate for your deployment.
       ```
 
     - `tolerations` (`array: []`) - Toleration Settings for CSI pods. This should be a multi-line string or YAML matching the Toleration array in a PodSpec.
+
+  - `priorityClassName` (`string: ""`) - Priority class for CSI Provider pods
 
   - `serviceAccount` - Values that configure the Vault CSI Provider's serviceaccount.
 
