@@ -44,7 +44,7 @@ export default Component.extend({
         .save({
           adapterOptions: {
             method: section,
-            fields: get(config, `${section}Attrs`).map(attr => attr.name),
+            fields: get(config, `${section}Attrs`).map((attr) => attr.name),
           },
         })
         .then(() => {

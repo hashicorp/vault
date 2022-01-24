@@ -11,7 +11,7 @@ export default Route.extend({
       .query('secret-engine', {
         path: backend,
       })
-      .then(model => {
+      .then((model) => {
         if (model) {
           return model.get('firstObject');
         }

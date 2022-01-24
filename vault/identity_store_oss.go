@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package vault
 
@@ -14,4 +14,8 @@ func (c *Core) PersistTOTPKey(context.Context, string, string, string) error {
 
 func (c *Core) SendGroupUpdate(context.Context, *identity.Group) (bool, error) {
 	return false, nil
+}
+
+func (c *Core) CreateEntity(ctx context.Context) (*identity.Entity, error) {
+	return nil, nil
 }

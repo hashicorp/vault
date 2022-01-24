@@ -1,4 +1,4 @@
-// +build tools
+//go:build tools
 
 // This file ensures tool dependencies are kept in sync.  This is the
 // recommended way of doing this according to
@@ -25,11 +25,10 @@ import (
 	_ "github.com/client9/misspell/cmd/misspell"
 
 	_ "mvdan.cc/gofumpt"
-	
+
 	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 
 	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
 
 	_ "github.com/favadi/protoc-go-inject-tag"
-)
 )

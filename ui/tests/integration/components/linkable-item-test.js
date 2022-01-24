@@ -3,12 +3,12 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-module('Integration | Component | linkable-item', function(hooks) {
+module('Integration | Component | linkable-item', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders anything passed in', async function(assert) {
+  test('it renders anything passed in', async function (assert) {
     await render(hbs`<LinkableItem />`);
-    assert.equal(this.element.textContent.trim(), '', 'No content rendered');
+    assert.dom(this.element).hasText('', 'No content rendered');
 
     await render(hbs`
       <LinkableItem as |Li|>
@@ -24,7 +24,7 @@ module('Integration | Component | linkable-item', function(hooks) {
     assert.dom('[data-test-linkable-item-menu]').hasText('menu');
   });
 
-  test('it is not wrapped in a linked block if disabled is true', async function(assert) {
+  test('it is not wrapped in a linked block if disabled is true', async function (assert) {
     await render(hbs`
       <LinkableItem @disabled={{true}} as |Li|>
         <Li.content>
@@ -40,7 +40,7 @@ module('Integration | Component | linkable-item', function(hooks) {
     assert.dom('[data-test-linkable-item-glyph]').doesNotExist('Glyph is not rendered');
   });
 
-  test('it is wrapped in a linked block if a link is passed', async function(assert) {
+  test('it is wrapped in a linked block if a link is passed', async function (assert) {
     await render(hbs`
       <LinkableItem @link={{hash route="vault" model="modelId"}} as |Li|>
         <Li.content
@@ -55,7 +55,7 @@ module('Integration | Component | linkable-item', function(hooks) {
     assert.dom('.list-item-row.linked-block').exists('Renders linked block');
   });
 
-  test('it renders standard attributes on content', async function(assert) {
+  test('it renders standard attributes on content', async function (assert) {
     this.set('title', 'A Title');
     this.set('accessor', 'my accessor');
     this.set('description', 'my description');

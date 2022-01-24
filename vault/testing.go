@@ -128,6 +128,29 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
+func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders map[string]map[string]string, enableUI bool) (*Core, [][]byte, string) {
+	confRaw := &server.Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:                  "tcp",
+					Address:               "127.0.0.1",
+					CustomResponseHeaders: CustomResponseHeaders,
+				},
+			},
+			DisableMlock: true,
+		},
+	}
+	conf := &CoreConfig{
+		RawConfig:       confRaw,
+		EnableUI:        enableUI,
+		EnableRaw:       true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+	}
+	core := TestCoreWithSealAndUI(t, conf)
+	return testCoreUnsealed(t, core)
+}
+
 func TestCoreUI(t testing.T, enableUI bool) *Core {
 	conf := &CoreConfig{
 		EnableUI:        enableUI,
@@ -163,6 +186,10 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
+	}
+
+	if opts.RedirectAddr != "" {
+		conf.RedirectAddr = opts.RedirectAddr
 	}
 
 	for k, v := range opts.LogicalBackends {
@@ -2243,4 +2270,19 @@ func (n *NoopAudit) Invalidate(ctx context.Context) {
 	n.saltMutex.Lock()
 	defer n.saltMutex.Unlock()
 	n.salt = nil
+}
+
+// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
 }

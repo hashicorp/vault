@@ -105,6 +105,74 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-cache-no-listeners.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Cache: &Cache{
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: true,
+			ForceAutoAuthToken:  false,
+			Persist: &Persist{
+				Type:                    "kubernetes",
+				Path:                    "/vault/agent-cache/",
+				KeepAfterImport:         true,
+				ExitOnErr:               true,
+				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
+			},
+		},
+		Vault: &Vault{
+			Address:          "http://127.0.0.1:1111",
+			CACert:           "config_ca_cert",
+			CAPath:           "config_ca_path",
+			TLSSkipVerifyRaw: interface{}("true"),
+			TLSSkipVerify:    true,
+			ClientCert:       "config_client_cert",
+			ClientKey:        "config_client_key",
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
+		Templates: []*ctconfig.TemplateConfig{
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func TestLoadConfigFile(t *testing.T) {
 	if err := os.Setenv("TEST_AAD_ENV", "aad"); err != nil {
 		t.Fatal(err)
@@ -270,7 +338,7 @@ func TestLoadConfigFile_Bad_AgentCache_ForceAutoAuthNoMethod(t *testing.T) {
 func TestLoadConfigFile_Bad_AgentCache_NoListeners(t *testing.T) {
 	_, err := LoadConfig("./test-fixtures/bad-config-cache-no-listeners.hcl")
 	if err == nil {
-		t.Fatal("LoadConfig should return an error when cache section present and no listeners present")
+		t.Fatal("LoadConfig should return an error when cache section present and no listeners present and no templates defined")
 	}
 }
 
@@ -536,7 +604,6 @@ func TestLoadConfigFile_AgentCache_PersistMissingType(t *testing.T) {
 }
 
 func TestLoadConfigFile_TemplateConfig(t *testing.T) {
-
 	testCases := map[string]struct {
 		fixturePath            string
 		expectedTemplateConfig TemplateConfig
@@ -586,7 +653,6 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // TestLoadConfigFile_Template tests template definitions in Vault Agent

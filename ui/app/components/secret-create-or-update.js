@@ -28,9 +28,8 @@ import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
 import keys from 'vault/lib/keycodes';
 
-import { action } from '@ember/object';
+import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { set } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 import { isBlank, isNone } from '@ember/utils';
@@ -44,6 +43,7 @@ export default class SecretCreateOrUpdate extends Component {
   @tracked codemirrorString = null;
   @tracked error = null;
   @tracked secretPaths = null;
+  @tracked pathWhiteSpaceWarning = false;
   @tracked validationErrorCount = 0;
   @tracked validationMessages = null;
 
@@ -65,7 +65,7 @@ export default class SecretCreateOrUpdate extends Component {
       let adapter = this.store.adapterFor('secret-v2');
       let type = { modelName: 'secret-v2' };
       let query = { backend: this.args.model.backend };
-      adapter.query(this.store, type, query).then(result => {
+      adapter.query(this.store, type, query).then((result) => {
         this.secretPaths = result.data.keys;
       });
     }
@@ -82,6 +82,8 @@ export default class SecretCreateOrUpdate extends Component {
   }
   checkValidation(name, value) {
     if (name === 'path') {
+      // check for whitespace
+      this.pathHasWhiteSpace(value);
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
         : set(this.validationMessages, name, '');
@@ -106,6 +108,10 @@ export default class SecretCreateOrUpdate extends Component {
       this.transitionToRoute(LIST_ROOT_ROUTE);
     }
   }
+  pathHasWhiteSpace(value) {
+    let validation = new RegExp('\\s', 'g'); // search for whitespace
+    this.pathWhiteSpaceWarning = validation.test(value);
+  }
   // successCallback is called in the context of the component
   persistKey(successCallback) {
     let secret = this.args.model;
@@ -117,6 +123,8 @@ export default class SecretCreateOrUpdate extends Component {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
+    let changed = secret.changedAttributes();
+    let changedKeys = Object.keys(changed);
 
     return secretData
       .save()
@@ -125,16 +133,18 @@ export default class SecretCreateOrUpdate extends Component {
           if (isV2) {
             secret.set('id', key);
           }
-          if (isV2 && Object.keys(secret.changedAttributes()).length > 0) {
+          // this secret.save() saves to the metadata endpoint. Only saved if metadata has been added
+          // and if the currentVersion attr changed that's because we added it (only happens if they don't have read access to metadata on mode = update which does not allow you to change metadata)
+          if (isV2 && changedKeys.length > 0 && changedKeys[0] !== 'currentVersion') {
             // save secret metadata
             secret
               .save()
               .then(() => {
                 this.saveComplete(successCallback, key);
               })
-              .catch(e => {
+              .catch((e) => {
                 // when mode is not create the metadata error is handled in secret-edit-metadata
-                if (this.mode === 'create') {
+                if (this.args.mode === 'create') {
                   this.error = e.errors.join(' ');
                 }
                 return;
@@ -144,7 +154,7 @@ export default class SecretCreateOrUpdate extends Component {
           }
         }
       })
-      .catch(error => {
+      .catch((error) => {
         if (error instanceof ControlGroupError) {
           let errorMessage = this.controlGroup.logFromError(error);
           this.error = errorMessage.content;
@@ -177,7 +187,7 @@ export default class SecretCreateOrUpdate extends Component {
     return false;
   }
 
-  @(task(function*(name, value) {
+  @(task(function* (name, value) {
     this.checkValidation(name, value);
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');

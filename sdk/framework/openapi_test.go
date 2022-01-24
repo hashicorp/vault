@@ -199,6 +199,10 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 		{"^plugins/catalog/(?P<type>auth|database|secret)/?$", []string{
 			"plugins/catalog/{type}",
 		}},
+		{"(pathOne|pathTwo)/", []string{"pathOne/", "pathTwo/"}},
+		{"(pathOne|pathTwo)/" + GenericNameRegex("name"), []string{"pathOne/{name}", "pathTwo/{name}"}},
+		{"(pathOne|path-2|Path_3)/" + GenericNameRegex("name"),
+			[]string{"Path_3/{name}", "path-2/{name}", "pathOne/{name}"}},
 	}
 
 	for i, test := range tests {
@@ -316,7 +320,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 		testPath(t, p, sp, expected("legacy"))
 	})
 
-	t.Run("Operations", func(t *testing.T) {
+	t.Run("Operations - All Operations", func(t *testing.T) {
 		p := &Path{
 			Pattern: "foo/" + GenericNameRegex("id"),
 			Fields: map[string]*FieldSchema{
@@ -389,6 +393,65 @@ func TestOpenAPI_Paths(t *testing.T) {
 			Root: []string{"foo*"},
 		}
 		testPath(t, p, sp, expected("operations"))
+	})
+
+	t.Run("Operations - List Only", func(t *testing.T) {
+		p := &Path{
+			Pattern: "foo/" + GenericNameRegex("id"),
+			Fields: map[string]*FieldSchema{
+				"id": {
+					Type:        TypeString,
+					Description: "id path parameter",
+				},
+				"flavors": {
+					Type:        TypeCommaStringSlice,
+					Description: "the flavors",
+				},
+				"name": {
+					Type:        TypeNameString,
+					Default:     "Larry",
+					Description: "the name",
+				},
+				"age": {
+					Type:          TypeInt,
+					Description:   "the age",
+					AllowedValues: []interface{}{1, 2, 3},
+					Required:      true,
+					DisplayAttrs: &DisplayAttributes{
+						Name:      "Age",
+						Sensitive: true,
+						Group:     "Some Group",
+						Value:     7,
+					},
+				},
+				"x-abc-token": {
+					Type:          TypeHeader,
+					Description:   "a header value",
+					AllowedValues: []interface{}{"a", "b", "c"},
+				},
+				"format": {
+					Type:        TypeString,
+					Description: "a query param",
+					Query:       true,
+				},
+			},
+			HelpSynopsis:    "Synopsis",
+			HelpDescription: "Description",
+			Operations: map[logical.Operation]OperationHandler{
+				logical.ListOperation: &PathOperation{
+					Summary:     "List Summary",
+					Description: "List Description",
+				},
+			},
+			DisplayAttrs: &DisplayAttributes{
+				Navigation: true,
+			},
+		}
+
+		sp := &logical.Paths{
+			Root: []string{"foo*"},
+		}
+		testPath(t, p, sp, expected("operations_list"))
 	})
 
 	t.Run("Responses", func(t *testing.T) {

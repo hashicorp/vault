@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -246,9 +247,11 @@ func (i *intValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-
-	*i.target = int(v)
-	return nil
+	if v >= math.MinInt && v <= math.MaxInt {
+		*i.target = int(v)
+		return nil
+	}
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
 func (i *intValue) Get() interface{} { return int(*i.target) }
@@ -374,9 +377,12 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	if v >= 0 && v <= math.MaxUint {
+		*i.target = uint(v)
+		return nil
+	}
 
-	*i.target = uint(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 }
 
 func (i *uintValue) Get() interface{} { return uint(*i.target) }
@@ -887,28 +893,28 @@ func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, 
 	if allowedFormats&TimeVar_RFC3339Nano != 0 {
 		t, err := time.Parse(time.RFC3339Nano, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_RFC3339Second != 0 {
 		t, err := time.Parse(time.RFC3339, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Day != 0 {
 		t, err := time.Parse("2006-01-02", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Month != 0 {
 		t, err := time.Parse("2006-01", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 

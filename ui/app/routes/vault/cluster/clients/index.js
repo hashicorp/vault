@@ -43,20 +43,57 @@ export default Route.extend(ClusterRoute, {
     },
   },
 
-  model(params) {
-    let config = this.store.queryRecord('clients/config', {}).catch(e => {
+  async getLicense() {
+    try {
+      return await this.store.queryRecord('license', {});
+    } catch (e) {
+      // ARG TODO handle
+      return e;
+    }
+  },
+
+  async getNewInitActivity(start_time) {
+    try {
+      return await this.store.queryRecord('clients/newInitActivity', { start_time });
+    } catch (e) {
+      // ARG TODO handle
+      return e;
+    }
+  },
+
+  // ARG TODO will need to remove activity and replace with newInitActivity once API is complete
+  async model(params) {
+    let config = this.store.queryRecord('clients/config', {}).catch((e) => {
       console.debug(e);
       // swallowing error so activity can show if no config permissions
       return {};
     });
-    const activityParams = getActivityParams(params);
+
+    let license = await this.getLicense(); // get default start_time
+    let newInitActivity = await this.getNewInitActivity(license.startTime); // returns client counts using license start_time.
+    let activityParams = getActivityParams(params);
     let activity = this.store.queryRecord('clients/activity', activityParams);
 
     return hash({
-      queryStart: params.start,
-      queryEnd: params.end,
+      // ARG TODO will remove "hash" once remove "activity," which currently relies on it.
+      queryStart: params.start, // ARG will remove once API complete
+      queryEnd: params.end, // ARG will remove once API complete
       activity,
+      newInitActivity,
       config,
+      endTime: newInitActivity.endTime,
+      startTime: license.startTime,
     });
+  },
+
+  actions: {
+    loading(transition) {
+      // eslint-disable-next-line ember/no-controller-access-in-routes
+      let controller = this.controllerFor('vault.cluster.clients.index');
+      controller.set('currentlyLoading', true);
+      transition.promise.finally(function () {
+        controller.set('currentlyLoading', false);
+      });
+    },
   },
 });

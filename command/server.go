@@ -724,7 +724,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
-
 }
 
 func logProxyEnvironmentVariables(logger hclog.Logger) {
@@ -1540,6 +1539,15 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			core.SetConfig(config)
+
+			// reloading custom response headers to make sure we have
+			// the most up to date headers after reloading the config file
+			if err = core.ReloadCustomResponseHeaders(); err != nil {
+				c.logger.Error(err.Error())
+			}
+
+			// Setting log request with the new value in the config after reload
+			core.ReloadLogRequestsLevel()
 
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
@@ -2401,6 +2409,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if coreConfig.ClusterAddr != "" {
+		rendered, err := configutil.ParseSingleIPTemplate(coreConfig.ClusterAddr)
+		if err != nil {
+			return fmt.Errorf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err)
+		}
+		coreConfig.ClusterAddr = rendered
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {

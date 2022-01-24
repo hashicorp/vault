@@ -34,12 +34,14 @@ const MOUNTABLE_SECRET_ENGINES = [
     value: 'aws',
     type: 'aws',
     category: 'cloud',
+    glyph: 'aws-color',
   },
   {
     displayName: 'Azure',
     value: 'azure',
     type: 'azure',
     category: 'cloud',
+    glyph: 'azure-color',
   },
   {
     displayName: 'Consul',
@@ -58,12 +60,14 @@ const MOUNTABLE_SECRET_ENGINES = [
     value: 'gcp',
     type: 'gcp',
     category: 'cloud',
+    glyph: 'gcp-color',
   },
   {
     displayName: 'Google Cloud KMS',
     value: 'gcpkms',
     type: 'gcpkms',
     category: 'cloud',
+    glyph: 'gcp-color',
   },
   {
     displayName: 'KV',

@@ -36,10 +36,10 @@ export default class SecretListHeaderTab extends Component {
 
   async fetchCapabilities() {
     let capabilitiesArray = ['canList', 'canCreate', 'canUpdate'];
-    let checkCapabilities = function(object) {
+    let checkCapabilities = function (object) {
       let array = [];
       // we only want to look at the canList, canCreate and canUpdate on the capabilities record
-      capabilitiesArray.forEach(item => {
+      capabilitiesArray.forEach((item) => {
         // object is sometimes null
         if (object) {
           array.push(object[item]);
@@ -47,7 +47,7 @@ export default class SecretListHeaderTab extends Component {
       });
       return array;
     };
-    let checker = arr => arr.every(item => !item); // same things as listing every item as !item && !item, etc.
+    let checker = (arr) => arr.every((item) => !item); // same things as listing every item as !item && !item, etc.
     // For now only check capabilities for the Database Secrets Engine
     if (this.args.displayName === 'Database') {
       let peekRecordRoles = this.store.peekRecord('capabilities', 'database/roles/');

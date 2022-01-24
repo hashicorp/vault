@@ -8,7 +8,7 @@ export function codeFillable(selector) {
     isDescriptor: true,
 
     get() {
-      return function(context, code) {
+      return function (context, code) {
         const cm = getCodeMirrorInstance(context, selector);
         cm.setValue(code);
         return this;
@@ -25,7 +25,7 @@ export function code(selector) {
   return {
     isDescriptor: true,
     get() {
-      return function(context) {
+      return function (context) {
         const cm = getCodeMirrorInstance(context, selector);
         return cm.getValue();
       };

@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -207,9 +208,10 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -218,6 +220,17 @@ func TestSystemBackend_mounts(t *testing.T) {
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
+	}
+
+	for name, conf := range exp {
+		req := logical.TestRequest(t, logical.ReadOperation, "mounts/"+name)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if diff := deep.Equal(resp.Data, conf); len(diff) > 0 {
+			t.Fatalf("bad, diff: %#v", diff)
+		}
 	}
 }
 
@@ -308,9 +321,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1927,16 +1941,140 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 }
 
 func TestSystemBackend_rawRead_Compressed(t *testing.T) {
-	b := testSystemBackendRaw(t)
+	t.Run("basic", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
 
-	req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
-		t.Fatalf("bad: %v", resp)
-	}
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !strings.HasPrefix(resp.Data["value"].(string), `{"type":"mounts"`) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("base64", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"encoding": "base64",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), `{"type":"mounts"`) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid_encoding", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"encoding": "invalid_encoding",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compressed_false", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].(string); !ok {
+			t.Fatalf("value is a not a string, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].(string)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compressed_false_base64", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("uncompressed_entry_with_prefix_byte", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/test_raw")
+		req.Data = map[string]interface{}{
+			"value": "414c1e7f-0a9a-49e0-9fc4-61af329d0724",
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("expected error if trying to read uncompressed entry with prefix byte")
+		}
+		if !resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: %v", resp)
+		}
+		if resp.Data["value"].(string) != "414c1e7f-0a9a-49e0-9fc4-61af329d0724" {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
 }
 
 func TestSystemBackend_rawRead_Protected(t *testing.T) {
@@ -1962,7 +2100,7 @@ func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 func TestSystemBackend_rawReadWrite(t *testing.T) {
 	_, b, _ := testCoreSystemBackendRaw(t)
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
+	req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
 	req.Data["value"] = `path "secret/" { policy = "read" }`
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -1984,6 +2122,328 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 
 	// Note: since the upgrade code is gone that upgraded from 0.1, we can't
 	// simply parse this out directly via GetPolicy, so the test now ends here.
+}
+
+func TestSystemBackend_rawWrite_ExistanceCheck(t *testing.T) {
+	b := testSystemBackendRaw(t)
+	req := logical.TestRequest(t, logical.CreateOperation, "raw/core/mounts")
+	_, exist, err := b.HandleExistenceCheck(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: #{err}")
+	}
+	if !exist {
+		t.Fatalf("raw existence check failed for actual key")
+	}
+
+	req = logical.TestRequest(t, logical.CreateOperation, "raw/non_existent")
+	_, exist, err = b.HandleExistenceCheck(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: #{err}")
+	}
+	if exist {
+		t.Fatalf("raw existence check failed for non-existent key")
+	}
+}
+
+func TestSystemBackend_rawReadWrite_base64(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
+		req.Data = map[string]interface{}{
+			"value":    base64.StdEncoding.EncodeToString([]byte(`path "secret/" { policy = "read"[ }`)),
+			"encoding": "base64",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp != nil {
+			t.Fatalf("bad: %v", resp)
+		}
+
+		// Read via raw API
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/sys/policy/test")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !strings.HasPrefix(resp.Data["value"].(string), "path") {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid_value", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
+		req.Data = map[string]interface{}{
+			"value":    "invalid base64",
+			"encoding": "base64",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error")
+		}
+
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("invalid_encoding", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/sys/policy/test")
+		req.Data = map[string]interface{}{
+			"value":    "text",
+			"encoding": "invalid_encoding",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error")
+		}
+
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+}
+
+func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
+	t.Run("use_existing_compression", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value":            mounts,
+			"compression_type": compressutil.CompressionTypeGzip,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("compression_type_matches_existing_compression", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value": mounts,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), string(compressutil.CompressionCanaryGzip)) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("write_uncompressed_over_existing_compressed", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value":            mounts,
+			"compression_type": "",
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read back and check gzip was not applied by looking for prefix byte
+		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"compressed": false,
+			"encoding":   "base64",
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if _, ok := resp.Data["value"].([]byte); !ok {
+			t.Fatalf("value is a not an array of bytes, it is %T", resp.Data["value"])
+		}
+
+		if !strings.HasPrefix(string(resp.Data["value"].([]byte)), `{"type":"mounts"`) {
+			t.Fatalf("bad: %v", resp)
+		}
+	})
+
+	t.Run("invalid_compression_type", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		mounts := resp.Data["value"].(string)
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/core/mounts")
+		req.Data = map[string]interface{}{
+			"value":            mounts,
+			"compression_type": "invalid_type",
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("update_non_existent_entry", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.UpdateOperation, "raw/non_existent")
+		req.Data = map[string]interface{}{
+			"value": "{}",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("invalid_compression_over_existing_uncompressed_data", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value": "{}",
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if resp.IsError() {
+			t.Fatalf("response is an error: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value":            "{}",
+			"compression_type": compressutil.CompressionTypeGzip,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
+
+	t.Run("wrong_compression_type_over_existing_compressed_data", func(t *testing.T) {
+		b := testSystemBackendRaw(t)
+
+		req := logical.TestRequest(t, logical.CreateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value":            "{}",
+			"compression_type": compressutil.CompressionTypeGzip,
+		}
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if resp.IsError() {
+			t.Fatalf("response is an error: %v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.UpdateOperation, "raw/test")
+		req.Data = map[string]interface{}{
+			"value":            "{}",
+			"compression_type": compressutil.CompressionTypeSnappy,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != logical.ErrInvalidRequest {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !resp.IsError() {
+			t.Fatalf("response is not error: %v", resp)
+		}
+	})
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {
@@ -2270,7 +2730,7 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 			t.Fatal("no sum key found in returned data")
 		}
 		if sum.(string) != expected {
-			t.Fatal("mismatched hashes")
+			t.Fatalf("mismatched hashes: got: %s, expect: %s", sum.(string), expected)
 		}
 	}
 
@@ -2295,6 +2755,20 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 	// Test returning as base64
 	req.Data["format"] = "base64"
 	doRequest(req, false, "2dOA8puXrWodkumH2D+loCZTMB4QBt0rzVGvpZqRR+nK7a+JUhq8DwtoKtzUf7USuDQ8g0oy8yb+m+8AVCzohw==")
+
+	// Test SHA-3
+	req.Data["format"] = "hex"
+	req.Data["algorithm"] = "sha3-224"
+	doRequest(req, false, "ced91e69d89c837e87cff960bd64fd9b9f92325fb9add8988d33d007")
+
+	req.Data["algorithm"] = "sha3-256"
+	doRequest(req, false, "e4bd866ec3fa52df3b7842aa97b448bc859a7606cefcdad1715847f4b82a6c93")
+
+	req.Data["algorithm"] = "sha3-384"
+	doRequest(req, false, "715cd38cbf8d0bab426b6a084d649760be555dd64b34de6db148a3fbf2cd2aa5d8b03eb6eda73a3e9a8769c00b4c2113")
+
+	req.Data["algorithm"] = "sha3-512"
+	doRequest(req, false, "f7cac5ad830422a5408b36a60a60620687be180765a3e2895bc3bdbd857c9e08246c83064d4e3612f0cb927f3ead208413ab98624bf7b0617af0f03f62080976")
 
 	// Test bad input/format/algorithm
 	req.Data["format"] = "base92"
@@ -2476,9 +2950,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"accessor":                resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["accessor"],
 				"uuid":                    resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
-					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-					"force_no_cache":    false,
+					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []string{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
