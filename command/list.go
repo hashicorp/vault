@@ -26,8 +26,8 @@ func (c *ListCommand) Help() string {
 
 Usage: vault list [options] PATH
 
-  Lists data from Vault at the given path. This can be used to list keys in a,
-  given secret engine.
+  Lists data from Vault at the given path. This can be used to list keys in
+  a given secret engine.
 
   List values under the "my-app" folder of the generic secret engine:
 
