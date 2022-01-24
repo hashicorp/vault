@@ -6,6 +6,7 @@ import Head from 'next/head'
 import rivetQuery from '@hashicorp/nextjs-scripts/dato/client'
 import { ErrorBoundary } from '@hashicorp/platform-runtime-error-monitoring'
 import createConsentManager from '@hashicorp/react-consent-manager/loader'
+import localConsentManagerServices from 'lib/consent-manager-services'
 import NProgress from '@hashicorp/platform-util/nprogress'
 import useFathomAnalytics from '@hashicorp/platform-analytics'
 import useAnchorLinkAnalytics from '@hashicorp/platform-util/anchor-link-analytics'
@@ -18,6 +19,7 @@ import StandardLayout from 'layouts/standard'
 NProgress({ Router })
 const { ConsentManager } = createConsentManager({
   preset: 'oss',
+  otherServices: [...localConsentManagerServices],
 })
 
 export default function App({ Component, pageProps, layoutData }) {
