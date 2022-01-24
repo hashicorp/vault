@@ -64,16 +64,9 @@
         </Toolbar>
         {{#if @isLoading}}
           <LayoutLoading />
-        {{else if this.hasClientData}}
-          <Clients::Attribution
-            @newClientsData={{this.barChartDataset}}
-            @totalClientsData={{this.barChartDataset}}
-            @chartLegend={{this.chartLegend}}
-            @isDateRange={{this.isDateRange}}
-            @isAllNamespaces={{this.isAllNamespaces}}
-            {{! TODO this should be on the model?}}
-            @activityDateRange="January 2021 - December 2021"
-          />
+        {{else}}
+          {{! ARG TODO remove once we have this dialed }}
+          <EmptyState @title="Coming soon" @message="Under construction for the 1.10 binary." />
         {{/if}}
       {{else}}
         <EmptyState

@@ -62,8 +62,8 @@
     </ToolbarActions>
   </Toolbar>
   <Clients::Config @model={{this.model.config}} @isLoading={{this.currentlyLoading}} />
-{{else if (eq this.tab "dashboard")}}
-  <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
 {{else if (eq this.tab "current")}}
   <Clients::Current @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
+{{else if (eq this.tab "dashboard")}}
+  <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
 {{/if}}
