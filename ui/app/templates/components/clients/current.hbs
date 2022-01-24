@@ -1,0 +1,68 @@
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  <p class="has-bottom-margin-s">
+    The below data is for the current month starting from the first day. For historical data, see the monthly history tab.
+  </p>
+  {{#if (eq @model.config.enabled "Off")}}
+    <EmptyState
+      @title="Tracking is disabled"
+      @message="Tracking is disabled and data is not being collected. To turn it on edit the configuration."
+    >
+      {{#if @model.config.configPath.canUpdate}}
+        <LinkTo @route="vault.cluster.clients.edit">
+          Go to configuration
+        </LinkTo>
+      {{/if}}
+    </EmptyState>
+  {{/if}}
+
+  {{#if @isLoading}}
+    <LayoutLoading />
+  {{else}}
+    <div class="card has-bottom-margin-m">
+      <div class="card-content">
+        <div class="is-flex is-flex-center">
+          <div class="is-flex-1">
+            <h2 class="title is-5 is-marginless">
+              Total usage
+            </h2>
+            <p class="sub-text">
+              These totals are within this namespace and all its children.
+            </p>
+          </div>
+          <LearnLink @path="/tutorials/vault/usage-metrics">
+            Learn more
+          </LearnLink>
+        </div>
+        <hr />
+        <div class="columns">
+          <div class="column" data-test-client-count-stats>
+            <StatText
+              @label="Total active clients"
+              @value={{or @model.activity.clients @model.activity.total.clients "0"}}
+              @size="l"
+              @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
+            />
+          </div>
+          <div class="column">
+            <StatText
+              class="column"
+              @label="Unique entities"
+              @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities "0"}}
+              @size="l"
+              @subText="Representation of a particular user, client or application that created a token via login."
+            />
+          </div>
+          <div class="column">
+            <StatText
+              class="column"
+              @label="Non-entity tokens"
+              @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens "0"}}
+              @size="l"
+              @subText="Tokens created via a method that is not associated with an entity."
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+</div>
