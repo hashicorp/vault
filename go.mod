@@ -88,7 +88,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.9.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.9.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.10.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.10.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.10.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
@@ -100,14 +100,14 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.10.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.3
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.2.0
 	github.com/hashicorp/vault/api v1.1.2-0.20210713235431-1fc8af4c041f
-	github.com/hashicorp/vault/sdk v0.2.2-0.20211130145818-1f9ef32c630d
+	github.com/hashicorp/vault/sdk v0.2.2-0.20220103165610-48e31c378a61
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

@@ -1,3 +1,10 @@
+## 1.8.7
+### December 21, 2021
+
+CHANGES:
+
+* go: Update go version to 1.16.12 [[GH-13422](https://github.com/hashicorp/vault/pull/13422)]
+
 ## 1.8.6
 ### December 9, 2021
 
