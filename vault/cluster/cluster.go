@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"net"
 	"net/url"
 	"os"
@@ -14,9 +16,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"golang.org/x/net/http2"
 )
 
@@ -279,9 +279,9 @@ func (cl *Listener) Run(ctx context.Context) error {
 		// Start our listening loop
 		go func(closeCh chan struct{}, tlsLn net.Listener) {
 			defer func() {
+				cl.shutdownWg.Done()
 				tlsLn.Close()
 				close(closeCh)
-				cl.shutdownWg.Done()
 			}()
 
 			// baseDelay is the initial delay after an Accept() error before attempting again

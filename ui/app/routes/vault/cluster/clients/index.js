@@ -11,6 +11,7 @@ const getActivityParams = ({ tab, start, end }) => {
   if (tab === 'current') {
     params.tab = tab;
   } else if (tab === 'history') {
+    // ARG TODO remove
     if (start) {
       let startDate = parseDateString(start);
       if (startDate) {
@@ -26,6 +27,8 @@ const getActivityParams = ({ tab, start, end }) => {
         params.end_time = getTime(endDate) / 1000;
       }
     }
+  } else if (tab === 'dashboard') {
+    params.tab = tab;
   }
   return params;
 };

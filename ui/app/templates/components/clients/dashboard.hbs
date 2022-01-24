@@ -1,4 +1,4 @@
-{{#if (and (eq @tab "history") (eq @model.config.queriesAvailable false))}}
+{{#if (and (eq @tab "dashboard") (eq @model.config.queriesAvailable false))}}
   {{#if (eq @model.config.enabled "On")}}
     <EmptyState
       @title="No monthly history"
@@ -20,8 +20,7 @@
   {{/if}}
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-    {{! ARG TODO change current to Dashboard }}
-    {{#if (eq @tab "current")}}
+    {{#if (eq @tab "dashboard")}}
       <p class="has-bottom-margin-xl">
         {{! ARG TODO Add link for documentation "here" }}
         This dashboard will surface Vault client usage over time. Clients represent anything that has authenticated to or
@@ -60,30 +59,14 @@
               @handleClientActivityQuery={{this.handleClientActivityQuery}}
               @endTimeDisplay={{this.endTimeDisplay}}
             />
-            {{! ARG TODO more filters for auth and namespace here }}
+            {{! ARG TODO more filters for namespace here }}
           </ToolbarFilters>
         </Toolbar>
         {{#if @isLoading}}
           <LayoutLoading />
-        {{else if this.hasClientData}}
-          <Clients::RunningTotal
-            @chartLegend={{this.chartLegend}}
-            @barChartData={{this.byMonthNewClients}}
-            @lineChartData={{this.byMonth}}
-            @runningTotals={{this.runningTotals}}
-          />
-
-          <Clients::Attribution
-            @byMonth={{this.byMonth}}
-            @topTenNamespaces={{this.topTenNamespaces}}
-            @selectedNamespace={{this.selectedNamespace}}
-            @chartLegend={{this.chartLegend}}
-            @isDateRange={{this.isDateRange}}
-            @startTimeDisplay={{this.startTimeDisplay}}
-            @endTimeDisplay={{this.endTimeDisplay}}
-          />
-
-          <Clients::MonthlyUsage @chartLegend={{this.chartLegend}} @verticalBarChartData={{this.byMonth}} />
+        {{else}}
+          {{! ARG TODO remove once we have this dialed }}
+          <EmptyState @title="Coming soon" @message="Under construction for the 1.10 binary." />
         {{/if}}
       {{else}}
         <EmptyState
