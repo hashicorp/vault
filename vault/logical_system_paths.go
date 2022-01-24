@@ -1616,6 +1616,17 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "policies/password/?$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordList,
+					Summary:  "List the existing password policies.",
+				},
+			},
+		},
+
+		{
 			Pattern: "policies/password/(?P<name>.+)/generate$",
 
 			Fields: map[string]*framework.FieldSchema{
