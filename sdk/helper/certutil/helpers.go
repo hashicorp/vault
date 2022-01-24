@@ -354,6 +354,9 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 	block, data := pem.Decode(data)
 	if block != nil {
+		if len(bytes.TrimSpace(data)) > 0 {
+			return nil, errutil.UserError{Err: "unexpected trailing data after parsed PEM block"}
+		}
 		var rawKey interface{}
 		var err error
 		if rawKey, err = x509.ParsePKIXPublicKey(block.Bytes); err != nil {
@@ -364,17 +367,15 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 			}
 		}
 
-		if rsaPublicKey, ok := rawKey.(*rsa.PublicKey); ok {
-			return rsaPublicKey, nil
-		}
-		if ecPublicKey, ok := rawKey.(*ecdsa.PublicKey); ok {
-			return ecPublicKey, nil
-		}
-		if edPublicKey, ok := rawKey.(ed25519.PublicKey); ok {
-			return edPublicKey, nil
+		switch key := rawKey.(type) {
+		case *rsa.PublicKey:
+			return key, nil
+		case *ecdsa.PublicKey:
+			return key, nil
+		case ed25519.PublicKey:
+			return key, nil
 		}
 	}
-
 	return nil, errors.New("data does not contain any valid public keys")
 }
 
