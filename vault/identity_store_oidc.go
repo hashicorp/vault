@@ -1043,7 +1043,7 @@ func (k *namedKey) generateAndSetNextKey(ctx context.Context, logger hclog.Logge
 
 func (k *namedKey) signPayload(payload []byte) (string, error) {
 	if k.SigningKey == nil {
-		return "", fmt.Errorf("signing key is nil")
+		return "", fmt.Errorf("signing key is nil; rotate the key and try again")
 	}
 	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.Algorithm)}
 	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
@@ -1509,6 +1509,8 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 			}
 		}
 	} else {
+		// this can occur for keys generated before vault 1.9.0 but rotated on
+		// vault 1.9.0
 		logger.Debug("nil signing key detected on rotation")
 	}
 
