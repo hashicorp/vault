@@ -75,20 +75,6 @@ export default class Dashboard extends Component {
     return this.args.model.activity && this.args.model.activity.total;
   }
 
-  // Construct the namespace model for the search select component
-  get searchDataset() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
-    }
-    let dataList = this.args.model.activity.byNamespace;
-    return dataList.map((d) => {
-      return {
-        name: d['namespace_id'],
-        id: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
-      };
-    });
-  }
-
   // top level TOTAL client counts from response for given date range
   get runningTotals() {
     if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.total) {
@@ -97,32 +83,12 @@ export default class Dashboard extends Component {
     return this.args.model.newInitActivity.total;
   }
 
-  // TODO just here for testing right now, needs to be moved and set by filter
-  // @tracked selectedNamespace = 'namespacelonglonglong4/';
-
-  // for horizontal chart in Attribution component
+  // for horizontal bar chart in Attribution component
   get topTenNamespaces() {
     if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byNamespace) {
       return null;
     }
     return this.args.model.newInitActivity.byNamespace;
-  }
-
-  // for line chart in RunningTotal component
-  // for vertical bar chart in MonthlyUsage component
-  get byMonth() {
-    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byMonth) {
-      return null;
-    }
-    return this.args.model.newInitActivity.byMonth;
-  }
-
-  // for vertical bar chart in RunningTotal component
-  get byMonthNewClients() {
-    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byMonthNewClients) {
-      return null;
-    }
-    return this.args.model.newInitActivity.byMonthNewClients;
   }
 
   @action
