@@ -494,3 +494,113 @@ path "foo/+*" {
 		t.Errorf("bad error: %s", err)
 	}
 }
+
+func TestPolicy_ParseNestedParameters(t *testing.T) {
+	t.Parallel()
+	tCases := map[string]struct {
+		policy      string
+		expectedErr string
+	}{
+		"allowedEndDot": {
+			policy: `
+path "foo" {
+	allowed_parameters = {
+		"map." = []
+	}
+}`,
+			expectedErr: `path "foo": invalid allowed parameter "map."`,
+		},
+		"allowedInnerGlob": {policy: `
+path "foo" {
+	allowed_parameters = {
+		"map.*.key" = []
+	}
+}`,
+			expectedErr: `path "foo": invalid allowed parameter "map.*.key"`,
+		},
+		"allowedPartialGlob": {policy: `
+path "foo" {
+	allowed_parameters = {
+		"map.key*" = []
+	}
+}`,
+			expectedErr: `path "foo": invalid allowed parameter "map.key*"`,
+		},
+		"deniedEndDot": {policy: `
+path "foo" {
+	denied_parameters = {
+		"map." = []
+	}
+}`,
+			expectedErr: `path "foo": invalid denied parameter "map."`,
+		},
+		"deniedInnerGlob": {policy: `
+path "foo" {
+	denied_parameters = {
+		"map.*.key" = []
+	}
+}`,
+			expectedErr: `path "foo": invalid denied parameter "map.*.key"`,
+		},
+		"deniedPartialGlob": {policy: `
+path "foo" {
+	denied_parameters = {
+		"map.key*" = []
+	}
+}`,
+			expectedErr: `path "foo": invalid denied parameter "map.key*"`,
+		},
+		"requiredEndDot": {policy: `
+path "foo" {
+	required_parameters = ["map."]
+}`,
+			expectedErr: `path "foo": invalid required parameter "map."`,
+		},
+		"requiredInnerGlob": {policy: `
+path "foo" {
+	required_parameters = ["map.*.key"]
+}`,
+			expectedErr: `path "foo": invalid required parameter "map.*.key"`,
+		},
+		"requiredPartialGlob": {policy: `
+path "foo" {
+	required_parameters = ["map.key*"]
+}`,
+			expectedErr: `path "foo": invalid required parameter "map.key*"`,
+		},
+		"validPolicy": {policy: `
+path "foo" {
+	required_parameters = ["map.key1", "map.nest.key2"]
+	allowed_parameters = {
+		"map.key1" = []
+		"map.nest.key2" = ["val2"]
+		"map.star.*" = [] 
+	}
+	denied_parameters = {
+		"map.key1" = ["foo"]
+		"map.star.inner.key0" = []
+		"map.star.other.*" = ["bar"]
+	}
+}`},
+	}
+
+	for name, test := range tCases {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(test.policy))
+
+			if test.expectedErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+
+			if err == nil {
+				t.Fatal("expected error, but received none")
+			}
+			if !strings.Contains(err.Error(), test.expectedErr) {
+				t.Fatalf("bad error: expected %q, got %q", test.expectedErr, err.Error())
+			}
+		})
+	}
+}
