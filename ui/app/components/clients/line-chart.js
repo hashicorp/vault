@@ -34,7 +34,6 @@ export default class LineChart extends Component {
   @action
   renderChart(element, args) {
     let dataset = args[0];
-    console.log(dataset);
     let chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
@@ -113,8 +112,8 @@ export default class LineChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
       this.tooltipMonth = data.month;
-      this.tooltipTotal = `${data.total} total clients`;
-      this.tooltipNew = `${data.new_clients.total} new clients`;
+      this.tooltipTotal = `${data.clients} total clients`;
+      this.tooltipNew = `${data.new_clients.clients} new clients`;
       let node = hoverCircles.filter((plot) => plot.month === data.month).node();
       this.tooltipTarget = node;
     });
