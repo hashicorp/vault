@@ -147,6 +147,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"rekey-recovery-key/init",
 				"rekey-recovery-key/update",
 				"rekey-recovery-key/verify",
+				"version-history",
 			},
 
 			LocalStorage: []string{
@@ -4241,6 +4242,42 @@ type HAStatusNode struct {
 	LastEcho       *time.Time `json:"last_echo"`
 }
 
+func (b *SystemBackend) handleVersionHistoryRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	versions := make([]VaultVersion, 0)
+
+	for versionString, ts := range b.Core.versionTimestamps {
+		versions = append(versions, VaultVersion{
+			Version:            versionString,
+			TimestampInstalled: ts,
+		})
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].TimestampInstalled.Before(versions[j].TimestampInstalled)
+	})
+
+	versionHistoryResp := map[string]interface{}{}
+
+	for i, v := range versions {
+		entry := map[string]interface{}{
+			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"previous_version":    nil,
+		}
+
+		if i > 0 {
+			entry["previous_version"] = versions[i-1].Version
+		}
+
+		versionHistoryResp[v.Version] = entry
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"versions": versionHistoryResp,
+		},
+	}, nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -5031,5 +5068,15 @@ This path responds to the following HTTP methods.
 	"list-leases": {
 		"List leases associated with this Vault cluster",
 		"Requires sudo capability. List leases associated with this Vault cluster",
+	},
+	"version-history": {
+		"Returns map of historical version change entries.",
+		`
+This path responds to the following HTTP methods.
+
+    GET /
+        Returns a map of historical version change entries. This is an unauthenticated
+        endpoint.
+		`,
 	},
 }
