@@ -1,27 +1,77 @@
 import ApplicationSerializer from '../application';
-import { format } from 'date-fns';
 
-// TODO CMB: add before and after example of serializer
+/* 
+SAMPLE PAYLOAD BEFORE/AFTER:
+
+payload.data.by_namespace = [
+  {
+    namespace_id: '5SWT8',
+    namespace_path: 'namespacelonglonglong4/',
+    _comment1: 'client counts are nested within own object', 
+    counts: {
+      entity_clients: 171,
+      non_entity_clients: 20,
+      clients: 191,
+    },
+    mounts: [
+      {
+        path: 'auth/method/uMGBU',
+        counts: {
+          clients: 35,
+          entity_clients: 20,
+          non_entity_clients: 15,
+        },
+      },
+    ],
+  },
+];
+
+transformedPayload.by_namespace = [
+  {
+    label: 'namespacelonglonglong4/',
+    _comment2: 'remove nested object', 
+    entity_clients: 171,
+    non_entity_clients: 20,
+    clients: 191,
+    mounts: [
+      {
+        label: 'auth/method/uMGBU',
+        entity_clients: 20,
+        non_entity_clients: 15,
+        clients: 35,
+      },
+    ],
+  },
+]
+*/
 
 export default ApplicationSerializer.extend({
-  // abstracting like this may not work as the order does matter in how the charts display
-  // whatever is first will be the bottom/left bar, second will be top/right bar
-  flattenDataset(dataset, nestedObjectKey = 'counts') {
-    // nestedObjectKey needs to be passed in as a string, defaults to counts
-    // because most of the data from the API is nested under the key 'counts'
-    return dataset.map((d) => {
-      let flattenedObject = {};
-      Object.keys(d[nestedObjectKey]).forEach((k) => {
-        flattenedObject[k] = d[nestedObjectKey][k];
+  flattenDataset(payload) {
+    let topTen = payload.slice(0, 10);
+
+    return topTen.map((ns) => {
+      // 'namespace_path' is an empty string for root
+      if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
+      let label = ns['namespace_path'] || ns['namespace_id']; // TODO CMB will namespace_path ever be empty?
+      let flattenedNs = {};
+      // we don't want client counts nested within the 'counts' object for stacked charts
+      Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
+      // if mounts attribution unavailable, mounts will be undefined
+      flattenedNs.mounts = ns.mounts?.map((mount) => {
+        let flattenedMount = {};
+        flattenedMount.label = mount['path'];
+        Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
+        return flattenedMount;
       });
       return {
-        label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
-        ...flattenedObject,
+        label,
+        ...flattenedNs,
       };
     });
   },
 
-  // used for top 10 attribution charts
+  // TODO CMB remove and used abstracted function above
+  // prior to 1.10, payload key names were "distinct_entities" and "non_entity_tokens" so mapping below won't work
   flattenByNamespace(payload) {
     // keys in the object created here must match the legend keys in dashboard.js ('entity_clients')
     let topTen = payload.slice(0, 10);
@@ -48,61 +98,14 @@ export default ApplicationSerializer.extend({
     });
   },
 
-  // for vault usage - vertical bar chart
-  flattenByMonths(payload, isNewClients = false) {
-    if (isNewClients) {
-      return payload.map((m) => {
-        return {
-          month: format(new Date(m.timestamp), 'M/yy'),
-          entity_clients: m['new_clients']['counts']['entity_clients'],
-          non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
-          total: m['new_clients']['counts']['clients'],
-          namespaces: this.flattenByNamespace(m['new_clients']['namespaces']),
-        };
-      });
-    } else {
-      return payload.map((m) => {
-        return {
-          month: format(new Date(m.timestamp), 'M/yy'),
-          entity_clients: m['counts']['entity_clients'],
-          non_entity_clients: m['counts']['non_entity_clients'],
-          total: m['counts']['clients'],
-          namespaces: this.flattenByNamespace(m['namespaces']),
-          new_clients: {
-            entity_clients: m['new_clients']['counts']['entity_clients'],
-            non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
-            total: m['new_clients']['counts']['clients'],
-            namespaces: this.flattenByNamespace(m['new_clients']['namespaces']),
-          },
-        };
-      });
-    }
-  },
-
-  formatTimestamp(payload) {
-    return payload.map((m) => {
-      let month = format(new Date(m.timestamp), 'M/yy');
-      return {
-        month,
-        ...m,
-      };
-    });
-  },
-
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    // conditionals to see if .months, if new_totals exist?
     // needs to accept both /monthly and /activity payloads
-    // replace & delete old keys on payload
     let transformedPayload = {
       ...payload,
-      // TODO CMB should these be nested under "data"?
-      by_namespace: this.flattenByNamespace(payload.data.by_namespace),
-      by_month: this.flattenByMonths(payload.data.months),
-      by_month_new_clients: this.flattenByMonths(payload.data.months, { isNewClients: true }),
+      // TODO CMB should these be nested under "data" to go to model correctly?)
+      by_namespace: this.flattenDataset(payload.data.by_namespace),
     };
-
     delete payload.data.by_namespace;
-    delete payload.data.months;
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 });
