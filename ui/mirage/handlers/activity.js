@@ -1,5 +1,11 @@
 export default function (server) {
   // 1.10 API response
+  server.get('sys/internal/counters/config', function (db) {
+    return {
+      request_id: '00001',
+      data: db['clients/configs'].first(),
+    };
+  });
   server.get('/sys/internal/counters/activity', function () {
     return {
       request_id: '26be5ab9-dcac-9237-ec12-269a8ca647d5',

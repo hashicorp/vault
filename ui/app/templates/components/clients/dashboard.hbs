@@ -1,4 +1,4 @@
-{{#if (and (eq @tab "history") (eq @model.config.queriesAvailable false))}}
+{{#if (and (eq @tab "dashboard") (eq @model.config.queriesAvailable false))}}
   {{#if (eq @model.config.enabled "On")}}
     <EmptyState
       @title="No monthly history"
@@ -20,8 +20,7 @@
   {{/if}}
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-    {{! ARG TODO change current to Dashboard }}
-    {{#if (eq @tab "current")}}
+    {{#if (eq @tab "dashboard")}}
       <p class="has-bottom-margin-xl">
         {{! ARG TODO Add link for documentation "here" }}
         This dashboard will surface Vault client usage over time. Clients represent anything that has authenticated to or
@@ -60,42 +59,14 @@
               @handleClientActivityQuery={{this.handleClientActivityQuery}}
               @endTimeDisplay={{this.endTimeDisplay}}
             />
-            {{! ARG TODO more filters for auth and namespace here }}
+            {{! ARG TODO more filters for namespace here }}
           </ToolbarFilters>
         </Toolbar>
         {{#if @isLoading}}
           <LayoutLoading />
-        {{else if this.hasClientData}}
-          <Clients::RunningTotal
-            @title="Vault client counts"
-            @description="An active client is any user or service that interacts with Vault. They are made up of unique entities and non-entity tokens. The total client count number is an important consideration for Vault billing."
-            @chartLegend={{this.chartLegend}}
-            @lineChartData={{this.lineChartData}}
-            @barChartData={{this.newMonthlyClients}}
-          />
-
-          <Clients::Attribution
-            @newClientsData={{this.barChartDataset}}
-            @totalClientsData={{this.barChartDataset}}
-            @chartLegend={{this.chartLegend}}
-            @isDateRange={{this.isDateRange}}
-            @isAllNamespaces={{this.isAllNamespaces}}
-            {{! TODO this should be on the model?}}
-            @activityDateRange="January 2021 - December 2021"
-          />
-
-          <Clients::MonthlyUsage
-            @title="Vault usage"
-            @description="This data can be used to understand how many total clients are using Vault each month for the time period selected above."
-            @chartLegend={{this.chartLegend}}
-            @verticalBarChartData={{this.monthlyUsage}}
-            @subTitle="Total monthly clients"
-            @subText="Each unique client is counted once per month. This can help with capacity planning."
-            @dataOne="Average total clients per month"
-            @dataOneData="100"
-            @dataTwo="Average new clients per month"
-            @dataTwoData="4"
-          />
+        {{else}}
+          {{! ARG TODO remove once we have this dialed }}
+          <EmptyState @title="Coming soon" @message="Under construction for the 1.10 binary." />
         {{/if}}
       {{else}}
         <EmptyState
