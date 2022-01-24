@@ -7,16 +7,29 @@ import { mean } from 'd3-array';
  * 
  * @example
  * ```js
- *  <Clients::MonthlyUsage
- *    @chartLegend={{this.chartLegend}}
- *    @verticalBarChartData={{this.totalMonthlyClients}}
- *   />
+  <Clients::MonthlyUsage 
+    @chartLegend={{this.chartLegend}} 
+    @verticalBarChartData={{this.byMonth}} 
+  />
  * ```
 
- * @param {array} verticalBarChartData - (passed to child chart) must be an array of flattened objects
- * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
+ * @param {array} verticalBarChartData - array of flattened objects
+    sample object = 
+    {
+      month: '1/22',
+      entity_clients: 23,
+      non_entity_clients: 45,
+      total: 68,
+      namespaces: [],
+      new_clients: {
+        entity_clients: 11,
+        non_entity_clients: 36,
+        total: 47,
+        namespaces: [],
+      },
+    }
+ * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
-
 export default class MonthlyUsage extends Component {
   get averageTotalClients() {
     let average = mean(this.args.verticalBarChartData?.map((d) => d.total));

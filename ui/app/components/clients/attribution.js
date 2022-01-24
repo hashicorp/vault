@@ -8,15 +8,15 @@ import { tracked } from '@glimmer/tracking';
  *
  * @example
  * ```js
- * <Clients::Attribution
- *    @newClientsData={{this.newClientData}}
- *    @totalClientsData={{this.totalClientData}}
- *    @chartLegend={{this.chartLegend}}
- *    @isDateRange={{this.isDateRange}}
- *    @isAllNamespaces={{this.isAllNamespaces}}
-    >
-      <button type="button"> Export attribution data </button>
-    </Clients::Attribution>
+    <Clients::Attribution
+      @byMonth={{this.byMonth}}
+      @topTenNamespaces={{this.topTenNamespaces}}
+      @selectedNamespace={{this.selectedNamespace}}
+      @chartLegend={{this.chartLegend}}
+      @isDateRange={{this.isDateRange}}
+      @startTimeDisplay={{this.startTimeDisplay}}
+      @endTimeDisplay={{this.endTimeDisplay}}
+    />
  * ```
 
  * @param {array} newClientsData - (passed to child chart) must be an array of flattened objects
