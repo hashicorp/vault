@@ -213,10 +213,15 @@ func (r *Raft) runFollower() {
 					didWarn = true
 				}
 			} else {
-				r.logger.Warn("heartbeat timeout reached, starting election", "last-leader", lastLeader)
 				metrics.IncrCounter([]string{"raft", "transition", "heartbeat_timeout"}, 1)
-				r.setState(Candidate)
-				return
+				if hasVote(r.configurations.latest, r.localID) {
+					r.logger.Warn("heartbeat timeout reached, starting election", "last-leader", lastLeader)
+					r.setState(Candidate)
+					return
+				} else if !didWarn {
+					r.logger.Warn("heartbeat timeout reached, not part of a stable configuration or a non-voter, not triggering a leader election")
+					didWarn = true
+				}
 			}
 
 		case <-r.shutdownCh:
@@ -244,8 +249,7 @@ func (r *Raft) liveBootstrap(configuration Configuration) error {
 	}
 	r.setCurrentTerm(1)
 	r.setLastLog(entry.Index, entry.Term)
-	r.processConfigurationLogEntry(&entry)
-	return nil
+	return r.processConfigurationLogEntry(&entry)
 }
 
 // runCandidate runs the FSM for a candidate.
@@ -508,9 +512,18 @@ func (r *Raft) startStopReplication() {
 			r.goFunc(func() { r.replicate(s) })
 			asyncNotifyCh(s.triggerCh)
 			r.observe(PeerObservation{Peer: server, Removed: false})
-		} else if ok && s.peer.Address != server.Address {
-			r.logger.Info("updating peer", "peer", server.ID)
-			s.peer = server
+		} else if ok {
+
+			s.peerLock.RLock()
+			peer := s.peer
+			s.peerLock.RUnlock()
+
+			if peer.Address != server.Address {
+				r.logger.Info("updating peer", "peer", server.ID)
+				s.peerLock.Lock()
+				s.peer = server
+				s.peerLock.Unlock()
+			}
 		}
 	}
 
@@ -1383,7 +1396,13 @@ func (r *Raft) appendEntries(rpc RPC, a *AppendEntriesRequest) {
 
 			// Handle any new configuration changes
 			for _, newEntry := range newEntries {
-				r.processConfigurationLogEntry(newEntry)
+				if err := r.processConfigurationLogEntry(newEntry); err != nil {
+					r.logger.Warn("failed to append entry",
+						"index", newEntry.Index,
+						"error", err)
+					rpcErr = err
+					return
+				}
 			}
 
 			// Update the lastLog
@@ -1415,14 +1434,21 @@ func (r *Raft) appendEntries(rpc RPC, a *AppendEntriesRequest) {
 // processConfigurationLogEntry takes a log entry and updates the latest
 // configuration if the entry results in a new configuration. This must only be
 // called from the main thread, or from NewRaft() before any threads have begun.
-func (r *Raft) processConfigurationLogEntry(entry *Log) {
-	if entry.Type == LogConfiguration {
+func (r *Raft) processConfigurationLogEntry(entry *Log) error {
+	switch entry.Type {
+	case LogConfiguration:
 		r.setCommittedConfiguration(r.configurations.latest, r.configurations.latestIndex)
 		r.setLatestConfiguration(DecodeConfiguration(entry.Data), entry.Index)
-	} else if entry.Type == LogAddPeerDeprecated || entry.Type == LogRemovePeerDeprecated {
+
+	case LogAddPeerDeprecated, LogRemovePeerDeprecated:
 		r.setCommittedConfiguration(r.configurations.latest, r.configurations.latestIndex)
-		r.setLatestConfiguration(decodePeers(entry.Data, r.trans), entry.Index)
+		conf, err := decodePeers(entry.Data, r.trans)
+		if err != nil {
+			return err
+		}
+		r.setLatestConfiguration(conf, entry.Index)
 	}
+	return nil
 }
 
 // requestVote is invoked when we get an request vote RPC call.
@@ -1574,7 +1600,11 @@ func (r *Raft) installSnapshot(rpc RPC, req *InstallSnapshotRequest) {
 		reqConfiguration = DecodeConfiguration(req.Configuration)
 		reqConfigurationIndex = req.ConfigurationIndex
 	} else {
-		reqConfiguration = decodePeers(req.Peers, r.trans)
+		reqConfiguration, rpcErr = decodePeers(req.Peers, r.trans)
+		if rpcErr != nil {
+			r.logger.Error("failed to install snapshot", "error", rpcErr)
+			return
+		}
 		reqConfigurationIndex = req.LastLogIndex
 	}
 	version := getSnapshotVersion(r.protocolVersion)

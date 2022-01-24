@@ -319,11 +319,11 @@ func encodePeers(configuration Configuration, trans Transport) []byte {
 // decodePeers is used to deserialize an old list of peers into a Configuration.
 // This is here for backwards compatibility with old log entries and snapshots;
 // it should be removed eventually.
-func decodePeers(buf []byte, trans Transport) Configuration {
+func decodePeers(buf []byte, trans Transport) (Configuration, error) {
 	// Decode the buffer first.
 	var encPeers [][]byte
 	if err := decodeMsgPack(buf, &encPeers); err != nil {
-		panic(fmt.Errorf("failed to decode peers: %v", err))
+		return Configuration{}, fmt.Errorf("failed to decode peers: %v", err)
 	}
 
 	// Deserialize each peer.
@@ -333,13 +333,11 @@ func decodePeers(buf []byte, trans Transport) Configuration {
 		servers = append(servers, Server{
 			Suffrage: Voter,
 			ID:       ServerID(p),
-			Address:  ServerAddress(p),
+			Address:  p,
 		})
 	}
 
-	return Configuration{
-		Servers: servers,
-	}
+	return Configuration{Servers: servers}, nil
 }
 
 // EncodeConfiguration serializes a Configuration using MsgPack, or panics on

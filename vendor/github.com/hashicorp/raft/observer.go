@@ -34,6 +34,11 @@ type FailedHeartbeatObservation struct {
 	LastContact time.Time
 }
 
+// ResumedHeartbeatObservation is sent when a node resumes to heartbeat with the leader following failures
+type ResumedHeartbeatObservation struct {
+	PeerID ServerID
+}
+
 // nextObserverId is used to provide a unique ID for each observer to aid in
 // deregistration.
 var nextObserverID uint64
