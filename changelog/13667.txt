@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Fixes code scanning alerts
+```

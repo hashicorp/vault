@@ -1366,7 +1366,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	// Set up conf to pass in plugin_name
-	conf := make(map[string]string, len(entry.Options)+1)
+	conf := make(map[string]string)
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
