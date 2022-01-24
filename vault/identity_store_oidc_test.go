@@ -891,11 +891,11 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	}
 }
 
-// TestOIDC_SignIDToken_NilSigningKey
+// TestOIDC_SignIDToken_NilSigningKey tests that an error is returned when
+// attempting to sign an ID token with a nil signing key
 func TestOIDC_SignIDToken_NilSigningKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	// storage := &logical.InmemStorage{}
 
 	// Create and load an entity, an entity is required to generate an ID token
 	testEntity := &identity.Entity{
@@ -959,7 +959,7 @@ func TestOIDC_SignIDToken_NilSigningKey(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"error signing OIDC token: signing key is nil": true,
+		"error signing OIDC token: signing key is nil; rotate the key and try again": true,
 	}
 	expectStrings(t, []string{err.Error()}, expectedStrings)
 }
@@ -978,7 +978,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		expectedKeyCount  int
 		setSigningKey     bool
 		setNextSigningKey bool
-		cycle             []int
+		cycles            int
 	}{
 		{
 			namedKey: &namedKey{
@@ -994,7 +994,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			expectedKeyCount:  3,
 			setSigningKey:     true,
 			setNextSigningKey: true,
-			cycle:             []int{1, 2, 3, 4},
+			cycles:            4,
 		},
 		{
 			// don't set SigningKey to ensure its non-existence can be handled
@@ -1011,7 +1011,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			expectedKeyCount:  2,
 			setSigningKey:     false,
 			setNextSigningKey: true,
-			cycle:             []int{1, 2},
+			cycles:            2,
 		},
 		{
 			// don't set NextSigningKey to ensure its non-existence can be handled
@@ -1028,7 +1028,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			expectedKeyCount:  2,
 			setSigningKey:     true,
 			setNextSigningKey: false,
-			cycle:             []int{1, 2},
+			cycles:            2,
 		},
 		{
 			// don't set keys to ensure non-existence can be handled
@@ -1045,7 +1045,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			expectedKeyCount:  2,
 			setSigningKey:     false,
 			setNextSigningKey: false,
-			cycle:             []int{1, 2},
+			cycles:            2,
 		},
 	}
 
@@ -1067,17 +1067,15 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			t.Fatalf("writing to in mem storage failed")
 		}
 
-		currentCycle := 1
-		numCases := len(testSet.cycle)
-		lastCycle := testSet.cycle[numCases-1]
-		namedKeySamples := make([]*logical.StorageEntry, numCases)
-		publicKeysSamples := make([][]string, numCases)
+		currentCycle := 0
+		lastCycle := testSet.cycles - 1
+		namedKeySamples := make([]*logical.StorageEntry, testSet.cycles)
+		publicKeysSamples := make([][]string, testSet.cycles)
 
 		i := 0
-		// var start time.Time
 		for currentCycle <= lastCycle {
 			c.identityStore.oidcPeriodicFunc(ctx)
-			if currentCycle == testSet.cycle[i] {
+			if currentCycle == i {
 				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
 				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
 				namedKeySamples[i] = namedKeyEntry
@@ -1097,7 +1095,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 		}
 
 		// measure collected samples
-		for i, cycle := range testSet.cycle {
+		for i := 0; i < testSet.cycles; i++ {
+			cycle := i + 1
 			namedKeySamples[i].DecodeJSON(&testSet.namedKey)
 			actualKeyRingLen := len(testSet.namedKey.KeyRing)
 			if actualKeyRingLen < testSet.expectedKeyCount {
