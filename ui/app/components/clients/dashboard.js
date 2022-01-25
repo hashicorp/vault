@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { format, formatRFC3339 } from 'date-fns';
+import { format, formatRFC3339, isSameMonth } from 'date-fns';
 
 export default class Dashboard extends Component {
   arrayOfMonths = [
@@ -42,11 +42,7 @@ export default class Dashboard extends Component {
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
-
-  // filtering conditionals for HBS file
-  // set initially based on response received from API & update based on filters
-  @tracked isDateRange = true; // rename to isSingleMonth ?
-  @tracked isAllNamespaces; // false when filtered down to auth methods (mounts)
+  // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
   get startTimeDisplay() {
     if (!this.startTime) {
@@ -64,6 +60,10 @@ export default class Dashboard extends Component {
     }
     let formattedAsDate = new Date(this.endTime);
     return format(formattedAsDate, 'MMMM yyyy');
+  }
+
+  get isDateRange() {
+    return !isSameMonth(new Date(this.startTime), new Date(this.endTime));
   }
 
   // Determine if we have client count data based on the current tab
@@ -110,7 +110,7 @@ export default class Dashboard extends Component {
       let response = await this.adapter.queryClientActivity(this.startTime, this.endTime);
       // resets the endTime to what is returned on the response
       this.endTime = response.data.end_time;
-      // TODO CMB set tracked property isDateRange depending on dates from response
+
       return response;
       // ARG TODO this is the response you need to use to repopulate the chart data
     } catch (e) {

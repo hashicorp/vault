@@ -57,6 +57,14 @@ export default ApplicationSerializer.extend({
       // we don't want client counts nested within the 'counts' object for stacked charts
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
 
+      // homogenize client naming for all namespaces
+      if (Object.keys(flattenedNs).includes('distinct_entities', 'non_entity_tokens')) {
+        flattenedNs.entity_clients = flattenedNs.distinct_entities;
+        flattenedNs.non_entity_clients = flattenedNs.non_entity_tokens;
+        delete flattenedNs.distinct_entities;
+        delete flattenedNs.non_entity_tokens;
+      }
+
       // if mounts attribution unavailable, mounts will be undefined
       flattenedNs.mounts = ns.mounts?.map((mount) => {
         let flattenedMount = {};
@@ -64,6 +72,7 @@ export default ApplicationSerializer.extend({
         Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
         return flattenedMount;
       });
+
       return {
         label,
         ...flattenedNs,

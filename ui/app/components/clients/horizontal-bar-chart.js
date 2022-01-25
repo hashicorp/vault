@@ -42,7 +42,7 @@ export default class HorizontalBarChart extends Component {
   }
 
   get topNamespace() {
-    return this.args.dataset[maxIndex(this.args.dataset, (d) => d.total)];
+    return this.args.dataset[maxIndex(this.args.dataset, (d) => d.clients)];
   }
 
   @action removeTooltip() {
@@ -60,7 +60,7 @@ export default class HorizontalBarChart extends Component {
     let labelKey = this.labelKey;
 
     let xScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.total))])
+      .domain([0, max(dataset.map((d) => d.clients))])
       .range([0, 75]); // 25% reserved for margins
 
     let yScale = scaleBand()
@@ -150,8 +150,9 @@ export default class HorizontalBarChart extends Component {
       .on('mouseover', (data) => {
         let hoveredElement = actionBars.filter((bar) => bar.label === data.label).node();
         this.tooltipTarget = hoveredElement;
-        this.tooltipText = `${Math.round((data.total * 100) / 19000)}% of total client counts:
-        ${data.non_entity_tokens} non-entity tokens, ${data.distinct_entities} unique entities.`;
+        this.tooltipText = `${Math.round((data.clients * 100) / this.args.clientTotals.clients)}
+        % of total client counts:
+        , ${data.entity_clients} entity clients, ${data.non_entity_clients} non-entity clients.`;
 
         select(hoveredElement).style('opacity', 1);
 
@@ -213,13 +214,13 @@ export default class HorizontalBarChart extends Component {
       .data(dataset)
       .enter()
       .append('text')
-      .text((d) => d.total)
+      .text((d) => d.clients)
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
       .attr('alignment-baseline', 'middle')
-      .attr('x', (chartData) => `${xScale(chartData.total)}%`)
+      .attr('x', (chartData) => `${xScale(chartData.clients)}%`)
       .attr('y', (chartData) => yScale(chartData.label));
   }
 }
