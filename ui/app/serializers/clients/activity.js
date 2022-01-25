@@ -109,7 +109,6 @@ export default ApplicationSerializer.extend({
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    // needs to accept both /monthly and /activity payloads
     let transformedPayload = {
       ...payload,
       // TODO CMB should these be nested under "data" to go to model correctly?)
