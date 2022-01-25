@@ -99,7 +99,6 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
  * user's attributes (if found)
  */
 func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, username string) (*ldap.SearchResult, error) {
-
 	// Note: The logic below drives the logic in ConfigEntry.Validate().
 	// If updated, please update there as well.
 	var err error
@@ -113,6 +112,9 @@ func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, userna
 	}
 
 	renderedFilter, err := c.RenderUserSearchFilter(cfg, username)
+	if err != nil {
+		return nil, err
+	}
 
 	if c.Logger.IsDebug() {
 		c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", renderedFilter)
@@ -121,14 +123,13 @@ func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, userna
 		BaseDN:    cfg.UserDN,
 		Scope:     ldap.ScopeWholeSubtree,
 		Filter:    renderedFilter,
-		SizeLimit: 2, //Should be only 1 result. Any number larger (2 or more) means access denied.
+		SizeLimit: 2, // Should be only 1 result. Any number larger (2 or more) means access denied.
 		Attributes: []string{
-			cfg.UserAttr, //Return only needed attributes
+			cfg.UserAttr, // Return only needed attributes
 		},
 	}
 
 	result, err := conn.Search(ldapRequest)
-
 	if err != nil {
 		return nil, err
 	}

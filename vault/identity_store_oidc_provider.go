@@ -403,7 +403,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"nonce": {
 					Type:        framework.TypeString,
 					Description: "The value that will be returned in the ID token nonce claim after a token exchange.",
-					Required:    true,
 				},
 				"max_age": {
 					Type:        framework.TypeInt,
@@ -793,9 +792,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 		}
 
 		for key := range tmp {
-			if strutil.StrListContains(requiredClaims, key) {
+			if strutil.StrListContains(reservedClaims, key) {
 				return logical.ErrorResponse(`top level key %q not allowed. Restricted keys: %s`,
-					key, strings.Join(requiredClaims, ", ")), nil
+					key, strings.Join(reservedClaims, ", ")), nil
 			}
 		}
 	}
@@ -1518,12 +1517,6 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
-	// Validate the nonce
-	nonce := d.Get("nonce").(string)
-	if nonce == "" {
-		return authResponse("", state, ErrAuthInvalidRequest, "nonce parameter is required")
-	}
-
 	// We don't support the request or request_uri parameters. If they're provided,
 	// the appropriate errors must be returned. For details, see the spec at:
 	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
@@ -1556,6 +1549,10 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		return authResponse("", state, ErrAuthAccessDenied, "identity entity not authorized by client assignment")
 	}
 
+	// A nonce is optional for the authorization code flow. If not
+	// provided, the nonce claim will be omitted from the ID token.
+	nonce := d.Get("nonce").(string)
+
 	// Create the auth code cache entry
 	authCodeEntry := &authCodeCacheEntry{
 		provider:    name,
@@ -1567,10 +1564,9 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 
 	// Validate the optional max_age parameter to check if an active re-authentication
-	// of the user should occur. Re-authentication will be requested if max_age=0 or the
-	// last time the token actively authenticated exceeds the given max_age requirement.
-	// Returning ErrAuthMaxAgeReAuthenticate will enforce the user to re-authenticate via
-	// the user agent.
+	// of the user should occur. Re-authentication will be requested if the last time
+	// the token actively authenticated exceeds the given max_age requirement. Returning
+	// ErrAuthMaxAgeReAuthenticate will enforce the user to re-authenticate via the user agent.
 	if maxAgeRaw, ok := d.GetOk("max_age"); ok {
 		maxAge := maxAgeRaw.(int)
 		if maxAge < 1 {

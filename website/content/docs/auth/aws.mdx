@@ -766,12 +766,6 @@ import (
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault via AWS IAM,
 // one of two auth methods used to authenticate with AWS (the other is EC2 auth).
-// A role must first be created in Vault bound to the IAM ARN you wish to authenticate with, like so:
-// vault write auth/aws/role/dev-role-iam \
-//     auth_type=iam \
-//     bound_iam_principal_arn="arn:aws:iam::AWS-ACCOUNT-NUMBER:role/AWS-IAM-ROLE-NAME" \
-//     ttl=24h
-// Learn more about the available parameters at https://www.vaultproject.io/api/auth/aws#parameters-10
 func getSecretWithAWSAuthIAM() (string, error) {
 	config := vault.DefaultConfig() // modify for more granular configuration
 
@@ -849,17 +843,11 @@ using VaultSharp.V1.SecretsEngines.AWS;
 
 namespace Examples
 {
-    public class AwsAuthExample
+    public class AwsAuthExample 
     {
-        /// <summary>
+        /// <summary> 
         /// Fetches a key-value secret (kv-v2) after authenticating to Vault via AWS IAM,
         /// one of two auth methods used to authenticate with AWS (the other is EC2 auth).
-        /// A role must first be created in Vault bound to the IAM ARN you wish to authenticate with, like so:
-        /// 	vault write auth/aws/role/dev-role-iam \
-        ///     auth_type=iam \
-        ///     bound_iam_principal_arn="arn:aws:iam::AWS-ACCOUNT-NUMBER:role/AWS-IAM-ROLE-NAME" \
-        ///     ttl=24h
-        ///  Learn more about the available parameters at https://www.vaultproject.io/api/auth/aws#parameters-10
         /// </summary>
         public string GetSecretAWSAuthIAM()
         {
@@ -869,21 +857,21 @@ namespace Examples
                 throw new System.ArgumentNullException("Vault Address");
             }
 
-            var roleName = Environment.GetEnvironmentVariable("AWS_ROLE_NAME");
+            var roleName = Environment.GetEnvironmentVariable("VAULT_ROLE");
             if(String.IsNullOrEmpty(roleName))
             {
-                throw new System.ArgumentNullException("AWS Role Name");
+                throw new System.ArgumentNullException("Vault Role Name");
             }
 
             var amazonSecurityTokenServiceConfig = new AmazonSecurityTokenServiceConfig();
 
             // Initialize BasicAWS Credentials w/ an accessKey and secretKey
-            Amazon.Runtime.AWSCredentials awsCredentials = new BasicAWSCredentials(accessKey: Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
+            Amazon.Runtime.AWSCredentials awsCredentials = new BasicAWSCredentials(accessKey: Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"), 
                                                                 secretKey: Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"));
-
+            
             // Construct the IAM Request and add necessary headers
             var iamRequest = GetCallerIdentityRequestMarshaller.Instance.Marshall(new GetCallerIdentityRequest());
-
+            
             iamRequest.Endpoint = new Uri(amazonSecurityTokenServiceConfig.DetermineServiceURL());
             iamRequest.ResourcePath = "/";
 
@@ -905,9 +893,9 @@ namespace Examples
             // We can retrieve the secret from the VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-
+            
             var password = kv2Secret.Data.Data["password"];
-
+            
             return password.ToString();
         }
     }

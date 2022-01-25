@@ -40,6 +40,8 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 // EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
+var getMmapFlags = func(string) int { return 0 }
+
 // Verify RaftBackend satisfies the correct interfaces
 var (
 	_ physical.Backend       = (*RaftBackend)(nil)
@@ -364,12 +366,14 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
+		dbPath := filepath.Join(path, "raft.db")
 		freelistType, noFreelistSync := freelistOptions()
 		raftOptions := raftboltdb.Options{
-			Path: filepath.Join(path, "raft.db"),
+			Path: dbPath,
 			BoltOptions: &bolt.Options{
 				FreelistType:   freelistType,
 				NoFreelistSync: noFreelistSync,
+				MmapFlags:      getMmapFlags(dbPath),
 			},
 		}
 		store, err := raftboltdb.New(raftOptions)
@@ -509,12 +513,12 @@ func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsuti
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime.Milliseconds()), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime.Milliseconds()), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime.Milliseconds()), labels)
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -1291,6 +1295,9 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 // or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
+	if len(entry.Key) > bolt.MaxKeySize {
+		return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+	}
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -1352,6 +1359,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
+			if len(txn.Entry.Key) > bolt.MaxKeySize {
+				return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+			}
 			op.OpType = putOp
 			op.Key = txn.Entry.Key
 			op.Value = txn.Entry.Value

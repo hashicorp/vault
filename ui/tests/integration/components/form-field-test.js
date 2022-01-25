@@ -160,4 +160,34 @@ module('Integration | Component | form field', function(hooks) {
     await component.tooltipTrigger();
     assert.ok(component.hasTooltip, 'renders the tooltip component');
   });
+
+  test('it should not expand and toggle ttl when default 0s value is present', async function(assert) {
+    assert.expect(2);
+
+    this.setProperties({
+      model: EmberObject.create({ foo: '0s' }),
+      attr: createAttr('foo', null, { editType: 'ttl' }),
+      onChange: () => {},
+    });
+
+    await render(hbs`{{form-field attr=attr model=model onChange=onChange}}`);
+    assert
+      .dom('[data-test-toggle-input="Foo"]')
+      .isNotChecked('Toggle is initially unchecked when given default value');
+    assert.dom('[data-test-ttl-picker-group="Foo"]').doesNotExist('Ttl input is hidden');
+  });
+
+  test('it should toggle and expand ttl when initial non default value is provided', async function(assert) {
+    assert.expect(2);
+
+    this.setProperties({
+      model: EmberObject.create({ foo: '1s' }),
+      attr: createAttr('foo', null, { editType: 'ttl' }),
+      onChange: () => {},
+    });
+
+    await render(hbs`{{form-field attr=attr model=model onChange=onChange}}`);
+    assert.dom('[data-test-toggle-input="Foo"]').isChecked('Toggle is initially checked when given value');
+    assert.dom('[data-test-ttl-value="Foo"]').hasValue('1', 'Ttl input displays with correct value');
+  });
 });

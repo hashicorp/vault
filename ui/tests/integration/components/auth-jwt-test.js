@@ -211,7 +211,10 @@ module('Integration | Component | auth jwt', function(hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.trigger('message', buildMessage({ data: { state: 'state', foo: 'bar' } }));
+    this.window.trigger(
+      'message',
+      buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
+    );
     run.cancelTimers();
     assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
@@ -228,6 +231,7 @@ module('Integration | Component | auth jwt', function(hooks) {
       'message',
       buildMessage({
         data: {
+          source: 'oidc-callback',
           path: 'foo',
           state: 'state',
           code: 'code',
@@ -253,6 +257,7 @@ module('Integration | Component | auth jwt', function(hooks) {
       buildMessage({
         origin: 'http://hackerz.com',
         data: {
+          source: 'oidc-callback',
           path: 'foo',
           state: 'state',
           code: 'code',
@@ -277,6 +282,7 @@ module('Integration | Component | auth jwt', function(hooks) {
       buildMessage({
         isTrusted: false,
         data: {
+          source: 'oidc-callback',
           path: 'foo',
           state: 'state',
           code: 'code',

@@ -1045,7 +1045,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	return c, nil
 }
 
-// HandleVersionTimeStamps stores the current version at the current time to
+// handleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now()
@@ -1367,6 +1367,9 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	if config == nil {
+		return nil, fmt.Errorf("failed to obtain seal/recovery configuration")
 	}
 
 	// Check if we don't have enough keys to unlock, proceed through the rest of
