@@ -10,8 +10,8 @@ export default function (server) {
     return {
       request_id: '26be5ab9-dcac-9237-ec12-269a8ca647d5',
       data: {
-        start_time: '2019-11-01T00:00:00Z',
-        end_time: '2020-10-31T23:59:59Z',
+        start_time: '2021-02-01T00:00:00Z',
+        end_time: '2022-01-31T23:59:59Z',
         total: {
           _comment1: 'total client counts',
           clients: 300,

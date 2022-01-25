@@ -42,7 +42,6 @@ class CalendarWidget extends Component {
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
   @tracked showCalendar = false;
-  @tracked showSingleMonth = false;
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -103,10 +102,8 @@ class CalendarWidget extends Component {
 
   @action
   selectCurrentBillingPeriod() {
-    // ARG TOOD send to dashboard the select current billing period. The parent may know this it's just a boolean.
-    // Turn the calendars off if they are showing.
+    // resets the billing startTime and endTime to what it is on init.
     this.showCalendar = false;
-    this.showSingleMonth = false;
   }
   @action
   selectEndMonth(month, year, element) {
@@ -134,13 +131,6 @@ class CalendarWidget extends Component {
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
-    this.showSingleMonth = false;
-  }
-
-  @action
-  toggleSingleMonth() {
-    this.showSingleMonth = !this.showSingleMonth;
-    this.showCalendar = false;
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);

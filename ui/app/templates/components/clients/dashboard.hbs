@@ -37,7 +37,8 @@
         </button>
       </div>
       <p class="is-8 has-text-grey has-bottom-margin-xl">
-        This date is when client counting starts. Without this starting point, the data shown is not reliable.
+        This date comes from your license, and defines when client counting starts. Without this starting point, the data
+        shown is not reliable.
       </p>
       {{#if (eq @model.config.enabled "Off")}}
         <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
