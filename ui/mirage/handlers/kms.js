@@ -45,4 +45,14 @@ export default function (server) {
   server.put('keymgmt/key/:name', function () {
     return {};
   });
+
+  server.get('/keymgmt/kms/:provider/key', () => {
+    const keys = [];
+    let i = 1;
+    while (i <= 75) {
+      keys.push(`testkey-${i}`);
+      i++;
+    }
+    return { data: { keys } };
+  });
 }

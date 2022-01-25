@@ -96,10 +96,9 @@ const SECRET_BACKENDS = {
         create: 'Create key',
         editComponent: 'keymgmt/key-edit',
       },
-      /* TODO: Add this tab
       {
         name: 'provider',
-        modelPrefix: '/',
+        modelPrefix: 'provider/',
         label: 'Providers',
         searchPlaceholder: 'Filter providers',
         item: 'provider',
@@ -107,7 +106,6 @@ const SECRET_BACKENDS = {
         tab: 'provider',
         editComponent: 'keymgmt/provider-edit',
       },
-      */
     ],
   },
   transform: {
