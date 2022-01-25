@@ -45,10 +45,11 @@ export default ApplicationSerializer.extend({
       // TODO CMB should these be nested under "data" to go to model correctly?)
       response_timestamp,
       by_namespace: this.flattenDataset(data.by_namespace),
+      // nest within 'total' object to mimic /activity response shape
       total: {
         clients,
-        entity_clients: distinct_entities,
-        non_entity_clients: non_entity_tokens,
+        entityClients: distinct_entities,
+        nonEntityClients: non_entity_tokens,
       },
     };
     delete payload.data.by_namespace;

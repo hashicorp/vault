@@ -21,8 +21,8 @@ export default class Dashboard extends Component {
   ];
   maxNamespaces = 10;
   chartLegend = [
-    { key: 'entity_clients', label: 'unique entities' },
-    { key: 'non_entity_clients', label: 'non-entity tokens' },
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
   // TODO remove this adapter variable? or set to /clients/activity ?
   adapter = this.store.adapterFor('clients/new-init-activity');
