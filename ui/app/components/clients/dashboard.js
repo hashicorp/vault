@@ -24,13 +24,7 @@ export default class Dashboard extends Component {
     { key: 'entity_clients', label: 'unique entities' },
     { key: 'non_entity_clients', label: 'non-entity tokens' },
   ];
-
-  months = Array.from({ length: 12 }, (item, i) => {
-    return new Date(0, i).toLocaleString('en-US', { month: 'long' });
-  });
-  years = Array.from({ length: 5 }, (item, i) => {
-    return new Date().getFullYear() - i;
-  });
+  // TODO remove this adapter variable? or set to /clients/activity ?
   adapter = this.store.adapterFor('clients/new-init-activity');
 
   @service store;
