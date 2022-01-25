@@ -1,0 +1,71 @@
+<form {{on "submit" this.createDistribution}}>
+  <div class="form-section">
+    <SearchSelect
+      @id={{@model.key.name}}
+      @models={{array "keymgmt/key"}}
+      @onChange={{this.handleKeySelect}}
+      @passObject={{true}}
+      @inputValue={{@model.key}}
+      @subText="Type to use the name of an existing key that you’d like to add to this provider, or to create one."
+      @wildcardLabel="key"
+      @label=""
+      @subLabel="Key name"
+      @fallbackComponent="string-list"
+      @selectLimit="1"
+      @backend={{@model.backend}}
+      @disallowNewItems={{false}}
+    />
+  </div>
+
+  {{#if this.keyModel}}
+    <div class="form-section">
+      <label for="keyType">Key Type</label>
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+          <select name="keyType" id="keyType" {{on "change" this.handleKeyType}}>
+            {{!-- <select name="keyType" id="keyType" {{on "change" (fn (mut this.keyModel.type) value="target.value")}}> --}}
+            <option value="">
+              Select one
+            </option>
+            {{#each this.keyTypes as |val|}}
+              <option selected={{eq this.keyType val}} value={{val}}>
+                {{val}}
+              </option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+  <div class="form-section">
+    <label for="provider">Provider</label>
+    <div class="control is-expanded">
+      <div class="select is-fullwidth">
+        <select name="provider" id="provider" {{on "change" this.handleProvider}}>
+          <option value="">
+            Select provider
+          </option>
+          {{#each @providers as |val|}}
+            <option selected={{eq @model.provider val}} value={{val}}>
+              {{val}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <fieldset class="form-fieldset" id="operations" disabled={{or (not @model.provider) (not @model.key)}}>
+    <legend>Operations</legend>
+    {{#each this.operations as |op|}}
+      <div class="b-checkbox">
+        <Input @type="checkbox" id={{op}} class="styled" @checked={{false}} {{on "input" this.handleOperation}} />
+        <label for={{op}}>{{capitalize op}}</label>
+      </div>
+    {{/each}}
+  </fieldset>
+  <div>
+    <input type="submit" value="Distribute key" />
+  </div>
+</form>
