@@ -77,18 +77,18 @@ export default class Dashboard extends Component {
 
   // top level TOTAL client counts from response for given date range
   get runningTotals() {
-    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.total) {
+    if (!this.args.model.activity || !this.args.model.activity.total) {
       return null;
     }
-    return this.args.model.newInitActivity.total;
+    return this.args.model.activity.total;
   }
 
   // for horizontal bar chart in Attribution component
   get topTenNamespaces() {
-    if (!this.args.model.newInitActivity || !this.args.model.newInitActivity.byNamespace) {
+    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
-    return this.args.model.newInitActivity.byNamespace;
+    return this.args.model.activity.byNamespace;
   }
 
   @action
