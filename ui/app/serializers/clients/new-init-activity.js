@@ -56,6 +56,7 @@ export default ApplicationSerializer.extend({
       let flattenedNs = {};
       // we don't want client counts nested within the 'counts' object for stacked charts
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
+
       // if mounts attribution unavailable, mounts will be undefined
       flattenedNs.mounts = ns.mounts?.map((mount) => {
         let flattenedMount = {};
@@ -70,8 +71,8 @@ export default ApplicationSerializer.extend({
     });
   },
 
-  // TODO CMB remove and used abstracted function above
-  // prior to 1.10, payload key names were "distinct_entities" and "non_entity_tokens" so mapping below won't work
+  // TODO CMB remove and use abstracted function above
+  // prior to 1.10, client count key names are "distinct_entities" and "non_entity_tokens" so mapping below wouldn't work
   flattenByNamespace(payload) {
     // keys in the object created here must match the legend keys in dashboard.js ('entity_clients')
     let topTen = payload.slice(0, 10);
