@@ -62,8 +62,8 @@
       This export will include the namespace path, authentication method path, and the associated clients, unique entities,
       and non-entity tokens for the below date range.
     </p>
-    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE RANGE</p>
-    <p class="has-bottom-margin-s">{{@startTimeDisplay}} - {{@endTimeDisplay}}</p>
+    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if @endTimeDisplay " RANGE"}}</p>
+    <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <DownloadCsv @label="Export" @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />

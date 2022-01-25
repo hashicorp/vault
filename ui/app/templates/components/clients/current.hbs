@@ -66,5 +66,16 @@
         </div>
       </div>
     </div>
+    <Clients::Attribution
+      @chartLegend={{array
+        (hash key="entity_clients" label="Unique entities")
+        (hash key="non_entity_clients" label="Non-entity tokens")
+      }}
+      @topTenNamespaces={{@model.monthly.byNamespace}}
+      @runningTotals={{@model.monthly.total}}
+      @selectedNamespace={{@model.monthly.selectedNamespace}}
+      @startTimeDisplay={{date-format @model.monthly.timestamp "MMMM yyyy"}}
+      @isDateRange={{false}}
+    />
   {{/if}}
 </div>
