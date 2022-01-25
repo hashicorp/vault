@@ -85,6 +85,13 @@ export default class Dashboard extends Component {
     return this.args.model.activity.byNamespace;
   }
 
+  get responseTimestamp() {
+    if (!this.args.model.activity || !this.args.model.activity.responseTimestamp) {
+      return null;
+    }
+    return this.args.model.activity.responseTimestamp;
+  }
+
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
