@@ -152,7 +152,7 @@ export default class HorizontalBarChart extends Component {
         this.tooltipTarget = hoveredElement;
         this.tooltipText = `${Math.round((data.clients * 100) / this.args.clientTotals.clients)}
         % of total client counts:
-        , ${data.entity_clients} entity clients, ${data.non_entity_clients} non-entity clients.`;
+        ${data.entity_clients} entity clients, ${data.non_entity_clients} non-entity clients.`;
 
         select(hoveredElement).style('opacity', 1);
 
