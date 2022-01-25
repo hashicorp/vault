@@ -1,3 +1,27 @@
+## 1.7.8
+### December 21, 2021
+
+CHANGES:
+
+* go: Update go version to 1.16.12 [[GH-13422](https://github.com/hashicorp/vault/pull/13422)]
+
+BUG FIXES:
+
+* auth/aws: Fixes ec2 login no longer supporting DSA signature verification [[GH-12340](https://github.com/hashicorp/vault/pull/12340)]
+* identity: Fix a panic on arm64 platform when doing identity I/O. [[GH-12371](https://github.com/hashicorp/vault/pull/12371)]
+
+## 1.7.7
+### December 9, 2021
+
+BUG FIXES:
+
+* ha (enterprise): Prevents performance standby nodes from serving and caching stale data immediately after performance standby election completes
+* storage/raft: Fix a panic when trying to store a key > 32KB in a transaction. [[GH-13286](https://github.com/hashicorp/vault/pull/13286)]
+* storage/raft: Fix a panic when trying to write a key > 32KB [[GH-13282](https://github.com/hashicorp/vault/pull/13282)]
+* ui: Fixes issue restoring raft storage snapshot [[GH-13107](https://github.com/hashicorp/vault/pull/13107)]
+* ui: Fixes issue with OIDC auth workflow when using MetaMask Chrome extension [[GH-13133](https://github.com/hashicorp/vault/pull/13133)]
+* ui: Fixes issue with the number of PGP Key inputs not matching the key shares number in the initialization form on change [[GH-13038](https://github.com/hashicorp/vault/pull/13038)]
+
 ## 1.7.6
 ### November 4, 2021
 

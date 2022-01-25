@@ -42,7 +42,6 @@ require (
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 	github.com/fatih/color v1.11.0
 	github.com/fatih/structs v1.1.0
-	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap/v3 v3.2.4
@@ -51,6 +50,7 @@ require (
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 	github.com/golang/protobuf v1.4.2
+	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/consul-template v0.25.2
@@ -84,7 +84,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.8.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.8.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.9.1
-	github.com/hashicorp/vault-plugin-auth-jwt v0.9.5
+	github.com/hashicorp/vault-plugin-auth-jwt v0.9.6
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.7.0
@@ -96,14 +96,14 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.9.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.9.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.3.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 	github.com/hashicorp/vault/api v1.1.1
-	github.com/hashicorp/vault/sdk v0.2.1-0.20211101201606-6453490da33b
+	github.com/hashicorp/vault/sdk v0.2.1-0.20220103165602-ec5d5ca80bed
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

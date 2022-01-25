@@ -17,7 +17,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.15.15
+GO_VERSION_MIN=1.16.12
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -244,12 +244,6 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-# Tell packagespec where to write its CircleCI config.
-PACKAGESPEC_CIRCLECI_CONFIG := .circleci/config/@build-release.yml
-
-# Tell packagespec to re-run 'make ci-config' whenever updating its own CI config.
-PACKAGESPEC_HOOK_POST_CI_CONFIG := $(MAKE) ci-config
-
 .PHONY: ci-config
 ci-config:
 	@$(MAKE) -C .circleci ci-config
@@ -261,4 +255,13 @@ ci-verify:
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
 
--include packagespec.mk
+.PHONY: build
+# This is used for release builds by .github/workflows/build.yml
+build: static-dist
+	@echo "--> Building Vault $(VAULT_VERSION)"
+	@@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION)" -o dist/
+
+.PHONY: version
+# This is used for release builds by .github/workflows/build.yml
+version:
+	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go

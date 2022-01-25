@@ -8,7 +8,7 @@ parameters:
     default: "/tmp/testlogs"
   go_image:
     type: string
-    default: "circleci/golang:1.15.15-buster"
+    default: "docker.mirror.hashicorp.services/cimg/go:1.16.12"
   use_docker:
     type: boolean
     default: false
@@ -82,11 +82,11 @@ steps:
             tail -f /dev/null
 
           # Run tests
-          docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
-          docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+          docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+          docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
           docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
-          docker exec -w /go/src/github.com/hashicorp/vault/ \
+          docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
             -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
             testcontainer \
             gotestsum --format=short-verbose \
@@ -117,4 +117,4 @@ steps:
             name: Copy test results
             when: always
             command: |
-              docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+              docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
