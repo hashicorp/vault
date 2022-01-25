@@ -64,6 +64,17 @@
         </Toolbar>
         {{#if @isLoading}}
           <LayoutLoading />
+        {{else if this.topTenNamespaces}}
+          {{! TODO make conditional above more apt }}
+          <Clients::Attribution
+            @chartLegend={{this.chartLegend}}
+            @topTenNamespaces={{this.topTenNamespaces}}
+            @runningTotals={{this.runningTotals}}
+            @selectedNamespace={{this.selectedNamespace}}
+            @startTimeDisplay={{this.startTimeDisplay}}
+            @endTimeDisplay={{this.endTimeDisplay}}
+            @isDateRange={{this.isDateRange}}
+          />
         {{else}}
           {{! ARG TODO remove once we have this dialed }}
           <EmptyState @title="Coming soon" @message="Under construction for the 1.10 binary." />
@@ -84,8 +95,8 @@
       >
         <section class="modal-card-body">
           <p class="has-bottom-margin-s">
-            This date is when client counting starts, or the point at which clients become unique. Without this starting
-            point, the data shown is not reliable.
+            This date comes from your license, and defines when client counting starts. Without this starting point, the data
+            shown is not reliable.
           </p>
           <p class="has-bottom-margin-s"><strong>Billing contract start month</strong></p>
           <div class="modal-radio-button">

@@ -39,7 +39,7 @@
             <StatText
               @label="Total active clients"
               {{! ARG TODO naming is changing }}
-              @value={{or @model.activity.clients "0"}}
+              @value={{or @model.monthly.clients "0"}}
               @size="l"
               @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
             />
@@ -49,7 +49,7 @@
               class="column"
               @label="Unique entities"
               {{! ARG TODO naming is changing }}
-              @value={{or @model.activity.distinct_entities "0"}}
+              @value={{or @model.monthly.distinctEntities "0"}}
               @size="l"
               @subText="Representation of a particular user, client or application that created a token via login."
             />
@@ -58,7 +58,7 @@
             <StatText
               class="column"
               @label="Non-entity tokens"
-              @value={{or @model.activity.non_entity_tokens "0"}}
+              @value={{or @model.monthly.nonEntityTokens "0"}}
               @size="l"
               @subText="Tokens created via a method that is not associated with an entity."
             />
@@ -66,5 +66,16 @@
         </div>
       </div>
     </div>
+    <Clients::Attribution
+      @chartLegend={{array
+        (hash key="entity_clients" label="Unique entities")
+        (hash key="non_entity_clients" label="Non-entity tokens")
+      }}
+      @topTenNamespaces={{@model.monthly.byNamespace}}
+      @runningTotals={{@model.monthly.total}}
+      @selectedNamespace={{@model.monthly.selectedNamespace}}
+      @startTimeDisplay={{date-format @model.monthly.timestamp "MMMM yyyy"}}
+      @isDateRange={{false}}
+    />
   {{/if}}
 </div>
