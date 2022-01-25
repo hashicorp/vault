@@ -8,7 +8,7 @@ var (
 	// Whether cgo is enabled or not; set at build time
 	CgoEnabled bool
 
-	Version           = "1.8.5"
+	Version           = "1.8.8"
 	VersionPrerelease = ""
 	VersionMetadata   = ""
 )
