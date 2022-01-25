@@ -66,9 +66,9 @@ export default Route.extend(UnloadModelRoute, {
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
-  beforeModel() {
+  beforeModel(transition) {
     let secret = this.secretParam();
-    return this.buildModel(secret).then(() => {
+    return this.buildModel(secret, transition).then(() => {
       const parentKey = utils.parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
       if (mode === 'edit' && utils.keyIsFolder(secret)) {
@@ -81,17 +81,16 @@ export default Route.extend(UnloadModelRoute, {
     });
   },
 
-  buildModel(secret) {
+  buildModel(secret, transition) {
     const backend = this.enginePathParam();
-
-    let modelType = this.modelType(backend, secret);
+    let modelType = this.modelType(backend, secret, transition);
     if (['secret', 'secret-v2'].includes(modelType)) {
       return resolve();
     }
     return this.pathHelp.getNewModel(modelType, backend);
   },
 
-  modelType(backend, secret) {
+  modelType(backend, secret, transition) {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
@@ -103,7 +102,7 @@ export default Route.extend(UnloadModelRoute, {
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
-      keymgmt: 'keymgmt/key',
+      keymgmt: `keymgmt/${transition.to.queryParams.itemType || 'key'}`,
       generic: backendModel.get('modelTypeForKV'),
     };
     return types[type];
@@ -213,10 +212,10 @@ export default Route.extend(UnloadModelRoute, {
     return secretModel;
   },
 
-  async model(params) {
+  async model(params, transition) {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
-    let modelType = this.modelType(backend, secret);
+    let modelType = this.modelType(backend, secret, transition);
     let type = params.type || '';
     if (!secret) {
       secret = '\u0020';

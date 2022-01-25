@@ -31,7 +31,7 @@ export default EditBase.extend({
   wizard: service(),
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let modelType = this.modelType(backend);
+    let modelType = this.modelType(backend, null, transition);
     if (modelType === 'role-ssh') {
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
