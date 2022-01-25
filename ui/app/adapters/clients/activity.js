@@ -1,25 +1,6 @@
 import Application from '../application';
 
 export default Application.extend({
-  // FROM 1.9 (commenting out breaks current month view)
-  // pathForType() {
-  //   return 'internal/counters/activity';
-  // },
-  // queryRecord(store, type, query) {
-  //   let url = this.urlForQuery(null, type);
-  //   if (query.tab === 'current') {
-  //     url = `${url}/monthly`;
-  //     query = null;
-  //   }
-  //   // API accepts start and end as query params
-  //   return this.ajax(url, 'GET', { data: query }).then((resp) => {
-  //     let response = resp || {};
-  //     // if the response is a 204 it has no request id
-  //     response.id = response.request_id || 'no-data';
-  //     return response;
-  //   });
-  // },
-
   queryRecord(store, type, query) {
     let url = `${this.buildURL()}/internal/counters/activity`;
     // Query has startTime defined. The API will return the endTime if none is provided.
@@ -30,7 +11,6 @@ export default Application.extend({
       return response;
     });
   },
-
   // called from components
   queryClientActivity(start_time, end_time) {
     // do not query without start_time. Otherwise returns last year data, which is not reflective of billing data.
