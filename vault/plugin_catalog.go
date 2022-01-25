@@ -50,8 +50,6 @@ type PluginCatalog struct {
 }
 
 type MultiplexedClient struct {
-	sync.Mutex
-
 	// clientConn represents a virtual connection to a conceptual endpoint, to
 	// perform RPCs
 	clientConn *grpc.ClientConn
@@ -85,16 +83,16 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 }
 
 func (c *PluginCatalog) removeMultiplexedClient(ctx context.Context, name, id string) {
-	if _, ok := c.multiplexedClients[name]; !ok {
+	mpc, ok := c.multiplexedClients[name]
+	if !ok {
 		return
 	}
-
-	delete(c.multiplexedClients[name].connections, id)
+	delete(mpc.connections, id)
 	c.logger.Debug("deleted multiplexedClients connection entry", "id", id)
 
-	if len(c.multiplexedClients[name].connections) == 0 {
+	if len(mpc.connections) == 0 {
 		// TODO(JM): This leaves child process behind after vault exits
-		c.multiplexedClients[name].client.Kill()
+		mpc.client.Kill()
 		delete(c.multiplexedClients, name)
 		c.logger.Debug("deleted multiplexedClients plugin entry", "name", name)
 	}
@@ -127,6 +125,16 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 	c.logger.Debug("set the MultiplexedClient for", "pluginName", pluginName)
 
 	return mpc
+}
+
+// GetPluginClient returns a client for managing the lifecycle of a plugin
+// process and an ID for a newly created entry in the MultiplexedClients'
+// connections map.
+func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
+	c.lock.Lock()
+	pc, id, err := c.getPluginClient(ctx, sys, pluginRunner, namedLogger, isMetadataMode)
+	c.lock.Unlock()
+	return pc, id, err
 }
 
 // getPluginClient returns a client for managing the lifecycle of a plugin

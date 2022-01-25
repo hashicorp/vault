@@ -112,7 +112,7 @@ func newRegistry() *registry {
 			"snowflake-database-plugin":     dbSnowflake.New,
 		},
 		databasePluginsMultiplexed: map[string]dbplugin.Factory{
-			"postgresql-database-plugin-multiplexed": dbPostgres.NewWithMultiplex,
+			"postgresql-database-plugin": dbPostgres.NewWithMultiplex,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":           logicalAd.Factory,
