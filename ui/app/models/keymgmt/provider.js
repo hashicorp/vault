@@ -77,7 +77,9 @@ export default class KeymgmtProviderModel extends ValidationsModel {
   get showFields() {
     const attrs = expandAttributeMeta(this, ['name', 'created', 'keyCollection']);
     attrs.splice(1, 0, { hasBlock: true, label: 'Type', value: this.typeName, icon: this.icon });
-    attrs.push({ hasBlock: true, label: 'Keys', value: this.keys.length || 'None' });
+    const l = this.keys.length;
+    const value = l ? `${l} ${l > 1 ? 'keys' : 'key'}` : 'None';
+    attrs.push({ hasBlock: true, isLink: l, label: 'Keys', value });
     return attrs;
   }
   get credentialProps() {

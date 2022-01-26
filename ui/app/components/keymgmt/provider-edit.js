@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module KeymgmtKeyEdit
@@ -13,8 +14,8 @@ import { task } from 'ember-concurrency';
  * <KeymgmtProviderEdit @model={model} @mode="show" />
  * ```
  * @param {object} model - model is the data from the store
- * @param {string} [mode=show] - mode controls which view is shown on the component
- * * @param {string} [tab=details] - Options are "details" or "keys" for the show mode only
+ * @param {string} mode - mode controls which view is shown on the component - show | create |
+ * @param {string} [tab] - Options are "details" or "keys" for the show mode only
  */
 
 export default class KeymgmtKeyEdit extends Component {
@@ -23,7 +24,8 @@ export default class KeymgmtKeyEdit extends Component {
 
   constructor() {
     super(...arguments);
-    if (this.viewingKeys) {
+    // key count displayed in details tab and keys are listed in keys tab
+    if (this.args.mode === 'show') {
       this.fetchKeys.perform();
     }
   }
@@ -41,6 +43,7 @@ export default class KeymgmtKeyEdit extends Component {
   }
 
   @task
+  @waitFor
   *saveTask() {
     const { model } = this.args;
     try {
@@ -53,6 +56,7 @@ export default class KeymgmtKeyEdit extends Component {
     }
   }
   @task
+  @waitFor
   *fetchKeys(page = 1) {
     try {
       yield this.args.model.fetchKeys(page);
