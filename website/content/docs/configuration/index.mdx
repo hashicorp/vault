@@ -182,18 +182,12 @@ The following parameters are used on backends that support [high availability][h
   used for [plugin backends][plugins]. This can also be provided via the
   environment variable `VAULT_API_ADDR`. In general this should be set as a full
   URL that points to the value of the [`listener`](#listener) address.
-  This can be dynamically defined with a
-  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
-  that is resolved at runtime.
 
 - `cluster_addr` `(string: "")` - – Specifies the address to advertise to other
   Vault servers in the cluster for request forwarding. This can also be provided
   via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
   `api_addr`, but Vault will ignore the scheme (all cluster members always
   use TLS with a private key/certificate).
-  This can be dynamically defined with a
-  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
-  that is resolved at runtime.
 
 - `disable_clustering` `(bool: false)` – Specifies whether clustering features
   such as request forwarding are enabled. Setting this to true on one Vault node
