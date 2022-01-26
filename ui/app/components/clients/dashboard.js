@@ -42,7 +42,6 @@ export default class Dashboard extends Component {
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
-  @tracked noPayload = false;
   // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
   get startTimeDisplay() {
@@ -110,10 +109,9 @@ export default class Dashboard extends Component {
     try {
       let response = await this.adapter.queryClientActivity(this.startTime, this.endTime);
       if (!response) {
-        this.noPayload = true;
+        // this.endTime will be null and use this to show EmptyState message on the template.
         return;
       }
-      this.noPayload = false;
       // resets the endTime to what is returned on the response
       this.endTime = response.data.end_time;
       return response;
@@ -125,19 +123,10 @@ export default class Dashboard extends Component {
 
   @action
   handleCurrentBillingPeriod() {
-    let parsed = format(parseISO(this.args.model.startTime), 'MMMM yyyy');
+    let parsed = format(parseISO(this.args.model.startTime), 'MMMM yyyy'); // this.startTime is a tracked property and changes, thus use the startTime first passed into the component from the model.
     let month = parsed.split(' ')[0];
     let year = parsed.split(' ')[1];
     this.handleClientActivityQuery(month, year, 'startTime');
-    // this.startTime = this.args.model.startTime; // reset to the startTime taken off the license endpoint
-    // this.endTime = null;
-  }
-
-  // ARG TODO this might be a carry over from history, will need to confirm
-  @action
-  resetData() {
-    this.barChartSelection = false;
-    this.selectedNamespace = null;
   }
 
   @action

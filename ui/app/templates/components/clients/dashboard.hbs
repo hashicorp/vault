@@ -56,11 +56,11 @@
         <Toolbar>
           <ToolbarFilters>
             <CalendarWidget
-              @startTimeDisplay={{this.startTimeDisplay}}
-              @handleClientActivityQuery={{this.handleClientActivityQuery}}
               @endTimeDisplay={{this.endTimeDisplay}}
-              @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
               @endTimeAtInit={{date-format @model.endTime "MMMM yyyy"}}
+              @handleClientActivityQuery={{this.handleClientActivityQuery}}
+              @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
+              @startTimeDisplay={{this.startTimeDisplay}}
             />
             {{! ARG TODO more filters for namespace here }}
           </ToolbarFilters>
@@ -78,7 +78,8 @@
             @endTimeDisplay={{this.endTimeDisplay}}
             @isDateRange={{this.isDateRange}}
           />
-        {{else if this.noPayload}}
+          {{! If no endTime that means the counters/activity request did not return a payload. }}
+        {{else if this.endTime}}
           <EmptyState
             @title="No counter activity data"
             @message="There is no data in the activity data yet. We collect it at the end of each month, so your data will be available on the first of next month."
