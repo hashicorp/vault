@@ -3,6 +3,7 @@ export default class MonthlyModel extends Model {
   @attr('array') byNamespace;
   @attr('object') total;
   @attr('string') timestamp;
+  // TODO CMB remove 'clients' and use 'total' object?
   @attr('number') clients;
   // new names
   @attr('number') entityClients;
