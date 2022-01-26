@@ -231,32 +231,37 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 			continue
 		}
 
-		if !b.System().CachingDisabled() {
-			p.Lock(true)
-		}
-
-		// If the policy's automatic rotation interval is 0, it should not
-		// automatically rotate.
-		if p.AutoRotateInterval == 0 {
-			p.Unlock()
+		err = b.rotateIfRequired(ctx, req, key, p)
+		if err != nil {
+			errs = multierror.Append(errs, err)
 			continue
 		}
-
-		// Retrieve the latest version of the policy and determine if it is time to rotate.
-		latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
-		if time.Now().After(latestKey.CreationTime.Add(p.AutoRotateInterval)) {
-			if b.Logger().IsDebug() {
-				b.Logger().Debug("automatically rotating key", "key", key)
-			}
-			err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
-			if err != nil {
-				errs = multierror.Append(errs, err)
-				p.Unlock()
-				continue
-			}
-		}
-		p.Unlock()
 	}
 
 	return errs.ErrorOrNil()
+}
+
+// rotateIfRequired rotates a key if it is due for autorotation.
+func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, key string, p *keysutil.Policy) error {
+	if !b.System().CachingDisabled() {
+		p.Lock(true)
+	}
+	defer p.Unlock()
+
+	// If the policy's automatic rotation interval is 0, it should not
+	// automatically rotate.
+	if p.AutoRotateInterval == 0 {
+		return nil
+	}
+
+	// Retrieve the latest version of the policy and determine if it is time to rotate.
+	latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
+	if time.Now().After(latestKey.CreationTime.Add(p.AutoRotateInterval)) {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("automatically rotating key", "key", key)
+		}
+		return p.Rotate(ctx, req.Storage, b.GetRandomReader())
+
+	}
+	return nil
 }
