@@ -103,15 +103,3 @@
     }
   }
 }
-
-.has-gap {
-  gap: $spacing-xxl;
-}
-
-.stat-text-flex-wrapper {
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  column-gap: 70px;
-  row-gap: 20px;
-}
