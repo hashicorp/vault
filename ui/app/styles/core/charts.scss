@@ -38,15 +38,6 @@
   }
 }
 
-.flex-header {
-  flex-grow: 1;
-  box-shadow: inset 0 -1px 0 $vault-gray-200;
-
-  > h2 {
-    padding-bottom: $spacing-xs;
-  }
-}
-
 .has-header-link {
   display: grid;
   grid-template-columns: 4fr 1fr;
