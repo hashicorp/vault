@@ -6,7 +6,7 @@ export default Mirage.Factory.extend({
   total: function () {
     return {
       clients: 20,
-      distinct_entities: 10,
+      direct_entities: 10,
       non_entity_tokens: 10,
     };
   },

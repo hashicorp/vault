@@ -1,11 +1,11 @@
-<div class={{concat "chart-wrapper" (if @isDateRange " single-chart-grid") (unless @isDateRange " dual-chart-grid")}}>
+<div class="chart-wrapper single-chart-grid">
   <div class="chart-header has-export has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">Attribution</h2>
       <p class="chart-description">{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
-      {{#if @totalClientsData}}
+      {{#if this.totalClientsData}}
         <button type="button" class="button is-secondary" {{on "click" (fn (mut this.showCSVDownloadModal) true)}}>
           Export attribution data
         </button>
@@ -13,10 +13,13 @@
     </div>
   </div>
 
-  {{! show single chart if data is from a range, show two charts if from a single month}}
-  {{#if (eq @isDateRange true)}}
+  {{#if this.totalClientsData}}
     <div class="chart-container-wide">
-      <Clients::HorizontalBarChart @dataset={{@totalClientsData}} @chartLegend={{@chartLegend}} />
+      <Clients::HorizontalBarChart
+        @dataset={{this.totalClientsData}}
+        @chartLegend={{@chartLegend}}
+        @clientTotals={{@runningTotals}}
+      />
     </div>
 
     <div class="chart-subTitle">
@@ -24,25 +27,13 @@
     </div>
 
     <div class="data-details-top">
-      <h3 class="data-details">Top {{lowercase this.clientCountBreakdown}}</h3>
-      <p class="data-details">ns/1</p>
+      <h3 class="data-details">Top {{lowercase this.attributionBreakdown}}</h3>
+      <p class="data-details">{{this.topClientCounts.label}}</p>
     </div>
 
     <div class="data-details-bottom">
-      <h3 class="data-details">Clients in {{lowercase this.clientCountBreakdown}}</h3>
-      <p class="data-details">1,512</p>
-    </div>
-  {{else if (and @newClientsData (not @isDateRange))}}
-    <div class="chart-container-left">
-      <h2 class="chart-title">New clients</h2>
-      <p class="chart-description">{{this.chartText.newCopy}}</p>
-      <Clients::HorizontalBarChart @dataset={{@newClientsData}} @chartLegend={{@chartLegend}} />
-    </div>
-
-    <div class="chart-container-right">
-      <h2 class="chart-title">Total clients</h2>
-      <p class="chart-description">{{this.chartText.totalCopy}}</p>
-      <Clients::HorizontalBarChart @dataset={{@totalClientsData}} @chartLegend={{@chartLegend}} />
+      <h3 class="data-details">Clients in {{lowercase this.attributionBreakdown}}</h3>
+      <p class="data-details">{{this.topClientCounts.clients}}</p>
     </div>
   {{else}}
     <EmptyState />
@@ -71,8 +62,8 @@
       This export will include the namespace path, authentication method path, and the associated clients, unique entities,
       and non-entity tokens for the below date range.
     </p>
-    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE RANGE</p>
-    <p class="has-bottom-margin-s">{{@activityDateRange}}</p>
+    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if @endTimeDisplay " RANGE"}}</p>
+    <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <DownloadCsv @label="Export" @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />

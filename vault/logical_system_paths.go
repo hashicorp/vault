@@ -1501,6 +1501,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadAuth,
+					Summary: "Read the configuration of the auth engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
 					Summary:  "Enables a new auth method.",
@@ -1613,6 +1617,17 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+
+		{
+			Pattern: "policies/password/?$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordList,
+					Summary:  "List the existing password policies.",
+				},
+			},
 		},
 
 		{
