@@ -225,15 +225,20 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 			errs = multierror.Append(errs, err)
 			continue
 		}
+		if !b.System().CachingDisabled() {
+			p.Lock(true)
+		}
 
 		// If the policy is nil, move onto the next one.
 		if p == nil {
+			p.Unlock()
 			continue
 		}
 
 		// If the policy's automatic rotation interval is 0, it should not
 		// automatically rotate.
 		if p.AutoRotateInterval == 0 {
+			p.Unlock()
 			continue
 		}
 
@@ -243,16 +248,14 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("automatically rotating key", "key", key)
 			}
-			if !b.System().CachingDisabled() {
-				p.Lock(true)
-			}
 			err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
-			p.Unlock()
 			if err != nil {
 				errs = multierror.Append(errs, err)
+				p.Unlock()
 				continue
 			}
 		}
+		p.Unlock()
 	}
 
 	return errs.ErrorOrNil()
