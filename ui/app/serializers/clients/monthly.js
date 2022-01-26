@@ -52,6 +52,6 @@ export default class MonthlySerializer extends ApplicationSerializer {
       },
     };
     delete payload.data.by_namespace;
-    return super(store, primaryModelClass, transformedPayload, id, requestType);
+    return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 }
