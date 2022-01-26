@@ -35,19 +35,21 @@
       <h3 class="data-details">Clients in {{lowercase this.attributionBreakdown}}</h3>
       <p class="data-details">{{this.topClientCounts.clients}}</p>
     </div>
+
+    <div class="timestamp">
+      Updated
+      {{date-format @timestamp "MMM dd yyyy, h:mm:ss aaa"}}
+    </div>
+
+    <div class="legend-center">
+      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+    </div>
   {{else}}
-    <EmptyState />
+    <div class="chart-empty-state">
+      <EmptyState @title="No namespace data" @message="There is no data to display for namespaces." />
+    </div>
   {{/if}}
-
-  <div class="timestamp">
-    Updated
-    {{date-format @timestamp "MMM dd yyyy, h:mm:ss aaa"}}
-  </div>
-
-  <div class="legend-center">
-    <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-    <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
-  </div>
 </div>
 
 {{! MODAL FOR CSV DOWNLOAD BUTTON }}

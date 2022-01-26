@@ -8,24 +8,15 @@ export default class Current extends Component {
 
   // data for horizontal bar chart in attribution component
   get topTenNamespaces() {
-    if (!this.args.model.monthly || !this.args.model.monthly.byNamespace) {
-      return null;
-    }
-    return this.args.model.monthly.byNamespace;
+    return this.args.model.monthly?.byNamespace;
   }
 
   // top level TOTAL client counts from response for given month
   get runningTotals() {
-    if (!this.args.model.monthly || !this.args.model.monthly.total) {
-      return null;
-    }
-    return this.args.model.monthly.total;
+    return this.args.model.monthly?.total;
   }
 
   get responseTimestamp() {
-    if (!this.args.model.monthly || !this.args.model.monthly.responseTimestamp) {
-      return null;
-    }
-    return this.args.model.monthly.responseTimestamp;
+    return this.args.model.monthly?.responseTimestamp;
   }
 }

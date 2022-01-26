@@ -111,6 +111,11 @@
   }
 }
 
+.chart-empty-state {
+  grid-column-start: 1;
+  grid-column-end: -1;
+}
+
 .chart-subTitle {
   grid-column-start: 1;
   grid-column-end: 3;
