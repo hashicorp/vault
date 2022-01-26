@@ -51,17 +51,19 @@
       {{/if}}
       {{! check for @startTime otherwise emptyState}}
       {{#if @model.startTime}}
-        <div class="calendar-title">Filters</div>
-        <Toolbar>
-          <ToolbarFilters>
-            <CalendarWidget
-              @startTimeDisplay={{this.startTimeDisplay}}
-              @handleClientActivityQuery={{this.handleClientActivityQuery}}
-              @endTimeDisplay={{this.endTimeDisplay}}
-            />
-            {{! ARG TODO more filters for namespace here }}
-          </ToolbarFilters>
-        </Toolbar>
+        <div class="is-subtitle-gray has-bottom-margin-m">
+          FILTERS
+          <Toolbar>
+            <ToolbarFilters>
+              <CalendarWidget
+                @startTimeDisplay={{this.startTimeDisplay}}
+                @handleClientActivityQuery={{this.handleClientActivityQuery}}
+                @endTimeDisplay={{this.endTimeDisplay}}
+              />
+              {{! ARG TODO more filters for namespace here }}
+            </ToolbarFilters>
+          </Toolbar>
+        </div>
         {{#if @isLoading}}
           <LayoutLoading />
         {{else}}
