@@ -12,10 +12,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ed25519"
 	"reflect"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
@@ -109,7 +110,7 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
 			},
-			"require_matching_certificate_algorithms": &framework.FieldSchema{
+			"require_matching_certificate_algorithms": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,

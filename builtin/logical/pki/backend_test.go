@@ -233,7 +233,6 @@ func TestPKI_DeviceCert(t *testing.T) {
 	if notAfter != "9999-12-31T23:59:59Z" {
 		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
 	}
-
 }
 
 func TestBackend_InvalidParameter(t *testing.T) {
@@ -278,6 +277,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func TestBackend_CSRValues(t *testing.T) {
 	initTest.Do(setCerts)
 	defaultLeaseTTLVal := time.Hour * 24
@@ -823,10 +823,10 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTL:        12 * time.Hour,
-		KeyType:       "rsa",
-		KeyBits:       2048,
-		RequireCN:     true,
+		MaxTTL:    12 * time.Hour,
+		KeyType:   "rsa",
+		KeyBits:   2048,
+		RequireCN: true,
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
@@ -3066,8 +3066,10 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 
 	// Write role PKI.
 	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
-		"allowed_uri_sans": []string{"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}",
-			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}/*", "spiffe://domain/foo"},
+		"allowed_uri_sans": []string{
+			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}/*", "spiffe://domain/foo",
+		},
 		"allowed_uri_sans_template": true,
 		"require_cn":                false,
 	})

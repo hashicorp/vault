@@ -200,7 +200,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	policies = strutil.RemoveDuplicates(policies, true)
 
 	entityAliasAttribute, err := ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
-
 	if err != nil {
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}

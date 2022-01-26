@@ -22,8 +22,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var errDuplicateIdentityName = errors.New("duplicate identity name")
-var tmpSuffix = ".tmp"
+var (
+	errDuplicateIdentityName = errors.New("duplicate identity name")
+	tmpSuffix                = ".tmp"
+)
 
 func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
 	c.loadCaseSensitiveIdentityStore = caseSensitive

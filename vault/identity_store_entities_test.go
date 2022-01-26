@@ -1259,7 +1259,7 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 			"mount_accessor": githubAccessor,
 			"metadata":       []string{"organization=hashicorp", "team=vault"},
 			"entity_id":      entityID2,
-			"policies": []string{"testPolicy1", "testPolicy1", "testPolicy2"},
+			"policies":       []string{"testPolicy1", "testPolicy1", "testPolicy2"},
 		},
 	}
 

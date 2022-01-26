@@ -76,9 +76,9 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	})
 
 	f.BoolPtrVar(&BoolPtrVar{
-		Name:    "cas-required",
-		Target:  &c.flagCASRequired,
-		Usage:   `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
+		Name:   "cas-required",
+		Target: &c.flagCASRequired,
+		Usage:  `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
 	})
 
 	f.DurationVar(&DurationVar{
@@ -95,8 +95,8 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	})
 
 	f.StringMapVar(&StringMapVar{
-		Name: "custom-metadata",
-		Target: &c.flagCustomMetadata,
+		Name:    "custom-metadata",
+		Target:  &c.flagCustomMetadata,
 		Default: map[string]string{},
 		Usage: "Specifies arbitrary version-agnostic key=value metadata meant to describe a secret." +
 			"This can be specified multiple times to add multiple pieces of metadata.",
