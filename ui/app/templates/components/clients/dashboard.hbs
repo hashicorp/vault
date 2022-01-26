@@ -78,15 +78,14 @@
             @endTimeDisplay={{this.endTimeDisplay}}
             @isDateRange={{this.isDateRange}}
           />
+        {{else if this.noPayload}}
+          <EmptyState
+            @title="No counter activity data"
+            @message="There is no data in the activity data yet. We collect it at the end of each month, so your data will be available on the first of next month."
+          />
         {{else}}
-          {{! ARG TODO remove once we have this dialed }}
-          <EmptyState @title="Coming soon" @message="Under construction for the 1.10 binary." />
+          <EmptyState @title="Under construction" />
         {{/if}}
-      {{else}}
-        <EmptyState
-          @title="No billing start date found"
-          @message="In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate."
-        />
       {{/if}}
 
       {{! Modal for startTime picker }}

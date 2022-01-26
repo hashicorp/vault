@@ -113,6 +113,7 @@ class CalendarWidget extends Component {
   @action
   selectCurrentBillingPeriod() {
     // resets the billing startTime and endTime to what it is on init.
+    this.args.handleCurrentBillingPeriod(); // reset from dashboard to current billing period (e.g. from license startTime)
     this.showCalendar = false;
   }
   @action
