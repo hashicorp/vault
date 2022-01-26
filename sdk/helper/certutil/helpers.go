@@ -678,16 +678,23 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 // CreateCertificate uses CreationBundle and the default rand.Reader to
 // generate a cert/keypair.
 func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
-	return createCertificate(data, rand.Reader)
+	return createCertificate(data, rand.Reader, generatePrivateKey)
 }
 
 // CreateCertificateWithRandomSource uses CreationBundle and a custom
 // io.Reader for randomness to generate a cert/keypair.
 func CreateCertificateWithRandomSource(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
-	return createCertificate(data, randReader)
+	return createCertificate(data, randReader, generatePrivateKey)
 }
 
-func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
+// KeyGenerator Allow us to override how/what generates the private key
+type KeyGenerator func(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader io.Reader) error
+
+func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCertBundle, error) {
+	return createCertificate(data, randReader, keyGenerator)
+}
+
+func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGenerator KeyGenerator) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
 
@@ -696,7 +703,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		return nil, err
 	}
 
-	if err := generatePrivateKey(data.Params.KeyType,
+	if err := privateKeyGenerator(data.Params.KeyType,
 		data.Params.KeyBits,
 		result, randReader); err != nil {
 		return nil, err
@@ -863,20 +870,26 @@ var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 // generate a cert/keypair. This is currently only meant
 // for use when generating an intermediate certificate.
 func CreateCSR(data *CreationBundle, addBasicConstraints bool) (*ParsedCSRBundle, error) {
-	return createCSR(data, addBasicConstraints, rand.Reader)
+	return createCSR(data, addBasicConstraints, rand.Reader, generatePrivateKey)
 }
 
 // CreateCSRWithRandomSource creates a CSR with a custom io.Reader
 // for randomness to generate a cert/keypair.
 func CreateCSRWithRandomSource(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
-	return createCSR(data, addBasicConstraints, randReader)
+	return createCSR(data, addBasicConstraints, randReader, generatePrivateKey)
 }
 
-func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
+// CreateCSRWithKeyGenerator creates a CSR with a custom io.Reader
+// for randomness to generate a cert/keypair with the provided private key generator.
+func CreateCSRWithKeyGenerator(data *CreationBundle, addBasicConstraints bool, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCSRBundle, error) {
+	return createCSR(data, addBasicConstraints, randReader, keyGenerator)
+}
+
+func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCSRBundle, error) {
 	var err error
 	result := &ParsedCSRBundle{}
 
-	if err := generatePrivateKey(data.Params.KeyType,
+	if err := keyGenerator(data.Params.KeyType,
 		data.Params.KeyBits,
 		result, randReader); err != nil {
 		return nil, err

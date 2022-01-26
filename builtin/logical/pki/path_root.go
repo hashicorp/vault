@@ -163,6 +163,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 			return logical.ErrorResponse(err.Error()), nil
 		case errutil.InternalError:
 			return nil, err
+		default:
+			return nil, err
 		}
 	}
 
@@ -291,7 +293,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
@@ -417,7 +419,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
