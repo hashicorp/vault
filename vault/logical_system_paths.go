@@ -490,11 +490,11 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
 		},
 		{
-			Pattern: "version-history$",
+			Pattern: "version-history/$",
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleVersionHistoryRead,
-					Summary: "Returns map of historical version change entries",
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleVersionHistoryList,
+					Summary:  "Returns map of historical version change entries",
 				},
 			},
 

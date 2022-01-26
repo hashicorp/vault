@@ -147,7 +147,6 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"rekey-recovery-key/init",
 				"rekey-recovery-key/update",
 				"rekey-recovery-key/verify",
-				"version-history",
 			},
 
 			LocalStorage: []string{
@@ -4242,8 +4241,9 @@ type HAStatusNode struct {
 	LastEcho       *time.Time `json:"last_echo"`
 }
 
-func (b *SystemBackend) handleVersionHistoryRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	versions := make([]VaultVersion, 0)
+	respKeys := make([]string, 0)
 
 	for versionString, ts := range b.Core.versionTimestamps {
 		versions = append(versions, VaultVersion{
@@ -4256,9 +4256,11 @@ func (b *SystemBackend) handleVersionHistoryRead(ctx context.Context, req *logic
 		return versions[i].TimestampInstalled.Before(versions[j].TimestampInstalled)
 	})
 
-	versionHistoryResp := map[string]interface{}{}
+	respKeyInfo := map[string]interface{}{}
 
 	for i, v := range versions {
+		respKeys = append(respKeys, v.Version)
+
 		entry := map[string]interface{}{
 			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
 			"previous_version":    nil,
@@ -4268,14 +4270,11 @@ func (b *SystemBackend) handleVersionHistoryRead(ctx context.Context, req *logic
 			entry["previous_version"] = versions[i-1].Version
 		}
 
-		versionHistoryResp[v.Version] = entry
+		respKeyInfo[v.Version] = entry
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"versions": versionHistoryResp,
-		},
-	}, nil
+	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+
 }
 
 func sanitizePath(path string) string {
@@ -5070,13 +5069,12 @@ This path responds to the following HTTP methods.
 		"Requires sudo capability. List leases associated with this Vault cluster",
 	},
 	"version-history": {
-		"Returns map of historical version change entries.",
+		"List historical version changes sorted by installation time in ascending order.",
 		`
 This path responds to the following HTTP methods.
 
-    GET /
-        Returns a map of historical version change entries. This is an unauthenticated
-        endpoint.
+    LIST /
+        Returns a list historical version changes sorted by installation time in ascending order.
 		`,
 	},
 }

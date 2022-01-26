@@ -7,26 +7,25 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// TestSysVersionHistory_Get tests the sys/version-history endpoint. The
-// endpoint is accessible in both an authenticated and unauthenticated fashion.
-// Without synthetically altering the underlying core/versions storage entries,
-// a single version entry should exist.
-func TestSysVersionHistory_Get(t *testing.T) {
-	cases := []struct{
-		name   string
-		auth   bool
+// TestSysVersionHistory_List tests the sys/version-history endpoint. Requests
+// to the endpoint must be authenticated. Without synthetically altering the
+// underlying core/versions storage entries, a single version entry should
+// exist.
+func TestSysVersionHistory_List(t *testing.T) {
+	cases := []struct {
+		name           string
+		auth           bool
+		expectedStatus int
 	}{
 		{
-			name: "authenticated",
-			auth: true,
+			name:           "authenticated",
+			auth:           true,
+			expectedStatus: 200,
 		},
 		{
-			name: "unauthenticated",
-			auth: false,
-		},
-		{
-			name: "chicken",
-			auth: true,
+			name:           "unauthenticated",
+			auth:           false,
+			expectedStatus: 403,
 		},
 	}
 
@@ -44,29 +43,39 @@ func TestSysVersionHistory_Get(t *testing.T) {
 				token = ""
 			}
 
-			resp := testHttpGet(t, token, addr + "/v1/sys/version-history")
+			resp := testHttpList(t, token, addr+"/v1/sys/version-history")
 
 			var actual map[string]interface{}
 
-			testResponseStatus(t, resp, 200)
+			testResponseStatus(t, resp, tc.expectedStatus)
 			testResponseBody(t, resp, &actual)
 
-			var respData map[string]interface{}
-			var versions map[string]interface{}
-			var ok bool
+			if tc.auth {
+				var respData map[string]interface{}
+				var ok bool
+				var keys []interface{}
+				var keyInfo map[string]interface{}
 
-			if respData, ok = actual["data"].(map[string]interface{}); !ok {
-				t.Fatalf("expected data key to be map, actual: %#v", actual["data"])
-			}
+				if respData, ok = actual["data"].(map[string]interface{}); !ok {
+					t.Fatalf("expected data key to be map, actual: %#v", actual["data"])
+				}
 
-			if versions, ok = respData["versions"].(map[string]interface{}); !ok {
-				t.Fatalf("expected versions key to be map, actual: %#v", respData["versions"])
-			}
+				if keys, ok = respData["keys"].([]interface{}); !ok {
+					t.Fatalf("expected keys to be array, actual: %#v", respData["keys"])
+				}
 
-			if len(versions) != 1 || versions[version.Version] == nil {
-				t.Fatalf("expected single version history entry for %q", version.Version)
+				if keyInfo, ok = respData["key_info"].(map[string]interface{}); !ok {
+					t.Fatalf("expected key_info to be map, actual: %#v", respData["key_info"])
+				}
+
+				if len(keys) != 1 {
+					t.Fatalf("expected single version history entry for %q", version.Version)
+				}
+
+				if keyInfo[version.Version] == nil {
+					t.Fatalf("expected version %s to be present in key_info, actual: %#v", version.Version, keyInfo)
+				}
 			}
 		})
 	}
-
 }
