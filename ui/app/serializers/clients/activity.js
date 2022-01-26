@@ -113,7 +113,6 @@ export default ApplicationSerializer.extend({
     let response_timestamp = formatISO(new Date());
     let transformedPayload = {
       ...payload,
-      // TODO CMB should these be nested under "data" to go to model correctly?)
       response_timestamp,
       by_namespace: this.flattenDataset(payload.data.by_namespace),
     };
