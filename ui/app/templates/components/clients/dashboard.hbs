@@ -64,8 +64,8 @@
         </Toolbar>
         {{#if @isLoading}}
           <LayoutLoading />
-        {{else if this.topTenNamespaces}}
-          {{! TODO make conditional above more apt }}
+        {{else}}
+          <Clients::UsageStats @title="Total usage" @runningTotals={{this.runningTotals}} />
           <Clients::Attribution
             @chartLegend={{this.chartLegend}}
             @topTenNamespaces={{this.topTenNamespaces}}
@@ -76,9 +76,6 @@
             @isDateRange={{this.isDateRange}}
             @timestamp={{this.responseTimestamp}}
           />
-        {{else}}
-          {{! ARG TODO remove once we have this dialed }}
-          <EmptyState @title="Coming soon" @message="Under construction for the 1.10 binary." />
         {{/if}}
       {{else}}
         <EmptyState

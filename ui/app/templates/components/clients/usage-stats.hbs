@@ -24,7 +24,7 @@
       <StatText
         class="column"
         @label="Entity clients"
-        @value={{or @runningTotals.entityClients "0"}}
+        @value={{or @runningTotals.entity_clients "0"}}
         @size="l"
         @subText="Representations of a particular user, client, or application that created a token via login."
       />
@@ -33,7 +33,7 @@
       <StatText
         class="column"
         @label="Non-entity clients"
-        @value={{or @runningTotals.nonEntityClients "0"}}
+        @value={{or @runningTotals.non_entity_clients "0"}}
         @size="l"
         @subText="Clients created with a shared set of permissions, but not associated with an entity. "
       />
