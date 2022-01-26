@@ -3,12 +3,12 @@ import { formatISO } from 'date-fns';
 
 export default ApplicationSerializer.extend({
   flattenDataset(payload) {
-    let topTen = payload?.slice(0, 10);
+    let topTen = payload ? payload.slice(0, 10) : [];
 
-    return topTen?.map((ns) => {
+    return topTen.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
-      let label = ns['namespace_path'] || ns['namespace_id']; // TODO CMB will namespace_path ever be empty?
+      let label = ns['namespace_path'];
       let flattenedNs = {};
       // we don't want client counts nested within the 'counts' object for stacked charts
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
