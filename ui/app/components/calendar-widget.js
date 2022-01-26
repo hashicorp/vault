@@ -12,6 +12,7 @@ import { tracked } from '@glimmer/tracking';
  * ```js
  * <CalendarWidget
  * @param {string} endTimeDisplay - The display value of the endTime. Ex: January 2022.
+ * @param {string} endTimeAtInit - Because endTimeDisplay is a tracked property of the parent it changes. But we need to keep a value unchanged that records the endTime returned by the activity/counter endpoint. This is that value.
  * @param {string} startTimeDisplay - The display value of startTime that the parent manages. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.
  * @param {function} handleClientActivityQuery - a function passed from parent. This component sends the month and year to the parent via this method which then calculates the new data.
  * />
@@ -94,6 +95,15 @@ class CalendarWidget extends Component {
         let startMonthIndex = this.arrayOfMonths.indexOf(startMonth);
         // then add readOnly class to any month less than the startMonth index.
         if (startMonthIndex > elementMonthId) {
+          e.classList.add('is-readOnly');
+        }
+      }
+      // compare so user cannot select endTime after endTime returned from activity/counters response on init.
+      if (this.displayYear.toString() === this.args.endTimeAtInit.split(' ')[1]) {
+        let endMonth = this.args.endTimeAtInit.split(' ')[0]; // returns month name e.g. November
+        let endMonthIndex = this.arrayOfMonths.indexOf(endMonth);
+        // then add readOnly class to any month that is older (higher) than the endMonth index.  e.g. if nov is the endMonth of the endTimeDisplay, then 11 and 12 should not be displayed 10 < 11 and 10 < 12.
+        if (endMonthIndex < elementMonthId) {
           e.classList.add('is-readOnly');
         }
       }

@@ -232,6 +232,12 @@ export default class Dashboard extends Component {
     }
   }
 
+  @action
+  handleCurrentBillingPeriod() {
+    this.startTime = this.args.model.startTime; // reset to the startTime taken off the license endpoint
+    this.endTime = null;
+  }
+
   // ARG TODO this might be a carry over from history, will need to confirm
   @action
   resetData() {
