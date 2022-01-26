@@ -224,6 +224,7 @@ func TestLogical_CreateToken(t *testing.T) {
 			"entity_id":      "",
 			"token_type":     "service",
 			"orphan":         false,
+			"num_uses":       json.Number("0"),
 		},
 		"warnings": nilWarnings,
 	}
