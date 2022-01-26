@@ -6,12 +6,22 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   listPayload = { data: { list: true } };
 
   pathForType() {
-    return 'keymgmt/kms';
+    // backend name prepended in buildURL method
+    return 'kms';
   }
-  async createRecord(store, type, snapshot) {
+  buildURL(modelName, id, snapshot, requestType, query) {
+    let url = super.buildURL(...arguments);
+    if (snapshot) {
+      url = url.replace('kms', `${snapshot.attr('backend')}/kms`);
+    } else if (query) {
+      url = url.replace('kms', `${query.backend}/kms`);
+    }
+    return url;
+  }
+  async createRecord(store, { modelName }, snapshot) {
     // create uses PUT instead of POST
-    const data = store.serializerFor(type.modelName).serialize(snapshot);
-    const url = `${this.buildURL(type.modelName)}/${snapshot.attr('name')}`;
+    const data = store.serializerFor(modelName).serialize(snapshot);
+    const url = this.buildURL(modelName, snapshot.attr('name'), snapshot, 'updateRecord');
     return this.ajax(url, 'PUT', { data }).then(() => data);
   }
   findRecord(store, type, name) {
@@ -20,16 +30,30 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
       return resp;
     });
   }
-  async query(store, type) {
-    return this.ajax(this.buildURL(type.modelName), 'GET', this.listPayload).then(async (resp) => {
+  async query(store, type, query) {
+    const url = this.buildURL(type.modelName, null, null, 'query', query);
+    return this.ajax(url, 'GET', this.listPayload).then(async (resp) => {
       // additional data is needed to fullfil the list view requirements
       // pull in full record for listed items
-      const records = await all(resp.data.keys.map((name) => this.findRecord(store, type, name)));
+      const records = await all(
+        resp.data.keys.map((name) => this.findRecord(store, type, name, this._mockSnapshot(query.backend)))
+      );
       resp.data.keys = records.map((record) => record.data);
       return resp;
     });
   }
   async queryRecord(store, type, query) {
-    return this.findRecord(store, type, query.id);
+    return this.findRecord(store, type, query.id, this._mockSnapshot(query.backend));
+  }
+
+  // when using find in query or queryRecord overrides snapshot is not available
+  // ultimately buildURL requires the snapshot to pull the backend name for the dynamic segment
+  // since we have the backend value from the query generate a mock snapshot
+  _mockSnapshot(backend) {
+    return {
+      attr(prop) {
+        return prop === 'backend' ? backend : null;
+      },
+    };
   }
 }

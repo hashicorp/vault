@@ -32,6 +32,7 @@ const Validations = buildValidations({
 const ValidationsModel = Model.extend(Validations);
 
 export default class KeymgmtProviderModel extends ValidationsModel {
+  @attr('string') backend;
   @attr('string', {
     label: 'Provider name',
     subText: 'This is the name of the provider that will be displayed in Vault. This cannot be edited later.',
