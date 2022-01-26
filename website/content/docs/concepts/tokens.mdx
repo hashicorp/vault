@@ -6,6 +6,8 @@ description: Tokens are a core auth method in Vault. Concepts and important feat
 
 # Tokens
 
+!> **Warning**: Since tokens are considered opaque values, their structure is undocumented and subject to change. For these reasons, we do not recommend using tokens within your scripts or for automation since it can cause breakage.
+
 Tokens are the core method for _authentication_ within Vault. Tokens
 can be used directly or [auth methods](/docs/concepts/auth)
 can be used to dynamically generate tokens based on external identities.
@@ -27,9 +29,6 @@ holder is allowed to do within Vault. Other mapped information includes
 metadata that can be viewed and is added to the audit log, such as creation
 time, last renewal time, and more.
 
-~> Note that external to Vault, tokens are to be considered opaque values
-by users and as such, their structure is both currently undocumented and
-subject to change.
 
 Read on for a deeper dive into token concepts.
 
