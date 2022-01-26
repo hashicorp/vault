@@ -110,14 +110,16 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   }
 
   async queryRecord(store, type, query) {
-    const { id, backend } = query;
+    const { id, backend, recordOnly = false } = query;
     const keyData = await this.ajax(this.url(backend, id), 'GET');
     keyData.data.id = id;
     keyData.data.backend = backend;
-    const provider = await this.getProvider(backend, id);
-    let distribution;
-    if (provider) {
-      distribution = await this.getDistribution(backend, provider, id);
+    let provider, distribution;
+    if (!recordOnly) {
+      provider = await this.getProvider(backend, id);
+      if (provider) {
+        distribution = await this.getDistribution(backend, provider, id);
+      }
     }
     return { ...keyData, provider, distribution };
   }

@@ -1,24 +1,26 @@
 <form {{on "submit" this.createDistribution}}>
-  <div class="form-section">
-    <SearchSelect
-      @id={{@model.key.name}}
-      @models={{array "keymgmt/key"}}
-      @onChange={{this.handleKeySelect}}
-      @passObject={{true}}
-      @inputValue={{@model.key}}
-      @subText="Type to use the name of an existing key that you’d like to add to this provider, or to create one."
-      @wildcardLabel="key"
-      @label=""
-      @subLabel="Key name"
-      @fallbackComponent="string-list"
-      @selectLimit="1"
-      @backend={{@model.backend}}
-      @disallowNewItems={{false}}
-    />
-  </div>
+  {{#unless @key}}
+    <div class="form-section" data-test-keymgmt-dist-key>
+      <SearchSelect
+        @id="key"
+        @models={{array "keymgmt/key"}}
+        @onChange={{this.handleKeySelect}}
+        @passObject={{true}}
+        @inputValue={{this.formData.key}}
+        @subText="Type to use the name of an existing key that you’d like to add to this provider, or to create one."
+        @wildcardLabel="key"
+        @label=""
+        @subLabel="Key name"
+        @fallbackComponent="string-list"
+        @selectLimit="1"
+        @backend={{@backend}}
+        @disallowNewItems={{false}}
+      />
+    </div>
+  {{/unless}}
 
-  {{#if this.keyModel}}
-    <div class="form-section">
+  {{#if this.isNewKey}}
+    <div class="form-section" data-test-keymgmt-dist-keytype>
       <label for="keyType">Key Type</label>
       <div class="control is-expanded">
         <div class="select is-fullwidth">
@@ -38,26 +40,34 @@
     </div>
   {{/if}}
 
-  <div class="form-section">
-    <label for="provider">Provider</label>
-    <div class="control is-expanded">
-      <div class="select is-fullwidth">
-        <select name="provider" id="provider" {{on "change" this.handleProvider}}>
-          <option value="">
-            Select provider
-          </option>
-          {{#each @providers as |val|}}
-            <option selected={{eq @model.provider val}} value={{val}}>
-              {{val}}
+  {{#unless @provider}}
+    <div class="form-section" data-test-keymgmt-dist-provider>
+      <label for="provider">Provider</label>
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+          <select name="provider" id="provider" {{on "change" this.handleProvider}}>
+            <option value="">
+              Select provider
             </option>
-          {{/each}}
-        </select>
+            {{#each @providers as |val|}}
+              <option selected={{eq @model.provider val}} value={{val}}>
+                {{val}}
+              </option>
+            {{/each}}
+          </select>
+        </div>
       </div>
     </div>
-  </div>
+  {{/unless}}
 
-  <fieldset class="form-fieldset" id="operations" disabled={{or (not @model.provider) (not @model.key)}}>
+  <fieldset
+    class="form-fieldset"
+    id="operations"
+    disabled={{or (not this.formData.provider) (not this.keyModel.type)}}
+    data-test-keymgmt-dist-operations
+  >
     <legend>Operations</legend>
+    {{!-- {{#each-in fieldGroup as |group fields|}} --}}
     {{#each this.operations as |op|}}
       <div class="b-checkbox">
         <Input @type="checkbox" id={{op}} class="styled" @checked={{false}} {{on "input" this.handleOperation}} />
@@ -65,6 +75,35 @@
       </div>
     {{/each}}
   </fieldset>
+
+  <fieldset class="form-fieldset" id="protection" data-test-keymgmt-dist-protections>
+    <legend>Protection</legend>
+    <div>
+      <RadioButton
+        @value="hsm"
+        @radioClass="radio"
+        @groupValue={{this.formData.protection}}
+        @name="hsm"
+        @radioId="protection-hsm"
+      />
+      <label for="protection-hsm">HSM</label>
+    </div>
+    <div>
+      <RadioButton
+        @value="software"
+        @radioClass="radio"
+        @groupValue={{this.formData.protection}}
+        @name="software"
+        @radioId="protection-software"
+      />
+      <label for="protection-software">Software</label>
+    </div>
+  </fieldset>
+
+  {{#if this.validMatchError}}
+    <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" @message={{this.validMatchError}} />
+  {{/if}}
+
   <div>
     <input type="submit" value="Distribute key" />
   </div>

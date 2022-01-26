@@ -141,10 +141,52 @@
     {{/each}}
   </div>
   <div class="has-top-margin-xl has-bottom-margin-s">
-    <h2 class="title has-border-bottom-light is-5">Distribution Details</h2>
+    <h2 class="title has-border-bottom-light is-5 {{if @model.provider.permissionsError "is-borderless is-marginless"}}">
+      Distribution Details
+    </h2>
     {{! TODO: Use capabilities to tell if it's not distributed vs no permissions }}
-    {{#if @model.provider}}
-      TODO: Distribution details
+    {{#if @model.provider.permissionsError}}
+      <EmptyState
+        @title="You are not authorized"
+        @subTitle="Error 403"
+        @message={{concat
+          "You must be granted permissions to see whether this key is distributed. Ask your administrator if you think you should have access to LIST /"
+          @model.backend
+          "/key/"
+          @model.name
+          "/kms."
+        }}
+        @icon="minus-circle"
+      />
+    {{else if @model.provider}}
+      <InfoTableRow @label="Distributed" @value={{@model.provider}}>
+        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{concat "kms/" @model.provider}}>
+          <Icon @name="check-circle-fill" class="has-text-success" />{{@model.provider}}
+        </LinkTo>
+      </InfoTableRow>
+      {{#if @model.distribution}}
+        {{#each @model.distFields as |attr|}}
+          <InfoTableRow
+            @alwaysRender={{true}}
+            @label={{capitalize (or attr.label (humanize (dasherize attr.name)))}}
+            @value={{if
+              (eq attr.name "protection")
+              (uppercase (get @model.distribution attr.name))
+              (get @model.distribution attr.name)
+            }}
+            @defaultShown={{attr.defaultShown}}
+            @helperText={{attr.subText}}
+            @formatDate={{if (eq attr.type "date") "MMM d yyyy, h:mm:ss aaa"}}
+          />
+        {{/each}}
+      {{else}}
+        <EmptyState
+          @title="You are not authorized"
+          @subTitle="Error 403"
+          @message="You must be granted permissions to view distribution details for this key. Ask your administrator if you think you should have access to GET /keymgmt/keymgmt/key/example."
+          @icon="minus-circle"
+        />
+      {{/if}}
     {{else}}
       <EmptyState
         @title="Key not distributed"
