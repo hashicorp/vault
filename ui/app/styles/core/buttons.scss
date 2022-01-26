@@ -129,6 +129,14 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     text-shadow: 0 1px 1px rgba($black, 0.25);
   }
 
+  &.is-link {
+    color: $link;
+    text-decoration: none;
+    font-weight: $font-weight-semibold;
+    box-shadow: none;
+    min-width: 4rem;
+  }
+
   &.is-ghost {
     background-color: transparent;
     border-color: transparent;

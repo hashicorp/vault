@@ -58,7 +58,7 @@ export default ApplicationAdapter.extend({
       zeroAddressAjax = this.findAllZeroAddress(store, query);
     }
 
-    return allSettled([queryAjax, zeroAddressAjax]).then(results => {
+    return allSettled([queryAjax, zeroAddressAjax]).then((results) => {
       // query result 404d, so throw the adapterError
       if (!results[0].value) {
         throw results[0].reason;
@@ -70,7 +70,7 @@ export default ApplicationAdapter.extend({
         data: {},
       };
 
-      results.forEach(result => {
+      results.forEach((result) => {
         if (result.value) {
           if (result.value.data.roles) {
             resp.data = assign({}, resp.data, { zero_address_roles: result.value.data.roles });

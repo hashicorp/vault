@@ -1,4 +1,4 @@
-// +build deadlock
+//go:build deadlock
 
 package vault
 

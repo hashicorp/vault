@@ -250,8 +250,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// storage entry is non-nil, its an indication of an update. In this
 		// case, entities in the updated bucket needs to be reinserted into
 		// MemDB.
-		entityIDs := make([]string, 0, len(bucket.Items))
+		var entityIDs []string
 		if bucket != nil {
+			entityIDs = make([]string, 0, len(bucket.Items))
 			for _, item := range bucket.Items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
@@ -750,7 +751,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	// Check if an entity already exists for the given alias
-	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
+	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
 	if err != nil {
 		return nil, err
 	}
@@ -837,8 +838,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	txn.Commit()
-
-	return entity, nil
+	return entity.Clone()
 }
 
 // changedAliasIndex searches an entity for changed alias metadata.

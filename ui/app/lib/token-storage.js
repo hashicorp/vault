@@ -1,7 +1,7 @@
 import localStorageWrapper from './local-storage';
 import memoryStorage from './memory-storage';
 
-export default function(type) {
+export default function (type) {
   if (type === 'memory') {
     return memoryStorage;
   }

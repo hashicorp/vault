@@ -1,0 +1,74 @@
+<div class="chart-wrapper single-chart-grid">
+  <div class="chart-header has-export has-bottom-margin-m">
+    <div class="header-left">
+      <h2 class="chart-title">Attribution</h2>
+      <p class="chart-description">{{this.chartText.description}}</p>
+    </div>
+    <div class="header-right">
+      {{#if this.totalClientsData}}
+        <button type="button" class="button is-secondary" {{on "click" (fn (mut this.showCSVDownloadModal) true)}}>
+          Export attribution data
+        </button>
+      {{/if}}
+    </div>
+  </div>
+
+  {{#if this.totalClientsData}}
+    <div class="chart-container-wide">
+      <Clients::HorizontalBarChart
+        @dataset={{this.totalClientsData}}
+        @chartLegend={{@chartLegend}}
+        @clientTotals={{@runningTotals}}
+      />
+    </div>
+
+    <div class="chart-subTitle">
+      <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
+    </div>
+
+    <div class="data-details-top">
+      <h3 class="data-details">Top {{lowercase this.attributionBreakdown}}</h3>
+      <p class="data-details">{{this.topClientCounts.label}}</p>
+    </div>
+
+    <div class="data-details-bottom">
+      <h3 class="data-details">Clients in {{lowercase this.attributionBreakdown}}</h3>
+      <p class="data-details">{{this.topClientCounts.clients}}</p>
+    </div>
+  {{else}}
+    <EmptyState />
+  {{/if}}
+
+  <div class="timestamp">
+    Updated Nov 15 2021, 4:07:32 pm
+  </div>
+
+  <div class="legend-center">
+    <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+    <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+  </div>
+</div>
+
+{{! MODAL FOR CSV DOWNLOAD BUTTON }}
+<Modal
+  @title="Export attribution data"
+  @type="info"
+  @isActive={{this.showCSVDownloadModal}}
+  @showCloseButton={{true}}
+  @onClose={{action (mut this.showCSVDownloadModal) false}}
+>
+  <section class="modal-card-body">
+    <p class="has-bottom-margin-s">
+      This export will include the namespace path, authentication method path, and the associated clients, unique entities,
+      and non-entity tokens for the below date range.
+    </p>
+    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if @endTimeDisplay " RANGE"}}</p>
+    <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <DownloadCsv @label="Export" @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />
+    <button type="button" class="button is-secondary" onclick={{action (mut this.showCSVDownloadModal) false}}>
+      Cancel
+    </button>
+  </footer>
+</Modal>

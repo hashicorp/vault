@@ -33,7 +33,7 @@ export default Service.extend({
     return getOwner(this).lookup('adapter:cluster');
   },
 
-  tokens: computed(function() {
+  tokens: computed(function () {
     return this.getTokensFromStorage() || [];
   }),
 
@@ -92,7 +92,7 @@ export default Service.extend({
     return fetch(url, {
       method: opts.method || 'GET',
       headers: opts.headers || {},
-    }).then(response => {
+    }).then((response) => {
       if (response.status === 204) {
         return resolve();
       } else if (response.status >= 200 && response.status < 300) {
@@ -144,7 +144,7 @@ export default Service.extend({
     let currentBackend = BACKENDS.findBy('type', backend);
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map(name => get(resp, name)).join('/');
+      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
     } else {
       displayName = get(resp, currentBackend.displayNamePath);
     }
@@ -217,7 +217,7 @@ export default Service.extend({
     return this.storage(token).removeItem(token);
   },
 
-  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function() {
+  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
     const tokenName = this.currentTokenName;
     if (!tokenName) {
       return;
@@ -232,7 +232,7 @@ export default Service.extend({
     return expiration ? this.now() >= expiration : null;
   },
 
-  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
+  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function () {
     const tokenName = this.currentTokenName;
     let { expirationCalcTS } = this;
     const data = this.getTokenData(tokenName);
@@ -252,18 +252,18 @@ export default Service.extend({
     }
     this.isRenewing = true;
     return this.renewCurrentToken().then(
-      resp => {
+      (resp) => {
         this.isRenewing = false;
         return this.persistAuthData(tokenName, resp.data || resp.auth);
       },
-      e => {
+      (e) => {
         this.isRenewing = false;
         throw e;
       }
     );
   },
 
-  checkShouldRenew: task(function*() {
+  checkShouldRenew: task(function* () {
     while (true) {
       if (Ember.testing) {
         return;
@@ -303,7 +303,7 @@ export default Service.extend({
   getTokensFromStorage(filterFn) {
     return this.storage()
       .keys()
-      .reject(key => {
+      .reject((key) => {
         return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
       });
   },
@@ -313,7 +313,7 @@ export default Service.extend({
       return;
     }
 
-    this.getTokensFromStorage().forEach(key => {
+    this.getTokensFromStorage().forEach((key) => {
       const data = this.getTokenData(key);
       if (data && data.policies && data.policies.includes('root')) {
         this.removeTokenData(key);
@@ -349,19 +349,19 @@ export default Service.extend({
   },
 
   // returns the key for the token to use
-  currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function() {
+  currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function () {
     const regex = new RegExp(this.activeCluster);
-    return this.tokens.find(key => regex.test(key));
+    return this.tokens.find((key) => regex.test(key));
   }),
 
-  currentToken: computed('currentTokenName', function() {
+  currentToken: computed('currentTokenName', function () {
     const name = this.currentTokenName;
     const data = name && this.getTokenData(name);
     // data.token is undefined so that's why it returns current token undefined
     return name && data ? data.token : null;
   }),
 
-  authData: computed('currentTokenName', function() {
+  authData: computed('currentTokenName', function () {
     const token = this.currentTokenName;
     if (!token) {
       return;

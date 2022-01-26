@@ -2,10 +2,10 @@ import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Adapter | cluster', function(hooks) {
+module('Unit | Adapter | cluster', function (hooks) {
   setupTest(hooks);
 
-  test('cluster api urls', function(assert) {
+  test('cluster api urls', function (assert) {
     let url, method, options;
     let adapter = this.owner.factoryFor('adapter:cluster').create({
       ajax: (...args) => {
@@ -136,7 +136,7 @@ module('Unit | Adapter | cluster', function(hooks) {
     assert.equal('/v1/auth/path/login/username', url, 'auth:Okta with path url OK');
   });
 
-  test('cluster replication api urls', function(assert) {
+  test('cluster replication api urls', function (assert) {
     let url, method, options;
     let adapter = this.owner.factoryFor('adapter:cluster').create({
       ajax: (...args) => {

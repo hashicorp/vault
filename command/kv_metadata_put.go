@@ -19,7 +19,7 @@ type KVMetadataPutCommand struct {
 	*BaseCommand
 
 	flagMaxVersions        int
-	flagCASRequired        bool
+	flagCASRequired        BoolPtr
 	flagDeleteVersionAfter time.Duration
 	flagCustomMetadata     map[string]string
 	testStdin              io.Reader // for tests
@@ -71,14 +71,13 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:    "max-versions",
 		Target:  &c.flagMaxVersions,
-		Default: 0,
+		Default: -1,
 		Usage:   `The number of versions to keep. If not set, the backend’s configured max version is used.`,
 	})
 
-	f.BoolVar(&BoolVar{
+	f.BoolPtrVar(&BoolPtrVar{
 		Name:    "cas-required",
 		Target:  &c.flagCASRequired,
-		Default: false,
 		Usage:   `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
 	})
 
@@ -151,14 +150,22 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	}
 
 	path = addPrefixToVKVPath(path, mountPath, "metadata")
-	data := map[string]interface{}{
-		"max_versions":  c.flagMaxVersions,
-		"cas_required":  c.flagCASRequired,
-		"custom_metadata": c.flagCustomMetadata,
+	data := map[string]interface{}{}
+
+	if c.flagMaxVersions >= 0 {
+		data["max_versions"] = c.flagMaxVersions
 	}
 
 	if c.flagDeleteVersionAfter >= 0 {
 		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
+	}
+
+	if c.flagCASRequired.IsSet() {
+		data["cas_required"] = c.flagCASRequired.Get()
+	}
+
+	if len(c.flagCustomMetadata) > 0 {
+		data["custom_metadata"] = c.flagCustomMetadata
 	}
 
 	secret, err := client.Logical().Write(path, data)

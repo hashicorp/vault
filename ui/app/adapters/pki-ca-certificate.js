@@ -34,7 +34,7 @@ export default ApplicationAdapter.extend({
       data = serializer.serialize(snapshot, requestType);
     }
 
-    return this.ajax(this.url(snapshot, action), 'POST', { data }).then(response => {
+    return this.ajax(this.url(snapshot, action), 'POST', { data }).then((response) => {
       // uploading CA, setting signed intermediate cert, and attempting to generate
       // a new CA if one exists, all return a 204
       if (!response) {

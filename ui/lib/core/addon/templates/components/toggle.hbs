@@ -1,17 +1,19 @@
-{{input
-  id=safeId
-  name=name
-  type="checkbox"
-  checked=checked
-  change=(action "handleChange" value='target.checked')
-  class=inputClasses
-  disabled=disabled
-  data-test-toggle-input=name
-}}
-<label data-test-toggle-label={{name}} for={{safeId}} class="toggle-label">
+{{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
+<Input
+  id={{this.safeId}}
+  name={{this.name}}
+  @type="checkbox"
+  @checked={{this.checked}}
+  @change={{action "handleChange" value="target.checked"}}
+  class={{this.inputClasses}}
+  disabled={{this.disabled}}
+  data-test-toggle-input={{this.name}}
+/>
+{{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
+<label data-test-toggle-label={{this.name}} for={{this.safeId}} class="toggle-label">
   {{#if (has-block)}}
     {{yield}}
   {{else}}
-    {{name}}
+    {{this.name}}
   {{/if}}
 </label>

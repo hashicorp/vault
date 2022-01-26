@@ -100,7 +100,7 @@ export default Component.extend({
    * This array provides the text and download hrefs for those links.
    *
    */
-  downloadHrefs: computed('config', 'config.{backend,pem,caChain,der}', function() {
+  downloadHrefs: computed('config', 'config.{backend,pem,caChain,der}', function () {
     const config = this.config;
     const { backend, pem, caChain, der } = config;
 
@@ -139,7 +139,7 @@ export default Component.extend({
       const isUpload = this.model.uploadPemBundle;
       model
         .save({ adapterOptions: { method } })
-        .then(m => {
+        .then((m) => {
           if (method === 'setSignedIntermediate' || isUpload) {
             this.send('refresh');
             this.flashMessages.success('The certificate for this backend has been updated.');

@@ -191,15 +191,16 @@ var OASStdRespNoContent = &OASResponse{
 var optRe = regexp.MustCompile(`(?U)\([^(]*\)\?|\(/\(\?P<[^(]*\)\)\?`)
 
 var (
-	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)   // Capture required parameters, e.g. "(?P<name>regex)"
-	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)          // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
-	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                 // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-	cleanCharsRe     = regexp.MustCompile("[()^$?]")                 // Set of regex characters that will be stripped during cleaning
-	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                 // Path suffix patterns that will be stripped during cleaning
-	wsRe             = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
-	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
-	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)             // Match an options set, e.g. "a|b|c"
-	nonWordRe        = regexp.MustCompile(`[^\w]+`)                  // Match a sequence of non-word characters
+	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`)              // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
+	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)                          // Match an options set, e.g. "a|b|c"
+	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)                       // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
+	altRootsRe       = regexp.MustCompile(`^\(([\w\-_]+(?:\|[\w\-_]+)+)\)(/.*)$`) // Pattern starting with alts, e.g. "(root1|root2)/(?P<name>regex)"
+	cleanCharsRe     = regexp.MustCompile("[()^$?]")                              // Set of regex characters that will be stripped during cleaning
+	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                              // Path suffix patterns that will be stripped during cleaning
+	nonWordRe        = regexp.MustCompile(`[^\w]+`)                               // Match a sequence of non-word characters
+	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                              // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)                // Capture required parameters, e.g. "(?P<name>regex)"
+	wsRe             = regexp.MustCompile(`\s+`)                                  // Match whitespace, to be compressed during cleaning
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
@@ -367,8 +368,18 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				}
 			}
 
-			// LIST is represented as GET with a `list` query parameter
-			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
+			// LIST is represented as GET with a `list` query parameter.
+			if opType == logical.ListOperation {
+				// Only accepts List (due to the above skipping of ListOperations that also have ReadOperations)
+				op.Parameters = append(op.Parameters, OASParameter{
+					Name:        "list",
+					Description: "Must be set to `true`",
+					Required:    true,
+					In:          "query",
+					Schema:      &OASSchema{Type: "string", Enum: []interface{}{"true"}},
+				})
+			} else if opType == logical.ReadOperation && operations[logical.ListOperation] != nil {
+				// Accepts both Read and List
 				op.Parameters = append(op.Parameters, OASParameter{
 					Name:        "list",
 					Description: "Return a list if `true`",
@@ -463,6 +474,17 @@ func specialPathMatch(path string, specialPaths []string) bool {
 // and changing named parameters into their {openapi} equivalents.
 func expandPattern(pattern string) []string {
 	var paths []string
+
+	// Determine if the pattern starts with an alternation for multiple roots
+	// example (root1|root2)/(?P<name>regex) -> match['(root1|root2)/(?P<name>regex)','root1|root2','/(?P<name>regex)']
+	match := altRootsRe.FindStringSubmatch(pattern)
+	if len(match) == 3 {
+		var expandedRoots []string
+		for _, root := range strings.Split(match[1], "|") {
+			expandedRoots = append(expandedRoots, expandPattern(root+match[2])...)
+		}
+		return expandedRoots
+	}
 
 	// GenericNameRegex adds a regex that complicates our parsing. It is much easier to
 	// detect and remove it now than to compensate for in the other regexes.

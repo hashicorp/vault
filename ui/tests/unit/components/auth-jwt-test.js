@@ -9,16 +9,16 @@ const mockWindow = EmberObject.extend(Evented, {
   origin: 'http://localhost:4200',
 });
 
-module('Unit | Component | auth-jwt', function(hooks) {
+module('Unit | Component | auth-jwt', function (hooks) {
   setupTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.component = this.owner.lookup('component:auth-jwt');
     this.component.set('window', mockWindow.create());
     this.errorSpy = sinon.spy(this.component, 'handleOIDCError');
   });
 
-  test('it should handle error for cross origin messages while waiting for oidc callback', async function(assert) {
+  test('it should handle error for cross origin messages while waiting for oidc callback', async function (assert) {
     assert.expect(1);
     this.component.prepareForOIDC.perform(mockWindow.create());
     this.component.window.trigger('message', { origin: 'http://anotherdomain.com', isTrusted: true });
@@ -26,7 +26,7 @@ module('Unit | Component | auth-jwt', function(hooks) {
     run.cancelTimers();
   });
 
-  test('it should handle error for untrusted messages while waiting for oidc callback', async function(assert) {
+  test('it should handle error for untrusted messages while waiting for oidc callback', async function (assert) {
     assert.expect(1);
     this.component.prepareForOIDC.perform(mockWindow.create());
     this.component.window.trigger('message', { origin: 'http://localhost:4200', isTrusted: false });
@@ -34,7 +34,7 @@ module('Unit | Component | auth-jwt', function(hooks) {
     run.cancelTimers();
   });
   // test case for https://github.com/hashicorp/vault/issues/12436
-  test('it should ignore messages sent from outside the app while waiting for oidc callback', async function(assert) {
+  test('it should ignore messages sent from outside the app while waiting for oidc callback', async function (assert) {
     assert.expect(2);
     this.component.prepareForOIDC.perform(mockWindow.create());
     const message = {

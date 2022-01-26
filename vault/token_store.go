@@ -747,6 +747,9 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 			resp.AddWarning(fmt.Sprintf("Found an accessor entry that could not be successfully decoded; associated error is %q", err.Error()))
 			continue
 		}
+		if aEntry == nil {
+			continue
+		}
 
 		if aEntry.TokenID == "" {
 			resp.AddWarning(fmt.Sprintf("Found an accessor entry missing a token: %v", aEntry.AccessorID))
@@ -1741,12 +1744,12 @@ func (ts *TokenStore) handleCreateAgainstRole(ctx context.Context, req *logical.
 	return ts.handleCreateCommon(ctx, req, d, false, roleEntry)
 }
 
-func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, tainted bool) (accessorEntry, error) {
+func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, tainted bool) (*accessorEntry, error) {
 	var aEntry accessorEntry
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return aEntry, err
+		return nil, err
 	}
 
 	lookupID := id
@@ -1755,7 +1758,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 		if nsID != "" {
 			accessorNS, err := NamespaceByID(ctx, nsID, ts.core)
 			if err != nil {
-				return aEntry, err
+				return nil, err
 			}
 			if accessorNS != nil {
 				if accessorNS.ID != ns.ID {
@@ -1773,16 +1776,16 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 
 		lookupID, err = ts.SaltID(ctx, id)
 		if err != nil {
-			return aEntry, err
+			return nil, err
 		}
 	}
 
 	entry, err := ts.accessorView(ns).Get(ctx, lookupID)
 	if err != nil {
-		return aEntry, fmt.Errorf("failed to read index using accessor: %w", err)
+		return nil, fmt.Errorf("failed to read index using accessor: %w", err)
 	}
 	if entry == nil {
-		return aEntry, &logical.StatusBadRequest{Err: "invalid accessor"}
+		return nil, nil
 	}
 
 	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
@@ -1790,7 +1793,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 	if err != nil {
 		te, err := ts.lookupInternal(ctx, string(entry.Value), false, tainted)
 		if err != nil {
-			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %w", err)
+			return nil, fmt.Errorf("failed to look up token using accessor index: %w", err)
 		}
 		// It's hard to reason about what to do here if te is nil -- it may be
 		// that the token was revoked async, or that it's an old accessor index
@@ -1808,7 +1811,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 		aEntry.NamespaceID = namespace.RootNamespaceID
 	}
 
-	return aEntry, nil
+	return &aEntry, nil
 }
 
 // handleTidy handles the cleaning up of leaked accessor storage entries and
@@ -1959,6 +1962,10 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor index: %w", err))
 					continue
 				}
+				if accessorEntry == nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor index: invalid accessor"))
+					continue
+				}
 
 				// A valid accessor storage entry should always have a token ID
 				// in it. If not, it is an invalid accessor entry and needs to
@@ -2098,6 +2105,9 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 	if err != nil {
 		return nil, err
 	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
+	}
 
 	// Prepare the field data required for a lookup call
 	d := &framework.FieldData{
@@ -2139,6 +2149,9 @@ func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logica
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, false)
 	if err != nil {
 		return nil, err
+	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
 	}
 
 	// Prepare the field data required for a lookup call
@@ -2189,6 +2202,11 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, true)
 	if err != nil {
 		return nil, err
+	}
+	if aEntry == nil {
+		resp := &logical.Response{}
+		resp.AddWarning("No token found with this accessor")
+		return resp, nil
 	}
 
 	te, err := ts.Lookup(ctx, aEntry.TokenID)
@@ -3348,6 +3366,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	oldEntryTokenType := entry.TokenType
 	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
 		tokenTypeStr = new(string)
+		if tokenTypeRaw == nil {
+			return logical.ErrorResponse("Invalid 'token_type' value: null"), nil
+		}
 		*tokenTypeStr = tokenTypeRaw.(string)
 		delete(data.Raw, "token_type")
 		entry.TokenType = logical.TokenTypeDefault

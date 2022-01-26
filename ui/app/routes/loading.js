@@ -5,7 +5,7 @@ export default Route.extend({
   router: service(),
   init() {
     this._super(...arguments);
-    this.router.on('routeWillChange', transition => {
+    this.router.on('routeWillChange', (transition) => {
       this.set('myTargetRouteName', transition.to.name);
     });
   },
