@@ -39,11 +39,11 @@ func ServeConfig(db Database) *plugin.ServeConfig {
 	return conf
 }
 
-func ServeMultiplex(factory func() (Database, error)) {
+func ServeMultiplex(factory Factory) {
 	plugin.Serve(ServeConfigMultiplex(factory))
 }
 
-func ServeConfigMultiplex(factory func() (Database, error)) *plugin.ServeConfig {
+func ServeConfigMultiplex(factory Factory) *plugin.ServeConfig {
 	err := pluginutil.OptionallyEnableMlock()
 	if err != nil {
 		fmt.Println(err)

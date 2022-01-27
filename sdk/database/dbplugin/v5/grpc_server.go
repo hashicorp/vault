@@ -18,7 +18,7 @@ var _ proto.DatabaseServer = gRPCServer{}
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
 
-	factoryFunc func() (Database, error)
+	factoryFunc func() (interface{}, error)
 	instances   map[string]Database
 	sync.RWMutex
 }
@@ -60,9 +60,10 @@ func (g gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 		return nil, err
 	}
 
-	g.instances[id] = db
+	database := db.(Database)
+	g.instances[id] = database
 
-	return db, nil
+	return database, nil
 }
 
 func (g gRPCServer) getDatabase(ctx context.Context) (Database, error) {

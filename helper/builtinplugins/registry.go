@@ -53,7 +53,6 @@ import (
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -108,11 +107,9 @@ func newRegistry() *registry {
 			"mongodb-database-plugin":       dbMongo.New,
 			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
 			"mssql-database-plugin":         dbMssql.New,
+			"postgresql-database-plugin":    dbPostgres.New,
 			"redshift-database-plugin":      dbRedshift.New,
 			"snowflake-database-plugin":     dbSnowflake.New,
-		},
-		databasePluginsMultiplexed: map[string]dbplugin.Factory{
-			"postgresql-database-plugin": dbPostgres.NewWithMultiplex,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":           logicalAd.Factory,
@@ -148,10 +145,9 @@ func newRegistry() *registry {
 func addExtPluginsImpl(r *registry) {}
 
 type registry struct {
-	credentialBackends         map[string]logical.Factory
-	databasePlugins            map[string]BuiltinFactory
-	databasePluginsMultiplexed map[string]dbplugin.Factory
-	logicalBackends            map[string]logical.Factory
+	credentialBackends map[string]logical.Factory
+	databasePlugins    map[string]BuiltinFactory
+	logicalBackends    map[string]logical.Factory
 }
 
 // Get returns the Factory func for a particular backend plugin from the
@@ -166,11 +162,7 @@ func (r *registry) Get(name string, pluginType consts.PluginType) (func() (inter
 		return toFunc(f), ok
 	case consts.PluginTypeDatabase:
 		f, ok := r.databasePlugins[name]
-		if ok {
-			return f, ok
-		}
-		fn, ok := r.databasePluginsMultiplexed[name]
-		return toFunc(fn), ok
+		return f, ok
 	default:
 		return nil, false
 	}

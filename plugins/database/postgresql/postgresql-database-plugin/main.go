@@ -18,7 +18,7 @@ func main() {
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
 func Run() error {
-	dbplugin.ServeMultiplex(postgresql.NewWithMultiplex)
+	dbplugin.ServeMultiplex(postgresql.New)
 
 	return nil
 }
