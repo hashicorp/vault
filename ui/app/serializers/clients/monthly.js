@@ -47,8 +47,8 @@ export default ApplicationSerializer.extend({
       // nest within 'total' object to mimic /activity response shape
       total: {
         clients,
-        entity_clients: distinct_entities,
-        non_entity_clients: non_entity_tokens,
+        entityClients: distinct_entities,
+        nonEntityClients: non_entity_tokens,
       },
     };
     delete payload.data.by_namespace;

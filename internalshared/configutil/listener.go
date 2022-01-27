@@ -24,9 +24,9 @@ type ListenerTelemetry struct {
 }
 
 type ListenerProfiling struct {
-	UnusedKeys                       UnusedKeyMap `hcl:",unusedKeyPositions"`
-	UnauthenticatedPProfAccess       bool         `hcl:"-"`
-	UnauthenticatedPProfAccessRaw    interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
+	UnusedKeys                    UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedPProfAccess    bool         `hcl:"-"`
+	UnauthenticatedPProfAccessRaw interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
 }
 
 type ListenerInFlightRequestLogging struct {

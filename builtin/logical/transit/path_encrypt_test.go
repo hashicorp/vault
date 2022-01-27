@@ -3,10 +3,11 @@ package transit
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
