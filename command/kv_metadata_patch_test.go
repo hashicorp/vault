@@ -254,7 +254,7 @@ func TestKvMetadataPatchCommand_CasWarning(t *testing.T) {
 		"cas_required": true,
 	}
 
-	_, err := client.Logical().Write(basePath + "config", casConfig)
+	_, err := client.Logical().Write(basePath+"config", casConfig)
 	if err != nil {
 		t.Fatalf("config write failed, err: #%v", err)
 	}

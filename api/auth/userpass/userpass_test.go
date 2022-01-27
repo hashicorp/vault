@@ -34,6 +34,7 @@ func testHTTPServer(
 func init() {
 	os.Setenv("VAULT_TOKEN", "")
 }
+
 func TestLogin(t *testing.T) {
 	passwordEnvVar := "USERPASS_PASSWORD"
 	allowedPassword := "my-password"

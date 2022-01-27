@@ -1775,6 +1775,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		t.Fatalf("Bad: %#v", noop.Requests)
 	}
 }
+
 func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}

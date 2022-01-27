@@ -559,7 +559,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	}
 
 	verifyTidyStatus := func(expectedCertStoreDeleteCount int, expectedRevokedCertDeletedCount int) {
-		tidyStatus, err := client.Logical().Read(rootName+"tidy-status")
+		tidyStatus, err := client.Logical().Read(rootName + "tidy-status")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -662,4 +662,3 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		}
 	}
 }
-
