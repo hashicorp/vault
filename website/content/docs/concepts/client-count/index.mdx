@@ -57,7 +57,7 @@ Using the identity system allows for Vault to make sure that entities aren’t c
 
 If you chose to use the [Token Auth Method](/docs/auth/token) without an identity, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. See more on entity alias below.
 
-### Differences between a direct entity and non-entity tokens
+### Differences between a direct entity and a non-entity token
 
 While the definition of clients appears to be simple on the surface, there are many nuances involved in the computation of clients. As mentioned, clients are unique applications, services, and/or users that authenticate to a Vault cluster. When anything authenticates to Vault, it is associated with a unique identity entity within the [Vault Identity system](/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies, and each entity is created or verified during authorization.
 
