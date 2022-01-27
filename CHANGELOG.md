@@ -5,6 +5,7 @@ CHANGES:
 
 * go: Update go version to 1.17.5 [[GH-13408](https://github.com/hashicorp/vault/pull/13408)]
 * ui: Upgrade Ember to version 3.24 [[GH-13443](https://github.com/hashicorp/vault/pull/13443)]
+
 FEATURES:
 
 * **Report in-flight requests**: Adding a trace capability to show in-flight requests, and a new gauge metric to show the total number of in-flight requests [[GH-13024](https://github.com/hashicorp/vault/pull/13024)]
