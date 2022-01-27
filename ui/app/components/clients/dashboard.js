@@ -3,6 +3,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { format, formatRFC3339, isSameMonth, parseISO } from 'date-fns';
+import { zonedTimeToUtc } from 'date-fns-tz'; // https://github.com/marnusw/date-fns-tz#zonedtimetoutc
 
 export default class Dashboard extends Component {
   arrayOfMonths = [
@@ -37,6 +38,8 @@ export default class Dashboard extends Component {
 
   @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
+  @tracked responseRangeDiffMessage = null;
+  @tracked requestedStartTime = null;
   @tracked startTime = this.args.model.startTime;
   @tracked endTime = this.args.model.endTime;
   @tracked startMonth = null;
@@ -44,13 +47,25 @@ export default class Dashboard extends Component {
   @tracked selectedNamespace = null;
   // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
+  // HELPER
+
+  utcDate(dateObject) {
+    // To remove the timezone of the local user (API returns and expects Zulu time/UTC) we need to use a method provided by date-fns-tz to return the UTC date
+    let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // browser API method
+    return zonedTimeToUtc(dateObject, timeZone);
+  }
+
   get startTimeDisplay() {
     if (!this.startTime) {
       // otherwise will return date of new Date(null)
       return null;
     }
-    let formattedAsDate = new Date(this.startTime); // on init it's formatted as a Date object, but when modified by modal it's formatted as RFC3339
-    return format(formattedAsDate, 'MMMM yyyy');
+    // unable to use date-fns format here because of the local timestamp attached to the date when the user selects a new start time from the modal
+    let formattedAsDate = new Date(this.startTime);
+    let test = this.utcDate(formattedAsDate).toISOString();
+    let year = test.substring(0, 4);
+    let month = Number(test.substring(5, 7)) - 1;
+    return `${this.arrayOfMonths[month]} ${year}`;
   }
 
   get endTimeDisplay() {
@@ -91,6 +106,8 @@ export default class Dashboard extends Component {
     return this.args.model.activity.byNamespace;
   }
 
+  // ACTIONS
+
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
@@ -99,24 +116,39 @@ export default class Dashboard extends Component {
     // dateType is either startTime or endTime
     let monthIndex = this.arrayOfMonths.indexOf(month);
     if (dateType === 'startTime') {
-      this.startTime = formatRFC3339(new Date(year, monthIndex));
+      let utcDateObject = this.utcDate(new Date(year, monthIndex));
+      this.requestedStartTime = utcDateObject.toISOString();
       this.endTime = null;
     }
     if (dateType === 'endTime') {
       // this month comes in as an index
+      // ARG TODO remove timezone!!!! user helper
       this.endTime = formatRFC3339(new Date(year, month));
     }
     try {
-      let response = await this.adapter.queryClientActivity(this.startTime, this.endTime);
+      let response = await this.adapter.queryClientActivity(this.requestedStartTime, this.endTime);
       if (!response) {
         // this.endTime will be null and use this to show EmptyState message on the template.
         return;
       }
+      // compare year and month of the RFC33393 times from the start time set to what is returned on the response
+      if (this.requestedStartTime.substring(0, 7) !== response.data.start_time.substring(0, 7)) {
+        // reset the starTime
+        // show warning that the response is different than what was set
+        this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
+      } else {
+        this.responseRangeDiffMessage = null;
+      }
+      // change the startTime to the time returned on the response
+      this.startTime = response.data.start_time;
+
       // resets the endTime to what is returned on the response
       this.endTime = response.data.end_time;
+      this.updateData = response;
       return response;
       // ARG TODO this is the response you need to use to repopulate the chart data
     } catch (e) {
+      console.log('ERROR', e);
       // ARG TODO handle error
     }
   }

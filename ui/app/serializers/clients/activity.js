@@ -45,7 +45,7 @@ transformedPayload.by_namespace = [
 ]
 */
 
-export default ApplicationSerializer.extend({
+export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(payload) {
     let topTen = payload.slice(0, 10);
 
@@ -78,7 +78,7 @@ export default ApplicationSerializer.extend({
         ...flattenedNs,
       };
     });
-  },
+  }
 
   // TODO CMB remove and use abstracted function above
   // prior to 1.10, client count key names are "distinct_entities" and "non_entity_tokens" so mapping below wouldn't work
@@ -106,7 +106,7 @@ export default ApplicationSerializer.extend({
         mounts: namespaceMounts,
       };
     });
-  },
+  }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let transformedPayload = {
@@ -115,6 +115,6 @@ export default ApplicationSerializer.extend({
       by_namespace: this.flattenDataset(payload.data.by_namespace),
     };
     delete payload.data.by_namespace;
-    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
-  },
-});
+    return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
+  }
+}

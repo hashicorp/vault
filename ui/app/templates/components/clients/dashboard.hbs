@@ -65,6 +65,9 @@
             {{! ARG TODO more filters for namespace here }}
           </ToolbarFilters>
         </Toolbar>
+        {{#if this.responseRangeDiffMessage}}
+          <AlertBanner @class="has-margin-top" @type="warning" @message={{this.responseRangeDiffMessage}} />
+        {{/if}}
         {{#if @isLoading}}
           <LayoutLoading />
         {{else if this.topTenNamespaces}}
