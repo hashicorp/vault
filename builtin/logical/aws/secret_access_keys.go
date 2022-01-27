@@ -92,8 +92,8 @@ func genUsername(displayName, policyName, userType, usernameTemplate string) (re
 
 func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
-
+	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error,
+) {
 	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -176,8 +176,8 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error) {
-
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error,
+) {
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
 	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)

@@ -667,7 +667,7 @@ func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, r
 	}
 
 	var names []string
-	for key, _ := range roles {
+	for key := range roles {
 		names = append(names, key)
 	}
 	sort.Strings(names)

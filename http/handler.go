@@ -402,11 +402,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// Storing the in-flight requests. Path should include namespace as well
 		core.StoreInFlightReqData(
 			inFlightReqID,
-			vault.InFlightReqData {
-				StartTime: inFlightReqStartTime,
-				ReqPath: r.URL.Path,
+			vault.InFlightReqData{
+				StartTime:        inFlightReqStartTime,
+				ReqPath:          r.URL.Path,
 				ClientRemoteAddr: clientAddr,
-				Method: requestMethod,
+				Method:           requestMethod,
 			})
 		defer func() {
 			// Not expecting this fail, so skipping the assertion check
