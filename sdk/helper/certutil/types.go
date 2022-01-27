@@ -638,7 +638,6 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 
 	if tlsCert.Certificate != nil && len(tlsCert.Certificate) > 0 {
 		tlsConfig.Certificates = []tls.Certificate{tlsCert}
-		tlsConfig.BuildNameToCertificate()
 	}
 
 	return tlsConfig, nil
