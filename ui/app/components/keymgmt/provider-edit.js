@@ -4,7 +4,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-
+import { generateFormFieldErrors } from 'vault/utils/model-validations-helper';
 /**
  * @module KeymgmtKeyEdit
  * ProviderKeyEdit components are used to display KeyMgmt Secrets engine UI for Key items
@@ -72,18 +72,7 @@ export default class KeymgmtKeyEdit extends Component {
     if (validations.isValid) {
       this.saveTask.perform();
     } else {
-      // FormField expects validationMessages in a shape not output by ember-cp-validations
-      this.modelValidations = validations.errors.reduce(
-        (obj, e) => {
-          if (e.attribute.includes('credentials')) {
-            obj.credentials[e.attribute.split('.')[1]] = e.message;
-          } else {
-            obj[e.attribute] = e.message;
-          }
-          return obj;
-        },
-        { credentials: {} }
-      );
+      this.modelValidations = generateFormFieldErrors(validations);
     }
   }
   @action
