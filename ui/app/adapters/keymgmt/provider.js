@@ -18,6 +18,10 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     }
     return url;
   }
+  buildKeysURL(query) {
+    const url = this.buildURL('keymgmt/provider', null, null, 'query', query);
+    return `${url}/${query.provider}/key`;
+  }
   async createRecord(store, { modelName }, snapshot) {
     // create uses PUT instead of POST
     const data = store.serializerFor(modelName).serialize(snapshot);

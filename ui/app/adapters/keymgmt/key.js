@@ -105,9 +105,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   async query(store, type, query) {
     const { backend, provider } = query;
     const providerAdapter = store.adapterFor('keymgmt/provider');
-    const url = provider
-      ? `${providerAdapter.buildURL('keymgmt/provider')}/${provider}/key`
-      : this.url(backend);
+    const url = provider ? providerAdapter.buildKeysURL(query) : this.url(backend);
 
     return this.ajax(url, 'GET', {
       data: {
