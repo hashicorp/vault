@@ -104,7 +104,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 		version, ok := versionRaw.(string)
 
 		if !ok {
-			c.UI.Error(fmt.Sprintf("TODO"))
+			c.UI.Error("Expected version to be string")
 			return 2
 		}
 
