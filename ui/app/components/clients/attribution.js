@@ -43,6 +43,7 @@ export default class Attribution extends Component {
 
   get totalClientsData() {
     // get dataset for bar chart displaying top 10 namespaces/mounts with highest # of total clients
+    // TODO CMB slice data to top 10 here instead of serializer?
     return this.isSingleNamespace
       ? this.filterByNamespace(this.args.selectedNamespace)
       : this.args.topTenNamespaces;
@@ -55,7 +56,7 @@ export default class Attribution extends Component {
 
   get attributionBreakdown() {
     // display 'Auth method' or 'Namespace' respectively in CSV file
-    return this.isSingleNamespace ? 'Auth method' : 'Namespace';
+    return this.isSingleNamespace ? 'auth-method' : 'namespace';
   }
 
   get chartText() {
@@ -86,34 +87,51 @@ export default class Attribution extends Component {
     }
   }
 
-  // TODO CMB update with proper data format when we have
   get getCsvData() {
-    let results = '',
-      data,
-      fields;
+    let csvData = [],
+      graphData = this.totalClientsData,
+      csvHeader = [
+        `Namespace path`,
+        'Authentication method',
+        'Total clients',
+        'Entity clients',
+        'Non-entity clients',
+      ];
 
-    // TODO CMB will CSV for namespaces include mounts?
-    fields = [`${this.attributionBreakdown}`, 'Active clients', 'Unique entities', 'Non-entity tokens'];
+    csvData.push(csvHeader);
 
-    results = fields.join(',') + '\n';
-    data.forEach(function (item) {
-      let path = item.label !== '' ? item.label : 'root',
-        total = item.total,
-        unique = item.entity_clients,
-        non_entity = item.non_entity_clients;
-
-      results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
-    });
-    return results;
+    // each array will be a row in the csv file
+    if (this.attributionBreakdown === 'namespace') {
+      graphData.forEach((ns) => {
+        csvData.push([ns.label, '', ns.clients, ns.entity_clients, ns.non_entity_clients]);
+        if (ns.mounts) {
+          ns.mounts.forEach((m) => {
+            csvData.push([ns.label, m.label, m.clients, m.entity_clients, m.non_entity_clients]);
+          });
+        }
+      });
+    } else if (this.attributionBreakdown === 'auth-method') {
+      csvData = graphData.map((data) => [
+        '',
+        data.label,
+        data.clients,
+        data.entity_clients,
+        data.non_entity_clients,
+      ]);
+      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
+    } else {
+      // conditional to handle ALL namespace data not just top 10?
+    }
+    // make each nested array in csvData a comma separated string, join each array in csvData with line break (\n)
+    return csvData.map((d) => d.join()).join('\n');
   }
-  // TODO CMB - confirm with design file name structure
+
   get getCsvFileName() {
-    let activityDateRange = `${this.args.startTimeDisplay} - ${this.args.endTimeDisplay}`;
+    let activityDateRange = `${this.args.startTimeDisplay}-${this.args.endTimeDisplay}`;
     return activityDateRange
       ? `clients-by-${this.attributionBreakdown}-${activityDateRange}`
       : `clients-by-${this.attributionBreakdown}-${new Date()}`;
   }
-
   // HELPERS
   filterByNamespace(namespace) {
     // return top 10 mounts for a namespace

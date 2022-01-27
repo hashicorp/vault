@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 
 /**
  * @module DownloadCsv
- * Download csv component is used to display a link which initiates a csv file download of the data provided by it's parent component.
+ * Download csv component is used to display a link which initiates a csv file download of the data provided by its parent component.
  *
  * @example
  * ```js
@@ -17,6 +17,12 @@ import { action } from '@ember/object';
  * @param {string} fileName - Custom name for the downloaded file
  *
  */
+
+// Sample of CSV format: each row needs to be \n separated, and each column separated by a comma
+// 'Namespace path,Authentication method,Total clients,Entity clients,Non-entity clients\n
+//  namespacelonglonglong4/,,191,171,20\n
+//  namespacelonglonglong4/,auth/method/uMGBU,35,20,15\n'
+
 class DownloadCsvComponent extends Component {
   @action
   downloadCsv() {
