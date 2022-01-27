@@ -41,6 +41,8 @@ export default class KeymgmtKeyModel extends Model {
   // The following are from endpoints other than the main read one
   @attr('string') provider;
 
+  icon = 'key';
+
   get hasVersions() {
     return this.versions.length > 1;
   }
