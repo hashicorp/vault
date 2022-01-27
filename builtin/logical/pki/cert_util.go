@@ -477,8 +477,8 @@ func generateCert(ctx context.Context,
 	input *inputBundle,
 	caSign *certutil.CAInfoBundle,
 	isCA bool,
-	randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
-
+	randomSource io.Reader) (*certutil.ParsedCertBundle, error,
+) {
 	if input.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
 	}
@@ -554,8 +554,8 @@ func signCert(b *backend,
 	data *inputBundle,
 	caSign *certutil.CAInfoBundle,
 	isCA bool,
-	useCSRValues bool) (*certutil.ParsedCertBundle, error) {
-
+	useCSRValues bool) (*certutil.ParsedCertBundle, error,
+) {
 	if data.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
 	}
