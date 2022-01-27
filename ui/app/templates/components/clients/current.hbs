@@ -18,64 +18,16 @@
   {{#if @isLoading}}
     <LayoutLoading />
   {{else}}
-    <div class="card has-bottom-margin-m">
-      <div class="card-content">
-        <div class="is-flex is-flex-center">
-          <div class="is-flex-1">
-            <h2 class="title is-5 is-marginless">
-              Total usage
-            </h2>
-            <p class="sub-text">
-              These totals are within this namespace and all its children.
-            </p>
-          </div>
-          <LearnLink @path="/tutorials/vault/usage-metrics">
-            Learn more
-          </LearnLink>
-        </div>
-        <hr />
-        <div class="columns">
-          <div class="column" data-test-client-count-stats>
-            <StatText
-              @label="Total active clients"
-              {{! ARG TODO naming is changing }}
-              @value={{or @model.monthly.clients "0"}}
-              @size="l"
-              @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
-            />
-          </div>
-          <div class="column">
-            <StatText
-              class="column"
-              @label="Unique entities"
-              {{! ARG TODO naming is changing }}
-              @value={{or @model.monthly.distinctEntities "0"}}
-              @size="l"
-              @subText="Representation of a particular user, client or application that created a token via login."
-            />
-          </div>
-          <div class="column">
-            <StatText
-              class="column"
-              @label="Non-entity tokens"
-              @value={{or @model.monthly.nonEntityTokens "0"}}
-              @size="l"
-              @subText="Tokens created via a method that is not associated with an entity."
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+    <Clients::UsageStats @title={{date-format this.responseTimestamp "MMMM"}} @runningTotals={{this.runningTotals}} />
+
     <Clients::Attribution
-      @chartLegend={{array
-        (hash key="entity_clients" label="Unique entities")
-        (hash key="non_entity_clients" label="Non-entity tokens")
-      }}
-      @topTenNamespaces={{@model.monthly.byNamespace}}
-      @runningTotals={{@model.monthly.total}}
-      @selectedNamespace={{@model.monthly.selectedNamespace}}
-      @startTimeDisplay={{date-format @model.monthly.timestamp "MMMM yyyy"}}
+      @chartLegend={{this.chartLegend}}
+      @topTenNamespaces={{this.topTenNamespaces}}
+      @runningTotals={{this.runningTotals}}
+      @selectedNamespace={{this.selectedNamespace}}
+      @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
       @isDateRange={{false}}
+      @timestamp={{this.responseTimestamp}}
     />
   {{/if}}
 </div>

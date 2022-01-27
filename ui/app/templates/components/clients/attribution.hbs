@@ -1,5 +1,5 @@
 <div class="chart-wrapper single-chart-grid">
-  <div class="chart-header has-export has-bottom-margin-m">
+  <div class="chart-header has-header-link has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">Attribution</h2>
       <p class="chart-description">{{this.chartText.description}}</p>
@@ -13,34 +13,31 @@
     </div>
   </div>
 
-  {{#if this.totalClientsData}}
-    <div class="chart-container-wide">
-      <Clients::HorizontalBarChart
-        @dataset={{this.totalClientsData}}
-        @chartLegend={{@chartLegend}}
-        @clientTotals={{@runningTotals}}
-      />
-    </div>
+  <div class="chart-container-wide">
+    <Clients::HorizontalBarChart
+      @dataset={{this.totalClientsData}}
+      @chartLegend={{@chartLegend}}
+      @clientTotals={{@runningTotals}}
+    />
+  </div>
 
-    <div class="chart-subTitle">
-      <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
-    </div>
+  <div class="chart-subTitle">
+    <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
+  </div>
 
-    <div class="data-details-top">
-      <h3 class="data-details">Top {{lowercase this.attributionBreakdown}}</h3>
-      <p class="data-details">{{this.topClientCounts.label}}</p>
-    </div>
+  <div class="data-details-top">
+    <h3 class="data-details">Top {{lowercase this.attributionBreakdown}}</h3>
+    <p class="data-details">{{this.topClientCounts.label}}</p>
+  </div>
 
-    <div class="data-details-bottom">
-      <h3 class="data-details">Clients in {{lowercase this.attributionBreakdown}}</h3>
-      <p class="data-details">{{this.topClientCounts.clients}}</p>
-    </div>
-  {{else}}
-    <EmptyState />
-  {{/if}}
+  <div class="data-details-bottom">
+    <h3 class="data-details">Clients in {{lowercase this.attributionBreakdown}}</h3>
+    <p class="data-details">{{this.topClientCounts.clients}}</p>
+  </div>
 
   <div class="timestamp">
-    Updated Nov 15 2021, 4:07:32 pm
+    Updated
+    {{date-format @timestamp "MMM dd yyyy, h:mm:ss aaa"}}
   </div>
 
   <div class="legend-center">

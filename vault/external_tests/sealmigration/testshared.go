@@ -147,8 +147,8 @@ func ParamTestSealMigrationShamirToTransit_Post14(t *testing.T, logger hclog.Log
 }
 
 func ParamTestSealMigration_TransitToTransit(t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
-
+	storage teststorage.ReusableStorage, basePort int,
+) {
 	// Create the transit server.
 	tss1 := sealhelper.NewTransitSealServer(t, 0)
 	defer func() {
@@ -190,8 +190,8 @@ func ParamTestSealMigration_TransitToTransit(t *testing.T, logger hclog.Logger,
 }
 
 func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int,
-	tss *sealhelper.TransitSealServer, sealFunc func() vault.Seal, rootToken string, recoveryKeys [][]byte) {
-
+	tss *sealhelper.TransitSealServer, sealFunc func() vault.Seal, rootToken string, recoveryKeys [][]byte,
+) {
 	baseClusterPort := basePort + 10
 
 	var conf vault.CoreConfig
@@ -350,8 +350,8 @@ func validateMigration(t *testing.T, storage teststorage.ReusableStorage,
 }
 
 func migratePost14(t *testing.T, storage teststorage.ReusableStorage, cluster *vault.TestCluster,
-	opts *vault.TestClusterOptions, unsealKeys [][]byte) int {
-
+	opts *vault.TestClusterOptions, unsealKeys [][]byte,
+) int {
 	cluster.Logger = cluster.Logger.Named("migration")
 	// Restart each follower with the new config, and migrate.
 	for i := 1; i < len(cluster.Cores); i++ {
@@ -737,8 +737,8 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 }
 
 func runAutoseal(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage,
-	basePort int, rootToken string, sealFunc func() vault.Seal) {
-
+	basePort int, rootToken string, sealFunc func() vault.Seal,
+) {
 	baseClusterPort := basePort + 10
 
 	// Start the cluster

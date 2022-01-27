@@ -80,6 +80,7 @@
             @startTimeDisplay={{this.startTimeDisplay}}
             @endTimeDisplay={{this.endTimeDisplay}}
             @isDateRange={{this.isDateRange}}
+            @timestamp={{this.responseTimestamp}}
           />
           {{! If no endTime that means the counters/activity request did not return a payload. }}
         {{else if this.endTime}}

@@ -22,8 +22,8 @@ export default class Dashboard extends Component {
   ];
   maxNamespaces = 10;
   chartLegend = [
-    { key: 'entity_clients', label: 'unique entities' },
-    { key: 'non_entity_clients', label: 'non-entity tokens' },
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
   adapter = this.store.adapterFor('clients/activity');
   // needed for startTime modal picker
@@ -104,6 +104,13 @@ export default class Dashboard extends Component {
       return null;
     }
     return this.args.model.activity.byNamespace;
+  }
+
+  get responseTimestamp() {
+    if (!this.args.model.activity || !this.args.model.activity.responseTimestamp) {
+      return null;
+    }
+    return this.args.model.activity.responseTimestamp;
   }
 
   // ACTIONS

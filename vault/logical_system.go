@@ -1947,7 +1947,7 @@ func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request
 
 	for _, entry := range b.Core.auth.Entries {
 		// Only show entry for current namespace
-		if entry.Namespace().Path != ns.Path || entry.Path != path{
+		if entry.Namespace().Path != ns.Path || entry.Path != path {
 			continue
 		}
 

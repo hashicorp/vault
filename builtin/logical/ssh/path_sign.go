@@ -369,7 +369,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 
 		notAllowed := []string{}
 		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
-		for extensionKey, _ := range extensions {
+		for extensionKey := range extensions {
 			if !strutil.StrListContains(allowedExtensions, extensionKey) {
 				notAllowed = append(notAllowed, extensionKey)
 			}
