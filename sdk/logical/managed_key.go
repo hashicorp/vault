@@ -6,16 +6,36 @@ import (
 	"io"
 )
 
+type KeyUsage int
+
+const (
+	KeyUsageEncrypt KeyUsage = 1 + iota
+	KeyUsageDecrypt
+	KeyUsageSign
+	KeyUsageVerify
+	KeyUsageWrap
+	KeyUsageUnwrap
+)
+
 type ManagedKey interface {
+	// Name is a human-readable identifier for a managed key that may change/renamed. Use Uuid if a
+	// long term consistent identifier is needed.
 	Name() string
+	// UUID is a unique identifier for a managed key that is guaranteed to remain
+	// consistent even if a key is migrated or renamed.
+	UUID() string
 	// Present returns true if the key is established in the KMS.  This may return false if for example
 	// an HSM library is not configured on all cluster nodes.
 	Present(ctx context.Context) (bool, error)
 	Finalize(context.Context) error
+
+	// AllowsAll returns true if all the requested usages are supported by the managed key.
+	AllowsAll(usages []KeyUsage) bool
 }
 
 type ManagedKeySystemView interface {
-	GetManagedKey(ctx context.Context, name string) (ManagedKey, error)
+	GetManagedKeyByName(ctx context.Context, keyName, mountPoint string) (ManagedKey, error)
+	GetManagedKeyByUUID(ctx context.Context, keyUuid, mountPoint string) (ManagedKey, error)
 }
 
 type ManagedAsymmetricKey interface {

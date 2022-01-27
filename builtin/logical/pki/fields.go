@@ -242,10 +242,17 @@ the alt_names map using OID 2.5.4.5.`,
 func addCAKeyGenerationFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields["exported"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `Must be "internal" or "exported". If set to
+		Description: `Must be "internal", "exported" or "kms". If set to
 "exported", the generated private key will be
 returned. This is your *only* chance to retrieve
 the private key!`,
+		AllowedValues: []interface{}{"internal", "external", "kms"},
+	}
+
+	fields["managed_key_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The name of the managed key to use when the exported
+type is kms. Ignored for other types,but required when kms type is selected.`,
 	}
 
 	fields["key_bits"] = &framework.FieldSchema{

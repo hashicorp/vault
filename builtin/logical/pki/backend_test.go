@@ -48,8 +48,6 @@ import (
 
 var (
 	stepCount               = 0
-	serialUnderTest         string
-	parsedKeyUsageUnderTest int
 )
 
 func TestPKI_RequireCN(t *testing.T) {
@@ -1300,7 +1298,6 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			if parsedKeyUsage == 0 && len(usage) != 0 {
 				panic("parsed key usages was zero")
 			}
-			parsedKeyUsageUnderTest = parsedKeyUsage
 
 			var extUsage x509.ExtKeyUsage
 			i := mathRand.Int() % 4
@@ -2337,7 +2334,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signingBundle, err := fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
+	signingBundle, err := fetchCAInfo(context.Background(), b, &logical.Request{Storage: storage})
 	if err != nil {
 		t.Fatal(err)
 	}
