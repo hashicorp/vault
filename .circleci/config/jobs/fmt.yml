@@ -10,7 +10,7 @@ steps:
       command: |
         go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
         make fmt
-        if ! git diff --no-patch --exit-code; then
+        if ! git diff --exit-code; then
           echo "Code has formatting errors. Run 'make fmt' to fix"
           exit 1
         fi
