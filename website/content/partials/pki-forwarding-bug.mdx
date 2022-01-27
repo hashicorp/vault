@@ -3,7 +3,7 @@
 A bug introduced in Vault 1.8 causes certificates issue by the PKI secrets engine made on a performance
 secondary node to be forwarded to a Vault cluster's primary node.  This affects horizontal scalability, but
 does not affect the validity of the generated certs.  They are visible to list and read certificate requests
-only on the primary node rather than the secondary node as intented.  Furthermore, if a certificate is 
+only on the primary node rather than the secondary node as intended.  Furthermore, if a certificate is 
 subsequently revoked on a performance secondary node, the secondary's certificate revocation list is updated, 
 rather than the primary's where the certificate is stored.  This bug is fixed in Vault 1.8.8 and 1.9.3.  
 Certificates issued after the fix are correctly stored locally to the performance secondary.
