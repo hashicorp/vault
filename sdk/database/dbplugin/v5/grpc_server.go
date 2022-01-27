@@ -66,10 +66,8 @@ func (g gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	return database, nil
 }
 
-func (g gRPCServer) getDatabase(ctx context.Context) (Database, error) {
-	g.Lock()
-	defer g.Unlock()
-
+// getDatabaseInternal returns the database but does not hold a lock
+func (g gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) {
 	id, err := getMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -86,14 +84,19 @@ func (g gRPCServer) getDatabase(ctx context.Context) (Database, error) {
 	return nil, fmt.Errorf("no database instance found")
 }
 
+// getDatabase holds a read lock and returns the database
+func (g gRPCServer) getDatabase(ctx context.Context) (Database, error) {
+	g.RLock()
+	impl, err := g.getDatabaseInternal(ctx)
+	g.RUnlock()
+	return impl, err
+}
+
 // Initialize the database plugin
 func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeRequest) (*proto.InitializeResponse, error) {
 	impl, err := g.getOrCreateDatabase(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if impl == nil {
-		return nil, fmt.Errorf("no database instance found")
 	}
 
 	rawConfig := structToMap(request.ConfigData)
@@ -268,7 +271,10 @@ func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeRespon
 }
 
 func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
-	impl, err := g.getDatabase(ctx)
+	g.Lock()
+	defer g.Unlock()
+
+	impl, err := g.getDatabaseInternal(ctx)
 	if err != nil {
 		return nil, err
 	}
