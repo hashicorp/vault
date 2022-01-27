@@ -1,0 +1,3 @@
+```release-note:security
+secrets/database/mssql: Removed fmt strings and replaced them with inline queries using named parameters.
+```
