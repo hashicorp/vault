@@ -16,6 +16,7 @@ import { tracked } from '@glimmer/tracking';
  *    @startTimeDisplay={{this.startTimeDisplay}}
  *    @endTimeDisplay={{this.endTimeDisplay}}
  *    @isDateRange={{this.isDateRange}}
+ *    @timestamp={{this.responseTimestamp}}
  *  />
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
@@ -25,6 +26,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} startTimeDisplay - start date for CSV modal
  * @param {string} endTimeDisplay - end date for CSV modal
  * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month
+ * @param {string} timestamp - timestamp response was received from API
  */
 
 export default class Attribution extends Component {

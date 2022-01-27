@@ -1,4 +1,5 @@
 import ApplicationSerializer from '../application';
+import { formatISO } from 'date-fns';
 
 /* 
 SAMPLE PAYLOAD BEFORE/AFTER:
@@ -109,9 +110,10 @@ export default ApplicationSerializer.extend({
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    let response_timestamp = formatISO(new Date());
     let transformedPayload = {
       ...payload,
-      // TODO CMB should these be nested under "data" to go to model correctly?)
+      response_timestamp,
       by_namespace: this.flattenDataset(payload.data.by_namespace),
     };
     delete payload.data.by_namespace;
