@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 
 /**
  * @module Attribution
@@ -136,5 +137,10 @@ export default class Attribution extends Component {
   filterByNamespace(namespace) {
     // return top 10 mounts for a namespace
     return this.args.topTenNamespaces.find((ns) => ns.label === namespace).mounts.slice(0, 10);
+  }
+
+  @action
+  closeModal() {
+    this.showCSVDownloadModal = false;
   }
 }

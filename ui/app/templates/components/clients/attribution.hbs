@@ -63,7 +63,12 @@
     <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <DownloadCsv @label="Export" @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />
+    <DownloadCsv
+      @label="Export"
+      @csvData={{this.getCsvData}}
+      @fileName={{this.getCsvFileName}}
+      @handleDownloadSuccess={{this.closeModal}}
+    />
     <button type="button" class="button is-secondary" onclick={{action (mut this.showCSVDownloadModal) false}}>
       Cancel
     </button>

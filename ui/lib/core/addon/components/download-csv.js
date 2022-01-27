@@ -30,7 +30,12 @@ class DownloadCsvComponent extends Component {
     hiddenElement.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(this.args.csvData));
     hiddenElement.setAttribute('target', '_blank');
     hiddenElement.setAttribute('download', this.args.fileName || 'vault-data.csv');
-    hiddenElement.click();
+    try {
+      hiddenElement.click();
+      this.args.handleDownloadSuccess();
+    } catch (e) {
+      console.log(e);
+    }
   }
 }
 
