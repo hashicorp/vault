@@ -1,3 +1,17 @@
+## 1.7.9
+### January 27, 2022
+
+IMPROVEMENTS:
+
+* core: Fixes code scanning alerts [[GH-13667](https://github.com/hashicorp/vault/pull/13667)]
+
+BUG FIXES:
+
+* auth/oidc: Fixes OIDC auth from the Vault UI when using the implicit flow and `form_post` response mode. [[GH-13493](https://github.com/hashicorp/vault/pull/13493)]
+* secrets/gcp: Fixes role bindings for BigQuery dataset resources. [[GH-13735](https://github.com/hashicorp/vault/pull/13735)]
+* ui: Fixes breadcrumb bug for secrets navigation [[GH-13604](https://github.com/hashicorp/vault/pull/13604)]
+* ui: Fixes issue saving KMIP role correctly [[GH-13585](https://github.com/hashicorp/vault/pull/13585)]
+
 ## 1.7.8
 ### December 21, 2021
 
