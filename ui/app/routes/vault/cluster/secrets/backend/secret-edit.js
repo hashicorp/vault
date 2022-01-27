@@ -90,7 +90,7 @@ export default Route.extend(UnloadModelRoute, {
     return this.pathHelp.getNewModel(modelType, backend);
   },
 
-  modelType(backend, secret, options) {
+  modelType(backend, secret, options = {}) {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
@@ -102,7 +102,7 @@ export default Route.extend(UnloadModelRoute, {
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
-      keymgmt: `keymgmt/${options.queryParams.itemType || 'key'}`,
+      keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: backendModel.get('modelTypeForKV'),
     };
     return types[type];
