@@ -1,3 +1,24 @@
+## 1.8.8
+### January 27, 2022
+
+IMPROVEMENTS:
+
+* core: Fixes code scanning alerts [[GH-13667](https://github.com/hashicorp/vault/pull/13667)]
+
+BUG FIXES:
+
+* auth/oidc: Fixes OIDC auth from the Vault UI when using the implicit flow and `form_post` response mode. [[GH-13494](https://github.com/hashicorp/vault/pull/13494)]
+* core (enterprise): Workaround AWS CloudHSM v5 SDK issue not allowing read-only sessions
+* kmip (enterprise): Fix locate by name operations fail to find key after a rekey operation.
+* secrets/gcp: Fixes role bindings for BigQuery dataset resources. [[GH-13549](https://github.com/hashicorp/vault/pull/13549)]
+* secrets/pki: Fix regression causing performance secondaries to forward certificate generation to the primary. [[GH-13759](https://github.com/hashicorp/vault/pull/13759)]
+* secrets/pki: Fix regression causing performance secondaries to forward certificate generation to the primary. [[GH-2456](https://github.com/hashicorp/vault/pull/2456)]
+* storage/raft: Fix issues allowing invalid nodes to become leadership candidates. [[GH-13703](https://github.com/hashicorp/vault/pull/13703)]
+* storage/raft: On linux, use map_populate for bolt files to improve startup time. [[GH-13573](https://github.com/hashicorp/vault/pull/13573)]
+* storage/raft: Units for bolt metrics now given in milliseconds instead of nanoseconds [[GH-13749](https://github.com/hashicorp/vault/pull/13749)]
+* ui: Fixes breadcrumb bug for secrets navigation [[GH-13604](https://github.com/hashicorp/vault/pull/13604)]
+* ui: Fixes issue saving KMIP role correctly [[GH-13585](https://github.com/hashicorp/vault/pull/13585)]
+
 ## 1.8.7
 ### December 21, 2021
 
