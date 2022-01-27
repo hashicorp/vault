@@ -169,7 +169,7 @@ type PrivateKeyExtractor func(c *CertBundle, parsedBundle *ParsedCertBundle) err
 func (c *CertBundle) ToParsedCertBundleWithExtractor(privateKeyExtractor PrivateKeyExtractor) (*ParsedCertBundle, error) {
 	var err error
 	var pemBlock *pem.Block
-	var result = &ParsedCertBundle{}
+	result := &ParsedCertBundle{}
 
 	err = privateKeyExtractor(c, result)
 	if err != nil {
