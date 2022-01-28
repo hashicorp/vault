@@ -42,6 +42,8 @@ export default class KeymgmtKeyModel extends Model {
   @attr() provider; // string, or object with permissions error
   @attr() distribution;
 
+  icon = 'key';
+
   get hasVersions() {
     return this.versions.length > 1;
   }
