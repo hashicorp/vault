@@ -49,7 +49,6 @@ export default class Dashboard extends Component {
   // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
   // HELPER
-
   utcDate(dateObject) {
     // To remove the timezone of the local user (API returns and expects Zulu time/UTC) we need to use a method provided by date-fns-tz to return the UTC date
     let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // browser API method
@@ -119,7 +118,6 @@ export default class Dashboard extends Component {
   }
 
   // ACTIONS
-
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
