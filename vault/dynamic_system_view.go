@@ -6,7 +6,6 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -217,14 +216,14 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	return resp.WrapInfo, nil
 }
 
-func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
-	c, id, err := d.core.pluginCatalog.GetPluginClient(ctx, d, pluginRunner, logger, isMetadataMode)
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.Multiplexer, error) {
+	c, err := d.core.pluginCatalog.GetPluginClient(ctx, d, pluginRunner, logger, isMetadataMode)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	d.core.logger.Debug("new plugin connection created", "id", id)
+	d.core.logger.Debug("new plugin connection created", "id", c.id)
 
-	return c, id, nil
+	return c, nil
 }
 
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It

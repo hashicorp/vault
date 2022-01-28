@@ -3,7 +3,6 @@ package dbplugin
 import (
 	"context"
 	"errors"
-	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
@@ -12,9 +11,17 @@ import (
 )
 
 type DatabasePluginClient struct {
-	sync.Mutex
-
+	client pluginutil.Multiplexer
 	Database
+}
+
+// This wraps the Close call and ensures we both close the database connection
+// and kill the plugin.
+func (dc *DatabasePluginClient) Close() error {
+	err := dc.Database.Close()
+	dc.client.Close()
+
+	return err
 }
 
 // pluginSets is the map of plugins we can dispense.
@@ -30,10 +37,12 @@ var PluginSets = map[int]plugin.PluginSet{
 // NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin.
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
-	rpcClient, id, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
+	pluginClient, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
 	if err != nil {
 		return nil, err
 	}
+
+	rpcClient := pluginClient.Protocol()
 
 	// Request the plugin
 	raw, err := rpcClient.Dispense("database")
@@ -49,12 +58,11 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 
 		gRPCClient := raw.(gRPCClient)
 
-		gc := rpcClient.(*plugin.GRPCClient)
-		// Wrap clientConn with our implementation and get rid of middleware
-		// and then cast it back
+		// Wrap clientConn with our implementation so that we can inject the
+		// ID into the context
 		cc := &databaseClientConn{
-			ClientConn: gc.Conn,
-			id:         id,
+			ClientConn: pluginClient.Conn(),
+			id:         pluginClient.ID(),
 		}
 		gRPCClient.client = proto.NewDatabaseClient(cc)
 		db = gRPCClient
@@ -62,8 +70,8 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		return nil, errors.New("unsupported client type")
 	}
 
-	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
+		client:   pluginClient,
 		Database: db,
 	}, nil
 }
