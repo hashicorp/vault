@@ -41,6 +41,7 @@ func NewOASDocument() *OASDocument {
 					Default:     "https",
 					Description: "URI Scheme, default https",
 				},
+				Host:     map[string]string{"default": "localhost"},
 				Port:     map[string]string{"default": "8200"},
 				BasePath: map[string]string{"default": "v1"},
 			},
@@ -118,6 +119,7 @@ type OASServer struct {
 
 type OASServerVars struct {
 	Scheme   OASScheme         `json:"scheme"`
+	Host     map[string]string `json:"host"`
 	Port     map[string]string `json:"port"`
 	BasePath map[string]string `json:"basePath"`
 }
