@@ -6,15 +6,15 @@ import { KEY_TYPES } from '../../models/keymgmt/key';
 
 /**
  * @module KeymgmtDistribute
- * KeymgmtDistribute components are used to...
+ * KeymgmtDistribute components are used to provide a form to distribute Keymgmt keys to a provider.
  *
  * @example
  * ```js
- * <KeymgmtDistribute @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <KeymgmtDistribute @backend="keymgmt" @key="my-key" @provider="my-kms" />
  * ```
  * @param {string} backend - name of backend, which will be the basis of other store queries
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {string} [key] - key is the name of the existing key which is being distributed. Will hide the key field in UI
+ * @param {string} [provider] - provider is the name of the existing provider which is being distributed to. Will hide the provider field in UI
  */
 
 class DistributionData {
@@ -40,8 +40,10 @@ export default class KeymgmtDistribute extends Component {
   constructor() {
     super(...arguments);
     this.formData = new DistributionData();
+    // Set initial values passed in
     this.formData.key = this.args.key || '';
     this.formData.provider = this.args.provider || '';
+    // Side effects to get types of key or provider passed in
     if (this.args.provider) {
       this.getProviderType(this.args.provider);
     }
@@ -54,7 +56,7 @@ export default class KeymgmtDistribute extends Component {
   distributeKey(backend, kms, key) {
     let adapter = this.store.adapterFor('keymgmt/key');
     return adapter.distribute(backend, kms, key);
-    // TODO: After effects
+    // TODO: on success/fail
   }
 
   async getKeyInfo(keyName, isNew = false) {
@@ -72,22 +74,15 @@ export default class KeymgmtDistribute extends Component {
         recordOnly: true,
       });
     }
-    console.log(key.type, 'KEY TYPE');
     this.keyModel = key;
   }
 
   destroyKey() {
     if (this.isNewKey) {
-      // Delete key record from store if it was created here
-      this.keyModel
-        .destroyRecord()
-        .then(() => {
-          this.keyModel = null;
-        })
-        .catch((e) => {
-          console.log('could not destroy record');
-          console.log({ e });
-        });
+      // Delete record from store if it was created here
+      this.keyModel.destroyRecord().finally(() => {
+        this.keyModel = null;
+      });
     }
     this.isNewKey = false;
     this.keyModel = null;
@@ -115,7 +110,6 @@ export default class KeymgmtDistribute extends Component {
   }
 
   get keyTypes() {
-    // TODO: filter these if provider type available?
     return KEY_TYPES;
   }
 
@@ -123,9 +117,20 @@ export default class KeymgmtDistribute extends Component {
     if (!this.providerType || !this.keyModel?.type) {
       return null;
     }
-    return VALID_TYPES_BY_PROVIDER[this.providerType].includes(this.keyModel.type)
-      ? null
-      : `${this.keyModel.type} is not a valid key for provider of type ${this.providerType}`;
+    const valid = VALID_TYPES_BY_PROVIDER[this.providerType].includes(this.keyModel.type);
+    if (valid) return null;
+
+    // default to showing error on provider unless @provider (field hidden)
+    if (this.args.provider) {
+      return {
+        key: `This key type is incompatible with the ${this.providerType} provider. To distribute to this provider, change the key type or choose another key.`,
+      };
+    }
+
+    const message = `This provider is incompatible with the ${this.keyModel.type} key type. Please choose another provider`;
+    return {
+      provider: this.args.key ? `${message}.` : `${message} or change the key type.`,
+    };
   }
 
   get operations() {
@@ -190,9 +195,8 @@ export default class KeymgmtDistribute extends Component {
   @action
   createDistribution(evt) {
     evt.preventDefault();
-    const { backend } = this.args;
+    // const { backend } = this.args;
     // TODO: serialize formData
-    console.log(this.formData.protection, backend);
     if (this.isNewKey) {
       // TODO: Create new key before distributing
     }
