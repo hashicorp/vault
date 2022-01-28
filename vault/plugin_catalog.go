@@ -89,7 +89,6 @@ func (m *MultiplexedClient) Close() error {
 		return err
 	}
 	if m.connectionCount == 0 {
-		// TODO(JM): This leaves child process behind after vault exits
 		m.client.Kill()
 		m.client = nil
 		m.protocol = nil
