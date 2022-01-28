@@ -134,13 +134,14 @@ export default class Attribution extends Component {
     return this.args.topTenNamespaces.find((ns) => ns.label === namespace).mounts.slice(0, 10);
   }
 
+  // ACTIONS
   @action
   closeModal() {
     this.showCSVDownloadModal = false;
   }
 
   @action
-  downloadChartData(filename, contents) {
+  exportChartData(filename, contents) {
     this.downloadCsv.download(filename, contents);
     this.closeModal();
   }
