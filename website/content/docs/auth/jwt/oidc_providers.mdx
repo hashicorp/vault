@@ -17,6 +17,10 @@ and additions may be submitted via the [Vault Github repository](https://github.
 
 ## Azure Active Directory (AAD)
 
+~> **Note:** Azure Active Directory Applications that have custom signing keys as a result of using
+the [claims-mapping](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-claims-mapping)
+feature are currently not supported for OIDC authentication.
+
 Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc)
 
 1. Choose your Azure tenant.
@@ -31,9 +35,6 @@ Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https:/
    - `https://hostname:port_number/ui/vault/auth/oidc/oidc/callback`
 
 1. Record the "Application (client) ID" as you will need it as the `oidc_client_id`.
-
-1. Under **API Permissions** grant the following permission:
-   - Microsoft Graph API permission [GroupMember.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-23)
 
 1. Under **Endpoints**, copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
    - The endpoint URL (`oidc_discovery_url`) will look like: https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
