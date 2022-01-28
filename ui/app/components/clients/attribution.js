@@ -57,8 +57,8 @@ export default class Attribution extends Component {
   }
 
   get attributionBreakdown() {
-    // display 'Auth method' or 'Namespace' respectively in CSV file
-    return this.isSingleNamespace ? 'auth-method' : 'namespace';
+    // display 'Auth method' or 'NAMESPACE' respectively in CSV filename
+    return this.isSingleNamespace ? 'AUTH_METHOD' : 'NAMESPACE';
   }
 
   get chartText() {
@@ -100,10 +100,13 @@ export default class Attribution extends Component {
         'Non-entity clients',
       ];
 
-    csvData.push(csvHeader);
-
     // each array will be a row in the csv file
-    if (this.attributionBreakdown === 'namespace') {
+    if (this.attributionBreakdown === 'AUTH_METHOD') {
+      graphData.forEach((mount) => {
+        csvData.push(['', mount.label, mount.clients, mount.entity_clients, mount.non_entity_clients]);
+      });
+      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
+    } else {
       graphData.forEach((ns) => {
         csvData.push([ns.label, '', ns.clients, ns.entity_clients, ns.non_entity_clients]);
         if (ns.mounts) {
@@ -112,27 +115,18 @@ export default class Attribution extends Component {
           });
         }
       });
-    } else if (this.attributionBreakdown === 'auth-method') {
-      csvData = graphData.map((data) => [
-        '',
-        data.label,
-        data.clients,
-        data.entity_clients,
-        data.non_entity_clients,
-      ]);
-      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
-    } else {
-      // conditional to handle ALL namespace data not just top 10?
     }
-    // make each nested array in csvData a comma separated string, join each array in csvData with line break (\n)
+    csvData.unshift(csvHeader);
+    // make each nested array a comma separated string, join each array in csvData with line break (\n)
     return csvData.map((d) => d.join()).join('\n');
   }
 
   get getCsvFileName() {
-    let activityDateRange = `${this.args.startTimeDisplay}-${this.args.endTimeDisplay}`;
+    let endRange = this.args.endTimeDisplay ? `-${this.args.endTimeDisplay}` : '';
+    let activityDateRange = `${this.args.startTimeDisplay + endRange}`;
     return activityDateRange
-      ? `clients-by-${this.attributionBreakdown}-${activityDateRange}`
-      : `clients-by-${this.attributionBreakdown}-${new Date()}`;
+      ? `CLIENTS_BY_${this.attributionBreakdown}_${activityDateRange}`
+      : `CLIENTS_BY_${this.attributionBreakdown}_${new Date()}`;
   }
   // HELPERS
   filterByNamespace(namespace) {
