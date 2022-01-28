@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-
+import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 /**
  * @module Attribution
  * Attribution components display the top 10 total client counts for namespaces or auth methods (mounts) during a billing period.
@@ -32,6 +32,7 @@ import { action } from '@ember/object';
 
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
+  @service downloadCsv;
 
   get isDateRange() {
     return this.args.isDateRange;
@@ -142,5 +143,11 @@ export default class Attribution extends Component {
   @action
   closeModal() {
     this.showCSVDownloadModal = false;
+  }
+
+  @action
+  downloadChartData(filename, contents) {
+    this.downloadCsv.download(filename, contents);
+    this.closeModal();
   }
 }
