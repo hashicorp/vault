@@ -113,23 +113,16 @@ class CalendarWidget extends Component {
   }
 
   @action
-  selectCurrentBillingPeriod() {
+  selectCurrentBillingPeriod(D) {
     this.args.handleCurrentBillingPeriod(); // resets the billing startTime and endTime to what it is on init via the parent.
     this.showCalendar = false;
+    D.actions.close(); // close the dropdown.
   }
   @action
-  selectEndMonth(month, year, element) {
-    this.addClass(element.target, 'is-selected');
+  selectEndMonth(month, year, D) {
     this.toggleShowCalendar();
     this.args.handleClientActivityQuery(month, year, 'endTime');
-  }
-
-  @action
-  selectSingleMonth(month, year, element) {
-    // select month
-    this.addClass(element.target, 'is-selected');
-    this.toggleSingleMonth();
-    // ARG TODO similar to selectEndMonth
+    D.actions.close(); // close the dropdown.
   }
 
   @action

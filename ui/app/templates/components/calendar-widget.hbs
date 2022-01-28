@@ -17,7 +17,7 @@
           <button
             class="link link-plain has-text-weight-semibold is-ghost"
             type="button"
-            {{on "click" this.selectCurrentBillingPeriod}}
+            {{on "click" (fn this.selectCurrentBillingPeriod D)}}
           >
             Current billing period
           </button>
@@ -56,7 +56,7 @@
           {{#each this.arrayOfMonths as |month index|}}
             <button
               type="button"
-              {{on "click" (fn this.selectEndMonth index this.displayYear)}}
+              {{on "click" (fn this.selectEndMonth index this.displayYear D)}}
               class="is-month-list"
               id={{concat index "-" this.displayYear}}
             >

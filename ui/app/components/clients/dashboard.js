@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { format, formatRFC3339, isSameMonth, parseISO } from 'date-fns';
+import { isSameMonth } from 'date-fns';
 import { zonedTimeToUtc } from 'date-fns-tz'; // https://github.com/marnusw/date-fns-tz#zonedtimetoutc
 
 export default class Dashboard extends Component {
@@ -26,6 +26,7 @@ export default class Dashboard extends Component {
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
   adapter = this.store.adapterFor('clients/activity');
+
   // needed for startTime modal picker
   months = Array.from({ length: 12 }, (item, i) => {
     return new Date(0, i).toLocaleString('en-US', { month: 'long' });
@@ -62,9 +63,9 @@ export default class Dashboard extends Component {
     }
     // unable to use date-fns format here because of the local timestamp attached to the date when the user selects a new start time from the modal
     let formattedAsDate = new Date(this.startTime);
-    let test = this.utcDate(formattedAsDate).toISOString();
-    let year = test.substring(0, 4);
-    let month = Number(test.substring(5, 7)) - 1;
+    let utcDate = this.utcDate(formattedAsDate).toISOString();
+    let year = utcDate.substring(0, 4);
+    let month = Number(utcDate.substring(5, 7)) - 1;
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
@@ -73,8 +74,12 @@ export default class Dashboard extends Component {
       // otherwise will return date of new Date(null)
       return null;
     }
+    // unable to use date-fns format here because of the local timestamp attached to the date when the user selects a new start time from the modal
     let formattedAsDate = new Date(this.endTime);
-    return format(formattedAsDate, 'MMMM yyyy');
+    let utcDate = this.utcDate(formattedAsDate).toISOString();
+    let year = utcDate.substring(0, 4);
+    let month = Number(utcDate.substring(5, 7)) - 1;
+    return `${this.arrayOfMonths[month]} ${year}`;
   }
 
   get isDateRange() {
@@ -120,52 +125,53 @@ export default class Dashboard extends Component {
     if (dateType === 'cancel') {
       return;
     }
-    // dateType is either startTime or endTime
-    let monthIndex = this.arrayOfMonths.indexOf(month);
+    // the clicked "Current Billing period" in the calendar widget
+    if (dateType === 'reset') {
+      this.requestedStartTime = this.args.model.startTime; // reset to original request at RFC3339 timestamp.
+      this.requestedEndTime = this.endTime = null;
+    }
+    // the clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
+      let monthIndex = this.arrayOfMonths.indexOf(month);
       let utcDateObject = this.utcDate(new Date(year, monthIndex));
       this.requestedStartTime = utcDateObject.toISOString();
-      this.endTime = null;
+      this.requestedEndTime = this.endTime = null;
     }
+    // the clicked "Custom End Month" from the calendar-widget
     if (dateType === 'endTime') {
-      // this month comes in as an index
-      // ARG TODO remove timezone!!!! user helper
-      this.endTime = formatRFC3339(new Date(year, month));
+      // use the currently selected startTime for your requestedStartTime.
+      this.requestedStartTime = this.startTime;
+      // unlike with the startTime modal the endTime calendar widget returns months as a number (e.g. index)
+      let utcDateObject = this.utcDate(new Date(year, month));
+      this.requestedEndTime = utcDateObject.toISOString();
     }
+
     try {
-      let response = await this.adapter.queryClientActivity(this.requestedStartTime, this.endTime);
+      let response = await this.adapter.queryClientActivity(this.requestedStartTime, this.requestedEndTime);
       if (!response) {
         // this.endTime will be null and use this to show EmptyState message on the template.
         return;
       }
-      // compare year and month of the RFC33393 times from the start time set to what is returned on the response
+      // compare year and month of the RFC33393 times from the startTime returned from the API response
+      // we only do this for startTime because we can prevent a user from selecting an inaccurate endTime.
+      // whereas with startTime they may want to select an earlier billing period, e.g. two billing periods ago.
       if (this.requestedStartTime.substring(0, 7) !== response.data.start_time.substring(0, 7)) {
-        // reset the starTime
-        // show warning that the response is different than what was set
         this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
       } else {
         this.responseRangeDiffMessage = null;
       }
-      // change the startTime to the time returned on the response
+      // change the startTime & endTime to the RFC3339 time returned on the response
       this.startTime = response.data.start_time;
-
-      // resets the endTime to what is returned on the response
       this.endTime = response.data.end_time;
-      this.updateData = response;
       return response;
-      // ARG TODO this is the response you need to use to repopulate the chart data
     } catch (e) {
-      console.log('ERROR', e);
       // ARG TODO handle error
     }
   }
 
   @action
   handleCurrentBillingPeriod() {
-    let parsed = format(parseISO(this.args.model.startTime), 'MMMM yyyy'); // this.startTime is a tracked property and changes, thus use the startTime first passed into the component from the model.
-    let month = parsed.split(' ')[0];
-    let year = parsed.split(' ')[1];
-    this.handleClientActivityQuery(month, year, 'startTime');
+    this.handleClientActivityQuery(0, 0, 'reset');
   }
 
   @action
