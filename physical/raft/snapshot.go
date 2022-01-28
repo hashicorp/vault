@@ -16,6 +16,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/rboyer/safeio"
 	bolt "go.etcd.io/bbolt"
@@ -389,6 +391,15 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 						return err
 					}
 
+					if strings.HasPrefix(entry.Key, "core/") {
+						switch path {
+						case "mount", "auth", "audit", "local-mount", "local-auth", "local-audit":
+						default:
+							s.logger.Info("skipping core entry in snapshot", "path", entry.Key)
+							// Skip most core/ entries
+							continue
+						}
+					}
 					err = b.Put([]byte(entry.Key), entry.Value)
 					if err != nil {
 						return err
@@ -405,6 +416,46 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 			}
 
 			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
+		}
+
+		ctx := context.Background()
+		err := boltDB.Update(func(tx *bolt.Tx) error {
+			// TODO also restore sys/policy
+			var paths []string
+			coreView := physical.NewView(s.store.fsm, "core/")
+			err := logical.ScanView(ctx, coreView, func(path string) {
+				switch path {
+				case "mount", "auth", "audit", "local-mount", "local-auth", "local-audit":
+				default:
+					paths = append(paths, path)
+				}
+			})
+			if err != nil {
+				return err
+			}
+
+			b, err := tx.CreateBucketIfNotExists(dataBucketName)
+			if err != nil {
+				return err
+			}
+			for _, path := range paths {
+				entry, err := coreView.Get(ctx, path)
+				if err != nil {
+					return err
+				}
+
+				err = b.Put([]byte("core/"+entry.Key), entry.Value)
+				if err != nil {
+					return err
+				}
+				s.logger.Info("added back core entry over snapshot", "path", entry.Key, "len", len(entry.Value))
+			}
+			return nil
+		})
+		if err != nil {
+			s.logger.Error("snapshot write: failed to write transaction", "error", err)
+			s.writeError = err
+			return
 		}
 	}()
 
