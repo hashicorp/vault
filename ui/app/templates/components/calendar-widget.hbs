@@ -53,7 +53,7 @@
           </button>
         </div>
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-          {{#each this.arrayOfMonths as |month index|}}
+          {{#each @arrayOfMonths as |month index|}}
             <button
               type="button"
               {{on "click" (fn this.selectEndMonth index this.displayYear D)}}

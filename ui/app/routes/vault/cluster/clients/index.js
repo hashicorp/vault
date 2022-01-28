@@ -53,13 +53,20 @@ export default Route.extend(ClusterRoute, {
     let activity = await this.getActivity(license.startTime); // returns client counts using license start_time.
     let monthly = await this.getMonthly(); // returns the partial month endpoint
 
+    // all times to the component must be mm,yyyy ex: "1,2021"
+    let endTimeFromLicense = `${activity.endTime.split('-')[1].replace(/^0+/, '')},${
+      activity.endTime.split('-')[0]
+    }`;
+    let startTimeFromLicense = `${license.startTime.split('-')[1].replace(/^0+/, '')},${
+      license.startTime.split('-')[0]
+    }`;
     return hash({
       // ARG TODO will remove "hash" once remove "activity," which currently relies on it.
       activity,
       monthly,
       config,
-      endTime: activity.endTime,
-      startTime: license.startTime,
+      endTimeFromLicense,
+      startTimeFromLicense,
     });
   },
 

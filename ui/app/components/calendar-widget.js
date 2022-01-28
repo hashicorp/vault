@@ -12,7 +12,7 @@ import { tracked } from '@glimmer/tracking';
  * ```js
  * <CalendarWidget
  * @param {string} endTimeDisplay - The display value of the endTime. Ex: January 2022.
- * @param {string} endTimeAtInit - Because endTimeDisplay is a tracked property of the parent it changes. But we need to keep a value unchanged that records the endTime returned by the counters/activity endpoint. This is that value.
+ * @param {string} endTimeFromResponse - Because endTimeDisplay is a tracked property of the parent it changes. But we need to keep a value unchanged that records the endTime returned by the counters/activity endpoint. This is that value.
  * @param {string} startTimeDisplay - The display value of startTime that the parent manages. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.
  * @param {function} handleClientActivityQuery - a function passed from parent. This component sends the month and year to the parent via this method which then calculates the new data.
  * @param {function} handleCurrentBillingPeriod - a function passed from parent. This component makes the parent aware that the user selected Current billing period and it handles resetting the data.
@@ -21,20 +21,6 @@ import { tracked } from '@glimmer/tracking';
  * ```
  */
 class CalendarWidget extends Component {
-  arrayOfMonths = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
   currentDate = new Date();
   currentYear = this.currentDate.getFullYear(); // integer
   currentMonth = parseInt(this.currentDate.getMonth()); // integer and zero index
@@ -93,7 +79,7 @@ class CalendarWidget extends Component {
         // if they are on the view where the start year equals the display year, check which months should not show.
         let startMonth = this.args.startTimeDisplay.split(' ')[0]; // returns month name e.g. January
         // return the index of the startMonth
-        let startMonthIndex = this.arrayOfMonths.indexOf(startMonth);
+        let startMonthIndex = this.args.arrayOfMonths.indexOf(startMonth);
         // then add readOnly class to any month less than the startMonth index.
         if (startMonthIndex > elementMonthId) {
           e.classList.add('is-readOnly');
@@ -101,9 +87,9 @@ class CalendarWidget extends Component {
       }
       // Compare values so the user cannot select an endTime after the endTime returned from counters/activity response on page load.
       // ARG TODO will need to test if no data is returned on page load.
-      if (this.displayYear.toString() === this.args.endTimeAtInit.split(' ')[1]) {
-        let endMonth = this.args.endTimeAtInit.split(' ')[0];
-        let endMonthIndex = this.arrayOfMonths.indexOf(endMonth);
+      if (this.displayYear.toString() === this.args.endTimeFromResponse.split(' ')[1]) {
+        let endMonth = this.args.endTimeFromResponse.split(' ')[0];
+        let endMonthIndex = this.args.arrayOfMonths.indexOf(endMonth);
         // add readOnly class to any month that is older (higher) than the endMonth index. (e.g. if nov is the endMonth of the endTimeDisplay, then 11 and 12 should not be displayed 10 < 11 and 10 < 12.)
         if (endMonthIndex < elementMonthId) {
           e.classList.add('is-readOnly');

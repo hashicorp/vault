@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth } from 'date-fns';
 import { zonedTimeToUtc } from 'date-fns-tz'; // https://github.com/marnusw/date-fns-tz#zonedtimetoutc
 
 export default class Dashboard extends Component {
@@ -40,9 +39,9 @@ export default class Dashboard extends Component {
   @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
   @tracked responseRangeDiffMessage = null;
-  @tracked requestedStartTime = null;
-  @tracked startTime = this.args.model.startTime;
-  @tracked endTime = this.args.model.endTime;
+  @tracked startTimeRequested = null;
+  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: "3,2021"
+  @tracked endTimeFromResponse = this.args.model.endTimeFromLicense;
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
@@ -56,33 +55,31 @@ export default class Dashboard extends Component {
   }
 
   get startTimeDisplay() {
-    if (!this.startTime) {
+    if (!this.startTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
     }
-    // unable to use date-fns format here because of the local timestamp attached to the date when the user selects a new start time from the modal
-    let formattedAsDate = new Date(this.startTime);
-    let utcDate = this.utcDate(formattedAsDate).toISOString();
-    let year = utcDate.substring(0, 4);
-    let month = Number(utcDate.substring(5, 7)) - 1;
+    let month = Number(this.startTimeFromResponse.split(',')[0]) - 1;
+    let year = this.startTimeFromResponse.split(',')[1];
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
   get endTimeDisplay() {
-    if (!this.endTime) {
+    if (!this.endTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
     }
-    // unable to use date-fns format here because of the local timestamp attached to the date when the user selects a new start time from the modal
-    let formattedAsDate = new Date(this.endTime);
-    let utcDate = this.utcDate(formattedAsDate).toISOString();
-    let year = utcDate.substring(0, 4);
-    let month = Number(utcDate.substring(5, 7)) - 1;
+    let month = Number(this.endTimeFromResponse.split(',')[0]) - 1;
+    let year = this.endTimeFromResponse.split(',')[1];
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
   get isDateRange() {
-    return !isSameMonth(new Date(this.startTime), new Date(this.endTime));
+    if (!this.startTimeFromResponse || !this.endTimeFromResponse) {
+      // need to check because the moment one of these tracked properties changes, this getter is fired of, even if the other tracked property hasn't been set yet
+      return false;
+    }
+    return this.startTimeFromResponse.split(',')[0] !== this.endTimeFromResponse.split(',')[0];
   }
 
   // Determine if we have client count data based on the current tab
@@ -123,44 +120,44 @@ export default class Dashboard extends Component {
     if (dateType === 'cancel') {
       return;
     }
-    // the clicked "Current Billing period" in the calendar widget
+    // clicked "Current Billing period" in the calendar widget
     if (dateType === 'reset') {
-      this.requestedStartTime = this.args.model.startTime; // reset to original request at RFC3339 timestamp.
-      this.requestedEndTime = this.endTime = null;
+      this.startTimeRequested = this.args.model.startTimeFromResponse;
+      this.endTimeRequested = this.endTimeFromResponse = null;
     }
-    // the clicked "Edit" Billing start month in Dashboard which opens a modal.
+    // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
-      let utcDateObject = this.utcDate(new Date(year, monthIndex));
-      this.requestedStartTime = utcDateObject.toISOString();
-      this.requestedEndTime = this.endTime = null;
+      this.startTimeRequested = `${monthIndex + 1},${year}`; // "1, 2021"
+      this.endTimeRequested = this.endTimeFromResponse = null;
     }
-    // the clicked "Custom End Month" from the calendar-widget
+    // clicked "Custom End Month" from the calendar-widget
     if (dateType === 'endTime') {
-      // use the currently selected startTime for your requestedStartTime.
-      this.requestedStartTime = this.startTime;
-      // unlike with the startTime modal the endTime calendar widget returns months as a number (e.g. index)
-      let utcDateObject = this.utcDate(new Date(year, month));
-      this.requestedEndTime = utcDateObject.toISOString();
+      // use the currently selected startTime for your startTimeRequested.
+      this.startTimeRequested = this.startTimeFromResponse;
+      this.endTimeRequested = `${month},${year}`; // "1, 2021"
     }
 
     try {
-      let response = await this.adapter.queryClientActivity(this.requestedStartTime, this.requestedEndTime);
+      let response = await this.adapter.queryClientActivity(this.startTimeRequested, this.endTimeRequested);
       if (!response) {
         // this.endTime will be null and use this to show EmptyState message on the template.
         return;
       }
-      // compare year and month of the RFC33393 times from the startTime returned from the API response
-      // we only do this for startTime because we can prevent a user from selecting an inaccurate endTime.
-      // whereas with startTime they may want to select an earlier billing period, e.g. two billing periods ago.
-      if (this.requestedStartTime.substring(0, 7) !== response.data.start_time.substring(0, 7)) {
+      // serializer transforms response from rfc3339 to "3,2021"
+      // ARG TODO move to serializer
+      this.startTimeFromResponse = `${response.data.start_time.split('-')[1].replace(/^0+/, '')},${
+        response.data.start_time.split('-')[0]
+      }`;
+      this.endTimeFromResponse = `${response.data.end_time.split('-')[1].replace(/^0+/, '')},${
+        response.data.end_time.split('-')[0]
+      }`;
+
+      if (this.startTimeRequested !== this.startTimeFromResponse) {
         this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
       } else {
         this.responseRangeDiffMessage = null;
       }
-      // change the startTime & endTime to the RFC3339 time returned on the response
-      this.startTime = response.data.start_time;
-      this.endTime = response.data.end_time;
       return response;
     } catch (e) {
       // ARG TODO handle error

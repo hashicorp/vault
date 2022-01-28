@@ -50,14 +50,15 @@
           to enable tracking again.
         </AlertBanner>
       {{/if}}
-      {{! check for @startTime otherwise emptyState}}
-      {{#if @model.startTime}}
+      {{! check for startTimeFromLicense or startTimeFromResponse otherwise emptyState}}
+      {{#if (or @model.startTimeFromLicense this.startTimeFromResponse)}}
         <div class="calendar-title">Filters</div>
         <Toolbar>
           <ToolbarFilters>
             <CalendarWidget
+              @arrayOfMonths={{this.arrayOfMonths}}
               @endTimeDisplay={{this.endTimeDisplay}}
-              @endTimeAtInit={{date-format @model.endTime "MMMM yyyy"}}
+              @endTimeFromResponse={{this.endTimeFromResponse}}
               @handleClientActivityQuery={{this.handleClientActivityQuery}}
               @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
               @startTimeDisplay={{this.startTimeDisplay}}
