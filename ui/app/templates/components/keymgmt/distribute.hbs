@@ -31,6 +31,7 @@
     {{#if this.isNewKey}}
       <div class="field" data-test-keymgmt-dist-keytype>
         <label class="is-label" for="keyType">Key Type</label>
+        <p class="sub-text">The type of cryptographic key that will be created.</p>
         <div class="control is-expanded">
           <div class="select is-fullwidth">
             <select
@@ -61,8 +62,9 @@
     {{/if}}
 
     {{#unless @provider}}
-      <div class="field" data-test-keymgmt-dist-provider>
+      <div class="field">
         <label class="is-label" for="provider">Provider</label>
+        <p class="sub-text">Select a provider in Vault. If it doesn’t exist yet, you’ll need to add it first.</p>
         <div class="control is-expanded">
           <div class="select is-fullwidth">
             <select
@@ -70,6 +72,7 @@
               id="provider"
               {{on "change" this.handleProvider}}
               class={{if this.validMatchError.provider "has-error-border"}}
+              data-test-keymgmt-dist-provider
             >
               <option value="">
                 Select provider
@@ -95,11 +98,16 @@
     <fieldset
       class="field form-fieldset"
       id="operations"
-      disabled={{or (not this.formData.provider) (not this.keyModel.type) this.validMatchError}}
+      disabled={{or
+        this.validMatchError
+        (not this.formData.provider)
+        (not this.formData.key)
+        (and (not this.keyModel.type) this.isNewKey)
+      }}
       data-test-keymgmt-dist-operations
     >
       <legend class="is-label">Operations</legend>
-      {{!-- {{#each-in fieldGroup as |group fields|}} --}}
+      <p class="sub-text">The types of operations this key can perform in the provider.</p>
       {{#each this.operations as |op|}}
         <div class="b-checkbox">
           <Input @type="checkbox" id={{op}} class="styled" @checked={{false}} {{on "input" this.handleOperation}} />
@@ -110,6 +118,7 @@
 
     <fieldset class="field form-fieldset" id="protection" data-test-keymgmt-dist-protections>
       <legend class="is-label">Protection</legend>
+      <p class="sub-text">Specifies the protection of the key.</p>
       <div>
         <RadioButton
           @value="hsm"

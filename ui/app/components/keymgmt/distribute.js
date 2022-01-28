@@ -31,6 +31,8 @@ const VALID_TYPES_BY_PROVIDER = {
 };
 export default class KeymgmtDistribute extends Component {
   @service store;
+  @service flashMessages;
+  @service router;
 
   @tracked keyModel;
   @tracked isNewKey = false;
@@ -51,62 +53,6 @@ export default class KeymgmtDistribute extends Component {
       this.getKeyInfo(this.args.key);
     }
     this.formData.operations = [];
-  }
-
-  distributeKey(backend, kms, key) {
-    let adapter = this.store.adapterFor('keymgmt/key');
-    return adapter.distribute(backend, kms, key);
-    // TODO: on success/fail
-  }
-
-  async getKeyInfo(keyName, isNew = false) {
-    let key;
-    if (isNew) {
-      this.isNewKey = true;
-      key = await this.store.createRecord(`keymgmt/key`, {
-        backend: this.args.backend,
-        id: keyName,
-      });
-    } else {
-      key = await this.store.queryRecord(`keymgmt/key`, {
-        backend: this.args.backend,
-        id: keyName,
-        recordOnly: true,
-      });
-    }
-    this.keyModel = key;
-  }
-
-  destroyKey() {
-    if (this.isNewKey) {
-      // Delete record from store if it was created here
-      this.keyModel.destroyRecord().finally(() => {
-        this.keyModel = null;
-      });
-    }
-    this.isNewKey = false;
-    this.keyModel = null;
-  }
-
-  async getProviderType(id) {
-    if (!id) {
-      this.providerType = '';
-      return;
-    }
-
-    if (id === 'kms-gcp') {
-      this.providerType = 'gcpckms';
-    } else if (id === 'kms-azure') {
-      this.providerType = 'azurekeyvault';
-    } else {
-      this.providerType = 'awskms';
-    }
-    // TODO: Add back once provider model available
-    // const provider = await this.store.queryRecord('keymgmt/provider', {
-    //   backend: this.args.backend,
-    //   id
-    // });
-    // this.providerType = provider.type
   }
 
   get keyTypes() {
@@ -157,6 +103,77 @@ export default class KeymgmtDistribute extends Component {
     return ['encrypt', 'decrypt', 'sign', 'verify', 'wrap', 'unwrap'];
   }
 
+  async getKeyInfo(keyName, isNew = false) {
+    let key;
+    if (isNew) {
+      this.isNewKey = true;
+      key = await this.store.createRecord(`keymgmt/key`, {
+        backend: this.args.backend,
+        id: keyName,
+        name: keyName,
+      });
+    } else {
+      key = await this.store
+        .queryRecord(`keymgmt/key`, {
+          backend: this.args.backend,
+          id: keyName,
+          recordOnly: true,
+        })
+        .catch(() => {});
+    }
+    this.keyModel = key;
+  }
+
+  async getProviderType(id) {
+    if (!id) {
+      this.providerType = '';
+      return;
+    }
+
+    const provider = await this.store
+      .queryRecord('keymgmt/provider', {
+        backend: this.args.backend,
+        id,
+      })
+      .catch(() => {});
+    this.providerType = provider?.type;
+  }
+
+  destroyKey() {
+    if (this.isNewKey) {
+      // Delete record from store if it was created here
+      this.keyModel.destroyRecord().finally(() => {
+        this.keyModel = null;
+      });
+    }
+    this.isNewKey = false;
+    this.keyModel = null;
+  }
+
+  /**
+   *
+   * @param {DistributionData} rawData
+   * @returns POJO formatted how the distribution endpoint needs
+   */
+  formatData(rawData) {
+    const { key, provider, operations, protection } = rawData;
+    if (!key || !provider || !operations || operations.length === 0) return null;
+    return { key, provider, purpose: operations.join(','), protection };
+  }
+
+  distributeKey(backend, kms, key, data) {
+    let adapter = this.store.adapterFor('keymgmt/key');
+    return adapter
+      .distribute(backend, kms, key, data)
+      .then(() => {
+        this.flashMessages.success(`Successfully distributed key ${key} to ${kms}`);
+        this.router.transitionTo('vault.cluster.secrets.backend.show', key);
+      })
+      .catch((e) => {
+        this.flashMessages.danger(`Error distributing key: ${e.errors}`);
+      });
+  }
+
   @action
   handleProvider(evt) {
     this.formData.provider = evt.target.value;
@@ -193,19 +210,24 @@ export default class KeymgmtDistribute extends Component {
   }
 
   @action
-  createDistribution(evt) {
+  async createDistribution(evt) {
     evt.preventDefault();
-    // const { backend } = this.args;
-    // TODO: serialize formData
-    if (this.isNewKey) {
-      // TODO: Create new key before distributing
+    const { backend } = this.args;
+    const data = this.formatData(this.formData);
+    if (!data) {
+      this.flashMessages.danger(`Key, provider, and operations are all required`);
+      return;
     }
-    // this.distributeKey(backend, 'example-kms', 'example-key')
-    //   .then(() => {
-    //     console.log('success');
-    //   })
-    //   .catch((e) => {
-    //     console.log('error', e);
-    //   });
+    if (this.isNewKey) {
+      this.keyModel
+        .save()
+        .then(() => {
+          this.flashMessages.success(`Successfully created key ${this.keyModel.name}`);
+        })
+        .catch((e) => {
+          this.flashMessages.danger(`Error creating new key ${this.keyModel.name}: ${e.errors}`);
+        });
+    }
+    this.distributeKey(backend, 'example-kms', 'example-key', this.formatData(this.formData));
   }
 }

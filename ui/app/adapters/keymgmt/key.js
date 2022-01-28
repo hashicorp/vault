@@ -74,6 +74,12 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     return this._updateKey(backend, name, data);
   }
 
+  distribute(backend, kms, key, data) {
+    return this.ajax(`${this.buildURL()}/${backend}/kms/${encodePath(kms)}/key/${encodePath(key)}`, 'PUT', {
+      data: { ...data },
+    });
+  }
+
   async getProvider(backend, name) {
     try {
       const resp = await this.ajax(this.url(backend, name, 'PROVIDERS'), 'GET', {
