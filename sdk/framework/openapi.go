@@ -32,6 +32,20 @@ func NewOASDocument() *OASDocument {
 			},
 		},
 		Paths: make(map[string]*OASPathItem),
+		Servers: []OASServer{OASServer{
+			Url:         "{scheme}://{host}:{port}/{basePath}",
+			Description: "The Vault server",
+			Variables: OASServerVars{
+				Scheme: OASScheme{
+					Enum:        []string{"https", "http"},
+					Default:     "https",
+					Description: "URI Scheme, default https",
+				},
+				Port:     map[string]string{"default": "8200"},
+				BasePath: map[string]string{"default": "v1"},
+			},
+		},
+		},
 	}
 }
 
@@ -81,6 +95,7 @@ type OASDocument struct {
 	Version string                  `json:"openapi" mapstructure:"openapi"`
 	Info    OASInfo                 `json:"info"`
 	Paths   map[string]*OASPathItem `json:"paths"`
+	Servers []OASServer             `json:"servers"`
 }
 
 type OASInfo struct {
@@ -93,6 +108,24 @@ type OASInfo struct {
 type OASLicense struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
+}
+
+type OASServer struct {
+	Url         string        `json:"url"`
+	Description string        `json:"description"`
+	Variables   OASServerVars `json:"variables"`
+}
+
+type OASServerVars struct {
+	Scheme   OASScheme         `json:"scheme"`
+	Port     map[string]string `json:"port"`
+	BasePath map[string]string `json:"basePath"`
+}
+
+type OASScheme struct {
+	Enum        []string `json:"enum"`
+	Default     string   `json:"default"`
+	Description string   `json:"description"`
 }
 
 type OASPathItem struct {
