@@ -41,16 +41,16 @@ export default {
     inputChecked: attribute('checked', 'input[type=checkbox]'),
     selectValue: value('select'),
   }),
-  fillInTextarea: async function(name, value) {
+  fillInTextarea: async function (name, value) {
     return this.fields
-      .filter(field => {
+      .filter((field) => {
         return field.for.includes(name);
       })[0]
       .textarea(value);
   },
-  fillIn: async function(name, value) {
+  fillIn: async function (name, value) {
     return this.fields
-      .filter(field => {
+      .filter((field) => {
         return field.for.includes(name);
       })[0]
       .input(value);

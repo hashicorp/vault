@@ -228,6 +228,11 @@ this value.`,
 more than one, specify alternative names in
 the alt_names map using OID 2.5.4.5.`,
 	}
+	fields["not_after"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Set the not after field of the certificate with specified date value.
+                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
 
 	return fields
 }
@@ -237,32 +242,40 @@ the alt_names map using OID 2.5.4.5.`,
 func addCAKeyGenerationFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields["exported"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `Must be "internal" or "exported". If set to
+		Description: `Must be "internal", "exported" or "kms". If set to
 "exported", the generated private key will be
 returned. This is your *only* chance to retrieve
 the private key!`,
+		AllowedValues: []interface{}{"internal", "external", "kms"},
+	}
+
+	fields["managed_key_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The name of the managed key to use when the exported
+type is kms. Ignored for other types,but required when kms type is selected.`,
 	}
 
 	fields["key_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
-		Default: 2048,
-		Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
+		Default: 0,
+		Description: `The number of bits to use. Allowed values are
+0 (universal default); with rsa key_type: 2048 (default), 3072, or
+4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
+ed25519.`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Value: 2048,
+			Value: 0,
 		},
 	}
 
 	fields["signature_bits"] = &framework.FieldSchema{
-		Type: framework.TypeInt,
-		Default: 256,
+		Type:    framework.TypeInt,
+		Default: 0,
 		Description: `The number of bits to use in the signature
-algorithm. Defaults to 256 for SHA256.
-Set to 384 for SHA384 and 512 for SHA512.
-`,
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Value: 256,
+			Value: 0,
 		},
 	}
 

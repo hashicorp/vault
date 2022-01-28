@@ -696,8 +696,8 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 func testCore_MountTable_UpgradeToTyped_Common(
 	t *testing.T,
 	c *Core,
-	testType string) {
-
+	testType string,
+) {
 	var path string
 	var mt *MountTable
 	switch testType {
@@ -782,6 +782,9 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	entry, err = c.barrier.Get(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if entry == nil {
+		t.Fatal("nil value")
 	}
 
 	decompressedBytes, uncompressed, err := compressutil.Decompress(entry.Value)

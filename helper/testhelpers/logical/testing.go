@@ -449,6 +449,49 @@ func TestCheckAuth(policies []string) TestCheckFunc {
 	}
 }
 
+// TestCheckAuthEntityId is a helper to check that a request generated an
+// auth token with the expected entity_id.
+func TestCheckAuthEntityId(entity_id *string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp == nil || resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+
+		if *entity_id == "" {
+			// If we don't know what the entity_id should be, just save it
+			*entity_id = resp.Auth.EntityID
+		} else if resp.Auth.EntityID != *entity_id {
+			return fmt.Errorf("entity_id %s does not match the expected value of %s", resp.Auth.EntityID, *entity_id)
+		}
+
+		return nil
+	}
+}
+
+// TestCheckAuthEntityAliasMetadataName is a helper to check that a request generated an
+// auth token with the expected alias metadata.
+func TestCheckAuthEntityAliasMetadataName(key string, value string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp == nil || resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+
+		if key == "" || value == "" {
+			return fmt.Errorf("alias metadata key and value required")
+		}
+
+		name, ok := resp.Auth.Alias.Metadata[key]
+		if !ok {
+			return fmt.Errorf("metadata key %s does not exist, it should", key)
+		}
+
+		if name != value {
+			return fmt.Errorf("expected map value %s, got %s", value, name)
+		}
+		return nil
+	}
+}
+
 // TestCheckAuthDisplayName is a helper to check that a request generated a
 // valid display name.
 func TestCheckAuthDisplayName(n string) TestCheckFunc {

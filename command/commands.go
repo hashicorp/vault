@@ -116,6 +116,8 @@ const (
 	flagNameAllowedResponseHeaders = "allowed-response-headers"
 	// flagNameTokenType is the flag name used to force a specific token type
 	flagNameTokenType = "token-type"
+	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
+	flagNameAllowedManagedKeys = "allowed-managed-keys"
 )
 
 var (
@@ -339,6 +341,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace lock": func() (cli.Command, error) {
+			return &NamespaceAPILockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace unlock": func() (cli.Command, error) {
+			return &NamespaceAPIUnlockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
 				BaseCommand: getBaseCommand(),
@@ -448,6 +460,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator members": func() (cli.Command, error) {
+			return &OperatorMembersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -698,6 +715,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"kv metadata put": func() (cli.Command, error) {
 			return &KVMetadataPutCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"kv metadata patch": func() (cli.Command, error) {
+			return &KVMetadataPatchCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

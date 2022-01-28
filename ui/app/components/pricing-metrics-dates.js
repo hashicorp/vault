@@ -37,7 +37,7 @@ export default Component.extend({
   defaultSpan: 12,
   retentionMonths: 24,
 
-  startDate: computed('start', function() {
+  startDate: computed('start', function () {
     if (!this.start) return null;
     let date;
     try {
@@ -48,7 +48,7 @@ export default Component.extend({
       return null;
     }
   }),
-  endDate: computed('end', function() {
+  endDate: computed('end', function () {
     if (!this.end) return null;
     let date;
     try {
@@ -60,7 +60,7 @@ export default Component.extend({
     }
   }),
 
-  error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function() {
+  error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function () {
     if (!this.startDate) {
       return 'Start date is invalid. Please use format MM/yyyy';
     }

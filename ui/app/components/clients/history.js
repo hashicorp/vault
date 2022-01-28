@@ -1,17 +1,20 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { format } from 'date-fns';
 
 export default class HistoryComponent extends Component {
   max_namespaces = 10;
 
   @tracked selectedNamespace = null;
 
-  // Determine if we have client count data based on the current tab,
-  // since model is slightly different for current month vs history api
+  @tracked barChartSelection = false;
+
+  // Determine if we have client count data based on the current tab
   get hasClientData() {
     if (this.args.tab === 'current') {
-      return this.args.model.activity && this.args.model.activity.clients;
+      // Show the current numbers as long as config is on
+      return this.args.model.config?.enabled !== 'Off';
     }
     return this.args.model.activity && this.args.model.activity.total;
   }
@@ -31,7 +34,7 @@ export default class HistoryComponent extends Component {
       return null;
     }
     let dataList = this.args.model.activity.byNamespace;
-    return dataList.map(d => {
+    return dataList.map((d) => {
       return {
         name: d['namespace_id'],
         id: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
@@ -45,7 +48,7 @@ export default class HistoryComponent extends Component {
       return null;
     }
     let dataset = this.args.model.activity.byNamespace.slice(0, this.max_namespaces);
-    return dataset.map(d => {
+    return dataset.map((d) => {
       return {
         label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
         non_entity_tokens: d['counts']['non_entity_tokens'],
@@ -66,7 +69,7 @@ export default class HistoryComponent extends Component {
 
     results = fields.join(',') + '\n';
 
-    namespaces.forEach(function(item) {
+    namespaces.forEach(function (item) {
       let path = item.namespace_path !== '' ? item.namespace_path : 'root',
         total = item.counts.clients,
         unique = item.counts.distinct_entities,
@@ -77,9 +80,22 @@ export default class HistoryComponent extends Component {
     return results;
   }
 
+  // Return csv filename with start and end dates
+  get getCsvFileName() {
+    let defaultFileName = `clients-by-namespace`,
+      startDate =
+        this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
+      endDate =
+        this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
+    if (startDate && endDate) {
+      defaultFileName += `-${startDate}-${endDate}`;
+    }
+    return defaultFileName;
+  }
+
   // Get the namespace by matching the path from the namespace list
   getNamespace(path) {
-    return this.args.model.activity.byNamespace.find(ns => {
+    return this.args.model.activity.byNamespace.find((ns) => {
       if (path === 'root') {
         return ns.namespace_path === '';
       }
@@ -92,11 +108,17 @@ export default class HistoryComponent extends Component {
     // In case of search select component, value returned is an array
     if (Array.isArray(value)) {
       this.selectedNamespace = this.getNamespace(value[0]);
+      this.barChartSelection = false;
     } else if (typeof value === 'object') {
       // While D3 bar selection returns an object
       this.selectedNamespace = this.getNamespace(value.label);
-    } else {
-      this.selectedNamespace = null;
+      this.barChartSelection = true;
     }
+  }
+
+  @action
+  resetData() {
+    this.barChartSelection = false;
+    this.selectedNamespace = null;
   }
 }

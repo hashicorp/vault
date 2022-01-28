@@ -108,7 +108,9 @@ func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, d
 	if err != nil {
 		return nil, err
 	}
-
+	for i := range entries {
+		entries[i] = denormalizeSerial(entries[i])
+	}
 	return logical.ListResponse(entries), nil
 }
 
@@ -158,7 +160,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	}
 
 	if serial == "ca_chain" {
-		caInfo, err := fetchCAInfo(ctx, req)
+		caInfo, err := fetchCAInfo(ctx, b, req)
 		switch err.(type) {
 		case errutil.UserError:
 			response = logical.ErrorResponse(err.Error())

@@ -2,8 +2,8 @@
   <p.levelLeft>
     <h1 class="title is-3">
       Create
-      {{model.identityType}}
+      {{this.model.identityType}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-<Identity::EditForm @model={{model}} @onSave={{perform navAfterSave}} />
+<Identity::EditForm @model={{this.model}} @onSave={{perform this.navAfterSave}} />

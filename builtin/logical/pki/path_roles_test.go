@@ -592,6 +592,12 @@ func TestPki_RoleNoStore(t *testing.T) {
 		t.Fatalf("allowed_domains_template should not be set by default")
 	}
 
+	// By default, allowed_uri_sans_template should be `false`
+	allowedURISANsTemplate := resp.Data["allowed_uri_sans_template"].(bool)
+	if allowedURISANsTemplate {
+		t.Fatalf("allowed_uri_sans_template should not be set by default")
+	}
+
 	// Make sure that setting no_store to `true` works properly
 	roleReq.Operation = logical.UpdateOperation
 	roleReq.Path = "roles/testrole_nostore"

@@ -481,6 +481,15 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	return c.tokenStore.Lookup(ctx, token)
 }
 
+// CreateToken creates the given token in the core's token store.
+func (c *Core) CreateToken(ctx context.Context, entry *logical.TokenEntry) error {
+	if c.tokenStore == nil {
+		return errors.New("unable to create token with nil token store")
+	}
+
+	return c.tokenStore.create(ctx, entry)
+}
+
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
@@ -499,8 +508,7 @@ type TokenStore struct {
 	parentBarrierView   *BarrierView
 	rolesBarrierView    *BarrierView
 
-	expiration  *ExpirationManager
-	activityLog *ActivityLog
+	expiration *ExpirationManager
 
 	cubbyholeBackend *CubbyholeBackend
 
@@ -677,12 +685,6 @@ func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
 }
 
-// SetActivityLog injects the activity log to which all new
-// token creation events are reported.
-func (ts *TokenStore) SetActivityLog(a *ActivityLog) {
-	ts.activityLog = a
-}
-
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
 func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 	ns, err := namespace.FromContext(ctx)
@@ -743,6 +745,9 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 		aEntry, err := ts.lookupByAccessor(ctx, entry, true, false)
 		if err != nil {
 			resp.AddWarning(fmt.Sprintf("Found an accessor entry that could not be successfully decoded; associated error is %q", err.Error()))
+			continue
+		}
+		if aEntry == nil {
 			continue
 		}
 
@@ -831,6 +836,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		metrics.IncrCounter([]string{"token", "create_root"}, 1)
 	}
 
+	// Validate the inline policy if it's set
+	if entry.InlinePolicy != "" {
+		if _, err := ParseACLPolicy(tokenNS, entry.InlinePolicy); err != nil {
+			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
+		}
+	}
+
 	switch entry.Type {
 	case logical.TokenTypeDefault, logical.TokenTypeService:
 		// In case it was default, force to service
@@ -894,11 +906,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return err
 		}
 
-		// Update the activity log in case the token has no entity
-		if ts.activityLog != nil && entry.EntityID == "" {
-			ts.activityLog.HandleTokenCreation(entry)
-		}
-
 		return ts.storeCommon(ctx, entry, true)
 
 	case logical.TokenTypeBatch:
@@ -906,17 +913,20 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		// encrypt, skip persistence
 		entry.ID = ""
 		pEntry := &pb.TokenEntry{
-			Parent:       entry.Parent,
-			Policies:     entry.Policies,
-			Path:         entry.Path,
-			Meta:         entry.Meta,
-			DisplayName:  entry.DisplayName,
-			CreationTime: entry.CreationTime,
-			TTL:          int64(entry.TTL),
-			Role:         entry.Role,
-			EntityID:     entry.EntityID,
-			NamespaceID:  entry.NamespaceID,
-			Type:         uint32(entry.Type),
+			Parent:             entry.Parent,
+			Policies:           entry.Policies,
+			Path:               entry.Path,
+			Meta:               entry.Meta,
+			DisplayName:        entry.DisplayName,
+			CreationTime:       entry.CreationTime,
+			TTL:                int64(entry.TTL),
+			Role:               entry.Role,
+			EntityID:           entry.EntityID,
+			NamespaceID:        entry.NamespaceID,
+			Type:               uint32(entry.Type),
+			InternalMeta:       entry.InternalMeta,
+			InlinePolicy:       entry.InlinePolicy,
+			NoIdentityPolicies: entry.NoIdentityPolicies,
 		}
 
 		boundCIDRs := make([]string, len(entry.BoundCIDRs))
@@ -940,11 +950,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
-		}
-
-		// Update the activity log in case the token has no entity
-		if ts.activityLog != nil && entry.EntityID == "" {
-			ts.activityLog.HandleTokenCreation(entry)
 		}
 
 		return nil
@@ -1653,6 +1658,9 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 			if err != nil {
 				return fmt.Errorf("failed to find namespace for token revocation: %w", err)
 			}
+			if saltedNS == nil {
+				return errors.New("failed to find namespace for token revocation")
+			}
 
 			saltedCtx = namespace.ContextWithNamespace(ctx, saltedNS)
 		}
@@ -1736,12 +1744,12 @@ func (ts *TokenStore) handleCreateAgainstRole(ctx context.Context, req *logical.
 	return ts.handleCreateCommon(ctx, req, d, false, roleEntry)
 }
 
-func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, tainted bool) (accessorEntry, error) {
+func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, tainted bool) (*accessorEntry, error) {
 	var aEntry accessorEntry
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return aEntry, err
+		return nil, err
 	}
 
 	lookupID := id
@@ -1750,7 +1758,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 		if nsID != "" {
 			accessorNS, err := NamespaceByID(ctx, nsID, ts.core)
 			if err != nil {
-				return aEntry, err
+				return nil, err
 			}
 			if accessorNS != nil {
 				if accessorNS.ID != ns.ID {
@@ -1768,16 +1776,16 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 
 		lookupID, err = ts.SaltID(ctx, id)
 		if err != nil {
-			return aEntry, err
+			return nil, err
 		}
 	}
 
 	entry, err := ts.accessorView(ns).Get(ctx, lookupID)
 	if err != nil {
-		return aEntry, fmt.Errorf("failed to read index using accessor: %w", err)
+		return nil, fmt.Errorf("failed to read index using accessor: %w", err)
 	}
 	if entry == nil {
-		return aEntry, &logical.StatusBadRequest{Err: "invalid accessor"}
+		return nil, nil
 	}
 
 	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
@@ -1785,7 +1793,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 	if err != nil {
 		te, err := ts.lookupInternal(ctx, string(entry.Value), false, tainted)
 		if err != nil {
-			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %w", err)
+			return nil, fmt.Errorf("failed to look up token using accessor index: %w", err)
 		}
 		// It's hard to reason about what to do here if te is nil -- it may be
 		// that the token was revoked async, or that it's an old accessor index
@@ -1803,7 +1811,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 		aEntry.NamespaceID = namespace.RootNamespaceID
 	}
 
-	return aEntry, nil
+	return &aEntry, nil
 }
 
 // handleTidy handles the cleaning up of leaked accessor storage entries and
@@ -1954,6 +1962,10 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor index: %w", err))
 					continue
 				}
+				if accessorEntry == nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor index: invalid accessor"))
+					continue
+				}
 
 				// A valid accessor storage entry should always have a token ID
 				// in it. If not, it is an invalid accessor entry and needs to
@@ -2093,6 +2105,9 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 	if err != nil {
 		return nil, err
 	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
+	}
 
 	// Prepare the field data required for a lookup call
 	d := &framework.FieldData{
@@ -2134,6 +2149,9 @@ func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logica
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, false)
 	if err != nil {
 		return nil, err
+	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
 	}
 
 	// Prepare the field data required for a lookup call
@@ -2184,6 +2202,11 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, true)
 	if err != nil {
 		return nil, err
+	}
+	if aEntry == nil {
+		resp := &logical.Response{}
+		resp.AddWarning("No token found with this accessor")
+		return resp, nil
 	}
 
 	te, err := ts.Lookup(ctx, aEntry.TokenID)
@@ -3042,7 +3065,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	}
 
 	if out.EntityID != "" {
-		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID)
+		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID, out.NoIdentityPolicies)
 		if err != nil {
 			return nil, err
 		}
@@ -3343,6 +3366,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	oldEntryTokenType := entry.TokenType
 	if tokenTypeRaw, ok := data.Raw["token_type"]; ok {
 		tokenTypeStr = new(string)
+		if tokenTypeRaw == nil {
+			return logical.ErrorResponse("Invalid 'token_type' value: null"), nil
+		}
 		*tokenTypeStr = tokenTypeRaw.(string)
 		delete(data.Raw, "token_type")
 		entry.TokenType = logical.TokenTypeDefault

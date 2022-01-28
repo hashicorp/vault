@@ -2,13 +2,13 @@
   <nav class="navbar is-grouped-split">
     <div class="navbar-brand">
       <HomeLink @class="navbar-item has-text-white has-current-color-fill">
-        <Icon @glyph="vault-logo" @size="l" />
+        <Icon @name="vault-logo" />
       </HomeLink>
     </div>
   </nav>
 </header>
 <section class="section">
   <div class="container is-widescreen">
-    <NotFound @model={{model}} />
+    <NotFound @model={{this.model}} />
   </div>
 </section>

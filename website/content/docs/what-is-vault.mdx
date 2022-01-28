@@ -20,10 +20,7 @@ available features as well as internals.
 
 ## What is Vault?
 
-Vault is a tool for securely accessing _secrets_. A secret is anything that you
-want to tightly control access to, such as API keys, passwords, or certificates.
-Vault provides a unified interface to any secret, while providing tight access
-control and recording a detailed audit log.
+Vault is an identity-based **secrets** and encryption management system. A secret is anything that you want to tightly control access to, such as API encryption keys, passwords, or certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
 
 A modern system requires access to a multitude of secrets: database credentials,
 API keys for external services, credentials for service-oriented architecture
@@ -52,8 +49,8 @@ The key features of Vault are:
 
 - **Data Encryption**: Vault can encrypt and decrypt data without storing
   it. This allows security teams to define encryption parameters and
-  developers to store encrypted data in a location such as SQL without
-  having to design their own encryption methods.
+  developers to store encrypted data in a location such as a SQL database 
+  without having to design their own encryption methods.
 
 - **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
   with them. At the end of the lease, Vault will automatically revoke that

@@ -74,6 +74,12 @@ message Group {
 	string namespace_id = 13;
 }
 
+// LocalAliases holds the aliases belonging to an entity that are local to the
+// cluster.
+message LocalAliases {
+	repeated Alias aliases = 1;
+}
+
 // Entity represents an entity that gets persisted and indexed.
 // Entity is fundamentally composed of zero or many aliases.
 message Entity {
@@ -212,6 +218,18 @@ message Alias {
 	// Custom Metadata represents the custom data tied to this alias
 	// @inject_tag: sentinel:"-"
 	map<string, string> custom_metadata = 12;
+
+	// Local indicates if the alias only belongs to the cluster where it was
+	// created. If true, the alias will be stored in a location that is ignored by
+	// the performance replication subsystem.
+	// @inject_tag: sentinel:"-"
+	bool local = 13;
+
+	// LocalBucketKey is the identifying element of the location where this alias
+	// is stored in the storage packer. This helps in querying local aliases
+	// during invalidation of local aliases in performance standbys.
+	// @inject_tag: sentinel:"-"
+	string local_bucket_key = 14;
 }
 
 // Deprecated. Retained for backwards compatibility.

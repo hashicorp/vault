@@ -12,7 +12,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	rabbithole "github.com/michaelklishin/rabbit-hole"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -37,7 +37,7 @@ func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "rabbitmq",
-		ImageTag:      "3.8-management",
+		ImageTag:      "3-management",
 		ContainerName: "rabbitmq",
 		Ports:         []string{"15672/tcp"},
 	})

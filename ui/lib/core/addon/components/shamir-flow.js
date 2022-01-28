@@ -4,18 +4,20 @@ import { camelize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import layout from '../templates/components/shamir-flow';
+import { A } from '@ember/array';
 
+const pgpKeyFileDefault = () => ({ value: '' });
 const DEFAULTS = {
   key: null,
   loading: false,
-  errors: [],
+  errors: A(),
   threshold: null,
   progress: null,
   pgp_key: null,
   haveSavedPGPKey: false,
   started: false,
   generateWithPGP: false,
-  pgpKeyFile: { value: '' },
+  pgpKeyFile: pgpKeyFileDefault(),
   nonce: '',
 };
 
@@ -97,7 +99,7 @@ export default Component.extend(DEFAULTS, {
     }
   },
 
-  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function() {
+  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function () {
     let { generateWithPGP, pgp_key, haveSavedPGPKey } = this;
     if (!generateWithPGP && !pgp_key) {
       return 'chooseMethod';
@@ -144,9 +146,10 @@ export default Component.extend(DEFAULTS, {
     const adapter = this.store.adapterFor('cluster');
     const method = adapter[action];
 
-    method
-      .call(adapter, data, { checkStatus })
-      .then(resp => this.actionSuccess(resp), (...args) => this.actionError(...args));
+    method.call(adapter, data, { checkStatus }).then(
+      (resp) => this.actionSuccess(resp),
+      (...args) => this.actionError(...args)
+    );
   },
 
   actions: {

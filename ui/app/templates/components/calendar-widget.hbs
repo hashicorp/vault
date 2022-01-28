@@ -1,0 +1,113 @@
+<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+  <D.Trigger
+    data-test-popup-menu-trigger="true"
+    class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+    @htmlTag="button"
+  >
+    {{@startTimeDisplay}}
+    -
+    {{@endTimeDisplay}}
+    <Chevron @direction="down" @isButton={{true}} />
+  </D.Trigger>
+  <D.Content class="popup-menu-content calendar-content">
+    <nav class="box menu">
+      <div class="calendar-title popup-menu-item">Date options</div>
+      <ul class="menu-list">
+        <li class="action">
+          <button
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            {{on "click" this.selectCurrentBillingPeriod}}
+          >
+            Current billing period
+          </button>
+        </li>
+        <li class="action">
+          <button
+            class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
+            type="button"
+            {{on "click" this.toggleShowCalendar}}
+          >
+            <div class="level is-mobile">
+              <span class="level-left">Custom end month</span>
+              <Chevron class="has-text-grey-light level-right" />
+            </div>
+          </button>
+        </li>
+        <li class="action">
+          <button
+            class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showSingleMonth " is-active")}}
+            type="button"
+            {{on "click" this.toggleSingleMonth}}
+          >
+            <div class="level is-mobile">
+              <span class="level-left">Single Month</span>
+              <Chevron class="has-text-grey-light level-right" />
+            </div>
+          </button>
+        </li>
+      </ul>
+    </nav>
+    {{#if this.showCalendar}}
+      <div class="calendar-widget-container">
+        <div class="select-year">
+          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
+            <Chevron @direction="left" @size="s" class="has-text-grey" />
+          </button>
+          <p>{{this.displayYear}}</p>
+          <button
+            type="button"
+            class="button is-transparent padding-right"
+            disabled={{this.disableFutureYear}}
+            {{on "click" this.addYear}}
+          >
+            <Chevron @direction="right" @size="s" class="has-text-grey" />
+          </button>
+        </div>
+        <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
+          {{#each this.arrayOfMonths as |month index|}}
+            <button
+              type="button"
+              {{on "click" (fn this.selectEndMonth index this.displayYear)}}
+              class="is-month-list"
+              id={{concat index "-" this.displayYear}}
+            >
+              {{month}}
+            </button>
+          {{/each}}
+        </div>
+      </div>
+    {{/if}}
+
+    {{#if this.showSingleMonth}}
+      <div class="calendar-widget-container">
+        <div class="select-year">
+          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
+            <Chevron @direction="left" @size="s" class="has-text-grey" />
+          </button>
+          <p>{{this.displayYear}}</p>
+          <button
+            type="button"
+            class="button is-transparent padding-right"
+            disabled={{this.disableFutureYear}}
+            {{on "click" this.addYear}}
+          >
+            <Chevron @direction="right" @size="s" class="has-text-grey" />
+          </button>
+        </div>
+        <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
+          {{#each this.arrayOfMonths as |month index|}}
+            <button
+              type="button"
+              {{on "click" (fn this.selectSingleMonth index this.displayYear)}}
+              class="is-month-list"
+              id={{concat index "-" this.displayYear "-single"}}
+            >
+              {{month}}
+            </button>
+          {{/each}}
+        </div>
+      </div>
+    {{/if}}
+  </D.Content>
+</BasicDropdown>
