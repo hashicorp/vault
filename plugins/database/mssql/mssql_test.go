@@ -335,7 +335,7 @@ func TestSQLSanitization(t *testing.T) {
 
 	db := new()
 
-	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	dbtesting.AssertInitialize(t, db, initReq)
 	defer dbtesting.AssertClose(t, db)
 
 	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
