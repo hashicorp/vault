@@ -122,14 +122,14 @@ export default class Dashboard extends Component {
     }
     // clicked "Current Billing period" in the calendar widget
     if (dateType === 'reset') {
-      this.startTimeRequested = this.args.model.startTimeFromResponse;
-      this.endTimeRequested = this.endTimeFromResponse = null;
+      this.startTimeRequested = this.args.model.startTimeFromLicense;
+      this.endTimeRequested = null;
     }
     // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
       this.startTimeRequested = `${monthIndex + 1},${year}`; // "1, 2021"
-      this.endTimeRequested = this.endTimeFromResponse = null;
+      this.endTimeRequested = null;
     }
     // clicked "Custom End Month" from the calendar-widget
     if (dateType === 'endTime') {
