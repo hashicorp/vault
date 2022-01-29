@@ -150,7 +150,7 @@ export default class HorizontalBarChart extends Component {
       .on('mouseover', (data) => {
         let hoveredElement = actionBars.filter((bar) => bar.label === data.label).node();
         this.tooltipTarget = hoveredElement;
-        this.tooltipText = `${Math.round((data.clients * 100) / this.args.clientTotals.clients)}% 
+        this.tooltipText = `${Math.round((data.clients * 100) / this.args.totalUsageCounts.clients)}% 
         of total client counts:
         ${data.entity_clients} entity clients, ${data.non_entity_clients} non-entity clients.`;
 

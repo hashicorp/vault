@@ -17,7 +17,7 @@
     <Clients::HorizontalBarChart
       @dataset={{this.totalClientsData}}
       @chartLegend={{@chartLegend}}
-      @clientTotals={{@runningTotals}}
+      @totalUsageCounts={{@totalUsageCounts}}
     />
   </div>
 
@@ -26,12 +26,12 @@
   </div>
 
   <div class="data-details-top">
-    <h3 class="data-details">Top {{lowercase this.attributionBreakdown}}</h3>
+    <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
     <p class="data-details">{{this.topClientCounts.label}}</p>
   </div>
 
   <div class="data-details-bottom">
-    <h3 class="data-details">Clients in {{lowercase this.attributionBreakdown}}</h3>
+    <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
     <p class="data-details">{{this.topClientCounts.clients}}</p>
   </div>
 

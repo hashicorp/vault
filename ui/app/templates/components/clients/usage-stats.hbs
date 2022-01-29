@@ -15,7 +15,7 @@
     <div class="column" data-test-client-count-stats>
       <StatText
         @label="Total clients"
-        @value={{or @runningTotals.clients "0"}}
+        @value={{or @totalUsageCounts.clients "0"}}
         @size="l"
         @subText="The sum of entity clientIDs and non-entity clientIDs; this is Vault’s primary billing metric."
       />
@@ -24,7 +24,7 @@
       <StatText
         class="column"
         @label="Entity clients"
-        @value={{or @runningTotals.entity_clients "0"}}
+        @value={{or @totalUsageCounts.entity_clients "0"}}
         @size="l"
         @subText="Representations of a particular user, client, or application that created a token via login."
       />
@@ -33,7 +33,7 @@
       <StatText
         class="column"
         @label="Non-entity clients"
-        @value={{or @runningTotals.non_entity_clients "0"}}
+        @value={{or @totalUsageCounts.non_entity_clients "0"}}
         @size="l"
         @subText="Clients created with a shared set of permissions, but not associated with an entity. "
       />

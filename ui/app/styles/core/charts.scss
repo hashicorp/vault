@@ -54,11 +54,6 @@
         border-color: darken($ui-gray-300, 5%);
       }
     }
-    > a {
-      &:hover {
-        text-decoration: underline;
-      }
-    }
   }
 }
 

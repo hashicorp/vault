@@ -12,7 +12,7 @@ import { inject as service } from '@ember/service';
  *  <Clients::Attribution
  *    @chartLegend={{this.chartLegend}}
  *    @topTenNamespaces={{this.topTenNamespaces}}
- *    @runningTotals={{this.runningTotals}}
+ *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @selectedNamespace={{this.selectedNamespace}}
  *    @startTimeDisplay={{this.startTimeDisplay}}
  *    @endTimeDisplay={{this.endTimeDisplay}}
@@ -22,7 +22,7 @@ import { inject as service } from '@ember/service';
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
  * @param {array} topTenNamespaces - (passed to child chart) array of top 10 namespace objects
- * @param {object} runningTotals - object with total client counts for chart tooltip text
+ * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {string} selectedNamespace - namespace selected from filter bar
  * @param {string} startTimeDisplay - start date for CSV modal
  * @param {string} endTimeDisplay - end date for CSV modal
@@ -44,11 +44,7 @@ export default class Attribution extends Component {
   }
 
   get totalClientsData() {
-    // get dataset for bar chart displaying top 10 namespaces/mounts with highest # of total clients
-    // TODO CMB slice data to top 10 here instead of serializer?
-    return this.isSingleNamespace
-      ? this.filterByNamespace(this.args.selectedNamespace)
-      : this.args.topTenNamespaces;
+    return this.args.totalClientsData;
   }
 
   get topClientCounts() {
@@ -57,8 +53,8 @@ export default class Attribution extends Component {
   }
 
   get attributionBreakdown() {
-    // display 'Auth method' or 'NAMESPACE' respectively in CSV filename
-    return this.isSingleNamespace ? 'AUTH_METHOD' : 'NAMESPACE';
+    // display text for hbs and csv file
+    return this.isSingleNamespace ? 'auth method' : 'namespace';
   }
 
   get chartText() {
@@ -101,7 +97,7 @@ export default class Attribution extends Component {
       ];
 
     // each array will be a row in the csv file
-    if (this.attributionBreakdown === 'AUTH_METHOD') {
+    if (this.isSingleNamespace) {
       graphData.forEach((mount) => {
         csvData.push(['', mount.label, mount.clients, mount.entity_clients, mount.non_entity_clients]);
       });
@@ -122,16 +118,11 @@ export default class Attribution extends Component {
   }
 
   get getCsvFileName() {
-    let endRange = this.args.endTimeDisplay ? `-${this.args.endTimeDisplay}` : '';
-    let activityDateRange = `${this.args.startTimeDisplay + endRange}`;
-    return activityDateRange
-      ? `CLIENTS_BY_${this.attributionBreakdown}_${activityDateRange}`
-      : `CLIENTS_BY_${this.attributionBreakdown}_${new Date()}`;
-  }
-  // HELPERS
-  filterByNamespace(namespace) {
-    // return top 10 mounts for a namespace
-    return this.args.topTenNamespaces.find((ns) => ns.label === namespace).mounts.slice(0, 10);
+    let endRange = this.isDateRange ? `-${this.args.endTimeDisplay}` : '';
+    let csvDateRange = `${this.args.startTimeDisplay + endRange}`;
+    return this.isSingleNamespace
+      ? `clients_by_auth_method_${csvDateRange}`
+      : `clients_by_namespace_${csvDateRange}`;
   }
 
   // ACTIONS

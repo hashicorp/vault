@@ -24,8 +24,8 @@ export default class Dashboard extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  // TODO remove this adapter variable? or set to /clients/activity ?
-  adapter = this.store.adapterFor('clients/new-init-activity');
+
+  adapter = this.store.adapterFor('clients/activity');
 
   @service store;
 
@@ -36,7 +36,7 @@ export default class Dashboard extends Component {
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
-  // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
+  // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view
 
   get startTimeDisplay() {
     if (!this.startTime) {
@@ -60,36 +60,27 @@ export default class Dashboard extends Component {
     return !isSameMonth(new Date(this.startTime), new Date(this.endTime));
   }
 
-  // Determine if we have client count data based on the current tab
-  get hasClientData() {
-    if (this.args.tab === 'current') {
-      // Show the current numbers as long as config is on
-      return this.args.model.config?.enabled !== 'Off';
-    }
-    return this.args.model.activity && this.args.model.activity.total;
-  }
-
   // top level TOTAL client counts from response for given date range
-  get runningTotals() {
-    if (!this.args.model.activity || !this.args.model.activity.total) {
-      return null;
-    }
-    return this.args.model.activity.total;
+  get totalUsageCounts() {
+    return this.selectedNamespace
+      ? this.filterByNamespace(this.selectedNamespace)
+      : this.args.model.activity?.total;
   }
 
-  // for horizontal bar chart in Attribution component
-  get topTenNamespaces() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
-    }
-    return this.args.model.activity.byNamespace;
+  // by namespace client count data for date range
+  get byNamespaceActivity() {
+    return this.args.model.activity?.byNamespace;
+  }
+
+  // for horizontal bar chart in attribution component
+  get topTenChartData() {
+    return this.selectedNamespace
+      ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
+      : this.byNamespaceActivity.slice(0, 10);
   }
 
   get responseTimestamp() {
-    if (!this.args.model.activity || !this.args.model.activity.responseTimestamp) {
-      return null;
-    }
-    return this.args.model.activity.responseTimestamp;
+    return this.args.model.activity?.responseTimestamp;
   }
 
   @action
@@ -147,5 +138,10 @@ export default class Dashboard extends Component {
   @action
   selectStartYear(year) {
     this.startYear = year;
+  }
+
+  // HELPERS
+  filterByNamespace(namespace) {
+    return this.byNamespaceActivity.find((ns) => ns.label === namespace);
   }
 }
