@@ -13,13 +13,7 @@ export default ApplicationSerializer.extend({
       // we don't want client counts nested within the 'counts' object for stacked charts
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
 
-      // homogenize client naming for all namespaces
-      if (Object.keys(flattenedNs).includes('distinct_entities', 'non_entity_tokens')) {
-        flattenedNs.entity_clients = flattenedNs.distinct_entities;
-        flattenedNs.non_entity_clients = flattenedNs.non_entity_tokens;
-        delete flattenedNs.distinct_entities;
-        delete flattenedNs.non_entity_tokens;
-      }
+      this.homogenizeClientNaming(flattenedNs);
 
       // if mounts attribution unavailable, mounts will be undefined
       flattenedNs.mounts = ns.mounts?.map((mount) => {
@@ -36,19 +30,29 @@ export default ApplicationSerializer.extend({
     });
   },
 
+  homogenizeClientNaming(object) {
+    if (Object.keys(object).includes('distinct_entities', 'non_entity_tokens')) {
+      object.entity_clients = object.distinct_entities;
+      object.non_entity_clients = object.non_entity_tokens;
+      delete object.distinct_entities;
+      delete object.non_entity_tokens;
+    }
+    return object;
+  },
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    let { data } = payload;
-    let { clients, distinct_entities, non_entity_tokens } = data;
+    let total = payload.data;
+    this.homogenizeClientNaming(total);
     let response_timestamp = formatISO(new Date());
     let transformedPayload = {
       ...payload,
       response_timestamp,
-      by_namespace: this.flattenDataset(data.by_namespace),
+      by_namespace: this.flattenDataset(payload.data.by_namespace),
       // nest within 'total' object to mimic /activity response shape
       total: {
-        clients,
-        entity_clients: distinct_entities,
-        non_entity_clients: non_entity_tokens,
+        clients: total.clients,
+        entity_clients: total.entity_clients,
+        non_entity_clients: total.non_entity_clients,
       },
     };
     delete payload.data.by_namespace;

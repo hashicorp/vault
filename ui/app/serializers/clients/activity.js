@@ -11,14 +11,7 @@ export default ApplicationSerializer.extend({
       let flattenedNs = {};
       // we don't want client counts nested within the 'counts' object for stacked charts
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
-
-      // homogenize client naming for all namespaces
-      if (Object.keys(flattenedNs).includes('distinct_entities', 'non_entity_tokens')) {
-        flattenedNs.entity_clients = flattenedNs.distinct_entities;
-        flattenedNs.non_entity_clients = flattenedNs.non_entity_tokens;
-        delete flattenedNs.distinct_entities;
-        delete flattenedNs.non_entity_tokens;
-      }
+      this.homogenizeClientNaming(flattenedNs);
 
       // if mounts attribution unavailable, mounts will be undefined
       flattenedNs.mounts = ns.mounts?.map((mount) => {
@@ -27,12 +20,21 @@ export default ApplicationSerializer.extend({
         Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
         return flattenedMount;
       });
-
       return {
         label,
         ...flattenedNs,
       };
     });
+  },
+
+  homogenizeClientNaming(object) {
+    if (Object.keys(object).includes('distinct_entities', 'non_entity_tokens')) {
+      object.entity_clients = object.distinct_entities;
+      object.non_entity_clients = object.non_entity_tokens;
+      delete object.distinct_entities;
+      delete object.non_entity_tokens;
+    }
+    return object;
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -41,6 +43,7 @@ export default ApplicationSerializer.extend({
       ...payload,
       response_timestamp,
       by_namespace: this.flattenDataset(payload.data.by_namespace),
+      total: this.homogenizeClientNaming(payload.data.total),
     };
     delete payload.data.by_namespace;
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
