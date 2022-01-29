@@ -3,6 +3,6 @@
   text-decoration: none;
   font-weight: $font-weight-semibold;
   &:hover {
-    text-decoration: underline;
+    text-decoration: underline !important;
   }
 }
