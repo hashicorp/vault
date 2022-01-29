@@ -670,6 +670,9 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 	if err != nil {
 		return nil, err
 	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
+	}
 
 	d.Raw["token"] = aEntry.TokenID
 	return b.handleCapabilities(ctx, req, d)
@@ -1624,10 +1627,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
-		AllowedManagedKeys := rawVal.([]string)
+		allowedManagedKeys := rawVal.([]string)
 
 		oldVal := mountEntry.Config.AllowedManagedKeys
-		mountEntry.Config.AllowedManagedKeys = AllowedManagedKeys
+		mountEntry.Config.AllowedManagedKeys = allowedManagedKeys
 
 		// Update the mount table
 		var err error
@@ -1928,6 +1931,40 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	}
 
 	return resp, nil
+}
+
+func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
+
+	for _, entry := range b.Core.auth.Entries {
+		// Only show entry for current namespace
+		if entry.Namespace().Path != ns.Path || entry.Path != path {
+			continue
+		}
+
+		cont, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		if err != nil {
+			return nil, err
+		}
+		if cont {
+			continue
+		}
+
+		return &logical.Response{
+			Data: mountInfo(entry),
+		}, nil
+	}
+
+	return logical.ErrorResponse("No auth engine at %s", path), nil
 }
 
 func expandStringValsWithCommas(configMap map[string]interface{}) error {
@@ -2341,6 +2378,16 @@ const (
 	minPasswordLength = 4
 	maxPasswordLength = 100
 )
+
+// handlePoliciesPasswordList returns the list of password policies
+func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	keys, err := req.Storage.List(ctx, "password_policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(keys), nil
+}
 
 // handlePoliciesPasswordSet saves/updates password policies
 func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {

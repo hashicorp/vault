@@ -751,7 +751,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	// Check if an entity already exists for the given alias
-	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
+	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
 	if err != nil {
 		return nil, err
 	}
@@ -838,8 +838,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	txn.Commit()
-
-	return entity, nil
+	return entity.Clone()
 }
 
 // changedAliasIndex searches an entity for changed alias metadata.

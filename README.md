@@ -36,7 +36,7 @@ The key features of Vault are:
 
 * **Data Encryption**: Vault can encrypt and decrypt data without storing
   it. This allows security teams to define encryption parameters and
-  developers to store encrypted data in a location such as SQL without
+  developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
@@ -59,7 +59,7 @@ check out our [Getting Started guides](https://learn.hashicorp.com/collections/v
 on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault)
 to continue your learning.
 
-For examples of how to interact with Vault from inside your application in different programming languages, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo.
+For examples of how to interact with Vault from inside your application in different programming languages, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo. An out-of-the-box [sample application](https://github.com/hashicorp/hello-vault-go) is also available.
 
 Show off your Vault knowledge by passing a certification exam. Visit the
 [certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)

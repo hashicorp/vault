@@ -1,4 +1,4 @@
-// +build !race
+//go:build !race
 
 package command
 
@@ -521,7 +521,6 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 	if exp.Status != act.Status {
 		if act.Status != diagnose.OkStatus {
 			return fmt.Errorf("section %s, status mismatch: %s vs %s, got error %s", exp.Name, exp.Status, act.Status, act.Message)
-
 		}
 		return fmt.Errorf("section %s, status mismatch: %s vs %s", exp.Name, exp.Status, act.Status)
 	}

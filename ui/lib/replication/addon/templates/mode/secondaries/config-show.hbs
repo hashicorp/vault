@@ -25,7 +25,7 @@
 </div>
 {{#if this.model.config.mode}}
   <div class="box is-fullwidth is-shadowless">
-    <InfoTableRow @label="Mode" @value={{this.model.config.mode}} @data-test-mount-config-mode={{true}} />
+    <InfoTableRow @label="Mode" @value={{this.model.config.mode}} data-test-mount-config-mode={{true}} />
     <InfoTableRow @label="Paths" @value={{this.model.config.paths}}>
       <ul class="list--comma" data-test-mount-config-paths={{true}}>
         {{#each this.model.config.paths as |path|}}

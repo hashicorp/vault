@@ -189,7 +189,8 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// If storing the certificate and on a performance standby, forward this request on to the primary
-	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby|consts.ReplicationPerformanceSecondary) {
+	// Allow performance secondaries to generate and store certificates locally to them.
+	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
 	}
 
@@ -200,7 +201,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(

@@ -18,6 +18,5 @@ func handleUnAuthenticatedInFlightRequest(core *vault.Core) http.Handler {
 		currentInFlightReqMap := core.LoadInFlightReqData()
 
 		respondOk(w, currentInFlightReqMap)
-
 	})
 }

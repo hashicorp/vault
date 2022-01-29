@@ -2777,7 +2777,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 	}
 }
 
-//TestActivityLog_PrecomputeNonEntityTokensWithID is the same test as
+// TestActivityLog_PrecomputeNonEntityTokensWithID is the same test as
 // TestActivityLog_Precompute, except all the clients are tokens without
 // entities. This ensures the deduplication logic and separation logic between
 // entities and TWE clients is correct.
@@ -3382,7 +3382,6 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 		if int(entityCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
 			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(entityCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
-
 		}
 		if int(tokenCounts[clientCount.NamespaceID]) != clientCount.Counts.NonEntityTokens {
 			t.Errorf("bad token count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(tokenCounts[clientCount.NamespaceID]), clientCount.Counts.NonEntityTokens)

@@ -144,14 +144,14 @@ Any valid URI is accepted, these values support globbing.`,
 				},
 			},
 
-			"allowed_uri_sans_template": &framework.FieldSchema{
+			"allowed_uri_sans_template": {
 				Type: framework.TypeBool,
 				Description: `If set, Allowed URI SANs can be specified using identity template policies.
 				Non-templated URI SANs are also permitted.`,
 				Default: false,
 			},
 
-			"allowed_other_sans": &framework.FieldSchema{
+			"allowed_other_sans": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -213,7 +213,7 @@ protection use. Defaults to false.`,
 ed25519.`,
 			},
 
-			"signature_bits": &framework.FieldSchema{
+			"signature_bits": {
 				Type:    framework.TypeInt,
 				Default: 0,
 				Description: `The number of bits to use in the signature
@@ -222,7 +222,7 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 			},
 
-			"key_usage": &framework.FieldSchema{
+			"key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 				Description: `A comma-separated string or list of key usages (not extended

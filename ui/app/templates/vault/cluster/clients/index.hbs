@@ -7,6 +7,7 @@
 </PageHeader>
 
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
+  {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
   <nav class="tabs">
     <ul>
       {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
@@ -24,8 +25,8 @@
           Current month
         </LinkTo>
       </LinkTo>
-      <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="history"}} @tagName="li" @activeClass="is-active">
-        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="history"}} data-test-usage-tab={{true}}>
+      <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="dashboard"}} @tagName="li" @activeClass="is-active">
+        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="dashboard"}} data-test-usage-tab={{true}}>
           Monthly history
         </LinkTo>
       </LinkTo>
@@ -61,6 +62,8 @@
     </ToolbarActions>
   </Toolbar>
   <Clients::Config @model={{this.model.config}} @isLoading={{this.currentlyLoading}} />
-{{else}}
-  <Clients::History @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
+{{else if (eq this.tab "current")}}
+  <Clients::Current @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
+{{else if (eq this.tab "dashboard")}}
+  <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
 {{/if}}

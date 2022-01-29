@@ -1,4 +1,4 @@
-import { currentRouteName, settled, visit } from '@ember/test-helpers';
+import { currentRouteName, settled, visit, waitUntil } from '@ember/test-helpers';
 import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
@@ -68,7 +68,10 @@ module('Acceptance | secrets/pki/create', function (hooks) {
     await settled();
     await showPage.deleteRole();
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects to list page');
+    assert.ok(
+      await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.list-root'),
+      'redirects to list page'
+    );
     assert.ok(listPage.backendIsEmpty, 'no roles listed');
   });
 });

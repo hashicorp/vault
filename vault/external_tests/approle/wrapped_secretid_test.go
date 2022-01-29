@@ -13,7 +13,6 @@ import (
 )
 
 func TestApproleSecretId_Wrapped(t *testing.T) {
-
 	var err error
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
@@ -70,11 +69,9 @@ func TestApproleSecretId_Wrapped(t *testing.T) {
 	if wrappedAccessor != unwrappedAccessor {
 		t.Fatalf("Expected wrappedAccessor (%v) to match wrapped secret_id_accessor (%v)", wrappedAccessor, unwrappedAccessor)
 	}
-
 }
 
 func TestApproleSecretId_NotWrapped(t *testing.T) {
-
 	var err error
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
@@ -117,5 +114,4 @@ func TestApproleSecretId_NotWrapped(t *testing.T) {
 	if resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
 		t.Fatalf("WrappedAccessor unexpectedly set")
 	}
-
 }

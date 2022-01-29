@@ -435,7 +435,7 @@ func TestRedshift_CustomUsernameTemplate(t *testing.T) {
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
+		"connection_url":    connURL,
 		"username_template": "{{.DisplayName}}-{{random 10}}",
 	}
 

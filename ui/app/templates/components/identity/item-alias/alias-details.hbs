@@ -1,4 +1,4 @@
-<InfoTableRow @label="Name" @value={{@model.name}} @data-test-alias-name={{true}} />
+<InfoTableRow @label="Name" @value={{@model.name}} data-test-alias-name={{true}} />
 <InfoTableRow @label="ID" @value={{@model.id}} />
 <InfoTableRow @label={{if (eq @model.identityType "entity-alias") "Entity ID" "Group ID"}} @value={{this.model.canonicalId}}>
   <LinkTo
