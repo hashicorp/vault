@@ -3,7 +3,6 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isSameMonth } from 'date-fns';
-import { zonedTimeToUtc } from 'date-fns-tz'; // https://github.com/marnusw/date-fns-tz#zonedtimetoutc
 
 export default class Dashboard extends Component {
   arrayOfMonths = [
@@ -25,7 +24,6 @@ export default class Dashboard extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  adapter = this.store.adapterFor('clients/activity');
 
   // needed for startTime modal picker
   months = Array.from({ length: 12 }, (item, i) => {
@@ -48,14 +46,8 @@ export default class Dashboard extends Component {
   @tracked selectedNamespace = null;
   // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
-  // HELPER
-  utcDate(dateObject) {
-    // To remove the timezone of the local user (API returns and expects Zulu time/UTC) we need to use a method provided by date-fns-tz to return the UTC date
-    let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // browser API method
-    return zonedTimeToUtc(dateObject, timeZone);
-  }
-
   get startTimeDisplay() {
+    // changes 3,2021 to March, 2021
     if (!this.startTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
@@ -66,6 +58,7 @@ export default class Dashboard extends Component {
   }
 
   get endTimeDisplay() {
+    // changes 3,2021 to March, 2021
     if (!this.endTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
