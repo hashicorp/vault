@@ -209,16 +209,26 @@ kubectl create clusterrolebinding vault-client-auth-delegator \
 
 #### Continue using long-lived tokens
 
-The default Kubernetes secret created for a service account is still long lived,
-and can be used as the `token_reviewer_jwt` without needing to refresh it. To
-find the secret, run:
+You can create a long-lived secret using the instructions [here][k8s-create-secret]
+and use that as the `token_reviewer_jwt`. In this example, the `vault` service
+account would need the `system:auth-delegator` ClusterRole:
 
 ```bash
-kubectl get secret "$(kubectl get serviceaccount default -o jsonpath='{.secrets[0].name}')"
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-k8s-auth-secret
+  annotations:
+    kubernetes.io/service-account.name: vault
+type: kubernetes.io/service-account-token
+EOF
 ```
 
-Using this maintains previous workflows but does not fully take advantage of the
-new default short-lived tokens.
+Using this maintains previous workflows but does not benefit from the improved
+security posture of short-lived tokens.
+
+[k8s-create-secret]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#manually-create-a-service-account-api-token
 
 #### Use JWT auth
 
