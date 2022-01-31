@@ -42,6 +42,11 @@ export default Route.extend(ClusterRoute, {
     }
   },
 
+  rfc33395ToMonthYear(timestamp) {
+    // return [2021, 04 (e.g. 2021 March, make 0-indexed)
+    return [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1];
+  },
+
   async model() {
     let config = this.store.queryRecord('clients/config', {}).catch((e) => {
       console.debug(e);
@@ -52,14 +57,9 @@ export default Route.extend(ClusterRoute, {
     let license = await this.getLicense(); // get default start_time
     let activity = await this.getActivity(license.startTime); // returns client counts using license start_time.
     let monthly = await this.getMonthly(); // returns the partial month endpoint
+    let endTimeFromLicense = this.rfc33395ToMonthYear(activity.endTime);
+    let startTimeFromLicense = this.rfc33395ToMonthYear(license.startTime);
 
-    // all times to the component must be mm,yyyy ex: "1,2021"
-    let endTimeFromLicense = `${activity.endTime.split('-')[1].replace(/^0+/, '')},${
-      activity.endTime.split('-')[0]
-    }`;
-    let startTimeFromLicense = `${license.startTime.split('-')[1].replace(/^0+/, '')},${
-      license.startTime.split('-')[0]
-    }`;
     return hash({
       // ARG TODO will remove "hash" once remove "activity," which currently relies on it.
       activity,

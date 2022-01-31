@@ -39,7 +39,7 @@ export default class Dashboard extends Component {
   @tracked isEditStartMonthOpen = false;
   @tracked responseRangeDiffMessage = null;
   @tracked startTimeRequested = null;
-  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: "3,2021"
+  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
   @tracked endTimeFromResponse = this.args.model.endTimeFromLicense;
   @tracked startMonth = null;
   @tracked startYear = null;
@@ -52,8 +52,9 @@ export default class Dashboard extends Component {
       // otherwise will return date of new Date(null)
       return null;
     }
-    let month = Number(this.startTimeFromResponse.split(',')[0]) - 1;
-    let year = this.startTimeFromResponse.split(',')[1];
+    // '2021, 2' is March 2021
+    let month = this.startTimeFromResponse[1];
+    let year = this.startTimeFromResponse[0];
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
@@ -63,8 +64,8 @@ export default class Dashboard extends Component {
       // otherwise will return date of new Date(null)
       return null;
     }
-    let month = Number(this.endTimeFromResponse.split(',')[0]) - 1;
-    let year = this.endTimeFromResponse.split(',')[1];
+    let month = this.endTimeFromResponse[1];
+    let year = this.endTimeFromResponse[0];
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
@@ -121,14 +122,14 @@ export default class Dashboard extends Component {
     // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
-      this.startTimeRequested = `${monthIndex + 1},${year}`; // "1, 2021"
+      this.startTimeRequested = `${year}, ${monthIndex}`; // '2021, 0' (e.g. January 2021) // TODO CHANGE TO ARRAY
       this.endTimeRequested = null;
     }
     // clicked "Custom End Month" from the calendar-widget
     if (dateType === 'endTime') {
       // use the currently selected startTime for your startTimeRequested.
       this.startTimeRequested = this.startTimeFromResponse;
-      this.endTimeRequested = `${month},${year}`; // "1, 2021"
+      this.endTimeRequested = `${year}, ${month}`;
     }
 
     try {
@@ -140,7 +141,6 @@ export default class Dashboard extends Component {
         // this.endTime will be null and use this to show EmptyState message on the template.
         return;
       }
-
       this.startTimeFromResponse = response.formattedStartTime;
       this.endTimeFromResponse = response.formattedEndTime;
       if (this.startTimeRequested !== this.startTimeFromResponse) {

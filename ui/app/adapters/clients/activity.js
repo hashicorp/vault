@@ -1,25 +1,23 @@
 import Application from '../application';
-import { zonedTimeToUtc } from 'date-fns-tz'; // https://github.com/marnusw/date-fns-tz#zonedtimetoutc
+import { formatRFC3339 } from 'date-fns';
 
 export default Application.extend({
-  checkTimeType(query) {
+  formatTimeParams(query) {
     let { start_time, end_time } = query;
     // do not query without start_time. Otherwise returns last year data, which is not reflective of billing data.
     if (start_time) {
-      // check if start_time is a RFC3339 timestamp and if not convert to one.
       if (start_time.split(',').length > 1) {
-        let utcDate = this.utcDate(
-          new Date(Number(start_time.split(',')[1]), Number(start_time.split(',')[0] - 1))
-        );
-        start_time = utcDate.toISOString();
+        let startYear = Number(start_time.split(',')[0]);
+        let startMonth = Number(start_time.split(',')[1]);
+        start_time = formatRFC3339(new Date(startYear, startMonth));
       }
-      // look for end_time. If there is one check if it is a RFC3339 timestamp otherwise convert it.
+      // look for end_time
       if (end_time) {
-        let utcDateEnd = this.utcDate(
-          new Date(Number(end_time.split(',')[1]), Number(end_time.split(',')[0]))
-        );
-        // ARG TODO !!!! SUPER IMPORTANT, with endDate you need to make it the last day of the month, right now it's the first!!!
-        end_time = utcDateEnd.toISOString();
+        if (end_time.split(',').length > 1) {
+          let endYear = Number(end_time.split(',')[0]);
+          let endMonth = Number(end_time.split(',')[1]);
+          end_time = formatRFC3339(new Date(endYear, endMonth));
+        }
         return { start_time, end_time };
       } else {
         return { start_time };
@@ -30,17 +28,11 @@ export default Application.extend({
     }
   },
 
-  utcDate(dateObject) {
-    // To remove the timezone of the local user (API returns and expects Zulu time/UTC) we need to use a method provided by date-fns-tz to return the UTC date
-    let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // browser API method
-    return zonedTimeToUtc(dateObject, timeZone);
-  },
-
   // ARG TODO current Month tab is hitting this endpoint. Need to amend so only hit on Monthly history (large payload)
   queryRecord(store, type, query) {
     let url = `${this.buildURL()}/internal/counters/activity`;
     // check if start and/or end times are in RFC3395 format, if not convert with timezone UTC/zulu.
-    let queryParams = this.checkTimeType(query);
+    let queryParams = this.formatTimeParams(query);
     if (queryParams) {
       return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
         let response = resp || {};

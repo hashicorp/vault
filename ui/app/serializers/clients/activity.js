@@ -110,8 +110,8 @@ export default class ActivitySerializer extends ApplicationSerializer {
   }
 
   rfc33395ToMonthYear(timestamp) {
-    // return 03,2021 (e.g. March 2021, non-indexed)
-    return `${timestamp.split('-')[1].replace(/^0+/, '')},${timestamp.split('-')[0]}`;
+    // return [2021, 04 (e.g. 2021 March, make 0-indexed)
+    return [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1];
   }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
