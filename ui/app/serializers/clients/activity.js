@@ -27,6 +27,9 @@ export default ApplicationSerializer.extend({
     });
   },
 
+  // For 1.10 release naming changed from 'distinct_entities' to 'entity_clients' and
+  // 'non_entity_tokens' to 'non_entity_clients'
+  // accounting for deprecated API keys here and updating to latest nomenclature
   homogenizeClientNaming(object) {
     if (Object.keys(object).includes('distinct_entities', 'non_entity_tokens')) {
       object.entity_clients = object.distinct_entities;
