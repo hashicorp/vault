@@ -1852,7 +1852,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": "test.com",
-		"ttl":         "172800",
+		"not_after":   "9999-12-31T23:59:59Z",
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
