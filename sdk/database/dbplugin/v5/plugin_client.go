@@ -42,10 +42,8 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		return nil, err
 	}
 
-	rpcClient := pluginClient.Protocol()
-
 	// Request the plugin
-	raw, err := rpcClient.Dispense("database")
+	raw, err := pluginClient.Dispense("database")
 	if err != nil {
 		return nil, err
 	}

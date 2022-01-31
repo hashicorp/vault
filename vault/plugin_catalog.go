@@ -68,10 +68,6 @@ type MultiplexedClient struct {
 	client *plugin.Client
 }
 
-func (m *MultiplexedClient) Protocol() plugin.ClientProtocol {
-	return m.protocol
-}
-
 func (m *MultiplexedClient) Conn() *grpc.ClientConn {
 	return m.clientConn
 }

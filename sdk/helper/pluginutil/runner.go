@@ -36,8 +36,8 @@ type LookRunnerUtil interface {
 type Multiplexer interface {
 	ID() string
 	Conn() *grpc.ClientConn
-	Protocol() plugin.ClientProtocol
-	Close() error
+
+	plugin.ClientProtocol
 }
 
 // PluginRunner defines the metadata needed to run a plugin securely with
