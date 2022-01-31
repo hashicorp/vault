@@ -47,7 +47,7 @@ import (
 )
 
 var (
-	stepCount               = 0
+	stepCount = 0
 )
 
 func TestPKI_RequireCN(t *testing.T) {
@@ -1984,7 +1984,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"csr": pemCSR,
+			"csr":       pemCSR,
 			"not_after": "9999-12-31T23:59:59Z",
 		},
 	})

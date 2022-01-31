@@ -127,7 +127,7 @@ be larger than the role max TTL.`,
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
                       The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
-	}	
+	}
 
 	return fields
 }
