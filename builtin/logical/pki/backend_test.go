@@ -46,9 +46,7 @@ import (
 	"golang.org/x/net/idna"
 )
 
-var (
-	stepCount = 0
-)
+var stepCount = 0
 
 func TestPKI_RequireCN(t *testing.T) {
 	coreConfig := &vault.CoreConfig{

@@ -5,9 +5,10 @@ package pki
 import (
 	"context"
 	"errors"
+	"io"
+
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"io"
 )
 
 var errEntOnly = errors.New("managed keys are supported within enterprise edition only")

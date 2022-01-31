@@ -2,13 +2,14 @@ package pki
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 const (
 	managedKeyNameArg = "managed_key_name"
-	managedKeyIdArg = "managed_key_id"
+	managedKeyIdArg   = "managed_key_id"
 )
 
 func normalizeSerial(serial string) string {
