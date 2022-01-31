@@ -36,7 +36,7 @@ export default class Dashboard extends Component {
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
-  // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view
+  // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view with mirage
 
   get startTimeDisplay() {
     if (!this.startTime) {
@@ -69,14 +69,19 @@ export default class Dashboard extends Component {
 
   // by namespace client count data for date range
   get byNamespaceActivity() {
-    return this.args.model.activity?.byNamespace;
+    return this.args.model.activity?.byNamespace || null;
   }
 
   // for horizontal bar chart in attribution component
   get topTenChartData() {
-    return this.selectedNamespace
-      ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
-      : this.byNamespaceActivity.slice(0, 10);
+    if (this.selectedNamespace) {
+      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
+      return filteredNamespace.mounts
+        ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
+        : null;
+    } else {
+      return this.byNamespaceActivity.slice(0, 10);
+    }
   }
 
   get responseTimestamp() {
@@ -107,26 +112,6 @@ export default class Dashboard extends Component {
       // ARG TODO this is the response you need to use to repopulate the chart data
     } catch (e) {
       // ARG TODO handle error
-    }
-  }
-
-  // ARG TODO this might be a carry over from history, will need to confirm
-  @action
-  resetData() {
-    this.barChartSelection = false;
-    this.selectedNamespace = null;
-  }
-
-  @action
-  selectNamespace(value) {
-    // In case of search select component, value returned is an array
-    if (Array.isArray(value)) {
-      this.selectedNamespace = this.getNamespace(value[0]);
-      this.barChartSelection = false;
-    } else if (typeof value === 'object') {
-      // While D3 bar selection returns an object
-      this.selectedNamespace = this.getNamespace(value.label);
-      this.barChartSelection = true;
     }
   }
 
