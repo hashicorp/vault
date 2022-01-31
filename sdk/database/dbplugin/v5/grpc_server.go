@@ -283,6 +283,13 @@ func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, er
 	if err != nil {
 		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
+
+	id, err := getMultiplexIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	delete(g.instances, id)
+
 	return &proto.Empty{}, nil
 }
 
