@@ -1743,8 +1743,8 @@ func signCertificateStep(
 }
 
 func validateSSHCertificate(cert *ssh.Certificate, keyID string, certType int, validPrincipals []string, criticalOptionPermissions, extensionPermissions map[string]string,
-	ttl time.Duration) error {
-
+	ttl time.Duration,
+) error {
 	if cert.KeyId != keyID {
 		return fmt.Errorf("incorrect KeyId: %v, wanted %v", cert.KeyId, keyID)
 	}

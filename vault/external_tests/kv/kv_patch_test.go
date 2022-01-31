@@ -159,7 +159,6 @@ func TestKV_Patch_Audit(t *testing.T) {
 	resp, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
 		return c.Logical().Write("kv/data/foo", writeData)
 	})
-
 	if err != nil {
 		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
 	}
@@ -264,7 +263,6 @@ func TestKV_Patch_RootToken(t *testing.T) {
 	secret, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
 		return client.Logical().Read("kv/data/foo")
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}

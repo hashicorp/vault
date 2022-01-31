@@ -391,8 +391,8 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 // The second error return value indicates whether there's an error in even
 // trying to validate those requirements
 func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
-	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (error, error) {
-
+	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (error, error,
+) {
 	switch {
 	case instance == nil:
 		return nil, fmt.Errorf("nil instance")

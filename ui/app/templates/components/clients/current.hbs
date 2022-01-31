@@ -1,0 +1,33 @@
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  <p class="has-bottom-margin-s">
+    The below data is for the current month starting from the first day. For historical data, see the monthly history tab.
+  </p>
+  {{#if (eq @model.config.enabled "Off")}}
+    <EmptyState
+      @title="Tracking is disabled"
+      @message="Tracking is disabled and data is not being collected. To turn it on edit the configuration."
+    >
+      {{#if @model.config.configPath.canUpdate}}
+        <LinkTo @route="vault.cluster.clients.edit">
+          Go to configuration
+        </LinkTo>
+      {{/if}}
+    </EmptyState>
+  {{/if}}
+
+  {{#if @isLoading}}
+    <LayoutLoading />
+  {{else}}
+    <Clients::UsageStats @title={{date-format this.responseTimestamp "MMMM"}} @runningTotals={{this.runningTotals}} />
+
+    <Clients::Attribution
+      @chartLegend={{this.chartLegend}}
+      @topTenNamespaces={{this.topTenNamespaces}}
+      @runningTotals={{this.runningTotals}}
+      @selectedNamespace={{this.selectedNamespace}}
+      @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
+      @isDateRange={{false}}
+      @timestamp={{this.responseTimestamp}}
+    />
+  {{/if}}
+</div>

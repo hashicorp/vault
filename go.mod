@@ -62,7 +62,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.7.0
-	github.com/hashicorp/go-hclog v1.0.0
+	github.com/hashicorp/go-hclog v1.1.0
 	github.com/hashicorp/go-kms-wrapping v0.6.8
 	github.com/hashicorp/go-memdb v1.3.2
 	github.com/hashicorp/go-msgpack v1.1.5
@@ -86,7 +86,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault-3
 	github.com/hashicorp/nomad/api v0.0.0-20211006193434-215bf04bc650
-	github.com/hashicorp/raft v1.3.1
+	github.com/hashicorp/raft v1.3.3
 	github.com/hashicorp/raft-autopilot v0.1.3
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.3
@@ -118,7 +118,7 @@ require (
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.3.1-0.20220112143259-b48602fdb885
-	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
+	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
@@ -127,7 +127,7 @@ require (
 	github.com/kr/pretty v0.3.0
 	github.com/kr/text v0.2.0
 	github.com/lib/pq v1.10.3
-	github.com/mattn/go-colorable v0.1.11
+	github.com/mattn/go-colorable v0.1.12
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
 	github.com/mitchellh/cli v1.1.2
@@ -173,7 +173,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	golang.org/x/tools v0.1.5
 	google.golang.org/api v0.30.0

@@ -30,6 +30,7 @@ export default function (server) {
     };
   });
 
+  // ARG TODO eventually remove from base it should all come from activity after 1.10 release.
   server.get('/sys/internal/counters/activity/monthly', function () {
     return {
       data: {
