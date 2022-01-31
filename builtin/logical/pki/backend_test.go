@@ -1847,7 +1847,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": "test.com",
-		"ttl":         "172800",
+		"not_after":   "9999-12-31T23:59:59Z",
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -1974,6 +1974,43 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	cert := certs[0]
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
 		t.Fatalf("sign-verbatim did not properly cap validity period on signed CSR")
+	}
+
+	// Now check signing a certificate using the not_after input using the Y10K value
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign-verbatim/test",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"csr":       pemCSR,
+			"not_after": "9999-12-31T23:59:59Z",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf(resp.Error().Error())
+	}
+	if resp.Data == nil || resp.Data["certificate"] == nil {
+		t.Fatal("did not get expected data")
+	}
+	certString = resp.Data["certificate"].(string)
+	block, _ = pem.Decode([]byte(certString))
+	if block == nil {
+		t.Fatal("nil pem block")
+	}
+	certs, err = x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(certs) != 1 {
+		t.Fatalf("expected a single cert, got %d", len(certs))
+	}
+	cert = certs[0]
+	notAfter := cert.NotAfter.Format(time.RFC3339)
+	if notAfter != "9999-12-31T23:59:59Z" {
+		t.Fatal(fmt.Errorf("not after from certificate is not matching with input parameter"))
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match

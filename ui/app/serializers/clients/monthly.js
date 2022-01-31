@@ -1,14 +1,14 @@
-import { formatISO } from 'date-fns';
 import ApplicationSerializer from '../application';
+import { formatISO } from 'date-fns';
 
 export default ApplicationSerializer.extend({
   flattenDataset(payload) {
-    let topTen = payload.slice(0, 10);
+    let topTen = payload ? payload.slice(0, 10) : [];
 
     return topTen.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
-      let label = ns['namespace_path'] || ns['namespace_id']; // TODO CMB will namespace_path ever be empty?
+      let label = ns['namespace_path'];
       let flattenedNs = {};
       // we don't want client counts nested within the 'counts' object for stacked charts
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
@@ -39,16 +39,16 @@ export default ApplicationSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let { data } = payload;
     let { clients, distinct_entities, non_entity_tokens } = data;
-    let timestamp = formatISO(new Date());
+    let response_timestamp = formatISO(new Date());
     let transformedPayload = {
       ...payload,
-      // TODO CMB should these be nested under "data" to go to model correctly?)
-      timestamp,
+      response_timestamp,
       by_namespace: this.flattenDataset(data.by_namespace),
+      // nest within 'total' object to mimic /activity response shape
       total: {
         clients,
-        entity_clients: distinct_entities,
-        non_entity_clients: non_entity_tokens,
+        entityClients: distinct_entities,
+        nonEntityClients: non_entity_tokens,
       },
     };
     delete payload.data.by_namespace;
