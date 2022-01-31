@@ -172,6 +172,10 @@
       {
         "title": "Transform",
         "path": "concepts/transform"
+      },
+      {
+        "title": "Managed Keys <sup>ENT</sup>",
+        "path": "concepts/managed-keys"
       }
     ]
   },
