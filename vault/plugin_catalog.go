@@ -85,9 +85,6 @@ func (m *MultiplexedClient) Close() error {
 	m.logger.Debug("deleted multiplexedClients connection entry")
 
 	err := m.protocol.Close()
-	if err != nil {
-		return err
-	}
 	if m.connectionCount == 0 {
 		m.client.Kill()
 		m.client = nil
@@ -95,7 +92,7 @@ func (m *MultiplexedClient) Close() error {
 		m.clientConn = nil
 		m.logger.Debug("killed plugin process", "id", m.id, "name", m.name)
 	}
-	return nil
+	return err
 }
 
 func (m *MultiplexedClient) Dispense(name string) (interface{}, error) {
@@ -176,6 +173,11 @@ func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.Runn
 func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (*MultiplexedClient, error) {
 	mpc := c.getMultiplexedClient(pluginRunner.Name)
 
+	id, err := base62.Random(10)
+	if err != nil {
+		return nil, err
+	}
+
 	if mpc.client == nil {
 		c.logger.Debug("spawning a new plugin process")
 		client, err := pluginRunner.RunConfig(ctx,
@@ -191,29 +193,25 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 		}
 
 		mpc.client = client
-		// Get the protocol client for this connection.
-		// Subsequent calls to this will return the same client.
-		rpcClient, err := mpc.client.Client()
-		if err != nil {
-			return nil, err
-		}
-
-		// set the ClientProtocol connection for the given ID
-		mpc.protocol = rpcClient
-
-		gc, ok := rpcClient.(*plugin.GRPCClient)
-		if ok {
-			mpc.clientConn = gc.Conn
-		}
-
-		id, err := base62.Random(10)
-		if err != nil {
-			return nil, err
-		}
-
-		mpc.id = id
-		mpc.name = pluginRunner.Name
 	}
+
+	// Get the protocol client for this connection.
+	// Subsequent calls to this will return the same client.
+	rpcClient, err := mpc.client.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	// set the ClientProtocol connection for the given ID
+	mpc.protocol = rpcClient
+
+	gc, ok := rpcClient.(*plugin.GRPCClient)
+	if ok {
+		mpc.clientConn = gc.Conn
+	}
+
+	mpc.name = pluginRunner.Name
+	mpc.id = id
 	mpc.connectionCount += 1
 
 	return mpc, nil

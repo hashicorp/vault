@@ -366,7 +366,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
-		if resp.Warnings == nil {
+		if len(resp.Warnings) == 0 {
 			return nil, nil
 		}
 		return resp, nil
