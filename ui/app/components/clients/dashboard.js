@@ -139,7 +139,10 @@ export default class Dashboard extends Component {
     }
 
     try {
-      let response = await this.adapter.queryClientActivity(this.startTimeRequested, this.endTimeRequested);
+      let response = await this.store.queryRecord('clients/activity', {
+        start_time: this.startTimeRequested,
+        end_time: this.endTimeRequested,
+      });
       if (!response) {
         // this.endTime will be null and use this to show EmptyState message on the template.
         return;
