@@ -12,10 +12,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ed25519"
 	"reflect"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
@@ -109,7 +110,7 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
 			},
-			"require_matching_certificate_algorithms": &framework.FieldSchema{
+			"require_matching_certificate_algorithms": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
@@ -162,6 +163,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
 		case errutil.InternalError:
+			return nil, err
+		default:
 			return nil, err
 		}
 	}
@@ -291,7 +294,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
@@ -417,7 +420,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(

@@ -1423,7 +1423,7 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 
 	// Collect the key IDs
 	var keyIDs []string
-	for name, _ := range keyNames {
+	for name := range keyNames {
 		entry, err := s.Get(ctx, namedKeyConfigPath+name)
 		if err != nil {
 			return nil, err

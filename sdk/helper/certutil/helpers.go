@@ -77,21 +77,42 @@ func ParseHexFormatted(in, sep string) []byte {
 	return ret.Bytes()
 }
 
-// GetSubjKeyID returns the subject key ID, e.g. the SHA1 sum
-// of the marshaled public key
+// GetSubjKeyID returns the subject key ID. The computed ID is the SHA-1 hash of
+// the marshaled public key according to
+// https://tools.ietf.org/html/rfc5280#section-4.2.1.2 (1)
 func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
+	return getSubjectKeyID(privateKey.Public())
+}
 
-	marshaledKey, err := x509.MarshalPKIXPublicKey(privateKey.Public())
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+func getSubjectKeyID(pub interface{}) ([]byte, error) {
+	var publicKeyBytes []byte
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		type pkcs1PublicKey struct {
+			N *big.Int
+			E int
+		}
+
+		var err error
+		publicKeyBytes, err = asn1.Marshal(pkcs1PublicKey{
+			N: pub.N,
+			E: pub.E,
+		})
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+		}
+	case *ecdsa.PublicKey:
+		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	case ed25519.PublicKey:
+		publicKeyBytes = pub
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported public key type: %T", pub)}
 	}
-
-	subjKeyID := sha1.Sum(marshaledKey)
-
-	return subjKeyID[:], nil
+	skid := sha1.Sum(publicKeyBytes)
+	return skid[:], nil
 }
 
 // ParsePKIMap takes a map (for instance, the Secret.Data
@@ -678,16 +699,23 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 // CreateCertificate uses CreationBundle and the default rand.Reader to
 // generate a cert/keypair.
 func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
-	return createCertificate(data, rand.Reader)
+	return createCertificate(data, rand.Reader, generatePrivateKey)
 }
 
 // CreateCertificateWithRandomSource uses CreationBundle and a custom
 // io.Reader for randomness to generate a cert/keypair.
 func CreateCertificateWithRandomSource(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
-	return createCertificate(data, randReader)
+	return createCertificate(data, randReader, generatePrivateKey)
 }
 
-func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
+// KeyGenerator Allow us to override how/what generates the private key
+type KeyGenerator func(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader io.Reader) error
+
+func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCertBundle, error) {
+	return createCertificate(data, randReader, keyGenerator)
+}
+
+func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGenerator KeyGenerator) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
 
@@ -696,7 +724,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		return nil, err
 	}
 
-	if err := generatePrivateKey(data.Params.KeyType,
+	if err := privateKeyGenerator(data.Params.KeyType,
 		data.Params.KeyBits,
 		result, randReader); err != nil {
 		return nil, err
@@ -863,20 +891,26 @@ var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 // generate a cert/keypair. This is currently only meant
 // for use when generating an intermediate certificate.
 func CreateCSR(data *CreationBundle, addBasicConstraints bool) (*ParsedCSRBundle, error) {
-	return createCSR(data, addBasicConstraints, rand.Reader)
+	return createCSR(data, addBasicConstraints, rand.Reader, generatePrivateKey)
 }
 
 // CreateCSRWithRandomSource creates a CSR with a custom io.Reader
 // for randomness to generate a cert/keypair.
 func CreateCSRWithRandomSource(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
-	return createCSR(data, addBasicConstraints, randReader)
+	return createCSR(data, addBasicConstraints, randReader, generatePrivateKey)
 }
 
-func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
+// CreateCSRWithKeyGenerator creates a CSR with a custom io.Reader
+// for randomness to generate a cert/keypair with the provided private key generator.
+func CreateCSRWithKeyGenerator(data *CreationBundle, addBasicConstraints bool, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCSRBundle, error) {
+	return createCSR(data, addBasicConstraints, randReader, keyGenerator)
+}
+
+func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCSRBundle, error) {
 	var err error
 	result := &ParsedCSRBundle{}
 
-	if err := generatePrivateKey(data.Params.KeyType,
+	if err := keyGenerator(data.Params.KeyType,
 		data.Params.KeyBits,
 		result, randReader); err != nil {
 		return nil, err
@@ -973,11 +1007,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	marshaledKey, err := x509.MarshalPKIXPublicKey(data.CSR.PublicKey)
+	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+		return nil, err
 	}
-	subjKeyID := sha1.Sum(marshaledKey)
 
 	caCert := data.SigningBundle.Certificate
 

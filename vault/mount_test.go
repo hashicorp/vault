@@ -696,8 +696,8 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 func testCore_MountTable_UpgradeToTyped_Common(
 	t *testing.T,
 	c *Core,
-	testType string) {
-
+	testType string,
+) {
 	var path string
 	var mt *MountTable
 	switch testType {

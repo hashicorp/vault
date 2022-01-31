@@ -1933,6 +1933,40 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
+
+	for _, entry := range b.Core.auth.Entries {
+		// Only show entry for current namespace
+		if entry.Namespace().Path != ns.Path || entry.Path != path {
+			continue
+		}
+
+		cont, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		if err != nil {
+			return nil, err
+		}
+		if cont {
+			continue
+		}
+
+		return &logical.Response{
+			Data: mountInfo(entry),
+		}, nil
+	}
+
+	return logical.ErrorResponse("No auth engine at %s", path), nil
+}
+
 func expandStringValsWithCommas(configMap map[string]interface{}) error {
 	configParamNameSlice := []string{
 		"audit_non_hmac_request_keys",
@@ -2344,6 +2378,16 @@ const (
 	minPasswordLength = 4
 	maxPasswordLength = 100
 )
+
+// handlePoliciesPasswordList returns the list of password policies
+func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	keys, err := req.Storage.List(ctx, "password_policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(keys), nil
+}
 
 // handlePoliciesPasswordSet saves/updates password policies
 func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {

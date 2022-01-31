@@ -38,14 +38,23 @@
   }
 }
 
-.has-export {
+.has-header-link {
   display: grid;
   grid-template-columns: 4fr 1fr;
 
   .header-right {
     text-align: right;
     > button {
-      font-size: $size-8;
+      &:hover,
+      &.is-hovered,
+      &:focus,
+      &.is-focused {
+        background-color: transparent;
+        background-color: darken($ui-gray-050, 5%);
+        border-color: darken($ui-gray-300, 5%);
+      }
+    }
+    > a {
       &:hover {
         text-decoration: underline;
       }
@@ -100,6 +109,11 @@
   > p {
     padding-left: 18px;
   }
+}
+
+.chart-empty-state {
+  grid-column-start: 1;
+  grid-column-end: -1;
 }
 
 .chart-subTitle {
