@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { isSameMonth } from 'date-fns';
 import { zonedTimeToUtc } from 'date-fns-tz'; // https://github.com/marnusw/date-fns-tz#zonedtimetoutc
 
 export default class Dashboard extends Component {
@@ -75,11 +76,10 @@ export default class Dashboard extends Component {
   }
 
   get isDateRange() {
-    if (!this.startTimeFromResponse || !this.endTimeFromResponse) {
-      // need to check because the moment one of these tracked properties changes, this getter is fired of, even if the other tracked property hasn't been set yet
-      return false;
-    }
-    return this.startTimeFromResponse.split(',')[0] !== this.endTimeFromResponse.split(',')[0];
+    return !isSameMonth(
+      new Date(this.args.model.activity.startTime),
+      new Date(this.args.model.activity.endTime)
+    );
   }
 
   // Determine if we have client count data based on the current tab
@@ -147,15 +147,9 @@ export default class Dashboard extends Component {
         // this.endTime will be null and use this to show EmptyState message on the template.
         return;
       }
-      // serializer transforms response from rfc3339 to "3,2021"
-      // ARG TODO move to serializer
-      this.startTimeFromResponse = `${response.data.start_time.split('-')[1].replace(/^0+/, '')},${
-        response.data.start_time.split('-')[0]
-      }`;
-      this.endTimeFromResponse = `${response.data.end_time.split('-')[1].replace(/^0+/, '')},${
-        response.data.end_time.split('-')[0]
-      }`;
 
+      this.startTimeFromResponse = response.formattedStartTime;
+      this.endTimeFromResponse = response.formattedEndTime;
       if (this.startTimeRequested !== this.startTimeFromResponse) {
         this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
       } else {

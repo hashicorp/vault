@@ -109,12 +109,19 @@ export default class ActivitySerializer extends ApplicationSerializer {
     });
   }
 
+  rfc33395ToMonthYear(timestamp) {
+    // return 03,2021 (e.g. March 2021, non-indexed)
+    return `${timestamp.split('-')[1].replace(/^0+/, '')},${timestamp.split('-')[0]}`;
+  }
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let response_timestamp = formatISO(new Date());
     let transformedPayload = {
       ...payload,
       response_timestamp,
       by_namespace: this.flattenDataset(payload.data.by_namespace),
+      formatted_end_time: this.rfc33395ToMonthYear(payload.data.end_time),
+      formatted_start_time: this.rfc33395ToMonthYear(payload.data.start_time),
     };
     delete payload.data.by_namespace;
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
