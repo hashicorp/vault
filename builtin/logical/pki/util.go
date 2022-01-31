@@ -9,7 +9,7 @@ import (
 
 const (
 	managedKeyNameArg = "managed_key_name"
-	managedKeyIdArg = "managed_key_id"
+	managedKeyIdArg   = "managed_key_id"
 )
 
 func normalizeSerial(serial string) string {

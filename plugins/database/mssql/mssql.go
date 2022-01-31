@@ -216,8 +216,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 	// Check if DB is contained
 	if m.containedDB {
-		revokeQuery :=
-			`DECLARE @stmt nvarchar(max);
+		revokeQuery := `DECLARE @stmt nvarchar(max);
 			SET @stmt = 'DROP USER IF EXISTS ' + QuoteName(@username);
 			EXEC(@stmt);`
 		revokeStmt, err := db.PrepareContext(ctx, revokeQuery)
@@ -232,12 +231,11 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	}
 
 	// First disable server login
-	disableQuery :=
-		`DECLARE @stmt nvarchar(max);
+	disableQuery := `DECLARE @stmt nvarchar(max);
 		SET @stmt = 'ALTER LOGIN ' + QuoteName(@username) + ' DISABLE';
 		EXEC(@stmt);`
 	disableStmt, err := db.PrepareContext(ctx, disableQuery)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	defer disableStmt.Close()
