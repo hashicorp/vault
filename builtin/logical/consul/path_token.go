@@ -20,7 +20,22 @@ func pathToken(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
-				Description: "Name of the role",
+				Description: "Name of the role.",
+			},
+
+			"policies": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `List of policies to attach to the token.`,
+			},
+
+			"consul_namespace": {
+				Type:        framework.TypeString,
+				Description: "Namespace to create the token in.",
+			},
+
+			"partition": {
+				Type:        framework.TypeString,
+				Description: "Admin partition to create the token in.",
 			},
 		},
 
@@ -32,6 +47,9 @@ func pathToken(b *backend) *framework.Path {
 
 func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	role := d.Get("role").(string)
+	policies := d.Get("policies").([]string)
+	namespace := d.Get("consul_namespace").(string)
+	partition := d.Get("partition").(string)
 
 	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
@@ -90,16 +108,31 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Create an ACLToken for Consul 1.4 and above
-	policyLink := []*api.ACLTokenPolicyLink{}
-	for _, policyName := range result.Policies {
-		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
-			Name: policyName,
-		})
+	// If policies were supplied here, then overwrite the policies
+	// that were given when the role was written
+	var policyLink []*api.ACLTokenPolicyLink
+	if len(policies) > 0 {
+		policyLink = getPolicies(policies)
+	} else {
+		policyLink = getPolicies(result.Policies)
+	}
+
+	// If a namespace was supplied here, then overwrite the namespace
+	// that was given when the role was written
+	if len(namespace) == 0 {
+		namespace = result.Namespace
+	}
+	// If a partition was supplied here, then overwrite the partition
+	// that was given when the role was written
+	if len(partition) == 0 {
+		partition = result.Partition
 	}
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
 		Policies:    policyLink,
 		Local:       result.Local,
+		Namespace:   namespace,
+		Partition:   partition,
 	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -107,9 +140,11 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Use the helper to create the secret
 	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
-		"token":    token.SecretID,
-		"accessor": token.AccessorID,
-		"local":    token.Local,
+		"token":            token.SecretID,
+		"accessor":         token.AccessorID,
+		"local":            token.Local,
+		"consul_namespace": token.Namespace,
+		"partition":        token.Partition,
 	}, map[string]interface{}{
 		"token":   token.AccessorID,
 		"role":    role,
@@ -119,4 +154,16 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	s.Secret.MaxTTL = result.MaxTTL
 
 	return s, nil
+}
+
+func getPolicies(policies []string) []*api.ACLLink {
+	policyLink := []*api.ACLTokenPolicyLink{}
+
+	for _, policyName := range policies {
+		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
+			Name: policyName,
+		})
+	}
+
+	return policyLink
 }
