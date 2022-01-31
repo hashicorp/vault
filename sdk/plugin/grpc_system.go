@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -100,7 +99,7 @@ func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[st
 	return info, nil
 }
 
-func (s *gRPCSystemViewClient) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.Multiplexer, error) {
+func (s *gRPCSystemViewClient) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error) {
 	return nil, fmt.Errorf("cannot call NewPluginClient from a plugin backend")
 }
 

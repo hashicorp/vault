@@ -157,16 +157,16 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 
 // GetPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (*MultiplexedClient, error) {
+func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*MultiplexedClient, error) {
 	c.lock.Lock()
-	pc, err := c.getPluginClient(ctx, sys, pluginRunner, namedLogger, isMetadataMode)
+	pc, err := c.getPluginClient(ctx, sys, pluginRunner, config)
 	c.lock.Unlock()
 	return pc, err
 }
 
 // getPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (*MultiplexedClient, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*MultiplexedClient, error) {
 	mpc := c.getMultiplexedClient(pluginRunner.Name)
 
 	id, err := base62.Random(10)
@@ -178,11 +178,11 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 		c.logger.Debug("spawning a new plugin process")
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.Runner(sys),
-			pluginutil.PluginSets(v5.PluginSets),
-			pluginutil.HandshakeConfig(v5.HandshakeConfig),
-			pluginutil.Logger(namedLogger),
-			pluginutil.MetadataMode(isMetadataMode),
-			pluginutil.AutoMTLS(true),
+			pluginutil.PluginSets(config.PluginSets),
+			pluginutil.HandshakeConfig(config.HandshakeConfig),
+			pluginutil.Logger(config.Logger),
+			pluginutil.MetadataMode(config.IsMetadataMode),
+			pluginutil.AutoMTLS(config.AutoMTLS),
 		)
 		if err != nil {
 			return nil, err
@@ -261,8 +261,16 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
+	config := pluginutil.PluginClientConfig{
+		Name:            plugin.Name,
+		PluginSets:      v5.PluginSets,
+		HandshakeConfig: v5.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  true,
+		AutoMTLS:        true,
+	}
 	// Attempt to run as database V5 plugin
-	v5Client, err := c.getPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	v5Client, err := c.getPluginClient(ctx, nil, plugin, config)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()

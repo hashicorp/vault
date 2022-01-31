@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -216,8 +215,8 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	return resp.WrapInfo, nil
 }
 
-func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.Multiplexer, error) {
-	c, err := d.core.pluginCatalog.GetPluginClient(ctx, d, pluginRunner, logger, isMetadataMode)
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error) {
+	c, err := d.core.pluginCatalog.GetPluginClient(ctx, d, pluginRunner, config)
 	if err != nil {
 		return nil, err
 	}

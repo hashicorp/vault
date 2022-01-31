@@ -40,8 +40,16 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		transport = "builtin"
 
 	} else {
+		config := pluginutil.PluginClientConfig{
+			Name:            pluginName,
+			PluginSets:      PluginSets,
+			HandshakeConfig: HandshakeConfig,
+			Logger:          namedLogger,
+			IsMetadataMode:  false,
+			AutoMTLS:        true,
+		}
 		// create a DatabasePluginClient instance
-		db, err = NewPluginClient(ctx, sys, pluginRunner, namedLogger, false)
+		db, err = NewPluginClient(ctx, sys, pluginRunner, config)
 		if err != nil {
 			return nil, err
 		}

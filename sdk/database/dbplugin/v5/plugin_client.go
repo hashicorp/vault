@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -36,8 +35,8 @@ var PluginSets = map[int]plugin.PluginSet{
 
 // NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin.
-func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
-	pluginClient, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (Database, error) {
+	pluginClient, err := sys.NewPluginClient(ctx, pluginRunner, config)
 	if err != nil {
 		return nil, err
 	}
