@@ -127,13 +127,8 @@ export default class Attribution extends Component {
 
   // ACTIONS
   @action
-  closeModal() {
-    this.showCSVDownloadModal = false;
-  }
-
-  @action
   exportChartData(filename, contents) {
     this.downloadCsv.download(filename, contents);
-    this.closeModal();
+    this.showCSVDownloadModal = false;
   }
 }
