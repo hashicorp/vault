@@ -14,3 +14,11 @@ export function formatNumbers(number) {
   // replace SI prefix of 'G' for billions to 'B'
   return format('.1s')(number).replace('G', 'B');
 }
+
+export function formatTooltipNumber(value) {
+  if (typeof value !== 'number') {
+    return value;
+  }
+  // formats a number according to the locale
+  return new Intl.NumberFormat().format(value);
+}
