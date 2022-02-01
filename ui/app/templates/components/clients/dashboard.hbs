@@ -67,7 +67,7 @@
           </ToolbarFilters>
         </Toolbar>
         {{#if this.responseRangeDiffMessage}}
-          <AlertBanner @class="has-margin-top" @type="warning" @message={{this.responseRangeDiffMessage}} />
+          <AlertBanner @type="warning" @class="has-top-margin-s" @message={{this.responseRangeDiffMessage}} />
         {{/if}}
         {{#if @isLoading}}
           <LayoutLoading />
