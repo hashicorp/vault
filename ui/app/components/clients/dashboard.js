@@ -52,7 +52,7 @@ export default class Dashboard extends Component {
       // otherwise will return date of new Date(null)
       return null;
     }
-    // '2021, 2' is March 2021
+    // ['2021, 2'] is March 2021
     let month = this.startTimeFromResponse[1];
     let year = this.startTimeFromResponse[0];
     return `${this.arrayOfMonths[month]} ${year}`;
@@ -107,6 +107,22 @@ export default class Dashboard extends Component {
     }
     return this.args.model.activity.responseTimestamp;
   }
+  // HELPERS
+  areArraysTheSame(a1, a2) {
+    return (
+      a1 === a2 ||
+      (a1 !== null &&
+        a2 !== null &&
+        a1.length === a2.length &&
+        a1
+          .map(function (val, idx) {
+            return val === a2[idx];
+          })
+          .reduce(function (prev, cur) {
+            return prev && cur;
+          }, true))
+    );
+  }
 
   // ACTIONS
   @action
@@ -122,14 +138,14 @@ export default class Dashboard extends Component {
     // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
-      this.startTimeRequested = `${year}, ${monthIndex}`; // '2021, 0' (e.g. January 2021) // TODO CHANGE TO ARRAY
+      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021) // TODO CHANGE TO ARRAY
       this.endTimeRequested = null;
     }
     // clicked "Custom End Month" from the calendar-widget
     if (dateType === 'endTime') {
       // use the currently selected startTime for your startTimeRequested.
       this.startTimeRequested = this.startTimeFromResponse;
-      this.endTimeRequested = `${year}, ${month}`;
+      this.endTimeRequested = [year.toString(), month];
     }
 
     try {
@@ -143,7 +159,8 @@ export default class Dashboard extends Component {
       }
       this.startTimeFromResponse = response.formattedStartTime;
       this.endTimeFromResponse = response.formattedEndTime;
-      if (this.startTimeRequested !== this.startTimeFromResponse) {
+
+      if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {
         this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
       } else {
         this.responseRangeDiffMessage = null;

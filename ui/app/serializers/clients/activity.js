@@ -110,7 +110,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
   }
 
   rfc33395ToMonthYear(timestamp) {
-    // return [2021, 04 (e.g. 2021 March, make 0-indexed)
+    // return ['2021,' 04 (e.g. 2021 March, make 0-indexed)
     return [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1];
   }
 

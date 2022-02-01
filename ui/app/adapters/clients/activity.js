@@ -6,18 +6,20 @@ export default Application.extend({
     let { start_time, end_time } = query;
     // do not query without start_time. Otherwise returns last year data, which is not reflective of billing data.
     if (start_time) {
-      if (start_time.split(',').length > 1) {
-        let startYear = Number(start_time.split(',')[0]);
-        let startMonth = Number(start_time.split(',')[1]);
+      // check if it's an array, if it is, it's coming from an action like selecting a new Start Time or new EndTime
+      if (Array.isArray(start_time)) {
+        let startYear = Number(start_time[0]);
+        let startMonth = Number(start_time[1]);
         start_time = formatRFC3339(new Date(startYear, startMonth));
       }
       // look for end_time
       if (end_time) {
-        if (end_time.split(',').length > 1) {
-          let endYear = Number(end_time.split(',')[0]);
-          let endMonth = Number(end_time.split(',')[1]);
+        if (Array.isArray(end_time)) {
+          let endYear = Number(end_time[0]);
+          let endMonth = Number(end_time[1]);
           end_time = formatRFC3339(new Date(endYear, endMonth));
         }
+
         return { start_time, end_time };
       } else {
         return { start_time };
@@ -29,6 +31,10 @@ export default Application.extend({
   },
 
   // ARG TODO current Month tab is hitting this endpoint. Need to amend so only hit on Monthly history (large payload)
+  // query comes in as either: {start_time: '2021-03-17T00:00:00Z'} or
+  // {start_time: Array(2), end_time: Array(2)}
+  // end_time: (2) ['2022', 0]
+  // start_time: (2) ['2021', 2]
   queryRecord(store, type, query) {
     let url = `${this.buildURL()}/internal/counters/activity`;
     // check if start and/or end times are in RFC3395 format, if not convert with timezone UTC/zulu.

@@ -11,11 +11,12 @@ import { tracked } from '@glimmer/tracking';
  * @example
  * ```js
  * <CalendarWidget
- * @param {string} endTimeDisplay - The display value of the endTime. Ex: January 2022.
- * @param {string} endTimeFromResponse - Because endTimeDisplay is a tracked property of the parent it changes. But we need to keep a value unchanged that records the endTime returned by the counters/activity endpoint. This is that value.
- * @param {string} startTimeDisplay - The display value of startTime that the parent manages. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.
+ * @param {array} arrayOfMonths - An array of all the months that the calendar widget iterates through.
+ * @param {string} endTimeDisplay - The formatted display value of the endTime. Ex: January 2022.
+ * @param {string} endTimeFromResponse - The value returned on the counters/activity endpoint, which shows the true endTime not the selected one, which can be different.
  * @param {function} handleClientActivityQuery - a function passed from parent. This component sends the month and year to the parent via this method which then calculates the new data.
  * @param {function} handleCurrentBillingPeriod - a function passed from parent. This component makes the parent aware that the user selected Current billing period and it handles resetting the data.
+ * @param {string} startTimeDisplay - The formatted display value of the endTime. Ex: January 2022. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.
  * />
  *
  * ```
@@ -41,7 +42,7 @@ class CalendarWidget extends Component {
   }
 
   isObsoleteYear() {
-    // do not allow them to choose a end year before the this.args.startTimeDisplay
+    // do not allow them to choose a year before the this.args.startTimeDisplay
     let startYear = this.args.startTimeDisplay.split(' ')[1];
     return this.displayYear.toString() === startYear; // if on startYear then don't let them click back to the year prior
   }
@@ -68,6 +69,7 @@ class CalendarWidget extends Component {
 
       let elementMonthId = parseInt(e.id.split('-')[0]); // dependent on the shape of the element id
       // for current year
+
       if (this.currentMonth <= elementMonthId) {
         // only disable months when current year is selected
         if (this.isCurrentYear()) {
@@ -87,11 +89,10 @@ class CalendarWidget extends Component {
       }
       // Compare values so the user cannot select an endTime after the endTime returned from counters/activity response on page load.
       // ARG TODO will need to test if no data is returned on page load.
-      if (this.displayYear.toString() === this.args.endTimeFromResponse.split(' ')[1]) {
-        let endMonth = this.args.endTimeFromResponse.split(' ')[0];
-        let endMonthIndex = this.args.arrayOfMonths.indexOf(endMonth);
+      if (this.displayYear.toString() === this.args.endTimeFromResponse[0]) {
+        let endMonth = this.args.endTimeFromResponse[1];
         // add readOnly class to any month that is older (higher) than the endMonth index. (e.g. if nov is the endMonth of the endTimeDisplay, then 11 and 12 should not be displayed 10 < 11 and 10 < 12.)
-        if (endMonthIndex < elementMonthId) {
+        if (endMonth < elementMonthId) {
           e.classList.add('is-readOnly');
         }
       }
