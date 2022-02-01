@@ -613,6 +613,10 @@
         "path": "system/unseal"
       },
       {
+        "title": "<code>/sys/version-history</code>",
+        "path": "system/version-history"
+      },
+      {
         "title": "<code>/sys/wrapping/lookup</code>",
         "path": "system/wrapping-lookup"
       },
