@@ -1,10 +1,13 @@
 ---
 layout: docs
-page_title: Install Vault EKM Provider
+page_title: Install the Vault EKM Provider
 description: Installation steps for the Vault EKM Provider for Microsoft SQL Server.
 ---
 
 # Installing the Vault EKM Provider
+
+This guide assumes you are installer the Vault EKM Provider for the first time.
+For upgrade instructions, see [upgrading](/docs/platform/mssql/upgrade).
 
 ## Prerequisites
 
@@ -95,8 +98,9 @@ The remaining steps are all run on the database server.
 
 1. Download and run the latest Vault EKM provider installer from
   [releases.hashicorp.com](https://releases.hashicorp.com/vault-mssql-ekm-provider/)
-
 1. Enter your Vault server's address when prompted and complete the installer
+1. If you need to configure non-default namespace or mount paths for your AppRole and
+   Transit engines, see [configuration](/docs/platform/mssql/configuration).
 
 ### Configure the EKM provider using SQL
 
