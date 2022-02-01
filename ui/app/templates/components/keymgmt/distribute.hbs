@@ -142,8 +142,17 @@
       </div>
     </fieldset>
 
-    <div>
-      <input type="submit" value="Distribute key" />
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          disabled={{or @buttonDisabled this.validationErrorCount this.error}}
+          class="button is-primary"
+          data-test-secret-save={{true}}
+        >
+          Save
+        </button>
+      </div>
     </div>
   </form>
 {{/if}}
