@@ -10,16 +10,16 @@ export default class DownloadCsvService extends Service {
   download(filename, content) {
     let formattedFilename = filename?.replace(/\s+/g, '-') || 'vault-data.csv';
     let { document, URL } = window;
-    let downloadLink = document.createElement('a');
-    downloadLink.download = formattedFilename;
-    downloadLink.href = URL.createObjectURL(
+    let downloadElement = document.createElement('a');
+    downloadElement.download = formattedFilename;
+    downloadElement.href = URL.createObjectURL(
       new Blob([content], {
         type: 'text/csv',
       })
     );
-
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    downloadLink.remove();
+    document.body.appendChild(downloadElement);
+    downloadElement.click();
+    URL.revokeObjectURL(downloadElement.href);
+    downloadElement.remove();
   }
 }
