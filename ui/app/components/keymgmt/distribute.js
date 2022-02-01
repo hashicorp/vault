@@ -63,7 +63,7 @@ export default class KeymgmtDistribute extends Component {
     if (!this.providerType || !this.keyModel?.type) {
       return null;
     }
-    const valid = VALID_TYPES_BY_PROVIDER[this.providerType].includes(this.keyModel.type);
+    const valid = VALID_TYPES_BY_PROVIDER[this.providerType]?.includes(this.keyModel.type);
     if (valid) return null;
 
     // default to showing error on provider unless @provider (field hidden)
@@ -136,7 +136,7 @@ export default class KeymgmtDistribute extends Component {
         id,
       })
       .catch(() => {});
-    this.providerType = provider?.type;
+    this.providerType = provider?.provider;
   }
 
   destroyKey() {

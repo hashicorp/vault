@@ -18,7 +18,7 @@
           @disallowNewItems={{false}}
         >
           {{#if (and this.validMatchError.key (not this.isNewKey))}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger">
+            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="key">
               {{this.validMatchError.key}}
               To check compatibility,
               <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
@@ -29,7 +29,7 @@
     {{/unless}}
 
     {{#if this.isNewKey}}
-      <div class="field" data-test-keymgmt-dist-keytype>
+      <div class="field">
         <label class="is-label" for="keyType">Key Type</label>
         <p class="sub-text">The type of cryptographic key that will be created.</p>
         <div class="control is-expanded">
@@ -39,6 +39,7 @@
               id="keyType"
               {{on "change" this.handleKeyType}}
               class={{if this.validMatchError.key "has-error-border"}}
+              data-test-keymgmt-dist-keytype
             >
               <option value="">
                 Select one
@@ -51,7 +52,7 @@
             </select>
           </div>
           {{#if this.validMatchError.key}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger">
+            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="new-key">
               {{this.validMatchError.key}}
               To check compatibility,
               <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
@@ -86,7 +87,7 @@
           </div>
         </div>
         {{#if this.validMatchError.provider}}
-          <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger">
+          <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
             {{this.validMatchError.provider}}
             To check compatibility,
             <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
