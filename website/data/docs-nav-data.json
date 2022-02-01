@@ -1452,6 +1452,14 @@
             "path": "platform/mssql/installation"
           },
           {
+            "title": "Configuration",
+            "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Upgrading",
+            "path": "platform/mssql/upgrading"
+          },
+          {
             "title": "Troubleshooting",
             "path": "platform/mssql/troubleshooting"
           }
