@@ -51,14 +51,12 @@ export default class Dashboard extends Component {
       // otherwise will return date of new Date(null)
       return null;
     }
-    // this.startTimeFromResponse = ['2021', 2] is March 2021
     let month = this.startTimeFromResponse[1];
     let year = this.startTimeFromResponse[0];
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
   get endTimeDisplay() {
-    // changes 3,2021 to March, 2021
     if (!this.endTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
@@ -144,7 +142,7 @@ export default class Dashboard extends Component {
     if (dateType === 'endTime') {
       // use the currently selected startTime for your startTimeRequested.
       this.startTimeRequested = this.startTimeFromResponse;
-      this.endTimeRequested = [year.toString(), month];
+      this.endTimeRequested = [year.toString(), month]; // endTime comes in as a number/index whereas startTime comes in as a month name. Hence the difference between monthIndex and month.
     }
 
     try {

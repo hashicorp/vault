@@ -6,13 +6,12 @@ export default Application.extend({
     let { start_time, end_time } = query;
     // do not query without start_time. Otherwise returns last year data, which is not reflective of billing data.
     if (start_time) {
-      // check if it's an array, if it is, it's coming from an action like selecting a new Start Time or new EndTime
+      // check if it's an array, if it is, it's coming from an action like selecting a new startTime or new EndTime
       if (Array.isArray(start_time)) {
         let startYear = Number(start_time[0]);
         let startMonth = Number(start_time[1]);
         start_time = formatRFC3339(new Date(startYear, startMonth));
       }
-      // look for end_time
       if (end_time) {
         if (Array.isArray(end_time)) {
           let endYear = Number(end_time[0]);
