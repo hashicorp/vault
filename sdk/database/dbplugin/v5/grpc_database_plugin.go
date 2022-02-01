@@ -24,9 +24,8 @@ const multiplexingCtxKey string = "multiplex_id"
 type Factory func() (interface{}, error)
 
 type GRPCDatabasePlugin struct {
-	FactoryFunc         Factory
-	Impl                Database
-	multiplexingSupport bool
+	FactoryFunc Factory
+	Impl        Database
 
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin

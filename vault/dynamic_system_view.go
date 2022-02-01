@@ -220,7 +220,6 @@ func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pl
 	if err != nil {
 		return nil, err
 	}
-	d.core.logger.Debug("new plugin connection created", "id", c.id)
 
 	return c, nil
 }

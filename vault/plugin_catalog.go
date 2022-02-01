@@ -49,58 +49,80 @@ type PluginCatalog struct {
 	lock sync.RWMutex
 }
 
-type MultiplexedClient struct {
-	logger log.Logger
-
-	// id is the ID for this grpc connection
-	id string
-	// connectionCount is the number of databases associated with this connection
-	connectionCount int
-	// name is the plugin name
-	name     string
+type PluginClient struct {
+	logger   log.Logger
+	id       string
 	protocol plugin.ClientProtocol
-
-	// clientConn represents a virtual connection to a conceptual endpoint, to
-	// perform RPCs
-	clientConn *grpc.ClientConn
-
 	// client handles the lifecycle of a plugin process
 	client *plugin.Client
 }
 
-func (m *MultiplexedClient) Conn() *grpc.ClientConn {
-	return m.clientConn
+type MultiplexedClient struct {
+	logger log.Logger
+
+	// name is the plugin name
+	name string
+
+	client *plugin.Client
+
+	connections         map[string]*PluginClient
+	multiplexingSupport bool
 }
 
-func (m *MultiplexedClient) ID() string {
-	return m.id
+func (p *PluginClient) Conn() *grpc.ClientConn {
+	gc := p.protocol.(*plugin.GRPCClient)
+	return gc.Conn
 }
 
-func (m *MultiplexedClient) Close() error {
-	m.connectionCount -= 1
-	m.logger.Debug("deleted multiplexedClients connection entry")
+func (p *PluginClient) ID() string {
+	return p.id
+}
 
-	err := m.protocol.Close()
-	if m.connectionCount == 0 {
-		m.client.Kill()
-		m.client = nil
-		m.protocol = nil
-		m.clientConn = nil
-		m.logger.Debug("killed plugin process", "id", m.id, "name", m.name)
+func (p *MultiplexedClient) ByID(id string) *PluginClient {
+	return p.connections[id]
+}
+
+func (p *PluginClient) MultiplexingSupport() bool {
+	if p.client == nil {
+		return false
 	}
+	return pluginutil.MultiplexingSupport(p.client.NegotiatedVersion())
+}
+
+func (c *PluginCatalog) removeMultiplexedClient(name, id string) {
+	mpc, ok := c.multiplexedClients[name]
+	if !ok {
+		return
+	}
+
+	mpc.connections[id].Close()
+
+	delete(mpc.connections, id)
+	if len(mpc.connections) == 0 {
+		delete(c.multiplexedClients, name)
+	}
+}
+
+func (p *PluginClient) Close() error {
+	p.logger.Debug("attempting to kill plugin process", "id", p.id)
+	p.client.Kill()
+	err := p.protocol.Close()
+	p.client = nil
+	p.protocol = nil
+	p.logger.Debug("killed plugin process", "id", p.id)
 	return err
 }
 
-func (m *MultiplexedClient) Dispense(name string) (interface{}, error) {
-	pluginInstance, err := m.protocol.Dispense(name)
+func (p *PluginClient) Dispense(name string) (interface{}, error) {
+	pluginInstance, err := p.protocol.Dispense(name)
 	if err != nil {
 		return nil, err
 	}
 	return pluginInstance, nil
 }
 
-func (m *MultiplexedClient) Ping() error {
-	err := m.protocol.Ping()
+func (p *PluginClient) Ping() error {
+	err := p.protocol.Ping()
 	if err != nil {
 		return err
 	}
@@ -146,7 +168,7 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 		c.logger.Debug("created multiplexedClients map")
 	}
 
-	mpc := &MultiplexedClient{logger: c.logger}
+	mpc := &MultiplexedClient{connections: make(map[string]*PluginClient), logger: c.logger}
 
 	// set the MultiplexedClient for the given plugin name
 	c.multiplexedClients[pluginName] = mpc
@@ -157,7 +179,7 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 
 // GetPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*MultiplexedClient, error) {
+func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
 	c.lock.Lock()
 	pc, err := c.getPluginClient(ctx, sys, pluginRunner, config)
 	c.lock.Unlock()
@@ -166,15 +188,21 @@ func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.Runn
 
 // getPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*MultiplexedClient, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
 	mpc := c.getMultiplexedClient(pluginRunner.Name)
+	c.logger.Debug("getPluginClient", "pluginRunner.MultiplexingSupport", pluginRunner.MultiplexingSupport)
 
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
 	}
 
-	if mpc.client == nil {
+	pc := &PluginClient{
+		id:     id,
+		logger: c.logger,
+	}
+	if !pluginRunner.MultiplexingSupport || mpc.client == nil {
+		// get a new client
 		c.logger.Debug("spawning a new plugin process")
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.Runner(sys),
@@ -189,38 +217,41 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 		}
 
 		mpc.client = client
+		pc.client = client
+
+	}
+
+	if pluginRunner.MultiplexingSupport && mpc.client != nil {
+		// return existing client
+		c.logger.Debug("return existing client")
+
+		pc.client = mpc.client
 	}
 
 	// Get the protocol client for this connection.
 	// Subsequent calls to this will return the same client.
-	rpcClient, err := mpc.client.Client()
+	rpcClient, err := pc.client.Client()
 	if err != nil {
 		return nil, err
 	}
 
-	// set the ClientProtocol connection for the given ID
-	mpc.protocol = rpcClient
-
-	gc, ok := rpcClient.(*plugin.GRPCClient)
-	if ok {
-		mpc.clientConn = gc.Conn
-	}
+	pc.protocol = rpcClient
+	mpc.connections[id] = pc
+	mpc.multiplexingSupport = pc.MultiplexingSupport()
 
 	mpc.name = pluginRunner.Name
-	mpc.id = id
-	mpc.connectionCount += 1
 
-	return mpc, nil
+	return mpc.connections[id], nil
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
-func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, bool, error) {
 	merr := &multierror.Error{}
-	err := c.isDatabasePlugin(ctx, plugin)
+	multiplexingSupport, err := c.isDatabasePlugin(ctx, plugin)
 	if err == nil {
-		return consts.PluginTypeDatabase, nil
+		return consts.PluginTypeDatabase, multiplexingSupport, nil
 	}
 	merr = multierror.Append(merr, err)
 
@@ -229,7 +260,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	if err == nil {
 		err := client.Setup(ctx, &logical.BackendConfig{})
 		if err != nil {
-			return consts.PluginTypeUnknown, err
+			return consts.PluginTypeUnknown, false, err
 		}
 
 		backendType := client.Type()
@@ -237,9 +268,9 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 
 		switch backendType {
 		case logical.TypeCredential:
-			return consts.PluginTypeCredential, nil
+			return consts.PluginTypeCredential, false, nil
 		case logical.TypeLogical:
-			return consts.PluginTypeSecrets, nil
+			return consts.PluginTypeSecrets, false, nil
 		}
 	} else {
 		merr = multierror.Append(merr, err)
@@ -256,37 +287,38 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 			"error", merr.Error())
 	}
 
-	return consts.PluginTypeUnknown, nil
+	return consts.PluginTypeUnknown, false, nil
 }
 
-func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
+func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (bool, error) {
 	merr := &multierror.Error{}
 	config := pluginutil.PluginClientConfig{
-		Name:            plugin.Name,
+		Name:            pluginRunner.Name,
 		PluginSets:      v5.PluginSets,
 		HandshakeConfig: v5.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
 	}
-	// Attempt to run as database V5 plugin
-	v5Client, err := c.getPluginClient(ctx, nil, plugin, config)
+	// Attempt to run as database V5 or V6 plugin
+	v5Client, err := c.getPluginClient(ctx, nil, pluginRunner, config)
 	if err == nil {
+		multiplexingSupport := v5Client.MultiplexingSupport()
 		// Close the client and cleanup the plugin process
-		v5Client.Close()
-		return nil
+		c.removeMultiplexedClient(pluginRunner.Name, v5Client.ID())
+		return multiplexingSupport, nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
-	v4Client, err := v4.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v4Client.Close()
-		return nil
+		return false, nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
 
-	return merr.ErrorOrNil()
+	return false, merr.ErrorOrNil()
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to
@@ -332,7 +364,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		pluginType, err := c.getPluginTypeFromUnknown(ctx, logger, plugin)
+		pluginType, multiplexingSupport, err := c.getPluginTypeFromUnknown(ctx, logger, plugin)
 		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
 			continue
@@ -343,7 +375,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		}
 
 		// Upgrade the storage
-		err = c.setInternal(ctx, pluginName, pluginType, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+		err = c.setInternal(ctx, pluginName, pluginType, multiplexingSupport, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
 		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
 			continue
@@ -431,10 +463,10 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.setInternal(ctx, name, pluginType, command, args, env, sha256)
+	return c.setInternal(ctx, name, pluginType, false, command, args, env, sha256)
 }
 
-func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, command string, args []string, env []string, sha256 []byte) error {
+func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, multiplexingSupport bool, command string, args []string, env []string, sha256 []byte) error {
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
 	commandFull := filepath.Join(c.directory, command)
@@ -456,15 +488,16 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		// entryTmp should only be used for the below type check, it uses the
 		// full command instead of the relative command.
 		entryTmp := &pluginutil.PluginRunner{
-			Name:    name,
-			Command: commandFull,
-			Args:    args,
-			Env:     env,
-			Sha256:  sha256,
-			Builtin: false,
+			Name:                name,
+			Command:             commandFull,
+			Args:                args,
+			Env:                 env,
+			Sha256:              sha256,
+			Builtin:             false,
+			MultiplexingSupport: multiplexingSupport,
 		}
 
-		pluginType, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
+		pluginType, multiplexingSupport, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
 		if err != nil {
 			return err
 		}
@@ -474,13 +507,14 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	}
 
 	entry := &pluginutil.PluginRunner{
-		Name:    name,
-		Type:    pluginType,
-		Command: command,
-		Args:    args,
-		Env:     env,
-		Sha256:  sha256,
-		Builtin: false,
+		Name:                name,
+		Type:                pluginType,
+		Command:             command,
+		Args:                args,
+		Env:                 env,
+		Sha256:              sha256,
+		Builtin:             false,
+		MultiplexingSupport: multiplexingSupport,
 	}
 
 	buf, err := json.Marshal(entry)
