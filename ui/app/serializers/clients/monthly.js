@@ -1,7 +1,7 @@
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 
-export default ApplicationSerializer.extend({
+export default class MonthlySerializer extends ApplicationSerializer {
   flattenDataset(payload) {
     let topTen = payload ? payload.slice(0, 10) : [];
 
@@ -28,7 +28,7 @@ export default ApplicationSerializer.extend({
         ...flattenedNs,
       };
     });
-  },
+  }
 
   // For 1.10 release naming changed from 'distinct_entities' to 'entity_clients' and
   // 'non_entity_tokens' to 'non_entity_clients'
@@ -41,7 +41,7 @@ export default ApplicationSerializer.extend({
       delete object.non_entity_tokens;
     }
     return object;
-  },
+  }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let total = payload.data;
@@ -59,6 +59,6 @@ export default ApplicationSerializer.extend({
       },
     };
     delete payload.data.by_namespace;
-    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
-  },
-});
+    return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
+  }
+}

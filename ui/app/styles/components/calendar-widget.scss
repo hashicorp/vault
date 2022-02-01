@@ -72,11 +72,6 @@ $dark-gray: #535f73;
       color: lighten($dark-gray, 30%);
       pointer-events: none;
     }
-    &.is-selected {
-      background-color: $blue-500;
-      color: white;
-      text-align: center;
-    }
   }
 }
 

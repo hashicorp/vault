@@ -181,7 +181,6 @@ func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Re
 	}
 
 	parsedCB, err := parseCABundle(ctx, b, req, cb)
-
 	if err != nil {
 		return nil, err
 	}

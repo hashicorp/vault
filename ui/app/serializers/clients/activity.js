@@ -1,7 +1,6 @@
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
-
-export default ApplicationSerializer.extend({
+export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(payload) {
     // let topTen = payload ? payload.slice(0, 10) : [];
     return payload?.map((ns) => {
@@ -25,7 +24,7 @@ export default ApplicationSerializer.extend({
         ...flattenedNs,
       };
     });
-  },
+  }
 
   // For 1.10 release naming changed from 'distinct_entities' to 'entity_clients' and
   // 'non_entity_tokens' to 'non_entity_clients'
@@ -38,7 +37,7 @@ export default ApplicationSerializer.extend({
       delete object.non_entity_tokens;
     }
     return object;
-  },
+  }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let response_timestamp = formatISO(new Date());
@@ -47,11 +46,18 @@ export default ApplicationSerializer.extend({
       response_timestamp,
       by_namespace: this.flattenDataset(payload.data.by_namespace),
       total: this.homogenizeClientNaming(payload.data.total),
+      formatted_end_time: this.rfc33395ToMonthYear(payload.data.end_time),
+      formatted_start_time: this.rfc33395ToMonthYear(payload.data.start_time),
     };
     delete payload.data.by_namespace;
-    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
-  },
-});
+    return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
+  }
+
+  rfc33395ToMonthYear(timestamp) {
+    // return ['2021,' 04 (e.g. 2021 March, make 0-indexed)
+    return [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1];
+  }
+}
 
 /* 
 SAMPLE PAYLOAD BEFORE/AFTER:
