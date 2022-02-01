@@ -47,12 +47,11 @@ export default class Dashboard extends Component {
   // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
   get startTimeDisplay() {
-    // changes 3,2021 to March, 2021
     if (!this.startTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
     }
-    // ['2021, 2'] is March 2021
+    // this.startTimeFromResponse = ['2021', 2] is March 2021
     let month = this.startTimeFromResponse[1];
     let year = this.startTimeFromResponse[0];
     return `${this.arrayOfMonths[month]} ${year}`;
@@ -157,9 +156,11 @@ export default class Dashboard extends Component {
         // this.endTime will be null and use this to show EmptyState message on the template.
         return;
       }
+      // note: this.startTimeDisplay (at getter) is updated by this.startTimeFromResponse
       this.startTimeFromResponse = response.formattedStartTime;
       this.endTimeFromResponse = response.formattedEndTime;
-
+      // compare if the response and what you requested are the same. If they are not throw a warning.
+      // this only gets triggered if the data was returned, which does not happen if the user selects a startTime after for which we have data. That's an adapter error and is captured differently.
       if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {
         this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
       } else {
