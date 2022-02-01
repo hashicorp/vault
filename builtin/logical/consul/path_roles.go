@@ -73,15 +73,13 @@ Defaults to 'client'.`,
 			},
 
 			"consul_namespace": {
-				Type:    framework.TypeString,
-				Default: "default",
+				Type: framework.TypeString,
 				Description: `Indicates which namespace that the token will be
 created within. Defaults to "default".`,
 			},
 
 			"partition": {
-				Type:    framework.TypeString,
-				Default: "default",
+				Type: framework.TypeString,
 				Description: `Indicates which admin partition that the token
 will be created within. Defaults to "default".`,
 			},

@@ -119,12 +119,12 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// If a namespace was supplied here, then overwrite the namespace
 	// that was given when the role was written
-	if len(namespace) == 0 {
+	if namespace == "" {
 		namespace = result.Namespace
 	}
 	// If a partition was supplied here, then overwrite the partition
 	// that was given when the role was written
-	if len(partition) == 0 {
+	if partition == "" {
 		partition = result.Partition
 	}
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
