@@ -46,7 +46,7 @@ transformedPayload.by_namespace = [
 ]
 */
 
-export default ApplicationSerializer.extend({
+export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(payload) {
     let topTen = payload.slice(0, 10);
 
@@ -79,7 +79,7 @@ export default ApplicationSerializer.extend({
         ...flattenedNs,
       };
     });
-  },
+  }
 
   // TODO CMB remove and use abstracted function above
   // prior to 1.10, client count key names are "distinct_entities" and "non_entity_tokens" so mapping below wouldn't work
@@ -107,7 +107,12 @@ export default ApplicationSerializer.extend({
         mounts: namespaceMounts,
       };
     });
-  },
+  }
+
+  rfc33395ToMonthYear(timestamp) {
+    // return ['2021,' 04 (e.g. 2021 March, make 0-indexed)
+    return [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1];
+  }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let response_timestamp = formatISO(new Date());
@@ -115,8 +120,10 @@ export default ApplicationSerializer.extend({
       ...payload,
       response_timestamp,
       by_namespace: this.flattenDataset(payload.data.by_namespace),
+      formatted_end_time: this.rfc33395ToMonthYear(payload.data.end_time),
+      formatted_start_time: this.rfc33395ToMonthYear(payload.data.start_time),
     };
     delete payload.data.by_namespace;
-    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
-  },
-});
+    return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
+  }
+}

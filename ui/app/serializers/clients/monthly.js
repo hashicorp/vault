@@ -1,7 +1,7 @@
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 
-export default ApplicationSerializer.extend({
+export default class MonthlySerializer extends ApplicationSerializer {
   flattenDataset(payload) {
     let topTen = payload ? payload.slice(0, 10) : [];
 
@@ -34,7 +34,7 @@ export default ApplicationSerializer.extend({
         ...flattenedNs,
       };
     });
-  },
+  }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let { data } = payload;
@@ -52,6 +52,6 @@ export default ApplicationSerializer.extend({
       },
     };
     delete payload.data.by_namespace;
-    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
-  },
-});
+    return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
+  }
+}

@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { format, formatRFC3339, isSameMonth } from 'date-fns';
+import { isSameMonth } from 'date-fns';
 
 export default class Dashboard extends Component {
   arrayOfMonths = [
@@ -24,40 +24,53 @@ export default class Dashboard extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  // TODO remove this adapter variable? or set to /clients/activity ?
-  adapter = this.store.adapterFor('clients/new-init-activity');
+
+  // needed for startTime modal picker
+  months = Array.from({ length: 12 }, (item, i) => {
+    return new Date(0, i).toLocaleString('en-US', { month: 'long' });
+  });
+  years = Array.from({ length: 5 }, (item, i) => {
+    return new Date().getFullYear() - i;
+  });
 
   @service store;
 
   @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
-  @tracked startTime = this.args.model.startTime;
-  @tracked endTime = this.args.model.endTime;
+  @tracked responseRangeDiffMessage = null;
+  @tracked startTimeRequested = null;
+  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
+  @tracked endTimeFromResponse = this.args.model.endTimeFromLicense;
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
   // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
   get startTimeDisplay() {
-    if (!this.startTime) {
+    if (!this.startTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
     }
-    let formattedAsDate = new Date(this.startTime); // on init it's formatted as a Date object, but when modified by modal it's formatted as RFC3339
-    return format(formattedAsDate, 'MMMM yyyy');
+    let month = this.startTimeFromResponse[1];
+    let year = this.startTimeFromResponse[0];
+    return `${this.arrayOfMonths[month]} ${year}`;
   }
 
   get endTimeDisplay() {
-    if (!this.endTime) {
+    if (!this.endTimeFromResponse) {
       // otherwise will return date of new Date(null)
       return null;
     }
-    let formattedAsDate = new Date(this.endTime);
-    return format(formattedAsDate, 'MMMM yyyy');
+    let month = this.endTimeFromResponse[1];
+    let year = this.endTimeFromResponse[0];
+    return `${this.arrayOfMonths[month]} ${year}`;
   }
 
   get isDateRange() {
-    return !isSameMonth(new Date(this.startTime), new Date(this.endTime));
+    return !isSameMonth(
+      new Date(this.args.model.activity.startTime),
+      new Date(this.args.model.activity.endTime)
+    );
   }
 
   // Determine if we have client count data based on the current tab
@@ -91,39 +104,75 @@ export default class Dashboard extends Component {
     }
     return this.args.model.activity.responseTimestamp;
   }
+  // HELPERS
+  areArraysTheSame(a1, a2) {
+    return (
+      a1 === a2 ||
+      (a1 !== null &&
+        a2 !== null &&
+        a1.length === a2.length &&
+        a1
+          .map(function (val, idx) {
+            return val === a2[idx];
+          })
+          .reduce(function (prev, cur) {
+            return prev && cur;
+          }, true))
+    );
+  }
 
+  // ACTIONS
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
       return;
     }
-    // dateType is either startTime or endTime
-    let monthIndex = this.arrayOfMonths.indexOf(month);
+    // clicked "Current Billing period" in the calendar widget
+    if (dateType === 'reset') {
+      this.startTimeRequested = this.args.model.startTimeFromLicense;
+      this.endTimeRequested = null;
+    }
+    // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
-      this.startTime = formatRFC3339(new Date(year, monthIndex));
-      this.endTime = null;
+      let monthIndex = this.arrayOfMonths.indexOf(month);
+      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021) // TODO CHANGE TO ARRAY
+      this.endTimeRequested = null;
     }
+    // clicked "Custom End Month" from the calendar-widget
     if (dateType === 'endTime') {
-      // this month comes in as an index
-      this.endTime = formatRFC3339(new Date(year, month));
+      // use the currently selected startTime for your startTimeRequested.
+      this.startTimeRequested = this.startTimeFromResponse;
+      this.endTimeRequested = [year.toString(), month]; // endTime comes in as a number/index whereas startTime comes in as a month name. Hence the difference between monthIndex and month.
     }
-    try {
-      let response = await this.adapter.queryClientActivity(this.startTime, this.endTime);
-      // resets the endTime to what is returned on the response
-      this.endTime = response.data.end_time;
 
+    try {
+      let response = await this.store.queryRecord('clients/activity', {
+        start_time: this.startTimeRequested,
+        end_time: this.endTimeRequested,
+      });
+      if (!response) {
+        // this.endTime will be null and use this to show EmptyState message on the template.
+        return;
+      }
+      // note: this.startTimeDisplay (at getter) is updated by this.startTimeFromResponse
+      this.startTimeFromResponse = response.formattedStartTime;
+      this.endTimeFromResponse = response.formattedEndTime;
+      // compare if the response and what you requested are the same. If they are not throw a warning.
+      // this only gets triggered if the data was returned, which does not happen if the user selects a startTime after for which we have data. That's an adapter error and is captured differently.
+      if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {
+        this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
+      } else {
+        this.responseRangeDiffMessage = null;
+      }
       return response;
-      // ARG TODO this is the response you need to use to repopulate the chart data
     } catch (e) {
       // ARG TODO handle error
     }
   }
 
-  // ARG TODO this might be a carry over from history, will need to confirm
   @action
-  resetData() {
-    this.barChartSelection = false;
-    this.selectedNamespace = null;
+  handleCurrentBillingPeriod() {
+    this.handleClientActivityQuery(0, 0, 'reset');
   }
 
   @action
