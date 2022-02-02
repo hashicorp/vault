@@ -126,9 +126,8 @@ div > .ember-power-select-options {
   top: 5px;
 }
 
-// ARG TODO fixes the icon but shouldn't need important?
 .search-icon {
-  margin-top: 4px !important;
+  margin-top: 4px;
 }
 
 .search-select.display-inherit {
