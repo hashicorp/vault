@@ -44,7 +44,7 @@ $ curl \
 ## Create/Update managed key
 
 An endpoint that will create or update a Managed Key within a given namespace. The :type refers to the backend type
-that the key is to use, such as `pkcs11`. The :name argument is unique name within all managed key types within
+that the key is to use, such as `pkcs11`. The :name argument is unique name within all managed key types in
 the namespace.
 
 | Method | Path                            |
@@ -62,7 +62,7 @@ $ curl \
 
 ### Generic Parameters
 - `name` `(string: <required>)` - A unique lowercase name that serves as identifying the key. Must be
-  unique throughout all types within the namespace.
+  unique throughout all types in the namespace.
 
 - `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
   Supported options are `pkcs11`.
@@ -135,7 +135,7 @@ $ curl \
 
 ## Read managed key
 
-This endpoint returns the configuration of the managed key at the given path.
+This endpoint returns the managed key configuration at the given path.
 
 | Method | Path                            |
 |:-------|:--------------------------------|
@@ -179,7 +179,8 @@ $ curl \
 
 ## Delete managed key
 
-This endpoint deletes the managed key at the given path if it is not configured for usage within any mount point.
+This endpoint deletes the managed key at the given path provided it is not
+listed within any mount point's `allowed_managed_keys`.
 
 | Method   | Path                            |
 |:---------|:--------------------------------|
