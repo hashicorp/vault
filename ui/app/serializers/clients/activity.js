@@ -39,7 +39,17 @@ export default class ActivitySerializer extends ApplicationSerializer {
     return object;
   }
 
+  rfc33395ToMonthYear(timestamp) {
+    // return ['2021,' 04 (e.g. 2021 March, make 0-indexed)
+    return timestamp
+      ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
+      : null;
+  }
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    if (payload.id === 'no-data') {
+      return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
+    }
     let response_timestamp = formatISO(new Date());
     let transformedPayload = {
       ...payload,
@@ -51,11 +61,6 @@ export default class ActivitySerializer extends ApplicationSerializer {
     };
     delete payload.data.by_namespace;
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
-  }
-
-  rfc33395ToMonthYear(timestamp) {
-    // return ['2021,' 04 (e.g. 2021 March, make 0-indexed)
-    return [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1];
   }
 }
 

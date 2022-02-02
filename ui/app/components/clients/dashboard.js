@@ -40,10 +40,11 @@ export default class Dashboard extends Component {
   @tracked responseRangeDiffMessage = null;
   @tracked startTimeRequested = null;
   @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
-  @tracked endTimeFromResponse = this.args.model.endTimeFromLicense;
+  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
+  @tracked noActivityDate = '';
   // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view with mirage
 
   get startTimeDisplay() {
@@ -68,8 +69,8 @@ export default class Dashboard extends Component {
 
   get isDateRange() {
     return !isSameMonth(
-      new Date(this.args.model.activity.startTime),
-      new Date(this.args.model.activity.endTime)
+      new Date(this.args.model.activity.startTimeStamp),
+      new Date(this.args.model.activity.endTimeStamp)
     );
   }
 
@@ -146,13 +147,15 @@ export default class Dashboard extends Component {
         start_time: this.startTimeRequested,
         end_time: this.endTimeRequested,
       });
-      if (!response) {
-        // this.endTime will be null and use this to show EmptyState message on the template.
-        return;
+      if (response.id === 'no-data') {
+        // empty response is the only time we want to update the displayed date with the requested time
+        this.startTimeFromResponse = this.startTimeRequested;
+        this.noActivityDate = this.startTimeDisplay;
+      } else {
+        // note: this.startTimeDisplay (getter) is updated by this.startTimeFromResponse
+        this.startTimeFromResponse = response.formattedStartTime;
+        this.endTimeFromResponse = response.formattedEndTime;
       }
-      // note: this.startTimeDisplay (at getter) is updated by this.startTimeFromResponse
-      this.startTimeFromResponse = response.formattedStartTime;
-      this.endTimeFromResponse = response.formattedEndTime;
       // compare if the response and what you requested are the same. If they are not throw a warning.
       // this only gets triggered if the data was returned, which does not happen if the user selects a startTime after for which we have data. That's an adapter error and is captured differently.
       if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {

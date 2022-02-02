@@ -43,8 +43,10 @@ export default Route.extend(ClusterRoute, {
   },
 
   rfc33395ToMonthYear(timestamp) {
-    // return [2021, 04 (e.g. 2021 March, make 0-indexed)
-    return [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1];
+    // return ['2021', 2] (e.g. 2021 March, make 0-indexed)
+    return timestamp
+      ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
+      : null;
   },
 
   async model() {
@@ -57,7 +59,7 @@ export default Route.extend(ClusterRoute, {
     let license = await this.getLicense(); // get default start_time
     let activity = await this.getActivity(license.startTime); // returns client counts using license start_time.
     let monthly = await this.getMonthly(); // returns the partial month endpoint
-    let endTimeFromLicense = this.rfc33395ToMonthYear(activity.endTime);
+    let endTimeFromResponse = activity ? this.rfc33395ToMonthYear(activity.endTime) : null;
     let startTimeFromLicense = this.rfc33395ToMonthYear(license.startTime);
 
     return hash({
@@ -65,7 +67,7 @@ export default Route.extend(ClusterRoute, {
       activity,
       monthly,
       config,
-      endTimeFromLicense,
+      endTimeFromResponse,
       startTimeFromLicense,
     });
   },

@@ -41,7 +41,6 @@ export default Application.extend({
     if (queryParams) {
       return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
         let response = resp || {};
-        // if the response is a 204 it has no request id (ARG TODO test that it returns a 204)
         response.id = response.request_id || 'no-data';
         return response;
       });
