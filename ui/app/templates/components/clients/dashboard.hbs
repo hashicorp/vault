@@ -61,7 +61,7 @@
               @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
               @startTimeDisplay={{this.startTimeDisplay}}
             />
-            {{#if this.topTenChartData}}
+            {{#if this.totalClientsData}}
               {{! ARG TODO more filters for namespace here }}
             {{/if}}
           </ToolbarFilters>
@@ -91,10 +91,10 @@
         <LayoutLoading />
       {{else}}
         <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
-        {{#if this.topTenChartData}}
+        {{#if this.totalClientsData}}
           <Clients::Attribution
             @chartLegend={{this.chartLegend}}
-            @totalClientsData={{this.topTenChartData}}
+            @totalClientsData={{this.totalClientsData}}
             @totalUsageCounts={{this.totalUsageCounts}}
             @selectedNamespace={{this.selectedNamespace}}
             @startTimeDisplay={{this.startTimeDisplay}}

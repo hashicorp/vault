@@ -2,9 +2,7 @@ import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(byNamespaceArray) {
-    let topTen = byNamespaceArray ? byNamespaceArray.slice(0, 10) : [];
-
-    return topTen.map((ns) => {
+    return byNamespaceArray.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
       let label = ns['namespace_path'];
@@ -13,13 +11,17 @@ export default class ActivitySerializer extends ApplicationSerializer {
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
       flattenedNs = this.homogenizeClientNaming(flattenedNs);
 
-      // if mounts attribution unavailable, mounts will be undefined
-      flattenedNs.mounts = ns.mounts?.map((mount) => {
-        let flattenedMount = {};
-        flattenedMount.label = mount['path'];
-        Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
-        return flattenedMount;
-      });
+      // TODO CMB check how this works with actual API endpoint
+      // if no mounts, mounts will be an empty array
+      flattenedNs.mounts = ns.mounts
+        ? ns.mounts.map((mount) => {
+            let flattenedMount = {};
+            flattenedMount.label = mount['path'];
+            Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
+            return flattenedMount;
+          })
+        : [];
+
       return {
         label,
         ...flattenedNs,
@@ -32,7 +34,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
   // accounting for deprecated API keys here and updating to latest nomenclature
   homogenizeClientNaming(object) {
     // TODO CMB check with API payload, latest draft includes both new and old key names
-    // Add else to delete old key names IF correct ones exist?
+    // TODO CMB Delete old key names IF correct ones exist?
     if (Object.keys(object).includes('distinct_entities', 'non_entity_tokens')) {
       let entity_clients = object.distinct_entities;
       let non_entity_clients = object.non_entity_tokens;
@@ -43,6 +45,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
         non_entity_clients,
       };
     }
+    return object;
   }
 
   rfc33395ToMonthYear(timestamp) {

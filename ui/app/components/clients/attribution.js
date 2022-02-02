@@ -11,7 +11,7 @@ import { inject as service } from '@ember/service';
  * ```js
  *  <Clients::Attribution
  *    @chartLegend={{this.chartLegend}}
- *    @totalClientsData={{this.topTenChartData}}
+ *    @totalClientsData={{this.totalClientsData}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @selectedNamespace={{this.selectedNamespace}}
  *    @startTimeDisplay={{this.startTimeDisplay}}
@@ -21,7 +21,7 @@ import { inject as service } from '@ember/service';
  *  />
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
- * @param {array} totalClientsData - (passed to child chart) array of top 10 namespace objects
+ * @param {array} totalClientsData - array of objects containing a label and breakdown of total, entity and non-entity clients
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {string} selectedNamespace - namespace selected from filter bar
  * @param {string} startTimeDisplay - start date for CSV modal
@@ -43,13 +43,15 @@ export default class Attribution extends Component {
     return !!this.args.selectedNamespace;
   }
 
-  get totalClientsData() {
-    return this.args.totalClientsData;
+  // truncate data before sending to chart component
+  // move truncating to serializer when we add separate request to fetch and export ALL namespace data
+  get barChartTotalClients() {
+    return this.args.totalClientsData.slice(0, 10);
   }
 
   get topClientCounts() {
     // get top namespace or auth method
-    return this.totalClientsData[0];
+    return this.args.totalClientsData[0];
   }
 
   get attributionBreakdown() {
@@ -87,7 +89,7 @@ export default class Attribution extends Component {
 
   get getCsvData() {
     let csvData = [],
-      graphData = this.totalClientsData,
+      graphData = this.args.totalClientsData,
       csvHeader = [
         `Namespace path`,
         'Authentication method',
