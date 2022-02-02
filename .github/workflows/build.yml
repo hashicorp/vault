@@ -44,6 +44,19 @@ jobs:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
 
+  check-docker-official-version:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout directory'
+        uses: actions/checkout@v2
+      # check that the version in dockerfile equals output of get-product-version
+      - name: check version
+        id: check-docker-official-version
+        uses: hashicorp/actions-check-docker-official-version@v1
+        with:
+          version: ${{ needs.get-product-version.outputs.product-version }}
+
   build-other:
     needs: get-product-version
     runs-on: ubuntu-latest
