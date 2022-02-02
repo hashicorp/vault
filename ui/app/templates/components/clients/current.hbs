@@ -14,7 +14,7 @@
       {{/if}}
     </EmptyState>
   {{else}}
-    {{#if this.topTenChartData}}
+    {{#if this.totalClientsData}}
       <div class="is-subtitle-gray has-bottom-margin-m">
         FILTERS
         <Toolbar>
@@ -53,10 +53,10 @@
         @title={{date-format this.responseTimestamp "MMMM"}}
         @totalUsageCounts={{this.totalUsageCounts}}
       />
-      {{#if this.topTenChartData}}
+      {{#if this.totalClientsData}}
         <Clients::Attribution
           @chartLegend={{this.chartLegend}}
-          @totalClientsData={{this.topTenChartData}}
+          @totalClientsData={{this.totalClientsData}}
           @totalUsageCounts={{this.totalUsageCounts}}
           @selectedNamespace={{this.selectedNamespace}}
           @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}

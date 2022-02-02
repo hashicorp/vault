@@ -5,7 +5,7 @@
       <p class="chart-description">{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
-      {{#if this.totalClientsData}}
+      {{#if @totalClientsData}}
         <button type="button" class="button is-secondary" {{on "click" (fn (mut this.showCSVDownloadModal) true)}}>
           Export attribution data
         </button>
@@ -23,7 +23,7 @@
   {{else}}
     <div class="chart-container-wide">
       <Clients::HorizontalBarChart
-        @dataset={{this.totalClientsData}}
+        @dataset={{this.barChartTotalClients}}
         @chartLegend={{@chartLegend}}
         @totalUsageCounts={{@totalUsageCounts}}
       />
