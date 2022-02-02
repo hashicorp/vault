@@ -1,0 +1,3 @@
+```release-note:bug
+oidc: Support dynamic port for loopback redirect URI
+```
