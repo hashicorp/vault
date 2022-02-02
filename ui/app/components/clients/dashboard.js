@@ -69,8 +69,8 @@ export default class Dashboard extends Component {
 
   get isDateRange() {
     return !isSameMonth(
-      new Date(this.args.model.activity.startTimeStamp),
-      new Date(this.args.model.activity.endTimeStamp)
+      new Date(this.args.model.activity.startTime),
+      new Date(this.args.model.activity.endTime)
     );
   }
 

@@ -4,7 +4,7 @@ export default class Activity extends Model {
   @attr('array') byNamespace;
   @attr('array') formattedEndTime;
   @attr('array') formattedStartTime;
-  @attr('string') startTimeStamp;
-  @attr('string') endTimeStamp;
+  @attr('string') startTime;
+  @attr('string') endTime;
   @attr('object') total;
 }
