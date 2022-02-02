@@ -1,10 +1,12 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 export default class Current extends Component {
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
+  searchSelectModel = ['namespace'];
   @tracked selectedNamespace = null;
 
   // TODO CMB get from model
@@ -47,5 +49,11 @@ export default class Current extends Component {
   // HELPERS
   filterByNamespace(namespace) {
     return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
+  }
+  // ACTIONS
+  @action
+  selectNamespace(value) {
+    // value comes in as [namespace0]
+    this.selectedNamespace = value[0];
   }
 }

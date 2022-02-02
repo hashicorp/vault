@@ -19,7 +19,16 @@
         FILTERS
         <Toolbar>
           <ToolbarFilters>
-            {{! ARG TODO more filters for namespace here }}
+            <SearchSelect
+              @id="namespace-search-select-monthly"
+              @models={{this.searchSelectModel}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{action "selectNamespace"}}
+              @placeholder={{"Filter by namespace"}}
+              @displayInherit={{true}}
+            />
           </ToolbarFilters>
         </Toolbar>
       </div>
