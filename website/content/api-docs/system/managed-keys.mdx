@@ -6,19 +6,19 @@ description: The `/sys/managed-keys` endpoint is used manage the managed keys in
 
 # `/sys/managed-keys`
 
-The `/sys/managed-keys` endpoint is used manage the managed keys in Vault. Managed keys are keys managed outside
-of Vault's storage and can be leveraged to perform various operations within Vault.
+The `/sys/managed-keys` endpoint is used manage the Managed Key configuration within Vault.
+See the [Managed Keys](/docs/enterprise/managed-keys) section for further details on the Managed Keys system.
 
-## List Managed keys.
+## List managed keys.
 
-This endpoints lists all the managed keys within the namespace.
+This endpoint lists all the Managed Keys of a certain type within the namespace.
 
 | Method | Path                      |
 |:-------|:--------------------------|
 | `LIST` | `/sys/managed-keys/:type` |
 
 ### Parameters
-- `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
+- `type` `(string: <required>)` – The backend type of keys to be listed.
   Supported options are `pkcs11`.
 
 ### Sample Request
@@ -41,10 +41,10 @@ $ curl \
 }
 ```
 
-## Create/Update Managed Key
+## Create/Update managed key
 
-An endpoint that will create or update a managed key within a given namespace. The :type refers to the backend type
-that the key is supposed to use such as pkcs11. The :name argument is unique name within all managed key types within
+An endpoint that will create or update a Managed Key within a given namespace. The :type refers to the backend type
+that the key is to use, such as `pkcs11`. The :name argument is unique name within all managed key types within
 the namespace.
 
 | Method | Path                            |
@@ -62,7 +62,7 @@ $ curl \
 
 ### Generic Parameters
 - `name` `(string: <required>)` - A unique lowercase name that serves as identifying the key. Must be
-  unique throughout the namespace.
+  unique throughout all types within the namespace.
 
 - `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
   Supported options are `pkcs11`.
@@ -78,10 +78,13 @@ $ curl \
   configured backend, if "false" those operations will be forbidden.
 
 - `any_mount` `(string: "false")` - Allow usage from any mount point within the namespace if "true". If "false"
-  specific mount points will need to be tuned setting `allowed_managed_keys` with the name value of the key
-  granting usage.
+  specific mount points will need their `allowed_managed_keys` parameter to be updated with the key name to
+  grant usage.
 
 #### PKCS#11 backend Parameters
+
+ ~> NOTE: The `pkcs11` backend is only available with Vault Enterprise Plus (HSMs) edition
+
 - `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`
 
 - `library` `(string: <required>)` - The name of the `kms_library` stanza to use from Vault's config to
@@ -101,19 +104,26 @@ $ curl \
 - `pin` `(string: <required>)`: The PIN for login.
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
-  specified as a string (e.g. `"2305843009213693953"`).
+  specified as a string in a decimal format (e.g. `"2305843009213693953"`).
+
+  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup
+  utility but this configuration uses their decimal equivalent. For example, using the
+  HSM command-line `pkcs11-tool`, a slot listed as `0x2000000000000001`in hex is equal
+  to `2305843009213693953` in decimal; these values may be listed shorter or
+  differently as determined by the HSM in use.
 
 - `token_label` `(string: <slot or token label required>)`: The slot token label to
   use.
 
-- `curve` `(string: "")` - supplies the curve value when using the `CKM_ECDSA`
-  mechanism. This key is required if  The supported values are
+- `curve` `(string: "")` - supplies the curve value when using the `CKM_ECDSA mechanism`.
+  The supported values are
     - `P384`
     - `P521`
     - `P256`
 
-- `key_bits` `(int: "")` - supplies the key bits when using `CKM_RSA_PKCS_PSS`,
-  `CKM_RSA_PKCS_OAEP` or `CKM_RSA_PKCS` mechanisms, supported values are
+- `key_bits` `(int: 0)` - supplies the size in bits of the key when using `CKM_RSA_PKCS_PSS`,
+  `CKM_RSA_PKCS_OAEP` or `CKM_RSA_PKCS` as a value for `mechanism`.
+  The supported values are
     - 2048
     - 3072
     - 4096
@@ -123,7 +133,7 @@ $ curl \
   `"true"`). This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
 
-## Read a Managed Key's properties
+## Read managed key
 
 This endpoint returns the configuration of the managed key at the given path.
 
@@ -132,11 +142,9 @@ This endpoint returns the configuration of the managed key at the given path.
 | `GET`  | `/sys/managed-keys/:type/:name` |
 
 ### Parameters
-- `name` `(string: <required>)` - A unique lowercase name that serves as identifying the key. Must be
-  unique throughout the namespace.
+- `name` `(string: <required>)` - The lowercase name identifying the key.
 
-- `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
-  Supported options are `pkcs11`.
+- `type` `(string: <required>)` – The backend type for the managed key.
 
 ### Sample Request
 
@@ -169,20 +177,18 @@ $ curl \
 }
 ```
 
-## Delete a managed key
+## Delete managed key
 
-This endpoint deletes the managed key at the given auth path if it is not configured for usage within any mount point
+This endpoint deletes the managed key at the given path if it is not configured for usage within any mount point.
 
 | Method   | Path                            |
 |:---------|:--------------------------------|
 | `DELETE` | `/sys/managed-keys/:type/:name` |
 
 ### Parameters
-- `name` `(string: <required>)` - A unique lowercase name that serves as identifying the key. Must be
-  unique throughout the namespace.
+- `name` `(string: <required>)` - The lowercase name identifying the key.
 
-- `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
-  Supported options are `pkcs11`.
+- `type` `(string: <required>)` – The backend type for the managed key.
 
 ### Sample Request
 

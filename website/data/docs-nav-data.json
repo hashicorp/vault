@@ -172,10 +172,6 @@
       {
         "title": "Transform",
         "path": "concepts/transform"
-      },
-      {
-        "title": "Managed Keys <sup>ENT</sup>",
-        "path": "concepts/managed-keys"
       }
     ]
   },
@@ -1831,6 +1827,10 @@
       {
         "title": "Control Groups",
         "path": "enterprise/control-groups"
+      },
+      {
+        "title": "Managed Keys",
+        "path": "enterprise/managed-keys"
       },
       {
         "title": "MFA",
