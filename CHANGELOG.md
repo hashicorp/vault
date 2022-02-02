@@ -159,6 +159,10 @@ BUG FIXES:
 ## 1.9.1
 ### December 9, 2021
 
+SECURITY:
+
+* storage/raft: Integrated Storage backend could be caused to crash by an authenticated user with write permissions to the KV secrets engine. This vulnerability, CVE-2021-45042, was fixed in Vault 1.7.7, 1.8.6, and 1.9.1.
+
 IMPROVEMENTS:
 
 * storage/aerospike: Upgrade `aerospike-client-go` to v5.6.0. [[GH-12165](https://github.com/hashicorp/vault/pull/12165)]
@@ -218,6 +222,11 @@ those who have implemented local auth mounts for complying with GDPR guidelines.
 * **OIDC Identity Provider (Tech Preview)**: Adds support for Vault to be an OpenID Connect (OIDC) provider. [[GH-12932](https://github.com/hashicorp/vault/pull/12932)]
 * **Oracle Database UI**: The UI now supports adding and editing Oracle connections in the database secret engine. [[GH-12752](https://github.com/hashicorp/vault/pull/12752)]
 * **Postgres Database UI**: The UI now supports adding and editing Postgres connections in the database secret engine. [[GH-12945](https://github.com/hashicorp/vault/pull/12945)]
+
+SECURITY:
+
+* core/identity: A Vault user with write permission to an entity alias ID sharing a mount accessor with another user may acquire this other user’s policies by merging their identities. This vulnerability, CVE-2021-41802, was fixed in Vault and Vault Enterprise 1.7.5, 1.8.4, and 1.9.0.
+* core/identity: Templated ACL policies would always match the first-created entity alias if multiple entity aliases existed for a specified entity and mount combination, potentially resulting in incorrect policy enforcement. This vulnerability, CVE-2021-43998, was fixed in Vault and Vault Enterprise 1.7.6, 1.8.5, and 1.9.0.
 
 IMPROVEMENTS:
 
@@ -417,6 +426,10 @@ CHANGES:
 
 * go: Update go version to 1.16.9 [[GH-13029](https://github.com/hashicorp/vault/pull/13029)]
 
+SECURITY:
+
+* storage/raft: Integrated Storage backend could be caused to crash by an authenticated user with write permissions to the KV secrets engine. This vulnerability, CVE-2021-45042, was fixed in Vault 1.7.7, 1.8.6, and 1.9.1.
+
 BUG FIXES:
 
 * ha (enterprise): Prevents performance standby nodes from serving and caching stale data immediately after performance standby election completes
@@ -430,6 +443,10 @@ BUG FIXES:
 
 ## 1.8.5
 ### November 4, 2021
+
+SECURITY:
+
+* core/identity: Templated ACL policies would always match the first-created entity alias if multiple entity aliases existed for a specified entity and mount combination, potentially resulting in incorrect policy enforcement. This vulnerability, CVE-2021-43998, was fixed in Vault and Vault Enterprise 1.7.6, 1.8.5, and 1.9.0.
 
 BUG FIXES:
 
@@ -446,6 +463,10 @@ BUG FIXES:
 
 ## 1.8.4
 ### 6 October 2021
+
+SECURITY:
+
+* core/identity: A Vault user with write permission to an entity alias ID sharing a mount accessor with another user may acquire this other user’s policies by merging their identities. This vulnerability, CVE-2021-41802, was fixed in Vault and Vault Enterprise 1.7.5 and 1.8.4.
 
 IMPROVEMENTS:
 
@@ -718,6 +739,10 @@ BUG FIXES:
 ## 1.7.7
 ### December 9, 2021
 
+SECURITY:
+
+* storage/raft: Integrated Storage backend could be caused to crash by an authenticated user with write permissions to the KV secrets engine. This vulnerability, CVE-2021-45042, was fixed in Vault 1.7.7, 1.8.6, and 1.9.1.
+
 BUG FIXES:
 
 * ha (enterprise): Prevents performance standby nodes from serving and caching stale data immediately after performance standby election completes
@@ -729,6 +754,10 @@ BUG FIXES:
 
 ## 1.7.6
 ### November 4, 2021
+
+SECURITY:
+
+* core/identity: Templated ACL policies would always match the first-created entity alias if multiple entity aliases existed for a specified entity and mount combination, potentially resulting in incorrect policy enforcement. This vulnerability, CVE-2021-43998, was fixed in Vault and Vault Enterprise 1.7.6, 1.8.5, and 1.9.0.
 
 BUG FIXES:
 
@@ -747,6 +776,10 @@ BUG FIXES:
 
 ## 1.7.5
 ### 29 September 2021
+
+SECURITY:
+
+* core/identity: A Vault user with write permission to an entity alias ID sharing a mount accessor with another user may acquire this other user’s policies by merging their identities. This vulnerability, CVE-2021-41802, was fixed in Vault and Vault Enterprise 1.7.5 and 1.8.4.
 
 IMPROVEMENTS:
 

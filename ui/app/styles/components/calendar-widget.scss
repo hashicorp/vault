@@ -9,14 +9,7 @@ $dark-gray: #535f73;
   }
 }
 .calendar-title {
-  color: $ui-gray-300;
-  text-transform: uppercase;
-  font-size: $size-7;
-  font-weight: $font-weight-semibold;
-
-  &.popup-menu-item {
-    padding: $size-10 $size-8;
-  }
+  padding: $size-10 $size-8;
 }
 .calendar-widget-dropdown {
   @extend .button;
