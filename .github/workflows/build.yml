@@ -44,6 +44,27 @@ jobs:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
 
+  check-docker-official-version:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout directory'
+        uses: actions/checkout@v2
+      # check that the version in dockerfile equals output of get-product-version
+      - name: check version
+        id: check-docker-official-version
+        uses: hashicorp/actions-check-docker-official-version@v1
+        with:
+          version: ${{ needs.get-product-version.outputs.product-version }}
+      - name: build docker official test
+        # make sure that the official image builds successfuly (GPG key is correct etc..) as we
+        # point to the release build commit sha/tag from the official docker repo
+        run: |
+          cd .release/docker
+          # we need to overwrite the version with one that exists since the one
+          # in the dockerfile doesn't exists on releases.hashicorp.com until released.
+          docker build --build-arg=VAULT_VERSION=1.10.3 --file=Dockerfile.official . 
+
   build-other:
     needs: get-product-version
     runs-on: ubuntu-latest
