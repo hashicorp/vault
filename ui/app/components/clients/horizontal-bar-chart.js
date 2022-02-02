@@ -6,7 +6,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE } from '../../utils/chart-helpers';
+import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE, formatTooltipNumber } from '../../utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 
 /**
@@ -32,6 +32,7 @@ const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 export default class HorizontalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked tooltipText = '';
+  @tracked isLabel = null;
 
   get labelKey() {
     return this.args.labelKey || 'label';
@@ -150,9 +151,11 @@ export default class HorizontalBarChart extends Component {
       .on('mouseover', (data) => {
         let hoveredElement = actionBars.filter((bar) => bar.label === data.label).node();
         this.tooltipTarget = hoveredElement;
-        this.tooltipText = `${Math.round((data.clients * 100) / this.args.clientTotals.clients)}% 
+        this.isLabel = false;
+        this.tooltipText = `${Math.round((data.clients * 100) / this.args.totalUsageCounts.clients)}% 
         of total client counts:
-        ${data.entity_clients} entity clients, ${data.non_entity_clients} non-entity clients.`;
+        ${formatTooltipNumber(data.entity_clients)} entity clients, 
+        ${formatTooltipNumber(data.non_entity_clients)} non-entity clients.`;
 
         select(hoveredElement).style('opacity', 1);
 
@@ -177,6 +180,7 @@ export default class HorizontalBarChart extends Component {
         if (data.label.length >= CHAR_LIMIT) {
           let hoveredElement = yLegendBars.filter((bar) => bar.label === data.label).node();
           this.tooltipTarget = hoveredElement;
+          this.isLabel = true;
           this.tooltipText = data.label;
         } else {
           this.tooltipTarget = null;

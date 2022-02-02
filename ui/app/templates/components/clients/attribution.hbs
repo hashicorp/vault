@@ -13,40 +13,49 @@
     </div>
   </div>
 
-  <div class="chart-container-wide">
-    <Clients::HorizontalBarChart
-      @dataset={{this.totalClientsData}}
-      @chartLegend={{@chartLegend}}
-      @clientTotals={{@runningTotals}}
-    />
-  </div>
+  {{#if (eq @totalUsageCounts.clients 0)}}
+    <div class="chart-empty-state">
+      <EmptyState
+        @title="No data received"
+        @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+      />
+    </div>
+  {{else}}
+    <div class="chart-container-wide">
+      <Clients::HorizontalBarChart
+        @dataset={{this.totalClientsData}}
+        @chartLegend={{@chartLegend}}
+        @totalUsageCounts={{@totalUsageCounts}}
+      />
+    </div>
 
-  <div class="chart-subTitle">
-    <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
-  </div>
+    <div class="chart-subTitle">
+      <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
+    </div>
 
-  <div class="data-details-top">
-    <h3 class="data-details">Top {{lowercase this.attributionBreakdown}}</h3>
-    <p class="data-details">{{this.topClientCounts.label}}</p>
-  </div>
+    <div class="data-details-top">
+      <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
+      <p class="data-details">{{this.topClientCounts.label}}</p>
+    </div>
 
-  <div class="data-details-bottom">
-    <h3 class="data-details">Clients in {{lowercase this.attributionBreakdown}}</h3>
-    <p class="data-details">{{this.topClientCounts.clients}}</p>
-  </div>
+    <div class="data-details-bottom">
+      <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
+      <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
+    </div>
 
-  <div class="timestamp">
-    Updated
-    {{date-format @timestamp "MMM dd yyyy, h:mm:ss aaa"}}
-  </div>
+    <div class="timestamp">
+      Updated
+      {{date-format @timestamp "MMM dd yyyy, h:mm:ss aaa"}}
+    </div>
 
-  <div class="legend-center">
-    <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-    <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
-  </div>
+    <div class="legend-center">
+      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+    </div>
+  {{/if}}
 </div>
 
-{{! MODAL FOR CSV DOWNLOAD BUTTON }}
+{{! MODAL FOR CSV DOWNLOAD }}
 <Modal
   @title="Export attribution data"
   @type="info"
@@ -63,7 +72,13 @@
     <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <DownloadCsv @label="Export" @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />
+    <button
+      type="button"
+      class="button is-primary"
+      {{on "click" (fn this.exportChartData this.getCsvFileName this.getCsvData)}}
+    >
+      Export
+    </button>
     <button type="button" class="button is-secondary" onclick={{action (mut this.showCSVDownloadModal) false}}>
       Cancel
     </button>

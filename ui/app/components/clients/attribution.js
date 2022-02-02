@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-
+import { inject as service } from '@ember/service';
 /**
  * @module Attribution
  * Attribution components display the top 10 total client counts for namespaces or auth methods (mounts) during a billing period.
@@ -10,8 +11,8 @@ import { tracked } from '@glimmer/tracking';
  * ```js
  *  <Clients::Attribution
  *    @chartLegend={{this.chartLegend}}
- *    @topTenNamespaces={{this.topTenNamespaces}}
- *    @runningTotals={{this.runningTotals}}
+ *    @totalClientsData={{this.topTenChartData}}
+ *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @selectedNamespace={{this.selectedNamespace}}
  *    @startTimeDisplay={{this.startTimeDisplay}}
  *    @endTimeDisplay={{this.endTimeDisplay}}
@@ -20,8 +21,8 @@ import { tracked } from '@glimmer/tracking';
  *  />
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
- * @param {array} topTenNamespaces - (passed to child chart) array of top 10 namespace objects
- * @param {object} runningTotals - object with total client counts for chart tooltip text
+ * @param {array} totalClientsData - (passed to child chart) array of top 10 namespace objects
+ * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {string} selectedNamespace - namespace selected from filter bar
  * @param {string} startTimeDisplay - start date for CSV modal
  * @param {string} endTimeDisplay - end date for CSV modal
@@ -31,6 +32,7 @@ import { tracked } from '@glimmer/tracking';
 
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
+  @service downloadCsv;
 
   get isDateRange() {
     return this.args.isDateRange;
@@ -42,10 +44,7 @@ export default class Attribution extends Component {
   }
 
   get totalClientsData() {
-    // get dataset for bar chart displaying top 10 namespaces/mounts with highest # of total clients
-    return this.isSingleNamespace
-      ? this.filterByNamespace(this.args.selectedNamespace)
-      : this.args.topTenNamespaces;
+    return this.args.totalClientsData;
   }
 
   get topClientCounts() {
@@ -54,8 +53,8 @@ export default class Attribution extends Component {
   }
 
   get attributionBreakdown() {
-    // display 'Auth method' or 'Namespace' respectively in CSV file
-    return this.isSingleNamespace ? 'Auth method' : 'Namespace';
+    // display text for hbs
+    return this.isSingleNamespace ? 'auth method' : 'namespace';
   }
 
   get chartText() {
@@ -86,37 +85,50 @@ export default class Attribution extends Component {
     }
   }
 
-  // TODO CMB update with proper data format when we have
   get getCsvData() {
-    let results = '',
-      data,
-      fields;
+    let csvData = [],
+      graphData = this.totalClientsData,
+      csvHeader = [
+        `Namespace path`,
+        'Authentication method',
+        'Total clients',
+        'Entity clients',
+        'Non-entity clients',
+      ];
 
-    // TODO CMB will CSV for namespaces include mounts?
-    fields = [`${this.attributionBreakdown}`, 'Active clients', 'Unique entities', 'Non-entity tokens'];
-
-    results = fields.join(',') + '\n';
-    data.forEach(function (item) {
-      let path = item.label !== '' ? item.label : 'root',
-        total = item.total,
-        unique = item.entity_clients,
-        non_entity = item.non_entity_clients;
-
-      results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
-    });
-    return results;
+    // each array will be a row in the csv file
+    if (this.isSingleNamespace) {
+      graphData.forEach((mount) => {
+        csvData.push(['', mount.label, mount.clients, mount.entity_clients, mount.non_entity_clients]);
+      });
+      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
+    } else {
+      graphData.forEach((ns) => {
+        csvData.push([ns.label, '', ns.clients, ns.entity_clients, ns.non_entity_clients]);
+        if (ns.mounts) {
+          ns.mounts.forEach((m) => {
+            csvData.push([ns.label, m.label, m.clients, m.entity_clients, m.non_entity_clients]);
+          });
+        }
+      });
+    }
+    csvData.unshift(csvHeader);
+    // make each nested array a comma separated string, join each array in csvData with line break (\n)
+    return csvData.map((d) => d.join()).join('\n');
   }
-  // TODO CMB - confirm with design file name structure
+
   get getCsvFileName() {
-    let activityDateRange = `${this.args.startTimeDisplay} - ${this.args.endTimeDisplay}`;
-    return activityDateRange
-      ? `clients-by-${this.attributionBreakdown}-${activityDateRange}`
-      : `clients-by-${this.attributionBreakdown}-${new Date()}`;
+    let endRange = this.isDateRange ? `-${this.args.endTimeDisplay}` : '';
+    let csvDateRange = this.args.startTimeDisplay + endRange;
+    return this.isSingleNamespace
+      ? `clients_by_auth_method_${csvDateRange}`
+      : `clients_by_namespace_${csvDateRange}`;
   }
 
-  // HELPERS
-  filterByNamespace(namespace) {
-    // return top 10 mounts for a namespace
-    return this.args.topTenNamespaces.find((ns) => ns.label === namespace).mounts.slice(0, 10);
+  // ACTIONS
+  @action
+  exportChartData(filename, contents) {
+    this.downloadCsv.download(filename, contents);
+    this.showCSVDownloadModal = false;
   }
 }

@@ -40,11 +40,12 @@ export default class Dashboard extends Component {
   @tracked responseRangeDiffMessage = null;
   @tracked startTimeRequested = null;
   @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
-  @tracked endTimeFromResponse = this.args.model.endTimeFromLicense;
+  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
-  // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
+  @tracked noActivityDate = '';
+  // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view with mirage
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -73,36 +74,32 @@ export default class Dashboard extends Component {
     );
   }
 
-  // Determine if we have client count data based on the current tab
-  get hasClientData() {
-    if (this.args.tab === 'current') {
-      // Show the current numbers as long as config is on
-      return this.args.model.config?.enabled !== 'Off';
-    }
-    return this.args.model.activity && this.args.model.activity.total;
-  }
-
   // top level TOTAL client counts from response for given date range
-  get runningTotals() {
-    if (!this.args.model.activity || !this.args.model.activity.total) {
-      return null;
-    }
-    return this.args.model.activity.total;
+  get totalUsageCounts() {
+    return this.selectedNamespace
+      ? this.filterByNamespace(this.selectedNamespace)
+      : this.args.model.activity?.total;
   }
 
-  // for horizontal bar chart in Attribution component
-  get topTenNamespaces() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
+  // by namespace client count data for date range
+  get byNamespaceActivity() {
+    return this.args.model.activity?.byNamespace || null;
+  }
+
+  // for horizontal bar chart in attribution component
+  get topTenChartData() {
+    if (this.selectedNamespace) {
+      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
+      return filteredNamespace.mounts
+        ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
+        : null;
+    } else {
+      return this.byNamespaceActivity;
     }
-    return this.args.model.activity.byNamespace;
   }
 
   get responseTimestamp() {
-    if (!this.args.model.activity || !this.args.model.activity.responseTimestamp) {
-      return null;
-    }
-    return this.args.model.activity.responseTimestamp;
+    return this.args.model.activity?.responseTimestamp;
   }
   // HELPERS
   areArraysTheSame(a1, a2) {
@@ -150,13 +147,15 @@ export default class Dashboard extends Component {
         start_time: this.startTimeRequested,
         end_time: this.endTimeRequested,
       });
-      if (!response) {
-        // this.endTime will be null and use this to show EmptyState message on the template.
-        return;
+      if (response.id === 'no-data') {
+        // empty response is the only time we want to update the displayed date with the requested time
+        this.startTimeFromResponse = this.startTimeRequested;
+        this.noActivityDate = this.startTimeDisplay;
+      } else {
+        // note: this.startTimeDisplay (getter) is updated by this.startTimeFromResponse
+        this.startTimeFromResponse = response.formattedStartTime;
+        this.endTimeFromResponse = response.formattedEndTime;
       }
-      // note: this.startTimeDisplay (at getter) is updated by this.startTimeFromResponse
-      this.startTimeFromResponse = response.formattedStartTime;
-      this.endTimeFromResponse = response.formattedEndTime;
       // compare if the response and what you requested are the same. If they are not throw a warning.
       // this only gets triggered if the data was returned, which does not happen if the user selects a startTime after for which we have data. That's an adapter error and is captured differently.
       if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {
@@ -196,5 +195,10 @@ export default class Dashboard extends Component {
   @action
   selectStartYear(year) {
     this.startYear = year;
+  }
+
+  // HELPERS
+  filterByNamespace(namespace) {
+    return this.byNamespaceActivity.find((ns) => ns.label === namespace);
   }
 }

@@ -54,11 +54,6 @@
         border-color: darken($ui-gray-300, 5%);
       }
     }
-    > a {
-      &:hover {
-        text-decoration: underline;
-      }
-    }
   }
 }
 
@@ -224,25 +219,26 @@ p.data-details {
   font-size: $size-9;
   padding: 6px;
   border-radius: $radius-large;
+  width: 140px;
 
   .bold {
     font-weight: $font-weight-bold;
   }
-
   .line-chart {
     width: 117px;
   }
-
   .vertical-chart {
     text-align: center;
     flex-wrap: nowrap;
     width: fit-content;
   }
-
   .horizontal-chart {
-    width: 200px;
     padding: $spacing-s;
   }
+}
+
+.is-label-fit-content {
+  max-width: fit-content !important;
 }
 
 .chart-tooltip-arrow {
