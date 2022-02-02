@@ -16,28 +16,26 @@ export default class Current extends Component {
     return this.args.licenseStartDate || null;
   }
 
-  // by namespace client count data for partial month
+  // API client count data by namespace for current/partial month
   get byNamespaceCurrent() {
     return this.args.model.monthly?.byNamespace || null;
   }
 
-  // data for horizontal bar chart in attribution component
-  get topTenChartData() {
-    if (this.selectedNamespace) {
-      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
-      return filteredNamespace.mounts
-        ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
-        : null;
-    } else {
-      return this.byNamespaceCurrent;
-    }
-  }
-
-  // top level TOTAL client counts from response for given month
+  // top level TOTAL client counts for current/partial month
   get totalUsageCounts() {
     return this.selectedNamespace
       ? this.filterByNamespace(this.selectedNamespace)
       : this.args.model.monthly?.total;
+  }
+
+  // total client data for horizontal bar chart in attribution component
+  get totalClientsData() {
+    if (this.selectedNamespace) {
+      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
+      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
+    } else {
+      return this.byNamespaceCurrent;
+    }
   }
 
   get responseTimestamp() {

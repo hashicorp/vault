@@ -2,9 +2,7 @@ import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(byNamespaceArray) {
-    let topTen = byNamespaceArray ? byNamespaceArray.slice(0, 10) : [];
-
-    return topTen.map((ns) => {
+    return byNamespaceArray.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
       let label = ns['namespace_path'];

@@ -74,25 +74,23 @@ export default class Dashboard extends Component {
     );
   }
 
-  // top level TOTAL client counts from response for given date range
+  // API client count data by namespace for date range
+  get byNamespaceActivity() {
+    return this.args.model.activity?.byNamespace || null;
+  }
+
+  // top level TOTAL client counts for given date range
   get totalUsageCounts() {
     return this.selectedNamespace
       ? this.filterByNamespace(this.selectedNamespace)
       : this.args.model.activity?.total;
   }
 
-  // by namespace client count data for date range
-  get byNamespaceActivity() {
-    return this.args.model.activity?.byNamespace || null;
-  }
-
-  // for horizontal bar chart in attribution component
-  get topTenChartData() {
+  // total client data for horizontal bar chart in attribution component
+  get totalClientsData() {
     if (this.selectedNamespace) {
       let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
-      return filteredNamespace.mounts
-        ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
-        : null;
+      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
     } else {
       return this.byNamespaceActivity;
     }
