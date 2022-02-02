@@ -147,12 +147,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
-	name := d.Get("name").(string)
 	policies := d.Get("policies").([]string)
-	local := d.Get("local").(bool)
-	namespace := d.Get("consul_namespace").(string)
-	partition := d.Get("partition").(string)
-
 	if len(policies) == 0 {
 		switch tokenType {
 		case "client":
@@ -190,6 +185,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		maxTTL = time.Second * time.Duration(maxTTLRaw.(int))
 	}
 
+	name := d.Get("name").(string)
+	local := d.Get("local").(bool)
+	namespace := d.Get("consul_namespace").(string)
+	partition := d.Get("partition").(string)
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
 		Policy:    string(policyRaw),
 		Policies:  policies,

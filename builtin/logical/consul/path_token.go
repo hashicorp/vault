@@ -47,10 +47,6 @@ func pathToken(b *backend) *framework.Path {
 
 func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	role := d.Get("role").(string)
-	policies := d.Get("policies").([]string)
-	namespace := d.Get("consul_namespace").(string)
-	partition := d.Get("partition").(string)
-
 	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %w", err)
@@ -59,13 +55,13 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(fmt.Sprintf("role %q not found", role)), nil
 	}
 
-	var result roleConfig
-	if err := entry.DecodeJSON(&result); err != nil {
+	var roleConfigData roleConfig
+	if err := entry.DecodeJSON(&roleConfigData); err != nil {
 		return nil, err
 	}
 
-	if result.TokenType == "" {
-		result.TokenType = "client"
+	if roleConfigData.TokenType == "" {
+		roleConfigData.TokenType = "client"
 	}
 
 	// Get the consul client
@@ -84,12 +80,12 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	writeOpts = writeOpts.WithContext(ctx)
 
 	// Create an ACLEntry for Consul pre 1.4
-	if (result.Policy != "" && result.TokenType == "client") ||
-		(result.Policy == "" && result.TokenType == "management") {
+	if (roleConfigData.Policy != "" && roleConfigData.TokenType == "client") ||
+		(roleConfigData.Policy == "" && roleConfigData.TokenType == "management") {
 		token, _, err := c.ACL().Create(&api.ACLEntry{
 			Name:  tokenName,
-			Type:  result.TokenType,
-			Rules: result.Policy,
+			Type:  roleConfigData.TokenType,
+			Rules: roleConfigData.Policy,
 		}, writeOpts)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -102,35 +98,38 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 			"token": token,
 			"role":  role,
 		})
-		s.Secret.TTL = result.TTL
-		s.Secret.MaxTTL = result.MaxTTL
+		s.Secret.TTL = roleConfigData.TTL
+		s.Secret.MaxTTL = roleConfigData.MaxTTL
 		return s, nil
 	}
 
 	// Create an ACLToken for Consul 1.4 and above
 	// If policies were supplied here, then overwrite the policies
 	// that were given when the role was written
-	var policyLink []*api.ACLTokenPolicyLink
+	policies := d.Get("policies").([]string)
+	var policyLinks []*api.ACLTokenPolicyLink
 	if len(policies) > 0 {
-		policyLink = getPolicies(policies)
+		policyLinks = getPolicies(policies)
 	} else {
-		policyLink = getPolicies(result.Policies)
+		policyLinks = getPolicies(roleConfigData.Policies)
 	}
 
 	// If a namespace was supplied here, then overwrite the namespace
 	// that was given when the role was written
+	namespace := d.Get("consul_namespace").(string)
 	if namespace == "" {
-		namespace = result.Namespace
+		namespace = roleConfigData.Namespace
 	}
 	// If a partition was supplied here, then overwrite the partition
 	// that was given when the role was written
+	partition := d.Get("partition").(string)
 	if partition == "" {
-		partition = result.Partition
+		partition = roleConfigData.Partition
 	}
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
-		Policies:    policyLink,
-		Local:       result.Local,
+		Policies:    policyLinks,
+		Local:       roleConfigData.Local,
 		Namespace:   namespace,
 		Partition:   partition,
 	}, writeOpts)
@@ -150,20 +149,20 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		"role":    role,
 		"version": tokenPolicyType,
 	})
-	s.Secret.TTL = result.TTL
-	s.Secret.MaxTTL = result.MaxTTL
+	s.Secret.TTL = roleConfigData.TTL
+	s.Secret.MaxTTL = roleConfigData.MaxTTL
 
 	return s, nil
 }
 
 func getPolicies(policies []string) []*api.ACLLink {
-	policyLink := []*api.ACLTokenPolicyLink{}
+	policyLinks := []*api.ACLTokenPolicyLink{}
 
 	for _, policyName := range policies {
-		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
+		policyLinks = append(policyLinks, &api.ACLTokenPolicyLink{
 			Name: policyName,
 		})
 	}
 
-	return policyLink
+	return policyLinks
 }
