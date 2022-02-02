@@ -11,7 +11,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       let flattenedNs = {};
       // we don't want client counts nested within the 'counts' object for stacked charts
       Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
-      this.homogenizeClientNaming(flattenedNs);
+      flattenedNs = this.homogenizeClientNaming(flattenedNs);
 
       // if mounts attribution unavailable, mounts will be undefined
       flattenedNs.mounts = ns.mounts?.map((mount) => {
@@ -31,13 +31,18 @@ export default class ActivitySerializer extends ApplicationSerializer {
   // 'non_entity_tokens' to 'non_entity_clients'
   // accounting for deprecated API keys here and updating to latest nomenclature
   homogenizeClientNaming(object) {
+    // TODO CMB check with API payload, latest draft includes both new and old key names
+    // Add else to delete old key names IF correct ones exist?
     if (Object.keys(object).includes('distinct_entities', 'non_entity_tokens')) {
-      object.entity_clients = object.distinct_entities;
-      object.non_entity_clients = object.non_entity_tokens;
-      delete object.distinct_entities;
-      delete object.non_entity_tokens;
+      let entity_clients = object.distinct_entities;
+      let non_entity_clients = object.non_entity_tokens;
+      let { clients } = object;
+      return {
+        clients,
+        entity_clients,
+        non_entity_clients,
+      };
     }
-    return object;
   }
 
   rfc33395ToMonthYear(timestamp) {
@@ -61,6 +66,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       formatted_start_time: this.rfc33395ToMonthYear(payload.data.start_time),
     };
     delete payload.data.by_namespace;
+    delete payload.data.total;
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 }
