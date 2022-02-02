@@ -10,7 +10,8 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
-  noMetadataPermissions: false,
+  // By default assume user doesn't have permissions
+  noMetadataPermissions: true,
   queryParams: {
     page: {
       refreshModel: true,
@@ -105,6 +106,7 @@ export default Route.extend({
           pageFilter: params.pageFilter,
         })
         .then((model) => {
+          this.set('noMetadataPermissions', false);
           this.set('has404', false);
           return model;
         })
