@@ -32,6 +32,7 @@ export default class Dashboard extends Component {
   years = Array.from({ length: 5 }, (item, i) => {
     return new Date().getFullYear() - i;
   });
+  searchSelectModel = ['namespace'];
 
   @service store;
 
@@ -44,7 +45,6 @@ export default class Dashboard extends Component {
   @tracked startMonth = null;
   @tracked startYear = null;
   @tracked selectedNamespace = null;
-  // @tracked selectedNamespace = 'namespacelonglonglong4/'; // for testing namespace selection view
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -177,15 +177,8 @@ export default class Dashboard extends Component {
 
   @action
   selectNamespace(value) {
-    // In case of search select component, value returned is an array
-    if (Array.isArray(value)) {
-      this.selectedNamespace = this.getNamespace(value[0]);
-      this.barChartSelection = false;
-    } else if (typeof value === 'object') {
-      // While D3 bar selection returns an object
-      this.selectedNamespace = this.getNamespace(value.label);
-      this.barChartSelection = true;
-    }
+    // value comes in as [namespace0]
+    this.selectedNamespace = value[0];
   }
 
   @action

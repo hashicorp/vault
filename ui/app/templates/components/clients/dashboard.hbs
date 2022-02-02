@@ -63,7 +63,17 @@
               @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
               @startTimeDisplay={{this.startTimeDisplay}}
             />
-            {{! ARG TODO more filters for namespace here }}
+            {{! ARG TODO QA when you have no namespaces }}
+            <SearchSelect
+              @id="namespace-search-select"
+              @models={{this.searchSelectModel}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{action "selectNamespace"}}
+              @placeholder={{"Filter by namespace"}}
+              @displayInherit={{true}}
+            />
           </ToolbarFilters>
         </Toolbar>
         {{#if this.responseRangeDiffMessage}}

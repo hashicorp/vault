@@ -117,6 +117,14 @@ export default class Attribution extends Component {
   // HELPERS
   filterByNamespace(namespace) {
     // return top 10 mounts for a namespace
-    return this.args.topTenNamespaces.find((ns) => ns.label === namespace).mounts.slice(0, 10);
+    let namespaceObject = this.args.topTenNamespaces.find((ns) => ns.label === `${namespace}/`);
+    // debugger;
+    if (namespaceObject.mounts) {
+      this.noMountsOnPayload = true;
+      return namespaceObject.mounts.slice(0, 10);
+    } else {
+      this.noMountsOnPayload = false;
+      // ARG TODO unsure on what to return here?
+    }
   }
 }
