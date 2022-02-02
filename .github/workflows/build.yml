@@ -208,7 +208,6 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           GO_TAGS: "${{ env.GO_TAGS }} netcgo"
-          CGO_ENABLED: 0
         run: |
           mkdir dist out
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
