@@ -173,9 +173,9 @@ export default class Dashboard extends Component {
   }
 
   @action
-  selectNamespace(value) {
+  selectNamespace([value]) {
     // value comes in as [namespace0]
-    this.selectedNamespace = value[0];
+    this.selectedNamespace = value;
   }
 
   @action
