@@ -107,7 +107,7 @@ export default class KeymgmtDistribute extends Component {
     let key;
     if (isNew) {
       this.isNewKey = true;
-      key = await this.store.createRecord(`keymgmt/key`, {
+      key = this.store.createRecord(`keymgmt/key`, {
         backend: this.args.backend,
         id: keyName,
         name: keyName,
@@ -119,7 +119,12 @@ export default class KeymgmtDistribute extends Component {
           id: keyName,
           recordOnly: true,
         })
-        .catch(() => {});
+        .catch(() => {
+          // Key type isn't essential for distributing, so if
+          // we can't read it for some reason swallow the error
+          // and allow the API to respond with any key/provider
+          // type matching errors
+        });
     }
     this.keyModel = key;
   }
