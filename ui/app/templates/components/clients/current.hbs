@@ -25,7 +25,7 @@
       </div>
     {{/if}}
     {{! TODO CMB COMMENT IN CONDITIONAL WHEN VERSION ENDPOINT IS COMPLETE }}
-    {{!-- {{#if (is-after this.upgradeDate this.billingStartDate)}} --}}
+    {{!-- {{#if (is-after this.upgradeDate this.licenseStartDate)}} --}}
     <AlertBanner @type="warning" @title="Warning">
       {{#if this.upgradeDate}}
         {{concat "You upgraded to Vault 1.9 on " (date-format this.upgradeDate "MMMM d, yyyy.")}}

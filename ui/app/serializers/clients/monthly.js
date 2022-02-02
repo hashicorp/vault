@@ -1,8 +1,8 @@
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 export default class MonthlySerializer extends ApplicationSerializer {
-  flattenDataset(payload) {
-    let topTen = payload ? payload.slice(0, 10) : [];
+  flattenDataset(byNamespaceArray) {
+    let topTen = byNamespaceArray ? byNamespaceArray.slice(0, 10) : [];
 
     return topTen.map((ns) => {
       // 'namespace_path' is an empty string for root

@@ -7,13 +7,13 @@ export default class Current extends Component {
   ];
   @tracked selectedNamespace = null;
 
-  // TODO CMB pass in from parent
+  // TODO CMB get from model
   get upgradeDate() {
     return this.args.upgradeDate || null;
   }
 
-  get billingStartDate() {
-    return this.args.billingStartDate || null;
+  get licenseStartDate() {
+    return this.args.licenseStartDate || null;
   }
 
   // by namespace client count data for partial month

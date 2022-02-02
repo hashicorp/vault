@@ -11,7 +11,7 @@ import { inject as service } from '@ember/service';
  * ```js
  *  <Clients::Attribution
  *    @chartLegend={{this.chartLegend}}
- *    @topTenNamespaces={{this.topTenNamespaces}}
+ *    @totalClientsData={{this.topTenChartData}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @selectedNamespace={{this.selectedNamespace}}
  *    @startTimeDisplay={{this.startTimeDisplay}}
@@ -21,7 +21,7 @@ import { inject as service } from '@ember/service';
  *  />
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
- * @param {array} topTenNamespaces - (passed to child chart) array of top 10 namespace objects
+ * @param {array} totalClientsData - (passed to child chart) array of top 10 namespace objects
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {string} selectedNamespace - namespace selected from filter bar
  * @param {string} startTimeDisplay - start date for CSV modal
@@ -53,7 +53,7 @@ export default class Attribution extends Component {
   }
 
   get attributionBreakdown() {
-    // display text for hbs and csv file
+    // display text for hbs
     return this.isSingleNamespace ? 'auth method' : 'namespace';
   }
 
@@ -119,7 +119,7 @@ export default class Attribution extends Component {
 
   get getCsvFileName() {
     let endRange = this.isDateRange ? `-${this.args.endTimeDisplay}` : '';
-    let csvDateRange = `${this.args.startTimeDisplay + endRange}`;
+    let csvDateRange = this.args.startTimeDisplay + endRange;
     return this.isSingleNamespace
       ? `clients_by_auth_method_${csvDateRange}`
       : `clients_by_namespace_${csvDateRange}`;
