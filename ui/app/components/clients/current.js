@@ -29,7 +29,7 @@ export default class Current extends Component {
         ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
         : null;
     } else {
-      return this.byNamespaceCurrent.slice(0, 10);
+      return this.byNamespaceCurrent;
     }
   }
 

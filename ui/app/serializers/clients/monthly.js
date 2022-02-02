@@ -1,6 +1,5 @@
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
-
 export default class MonthlySerializer extends ApplicationSerializer {
   flattenDataset(payload) {
     let topTen = payload ? payload.slice(0, 10) : [];

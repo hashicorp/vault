@@ -94,7 +94,7 @@ export default class Dashboard extends Component {
         ? this.filterByNamespace(this.selectedNamespace).mounts.slice(0, 10)
         : null;
     } else {
-      return this.byNamespaceActivity.slice(0, 10);
+      return this.byNamespaceActivity;
     }
   }
 
