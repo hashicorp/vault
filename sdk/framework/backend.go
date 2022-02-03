@@ -625,8 +625,11 @@ type FieldSchema struct {
 	Type        FieldType
 	Default     interface{}
 	Description string
-	Required    bool
-	Deprecated  bool
+
+	// Required is merely used by openapi, and it is not actually used
+	// by the framework.
+	Required   bool
+	Deprecated bool
 
 	// Query indicates this field will be sent as a query parameter:
 	//
