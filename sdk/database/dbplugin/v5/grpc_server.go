@@ -3,11 +3,13 @@ package dbplugin
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -16,11 +18,87 @@ var _ proto.DatabaseServer = gRPCServer{}
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
 
-	impl Database
+	factoryFunc func() (interface{}, error)
+	instances   map[string]Database
+	sync.RWMutex
+}
+
+func getMultiplexIDFromContext(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("missing plugin multiplexing metadata")
+	}
+
+	multiplexIDs := md[multiplexingCtxKey]
+	if len(multiplexIDs) != 1 {
+		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
+	}
+
+	multiplexID := multiplexIDs[0]
+	if multiplexID == "" {
+		return "", fmt.Errorf("empty multiplex ID in metadata")
+	}
+
+	return multiplexID, nil
+}
+
+func (g gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
+	g.Lock()
+	defer g.Unlock()
+
+	id, err := getMultiplexIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if db, ok := g.instances[id]; ok {
+		return db, nil
+	}
+
+	db, err := g.factoryFunc()
+	if err != nil {
+		return nil, err
+	}
+
+	database := db.(Database)
+	g.instances[id] = database
+
+	return database, nil
+}
+
+// getDatabaseInternal returns the database but does not hold a lock
+func (g gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) {
+	id, err := getMultiplexIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if id == "" {
+		return nil, fmt.Errorf("no instance ID found for multiplexed plugin")
+	}
+
+	if db, ok := g.instances[id]; ok {
+		return db, nil
+	}
+
+	return nil, fmt.Errorf("no database instance found")
+}
+
+// getDatabase holds a read lock and returns the database
+func (g gRPCServer) getDatabase(ctx context.Context) (Database, error) {
+	g.RLock()
+	impl, err := g.getDatabaseInternal(ctx)
+	g.RUnlock()
+	return impl, err
 }
 
 // Initialize the database plugin
 func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeRequest) (*proto.InitializeResponse, error) {
+	impl, err := g.getOrCreateDatabase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	rawConfig := structToMap(request.ConfigData)
 
 	dbReq := InitializeRequest{
@@ -28,7 +106,7 @@ func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeReq
 		VerifyConnection: request.VerifyConnection,
 	}
 
-	dbResp, err := g.impl.Initialize(ctx, dbReq)
+	dbResp, err := impl.Initialize(ctx, dbReq)
 	if err != nil {
 		return &proto.InitializeResponse{}, status.Errorf(codes.Internal, "failed to initialize: %s", err)
 	}
@@ -60,6 +138,11 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 		expiration = exp
 	}
 
+	impl, err := g.getDatabase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	dbReq := NewUserRequest{
 		UsernameConfig: UsernameMetadata{
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
@@ -71,7 +154,7 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
 	}
 
-	dbResp, err := g.impl.NewUser(ctx, dbReq)
+	dbResp, err := impl.NewUser(ctx, dbReq)
 	if err != nil {
 		return &proto.NewUserResponse{}, status.Errorf(codes.Internal, "unable to create new user: %s", err)
 	}
@@ -92,7 +175,12 @@ func (g gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest
 		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
-	_, err = g.impl.UpdateUser(ctx, dbReq)
+	impl, err := g.getDatabase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = impl.UpdateUser(ctx, dbReq)
 	if err != nil {
 		return &proto.UpdateUserResponse{}, status.Errorf(codes.Internal, "unable to update user: %s", err)
 	}
@@ -153,7 +241,12 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 		Statements: getStatementsFromProto(req.GetStatements()),
 	}
 
-	_, err := g.impl.DeleteUser(ctx, dbReq)
+	impl, err := g.getDatabase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = impl.DeleteUser(ctx, dbReq)
 	if err != nil {
 		return &proto.DeleteUserResponse{}, status.Errorf(codes.Internal, "unable to delete user: %s", err)
 	}
@@ -161,7 +254,12 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 }
 
 func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeResponse, error) {
-	t, err := g.impl.Type()
+	impl, err := g.getOrCreateDatabase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := impl.Type()
 	if err != nil {
 		return &proto.TypeResponse{}, status.Errorf(codes.Internal, "unable to retrieve type: %s", err)
 	}
@@ -173,10 +271,25 @@ func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeRespon
 }
 
 func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
-	err := g.impl.Close()
+	g.Lock()
+	defer g.Unlock()
+
+	impl, err := g.getDatabaseInternal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = impl.Close()
 	if err != nil {
 		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
+
+	id, err := getMultiplexIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	delete(g.instances, id)
+
 	return &proto.Empty{}, nil
 }
 
