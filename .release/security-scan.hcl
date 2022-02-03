@@ -6,7 +6,7 @@ container {
 
 binary {
 	secrets      = true
-	go_modules   = true
+	go_modules   = false
 	osv          = true
 	oss_index    = true
 	nvd          = true
