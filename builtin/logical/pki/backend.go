@@ -2,10 +2,14 @@ package pki
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -136,3 +140,48 @@ The PKI backend dynamically generates X509 server and client certificates.
 After mounting this backend, configure the CA using the "pem_bundle" endpoint within
 the "config/" path.
 `
+
+func metricsKey(req *logical.Request, extra ...string) ([]string, error) {
+	key := make([]string, len(extra)+1)
+	key[0] = req.MountPoint[:len(req.MountPoint)-1]
+	copy(key[1:], extra)
+	return key, nil
+}
+
+func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key, err := metricsKey(req, callType)
+		if err != nil {
+			return nil, err
+		}
+		roleName := data.Get("role").(string)
+
+		// Get the role
+		role, err := b.getRole(ctx, req.Storage, roleName)
+		if err != nil {
+			return nil, err
+		}
+		if role == nil {
+			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
+		}
+
+		labels := []metrics.Label{
+			metricsutil.NamespaceLabel(ns),
+			{"role", roleName},
+		}
+		start := time.Now()
+		defer metrics.MeasureSinceWithLabels(key, start, labels)
+		resp, err := ofunc(ctx, req, data, role)
+
+		if err != nil || resp.IsError() {
+			metrics.IncrCounterWithLabels(append(key, "failure"), 1.0, labels)
+		} else {
+			metrics.IncrCounterWithLabels(key, 1.0, labels)
+		}
+		return resp, err
+	}
+}

@@ -5,9 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -15,10 +12,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
-)
-
-var (
-	metricsIssue = metrics.EmitKey
 )
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
@@ -37,44 +30,6 @@ func pathIssue(b *backend) *framework.Path {
 
 	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
 	return ret
-}
-
-func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-		key, err := metricsKey(req, callType)
-		if err != nil {
-			return nil, err
-		}
-		roleName := data.Get("role").(string)
-
-		// Get the role
-		role, err := b.getRole(ctx, req.Storage, roleName)
-		if err != nil {
-			return nil, err
-		}
-		if role == nil {
-			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
-		}
-
-		labels := []metrics.Label{
-			metricsutil.NamespaceLabel(ns),
-			{"role", roleName},
-		}
-		start := time.Now()
-		defer metrics.MeasureSinceWithLabels(key, start, labels)
-		resp, err := ofunc(ctx, req, data, role)
-
-		if err != nil || resp.IsError() {
-			metrics.IncrCounterWithLabels(append(key, "failure"), 1.0, labels)
-		} else {
-			metrics.IncrCounterWithLabels(key, 1.0, labels)
-		}
-		return resp, err
-	}
 }
 
 func pathSign(b *backend) *framework.Path {
@@ -204,13 +159,6 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 
 	resp, err := b.pathIssueSignCert(ctx, req, data, entry, true, true)
 	return resp, err
-}
-
-func metricsKey(req *logical.Request, extra ...string) ([]string, error) {
-	key := make([]string, len(extra)+1)
-	key[0] = req.MountPoint[:len(req.MountPoint)-1]
-	copy(key[1:], extra)
-	return key, nil
 }
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
