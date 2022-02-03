@@ -14,8 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
-
 func pathIssue(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "issue/" + framework.GenericNameRegex("role"),
