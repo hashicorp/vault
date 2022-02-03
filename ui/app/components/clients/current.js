@@ -48,7 +48,6 @@ export default class Current extends Component {
 
   // HELPERS
   filterByNamespace(namespace) {
-    // ARG TODO test with normal data if it has a slash at the end.
     return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
   }
 

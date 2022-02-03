@@ -192,7 +192,6 @@ export default class Dashboard extends Component {
 
   // HELPERS
   filterByNamespace(namespace) {
-    // ARG TODO test with normal data if it has a slash at the end.
     return this.byNamespaceActivity.find((ns) => ns.label === namespace);
   }
 }
