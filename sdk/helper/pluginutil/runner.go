@@ -8,6 +8,7 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"google.golang.org/grpc"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
@@ -21,6 +22,7 @@ type Looker interface {
 // configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
+	NewPluginClient(ctx context.Context, pluginRunner *PluginRunner, config PluginClientConfig) (Multiplexer, error)
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
@@ -31,17 +33,26 @@ type LookRunnerUtil interface {
 	RunnerUtil
 }
 
+type Multiplexer interface {
+	ID() string
+	Conn() *grpc.ClientConn
+	MultiplexingSupport() bool
+
+	plugin.ClientProtocol
+}
+
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
-	Name           string                      `json:"name" structs:"name"`
-	Type           consts.PluginType           `json:"type" structs:"type"`
-	Command        string                      `json:"command" structs:"command"`
-	Args           []string                    `json:"args" structs:"args"`
-	Env            []string                    `json:"env" structs:"env"`
-	Sha256         []byte                      `json:"sha256" structs:"sha256"`
-	Builtin        bool                        `json:"builtin" structs:"builtin"`
-	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
+	Name                string                      `json:"name" structs:"name"`
+	Type                consts.PluginType           `json:"type" structs:"type"`
+	Command             string                      `json:"command" structs:"command"`
+	Args                []string                    `json:"args" structs:"args"`
+	Env                 []string                    `json:"env" structs:"env"`
+	Sha256              []byte                      `json:"sha256" structs:"sha256"`
+	Builtin             bool                        `json:"builtin" structs:"builtin"`
+	BuiltinFactory      func() (interface{}, error) `json:"-" structs:"-"`
+	MultiplexingSupport bool                        `json:"multiplexing_support" structs:"multiplexing_support"`
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and
@@ -85,4 +96,8 @@ func CtxCancelIfCanceled(f context.CancelFunc, ctxCanceler context.Context) chan
 		}
 	}()
 	return quitCh
+}
+
+func MultiplexingSupport(version int) bool {
+	return version == 6
 }
