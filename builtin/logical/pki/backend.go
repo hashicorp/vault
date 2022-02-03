@@ -155,10 +155,7 @@ func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.Op
 		if err != nil {
 			return nil, err
 		}
-		key, err := metricsKey(req, callType)
-		if err != nil {
-			return nil, err
-		}
+		key := metricsKey(req, callType)
 		roleName := data.Get("role").(string)
 
 		// Get the role

@@ -72,10 +72,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	labels := []metrics.Label{
 		metricsutil.NamespaceLabel(ns),
 	}
-	key, err := metricsKey(req, "revoke")
-	if err != nil {
-		return nil, err
-	}
+	key := metricsKey(req, "revoke")
 	start := time.Now()
 	defer metrics.MeasureSinceWithLabels(key, start, labels)
 	resp, err := revokeCert(ctx, b, req, serial, false)
