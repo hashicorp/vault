@@ -81,7 +81,6 @@ payload.data.by_namespace = [
   {
     namespace_id: '5SWT8',
     namespace_path: 'namespacelonglonglong4/',
-    _comment1: 'client counts are nested within own object', 
     counts: {
       entity_clients: 171,
       non_entity_clients: 20,
@@ -103,7 +102,6 @@ payload.data.by_namespace = [
 transformedPayload.by_namespace = [
   {
     label: 'namespacelonglonglong4/',
-    _comment2: 'remove nested object', 
     entity_clients: 171,
     non_entity_clients: 20,
     clients: 191,

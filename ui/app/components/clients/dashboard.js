@@ -5,7 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { isSameMonth } from 'date-fns';
 
 export default class Dashboard extends Component {
-  // TODO CMB alphabetize and delete unuse vars (particularly @tracked)
+  // TODO CMB alphabetize and delete unused vars (particularly @tracked)
   arrayOfMonths = [
     'January',
     'February',
