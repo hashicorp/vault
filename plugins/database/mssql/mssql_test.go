@@ -318,43 +318,71 @@ func TestDeleteUser(t *testing.T) {
 	dbUser := "vaultuser"
 	initPassword := "p4$sw0rd"
 
-	initReq := dbplugin.InitializeRequest{
-		Config: map[string]interface{}{
-			"connection_url": connURL,
+	type testCase struct {
+		req dbplugin.InitializeRequest
+	}
+
+	tests := map[string]testCase{
+		"happy path": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+				},
+				VerifyConnection: true,
+			},
 		},
-		VerifyConnection: true,
+		"contained_db": {
+			dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"contained_db":   true,
+				},
+				VerifyConnection: true,
+			},
+		},
 	}
 
-	db := new()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			db := new()
+			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
+			defer dbtesting.AssertClose(t, db)
 
-	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
-	defer dbtesting.AssertClose(t, db)
+			if !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
 
-	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
-	if err != nil {
-		t.Fatalf("Failed to create user: %s", err)
+			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+			if err != nil {
+				t.Fatalf("Failed to create user: %s", err)
+			}
+
+			assertCredsExist(t, connURL, dbUser, initPassword)
+
+			deleteReq := dbplugin.DeleteUserRequest{
+				Username: dbUser,
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			deleteResp, err := db.DeleteUser(ctx, deleteReq)
+			if err != nil {
+				t.Fatalf("Failed to delete user: %s", err)
+			}
+
+			// Protect against future fields that aren't specified
+			expectedResp := dbplugin.DeleteUserResponse{}
+			if !reflect.DeepEqual(deleteResp, expectedResp) {
+				t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
+			}
+
+			if _, ok := test.req.Config["contained_db"]; ok {
+				return
+			}
+
+			assertCredsDoNotExist(t, connURL, dbUser, initPassword)
+		})
 	}
-
-	assertCredsExist(t, connURL, dbUser, initPassword)
-
-	deleteReq := dbplugin.DeleteUserRequest{
-		Username: dbUser,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	deleteResp, err := db.DeleteUser(ctx, deleteReq)
-	if err != nil {
-		t.Fatalf("Failed to delete user: %s", err)
-	}
-
-	// Protect against future fields that aren't specified
-	expectedResp := dbplugin.DeleteUserResponse{}
-	if !reflect.DeepEqual(deleteResp, expectedResp) {
-		t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
-	}
-
-	assertCredsDoNotExist(t, connURL, dbUser, initPassword)
 }
 
 func TestSQLSanitization(t *testing.T) {
@@ -409,6 +437,18 @@ func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
 	if err == nil {
 		t.Fatalf("Able to log in when it shouldn't")
 	}
+}
+
+func testContainedDBCredsExist(connURL, username, password string) error {
+	// Log in with the new creds
+	parts := strings.Split(connURL, "@")
+	connURL = fmt.Sprintf("sqlserver://%s:%s@%s", username, password, parts[1])
+	db, err := sql.Open("mssql", connURL)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	return db.Ping()
 }
 
 func testCredsExist(connURL, username, password string) error {
