@@ -5,6 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -14,12 +17,18 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var (
+	metricsIssue = metrics.EmitKey
+)
+
+type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
+
 func pathIssue(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "issue/" + framework.GenericNameRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathIssue,
+			logical.UpdateOperation: b.metricsWrap("issue", b.pathIssue),
 		},
 
 		HelpSynopsis:    pathIssueHelpSyn,
@@ -30,12 +39,50 @@ func pathIssue(b *backend) *framework.Path {
 	return ret
 }
 
+func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key, err := metricsKey(req, callType)
+		if err != nil {
+			return nil, err
+		}
+		roleName := data.Get("role").(string)
+
+		// Get the role
+		role, err := b.getRole(ctx, req.Storage, roleName)
+		if err != nil {
+			return nil, err
+		}
+		if role == nil {
+			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
+		}
+
+		labels := []metrics.Label{
+			metricsutil.NamespaceLabel(ns),
+			{"role", roleName},
+		}
+		start := time.Now()
+		defer metrics.MeasureSinceWithLabels(key, start, labels)
+		resp, err := ofunc(ctx, req, data, role)
+
+		if err != nil || resp.IsError() {
+			metrics.IncrCounterWithLabels(append(key, "failure"), 1.0, labels)
+		} else {
+			metrics.IncrCounterWithLabels(key, 1.0, labels)
+		}
+		return resp, err
+	}
+}
+
 func pathSign(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathSign,
+			logical.UpdateOperation: b.metricsWrap("sign", b.pathSign),
 		},
 
 		HelpSynopsis:    pathSignHelpSyn,
@@ -58,7 +105,7 @@ func pathSignVerbatim(b *backend) *framework.Path {
 		Pattern: "sign-verbatim" + framework.OptionalParamRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathSignVerbatim,
+			logical.UpdateOperation: b.metricsWrap("sign-verbatim", b.pathSignVerbatim),
 		},
 
 		HelpSynopsis:    pathSignHelpSyn,
@@ -106,53 +153,24 @@ this value to an empty list.`,
 
 // pathIssue issues a certificate and private key from given parameters,
 // subject to role restrictions
-func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role").(string)
-
-	// Get the role
-	role, err := b.getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
-	}
-
+func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
 	if role.KeyType == "any" {
 		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
 
-	return b.pathIssueSignCert(ctx, req, data, role, false, false)
+	resp, err := b.pathIssueSignCert(ctx, req, data, role, false, false)
+	return resp, err
 }
 
 // pathSign issues a certificate from a submitted CSR, subject to role
 // restrictions
-func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role").(string)
-
-	// Get the role
-	role, err := b.getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
-	}
-
+func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
 	return b.pathIssueSignCert(ctx, req, data, role, true, false)
 }
 
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
-func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role").(string)
-
-	// Get the role if one was specified
-	role, err := b.getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-
+func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
 	entry := &roleEntry{
 		AllowLocalhost:       true,
 		AllowAnyName:         true,
@@ -184,7 +202,15 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		entry.NoStore = role.NoStore
 	}
 
-	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
+	resp, err := b.pathIssueSignCert(ctx, req, data, entry, true, true)
+	return resp, err
+}
+
+func metricsKey(req *logical.Request, extra ...string) ([]string, error) {
+	key := make([]string, len(extra)+1)
+	key[0] = req.MountPoint[:len(req.MountPoint)-1]
+	copy(key[1:], extra)
+	return key, nil
 }
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {

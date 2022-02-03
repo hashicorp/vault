@@ -3,7 +3,11 @@ package pki
 import (
 	"context"
 	"fmt"
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -57,11 +61,31 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	// We store and identify by lowercase colon-separated hex, but other
 	// utilities use dashes and/or uppercase, so normalize
 	serial = strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(ctx, b, req, serial, false)
+	labels := []metrics.Label{
+		metricsutil.NamespaceLabel(ns),
+	}
+	key, err := metricsKey(req, "revoke")
+	if err != nil {
+		return nil, err
+	}
+	start := time.Now()
+	defer metrics.MeasureSinceWithLabels(key, start, labels)
+	resp, err := revokeCert(ctx, b, req, serial, false)
+
+	if err != nil || resp.IsError() {
+		metrics.IncrCounterWithLabels(append(key, "failure"), 1.0, labels)
+	} else {
+		metrics.IncrCounterWithLabels(key, 1.0, labels)
+	}
+	return resp, err
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
