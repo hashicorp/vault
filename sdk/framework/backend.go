@@ -626,7 +626,7 @@ type FieldSchema struct {
 	Default     interface{}
 	Description string
 
-	// Deprecated: Required is merely used by openapi, and it is not actually
+	// The Required and Deprecated members are only used by openapi, and are not actually
 	// used by the framework.
 	Required   bool
 	Deprecated bool
