@@ -103,6 +103,15 @@ export default class KeymgmtDistribute extends Component {
     return ['encrypt', 'decrypt', 'sign', 'verify', 'wrap', 'unwrap'];
   }
 
+  get disableOperations() {
+    return (
+      this.validMatchError ||
+      !this.formData.provider ||
+      !this.formData.key ||
+      (this.isNewKey && !this.keyModel.type)
+    );
+  }
+
   async getKeyInfo(keyName, isNew = false) {
     let key;
     if (isNew) {

@@ -99,12 +99,7 @@
     <fieldset
       class="field form-fieldset"
       id="operations"
-      disabled={{or
-        this.validMatchError
-        (not this.formData.provider)
-        (not this.formData.key)
-        (and (not this.keyModel.type) this.isNewKey)
-      }}
+      disabled={{this.disableOperations}}
       data-test-keymgmt-dist-operations
     >
       <legend class="is-label">Operations</legend>
@@ -146,7 +141,7 @@
       <div class="control">
         <button
           type="submit"
-          disabled={{or @buttonDisabled this.validationErrorCount this.error}}
+          disabled={{or this.validationErrorCount this.error}}
           class="button is-primary"
           data-test-secret-save={{true}}
         >
