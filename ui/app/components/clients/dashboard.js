@@ -35,6 +35,7 @@ export default class Dashboard extends Component {
 
   @service store;
 
+  @tracked queriedActivityResponse = null;
   @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
   @tracked responseRangeDiffMessage = null;
@@ -46,6 +47,11 @@ export default class Dashboard extends Component {
   @tracked selectedNamespace = null;
   @tracked noActivityDate = '';
   // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view with mirage
+
+  // on init API response uses license start_date, getter updates when user queries dates
+  get getActivityResponse() {
+    return this.queriedActivityResponse || this.args.model.activity;
+  }
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -69,21 +75,16 @@ export default class Dashboard extends Component {
 
   get isDateRange() {
     return !isSameMonth(
-      new Date(this.args.model.activity.startTime),
-      new Date(this.args.model.activity.endTime)
+      new Date(this.getActivityResponse.startTime),
+      new Date(this.getActivityResponse.endTime)
     );
-  }
-
-  // API client count data by namespace for date range
-  get byNamespaceActivity() {
-    return this.args.model.activity?.byNamespace || null;
   }
 
   // top level TOTAL client counts for given date range
   get totalUsageCounts() {
     return this.selectedNamespace
       ? this.filterByNamespace(this.selectedNamespace)
-      : this.args.model.activity?.total;
+      : this.getActivityResponse.total;
   }
 
   // total client data for horizontal bar chart in attribution component
@@ -92,12 +93,12 @@ export default class Dashboard extends Component {
       let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
       return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
     } else {
-      return this.byNamespaceActivity;
+      return this.getActivityResponse.byNamespace;
     }
   }
 
   get responseTimestamp() {
-    return this.args.model.activity?.responseTimestamp;
+    return this.getActivityResponse.responseTimestamp;
   }
   // HELPERS
   areArraysTheSame(a1, a2) {
@@ -161,7 +162,7 @@ export default class Dashboard extends Component {
       } else {
         this.responseRangeDiffMessage = null;
       }
-      return response;
+      this.queriedActivityResponse = response;
     } catch (e) {
       // ARG TODO handle error
     }
@@ -197,6 +198,6 @@ export default class Dashboard extends Component {
 
   // HELPERS
   filterByNamespace(namespace) {
-    return this.byNamespaceActivity.find((ns) => ns.label === namespace);
+    return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
   }
 }
