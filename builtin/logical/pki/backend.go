@@ -142,11 +142,11 @@ After mounting this backend, configure the CA using the "pem_bundle" endpoint wi
 the "config/" path.
 `
 
-func metricsKey(req *logical.Request, extra ...string) ([]string, error) {
+func metricsKey(req *logical.Request, extra ...string) []string {
 	key := make([]string, len(extra)+1)
 	key[0] = req.MountPoint[:len(req.MountPoint)-1]
 	copy(key[1:], extra)
-	return key, nil
+	return key
 }
 
 func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.OperationFunc {
