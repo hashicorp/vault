@@ -111,8 +111,7 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
 
-	resp, err := b.pathIssueSignCert(ctx, req, data, role, false, false)
-	return resp, err
+	return b.pathIssueSignCert(ctx, req, data, role, false, false)
 }
 
 // pathSign issues a certificate from a submitted CSR, subject to role
@@ -155,8 +154,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		entry.NoStore = role.NoStore
 	}
 
-	resp, err := b.pathIssueSignCert(ctx, req, data, entry, true, true)
-	return resp, err
+	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
 }
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
