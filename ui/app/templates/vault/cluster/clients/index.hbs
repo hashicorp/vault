@@ -25,8 +25,8 @@
           Current month
         </LinkTo>
       </LinkTo>
-      <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="dashboard"}} @tagName="li" @activeClass="is-active">
-        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="dashboard"}} data-test-usage-tab={{true}}>
+      <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="history"}} @tagName="li" @activeClass="is-active">
+        <LinkTo @route="vault.cluster.clients.index" @query={{hash tab="history"}} data-test-usage-tab={{true}}>
           History
         </LinkTo>
       </LinkTo>
@@ -64,6 +64,6 @@
   <Clients::Config @model={{this.model.config}} @isLoading={{this.currentlyLoading}} />
 {{else if (eq this.tab "current")}}
   <Clients::Current @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
-{{else if (eq this.tab "dashboard")}}
-  <Clients::Dashboard @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
+{{else if (eq this.tab "history")}}
+  <Clients::History @tab={{this.tab}} @model={{this.model}} @isLoading={{this.currentlyLoading}} />
 {{/if}}
