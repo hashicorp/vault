@@ -32,7 +32,6 @@ export default class Dashboard extends Component {
   years = Array.from({ length: 5 }, (item, i) => {
     return new Date().getFullYear() - i;
   });
-  searchSelectModel = ['namespace'];
 
   @service store;
 
@@ -46,6 +45,9 @@ export default class Dashboard extends Component {
   @tracked startYear = null;
   @tracked selectedNamespace = null;
   @tracked noActivityDate = '';
+  @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
+    return { name: namespace['label'], id: namespace['label'] };
+  });
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -191,6 +193,6 @@ export default class Dashboard extends Component {
   // HELPERS
   filterByNamespace(namespace) {
     // ARG TODO test with normal data if it has a slash at the end.
-    return this.byNamespaceActivity.find((ns) => ns.label === `${namespace}/`);
+    return this.byNamespaceActivity.find((ns) => ns.label === namespace);
   }
 }

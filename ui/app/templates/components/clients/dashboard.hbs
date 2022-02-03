@@ -61,17 +61,18 @@
               @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
               @startTimeDisplay={{this.startTimeDisplay}}
             />
-            {{! ARG TODO QA when you have no namespaces }}
-            <SearchSelect
-              @id="namespace-search-select"
-              @models={{this.searchSelectModel}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{this.selectNamespace}}
-              @placeholder={{"Filter by namespace"}}
-              @displayInherit={{true}}
-            />
+            {{#if this.namespaceArray}}
+              <SearchSelect
+                @id="namespace-search-select"
+                @options={{this.namespaceArray}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{this.selectNamespace}}
+                @placeholder={{"Filter by namespace"}}
+                @displayInherit={{true}}
+              />
+            {{/if}}
           </ToolbarFilters>
         </Toolbar>
       </div>

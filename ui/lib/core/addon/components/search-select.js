@@ -31,7 +31,7 @@ import layout from '../templates/components/search-select';
  *
  * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
- * passed value.
+ * passed value. ex: [{ name: 'namespace45', id: 'displayedName' }];
  * @param {function} search - *Advanced usage* - Customizes how the power-select component searches for matches -
  * see the power-select docs for more information.
  *

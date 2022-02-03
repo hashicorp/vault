@@ -21,7 +21,7 @@
           <ToolbarFilters>
             <SearchSelect
               @id="namespace-search-select-monthly"
-              @models={{this.searchSelectModel}}
+              @options={{this.namespaceArray}}
               @selectLimit="1"
               @disallowNewItems={{true}}
               @fallbackComponent="input-search"

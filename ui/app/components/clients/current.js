@@ -6,7 +6,9 @@ export default class Current extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  searchSelectModel = ['namespace'];
+  @tracked namespaceArray = this.args.model.monthly?.byNamespace.map((namespace) => {
+    return { name: namespace['label'], id: namespace['label'] };
+  });
   @tracked selectedNamespace = null;
 
   // TODO CMB get from model
@@ -47,7 +49,7 @@ export default class Current extends Component {
   // HELPERS
   filterByNamespace(namespace) {
     // ARG TODO test with normal data if it has a slash at the end.
-    return this.byNamespaceActivity.find((ns) => ns.label === `${namespace}/`);
+    return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
   }
 
   // ACTIONS
