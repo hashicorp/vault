@@ -45,7 +45,9 @@ export default class Dashboard extends Component {
   @tracked startYear = null;
   @tracked selectedNamespace = null;
   @tracked noActivityDate = '';
-  // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view with mirage
+  @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
+    return { name: namespace['label'], id: namespace['label'] };
+  });
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -173,16 +175,9 @@ export default class Dashboard extends Component {
   }
 
   @action
-  selectNamespace(value) {
-    // In case of search select component, value returned is an array
-    if (Array.isArray(value)) {
-      this.selectedNamespace = this.getNamespace(value[0]);
-      this.barChartSelection = false;
-    } else if (typeof value === 'object') {
-      // While D3 bar selection returns an object
-      this.selectedNamespace = this.getNamespace(value.label);
-      this.barChartSelection = true;
-    }
+  selectNamespace([value]) {
+    // value comes in as [namespace0]
+    this.selectedNamespace = value;
   }
 
   @action
