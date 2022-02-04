@@ -51,6 +51,7 @@ type PluginCatalog struct {
 	lock sync.RWMutex
 }
 
+// PluginClient represents a connection to a plugin process
 type PluginClient struct {
 	logger log.Logger
 
@@ -64,6 +65,8 @@ type PluginClient struct {
 	cleanupFunc func() error
 }
 
+// MultiplexedClient holds client connections for multiplexed and
+// non-multiplexed plugin processes
 type MultiplexedClient struct {
 	logger log.Logger
 
@@ -86,6 +89,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	err := c.pluginCatalog.UpgradePlugins(ctx, c.logger)
 	if err != nil {
 		c.logger.Error("error while upgrading plugin storage", "error", err)
+		return err
 	}
 
 	if c.logger.IsInfo() {
@@ -104,6 +108,7 @@ func (p *PluginClient) ID() string {
 	return p.id
 }
 
+// MultiplexingSupport determines if a plugin client supports multiplexing
 func (p *PluginClient) MultiplexingSupport() (bool, error) {
 	if p.client == nil {
 		return false, fmt.Errorf("plugin client is nil")
@@ -111,11 +116,15 @@ func (p *PluginClient) MultiplexingSupport() (bool, error) {
 	return pluginutil.MultiplexingSupport(p.client.NegotiatedVersion()), nil
 }
 
+// Close calls the plugin client's cleanupFunc to do any necessary cleanup on
+// the plugin client and the PluginCatalog. This implements the
+// plugin.ClientProtocol interface.
 func (p *PluginClient) Close() error {
 	p.logger.Debug("cleaning up plugin client connection", "id", p.id)
 	return p.cleanupFunc()
 }
 
+// Dispense implements the plugin.ClientProtocol interface.
 func (p *PluginClient) Dispense(name string) (interface{}, error) {
 	pluginInstance, err := p.protocol.Dispense(name)
 	if err != nil {
@@ -124,6 +133,7 @@ func (p *PluginClient) Dispense(name string) (interface{}, error) {
 	return pluginInstance, nil
 }
 
+// Ping implements the plugin.ClientProtocol interface.
 func (p *PluginClient) Ping() error {
 	err := p.protocol.Ping()
 	if err != nil {
@@ -249,8 +259,9 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
-// type. It will first attempt to run as a database plugin then a backend
-// plugin. Both of these will be run in metadata mode.
+// type and if it supports multiplexing. It will first attempt to run as a
+// database plugin then a backend plugin. Both of these will be run in metadata
+// mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, bool, error) {
 	merr := &multierror.Error{}
 	multiplexingSupport, err := c.isDatabasePlugin(ctx, plugin)
@@ -294,6 +305,8 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	return consts.PluginTypeUnknown, false, nil
 }
 
+// isDatabasePlugin returns true if the plugin supports multiplexing. An error
+// is returned if the plugin is not a database plugin.
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (bool, error) {
 	merr := &multierror.Error{}
 	config := pluginutil.PluginClientConfig{
@@ -304,7 +317,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
 	}
-	// Attempt to run as database V5 or V6 plugin
+	// Attempt to run as database V5 or V6 multiplexed plugin
 	v5Client, err := c.getPluginClient(ctx, nil, pluginRunner, config)
 	if err == nil {
 		// At this point the pluginRunner does not know if multiplexing is
@@ -315,7 +328,8 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		}
 
 		// Close the client and cleanup the plugin process
-		v5Client.Close()
+		err = v5Client.Close()
+		c.logger.Error("error closing plugin client", "error", err)
 
 		return multiplexingSupport, nil
 	}
@@ -324,7 +338,9 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
-		v4Client.Close()
+		err = v4Client.Close()
+		c.logger.Error("error closing plugin client", "error", err)
+
 		return false, nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
