@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { compareAsc, startOfMonth } from 'date-fns';
 export default class Current extends Component {
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
@@ -7,9 +8,17 @@ export default class Current extends Component {
   ];
   @tracked selectedNamespace = null;
 
-  // TODO CMB get from model
   get upgradeDate() {
-    return this.args.upgradeDate || null;
+    let keyInfoObject = this.args.model.versionHistory.key_info;
+    let firstKey = Object.keys(keyInfoObject);
+    // compare against this month and this year to show message or not.
+    let versionDate = new Date(keyInfoObject[firstKey].timestamp_installed);
+    let compare = compareAsc(versionDate, startOfMonth(new Date())); // if the versionDate happened after the first of today's month
+    // Compare the two dates and return 1 if the first date is after the second, -1 if the first date is before the second or 0 if dates are equal.
+    if (compare === 1) {
+      return keyInfoObject[firstKey].timestamp_installed || false;
+    }
+    return false;
   }
 
   get licenseStartDate() {

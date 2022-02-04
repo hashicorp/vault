@@ -1,5 +1,17 @@
 export default function (server) {
   // 1.10 API response
+  server.get('sys/version-history', function () {
+    return {
+      keys: ['1.9.0', '1.9.1', '1.9.2'],
+      key_info: {
+        '1.9.0': {
+          previous_version: null,
+          timestamp_installed: '2021-01-03T10:23:16Z',
+        },
+      },
+    };
+  });
+
   server.get('sys/internal/counters/config', function (db) {
     return {
       request_id: '00001',

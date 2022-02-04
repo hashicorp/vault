@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth } from 'date-fns';
+import { isSameMonth, compareAsc } from 'date-fns';
 
 export default class Dashboard extends Component {
   arrayOfMonths = [
@@ -98,6 +98,19 @@ export default class Dashboard extends Component {
 
   get responseTimestamp() {
     return this.args.model.activity?.responseTimestamp;
+  }
+
+  get upgradeDate() {
+    let keyInfoObject = this.args.model.versionHistory.key_info;
+    let firstKey = Object.keys(keyInfoObject);
+    // compare against startTimeFromResponse to see if should display or not
+    let versionDate = new Date(keyInfoObject[firstKey].timestamp_installed);
+    let compare = compareAsc(versionDate, new Date(this.startTimeFromResponse));
+    // Compare the two dates and return 1 if the first date is after the second, -1 if the first date is before the second or 0 if dates are equal.
+    if (compare === 1) {
+      return keyInfoObject[firstKey].timestamp_installed || false;
+    }
+    return false;
   }
   // HELPERS
   areArraysTheSame(a1, a2) {
