@@ -841,6 +841,9 @@ func verifyDefaultTable(t *testing.T, table *MountTable, expected int) {
 			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
 			}
+			if !entry.SealWrap {
+				t.Fatalf("expected SealWrap to be enabled: %v", entry)
+			}
 		case "identity/":
 			if entry.Type != "identity" {
 				t.Fatalf("bad: %v", entry)
