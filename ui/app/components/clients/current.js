@@ -17,11 +17,11 @@ export default class Current extends Component {
     if (!keyInfoObject) {
       return false;
     }
-    let firstKey = Object.keys(keyInfoObject);
-    // compare against this month and this year to show message or not.
+    let firstKey = Object.keys(keyInfoObject); // key name here will change, but we want the first one as this indicates when they upgraded to 1.9 or above
     let versionDate = new Date(keyInfoObject[firstKey].timestamp_installed);
-    let compare = compareAsc(versionDate, startOfMonth(new Date())); // if the versionDate happened after the first of today's month
-    // Compare the two dates and return 1 if the first date is after the second, -1 if the first date is before the second or 0 if dates are equal.
+    // compare against this month and this year to show message or not.
+    let compare = compareAsc(versionDate, startOfMonth(new Date()));
+    // Compare method: takes the two dates and return 1 if the first date is after the second, -1 if the first date is before the second or 0 if dates are equal.
     if (compare === 1) {
       return keyInfoObject[firstKey].timestamp_installed || false;
     }

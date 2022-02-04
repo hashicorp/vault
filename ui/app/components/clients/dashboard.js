@@ -104,11 +104,13 @@ export default class Dashboard extends Component {
 
   get upgradeDate() {
     let keyInfoObject = this.args.model.versionHistory.key_info;
+    if (!keyInfoObject) {
+      return false;
+    }
     let firstKey = Object.keys(keyInfoObject);
-    // compare against startTimeFromResponse to see if should display or not
     let versionDate = new Date(keyInfoObject[firstKey].timestamp_installed);
+    // compare against this startTimeFromResponse to show message or not.
     let compare = compareAsc(versionDate, new Date(this.startTimeFromResponse));
-    // Compare the two dates and return 1 if the first date is after the second, -1 if the first date is before the second or 0 if dates are equal.
     if (compare === 1) {
       return keyInfoObject[firstKey].timestamp_installed || false;
     }
