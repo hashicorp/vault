@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -577,6 +579,31 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 	}
 }
 
+// Case13: Incorrect input for nonce when we aren't in convergent encryption should fail the operation
+func TestTransit_BatchEncryptionCase13(t *testing.T) {
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "YmFkbm9uY2U="},
+	}
+
+	batchData := map[string]interface{}{
+		"batch_input": batchInput,
+	}
+	batchReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/my-key",
+		Storage:   s,
+		Data:      batchData,
+	}
+	_, err = b.HandleRequest(context.Background(), batchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // Test that the fast path function decodeBatchRequestItems behave like mapstructure.Decode() to decode []BatchRequestItem.
 func TestTransit_decodeBatchRequestItems(t *testing.T) {
 	tests := []struct {
@@ -727,5 +754,84 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 				t.Errorf("decodeBatchRequestItems unexpected dest value, want: '%v', got: '%v'", expectedDest, gotDest)
 			}
 		})
+	}
+}
+
+func TestShouldWarnAboutNonceUsage(t *testing.T) {
+	tests := []struct {
+		name                 string
+		keyTypes             []keysutil.KeyType
+		nonce                []byte
+		convergentEncryption bool
+		convergentVersion    int
+		expected             bool
+	}{
+		{
+			name:                 "-NoConvergent-WithNonce",
+			keyTypes:             []keysutil.KeyType{keysutil.KeyType_AES256_GCM96, keysutil.KeyType_AES128_GCM96, keysutil.KeyType_ChaCha20_Poly1305},
+			nonce:                []byte("testnonce"),
+			convergentEncryption: false,
+			convergentVersion:    -1,
+			expected:             true,
+		},
+		{
+			name:                 "-NoConvergent-NoNonce",
+			keyTypes:             []keysutil.KeyType{keysutil.KeyType_AES256_GCM96, keysutil.KeyType_AES128_GCM96, keysutil.KeyType_ChaCha20_Poly1305},
+			nonce:                []byte{},
+			convergentEncryption: false,
+			convergentVersion:    -1,
+			expected:             false,
+		},
+		{
+			name:                 "-Convergentv1-WithNonce",
+			keyTypes:             []keysutil.KeyType{keysutil.KeyType_AES256_GCM96, keysutil.KeyType_AES128_GCM96, keysutil.KeyType_ChaCha20_Poly1305},
+			nonce:                []byte("testnonce"),
+			convergentEncryption: true,
+			convergentVersion:    1,
+			expected:             true,
+		},
+		{
+			name:                 "-Convergentv2-WithNonce",
+			keyTypes:             []keysutil.KeyType{keysutil.KeyType_AES256_GCM96, keysutil.KeyType_AES128_GCM96, keysutil.KeyType_ChaCha20_Poly1305},
+			nonce:                []byte("testnonce"),
+			convergentEncryption: true,
+			convergentVersion:    2,
+			expected:             false,
+		},
+		{
+			name:                 "-Convergentv3-WithNonce",
+			keyTypes:             []keysutil.KeyType{keysutil.KeyType_AES256_GCM96, keysutil.KeyType_AES128_GCM96, keysutil.KeyType_ChaCha20_Poly1305},
+			nonce:                []byte("testnonce"),
+			convergentEncryption: true,
+			convergentVersion:    3,
+			expected:             false,
+		},
+		{
+			name:                 "-NoConvergent-WithNonce",
+			keyTypes:             []keysutil.KeyType{keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096},
+			nonce:                []byte("testnonce"),
+			convergentEncryption: false,
+			convergentVersion:    -1,
+			expected:             false,
+		},
+	}
+
+	for _, tt := range tests {
+		for _, keyType := range tt.keyTypes {
+			testName := keyType.String() + tt.name
+			t.Run(testName, func(t *testing.T) {
+				p := keysutil.Policy{
+					ConvergentEncryption: tt.convergentEncryption,
+					ConvergentVersion:    tt.convergentVersion,
+					Type:                 keyType,
+				}
+
+				actual := shouldWarnAboutNonceUsage(&p, tt.nonce)
+
+				if actual != tt.expected {
+					t.Errorf("Expected actual '%v' but got '%v'", tt.expected, actual)
+				}
+			})
+		}
 	}
 }

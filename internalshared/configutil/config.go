@@ -21,9 +21,8 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
-	Seals        []*KMS                 `hcl:"-"`
-	Entropy      *Entropy               `hcl:"-"`
-	KmsLibraries map[string]*KMSLibrary `hcl:"-"`
+	Seals   []*KMS   `hcl:"-"`
+	Entropy *Entropy `hcl:"-"`
 
 	DisableMlock    bool        `hcl:"-"`
 	DisableMlockRaw interface{} `hcl:"disable_mlock"`
@@ -140,13 +139,6 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		}
 	}
 
-	if o := list.Filter("kms_library"); len(o.Items) > 0 {
-		result.found("kms_library", "KmsLibrary")
-		if err := parseKmsLibraries(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'kms_library': %w", err)
-		}
-	}
-
 	entConfig := &(result.EntSharedConfig)
 	if err := entConfig.ParseConfig(list); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
@@ -240,19 +232,6 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
 		}
 		result["telemetry"] = sanitizedTelemetry
-	}
-
-	if len(c.KmsLibraries) > 0 {
-		sanitizedKmsLibs := make(map[string]map[string]string, len(c.KmsLibraries))
-		for _, l := range c.KmsLibraries {
-			cleanLib := map[string]string{
-				"type":    l.Type,
-				"name":    l.Name,
-				"library": l.Library,
-			}
-			sanitizedKmsLibs[l.Name] = cleanLib
-		}
-		result["kms_library"] = sanitizedKmsLibs
 	}
 
 	return result

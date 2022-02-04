@@ -1,38 +1,34 @@
-{{#each model.fieldGroups as |fieldGroup|}}
+{{#each this.model.fieldGroups as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
-    {{#if (or (not renderGroup) (and renderGroup (eq group renderGroup)))}}
+    {{#if (or (not this.renderGroup) (and this.renderGroup (eq group this.renderGroup)))}}
       {{#if (eq group "default")}}
         {{#each fields as |attr|}}
-          {{#unless (and (not-eq mode "create") (eq attr.name "name"))}}
+          {{! template-lint-configure simple-unless "warn" }}
+          {{#unless (and (not-eq this.mode "create") (eq attr.name "name"))}}
             <FormField
               data-test-field
               @attr={{attr}}
-              @mode={{mode}}
-              @model={{model}}
-              @onChange={{onChange}}
-              @onKeyUp={{onKeyUp}}
-              @validationMessages={{validationMessages}}
+              @mode={{this.mode}}
+              @model={{this.model}}
+              @onChange={{this.onChange}}
+              @onKeyUp={{this.onKeyUp}}
+              @validationMessages={{this.validationMessages}}
             />
           {{/unless}}
         {{/each}}
       {{else}}
-        {{toggle-button
-          class="is-block"
-          toggleAttr=(concat "show" (camelize group))
-          toggleTarget=this
-          openLabel=(concat "Hide " group)
-          closedLabel=group
-          data-test-toggle-group=group
-        }}
-        {{#if (get this (concat "show" (camelize group)))}}
+        <ToggleButton
+          @class="is-block"
+          @toggleAttr={{camelize (concat "show" group)}}
+          @toggleTarget={{this}}
+          @openLabel={{concat "Hide " group}}
+          @closedLabel={{group}}
+          @data-test-toggle-group={{group}}
+        />
+        {{#if (get this (camelize (concat "show" group)))}}
           <div class="box is-marginless">
             {{#each fields as |attr|}}
-              <FormField
-                data-test-field
-                @attr={{attr}}
-                @mode={{mode}}
-                @model={{model}}
-              />
+              <FormField data-test-field @attr={{attr}} @mode={{this.mode}} @model={{this.model}} />
             {{/each}}
           </div>
         {{/if}}

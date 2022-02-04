@@ -18,7 +18,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
   featureFlagService: service('featureFlag'),
   currentCluster: service(),
-  modelTypes: computed(function() {
+  modelTypes: computed(function () {
     return ['node', 'secret', 'secret-engine'];
   }),
 
@@ -40,6 +40,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const currentTokenName = this.auth.get('currentTokenName');
     // if no namespace queryParam and user authenticated,
     // use user's root namespace to redirect to properly param'd url
+    if (this.featureFlagService.managedNamespaceRoot && this.version.isOss) {
+      console.error('Cannot use Cloud Admin Namespace flag with OSS Vault');
+    }
     if (!namespace && currentTokenName && !Ember.testing) {
       const storage = getStorage().getItem(currentTokenName);
       namespace = storage?.userRootNamespace;
@@ -66,7 +69,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return this.store.findRecord('cluster', id);
   },
 
-  poll: task(function*() {
+  poll: task(function* () {
     while (true) {
       // when testing, the polling loop causes promises to never settle so acceptance tests hang
       // to get around that, we just disable the poll in tests
@@ -118,7 +121,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       let controller = this.controllerFor('vault.cluster');
       controller.set('currentlyLoading', true);
 
-      transition.finally(function() {
+      transition.finally(function () {
         controller.set('currentlyLoading', false);
       });
     },

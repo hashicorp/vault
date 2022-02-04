@@ -18,7 +18,10 @@ const flash = Service.extend({
 
 const createModel = (canDelete = true) => {
   return EmberObject.create({
-    fields: [{ name: 'one', type: 'string' }, { name: 'two', type: 'boolean' }],
+    fields: [
+      { name: 'one', type: 'string' },
+      { name: 'two', type: 'boolean' },
+    ],
     canDelete,
     destroyRecord() {
       return resolve();
@@ -30,17 +33,17 @@ const createModel = (canDelete = true) => {
   });
 };
 
-module('Integration | Component | edit form', function(hooks) {
+module('Integration | Component | edit form', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.unregister('service:flash-messages');
       this.owner.register('service:flash-messages', flash);
     });
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     let model = createModel();
     this.set('model', model);
     await render(hbs`{{edit-form model=model}}`);
@@ -48,7 +51,7 @@ module('Integration | Component | edit form', function(hooks) {
     assert.ok(component.fields.length, 2);
   });
 
-  test('it calls flash message fns on save', async function(assert) {
+  test('it calls flash message fns on save', async function (assert) {
     let model = createModel();
     let onSave = () => {
       return resolve();

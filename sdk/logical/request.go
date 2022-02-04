@@ -377,3 +377,14 @@ type InitializationRequest struct {
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
 }
+
+type CustomHeader struct {
+	Name  string
+	Value string
+}
+
+type CtxKeyInFlightRequestID struct{}
+
+func (c CtxKeyInFlightRequestID) String() string {
+	return "in-flight-request-ID"
+}

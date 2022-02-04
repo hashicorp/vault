@@ -30,6 +30,7 @@ type SecretsTuneCommand struct {
 	flagAllowedResponseHeaders    []string
 	flagOptions                   map[string]string
 	flagVersion                   int
+	flagAllowedManagedKeys        []string
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -137,6 +138,15 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the engine to run. Not supported by all engines.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedManagedKeys,
+		Target: &c.flagAllowedManagedKeys,
+		Usage: "Managed key name(s) that the mount in question is allowed to access. " +
+			"Note that multiple keys may be specified either by providing the key names " +
+			"as a comma separated string or by providing this option multiple times, " +
+			"each time with 1 key.",
+	})
+
 	return set
 }
 
@@ -212,6 +222,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAllowedResponseHeaders {
 			mountConfigInput.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+		}
+
+		if fl.Name == flagNameAllowedManagedKeys {
+			mountConfigInput.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
 	})
 

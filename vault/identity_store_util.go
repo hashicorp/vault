@@ -22,8 +22,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var errDuplicateIdentityName = errors.New("duplicate identity name")
-var tmpSuffix = ".tmp"
+var (
+	errDuplicateIdentityName = errors.New("duplicate identity name")
+	tmpSuffix                = ".tmp"
+)
 
 func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
 	c.loadCaseSensitiveIdentityStore = caseSensitive
@@ -695,7 +697,7 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		return nil, fmt.Errorf("mount accessor %q is not local", lAlias.MountAccessor)
 	}
 
-	alias, err := i.MemDBAliasByFactors(lAlias.MountAccessor, lAlias.Name, true, false)
+	alias, err := i.MemDBAliasByFactors(lAlias.MountAccessor, lAlias.Name, false, false)
 	if err != nil {
 		return nil, err
 	}

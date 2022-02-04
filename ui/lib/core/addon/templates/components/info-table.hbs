@@ -1,20 +1,20 @@
 <div class="vlt-table info-table sticky-header" data-test-info-table>
   <table class="is-fullwidth">
     <caption class="is-collapsed">
-      {{title}}
+      {{this.title}}
     </caption>
     <thead class="has-text-weight-semibold">
       <tr>
         <th scope="col">
-          {{header}}
+          {{this.header}}
         </th>
       </tr>
     </thead>
     <tbody>
-      {{#each items as |item|}}
+      {{#each this.items as |item|}}
         <tr>
           <td>
-            {{info-table-row value=item}}
+            <InfoTableRow @value={{item}} />
           </td>
         </tr>
       {{/each}}

@@ -7,7 +7,7 @@ const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh', 'pki'];
 export default Route.extend({
   model() {
     const { backend } = this.paramsFor(this.routeName);
-    return this.store.query('secret-engine', { path: backend }).then(modelList => {
+    return this.store.query('secret-engine', { path: backend }).then((modelList) => {
       let model = modelList && modelList.get('firstObject');
       if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.get('type'))) {
         const error = new AdapterError();
@@ -40,7 +40,10 @@ export default Route.extend({
           backend: model.id,
           type,
         })
-        .then(() => model, () => model);
+        .then(
+          () => model,
+          () => model
+        );
     }
     return model;
   },

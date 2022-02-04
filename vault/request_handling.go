@@ -126,7 +126,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure there is a client token
 	if req.ClientToken == "" {
-		return nil, nil, nil, nil, &logical.StatusBadRequest{Err: "missing client token"}
+		return nil, nil, nil, nil, logical.ErrPermissionDenied
 	}
 
 	if c.tokenStore == nil {
@@ -141,7 +141,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		var err error
 		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		if err != nil {
-			c.logger.Error("failed to lookup token", "error", err)
+			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
 		}
 		// Set the token entry here since it has not been cached yet
@@ -346,6 +346,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Accessor:    req.ClientTokenAccessor,
 	}
 
+	var clientID string
+	var isTWE bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
@@ -362,6 +364,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		if te.CreationTime > 0 {
 			auth.IssueTime = time.Unix(te.CreationTime, 0)
 		}
+		clientID, isTWE = te.CreateClientID()
+		req.ClientID = clientID
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -398,7 +402,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
 	if !unauth && c.activityLog != nil {
-		req.ClientID = c.activityLog.HandleTokenUsage(te)
+		c.activityLog.HandleTokenUsage(te, clientID, isTWE)
 	}
 	return auth, te, nil
 }
@@ -439,7 +443,12 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
 
-	resp, err = c.handleCancelableRequest(namespace.ContextWithNamespace(ctx, ns), req)
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	inFlightReqID, ok := httpCtx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
+	}
+	resp, err = c.handleCancelableRequest(ctx, req)
 
 	req.SetTokenEntry(nil)
 	cancel()
@@ -455,7 +464,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	// backends. Basically, it's all just terrible, so don't allow it.
 	if strings.HasSuffix(req.Path, "/") &&
 		(req.Operation == logical.UpdateOperation ||
-			req.Operation == logical.CreateOperation) {
+			req.Operation == logical.CreateOperation ||
+			req.Operation == logical.PatchOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
@@ -542,6 +552,9 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 					ctx = newCtx
 				}
 				break
+			}
+			if token == nil {
+				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
 			}
 			_, nsID := namespace.SplitIDFromString(token.(string))
 			if nsID != "" {
@@ -770,6 +783,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	auth, te, ctErr := c.checkToken(ctx, req, false)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
+	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
 	// We run this logic first because we want to decrement the use count even
@@ -1165,6 +1184,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+	}
+
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct

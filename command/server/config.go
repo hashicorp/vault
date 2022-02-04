@@ -77,6 +77,9 @@ type Config struct {
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
+	LogRequestsLevel    string      `hcl:"-"`
+	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
@@ -292,6 +295,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
 	}
 
+	result.LogRequestsLevel = c.LogRequestsLevel
+	if c2.LogRequestsLevel != "" {
+		result.LogRequestsLevel = c2.LogRequestsLevel
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -480,6 +488,11 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
+	if result.LogRequestsLevelRaw != nil {
+		result.LogRequestsLevel = strings.ToLower(strings.TrimSpace(result.LogRequestsLevelRaw.(string)))
+		result.LogRequestsLevelRaw = ""
+	}
+
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
 		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
 			return nil, err
@@ -528,8 +541,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
-	entConfig := &(result.entConfig)
-	if err := entConfig.parseConfig(list); err != nil {
+	if err := result.parseConfig(list); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
@@ -840,6 +852,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
 
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
+
+		"log_requests_level": c.LogRequestsLevel,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

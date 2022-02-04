@@ -5,13 +5,13 @@ import { decamelize } from '@ember/string';
 export default RESTSerializer.extend({
   primaryKey: 'name',
 
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const secrets = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
+      const secrets = payload.data.keys.map((secret) => ({ name: secret, backend: payload.backend }));
       return secrets;
     }
     assign(payload, payload.data);

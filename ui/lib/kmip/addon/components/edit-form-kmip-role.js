@@ -31,7 +31,7 @@ export default EditForm.extend({
       // if we have operationAll or operationNone, we want to clear
       // out the others so that display shows the right data
       if (model.operationAll || model.operationNone) {
-        model.operationFieldsWithoutSpecial.forEach(field => model.set(field, null));
+        model.operationFieldsWithoutSpecial.forEach((field) => model.set(field, null));
       }
     },
   },

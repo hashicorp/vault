@@ -32,6 +32,11 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 			ImageTag:      "2017-latest-ubuntu",
 			Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
 			Ports:         []string{"1433/tcp"},
+			LogConsumer: func(s string) {
+				if t.Failed() {
+					t.Logf("container logs: %s", s)
+				}
+			},
 		})
 		if err != nil {
 			t.Fatalf("Could not start docker MSSQL: %s", err)

@@ -1,5 +1,10 @@
 module.exports = [
   {
+    source: '/home',
+    destination: '/',
+    permanent: true,
+  },
+  {
     source: '/trial',
     destination: 'https://www.hashicorp.com/products/vault/trial',
     permanent: true,

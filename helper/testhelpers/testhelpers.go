@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/go-testing-interface"
 )
@@ -655,7 +655,7 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	// If the collection is non-empty, it means that the peer was not found in
 	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+		t.Fatalf("failed to read configuration successfully, expected peers not found in configuration list: %v", expected)
 	}
 }
 
@@ -690,13 +690,44 @@ func SysMetricsReq(client *api.Client, cluster *vault.TestCluster, unauth bool) 
 }
 
 type SysMetricsJSON struct {
-	Gauges []GaugeJSON `json:"Gauges"`
+	Gauges   []gaugeJSON   `json:"Gauges"`
+	Counters []counterJSON `json:"Counters"`
+
+	// note: this is referred to as a "Summary" type in our telemetry docs, but
+	// the field name in the JSON is "Samples"
+	Summaries []summaryJSON `json:"Samples"`
 }
 
-type GaugeJSON struct {
+type baseInfoJSON struct {
 	Name   string                 `json:"Name"`
-	Value  int                    `json:"Value"`
 	Labels map[string]interface{} `json:"Labels"`
+}
+
+type gaugeJSON struct {
+	baseInfoJSON
+	Value int `json:"Value"`
+}
+
+type counterJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    int     `json:"Sum"`
+	Min    int     `json:"Min"`
+	Max    int     `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
+}
+
+type summaryJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    float64 `json:"Sum"`
+	Min    float64 `json:"Min"`
+	Max    float64 `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
 }
 
 // SetNonRootToken sets a token on :client: with a fairly generic policy.
