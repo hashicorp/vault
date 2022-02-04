@@ -548,18 +548,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	// generate current and next keys if creating a new key or changing algorithms
 	if key.Algorithm != prevAlgorithm {
-		signingKey, err := generateKeys(key.Algorithm)
+		err = key.generateAndSetKey(ctx, i.Logger(), req.Storage)
 		if err != nil {
 			return nil, err
 		}
-
-		key.SigningKey = signingKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
-
-		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
-			return nil, err
-		}
-		i.Logger().Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 
 		err = key.generateAndSetNextKey(ctx, i.Logger(), req.Storage)
 		if err != nil {
@@ -1013,6 +1005,24 @@ func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, temp
 	return nil
 }
 
+// generateAndSetKey will generate new signing and public key pairs and set
+// them as the SigningKey.
+func (k *namedKey) generateAndSetKey(ctx context.Context, logger hclog.Logger, s logical.Storage) error {
+	signingKey, err := generateKeys(k.Algorithm)
+	if err != nil {
+		return err
+	}
+
+	k.SigningKey = signingKey
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
+
+	if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
+		return err
+	}
+	logger.Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
+	return nil
+}
+
 // generateAndSetNextKey will generate new signing and public key pairs and set
 // them as the NextSigningKey.
 func (k *namedKey) generateAndSetNextKey(ctx context.Context, logger hclog.Logger, s logical.Storage) error {
@@ -1032,6 +1042,9 @@ func (k *namedKey) generateAndSetNextKey(ctx context.Context, logger hclog.Logge
 }
 
 func (k *namedKey) signPayload(payload []byte) (string, error) {
+	if k.SigningKey == nil {
+		return "", fmt.Errorf("signing key is nil; rotate the key and try again")
+	}
 	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.Algorithm)}
 	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
 	if err != nil {
@@ -1482,21 +1495,27 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 // verification_ttl can be overridden with an overrideVerificationTTL value >= 0
 func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.Storage, overrideVerificationTTL time.Duration) error {
 	verificationTTL := k.VerificationTTL
-
 	if overrideVerificationTTL >= 0 {
 		verificationTTL = overrideVerificationTTL
 	}
 
 	now := time.Now()
-	// set the previous public key's expiry time
-	for _, key := range k.KeyRing {
-		if key.KeyID == k.SigningKey.KeyID {
-			key.ExpireAt = now.Add(verificationTTL)
-			break
+	if k.SigningKey != nil {
+		// set the previous public key's expiry time
+		for _, key := range k.KeyRing {
+			if key.KeyID == k.SigningKey.KeyID {
+				key.ExpireAt = now.Add(verificationTTL)
+				break
+			}
 		}
+	} else {
+		// this can occur for keys generated before vault 1.9.0 but rotated on
+		// vault 1.9.0
+		logger.Debug("nil signing key detected on rotation")
 	}
 
 	if k.NextSigningKey == nil {
+		logger.Debug("nil next signing key detected on rotation")
 		// keys will not have a NextSigningKey if they were generated before
 		// vault 1.9
 		err := k.generateAndSetNextKey(ctx, logger, s)
@@ -1504,6 +1523,7 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 			return err
 		}
 	}
+
 	// do the rotation
 	k.SigningKey = k.NextSigningKey
 	k.NextRotation = now.Add(k.RotationPeriod)
@@ -1695,21 +1715,21 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 		return now, err
 	}
 
-	namedKeys, err := s.List(ctx, namedKeyConfigPath)
+	keyNames, err := s.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return now, err
 	}
 
-	usedKeys := make([]string, 0, 2*len(namedKeys))
+	usedKeys := make([]string, 0)
 
-	for _, k := range namedKeys {
-		entry, err := s.Get(ctx, namedKeyConfigPath+k)
+	for _, keyName := range keyNames {
+		entry, err := s.Get(ctx, namedKeyConfigPath+keyName)
 		if err != nil {
 			return now, err
 		}
 
 		if entry == nil {
-			i.Logger().Warn("could not find key to update", "key", k)
+			i.Logger().Warn("could not find key to update", "key", keyName)
 			continue
 		}
 
@@ -1722,14 +1742,14 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 		keyRing := key.KeyRing
 		var keyringUpdated bool
 
-		for i := 0; i < len(keyRing); i++ {
-			k := keyRing[i]
+		for j := 0; j < len(keyRing); j++ {
+			k := keyRing[j]
 			if !k.ExpireAt.IsZero() && k.ExpireAt.Before(now) {
-				keyRing[i] = keyRing[len(keyRing)-1]
+				keyRing[j] = keyRing[len(keyRing)-1]
 				keyRing = keyRing[:len(keyRing)-1]
 
 				keyringUpdated = true
-				i--
+				j--
 				continue
 			}
 
