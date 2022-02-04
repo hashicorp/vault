@@ -14,6 +14,9 @@ export default class Current extends Component {
 
   get upgradeDate() {
     let keyInfoObject = this.args.model.versionHistory.key_info;
+    if (!keyInfoObject) {
+      return false;
+    }
     let firstKey = Object.keys(keyInfoObject);
     // compare against this month and this year to show message or not.
     let versionDate = new Date(keyInfoObject[firstKey].timestamp_installed);

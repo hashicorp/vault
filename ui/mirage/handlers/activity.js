@@ -6,7 +6,7 @@ export default function (server) {
       key_info: {
         '1.9.0': {
           previous_version: null,
-          timestamp_installed: '2021-01-03T10:23:16Z',
+          timestamp_installed: '2021-11-03T10:23:16Z',
         },
       },
     };
