@@ -1,10 +1,8 @@
 /* Print Styles - Hide Elements */
 @media print {
   iframe,
-  #__next > header,
-  .g-product-subnav,
+  [class*='hashi-stack-menu'],
   .g-footer,
-  .g-consent-manager,
   [aria-hidden='true'],
   [id='sidebar'],
   [id='edit-this-page'],
@@ -226,15 +224,6 @@
     & .alert.alert-success,
     & .alert.alert-warning {
       background-color: transparent;
-    }
-  }
-}
-
-/* @todo: move print styles to @hashicorp/react-global-styles/code-highlighting.css */
-@media print {
-  .hljs {
-    & * {
-      color: inherit;
     }
   }
 }
