@@ -318,71 +318,90 @@ func TestDeleteUser(t *testing.T) {
 	dbUser := "vaultuser"
 	initPassword := "p4$sw0rd"
 
-	type testCase struct {
-		req dbplugin.InitializeRequest
-	}
-
-	tests := map[string]testCase{
-		"happy path": {
-			req: dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
-					"connection_url": connURL,
-				},
-				VerifyConnection: true,
-			},
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
 		},
-		"contained_db": {
-			dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
-					"connection_url": connURL,
-					"contained_db":   true,
-				},
-				VerifyConnection: true,
-			},
+		VerifyConnection: true,
+	}
+
+	db := new()
+
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
+
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
+	}
+
+	assertCredsExist(t, connURL, dbUser, initPassword)
+
+	deleteReq := dbplugin.DeleteUserRequest{
+		Username: dbUser,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	deleteResp, err := db.DeleteUser(ctx, deleteReq)
+	if err != nil {
+		t.Fatalf("Failed to delete user: %s", err)
+	}
+
+	// Protect against future fields that aren't specified
+	expectedResp := dbplugin.DeleteUserResponse{}
+	if !reflect.DeepEqual(deleteResp, expectedResp) {
+		t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
+	}
+
+	assertCredsDoNotExist(t, connURL, dbUser, initPassword)
+}
+
+func TestDeleteUserContainedDB(t *testing.T) {
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	dbUser := "vaultuser"
+	initPassword := "p4$sw0rd"
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+			"contained_db":   true,
 		},
+		VerifyConnection: true,
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			db := new()
-			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
-			defer dbtesting.AssertClose(t, db)
+	db := new()
 
-			if !db.Initialized {
-				t.Fatal("Database should be initialized")
-			}
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
 
-			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
-			if err != nil {
-				t.Fatalf("Failed to create user: %s", err)
-			}
-
-			assertCredsExist(t, connURL, dbUser, initPassword)
-
-			deleteReq := dbplugin.DeleteUserRequest{
-				Username: dbUser,
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			deleteResp, err := db.DeleteUser(ctx, deleteReq)
-			if err != nil {
-				t.Fatalf("Failed to delete user: %s", err)
-			}
-
-			// Protect against future fields that aren't specified
-			expectedResp := dbplugin.DeleteUserResponse{}
-			if !reflect.DeepEqual(deleteResp, expectedResp) {
-				t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
-			}
-
-			if _, ok := test.req.Config["contained_db"]; ok {
-				return
-			}
-
-			assertCredsDoNotExist(t, connURL, dbUser, initPassword)
-		})
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
 	}
+
+	assertCredsExist(t, connURL, dbUser, initPassword)
+
+	deleteReq := dbplugin.DeleteUserRequest{
+		Username: dbUser,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	deleteResp, err := db.DeleteUser(ctx, deleteReq)
+	if err != nil {
+		t.Fatalf("Failed to delete user: %s", err)
+	}
+
+	// Protect against future fields that aren't specified
+	expectedResp := dbplugin.DeleteUserResponse{}
+	if !reflect.DeepEqual(deleteResp, expectedResp) {
+		t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
+	}
+
+	assertContainedDBCredsExist(t, connURL, dbUser)
 }
 
 func TestSQLSanitization(t *testing.T) {
@@ -439,16 +458,28 @@ func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
 	}
 }
 
-func testContainedDBCredsExist(connURL, username, password string) error {
-	// Log in with the new creds
-	parts := strings.Split(connURL, "@")
-	connURL = fmt.Sprintf("sqlserver://%s:%s@%s", username, password, parts[1])
+func assertContainedDBCredsExist(t testing.TB, connURL, username string) {
+	t.Helper()
+	err := testContainedDBCredsExist(connURL, username)
+	if err == nil {
+		t.Fatalf("Able to drop user when it shouldn't")
+	}
+}
+
+func testContainedDBCredsExist(connURL, username string) error {
+	// Log in
 	db, err := sql.Open("mssql", connURL)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	return db.Ping()
+
+	userQuery := `DECLARE @stmt nvarchar(max);
+			SET @stmt = 'DROP USER ' + QuoteName(@username);
+			EXEC(@stmt);`
+
+	_, err = db.Exec(userQuery, username)
+	return err
 }
 
 func testCredsExist(connURL, username, password string) error {
