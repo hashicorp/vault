@@ -12,14 +12,14 @@ operators or developers using Vault directly via the CLI.
 
 ~> **IMPORTANT NOTE:** Vault does not support an OAuth workflow to generate
 GitHub tokens, so does not act as a GitHub application. As a result, this method
-uses personal access tokens. An important consequence is that any valid GitHub
-access token with the `read:org` scope for any user belonging to the Vault-configured
-organization can be used for authentication. If such a
+uses personal access tokens. If the risks below are unacceptable to you, consider
+using a different authentication method.
+
+~> Any valid GitHub access token with the `read:org` scope for any user belonging
+to the Vault-configured organization can be used for authentication. If such a
 token is stolen from a third party service, and the attacker is able to make
 network calls to Vault, they will be able to log in as the user that generated
-the access token. When using this method it is a good idea to ensure that access
-to Vault is restricted at a network level rather than public. If these risks are
-unacceptable to you, you should use a different method.
+the access token.
 
 ## Authentication
 
