@@ -1,0 +1,21 @@
+{{#if @label}}
+  <label class="is-label" ...attributes>
+    {{@label}}
+    {{#if @helpText}}
+      <InfoTooltip>
+        <span data-test-help-text>{{@helpText}}</span>
+      </InfoTooltip>
+    {{/if}}
+  </label>
+{{/if}}
+{{#if @subText}}
+  <p class="sub-text" data-test-label-subtext>
+    {{@subText}}
+    {{#if @docLink}}
+      <a href={{@docLink}} target="_blank" rel="noopener noreferrer">
+        See our documentation
+      </a>
+      for help.
+    {{/if}}
+  </p>
+{{/if}}
