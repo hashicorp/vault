@@ -3,10 +3,11 @@ package ldap
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
 )
 
 type LDAPAuth struct {

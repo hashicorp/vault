@@ -34,6 +34,7 @@ func testHTTPServer(
 func init() {
 	os.Setenv("VAULT_TOKEN", "")
 }
+
 func TestLogin(t *testing.T) {
 	passwordEnvVar := "LDAP_PASSWORD"
 	allowedPassword := "6hrtL!*bro!ywbQbvDwW"
