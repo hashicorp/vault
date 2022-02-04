@@ -94,7 +94,7 @@ export default class History extends Component {
       let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
       return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
     } else {
-      return this.getActivityResponse.byNamespace;
+      return this.getActivityResponse?.byNamespace;
     }
   }
 
