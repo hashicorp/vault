@@ -20,7 +20,7 @@ export default class History extends Component {
     'November',
     'December',
   ];
-  maxNamespaces = 10;
+
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
@@ -172,19 +172,6 @@ export default class History extends Component {
   @action
   handleCurrentBillingPeriod() {
     this.handleClientActivityQuery(0, 0, 'reset');
-  }
-
-  @action
-  selectNamespace(value) {
-    // In case of search select component, value returned is an array
-    if (Array.isArray(value)) {
-      this.selectedNamespace = this.getNamespace(value[0]);
-      this.barChartSelection = false;
-    } else if (typeof value === 'object') {
-      // While D3 bar selection returns an object
-      this.selectedNamespace = this.getNamespace(value.label);
-      this.barChartSelection = true;
-    }
   }
 
   @action

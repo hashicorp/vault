@@ -57,7 +57,7 @@ export default class ConfigComponent extends Component {
       this.error = err.message;
       return;
     }
-    this.router.transitionTo('vault.cluster.clients.index');
+    this.router.transitionTo('vault.cluster.clients.config');
   }).drop())
   save;
 
