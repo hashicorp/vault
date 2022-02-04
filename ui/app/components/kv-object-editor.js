@@ -1,9 +1,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { isNone } from '@ember/utils';
-import { assert } from '@ember/debug';
 import { action } from '@ember/object';
-import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
 
 /**
@@ -54,18 +52,14 @@ export default class KvObjectEditor extends Component {
     if (!isNone(this.kvData.findBy('name', ''))) {
       return;
     }
-    const newObj = { name: '', value: '' };
-    guidFor(newObj);
-    this.kvData.addObject(newObj);
+    this.kvData.addObject({ name: '', value: '' });
   }
   @action
   updateRow() {
     this.args.onChange(this.kvData.toJSON());
   }
   @action
-  deleteRow(object, index) {
-    const oldObj = this.kvData.objectAt(index);
-    assert('object guids match', guidFor(oldObj) === guidFor(object));
+  deleteRow(index) {
     this.kvData.removeAt(index);
     this.args.onChange(this.kvData.toJSON());
   }

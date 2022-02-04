@@ -22,7 +22,7 @@ const M = Model.extend({
     editType: 'regex',
     subText: 'The template’s pattern defines the data format. Expressed in regex.',
   }),
-  alphabet: attr('string', {
+  alphabet: attr('array', {
     subText:
       'Alphabet defines a set of characters (UTF-8) that is used for FPE to determine the validity of plaintext and ciphertext values. You can choose a built-in one, or create your own.',
     editType: 'searchSelect',
@@ -32,7 +32,7 @@ const M = Model.extend({
     selectLimit: 1,
   }),
   encodeFormat: attr('string'),
-  decodeFormats: attr('object'),
+  decodeFormats: attr(),
   backend: attr('string', { readOnly: true }),
 
   readAttrs: computed(function () {

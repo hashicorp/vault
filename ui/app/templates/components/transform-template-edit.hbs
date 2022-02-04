@@ -109,11 +109,11 @@
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each this.model.readAttrs as |attr|}}
       {{#let (capitalize (or attr.options.label (humanize (dasherize attr.name)))) as |label|}}
-        {{#if (eq attr.type "object")}}
-          {{#if (not (is-empty-value (get this.model attr.name)))}}
+        {{#if (eq attr.name "decodeFormats")}}
+          {{#if (not (is-empty-value this.model.decodeFormats))}}
             <InfoTableRow @label={{label}}>
               <div>
-                {{#each-in (get this.model attr.name) as |key value|}}
+                {{#each-in this.model.decodeFormats as |key value|}}
                   <div class="transform-decode-formats">
                     <p class="is-label has-text-grey-400">{{key}}</p>
                     <p>{{value}}</p>
