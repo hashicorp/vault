@@ -137,7 +137,7 @@ func (a *LDAPAuth) readPasswordFromFile() (string, error) {
 
 func (password *Password) validate() error {
 	if password.FromFile == "" && password.FromEnv == "" && password.FromString == "" {
-		return fmt.Errorf("password for Userpass auth must be provided with a source file, environment variable, or plaintext string")
+		return fmt.Errorf("password for LDAP auth must be provided with a source file, environment variable, or plaintext string")
 	}
 
 	if password.FromFile != "" {
