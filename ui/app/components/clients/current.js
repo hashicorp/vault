@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { compareAsc, startOfMonth } from 'date-fns';
+import { isAfter, startOfMonth } from 'date-fns';
 import { action } from '@ember/object';
 export default class Current extends Component {
   chartLegend = [
@@ -13,19 +13,14 @@ export default class Current extends Component {
   @tracked selectedNamespace = null;
 
   get upgradeDate() {
-    let keyInfoObject = this.args.model.versionHistory.key_info;
+    let keyInfoObject = this.args.model.versionHistory.keyInfo;
     if (!keyInfoObject) {
       return false;
     }
-    let firstKey = Object.keys(keyInfoObject); // key name here will change, but we want the first one as this indicates when they upgraded to 1.9 or above
-    let versionDate = new Date(keyInfoObject[firstKey].timestamp_installed);
+    let earliestUpgradeVersion = Object.keys(keyInfoObject)[0]; // key name here will change, but we want the first one as this indicates when they upgraded to 1.9 or above
+    let versionDate = new Date(keyInfoObject[earliestUpgradeVersion].timestamp_installed);
     // compare against this month and this year to show message or not.
-    let compare = compareAsc(versionDate, startOfMonth(new Date()));
-    // Compare method: takes the two dates and return 1 if the first date is after the second, -1 if the first date is before the second or 0 if dates are equal.
-    if (compare === 1) {
-      return keyInfoObject[firstKey].timestamp_installed || false;
-    }
-    return false;
+    return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
   }
 
   get licenseStartDate() {

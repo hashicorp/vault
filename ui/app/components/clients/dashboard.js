@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth, compareAsc } from 'date-fns';
+import { isSameMonth, isAfter } from 'date-fns';
 
 export default class Dashboard extends Component {
   arrayOfMonths = [
@@ -103,18 +103,14 @@ export default class Dashboard extends Component {
   }
 
   get upgradeDate() {
-    let keyInfoObject = this.args.model.versionHistory.key_info;
+    let keyInfoObject = this.args.model.versionHistory.keyInfo;
     if (!keyInfoObject) {
       return false;
     }
-    let firstKey = Object.keys(keyInfoObject);
-    let versionDate = new Date(keyInfoObject[firstKey].timestamp_installed);
+    let earliestUpgradeVersion = Object.keys(keyInfoObject)[0];
+    let versionDate = new Date(keyInfoObject[earliestUpgradeVersion].timestamp_installed);
     // compare against this startTimeFromResponse to show message or not.
-    let compare = compareAsc(versionDate, new Date(this.startTimeFromResponse));
-    if (compare === 1) {
-      return keyInfoObject[firstKey].timestamp_installed || false;
-    }
-    return false;
+    return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
   }
   // HELPERS
   areArraysTheSame(a1, a2) {
