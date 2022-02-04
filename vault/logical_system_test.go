@@ -183,7 +183,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"passthrough_request_headers": []string{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   map[string]string(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -296,7 +296,7 @@ func TestSystemBackend_mount(t *testing.T) {
 				"passthrough_request_headers": []string{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   map[string]string(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -2934,7 +2934,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"passthrough_request_headers": []string{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   map[string]string(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
