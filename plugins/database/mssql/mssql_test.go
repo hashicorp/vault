@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"reflect"
 	"regexp"
 	"strings"
@@ -401,7 +402,7 @@ func TestDeleteUserContainedDB(t *testing.T) {
 		t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
 	}
 
-	assertContainedDBCredsExist(t, connURL, dbUser)
+	assertContainedDBCredsDoNotExist(t, connURL, dbUser)
 }
 
 func TestSQLSanitization(t *testing.T) {
@@ -458,27 +459,25 @@ func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
 	}
 }
 
-func assertContainedDBCredsExist(t testing.TB, connURL, username string) {
+func assertContainedDBCredsDoNotExist(t testing.TB, connURL, username string) {
 	t.Helper()
 	err := testContainedDBCredsExist(connURL, username)
-	if err == nil {
-		t.Fatalf("Able to drop user when it shouldn't")
-	}
+	assert.EqualError(t, err, "mssql: Cannot drop the user 'vaultuser', because it does not exist or you do not have permission.")
 }
 
 func testContainedDBCredsExist(connURL, username string) error {
+	ctx := context.Background()
 	// Log in
 	db, err := sql.Open("mssql", connURL)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-
-	userQuery := `DECLARE @stmt nvarchar(max);
-			SET @stmt = 'DROP USER ' + QuoteName(@username);
-			EXEC(@stmt);`
-
-	_, err = db.Exec(userQuery, username)
+	userStmt, err := db.PrepareContext(ctx, fmt.Sprintf("DROP USER [%s]", username))
+	if err != nil {
+		return err
+	}
+	_, err = userStmt.ExecContext(ctx)
+	defer userStmt.Close()
 	return err
 }
 
