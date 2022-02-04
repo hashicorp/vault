@@ -20,13 +20,23 @@ Each user may have multiple accounts with various identity providers, and Vault
 supports many of those providers to authenticate with Vault. Vault Identity can
 tie authentications from various auth methods to a single representation. This representation of a consolidated identity is called an **Entity** and their
 corresponding accounts with authentication providers can be mapped as
-**Aliases**. In essence, each entity is made up of zero or more aliases. 
+**Aliases**. In essence, each entity is made up of zero or more aliases. An entity cannot have more than one alias for
+a particular authentication backend.
 
 For example, a user with accounts in both GitHub and LDAP can be mapped to a
 single entity in Vault with two aliases, one of type GitHub and one of type
 LDAP.
 
 ![Entity  overview](/img/vault-identity-doc-1.png)
+
+However, if both aliases are created on the same auth mount, such as
+a Github mount, both aliases cannot be mapped to the same entity. The aliases can
+have the same auth type, as long as the auth mounts are different, and 
+still be associated to the same entity. The diagrams below illustrate both valid
+and invalid scenarios.
+
+![Valid Alias Mapping](/img/vault-identity-doc-4.png) 
+![Invalid Alias Mapping](/img/vault-identity-doc-5.png)
 
 When a client authenticates via any credential backend (except the Token
 backend), Vault creates a new entity. It attaches a new alias to it if a
@@ -115,9 +125,13 @@ a particular auth mount point.
 
 ## Local Auth Methods
 
-**Vault Enterpris:** If a login is performed using an auth method that was
-mounted locally (using `local=true`), no entities or groups will be associated
-with the resulting token.
+**Vault Enterprise:** All the auth methods will generate an entity by default 
+when a token is being issued, with the exception of token store. This is applicable 
+for both mounts that are shared between clusters and cluster local auth mounts (using `local=true`) 
+when Vault replication is in use.
+If the goal of marking an auth method as `local` was to comply to GDPR guidelines, 
+then care must be taken to not set the data pertaining to local auth mount or local auth 
+mount aliases in the metadata of the associated entity. 
 
 ## Implicit Entities
 

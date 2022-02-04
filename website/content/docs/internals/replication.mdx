@@ -144,6 +144,12 @@ Vault Replication for operators.
 
 # Caveats
 
+~> **Mismatched Cluster Versions**: It is not safe to replicate from a newer
+version of Vault to an older version. When upgrading replicated clusters,
+ensure that upstream clusters are always on older version of Vault than
+downstream clusters. See
+[Upgrading Vault](/docs/upgrading#replication-installations) for an example.
+
 - **Read-After-Write Consistency**: All write requests are forwarded from
   secondaries to the primary cluster in order to avoid potential conflicts.
   While replication is near real-time, it is not instantaneous, meaning there

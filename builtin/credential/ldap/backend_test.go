@@ -597,6 +597,26 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 
 }
 
+func TestBackend_basic_authbind_metadata_name(t *testing.T) {
+
+	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	cfg.UserAttr = "cn"
+	cfg.UPNDomain = "planetexpress.com"
+
+	addUPNAttributeToLDAPSchemaAndUser(t, cfg, "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com", "professor@planetexpress.com")
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			testAccStepLoginAliasMetadataName(t, "professor", "professor"),
+		},
+	})
+}
+
 func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry, testUserDN string, testUserUPN string) {
 	// Setup connection
 	client := &ldaputil.Client{
@@ -642,23 +662,6 @@ func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry,
 		t.Fatal(err)
 	}
 
-}
-
-func TestBackend_basic_authbind_upndomain(t *testing.T) {
-	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
-	defer cleanup()
-	cfg.UPNDomain = "planetexpress.com"
-
-	addUPNAttributeToLDAPSchemaAndUser(t, cfg, "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com", "professor@planetexpress.com")
-
-	logicaltest.Test(t, logicaltest.TestCase{
-		CredentialBackend: b,
-		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrlWithAuthBind(t, cfg),
-			testAccStepLoginNoAttachedPolicies(t, "professor", "professor"),
-		},
-	})
 }
 
 func TestBackend_basic_discover(t *testing.T) {
@@ -987,6 +990,19 @@ func testAccStepLoginNoAttachedPolicies(t *testing.T, user string, pass string) 
 
 		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
 		Check: logicaltest.TestCheckAuth([]string{"abc", "default", "xyz"}),
+	}
+}
+
+func testAccStepLoginAliasMetadataName(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		Check: logicaltest.TestCheckAuthEntityAliasMetadataName("name", user),
 	}
 }
 
