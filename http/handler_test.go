@@ -425,7 +425,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -480,7 +480,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
