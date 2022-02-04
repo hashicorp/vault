@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -61,7 +62,7 @@ type PluginClient struct {
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
 	client      *plugin.Client
-	protocol    plugin.ClientProtocol
+	protocol    *pluginClientConn
 	cleanupFunc func() error
 }
 
@@ -99,9 +100,38 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	return nil
 }
 
-func (p *PluginClient) Conn() *grpc.ClientConn {
-	gc := p.protocol.(*plugin.GRPCClient)
-	return gc.Conn
+type pluginClientConn struct {
+	plugin.ClientProtocol
+	id string
+}
+
+var _ grpc.ClientConnInterface = &pluginClientConn{}
+
+func (d *pluginClientConn) Invoke(ctx context.Context, method string, args interface{}, reply interface{}, opts ...grpc.CallOption) error {
+	// Inject ID to the context
+	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, d.id)
+	idCtx := metadata.NewOutgoingContext(ctx, md)
+
+	conn := d.ClientProtocol.(*plugin.GRPCClient).Conn
+	return conn.Invoke(idCtx, method, args, reply, opts...)
+}
+
+func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	// Inject ID to the context
+	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, d.id)
+	idCtx := metadata.NewOutgoingContext(ctx, md)
+
+	conn := d.ClientProtocol.(*plugin.GRPCClient).Conn
+	return conn.NewStream(idCtx, desc, method, opts...)
+}
+
+// func (p *PluginClient) Conn() *grpc.ClientConn {
+// 	gc := p.protocol.(*plugin.GRPCClient)
+// 	return gc.Conn
+// }
+
+func (p *PluginClient) Protocol() grpc.ClientConnInterface {
+	return p.protocol
 }
 
 func (p *PluginClient) ID() string {
@@ -158,14 +188,14 @@ func (c *PluginCatalog) removePluginClient(name, id string) error {
 	delete(mpc.connections, id)
 	if !multiplexingSupport {
 		pluginClient.client.Kill()
-		err = pluginClient.protocol.Close()
+		err = pluginClient.protocol.ClientProtocol.Close()
 
 		if len(mpc.connections) == 0 {
 			delete(c.multiplexedClients, name)
 		}
 	} else if len(mpc.connections) == 0 {
 		pluginClient.client.Kill()
-		err = pluginClient.protocol.Close()
+		err = pluginClient.protocol.ClientProtocol.Close()
 		delete(c.multiplexedClients, name)
 	}
 	return err
@@ -242,6 +272,10 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 			pc.client = mpc.connections[k].client
 			break
 		}
+
+		if pc.client == nil {
+			return nil, fmt.Errorf("plugin client is nil")
+		}
 	}
 
 	// Get the protocol client for this connection.
@@ -251,7 +285,13 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 		return nil, err
 	}
 
-	pc.protocol = rpcClient
+	// Wrap rpcClient with our implementation so that we can inject the
+	// ID into the context
+	cc := &pluginClientConn{
+		ClientProtocol: rpcClient,
+		id:             id,
+	}
+	pc.protocol = cc
 	mpc.connections[id] = pc
 	mpc.name = pluginRunner.Name
 

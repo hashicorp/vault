@@ -54,14 +54,8 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	case gRPCClient:
 
 		gRPCClient := raw.(gRPCClient)
+		gRPCClient.client = proto.NewDatabaseClient(pluginClient.Protocol())
 
-		// Wrap clientConn with our implementation so that we can inject the
-		// ID into the context
-		cc := &databaseClientConn{
-			ClientConn: pluginClient.Conn(),
-			id:         pluginClient.ID(),
-		}
-		gRPCClient.client = proto.NewDatabaseClient(cc)
 		db = gRPCClient
 	default:
 		return nil, errors.New("unsupported client type")

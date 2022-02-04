@@ -35,11 +35,13 @@ type LookRunnerUtil interface {
 
 type Multiplexer interface {
 	ID() string
-	Conn() *grpc.ClientConn
+	Protocol() grpc.ClientConnInterface
 	MultiplexingSupport() (bool, error)
 
 	plugin.ClientProtocol
 }
+
+const MultiplexingCtxKey string = "multiplex_id"
 
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
