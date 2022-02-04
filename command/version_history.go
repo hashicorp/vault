@@ -69,17 +69,17 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 		return 2
 	}
 
+	if resp == nil || resp.Data == nil {
+		c.UI.Error("Invalid response returned from Vault")
+		return 2
+	}
+
 	if c.flagFormat == "json" {
 		c.UI.Warn("")
 		c.UI.Warn(versionTrackingWarning)
 		c.UI.Warn("")
 
 		return OutputData(c.UI, resp)
-	}
-
-	if resp == nil || resp.Data == nil {
-		c.UI.Error("Invalid response returned from Vault")
-		return 2
 	}
 
 	var keyInfo map[string]interface{}
@@ -98,7 +98,6 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 
 	table := []string{"Version | Installation Time"}
 	columnConfig := columnize.DefaultConfig()
-	columnConfig.Glue = "   "
 
 	for _, versionRaw := range keys {
 		version, ok := versionRaw.(string)
