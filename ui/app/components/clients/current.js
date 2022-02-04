@@ -1,11 +1,15 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { compareAsc, startOfMonth } from 'date-fns';
+import { action } from '@ember/object';
 export default class Current extends Component {
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
+  @tracked namespaceArray = this.args.model.monthly?.byNamespace.map((namespace) => {
+    return { name: namespace['label'], id: namespace['label'] };
+  });
   @tracked selectedNamespace = null;
 
   get upgradeDate() {
@@ -54,5 +58,12 @@ export default class Current extends Component {
   // HELPERS
   filterByNamespace(namespace) {
     return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
+  }
+
+  // ACTIONS
+  @action
+  selectNamespace([value]) {
+    // value comes in as [namespace0]
+    this.selectedNamespace = value;
   }
 }
