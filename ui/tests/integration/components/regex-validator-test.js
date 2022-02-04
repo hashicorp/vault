@@ -127,11 +127,13 @@ module('Integration | Component | regex-validator', function (hooks) {
       .dom('[data-test-regex-validator-groups-placeholder]')
       .exists('Placeholder is shown when regex does not match test input value');
     await fillIn('[data-test-input="regex-test-val"]', 'test8');
-    assert.dom('[data-test-regex-group-position="1"]').hasText('$1', 'First capture group position renders');
-    assert.dom('[data-test-regex-group-value="1"]').hasText('test', 'First capture group value renders');
-    assert.dom('[data-test-regex-group-position="2"]').hasText('$2', 'Second capture group position renders');
-    assert.dom('[data-test-regex-group-value="2"]').hasText('8', 'Second capture group value renders');
-    assert.dom('[data-test-regex-group-position="last"]').hasText('$last', 'Named capture group renders');
-    assert.dom('[data-test-regex-group-value="last"]').hasText('8', 'Named capture group value renders');
+    assert.dom('[data-test-regex-group-position="$1"]').hasText('$1', 'First capture group position renders');
+    assert.dom('[data-test-regex-group-value="$1"]').hasText('test', 'First capture group value renders');
+    assert
+      .dom('[data-test-regex-group-position="$2"]')
+      .hasText('$2', 'Second capture group position renders');
+    assert.dom('[data-test-regex-group-value="$2"]').hasText('8', 'Second capture group value renders');
+    assert.dom('[data-test-regex-group-position="$last"]').hasText('$last', 'Named capture group renders');
+    assert.dom('[data-test-regex-group-value="$last"]').hasText('8', 'Named capture group value renders');
   });
 });
