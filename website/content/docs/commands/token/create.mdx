@@ -74,6 +74,11 @@ flags](/docs/commands) included on all commands.
 - `-display-name` `(string: "")` - Name to associate with this token. This is a
   non-sensitive value that can be used to help identify created secrets (e.g.
   prefixes).
+  
+- `-entity-alias`  `(string: "")` - Name of the entity alias to associate with 
+  during token creation. Only works in combination with -role argument and used 
+  entity alias must be listed in allowed_entity_aliases. If this has been 
+  specified, the entity will not be inherited from the parent.
 
 - `-explicit-max-ttl` `(duration: "")` - Explicit maximum lifetime for the
   token. Unlike normal TTLs, the maximum TTL is a hard limit and cannot be

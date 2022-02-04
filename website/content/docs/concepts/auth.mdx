@@ -123,22 +123,27 @@ The following code snippet demonstrates how to renew auth tokens.
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	vault "github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/userpass"
 )
 
-// Once you've set the token for your Vault client, you will need to periodically renew its lease.
+// Once you've set the token for your Vault client, you will need to
+// periodically renew its lease.
 //
 // A function like this should be run as a goroutine to avoid blocking.
 //
-// Production applications may also wish to be more tolerant of failures and retry rather than exiting.
+// Production applications may also wish to be more tolerant of failures and
+// retry rather than exiting.
 //
-// Additionally, enterprise Vault users should be aware that due to eventual consistency, the API may return unexpected errors when
-// running Vault with performance standbys or performance replication, despite the client having a freshly renewed token.
-// See https://www.vaultproject.io/docs/enterprise/consistency#vault-1-7-mitigations for several ways to mitigate this
-// which are outside the scope of this code sample.
+// Additionally, enterprise Vault users should be aware that due to eventual
+// consistency, the API may return unexpected errors when running Vault with
+// performance standbys or performance replication, despite the client having
+// a freshly renewed token. See https://www.vaultproject.io/docs/enterprise/consistency#vault-1-7-mitigations
+// for several ways to mitigate this which are outside the scope of this code sample.
 func renewToken(client *vault.Client) {
 	for {
 		vaultLoginResp, err := login(client)
@@ -152,7 +157,8 @@ func renewToken(client *vault.Client) {
 	}
 }
 
-// Starts token lifecycle management. Returns only fatal errors as errors, otherwise returns nil so we can attempt login again.
+// Starts token lifecycle management. Returns only fatal errors as errors,
+// otherwise returns nil so we can attempt login again.
 func manageTokenLifecycle(client *vault.Client, token *vault.Secret) error {
 	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
 	if !renew {
