@@ -133,6 +133,10 @@
           {
             "title": "AWS KMS",
             "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
           }
         ]
       },

@@ -96,7 +96,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.11.3
 	github.com/hashicorp/vault-plugin-auth-jwt v0.11.4
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.3
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.4
 	github.com/hashicorp/vault-plugin-auth-oci v0.9.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.5.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.9.1
@@ -106,7 +106,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.11.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-azure v0.11.2
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.11.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.10.1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.5.1
@@ -114,9 +114,9 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.3.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
 	github.com/hashicorp/vault/api v1.3.0
-	github.com/hashicorp/vault/api/auth/approle v0.0.0-00010101000000-000000000000
-	github.com/hashicorp/vault/api/auth/userpass v0.0.0-00010101000000-000000000000
-	github.com/hashicorp/vault/sdk v0.3.1-0.20211209192327-a0822e64eae0
+	github.com/hashicorp/vault/api/auth/approle v0.1.0
+	github.com/hashicorp/vault/api/auth/userpass v0.1.0
+	github.com/hashicorp/vault/sdk v0.3.1-0.20220103172553-29ded54520a4
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
