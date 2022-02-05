@@ -1,4 +1,4 @@
-export const ALERT_BANNER_ACTIVE = true
+export const ALERT_BANNER_ACTIVE = false
 
 // https://github.com/hashicorp/web-components/tree/master/packages/alert-banner
 export default {

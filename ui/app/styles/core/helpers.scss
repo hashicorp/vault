@@ -61,6 +61,10 @@
   display: flex;
   align-items: center;
 }
+.is-flex-align-baseline {
+  display: flex;
+  align-items: baseline;
+}
 .is-flex-1 {
   flex-grow: 1;
 }
@@ -70,6 +74,10 @@
 .is-flex-end {
   display: flex !important;
   justify-content: flex-end;
+}
+.is-flex-start {
+  display: flex !important;
+  justify-content: flex-start;
 }
 .is-flex-full {
   flex-basis: 100%;

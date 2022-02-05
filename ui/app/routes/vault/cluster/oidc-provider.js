@@ -74,7 +74,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
   _buildUrl(urlString, params) {
     try {
       let url = new URL(urlString);
-      Object.keys(params).forEach(key => {
+      Object.keys(params).forEach((key) => {
         if (params[key]) {
           url.searchParams.append(key, params[key]);
         }

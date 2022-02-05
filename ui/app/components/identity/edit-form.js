@@ -3,6 +3,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
+import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
   flashMessages: service(),
@@ -19,7 +20,7 @@ export default Component.extend({
    */
   onSave: () => {},
 
-  cancelLink: computed('mode', 'model.identityType', function() {
+  cancelLink: computed('mode', 'model.identityType', function () {
     let { model, mode } = this;
     let routes = {
       'create-entity': 'vault.cluster.access.identity',
@@ -49,23 +50,24 @@ export default Component.extend({
     return `Successfully ${action} ${typeDisplay}.`;
   },
 
-  save: task(function*() {
-    let model = this.model;
-    let message = this.getMessage(model);
+  save: task(
+    waitFor(function* () {
+      let model = this.model;
+      let message = this.getMessage(model);
 
-    try {
-      yield model.save();
-    } catch (err) {
-      // err will display via model state
-      return;
-    }
-    this.flashMessages.success(message);
-    yield this.onSave({ saveType: 'save', model });
-  })
-    .drop()
-    .withTestWaiter(),
+      try {
+        yield model.save();
+      } catch (err) {
+        // err will display via model state
+        return;
+      }
+      this.flashMessages.success(message);
+      yield this.onSave({ saveType: 'save', model });
+    })
+  ).drop(),
 
   willDestroy() {
+    this._super(...arguments);
     let model = this.model;
     if (!model) return;
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {

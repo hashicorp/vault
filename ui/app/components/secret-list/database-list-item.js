@@ -41,7 +41,7 @@ export default class DatabaseListItem extends Component {
       .then(() => {
         this.flashMessages.success(`Success: ${id} connection was reset`);
       })
-      .catch(e => {
+      .catch((e) => {
         this.flashMessages.danger(e.errors);
       });
   }
@@ -54,7 +54,7 @@ export default class DatabaseListItem extends Component {
       .then(() => {
         this.flashMessages.success(`Success: ${id} connection was rotated`);
       })
-      .catch(e => {
+      .catch((e) => {
         this.flashMessages.danger(e.errors);
       });
   }

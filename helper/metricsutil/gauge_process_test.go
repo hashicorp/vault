@@ -332,7 +332,7 @@ func waitForDone(t *testing.T,
 	done <-chan struct{},
 ) int {
 	t.Helper()
-	timeout := time.After(100 * time.Millisecond)
+	timeout := time.After(500 * time.Millisecond)
 
 	numTicks := 0
 	for {

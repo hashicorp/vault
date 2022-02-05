@@ -95,7 +95,7 @@ export default Model.extend({
     return expandAttributeMeta(this, fields);
   },
 
-  roleSettingAttrs: computed(function() {
+  roleSettingAttrs: computed(function () {
     // logic for which get displayed is on DatabaseRoleSettingForm
     let allRoleSettingFields = [
       'ttl',

@@ -100,7 +100,7 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     if (query.type === 'aws') {
-      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then(resp => {
+      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then((resp) => {
         resp.path = query.backend + '/';
         return resp;
       });
@@ -135,11 +135,7 @@ export default ApplicationAdapter.extend({
 
   saveZeroAddressConfig(store, type, snapshot) {
     const path = encodePath(snapshot.id);
-    const roles = store
-      .peekAll('role-ssh')
-      .filterBy('zeroAddress')
-      .mapBy('id')
-      .join(',');
+    const roles = store.peekAll('role-ssh').filterBy('zeroAddress').mapBy('id').join(',');
     const url = `/v1/${path}/config/zeroaddress`;
     const data = { roles };
     if (roles === '') {

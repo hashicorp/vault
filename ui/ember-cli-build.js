@@ -9,58 +9,64 @@ const isProd = environment === 'production';
 const isTest = environment === 'test';
 const isCI = !!process.env.CI;
 
-module.exports = function(defaults) {
-  var app = new EmberApp(defaults, {
-    'ember-service-worker': {
-      serviceWorkerScope: config.serviceWorkerScope,
-      skipWaitingOnMessage: true,
+const appConfig = {
+  'ember-service-worker': {
+    serviceWorkerScope: config.serviceWorkerScope,
+    skipWaitingOnMessage: true,
+  },
+  svgJar: {
+    //optimize: false,
+    //paths: [],
+    optimizer: {},
+    sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
+    rootURL: '/ui/',
+  },
+  assetLoader: {
+    generateURI: function (filePath) {
+      return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
-    svgJar: {
-      //optimize: false,
-      //paths: [],
-      optimizer: {},
-      sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
-      rootURL: '/ui/',
-    },
-    assetLoader: {
-      generateURI: function(filePath) {
-        return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
-      },
-    },
-    codemirror: {
-      modes: ['javascript', 'ruby'],
-      keyMaps: ['sublime'],
-    },
-    babel: {
-      plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
-    },
-    'ember-cli-babel': {
-      includePolyfill: isTest || isProd || isCI,
-    },
-    hinting: isTest,
-    tests: isTest,
-    sourcemaps: {
-      enabled: !isProd,
-    },
-    sassOptions: {
-      sourceMap: false,
-      onlyIncluded: true,
-    },
-    autoprefixer: {
-      enabled: isTest || isProd,
-      grid: true,
-      browsers: ['defaults', 'ie 11'],
-    },
-    autoImport: {
-      forbidEval: true,
-    },
-    'ember-test-selectors': {
-      strip: isProd,
-    },
-    'ember-composable-helpers': {
-      except: ['array'],
-    },
-  });
+  },
+  codemirror: {
+    modes: ['javascript', 'ruby'],
+    keyMaps: ['sublime'],
+  },
+  babel: {
+    plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
+  },
+  'ember-cli-babel': {
+    includePolyfill: isTest || isProd || isCI,
+  },
+  hinting: isTest,
+  tests: isTest,
+  sourcemaps: {
+    enabled: !isProd,
+  },
+  sassOptions: {
+    sourceMap: false,
+    onlyIncluded: true,
+  },
+  autoprefixer: {
+    enabled: isTest || isProd,
+    grid: true,
+    // TODO CBS: Remove IE
+    browsers: ['defaults', 'ie 11'],
+  },
+  autoImport: {
+    forbidEval: true,
+  },
+  'ember-test-selectors': {
+    strip: isProd,
+  },
+  'ember-composable-helpers': {
+    except: ['array'],
+  },
+  'ember-cli-deprecation-workflow': {
+    enabled: true,
+  },
+};
+
+module.exports = function (defaults) {
+  let app = new EmberApp(defaults, appConfig);
 
   app.import('vendor/string-includes.js');
   app.import('node_modules/string.prototype.endswith/endswith.js');

@@ -10,7 +10,7 @@ export default PolicyModel.extend({
     defaultValue: 'hard-mandatory',
   }),
 
-  additionalAttrs: computed(function() {
+  additionalAttrs: computed(function () {
     return expandAttributeMeta(this, ['enforcementLevel']);
   }),
 });

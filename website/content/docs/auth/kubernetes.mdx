@@ -125,9 +125,8 @@ Kubernetes auth:
 * The value of the JWT's `"iss"` claim depends on the cluster's configuration.
 
 The changes to token lifetime are important when configuring the
-[`token_reviewer_jwt`](/api-docs/auth/kubernetes#token_reviewer_jwt) option. You
-must avoid using a short-lived token because Vault stores that token in Vault
-storage and does not automatically refresh it. If a short-lived token is used,
+[`token_reviewer_jwt`](/api-docs/auth/kubernetes#token_reviewer_jwt) option.
+If a short-lived token is used,
 Kubernetes will revoke it as soon as the pod or service account are deleted, or
 if the expiry time passes, and Vault will no longer be able to use the
 `TokenReview` API. See [How to work with short-lived Kubernetes tokens][short-lived-tokens]
@@ -155,6 +154,7 @@ table summarizes the options, each of which is explained in more detail below.
 
 | Option                               | All tokens are short-lived | Can revoke tokens early | Other considerations |
 | ------------------------------------ | -------------------------- | ----------------------- | -------------------- |
+| Use local token as reviewer JWT      | Yes                        | Yes                     | Requires Vault (1.9.3+) to be deployed on the Kubernetes cluster |
 | Use client JWT as reviewer JWT       | Yes                        | Yes                     | Operational overhead |
 | Use long-lived token as reviewer JWT | No                         | Yes                     |                      |
 | Use JWT auth instead                 | Yes                        | No                      |                      |
@@ -167,6 +167,25 @@ short-lived tokens. If you would like to disable this, set
 [here](/docs/auth/jwt/oidc_providers#specifying-ttl-and-audience) for an example.
 
 [k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
+
+#### Use local service account token as the reviewer JWT
+
+When running Vault in a Kubernetes pod the recommended option is to use the pod's local
+service account token. Vault will periodically re-read the file to support
+short-lived tokens. To use the local token and CA certificate, omit
+`token_reviewer_jwt` and `kubernetes_ca_cert` when configuring the auth method.
+Vault will attempt to load them from `token` and `ca.crt` respectively inside
+the default mount folder `/var/run/secrets/kubernetes.io/serviceaccount/`.
+
+```bash
+vault write auth/kubernetes/config \
+    kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_PORT
+```
+
+!> **Note:** Requires Vault 1.9.3+. In earlier versions the service account
+token and CA certificate is read once and stored in Vault storage.
+When the service account token expires or is revoked, Vault will no longer be
+able to use the `TokenReview` API and client authentication will fail.
 
 #### Use the Vault client's JWT as the reviewer JWT
 
@@ -190,16 +209,26 @@ kubectl create clusterrolebinding vault-client-auth-delegator \
 
 #### Continue using long-lived tokens
 
-The default Kubernetes secret created for a service account is still long lived,
-and can be used as the `token_reviewer_jwt` without needing to refresh it. To
-find the secret, run:
+You can create a long-lived secret using the instructions [here][k8s-create-secret]
+and use that as the `token_reviewer_jwt`. In this example, the `vault` service
+account would need the `system:auth-delegator` ClusterRole:
 
 ```bash
-kubectl get secret "$(kubectl get serviceaccount default -o jsonpath='{.secrets[0].name}')"
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-k8s-auth-secret
+  annotations:
+    kubernetes.io/service-account.name: vault
+type: kubernetes.io/service-account-token
+EOF
 ```
 
-Using this maintains previous workflows but does not fully take advantage of the
-new default short-lived tokens.
+Using this maintains previous workflows but does not benefit from the improved
+security posture of short-lived tokens.
+
+[k8s-create-secret]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#manually-create-a-service-account-api-token
 
 #### Use JWT auth
 
@@ -322,10 +351,7 @@ import (
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.
-//
-// As the client, all we need to do is pass along the JWT token representing our application's Kubernetes Service Account in our login request to Vault.
-//
-// For a more in-depth setup explanation, please see the full version of this code in the hashicorp/vault-examples repo.
+// For a more in-depth setup explanation, please see the relevant readme in the hashicorp/vault-examples repo.
 func getSecretWithKubernetesAuth() (string, error) {
 	// If set, the VAULT_ADDR environment variable will be the address that
 	// your pod uses to communicate with Vault.
@@ -394,37 +420,12 @@ using VaultSharp.V1.Commons;
 
 namespace Examples
 {
-    public class KubernetesAuthExample
+    public class KubernetesAuthExample 
     {
         const string DefaultTokenPath = "path/to/service-account-token";
 
         // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.
-        //
-        // As the client, all we need to do is pass along the JWT token representing our application's Kubernetes Service Account in our login request to Vault.
-        // This token is automatically mounted to your application's container by Kubernetes. Read more at https://www.vaultproject.io/docs/auth/kubernetes
-        //
-        // SETUP NOTES: If an operator has not already set up Kubernetes auth in Vault for you, then you must also first configure the Vault server with its own Service Account token to be able to communicate with the Kubernetes API
-        // so it can verify that the client's service-account token is valid. The service account that will be performing that verification needs the ClusterRole system:auth-delegator.
-        //
-        //    export TOKEN_REVIEW_JWT=$(kubectl get secret $TOKEN_REVIEWER_SECRET --output='go-template={{ .data.token }}' | base64 --decode)
-        //    export KUBE_HOST=$(kubectl config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.server}')
-        //    kubectl config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode > path/to/kube_ca_cert
-        //
-        //    vault write auth/kubernetes/config \
-        //  	token_reviewer_jwt=${TOKEN_REVIEW_JWT} \
-        //      kubernetes_host=${KUBE_HOST} \
-        //      kubernetes_ca_cert=@path/to/kube_ca_cert \
-        //      issuer="kubernetes/serviceaccount"
-        //
-        // The "issuer" field is normally only required when running Kubernetes 1.21 or above, and may differ from the default value above:
-        // https://www.vaultproject.io/docs/auth/kubernetes#discovering-the-service-account-issuer.
-        //
-        // Finally, make sure to create a role in Vault bound to your pod's service account:
-        //
-        // 	vault write auth/kubernetes/role/dev-role-k8s \
-        //     	policies="dev-policy" \
-        //     	bound_service_account_names="my-app" \
-        //		bound_service_account_namespaces="default"
+        // For a more in-depth setup explanation, please see the relevant readme in the hashicorp/vault-examples repo.
         public string GetSecretWithK8s()
         {
             var vaultAddr = Environment.GetEnvironmentVariable("VAULT_ADDR");
@@ -441,19 +442,19 @@ namespace Examples
 
             // Get the path to service account token or fall back on default path
             string pathToToken = String.IsNullOrEmpty(Environment.GetEnvironmentVariable("SA_TOKEN_PATH")) ? DefaultTokenPath : Environment.GetEnvironmentVariable("SA_TOKEN_PATH");
-            string jwt = File.ReadAllText(pathToToken);
+            string jwt = File.ReadAllText(pathToToken); 
 
             IAuthMethodInfo authMethod = new KubernetesAuthMethodInfo(roleName, jwt);
             var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
 
-            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings); 
 
             // We can retrieve the secret after creating our VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-
+            
             var password = kv2Secret.Data.Data["password"];
-
+            
             return password.ToString();
         }
     }

@@ -75,7 +75,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		req:     req,
 		apiData: data,
 	}
-	parsedBundle, err := generateIntermediateCSR(b, input, b.Backend.GetRandomReader())
+	parsedBundle, err := generateIntermediateCSR(ctx, b, input, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -180,7 +180,7 @@ func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("could not find an existing private key"), nil
 	}
 
-	parsedCB, err := cb.ToParsedCertBundle()
+	parsedCB, err := parseCABundle(ctx, b, req, cb)
 	if err != nil {
 		return nil, err
 	}

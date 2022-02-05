@@ -70,7 +70,7 @@ func getFormat(data *framework.FieldData) string {
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(ctx context.Context, req *logical.Request) (*certutil.CAInfoBundle, error) {
+func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request) (*certutil.CAInfoBundle, error) {
 	bundleEntry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
@@ -84,7 +84,7 @@ func fetchCAInfo(ctx context.Context, req *logical.Request) (*certutil.CAInfoBun
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode local CA certificate/key: %v", err)}
 	}
 
-	parsedBundle, err := bundle.ToParsedCertBundle()
+	parsedBundle, err := parseCABundle(ctx, b, req, &bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
@@ -174,6 +174,29 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 	}
 
 	return certEntry, nil
+}
+
+// Given a URI SAN, verify that it is allowed.
+func validateURISAN(b *backend, data *inputBundle, uri string) bool {
+	valid := false
+	for _, allowed := range data.role.AllowedURISANs {
+		if data.role.AllowedURISANsTemplate {
+			isTemplate, _ := framework.ValidateIdentityTemplate(allowed)
+			if isTemplate && data.req.EntityID != "" {
+				tmpAllowed, err := framework.PopulateIdentityTemplate(allowed, data.req.EntityID, b.System())
+				if err != nil {
+					continue
+				}
+				allowed = tmpAllowed
+			}
+		}
+		validURI := glob.Glob(allowed, uri)
+		if validURI {
+			valid = true
+			break
+		}
+	}
+	return valid
 }
 
 // Given a set of requested names for a certificate, verifies that all of them
@@ -454,8 +477,8 @@ func generateCert(ctx context.Context,
 	input *inputBundle,
 	caSign *certutil.CAInfoBundle,
 	isCA bool,
-	randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
-
+	randomSource io.Reader) (*certutil.ParsedCertBundle, error,
+) {
 	if input.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
 	}
@@ -499,7 +522,7 @@ func generateCert(ctx context.Context,
 		}
 	}
 
-	parsedBundle, err := certutil.CreateCertificateWithRandomSource(data, randomSource)
+	parsedBundle, err := generateCABundle(ctx, b, input, data, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +532,7 @@ func generateCert(ctx context.Context,
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
-func generateIntermediateCSR(b *backend, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+func generateIntermediateCSR(ctx context.Context, b *backend, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
 	creation, err := generateCreationBundle(b, input, nil, nil)
 	if err != nil {
 		return nil, err
@@ -519,7 +542,7 @@ func generateIntermediateCSR(b *backend, input *inputBundle, randomSource io.Rea
 	}
 
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
-	parsedBundle, err := certutil.CreateCSRWithRandomSource(creation, addBasicConstraints, randomSource)
+	parsedBundle, err := generateCSRBundle(ctx, b, input, creation, addBasicConstraints, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -531,8 +554,8 @@ func signCert(b *backend,
 	data *inputBundle,
 	caSign *certutil.CAInfoBundle,
 	isCA bool,
-	useCSRValues bool) (*certutil.ParsedCertBundle, error) {
-
+	useCSRValues bool) (*certutil.ParsedCertBundle, error,
+) {
 	if data.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
 	}
@@ -956,15 +979,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 
 				// validate uri sans
 				for _, uri := range csr.URIs {
-					valid := false
-					for _, allowed := range data.role.AllowedURISANs {
-						validURI := glob.Glob(allowed, uri.String())
-						if validURI {
-							valid = true
-							break
-						}
-					}
-
+					valid := validateURISAN(b, data, uri.String())
 					if !valid {
 						return nil, errutil.UserError{
 							Err: fmt.Sprintf(
@@ -986,15 +1001,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				}
 
 				for _, uri := range uriAlt {
-					valid := false
-					for _, allowed := range data.role.AllowedURISANs {
-						validURI := glob.Glob(allowed, uri)
-						if validURI {
-							valid = true
-							break
-						}
-					}
-
+					valid := validateURISAN(b, data, uri)
 					if !valid {
 						return nil, errutil.UserError{
 							Err: fmt.Sprintf(

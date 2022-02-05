@@ -1390,6 +1390,9 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if config == nil {
+		return nil, fmt.Errorf("failed to obtain seal/recovery configuration")
+	}
 
 	// Check if we don't have enough keys to unlock, proceed through the rest of
 	// the call only if we have met the threshold
@@ -2041,6 +2044,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 	if err := c.setupPolicyStore(ctx); err != nil {
+		return err
+	}
+	if err := c.setupManagedKeyRegistry(); err != nil {
 		return err
 	}
 	if err := c.loadCORSConfig(ctx); err != nil {
@@ -3017,7 +3023,7 @@ func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
 func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
-		c.Logger().Trace("failed to retrieve request with ID %v", reqID)
+		c.Logger().Trace("failed to retrieve request with ID", "request_id", reqID)
 		return
 	}
 
@@ -3038,7 +3044,12 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 
 	// there is only one writer to this map, so skip checking for errors
 	reqData := v.(InFlightReqData)
-	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+	c.logger.Log(logLevel, "completed_request",
+		"start_time", reqData.StartTime.Format(time.RFC3339),
+		"duration", fmt.Sprintf("%dms", time.Now().Sub(reqData.StartTime).Milliseconds()),
+		"client_id", reqData.ClientID,
+		"client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath,
+		"request_method", reqData.Method)
 }
 
 func (c *Core) ReloadLogRequestsLevel() {

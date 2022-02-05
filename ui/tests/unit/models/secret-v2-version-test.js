@@ -2,10 +2,10 @@ import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Model | secret-v2-version', function(hooks) {
+module('Unit | Model | secret-v2-version', function (hooks) {
   setupTest(hooks);
 
-  test('deleted is true for a past deletionTime', function(assert) {
+  test('deleted is true for a past deletionTime', function (assert) {
     let model;
     run(() => {
       model = run(() =>
@@ -17,7 +17,7 @@ module('Unit | Model | secret-v2-version', function(hooks) {
     });
   });
 
-  test('deleted is false for a future deletionTime', function(assert) {
+  test('deleted is false for a future deletionTime', function (assert) {
     let model;
     run(() => {
       model = run(() =>

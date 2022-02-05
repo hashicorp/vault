@@ -31,9 +31,9 @@ const NAMESPACE_MOUNTS_RESPONSE = {
   },
 };
 
-module('Integration | Component | path filter config list', function(hooks) {
+module('Integration | Component | path filter config list', function (hooks) {
   setupRenderingTest(hooks, { resolver });
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     let ajaxStub = sinon.stub().usingPromise(Promise);
     ajaxStub.withArgs('/v1/sys/internal/ui/mounts', 'GET').resolves(MOUNTS_RESPONSE);
     ajaxStub
@@ -58,14 +58,14 @@ module('Integration | Component | path filter config list', function(hooks) {
     this.owner.register('service:store', storeServiceStub);
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     this.set('config', { mode: null, paths: [] });
     await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
 
     assert.dom('[data-test-component=path-filter-config]').exists();
   });
 
-  test('it sets config.paths', async function(assert) {
+  test('it sets config.paths', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
     await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
@@ -84,7 +84,7 @@ module('Integration | Component | path filter config list', function(hooks) {
     await assert.equal(searchSelect.options.length, 2, 'has both options');
   });
 
-  test('it sets config.mode', async function(assert) {
+  test('it sets config.mode', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     await render(hbs`<PathFilterConfigList @config={{this.config}} />`);
     await click('#deny');
@@ -93,14 +93,14 @@ module('Integration | Component | path filter config list', function(hooks) {
     assert.equal(this.config.mode, null);
   });
 
-  test('it shows a warning when going from a mode to allow all', async function(assert) {
+  test('it shows a warning when going from a mode to allow all', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     await render(hbs`<PathFilterConfigList @config={{this.config}} />`);
     await click('#no-filtering');
     assert.dom('[data-test-remove-warning]').exists('shows removal warning');
   });
 
-  test('it fetches mounts from a namespace when namespace name is entered', async function(assert) {
+  test('it fetches mounts from a namespace when namespace name is entered', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
     await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);

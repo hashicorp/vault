@@ -9,18 +9,18 @@ import logout from 'vault/tests/pages/logout';
 
 const shell = create(consoleClass);
 
-const createNS = async name => {
+const createNS = async (name) => {
   await shell.runCommands(`write sys/namespaces/${name} -force`);
 };
 
-module('Acceptance | Enterprise | namespaces', function(hooks) {
+module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it clears namespaces when you log out', async function(assert) {
+  test('it clears namespaces when you log out', async function (assert) {
     let ns = 'foo';
     await createNS(ns);
     await shell.runCommands(`write -field=client_token auth/token/create policies=default`);
@@ -31,7 +31,7 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
     await logout.visit();
   });
 
-  test('it shows nested namespaces if you log in with a namspace starting with a /', async function(assert) {
+  test('it shows nested namespaces if you log in with a namspace starting with a /', async function (assert) {
     let nses = ['beep', 'boop', 'bop'];
     for (let [i, ns] of nses.entries()) {
       await createNS(ns);
@@ -47,7 +47,7 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
       let url = `/vault/secrets?namespace=${targetNamespace}`;
       // check if namespace is in the toggle
       await click('[data-test-namespace-toggle]');
-      await settled();
+
       // check that the single namespace "beep" or "boop" not "beep/boop" shows in the toggle display
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
@@ -56,7 +56,6 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
       await click('[data-test-namespace-toggle]');
       // because quint does not like page reloads, visiting url directing instead of clicking on namespace in toggle
       await visit(url);
-      await settled();
     }
     await logout.visit();
     await settled();
@@ -65,14 +64,14 @@ module('Acceptance | Enterprise | namespaces', function(hooks) {
     await authPage.tokenInput('root').submit();
     await settled();
     await click('[data-test-namespace-toggle]');
-    await settled();
+
     assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');
     assert
       .dom('[data-test-namespace-link="beep/boop/bop"]')
       .exists('renders the link to the nested namespace');
   });
 
-  test('it shows the regular namespace toolbar when not managed', async function(assert) {
+  test('it shows the regular namespace toolbar when not managed', async function (assert) {
     // This test is the opposite of the test in managed-namespace-test
     await logout.visit();
     assert.equal(currentURL(), '/vault/auth?with=token', 'Does not redirect');

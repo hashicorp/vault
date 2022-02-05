@@ -1,37 +1,57 @@
-{{#if isLink}}
-  <div data-test-row-value="{{label}}">
-    {{#each displayArrayAmended as |name|}}
+{{#if this.isLink}}
+  <div data-test-row-value={{this.label}}>
+    {{#each this.displayArrayAmended as |name|}}
       {{#if (is-wildcard-string name)}}
-        {{#let (filter-wildcard name allOptions) as | wildcardCount |}}
+        {{#let (filter-wildcard name this.allOptions) as |wildcardCount|}}
           <span>{{name}}</span>
           <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
-            includes {{if wildcardCount wildcardCount 0}} {{if (eq wildcardCount 1) wildcardLabel (pluralize wildcardLabel)}}
+            includes
+            {{if wildcardCount wildcardCount 0}}
+            {{if (eq wildcardCount 1) this.wildcardLabel (pluralize this.wildcardLabel)}}
           </span>
-          {{#if (eq displayArrayAmended.lastObject name)}}
-            {{#link-to "vault.cluster.secrets.backend.list-root" (query-params tab=queryParam)}}
-              <span data-test-view-all={{viewAll}}>View all {{viewAll}}</span>
-            {{/link-to}}
+          {{#if (eq this.displayArrayAmended.lastObject name)}}
+            <LinkTo @route="vault.cluster.secrets.backend.list-root" @query={{hash tab=this.queryParam}}>
+              <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}}</span>
+            </LinkTo>
           {{/if}}
         {{/let}}
       {{else}}
-        {{#link-to "vault.cluster.secrets.backend.show" (if queryParam (concat queryParam "/" name) name) data-test-item="array"}}
+        <LinkTo
+          @route="vault.cluster.secrets.backend.show"
+          @model={{if this.queryParam (concat this.queryParam "/" name) name}}
+          data-test-item="array"
+        >
           <span>{{name}}</span>
-        {{/link-to}}
+        </LinkTo>
       {{/if}}
-      {{#if (or (and (not-eq name displayArrayAmended.lastObject) wildcardInDisplayArray) (not-eq name displayArrayAmended.lastObject))}}
+      {{#if
+        (or
+          (and (not-eq name this.displayArrayAmended.lastObject) this.wildcardInDisplayArray)
+          (not-eq name this.displayArrayAmended.lastObject)
+        )
+      }}
         ,&nbsp;
       {{/if}}
-      {{#if (and (eq name displayArrayAmended.lastObject) (gte displayArray.length 10)) }}
-        <span data-test-and={{dec 5 displayArray.length}}>&nbsp;and {{dec 5 displayArray.length}} others.&nbsp;</span>
+      {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
+        <span data-test-and={{dec 5 this.displayArray.length}}>
+          &nbsp;and
+          {{dec 5 this.displayArray.length}}
+          others.&nbsp;
+        </span>
       {{/if}}
-      {{#if (and (eq name displayArrayAmended.lastObject) (gte displayArray.length 10)) }}
-        {{#link-to "vault.cluster.secrets.backend.list-root" (query-params tab=queryParam)}}
-          <span data-test-view-all={{viewAll}}>View all {{viewAll}} </span>
-        {{/link-to}}
+      {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
+        <LinkTo @route="vault.cluster.secrets.backend.list-root" @query={{hash tab=this.queryParam}}>
+          <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
+        </LinkTo>
       {{/if}}
     {{/each}}
   </div>
 {{else}}
-  <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{if (gte displayArray.length 10) (concat displayArray ", and " (dec 5 displayArray.length) " more.") displayArray}}</code>
+  <code class="is-word-break has-text-black" data-test-row-value={{this.label}}>
+    {{if
+      (gte this.displayArray.length 10)
+      (concat this.displayArray ", and " (dec 5 this.displayArray.length) " more.")
+      this.displayArray
+    }}
+  </code>
 {{/if}}
-

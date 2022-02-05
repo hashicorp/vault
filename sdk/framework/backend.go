@@ -284,7 +284,9 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 // the input and existing resource prior to performing the JSON merge operation
 // using the MergePatch function from the json-patch library. The preprocessor
 // is an arbitrary func that can be provided to further process the input. The
-// MergePatch function accepts and returns byte arrays.
+// MergePatch function accepts and returns byte arrays. Null values will unset
+// fields defined within the input's FieldData (as if they were never specified)
+// and remove user-specified keys that exist within a map field.
 func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
 	var err error
 
@@ -294,11 +296,18 @@ func HandlePatchOperation(input *FieldData, resource map[string]interface{}, pre
 
 	inputMap := map[string]interface{}{}
 
-	// Parse all fields to ensure data types are handled properly according to the FieldSchema
 	for key := range input.Raw {
-		val, ok := input.GetOk(key)
+		if _, ok := input.Schema[key]; !ok {
+			// Only accept fields in the schema
+			continue
+		}
 
-		// Only accept fields in the schema
+		// Ensure data types are handled properly according to the FieldSchema
+		val, ok, err := input.GetOkErr(key)
+		if err != nil {
+			return nil, err
+		}
+
 		if ok {
 			inputMap[key] = val
 		}
@@ -616,8 +625,11 @@ type FieldSchema struct {
 	Type        FieldType
 	Default     interface{}
 	Description string
-	Required    bool
-	Deprecated  bool
+
+	// The Required and Deprecated members are only used by openapi, and are not actually
+	// used by the framework.
+	Required   bool
+	Deprecated bool
 
 	// Query indicates this field will be sent as a query parameter:
 	//

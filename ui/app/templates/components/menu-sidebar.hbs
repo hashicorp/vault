@@ -1,14 +1,14 @@
 <aside class="menu">
-  {{#if title}}
+  {{#if this.title}}
     <p class="menu-label">
-      {{title}}
+      {{this.title}}
     </p>
   {{/if}}
   <ul class="menu-list">
     {{yield}}
   </ul>
   <div class="menu-toggle">
-    {{#if isActive}}
+    {{#if this.isActive}}
       <button type="button" class="button is-ghost" {{action "closeMenu"}}>
         <Icon @name="x" aria-label="Close menu" />
       </button>
