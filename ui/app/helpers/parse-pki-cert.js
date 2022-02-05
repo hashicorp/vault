@@ -5,7 +5,8 @@ import { Certificate } from 'pkijs';
 
 export function parsePkiCert([model]) {
   // model has to be the responseJSON from PKI serializer
-  if (!model.certificate) {
+  // return if no certificate or if the "certificate" is actually a CRL
+  if (!model.certificate || model.certificate.includes('BEGIN X509 CRL')) {
     return;
   }
   let cert;
@@ -15,7 +16,7 @@ export function parsePkiCert([model]) {
     let cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
     cert = new Certificate({ schema: cert_asn1.result });
   } catch (error) {
-    console.log('Error parsing certificate:', error, model.certificate);
+    console.debug('DEBUG: Parsing Certificate', error);
     return {
       can_parse: false,
     };
