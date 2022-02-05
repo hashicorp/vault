@@ -29,13 +29,15 @@ import (
 
 const (
 	// OIDC-related constants
-	openIDScope             = "openid"
-	scopesDelimiter         = " "
-	accessTokenScopesMeta   = "scopes"
-	accessTokenClientIDMeta = "client_id"
-	clientIDLength          = 32
-	clientSecretLength      = 64
-	clientSecretPrefix      = "hvo_secret_"
+	openIDScope              = "openid"
+	scopesDelimiter          = " "
+	accessTokenScopesMeta    = "scopes"
+	accessTokenClientIDMeta  = "client_id"
+	clientIDLength           = 32
+	clientSecretLength       = 64
+	clientSecretPrefix       = "hvo_secret_"
+	codeChallengeMethodPlain = "plain"
+	codeChallengeMethodS256  = "S256"
 
 	// Storage path constants
 	oidcProviderPrefix = "oidc_provider/"
@@ -130,13 +132,15 @@ type providerDiscovery struct {
 }
 
 type authCodeCacheEntry struct {
-	provider    string
-	clientID    string
-	entityID    string
-	redirectURI string
-	nonce       string
-	scopes      []string
-	authTime    time.Time
+	provider            string
+	clientID            string
+	entityID            string
+	redirectURI         string
+	nonce               string
+	scopes              []string
+	authTime            time.Time
+	codeChallenge       string
+	codeChallengeMethod string
 }
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -408,6 +412,14 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeInt,
 					Description: "The allowable elapsed time in seconds since the last time the end-user was actively authenticated.",
 				},
+				"code_challenge": {
+					Type:        framework.TypeString,
+					Description: "The code challenge derived from the code verifier.",
+				},
+				"code_challenge_method": {
+					Type:        framework.TypeString,
+					Description: "The method that was used to derive the code challenge. The following methods are supported: 'S256', 'plain'. Defaults to 'plain'.",
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -445,6 +457,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "The callback location where the authentication response was sent.",
 					Required:    true,
+				},
+				"code_verifier": {
+					Type:        framework.TypeString,
+					Description: "The code verifier associated with the authorization code.",
 				},
 				// The client_id and client_secret are provided to the token endpoint via
 				// the client_secret_basic authentication method, which uses the HTTP Basic
@@ -1563,6 +1579,33 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		scopes:      scopes,
 	}
 
+	// Validate the optional Proof Key for Code Exchange (PKCE) if a code
+	// challenge and code challenge method are provided. See details at
+	// https://datatracker.ietf.org/doc/html/rfc7636.
+	if codeChallengeRaw, ok := d.GetOk("code_challenge"); ok {
+		codeChallenge := codeChallengeRaw.(string)
+
+		// Validate the code challenge method
+		codeChallengeMethod := d.Get("code_challenge_method").(string)
+		switch codeChallengeMethod {
+		case codeChallengeMethodPlain, codeChallengeMethodS256:
+		case "":
+			codeChallengeMethod = codeChallengeMethodPlain
+		default:
+			return authResponse("", state, ErrAuthInvalidRequest, "invalid code_challenge_method")
+		}
+
+		// Validate the code challenge
+		if codeChallenge == "" {
+			return authResponse("", state, ErrAuthInvalidRequest, "invalid code_challenge")
+		}
+
+		// Associate the code challenge and method with the authorization code.
+		// This will be used to verify the code verifier in the token exchange.
+		authCodeEntry.codeChallenge = codeChallenge
+		authCodeEntry.codeChallengeMethod = codeChallengeMethod
+	}
+
 	// Validate the optional max_age parameter to check if an active re-authentication
 	// of the user should occur. Re-authentication will be requested if the last time
 	// the token actively authenticated exceeds the given max_age requirement. Returning
@@ -1771,6 +1814,25 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	}
 	if !isMember {
 		return tokenResponse(nil, ErrTokenInvalidRequest, "identity entity not authorized by client assignment")
+	}
+
+	// Validate the code verifier if a code challenge and code challenge
+	// method are associated with the authorization code. See details at
+	// https://datatracker.ietf.org/doc/html/rfc7636#section-4.6
+	if authCodeEntry.codeChallenge != "" && authCodeEntry.codeChallengeMethod != "" {
+		codeVerifier := d.Get("code_verifier").(string)
+		if codeVerifier == "" {
+			return tokenResponse(nil, ErrTokenInvalidGrant, "invalid code_verifier for token exchange")
+		}
+
+		codeChallenge, err := computeCodeChallenge(codeVerifier, authCodeEntry.codeChallengeMethod)
+		if err != nil {
+			return tokenResponse(nil, ErrTokenInvalidGrant, err.Error())
+		}
+
+		if codeChallenge != authCodeEntry.codeChallenge {
+			return tokenResponse(nil, ErrTokenInvalidGrant, "invalid code_verifier for token exchange")
+		}
 	}
 
 	// The access token is a Vault batch token with a policy that only
@@ -2156,6 +2218,21 @@ func (i *IdentityStore) populateScopeTemplates(ctx context.Context, s logical.St
 	}
 
 	return populatedTemplates, false, nil
+}
+
+// computeCodeChallenge computes a Proof Key for Code Exchange (PKCE)
+// code challenge given a code verifier and code challenge method.
+func computeCodeChallenge(verifier string, method string) (string, error) {
+	switch method {
+	case codeChallengeMethodPlain:
+		return verifier, nil
+	case codeChallengeMethodS256:
+		hf := sha256.New()
+		hf.Write([]byte(verifier))
+		return base64.RawURLEncoding.EncodeToString(hf.Sum(nil)), nil
+	default:
+		return "", fmt.Errorf("invalid code challenge method %q", method)
+	}
 }
 
 // computeHashClaim computes the hash value to be used for the at_hash

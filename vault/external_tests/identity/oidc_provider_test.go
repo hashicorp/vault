@@ -191,6 +191,10 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 	require.NoError(t, err)
 	defer p.Done()
 
+	// Create the client-side PKCE code verifier
+	v, err := oidc.NewCodeVerifier()
+	require.NoError(t, err)
+
 	type args struct {
 		useStandby bool
 		options    []oidc.Option
@@ -254,6 +258,21 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 				"namespace": "root",
 				"auth_time": %d
 			}`, discovery.Issuer, clientID, entityID, expectedAuthTime),
+		},
+		{
+			name: "active: authorization code flow with Proof Key for Code Exchange (PKCE)",
+			args: args{
+				options: []oidc.Option{
+					oidc.WithScopes("openid"),
+					oidc.WithPKCE(v),
+				},
+			},
+			expected: fmt.Sprintf(`{
+				"iss": "%s",
+				"aud": "%s",
+				"sub": "%s",
+				"namespace": "root"
+			}`, discovery.Issuer, clientID, entityID),
 		},
 		{
 			name: "standby: authorization code flow with additional scopes",

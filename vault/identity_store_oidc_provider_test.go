@@ -271,6 +271,104 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			wantErr: ErrTokenInvalidRequest,
 		},
 		{
+			name: "invalid token request with empty code_verifier",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "plain"
+					req.Data["code_challenge"] = "a1b2c3d4"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = ""
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidGrant,
+		},
+		{
+			name: "invalid token request with incorrect plain code_verifier",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "plain"
+					req.Data["code_challenge"] = "a1b2c3d4"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "wont_match_challenge"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidGrant,
+		},
+		{
+			name: "invalid token request with incorrect S256 code_verifier",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = "a1b2c3d4"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "wont_hash_to_challenge"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidGrant,
+		},
+		{
+			name: "valid token request with plain code_challenge_method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "plain"
+					req.Data["code_challenge"] = "a1b2c3d4"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "a1b2c3d4"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid token request with S256 code_challenge_method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = "fc9Af6hKDgUZx5kRVMQUjeAkTXWJAgwNmELbnvrYIJQ"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "a1b2c3d4"
+					return req
+				}(),
+			},
+		},
+		{
 			name: "valid token request with max_age and auth_time claim",
 			args: args{
 				clientReq:     testClientReq(s),
@@ -707,6 +805,38 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["max_age"] = "-1"
+					return req
+				}(),
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with invalid code_challenge_method",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S512"
+					req.Data["code_challenge"] = "a1b2c3d4"
+					return req
+				}(),
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with valid code_challenge_method and empty code_challenge",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = ""
 					return req
 				}(),
 			},
