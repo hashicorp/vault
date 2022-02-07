@@ -17,18 +17,16 @@ export default Route.extend(ClusterRoute, {
 
   async getActivity(start_time) {
     try {
-      return await this.store.queryRecord('clients/activity', { start_time });
+      return this.store.queryRecord('clients/activity', { start_time });
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   },
 
   async getVersionHistory() {
     try {
-      return await this.store.queryRecord('clients/version-history', {});
+      return await this.store.findAll('clients/version-history');
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   },
@@ -37,7 +35,6 @@ export default Route.extend(ClusterRoute, {
     try {
       return await this.store.queryRecord('license', {});
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   },
@@ -46,7 +43,6 @@ export default Route.extend(ClusterRoute, {
     try {
       return await this.store.queryRecord('clients/monthly', {});
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   },
@@ -71,7 +67,7 @@ export default Route.extend(ClusterRoute, {
     let versionHistory = await this.getVersionHistory();
     let endTimeFromResponse = activity ? this.rfc33395ToMonthYear(activity.endTime) : null;
     let startTimeFromLicense = this.rfc33395ToMonthYear(license.startTime);
-
+    console.log(versionHistory, 'VERSION HISTORy');
     return hash({
       // ARG TODO will remove "hash" once remove "activity," which currently relies on it.
       activity,

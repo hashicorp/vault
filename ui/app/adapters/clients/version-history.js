@@ -1,7 +1,7 @@
 import Application from '../application';
 
 export default Application.extend({
-  queryRecord() {
+  findAll() {
     return this.ajax(this.buildURL() + '/version-history', 'GET', {
       data: {
         list: true,

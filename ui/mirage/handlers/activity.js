@@ -8,6 +8,14 @@ export default function (server) {
           previous_version: null,
           timestamp_installed: '2021-11-03T10:23:16Z',
         },
+        '1.9.1': {
+          previous_version: '1.9.0',
+          timestamp_installed: '2021-12-03T10:23:16Z',
+        },
+        '1.9.2': {
+          previous_version: '1.9.1',
+          timestamp_installed: '2021-01-03T10:23:16Z',
+        },
       },
     };
   });
