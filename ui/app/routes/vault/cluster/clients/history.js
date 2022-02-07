@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 export default class HistoryRoute extends Route {
   async getLicense() {
     try {
-      return await this.store.queryRecord('license', {});
+      return this.store.queryRecord('license', {});
     } catch (e) {
       // ARG TODO handle
       return e;
@@ -14,31 +14,29 @@ export default class HistoryRoute extends Route {
 
   async getActivity(start_time) {
     try {
-      return await this.store.queryRecord('clients/activity', { start_time });
+      return this.store.queryRecord('clients/activity', { start_time });
     } catch (e) {
       // ARG TODO handle
       return e;
     }
   }
 
-  rfc33395ToMonthYear(timestamp) {
-    // return ['2021', 2] (e.g. 2021 March, make 0-indexed)
+  parseRFC3339(timestamp) {
+    // convert '2021-03-21T00:00:00Z' --> ['2021', 2] (e.g. 2021 March, month is zero indexed)
     return timestamp
       ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
       : null;
   }
 
   async model() {
-    let license = await this.getLicense(); // get default start_time
-    let activity = await this.getActivity(license.startTime); // returns client counts using license start_time.
-    let endTimeFromResponse = activity ? this.rfc33395ToMonthYear(activity.endTime) : null;
-    let startTimeFromLicense = this.rfc33395ToMonthYear(license.startTime);
+    let license = await this.getLicense();
+    let activity = await this.getActivity(license.startTime);
 
     return RSVP.hash({
       config: this.store.queryRecord('clients/config', {}),
       activity,
-      startTimeFromLicense,
-      endTimeFromResponse,
+      startTimeFromLicense: this.parseRFC3339(license.startTime),
+      endTimeFromResponse: activity ? this.parseRFC3339(activity.endTime) : null,
     });
   }
 

@@ -48,8 +48,8 @@ export default class ActivitySerializer extends ApplicationSerializer {
     return object;
   }
 
-  rfc33395ToMonthYear(timestamp) {
-    // return ['2021', 2] (e.g. 2021 March, make 0-indexed)
+  parseRFC3339(timestamp) {
+    // convert '2021-03-21T00:00:00Z' --> ['2021', 2] (e.g. 2021 March, month is zero indexed)
     return timestamp
       ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
       : null;
@@ -65,8 +65,8 @@ export default class ActivitySerializer extends ApplicationSerializer {
       response_timestamp,
       by_namespace: this.flattenDataset(payload.data.by_namespace),
       total: this.homogenizeClientNaming(payload.data.total),
-      formatted_end_time: this.rfc33395ToMonthYear(payload.data.end_time),
-      formatted_start_time: this.rfc33395ToMonthYear(payload.data.start_time),
+      formatted_end_time: this.parseRFC3339(payload.data.end_time),
+      formatted_start_time: this.parseRFC3339(payload.data.start_time),
     };
     delete payload.data.by_namespace;
     delete payload.data.total;
