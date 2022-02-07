@@ -824,7 +824,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			},
 		},
 		{
-			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1",
+			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1 with port",
 			args: args{
 				entityID: entityID,
 				clientReq: func() *logical.Request {
