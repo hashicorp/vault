@@ -28,7 +28,7 @@ func TestVersionHistoryCommand_TableOutput(t *testing.T) {
 	ui, cmd := testVersionHistoryCommand(t)
 	cmd.client = client
 
-	code := cmd.Run([]string{"version-history"})
+	code := cmd.Run([]string{})
 
 	if expectedCode := 0; code != expectedCode {
 		t.Fatalf("expected %d to be %d: %s", code, expectedCode, ui.ErrorWriter.String())
