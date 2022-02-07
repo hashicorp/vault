@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
@@ -2217,21 +2216,6 @@ func (i *IdentityStore) populateScopeTemplates(ctx context.Context, s logical.St
 	}
 
 	return populatedTemplates, false, nil
-}
-
-// computeCodeChallenge computes a Proof Key for Code Exchange (PKCE)
-// code challenge given a code verifier and code challenge method.
-func computeCodeChallenge(verifier string, method string) (string, error) {
-	switch method {
-	case codeChallengeMethodPlain:
-		return verifier, nil
-	case codeChallengeMethodS256:
-		hf := sha256.New()
-		hf.Write([]byte(verifier))
-		return base64.RawURLEncoding.EncodeToString(hf.Sum(nil)), nil
-	default:
-		return "", fmt.Errorf("invalid code challenge method %q", method)
-	}
 }
 
 // entityHasAssignment returns true if the entity is enabled and a member of any
