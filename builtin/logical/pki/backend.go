@@ -109,8 +109,10 @@ type backend struct {
 	tidyStatus     *tidyStatus
 }
 
-type tidyStatusState int
-type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
+type (
+	tidyStatusState int
+	roleOperation   func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
+)
 
 const (
 	tidyStatusInactive tidyStatusState = iota
