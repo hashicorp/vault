@@ -1,182 +1,197 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { format } from 'date-fns';
+import { isSameMonth } from 'date-fns';
 
 export default class Dashboard extends Component {
+  arrayOfMonths = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
   maxNamespaces = 10;
   chartLegend = [
-    { key: 'distinct_entities', label: 'unique entities' },
-    { key: 'non_entity_tokens', label: 'non-entity tokens' },
+    { key: 'entity_clients', label: 'entity clients' },
+    { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  @tracked selectedNamespace = null;
+
+  // needed for startTime modal picker
+  months = Array.from({ length: 12 }, (item, i) => {
+    return new Date(0, i).toLocaleString('en-US', { month: 'long' });
+  });
+  years = Array.from({ length: 5 }, (item, i) => {
+    return new Date().getFullYear() - i;
+  });
+
+  @service store;
 
   @tracked barChartSelection = false;
+  @tracked isEditStartMonthOpen = false;
+  @tracked responseRangeDiffMessage = null;
+  @tracked startTimeRequested = null;
+  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
+  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
+  @tracked startMonth = null;
+  @tracked startYear = null;
+  @tracked selectedNamespace = null;
+  @tracked noActivityDate = '';
+  @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
+    return { name: namespace['label'], id: namespace['label'] };
+  });
 
-  // Determine if we have client count data based on the current tab
-  get hasClientData() {
-    if (this.args.tab === 'current') {
-      // Show the current numbers as long as config is on
-      return this.args.model.config?.enabled !== 'Off';
+  get startTimeDisplay() {
+    if (!this.startTimeFromResponse) {
+      // otherwise will return date of new Date(null)
+      return null;
     }
-    return this.args.model.activity && this.args.model.activity.total;
+    let month = this.startTimeFromResponse[1];
+    let year = this.startTimeFromResponse[0];
+    return `${this.arrayOfMonths[month]} ${year}`;
   }
 
-  // Show namespace graph only if we have more than 1
-  get showGraphs() {
-    return (
-      this.args.model.activity &&
-      this.args.model.activity.byNamespace &&
-      this.args.model.activity.byNamespace.length > 1
+  get endTimeDisplay() {
+    if (!this.endTimeFromResponse) {
+      // otherwise will return date of new Date(null)
+      return null;
+    }
+    let month = this.endTimeFromResponse[1];
+    let year = this.endTimeFromResponse[0];
+    return `${this.arrayOfMonths[month]} ${year}`;
+  }
+
+  get isDateRange() {
+    return !isSameMonth(
+      new Date(this.args.model.activity.startTime),
+      new Date(this.args.model.activity.endTime)
     );
   }
 
-  // Construct the namespace model for the search select component
-  get searchDataset() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
+  // API client count data by namespace for date range
+  get byNamespaceActivity() {
+    return this.args.model.activity?.byNamespace || null;
+  }
+
+  // top level TOTAL client counts for given date range
+  get totalUsageCounts() {
+    return this.selectedNamespace
+      ? this.filterByNamespace(this.selectedNamespace)
+      : this.args.model.activity?.total;
+  }
+
+  // total client data for horizontal bar chart in attribution component
+  get totalClientsData() {
+    if (this.selectedNamespace) {
+      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
+      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
+    } else {
+      return this.byNamespaceActivity;
     }
-    let dataList = this.args.model.activity.byNamespace;
-    return dataList.map((d) => {
-      return {
-        name: d['namespace_id'],
-        id: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
-      };
-    });
   }
 
-  // Construct the namespace model for the bar chart component
-  get barChartDataset() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
+  get responseTimestamp() {
+    return this.args.model.activity?.responseTimestamp;
+  }
+  // HELPERS
+  areArraysTheSame(a1, a2) {
+    return (
+      a1 === a2 ||
+      (a1 !== null &&
+        a2 !== null &&
+        a1.length === a2.length &&
+        a1
+          .map(function (val, idx) {
+            return val === a2[idx];
+          })
+          .reduce(function (prev, cur) {
+            return prev && cur;
+          }, true))
+    );
+  }
+
+  // ACTIONS
+  @action
+  async handleClientActivityQuery(month, year, dateType) {
+    if (dateType === 'cancel') {
+      return;
     }
-    let dataset = this.args.model.activity.byNamespace.slice(0, this.maxNamespaces);
-    return dataset.map((d) => {
-      return {
-        label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
-        // the order here determines which data is the left bar and which is the right
-        distinct_entities: d['counts']['distinct_entities'],
-        non_entity_tokens: d['counts']['non_entity_tokens'],
-        total: d['counts']['clients'],
-      };
-    });
-  }
-
-  // TODO: dataset for line chart
-  get lineChartData() {
-    return [
-      { month: '1/21', clients: 100, new: 100 },
-      { month: '2/21', clients: 300, new: 200 },
-      { month: '3/21', clients: 300, new: 0 },
-      { month: '4/21', clients: 300, new: 0 },
-      { month: '5/21', clients: 300, new: 0 },
-      { month: '6/21', clients: 300, new: 0 },
-      { month: '7/21', clients: 300, new: 0 },
-      { month: '8/21', clients: 350, new: 50 },
-      { month: '9/21', clients: 400, new: 50 },
-      { month: '10/21', clients: 450, new: 50 },
-      { month: '11/21', clients: 500, new: 50 },
-      { month: '12/21', clients: 1000, new: 1000 },
-    ];
-  }
-
-  // TODO: dataset for new monthly clients vertical bar chart (manage in serializer?)
-  get newMonthlyClients() {
-    return [
-      { month: 'January', distinct_entities: 1000, non_entity_tokens: 322, total: 1322 },
-      { month: 'February', distinct_entities: 1500, non_entity_tokens: 122, total: 1622 },
-      { month: 'March', distinct_entities: 4300, non_entity_tokens: 700, total: 5000 },
-      { month: 'April', distinct_entities: 1550, non_entity_tokens: 229, total: 1779 },
-      { month: 'May', distinct_entities: 5560, non_entity_tokens: 124, total: 5684 },
-      { month: 'June', distinct_entities: 1570, non_entity_tokens: 142, total: 1712 },
-      { month: 'July', distinct_entities: 300, non_entity_tokens: 112, total: 412 },
-      { month: 'August', distinct_entities: 1610, non_entity_tokens: 130, total: 1740 },
-      { month: 'September', distinct_entities: 1900, non_entity_tokens: 222, total: 2122 },
-      { month: 'October', distinct_entities: 500, non_entity_tokens: 166, total: 666 },
-      { month: 'November', distinct_entities: 480, non_entity_tokens: 132, total: 612 },
-      { month: 'December', distinct_entities: 980, non_entity_tokens: 202, total: 1182 },
-    ];
-  }
-
-  // TODO: dataset for vault usage vertical bar chart (manage in serializer?)
-  get monthlyUsage() {
-    return [
-      { month: 'January', distinct_entities: 1000, non_entity_tokens: 322, total: 1322 },
-      { month: 'February', distinct_entities: 1500, non_entity_tokens: 122, total: 1622 },
-      { month: 'March', distinct_entities: 4300, non_entity_tokens: 700, total: 5000 },
-      { month: 'April', distinct_entities: 1550, non_entity_tokens: 229, total: 1779 },
-      { month: 'May', distinct_entities: 5560, non_entity_tokens: 124, total: 5684 },
-      { month: 'June', distinct_entities: 1570, non_entity_tokens: 142, total: 1712 },
-      { month: 'July', distinct_entities: 300, non_entity_tokens: 112, total: 412 },
-      { month: 'August', distinct_entities: 1610, non_entity_tokens: 130, total: 1740 },
-      { month: 'September', distinct_entities: 1900, non_entity_tokens: 222, total: 2122 },
-      { month: 'October', distinct_entities: 500, non_entity_tokens: 166, total: 666 },
-      { month: 'November', distinct_entities: 480, non_entity_tokens: 132, total: 612 },
-      { month: 'December', distinct_entities: 980, non_entity_tokens: 202, total: 1182 },
-    ];
-  }
-
-  // Create namespaces data for csv format
-  get getCsvData() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
+    // clicked "Current Billing period" in the calendar widget
+    if (dateType === 'reset') {
+      this.startTimeRequested = this.args.model.startTimeFromLicense;
+      this.endTimeRequested = null;
     }
-    let results = '',
-      namespaces = this.args.model.activity.byNamespace,
-      fields = ['Namespace path', 'Active clients', 'Unique entities', 'Non-entity tokens'];
-
-    results = fields.join(',') + '\n';
-
-    namespaces.forEach(function (item) {
-      let path = item.namespace_path !== '' ? item.namespace_path : 'root',
-        total = item.counts.clients,
-        unique = item.counts.distinct_entities,
-        non_entity = item.counts.non_entity_tokens;
-
-      results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
-    });
-    return results;
-  }
-
-  // Return csv filename with start and end dates
-  get getCsvFileName() {
-    let defaultFileName = `clients-by-namespace`,
-      startDate =
-        this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
-      endDate =
-        this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
-    if (startDate && endDate) {
-      defaultFileName += `-${startDate}-${endDate}`;
+    // clicked "Edit" Billing start month in Dashboard which opens a modal.
+    if (dateType === 'startTime') {
+      let monthIndex = this.arrayOfMonths.indexOf(month);
+      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021) // TODO CHANGE TO ARRAY
+      this.endTimeRequested = null;
     }
-    return defaultFileName;
-  }
+    // clicked "Custom End Month" from the calendar-widget
+    if (dateType === 'endTime') {
+      // use the currently selected startTime for your startTimeRequested.
+      this.startTimeRequested = this.startTimeFromResponse;
+      this.endTimeRequested = [year.toString(), month]; // endTime comes in as a number/index whereas startTime comes in as a month name. Hence the difference between monthIndex and month.
+    }
 
-  // Get the namespace by matching the path from the namespace list
-  getNamespace(path) {
-    return this.args.model.activity.byNamespace.find((ns) => {
-      if (path === 'root') {
-        return ns.namespace_path === '';
+    try {
+      let response = await this.store.queryRecord('clients/activity', {
+        start_time: this.startTimeRequested,
+        end_time: this.endTimeRequested,
+      });
+      if (response.id === 'no-data') {
+        // empty response is the only time we want to update the displayed date with the requested time
+        this.startTimeFromResponse = this.startTimeRequested;
+        this.noActivityDate = this.startTimeDisplay;
+      } else {
+        // note: this.startTimeDisplay (getter) is updated by this.startTimeFromResponse
+        this.startTimeFromResponse = response.formattedStartTime;
+        this.endTimeFromResponse = response.formattedEndTime;
       }
-      return ns.namespace_path === path;
-    });
-  }
-
-  @action
-  selectNamespace(value) {
-    // In case of search select component, value returned is an array
-    if (Array.isArray(value)) {
-      this.selectedNamespace = this.getNamespace(value[0]);
-      this.barChartSelection = false;
-    } else if (typeof value === 'object') {
-      // While D3 bar selection returns an object
-      this.selectedNamespace = this.getNamespace(value.label);
-      this.barChartSelection = true;
+      // compare if the response and what you requested are the same. If they are not throw a warning.
+      // this only gets triggered if the data was returned, which does not happen if the user selects a startTime after for which we have data. That's an adapter error and is captured differently.
+      if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {
+        this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
+      } else {
+        this.responseRangeDiffMessage = null;
+      }
+      return response;
+    } catch (e) {
+      // ARG TODO handle error
     }
   }
 
   @action
-  resetData() {
-    this.barChartSelection = false;
-    this.selectedNamespace = null;
+  handleCurrentBillingPeriod() {
+    this.handleClientActivityQuery(0, 0, 'reset');
+  }
+
+  @action
+  selectNamespace([value]) {
+    // value comes in as [namespace0]
+    this.selectedNamespace = value;
+  }
+
+  @action
+  selectStartMonth(month) {
+    this.startMonth = month;
+  }
+
+  @action
+  selectStartYear(year) {
+    this.startYear = year;
+  }
+
+  // HELPERS
+  filterByNamespace(namespace) {
+    return this.byNamespaceActivity.find((ns) => ns.label === namespace);
   }
 }

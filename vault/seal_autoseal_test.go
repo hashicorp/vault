@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
 
 	proto "github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping"

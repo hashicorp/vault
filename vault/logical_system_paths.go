@@ -1359,10 +1359,10 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "in-flight-req",
-		Operations: map[logical.Operation]framework.OperationHandler {
+		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.handleInFlightRequestData,
-				Summary: strings.TrimSpace(sysHelp["in-flight-req"][0]),
+				Callback:    b.handleInFlightRequestData,
+				Summary:     strings.TrimSpace(sysHelp["in-flight-req"][0]),
 				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
 			},
 		},
@@ -1501,6 +1501,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadAuth,
+					Summary:  "Read the configuration of the auth engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
 					Summary:  "Enables a new auth method.",
@@ -1613,6 +1617,17 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+
+		{
+			Pattern: "policies/password/?$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordList,
+					Summary:  "List the existing password policies.",
+				},
+			},
 		},
 
 		{

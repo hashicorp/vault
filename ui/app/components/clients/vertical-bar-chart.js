@@ -40,7 +40,6 @@ export default class VerticalBarChart extends Component {
   @action
   registerListener(element, args) {
     let dataset = args[0];
-    // TODO pull out lines 44 - scales into helper? b/c same as line chart?
     let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     let stackedData = stackFunction(dataset);
     let chartSvg = select(element);
@@ -117,9 +116,9 @@ export default class VerticalBarChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
       let hoveredMonth = data.month;
-      this.tooltipTotal = `${data.total} total clients`;
-      this.uniqueEntities = `${data.distinct_entities} unique entities`;
-      this.nonEntityTokens = `${data.non_entity_tokens} non-entity tokens`;
+      this.tooltipTotal = `${data.total} ${data.new_clients ? 'total' : 'new'} clients`;
+      this.uniqueEntities = `${data.entity_clients} unique entities`;
+      this.nonEntityTokens = `${data.non_entity_clients} non-entity tokens`;
       // let node = chartSvg
       //   .selectAll('rect.tooltip-rect')
       //   .filter(data => data.month === this.hoveredLabel)

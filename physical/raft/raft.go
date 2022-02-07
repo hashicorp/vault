@@ -40,6 +40,8 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 // EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
+var getMmapFlags = func(string) int { return 0 }
+
 // Verify RaftBackend satisfies the correct interfaces
 var (
 	_ physical.Backend       = (*RaftBackend)(nil)
@@ -364,9 +366,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		opts := boltOptions()
+		dbPath := filepath.Join(path, "raft.db")
+		opts := boltOptions(dbPath)
 		raftOptions := raftboltdb.Options{
-			Path:        filepath.Join(path, "raft.db"),
+			Path:        dbPath,
 			BoltOptions: opts,
 		}
 		store, err := raftboltdb.New(raftOptions)
@@ -506,12 +509,12 @@ func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsuti
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime.Milliseconds()), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime.Milliseconds()), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime.Milliseconds()), labels)
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -1649,11 +1652,12 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 
 // boltOptions returns a bolt.Options struct, suitable for passing to
 // bolt.Open(), pre-configured with all of our preferred defaults.
-func boltOptions() *bolt.Options {
+func boltOptions(path string) *bolt.Options {
 	o := &bolt.Options{
 		Timeout:        1 * time.Second,
 		FreelistType:   bolt.FreelistMapType,
 		NoFreelistSync: true,
+		MmapFlags:      getMmapFlags(path),
 	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {

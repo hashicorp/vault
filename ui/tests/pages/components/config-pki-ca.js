@@ -32,9 +32,6 @@ export default {
   enterCertAsText: clickable('[data-test-text-toggle]'),
   pemBundle: fillable('[data-test-text-file-textarea]'),
   commonName: fillable('[data-test-input="commonName"]'),
-  toggleOptions: clickable('[data-test-toggle-group="Options"]'),
-  keyType: fillable('[data-test-input="keyType"]'),
-  keyBits: fillable('[data-test-input="keyBits"]'),
 
   issueDateIsPresent: text('[data-test-row-value="Issue date"]'),
   expiryDateIsPresent: text('[data-test-row-value="Expiration date"]'),
@@ -44,10 +41,6 @@ export default {
       return await this.replaceCA().commonName(commonName).caType('intermediate').submit();
     }
     return await this.replaceCA().commonName(commonName).submit();
-  },
-
-  async generateCAKeyTypeEC(commonName = 'PKI CA EC') {
-    return await this.replaceCA().commonName(commonName).toggleOptions().keyType('ec').keyBits(256).submit();
   },
 
   async uploadCA(pem) {

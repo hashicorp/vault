@@ -94,17 +94,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     );
   });
 
-  test('EC cert config: generate', async function (assert) {
-    await mountAndNav(assert);
-    await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
-
-    await page.form.generateCAKeyTypeEC();
-    await settled();
-
-    assert.dom('[data-test-warning]').exists('Info banner renders when unable to parse certificate metadata');
-  });
-
   test('cert config: upload', async function (assert) {
     await mountAndNav(assert);
     await settled();
