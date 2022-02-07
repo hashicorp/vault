@@ -3724,6 +3724,159 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	}
 }
 
+func TestBackend_Root_FullCAChain(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+
+	// Generate a root CA at /pki-root
+	err = client.Sys().Mount("pki-root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("pki-root/root/generate/exported", map[string]interface{}{
+		"common_name": "root myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+	rootData := resp.Data
+	rootCert := rootData["certificate"].(string)
+
+	// Validate that root's /cert/ca-chain now contains the certificate.
+	resp, err = client.Logical().Read("pki-root/cert/ca_chain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected intermediate chain information")
+	}
+
+	fullChain := resp.Data["ca_chain"].(string)
+	if !strings.Contains(fullChain, rootCert) {
+		t.Fatal("expected full chain to contain root certificate")
+	}
+
+	// Now generate an intermediate at /pki-intermediate, signed by the root.
+	err = client.Sys().Mount("pki-intermediate", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().Write("pki-intermediate/intermediate/generate/exported", map[string]interface{}{
+		"common_name": "intermediate myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected intermediate CSR info")
+	}
+	intermediateData := resp.Data
+	intermediateKey := intermediateData["private_key"].(string)
+
+	resp, err = client.Logical().Write("pki-root/root/sign-intermediate", map[string]interface{}{
+		"csr":    intermediateData["csr"],
+		"format": "pem_bundle",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected signed intermediate info")
+	}
+	intermediateSignedData := resp.Data
+	intermediateCert := intermediateSignedData["certificate"].(string)
+
+	resp, err = client.Logical().Write("pki-intermediate/intermediate/set-signed", map[string]interface{}{
+		"certificate": intermediateCert + "\n" + rootCert + "\n",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Validate that intermediate's ca_chain field now includes the full
+	// chain.
+	resp, err = client.Logical().Read("pki-intermediate/cert/ca_chain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected intermediate chain information")
+	}
+
+	fullChain = resp.Data["ca_chain"].(string)
+	if !strings.Contains(fullChain, intermediateCert) {
+		t.Fatal("expected full chain to contain intermediate certificate")
+	}
+	if !strings.Contains(fullChain, rootCert) {
+		t.Fatal("expected full chain to contain root certificate")
+	}
+
+	// Finally, import this signing cert chain into a new mount to ensure
+	// "external" CAs behave as expected.
+	err = client.Sys().Mount("pki-external", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().Write("pki-external/config/ca", map[string]interface{}{
+		"pem_bundle": intermediateKey + "\n" + intermediateCert + "\n" + rootCert + "\n",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Validate the external chain information was loaded correctly.
+	resp, err = client.Logical().Read("pki-external/cert/ca_chain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected intermediate chain information")
+	}
+
+	fullChain = resp.Data["ca_chain"].(string)
+	if !strings.Contains(fullChain, intermediateCert) {
+		t.Fatal("expected full chain to contain intermediate certificate")
+	}
+	if !strings.Contains(fullChain, rootCert) {
+		t.Fatal("expected full chain to contain root certificate")
+	}
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string

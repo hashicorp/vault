@@ -687,6 +687,21 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 	return chain
 }
 
+func (b *CAInfoBundle) GetFullChain() []*CertBlock {
+	var chain []*CertBlock
+
+	chain = append(chain, &CertBlock{
+		Certificate: b.Certificate,
+		Bytes:       b.CertificateBytes,
+	})
+
+	if len(b.CAChain) > 0 {
+		chain = append(chain, b.CAChain...)
+	}
+
+	return chain
+}
+
 type CertExtKeyUsage int
 
 const (
