@@ -31,6 +31,7 @@ class CalendarWidget extends Component {
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
   @tracked showCalendar = false;
+  @tracked tooltipTarget = null;
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -49,6 +50,24 @@ class CalendarWidget extends Component {
 
   removeClass(element, classString) {
     element.classList.remove(classString);
+  }
+
+  // Getters
+  get tooltipText() {
+    if (this.disableFutureYear) {
+      let futureYear = Number(this.displayYear) + 1;
+      return `${futureYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${futureYear} to see data for this year.`;
+    }
+    return '';
+  }
+
+  @action addTooltip() {
+    // ARG TODO make dynamic for the tooltip
+    this.tooltipTarget = '#next-year';
+  }
+
+  @action removeTooltip() {
+    this.tooltipTarget = null;
   }
 
   // ACTIONS (alphabetically) //

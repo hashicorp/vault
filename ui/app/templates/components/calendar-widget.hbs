@@ -44,13 +44,37 @@
           </button>
           <p>{{this.displayYear}}</p>
           <button
+            id="next-year"
             type="button"
-            class="button is-transparent padding-right"
+            class={{concat "button is-transparent " (if this.tooltipTarget "negative-margin" "padding-right")}}
             disabled={{this.disableFutureYear}}
             {{on "click" this.addYear}}
           >
-            <Chevron @direction="right" @size="s" class="has-text-grey" />
+            <Chevron
+              @direction="right"
+              @size="s"
+              class="has-text-grey"
+              {{on "mouseover" this.addTooltip}}
+              {{on "mouseleave" this.removeTooltip}}
+            />
           </button>
+          {{#if this.tooltipTarget}}
+            {{! Component must be in curly bracket notation }}
+            {{! template-lint-disable no-curly-component-invocation }}
+            {{#modal-dialog
+              tagName="div"
+              tetherTarget=this.tooltipTarget
+              targetAttachment="top right"
+              attachment="top middle"
+              offset="35px 0"
+              overlayPosition="sibling"
+            }}
+              <div class={{"calendar-tooltip"}}>
+                <p>{{this.tooltipText}}</p>
+              </div>
+              <div class="chart-tooltip-arrow"></div>
+            {{/modal-dialog}}
+          {{/if}}
         </div>
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
           {{#each @arrayOfMonths as |month index|}}
