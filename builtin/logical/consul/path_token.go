@@ -104,34 +104,20 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Create an ACLToken for Consul 1.4 and above
-	// If policies were supplied here, then overwrite the policies
-	// that were given when the role was written
-	policies := d.Get("policies").([]string)
-	var policyLinks []*api.ACLTokenPolicyLink
-	if len(policies) > 0 {
-		policyLinks = getPolicies(policies)
-	} else {
-		policyLinks = getPolicies(roleConfigData.Policies)
+	policyLinks := []*api.ACLTokenPolicyLink{}
+
+	for _, policyName := range roleConfigData.Policies {
+		policyLinks = append(policyLinks, &api.ACLTokenPolicyLink{
+			Name: policyName,
+		})
 	}
 
-	// If a namespace was supplied here, then overwrite the namespace
-	// that was given when the role was written
-	namespace := d.Get("consul_namespace").(string)
-	if namespace == "" {
-		namespace = roleConfigData.Namespace
-	}
-	// If a partition was supplied here, then overwrite the partition
-	// that was given when the role was written
-	partition := d.Get("partition").(string)
-	if partition == "" {
-		partition = roleConfigData.Partition
-	}
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
 		Policies:    policyLinks,
 		Local:       roleConfigData.Local,
-		Namespace:   namespace,
-		Partition:   partition,
+		Namespace:   roleConfigData.ConsulNamespace,
+		Partition:   roleConfigData.Partition,
 	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -153,16 +139,4 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	s.Secret.MaxTTL = roleConfigData.MaxTTL
 
 	return s, nil
-}
-
-func getPolicies(policies []string) []*api.ACLLink {
-	policyLinks := []*api.ACLTokenPolicyLink{}
-
-	for _, policyName := range policies {
-		policyLinks = append(policyLinks, &api.ACLTokenPolicyLink{
-			Name: policyName,
-		})
-	}
-
-	return policyLinks
 }

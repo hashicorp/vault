@@ -75,13 +75,13 @@ Defaults to 'client'.`,
 			"consul_namespace": {
 				Type: framework.TypeString,
 				Description: `Indicates which namespace that the token will be
-created within. Defaults to "default".`,
+created within. Defaults to 'default'.`,
 			},
 
 			"partition": {
 				Type: framework.TypeString,
 				Description: `Indicates which admin partition that the token
-will be created within. Defaults to "default".`,
+will be created within. Defaults to 'default'.`,
 			},
 		},
 
@@ -130,7 +130,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 			"max_ttl":          int64(result.MaxTTL.Seconds()),
 			"token_type":       result.TokenType,
 			"local":            result.Local,
-			"consul_namespace": result.Namespace,
+			"consul_namespace": result.ConsulNamespace,
 			"partition":        result.Partition,
 		},
 	}
@@ -190,14 +190,14 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	namespace := d.Get("consul_namespace").(string)
 	partition := d.Get("partition").(string)
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
-		Policy:    string(policyRaw),
-		Policies:  policies,
-		TokenType: tokenType,
-		TTL:       ttl,
-		MaxTTL:    maxTTL,
-		Local:     local,
-		Namespace: namespace,
-		Partition: partition,
+		Policy:          string(policyRaw),
+		Policies:        policies,
+		TokenType:       tokenType,
+		TTL:             ttl,
+		MaxTTL:          maxTTL,
+		Local:           local,
+		ConsulNamespace: namespace,
+		Partition:       partition,
 	})
 	if err != nil {
 		return nil, err
@@ -219,12 +219,12 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 }
 
 type roleConfig struct {
-	Policy    string        `json:"policy"`
-	Policies  []string      `json:"policies"`
-	TTL       time.Duration `json:"lease"`
-	MaxTTL    time.Duration `json:"max_ttl"`
-	TokenType string        `json:"token_type"`
-	Local     bool          `json:"local"`
-	Namespace string        `json:"consul_namespace"`
-	Partition string        `json:partition"`
+	Policy          string        `json:"policy"`
+	Policies        []string      `json:"policies"`
+	TTL             time.Duration `json:"lease"`
+	MaxTTL          time.Duration `json:"max_ttl"`
+	TokenType       string        `json:"token_type"`
+	Local           bool          `json:"local"`
+	ConsulNamespace string        `json:"consul_namespace"`
+	Partition       string        `json:"partition"`
 }
