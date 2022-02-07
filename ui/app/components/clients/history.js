@@ -47,7 +47,9 @@ export default class History extends Component {
   @tracked startYear = null;
   @tracked selectedNamespace = null;
   @tracked noActivityDate = '';
-  // @tracked selectedNamespace = 'namespace18anotherlong/'; // for testing namespace selection view with mirage
+  @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
+    return { name: namespace['label'], id: namespace['label'] };
+  });
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
@@ -172,6 +174,12 @@ export default class History extends Component {
   @action
   handleCurrentBillingPeriod() {
     this.handleClientActivityQuery(0, 0, 'reset');
+  }
+
+  @action
+  selectNamespace([value]) {
+    // value comes in as [namespace0]
+    this.selectedNamespace = value;
   }
 
   @action

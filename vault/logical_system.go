@@ -153,6 +153,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				expirationSubPath,
 				countersSubPath,
 			},
+
+			SealWrapStorage: []string{
+				managedKeyRegistrySubPath,
+			},
 		},
 	}
 

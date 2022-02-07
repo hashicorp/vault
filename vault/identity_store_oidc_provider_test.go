@@ -805,6 +805,78 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://127.0.0.1/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://127.0.0.1:51004/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1 with port",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://127.0.0.1:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://127.0.0.1:51005/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri localhost",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://localhost:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://localhost:51006/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri [::1]",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://[::1]:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://[::1]:51007/callback"
+					return req
+				}(),
+			},
+		},
 	}
 
 	for _, tt := range tests {
