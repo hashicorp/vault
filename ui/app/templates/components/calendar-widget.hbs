@@ -42,7 +42,6 @@
           <button
             id="previous-year"
             type="button"
-            {{!-- class={{concat "button is-transparent " (if this.tooltipTarget "negative-margin")}} --}}
             class="button is-transparent"
             disabled={{this.disablePastYear}}
             {{on "click" this.subYear}}
@@ -52,17 +51,14 @@
               @size="s"
               class="has-text-grey"
               {{on "mouseover" this.addTooltipLeft}}
-              {{on "mouseleave" this.removeTooltipLeft}}
+              {{on "mouseleave" this.removeTooltip}}
             />
           </button>
           <p>{{this.displayYear}}</p>
           <button
             id="next-year"
             type="button"
-            class={{concat
-              "button is-transparent "
-              (if (or this.leftTooltipTarget this.rightTooltipTarget) "negative-margin" "padding-right")
-            }}
+            class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
             disabled={{this.disableFutureYear}}
             {{on "click" this.addYear}}
           >
@@ -71,36 +67,18 @@
               @size="s"
               class="has-text-grey"
               {{on "mouseover" this.addTooltipRight}}
-              {{on "mouseleave" this.removeTooltipRight}}
+              {{on "mouseleave" this.removeTooltip}}
             />
           </button>
-          {{! right tooltip }}
-          {{#if this.rightTooltipTarget}}
+          {{#if this.tooltipTarget}}
             {{! Component must be in curly bracket notation }}
             {{! template-lint-disable no-curly-component-invocation }}
             {{#modal-dialog
               tagName="div"
-              tetherTarget=this.rightTooltipTarget
+              tetherTarget=this.tooltipTarget
               targetAttachment="top right"
               attachment="top middle"
-              offset="80px 0"
-            }}
-              <div class={{"calendar-tooltip"}}>
-                <p>{{this.tooltipText}}</p>
-              </div>
-              <div class="chart-tooltip-arrow"></div>
-            {{/modal-dialog}}
-          {{/if}}
-          {{! left tooltip }}
-          {{#if this.leftTooltipTarget}}
-            {{! Component must be in curly bracket notation }}
-            {{! template-lint-disable no-curly-component-invocation }}
-            {{#modal-dialog
-              tagName="div"
-              tetherTarget=this.leftTooltipTarget
-              targetAttachment="top right"
-              attachment="top middle"
-              offset="150px 0"
+              offset=(if (eq this.tooltipSide "right") "80px 0" "150px 0")
             }}
               <div class={{"calendar-tooltip"}}>
                 <p>{{this.tooltipText}}</p>
