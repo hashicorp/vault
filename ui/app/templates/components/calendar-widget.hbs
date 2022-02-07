@@ -50,7 +50,7 @@
               @direction="left"
               @size="s"
               class="has-text-grey"
-              {{on "mouseover" this.addTooltipLeft}}
+              {{on "mouseover" this.addTooltip}}
               {{on "mouseleave" this.removeTooltip}}
             />
           </button>
@@ -62,13 +62,7 @@
             disabled={{this.disableFutureYear}}
             {{on "click" this.addYear}}
           >
-            <Chevron
-              @direction="right"
-              @size="s"
-              class="has-text-grey"
-              {{on "mouseover" this.addTooltipRight}}
-              {{on "mouseleave" this.removeTooltip}}
-            />
+            <Chevron @direction="right" @size="s" class="has-text-grey" />
           </button>
           {{#if this.tooltipTarget}}
             {{! Component must be in curly bracket notation }}
@@ -78,7 +72,7 @@
               tetherTarget=this.tooltipTarget
               targetAttachment="top right"
               attachment="top middle"
-              offset=(if (eq this.tooltipSide "right") "80px 0" "150px 0")
+              offset="150px 0"
             }}
               <div class={{"calendar-tooltip"}}>
                 <p>{{this.tooltipText}}</p>

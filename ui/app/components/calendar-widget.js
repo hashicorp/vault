@@ -33,7 +33,6 @@ class CalendarWidget extends Component {
   @tracked showCalendar = false;
   @tracked tooltipTarget = null;
   @tracked tooltipText = null;
-  @tracked tooltipSide = null; // either right or left for styling of offset
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -54,19 +53,10 @@ class CalendarWidget extends Component {
     element.classList.remove(classString);
   }
   // ARG TODO move these in alpha betical order
-  @action addTooltipRight() {
-    if (this.disableFutureYear) {
-      let futureYear = Number(this.displayYear) + 1;
-      this.tooltipText = `${futureYear} is unavailable because it is in the future.`; // set tooltip text
-      this.tooltipSide = 'right';
-      this.tooltipTarget = '#next-year';
-    }
-  }
-  @action addTooltipLeft() {
+  @action addTooltip() {
     if (this.isObsoleteYear()) {
       let previousYear = Number(this.displayYear) - 1;
       this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
-      this.tooltipSide = 'left';
       this.tooltipTarget = '#previous-year';
     }
   }
