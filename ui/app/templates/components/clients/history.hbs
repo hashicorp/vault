@@ -4,10 +4,10 @@
     Vault will only show data for contiguous blocks of time during which tracking was on. Documentation is available
     <DocLink @path="/docs/concepts/client-count">here</DocLink>.
   </p>
-  <h1 data-test-client-count-title class="title is-6 has-bottom-margin-xs">
+  <h1 class="title is-6 has-bottom-margin-xs">
     Billing start month
   </h1>
-  <div class="is-flex-align-baseline">
+  <div data-test-start-date-editor class="is-flex-align-baseline">
     <p class="is-size-6">{{this.startTimeDisplay}}</p>
     <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
       Edit
@@ -90,8 +90,8 @@
       {{#if @isLoading}}
         <LayoutLoading />
       {{else}}
-        <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
         {{#if this.totalClientsData}}
+          <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
           <Clients::Attribution
             @chartLegend={{this.chartLegend}}
             @totalClientsData={{this.totalClientsData}}
@@ -102,6 +102,8 @@
             @isDateRange={{this.isDateRange}}
             @timestamp={{this.responseTimestamp}}
           />
+        {{else}}
+          <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
       {{/if}}
     {{else}}

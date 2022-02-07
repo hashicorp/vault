@@ -1,20 +1,2 @@
 <Clients::Dashboard @model={{@model}} />
-<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-  <p class="has-bottom-margin-s">
-    The below data is for the current month starting from the first day. For historical data, see the history tab.
-  </p>
-  {{#if (eq @model.config.enabled "Off")}}
-    <EmptyState
-      @title="Tracking is disabled"
-      @message="Tracking is disabled and data is not being collected. To turn it on edit the configuration."
-    >
-      {{#if @model.config.configPath.canUpdate}}
-        <LinkTo @route="vault.cluster.clients.config">
-          Go to configuration
-        </LinkTo>
-      {{/if}}
-    </EmptyState>
-  {{else}}
-    <Clients::Current @model={{@model}} @isLoading={{this.currentlyLoading}} />
-  {{/if}}
-</div>
+<Clients::Current @model={{@model}} @isLoading={{this.currentlyLoading}} />
