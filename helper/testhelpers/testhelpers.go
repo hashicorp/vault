@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/url"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -20,7 +21,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/go-testing-interface"
+	testing2 "github.com/mitchellh/go-testing-interface"
 )
 
 type GenerateRootKind int
@@ -32,7 +33,7 @@ const (
 )
 
 // Generates a root token on the target cluster.
-func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
+func GenerateRoot(t testing2.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
 	if err != nil {

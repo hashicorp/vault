@@ -20,6 +20,7 @@ import (
 	mathrand "math/rand"
 	"net"
 	"net/http"
+
 	"os"
 	"path/filepath"
 	"sync"
@@ -49,7 +50,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
+	testing "github.com/mitchellh/go-testing-interface"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
 )
