@@ -1705,6 +1705,74 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	return ret
 }
 
+func TestBackend_PathFetchValidRaw(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedSerial := "17:67:16:b0:b9:45:58:c0:3a:29:e3:cb:d6:98:33:7a:a6:3b:66:c1"
+	expectedCert := []byte("test certificate")
+	entry := &logical.StorageEntry{
+		Key:   fmt.Sprintf("certs/%s", normalizeSerial(expectedSerial)),
+		Value: expectedCert,
+	}
+	err = storage.Put(context.Background(), entry)
+
+	// get der cert
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      fmt.Sprintf("cert/%s/raw", expectedSerial),
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to get raw cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check the raw cert matches the response body
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
+		t.Fatalf("failed to get raw cert")
+	}
+	if resp.Data[logical.HTTPContentType] != "application/pkix-cert" {
+		t.Fatalf("failed to get raw cert content-type")
+	}
+
+	// get pem
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      fmt.Sprintf("cert/%s/raw/pem", expectedSerial),
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to get raw, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pemBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: expectedCert,
+	}
+	pemCert := []byte(strings.TrimSpace(string(pem.EncodeToMemory(pemBlock))))
+	// check the pem cert matches the response body
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), pemCert) != 0 {
+		t.Fatalf("failed to get pem cert")
+	}
+	if resp.Data[logical.HTTPContentType] != "application/pkix-cert" {
+		t.Fatalf("failed to get raw cert content-type")
+	}
+}
+
 func TestBackend_PathFetchCertList(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -3039,7 +3107,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 
 	// Write test policy for userpass auth method.
 	err := client.Sys().PutPolicy("test", `
-   path "pki/*" {  
+   path "pki/*" {
      capabilities = ["update"]
    }`)
 	if err != nil {
