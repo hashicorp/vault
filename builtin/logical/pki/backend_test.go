@@ -1768,7 +1768,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), pemCert) != 0 {
 		t.Fatalf("failed to get pem cert")
 	}
-	if resp.Data[logical.HTTPContentType] != "application/pkix-cert" {
+	if resp.Data[logical.HTTPContentType] != "application/pem-certificate-chain" {
 		t.Fatalf("failed to get raw cert content-type")
 	}
 }

@@ -156,6 +156,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		contentType = "application/pkix-cert"
 		if req.Path == "ca/pem" {
 			pemType = "CERTIFICATE"
+			contentType = "application/pem-certificate-chain"
 		}
 	case req.Path == "ca_chain" || req.Path == "cert/ca_chain":
 		serial = "ca_chain"
@@ -167,6 +168,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		contentType = "application/pkix-crl"
 		if req.Path == "crl/pem" {
 			pemType = "X509 CRL"
+			contentType = "application/x-pem-file"
 		}
 	case req.Path == "cert/crl":
 		serial = "crl"
@@ -176,6 +178,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		contentType = "application/pkix-cert"
 		if strings.HasSuffix(req.Path, "/pem") {
 			pemType = "CERTIFICATE"
+			contentType = "application/pem-certificate-chain"
 		}
 	default:
 		serial = data.Get("serial").(string)

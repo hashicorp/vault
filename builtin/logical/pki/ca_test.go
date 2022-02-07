@@ -320,7 +320,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if diff := deep.Equal(resp.Data["http_raw_body"].([]byte), []byte(caCert)); diff != nil {
 				t.Fatal(diff)
 			}
-			if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
+			if resp.Data["http_content_type"].(string) != "application/pem-certificate-chain" {
 				t.Fatal("wrong content type")
 			}
 		}
