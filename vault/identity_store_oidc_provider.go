@@ -1513,7 +1513,8 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	if redirectURI == "" {
 		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
 	}
-	if !strutil.StrListContains(client.RedirectURIs, redirectURI) {
+
+	if !validRedirect(redirectURI, client.RedirectURIs) {
 		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
