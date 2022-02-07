@@ -20,7 +20,6 @@ import (
 	mathrand "math/rand"
 	"net"
 	"net/http"
-
 	"os"
 	"path/filepath"
 	"sync"
