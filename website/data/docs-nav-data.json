@@ -16,6 +16,10 @@
     "path": "browser-support"
   },
   {
+    "title": "OS Support",
+    "path": "os-support"
+  },
+  {
     "title": "Installing Vault",
     "path": "install"
   },
@@ -1046,7 +1050,6 @@
             "path": "secrets/identity/oidc-provider"
           }
         ]
-
       },
       {
         "title": "MongoDB Atlas",
