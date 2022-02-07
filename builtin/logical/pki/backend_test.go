@@ -1782,10 +1782,11 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 			"common_name": "example.test.com",
 		}
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
-			Operation: logical.UpdateOperation,
-			Path:      "issue/test-example",
-			Storage:   storage,
-			Data:      certData,
+			Operation:  logical.UpdateOperation,
+			Path:       "issue/test-example",
+			Storage:    storage,
+			Data:       certData,
+			MountPoint: "pki/",
 		})
 		if resp != nil && resp.IsError() {
 			t.Fatalf("failed to issue a cert, %#v", resp)
