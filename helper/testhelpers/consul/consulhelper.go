@@ -26,7 +26,7 @@ func (c *Config) APIConfig() *consulapi.Config {
 // the Consul version used will be given by the environment variable
 // CONSUL_DOCKER_VERSION, or if that's empty, whatever we've hardcoded as the
 // the latest Consul version.
-func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
+func PrepareTestContainer(t *testing.T, repo string, version string) (func(), *Config) {
 	if retAddress := os.Getenv("CONSUL_HTTP_ADDR"); retAddress != "" {
 		shp, err := docker.NewServiceHostPortParse(retAddress)
 		if err != nil {
@@ -41,21 +41,35 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		if consulVersion != "" {
 			version = consulVersion
 		} else {
-			version = "1.7.2" // Latest Consul version, update as new releases come out
+			version = "1.11.2" // Latest Consul version, update as new releases come out
 		}
 	}
 	if strings.HasPrefix(version, "1.3") {
 		config = `datacenter = "test" acl_default_policy = "deny" acl_datacenter = "test" acl_master_token = "test"`
 	}
 
-	repo := os.Getenv("CONSUL_DOCKER_REPO")
-	if repo == "" {
-		repo = "consul"
+	name := "consul"
+	isEnterprise := false
+	var envVars []string
+
+	// If running the enterprise container, set the appropriate values below.
+	if strings.HasSuffix(repo, "enterprise") {
+		version += "-ent"
+		name += "-enterprise"
+		isEnterprise = true
+		license, _ := os.LookupEnv("CONSUL_LICENSE")
+		envVars = append(envVars, "CONSUL_LICENSE="+license)
 	}
+
+	if dockerRepo, hasEnvRepo := os.LookupEnv("CONSUL_DOCKER_REPO"); hasEnvRepo {
+		repo = dockerRepo
+	}
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ContainerName: "consul",
+		ContainerName: name,
 		ImageRepo:     repo,
 		ImageTag:      version,
+		Env:           envVars,
 		Cmd:           []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", config},
 		Ports:         []string{"8500/tcp"},
 		AuthUsername:  os.Getenv("CONSUL_DOCKER_USERNAME"),
@@ -102,13 +116,12 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 			Name:        "test",
 			Description: "test",
 			Rules: `node_prefix "" {
-                policy = "write"
-              }
+               policy = "write"
+				}
 
-              service_prefix "" {
-                policy = "read"
-              }
-      `,
+            service_prefix "" {
+               policy = "read"
+            }`,
 		}
 		q := &consulapi.WriteOptions{
 			Token: consulToken,
@@ -117,13 +130,65 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		if err != nil {
 			return nil, err
 		}
+
+		// Configure a namespace and parition if testing enterprise Consul
+		if isEnterprise {
+			namespace := &consulapi.Namespace{
+				Name:        "ns1",
+				Description: "ns1 test",
+			}
+
+			_, _, err = consul.Namespaces().Create(namespace, q)
+			if err != nil {
+				return nil, err
+			}
+
+			nsPolicy := &consulapi.ACLPolicy{
+				Name:        "ns-test",
+				Description: "namespace test",
+				Namespace:   "ns1",
+				Rules: `service_prefix "" {
+							policy = "read"
+						}`,
+			}
+			_, _, err = consul.ACL().PolicyCreate(nsPolicy, q)
+			if err != nil {
+				return nil, err
+			}
+
+			partition := &consulapi.Partition{
+				Name:        "part1",
+				Description: "part1 test",
+			}
+
+			_, _, err = consul.Partitions().Create(ctx, partition, q)
+			if err != nil {
+				return nil, err
+			}
+
+			partPolicy := &consulapi.ACLPolicy{
+				Name:        "part-test",
+				Description: "partition test",
+				Partition:   "part1",
+				Rules: `service_prefix "" {
+							policy = "read"
+						}`,
+			}
+			_, _, err = consul.ACL().PolicyCreate(partPolicy, q)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		return &Config{
 			ServiceHostPort: *shp,
 			Token:           consulToken,
 		}, nil
 	})
+
 	if err != nil {
 		t.Fatalf("Could not start docker Consul: %s", err)
 	}
+
 	return svc.Cleanup, svc.Config.(*Config)
 }
