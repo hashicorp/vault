@@ -31,9 +31,9 @@ class CalendarWidget extends Component {
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
   @tracked showCalendar = false;
-  @tracked rightTooltipTarget = null;
-  @tracked leftTooltipTarget = null;
+  @tracked tooltipTarget = null;
   @tracked tooltipText = null;
+  @tracked tooltipSide = null; // either right or left for styling of offset
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -53,30 +53,25 @@ class CalendarWidget extends Component {
   removeClass(element, classString) {
     element.classList.remove(classString);
   }
-
+  // ARG TODO move these in alpha betical order
   @action addTooltipRight() {
     if (this.disableFutureYear) {
       let futureYear = Number(this.displayYear) + 1;
       this.tooltipText = `${futureYear} is unavailable because it is in the future.`; // set tooltip text
-      this.rightTooltipTarget = '#next-year'; // set the tooltip Target
+      this.tooltipSide = 'right';
+      this.tooltipTarget = '#next-year';
     }
   }
-
   @action addTooltipLeft() {
     if (this.isObsoleteYear()) {
       let previousYear = Number(this.displayYear) - 1;
       this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
-      this.leftTooltipTarget = '#previous-year';
+      this.tooltipSide = 'left';
+      this.tooltipTarget = '#previous-year';
     }
   }
-
-  @action removeTooltipRight() {
-    this.rightTooltipTarget = null;
-    this.leftTooltipTarget = null;
-  }
-  @action removeTooltipLeft() {
-    this.leftTooltipTarget = null;
-    this.rightTooltipTarget = null;
+  @action removeTooltip() {
+    this.tooltipTarget = null;
   }
 
   // ACTIONS (alphabetically) //
