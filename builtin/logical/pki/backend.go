@@ -14,6 +14,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const (
+	noRole       = 0
+	roleOptional = 1
+	roleRequired = 2
+)
+
 // Factory creates a new backend implementing the logical.Backend interface
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend(conf)
@@ -154,25 +160,32 @@ func metricsKey(req *logical.Request, extra ...string) []string {
 	return key
 }
 
-func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.OperationFunc {
+func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		key := metricsKey(req, callType)
 		roleName := data.Get("role").(string)
 
-		// Get the role
-		role, err := b.getRole(ctx, req.Storage, roleName)
-		if err != nil {
-			return nil, err
-		}
-		if role == nil {
-			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
+		var role *roleEntry
+		var labels []metrics.Label
+		var err error
+
+		if roleMode > noRole {
+			// Get the role
+			role, err = b.getRole(ctx, req.Storage, roleName)
+			if err != nil {
+				return nil, err
+			}
+			if role == nil && roleMode == roleRequired {
+				return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
+			}
+			labels = []metrics.Label{{"role", roleName}}
 		}
 
-		labels := []metrics.Label{{"role", roleName}}
 		ns, err := namespace.FromContext(ctx)
 		if err == nil {
 			labels = append(labels, metricsutil.NamespaceLabel(ns))
 		}
+
 		start := time.Now()
 		defer metrics.MeasureSinceWithLabels(key, start, labels)
 		resp, err := ofunc(ctx, req, data, role)

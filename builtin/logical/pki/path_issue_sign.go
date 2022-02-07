@@ -19,7 +19,7 @@ func pathIssue(b *backend) *framework.Path {
 		Pattern: "issue/" + framework.GenericNameRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("issue", b.pathIssue),
+			logical.UpdateOperation: b.metricsWrap("issue", roleRequired, b.pathIssue),
 		},
 
 		HelpSynopsis:    pathIssueHelpSyn,
@@ -35,7 +35,7 @@ func pathSign(b *backend) *framework.Path {
 		Pattern: "sign/" + framework.GenericNameRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("sign", b.pathSign),
+			logical.UpdateOperation: b.metricsWrap("sign", roleRequired, b.pathSign),
 		},
 
 		HelpSynopsis:    pathSignHelpSyn,
@@ -58,7 +58,7 @@ func pathSignVerbatim(b *backend) *framework.Path {
 		Pattern: "sign-verbatim" + framework.OptionalParamRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("sign-verbatim", b.pathSignVerbatim),
+			logical.UpdateOperation: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
 		},
 
 		HelpSynopsis:    pathSignHelpSyn,

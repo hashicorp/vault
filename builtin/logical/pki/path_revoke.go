@@ -4,11 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -27,7 +23,7 @@ hyphen-separated octal`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRevokeWrite,
+			logical.UpdateOperation: b.metricsWrap("revoke", noRole, b.pathRevokeWrite),
 		},
 
 		HelpSynopsis:    pathRevokeHelpSyn,
@@ -48,7 +44,7 @@ func pathRotateCRL(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *roleEntry) (*logical.Response, error) {
 	serial := data.Get("serial_number").(string)
 	if len(serial) == 0 {
 		return logical.ErrorResponse("The serial number must be provided"), nil
@@ -65,22 +61,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	var labels []metrics.Label
-	ns, err := namespace.FromContext(ctx)
-	if err == nil {
-		labels = []metrics.Label{metricsutil.NamespaceLabel(ns)}
-	}
-	key := metricsKey(req, "revoke")
-	start := time.Now()
-	defer metrics.MeasureSinceWithLabels(key, start, labels)
-	resp, err := revokeCert(ctx, b, req, serial, false)
-
-	if err != nil || resp.IsError() {
-		metrics.IncrCounterWithLabels(append(key, "failure"), 1.0, labels)
-	} else {
-		metrics.IncrCounterWithLabels(key, 1.0, labels)
-	}
-	return resp, err
+	return revokeCert(ctx, b, req, serial, false)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
