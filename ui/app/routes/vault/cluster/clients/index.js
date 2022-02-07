@@ -3,24 +3,6 @@ import RSVP from 'rsvp';
 import { action } from '@ember/object';
 
 export default class ClientsRoute extends Route {
-  // async getMonthly() {
-  //   try {
-  //     return await this.store.queryRecord('clients/monthly', {});
-  //   } catch (e) {
-  //     // ARG TODO handle
-  //     return e;
-  //   }
-  // }
-
-  // async getConfig() {
-  //   try {
-  //     return await this.store.queryRecord('clients/config', {});
-  //   } catch (e) {
-  //     // ARG TODO handle
-  //     return e;
-  //   }
-  // }
-
   model() {
     return RSVP.hash({
       config: this.store.queryRecord('clients/config', {}),
