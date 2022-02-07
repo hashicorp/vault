@@ -377,7 +377,7 @@ func TestDeleteUserContainedDB(t *testing.T) {
 	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 	defer dbtesting.AssertClose(t, db)
 
-	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLContainedLogin)
 	if err != nil {
 		t.Fatalf("Failed to create user: %s", err)
 	}
@@ -471,6 +471,7 @@ func testContainedDBCredsExist(connURL, username string) error {
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 	userStmt, err := db.PrepareContext(ctx, fmt.Sprintf("DROP USER [%s]", username))
 	if err != nil {
 		return err
@@ -530,4 +531,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{{name}}];`
 
 const testMSSQLLogin = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
+`
+
+const testMSSQLContainedLogin = `
+CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
+CREATE USER [{{name}}] FOR LOGIN [{{name}}];
 `
