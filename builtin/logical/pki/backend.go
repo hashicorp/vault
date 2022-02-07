@@ -151,10 +151,6 @@ func metricsKey(req *logical.Request, extra ...string) []string {
 
 func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			return nil, err
-		}
 		key := metricsKey(req, callType)
 		roleName := data.Get("role").(string)
 
@@ -167,9 +163,10 @@ func (b *backend) metricsWrap(callType string, ofunc roleOperation) framework.Op
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
 		}
 
-		labels := []metrics.Label{
-			metricsutil.NamespaceLabel(ns),
-			{"role", roleName},
+		labels := []metrics.Label{{"role", roleName}}
+		ns, err := namespace.FromContext(ctx)
+		if err == nil {
+			labels = append(labels, metricsutil.NamespaceLabel(ns))
 		}
 		start := time.Now()
 		defer metrics.MeasureSinceWithLabels(key, start, labels)

@@ -61,16 +61,14 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	// We store and identify by lowercase colon-separated hex, but other
 	// utilities use dashes and/or uppercase, so normalize
 	serial = strings.Replace(strings.ToLower(serial), "-", ":", -1)
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	labels := []metrics.Label{
-		metricsutil.NamespaceLabel(ns),
+	var labels []metrics.Label
+	ns, err := namespace.FromContext(ctx)
+	if err == nil {
+		labels = []metrics.Label{metricsutil.NamespaceLabel(ns)}
 	}
 	key := metricsKey(req, "revoke")
 	start := time.Now()
