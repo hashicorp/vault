@@ -52,19 +52,17 @@ class CalendarWidget extends Component {
   removeClass(element, classString) {
     element.classList.remove(classString);
   }
-  // ARG TODO move these in alpha betical order
-  @action addTooltip() {
+
+  // ACTIONS (alphabetically) //
+  @action
+  addTooltip() {
     if (this.isObsoleteYear()) {
       let previousYear = Number(this.displayYear) - 1;
       this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
       this.tooltipTarget = '#previous-year';
     }
   }
-  @action removeTooltip() {
-    this.tooltipTarget = null;
-  }
 
-  // ACTIONS (alphabetically) //
   @action
   addYear() {
     this.displayYear = this.displayYear + 1;
@@ -110,6 +108,10 @@ class CalendarWidget extends Component {
         }
       }
     });
+  }
+
+  @action removeTooltip() {
+    this.tooltipTarget = null;
   }
 
   @action
