@@ -52,9 +52,10 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var db Database
 	switch raw.(type) {
 	case gRPCClient:
-
 		gRPCClient := raw.(gRPCClient)
-		gRPCClient.client = proto.NewDatabaseClient(pluginClient.Protocol())
+		// This is an abstraction leak from go-plugin but it is necessary in
+		// order to enable multiplexing on multiplexed plugins
+		gRPCClient.client = proto.NewDatabaseClient(pluginClient.Conn())
 
 		db = gRPCClient
 	default:

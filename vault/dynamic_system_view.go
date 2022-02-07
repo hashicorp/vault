@@ -216,7 +216,7 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 }
 
 func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error) {
-	c, err := d.core.pluginCatalog.GetPluginClient(ctx, d, pluginRunner, config)
+	c, err := d.core.pluginCatalog.NewPluginClient(ctx, d, pluginRunner, config)
 	if err != nil {
 		return nil, err
 	}

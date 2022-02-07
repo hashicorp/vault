@@ -62,7 +62,8 @@ type PluginClient struct {
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
 	client      *plugin.Client
-	protocol    *pluginClientConn
+	clientConn  *pluginClientConn
+	protocol    plugin.ClientProtocol
 	cleanupFunc func() error
 }
 
@@ -101,7 +102,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 }
 
 type pluginClientConn struct {
-	plugin.ClientProtocol
+	*grpc.ClientConn
 	id string
 }
 
@@ -112,8 +113,7 @@ func (d *pluginClientConn) Invoke(ctx context.Context, method string, args inter
 	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, d.id)
 	idCtx := metadata.NewOutgoingContext(ctx, md)
 
-	conn := d.ClientProtocol.(*plugin.GRPCClient).Conn
-	return conn.Invoke(idCtx, method, args, reply, opts...)
+	return d.ClientConn.Invoke(idCtx, method, args, reply, opts...)
 }
 
 func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
@@ -121,17 +121,11 @@ func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc,
 	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, d.id)
 	idCtx := metadata.NewOutgoingContext(ctx, md)
 
-	conn := d.ClientProtocol.(*plugin.GRPCClient).Conn
-	return conn.NewStream(idCtx, desc, method, opts...)
+	return d.ClientConn.NewStream(idCtx, desc, method, opts...)
 }
 
-// func (p *PluginClient) Conn() *grpc.ClientConn {
-// 	gc := p.protocol.(*plugin.GRPCClient)
-// 	return gc.Conn
-// }
-
-func (p *PluginClient) Protocol() grpc.ClientConnInterface {
-	return p.protocol
+func (p *PluginClient) Conn() grpc.ClientConnInterface {
+	return p.clientConn
 }
 
 func (p *PluginClient) ID() string {
@@ -188,14 +182,14 @@ func (c *PluginCatalog) removePluginClient(name, id string) error {
 	delete(mpc.connections, id)
 	if !multiplexingSupport {
 		pluginClient.client.Kill()
-		err = pluginClient.protocol.ClientProtocol.Close()
+		err = pluginClient.protocol.Close()
 
 		if len(mpc.connections) == 0 {
 			delete(c.multiplexedClients, name)
 		}
 	} else if len(mpc.connections) == 0 {
 		pluginClient.client.Kill()
-		err = pluginClient.protocol.ClientProtocol.Close()
+		err = pluginClient.protocol.Close()
 		delete(c.multiplexedClients, name)
 	}
 	return err
@@ -223,18 +217,18 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 	return mpc
 }
 
-// GetPluginClient returns a client for managing the lifecycle of a plugin
+// NewPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) GetPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
+func (c *PluginCatalog) NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
 	c.lock.Lock()
-	pc, err := c.getPluginClient(ctx, sys, pluginRunner, config)
+	pc, err := c.newPluginClient(ctx, sys, pluginRunner, config)
 	c.lock.Unlock()
 	return pc, err
 }
 
-// getPluginClient returns a client for managing the lifecycle of a plugin
+// newPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
+func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
 	mpc := c.getMultiplexedClient(pluginRunner.Name)
 
 	id, err := base62.Random(10)
@@ -285,13 +279,15 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 		return nil, err
 	}
 
+	clientConn := rpcClient.(*plugin.GRPCClient).Conn
+
 	// Wrap rpcClient with our implementation so that we can inject the
 	// ID into the context
-	cc := &pluginClientConn{
-		ClientProtocol: rpcClient,
-		id:             id,
+	pc.clientConn = &pluginClientConn{
+		ClientConn: clientConn,
+		id:         id,
 	}
-	pc.protocol = cc
+	pc.protocol = rpcClient
 	mpc.connections[id] = pc
 	mpc.name = pluginRunner.Name
 
@@ -358,7 +354,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		AutoMTLS:        true,
 	}
 	// Attempt to run as database V5 or V6 multiplexed plugin
-	v5Client, err := c.getPluginClient(ctx, nil, pluginRunner, config)
+	v5Client, err := c.newPluginClient(ctx, nil, pluginRunner, config)
 	if err == nil {
 		// At this point the pluginRunner does not know if multiplexing is
 		// supported or not. So we need to ask the plugin client itself.
