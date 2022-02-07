@@ -163,12 +163,20 @@ func metricsKey(req *logical.Request, extra ...string) []string {
 func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		key := metricsKey(req, callType)
-		roleName := data.Get("role").(string)
-
 		var role *roleEntry
 		var labels []metrics.Label
 		var err error
 
+		var roleName string
+		switch roleMode {
+		case roleRequired:
+			roleName = data.Get("role").(string)
+		case roleOptional:
+			r, ok := data.GetOk("role")
+			if ok {
+				roleName = r.(string)
+			}
+		}
 		if roleMode > noRole {
 			// Get the role
 			role, err = b.getRole(ctx, req.Storage, roleName)
