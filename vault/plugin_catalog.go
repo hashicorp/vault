@@ -128,10 +128,6 @@ func (p *PluginClient) Conn() grpc.ClientConnInterface {
 	return p.clientConn
 }
 
-func (p *PluginClient) ID() string {
-	return p.id
-}
-
 // MultiplexingSupport determines if a plugin client supports multiplexing
 func (p *PluginClient) MultiplexingSupport() (bool, error) {
 	if p.client == nil {

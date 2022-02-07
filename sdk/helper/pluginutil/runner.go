@@ -34,7 +34,6 @@ type LookRunnerUtil interface {
 }
 
 type Multiplexer interface {
-	ID() string
 	Conn() grpc.ClientConnInterface
 	MultiplexingSupport() (bool, error)
 
