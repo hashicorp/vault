@@ -145,6 +145,9 @@ the "config/" path.
 `
 
 func metricsKey(req *logical.Request, extra ...string) []string {
+	if req == nil || req.MountPoint == "" {
+		return extra
+	}
 	key := make([]string, len(extra)+1)
 	key[0] = req.MountPoint[:len(req.MountPoint)-1]
 	copy(key[1:], extra)
