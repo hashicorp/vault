@@ -76,26 +76,30 @@
           </ToolbarFilters>
         </Toolbar>
       </div>
-      <AlertBanner @type="warning" @title="Warning">
-        <ul>
-          {{#if this.responseRangeDiffMessage}}
-            <li>{{this.responseRangeDiffMessage}}</li>
-          {{/if}}
-          {{! COMMENT IN CONDITIONAL WHEN VERSION ENDPOINT IS COMPLETE }}
-          {{!-- {{#if (is-after this.upgradeDate this.licenseStartDate)}} --}}
-          <li>
-            {{#if this.upgradeDate}}
-              {{concat "You upgraded to Vault 1.9 on " (date-format this.upgradeDate "MMMM d, yyyy.")}}
+      {{#if this.countsIncludeOlderData}}
+        <AlertBanner @type="warning" @title="Warning">
+          <ul>
+            {{#if this.responseRangeDiffMessage}}
+              <li>{{this.responseRangeDiffMessage}}</li>
             {{/if}}
-            How we count clients changed in 1.9, so please keep in mind when looking at the data below. Furthermore,
-            namespace attribution is available only for 1.9 data.
-            <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
-              Learn more here.
-            </DocLink>
-          </li>
-          {{!-- {{/if}} --}}
-        </ul>
-      </AlertBanner>
+            <li>
+              {{concat
+                "You upgraded to Vault "
+                this.firstUpgradeVersion
+                " on "
+                (date-format this.upgradeDate "MMMM d, yyyy.")
+              }}
+              How we count clients changed in 1.9, so please keep in mind when looking at the data below. Furthermore,
+              namespace attribution is available only for 1.9 data.
+              <DocLink
+                @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              >
+                Learn more here.
+              </DocLink>
+            </li>
+          </ul>
+        </AlertBanner>
+      {{/if}}
       {{#if @isLoading}}
         <LayoutLoading />
       {{else}}

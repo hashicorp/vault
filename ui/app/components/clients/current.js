@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { isAfter, startOfMonth } from 'date-fns';
 import { action } from '@ember/object';
 export default class Current extends Component {
   chartLegend = [
@@ -10,10 +11,17 @@ export default class Current extends Component {
     return { name: namespace['label'], id: namespace['label'] };
   });
   @tracked selectedNamespace = null;
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled; // returns RFC3339 timestamp
 
-  // TODO CMB get from model
-  get upgradeDate() {
-    return this.args.upgradeDate || null;
+  get countsIncludeOlderData() {
+    let firstUpgrade = this.args.model.versionHistory[0];
+    if (!firstUpgrade) {
+      return false;
+    }
+    let versionDate = new Date(firstUpgrade.timestampInstalled);
+    // compare against this month and this year to show message or not.
+    return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
   }
 
   get licenseStartDate() {

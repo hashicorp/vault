@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth } from 'date-fns';
+import { isSameMonth, isAfter } from 'date-fns';
 
 export default class Dashboard extends Component {
   arrayOfMonths = [
@@ -48,6 +48,8 @@ export default class Dashboard extends Component {
   @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled; // returns RFC3339 timestamp
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -100,6 +102,16 @@ export default class Dashboard extends Component {
 
   get responseTimestamp() {
     return this.args.model.activity?.responseTimestamp;
+  }
+
+  get countsIncludeOlderData() {
+    let firstUpgrade = this.args.model.versionHistory[0];
+    if (!firstUpgrade) {
+      return false;
+    }
+    let versionDate = new Date(firstUpgrade.timestampInstalled);
+    // compare against this startTimeFromResponse to show message or not.
+    return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
   }
   // HELPERS
   areArraysTheSame(a1, a2) {
