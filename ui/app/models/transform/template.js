@@ -31,13 +31,17 @@ const M = Model.extend({
     models: ['transform/alphabet'],
     selectLimit: 1,
   }),
+  encodeFormat: attr('string'),
+  decodeFormats: attr(),
+  backend: attr('string', { readOnly: true }),
 
-  attrs: computed(function () {
-    let keys = ['name', 'pattern', 'alphabet'];
+  readAttrs: computed(function () {
+    let keys = ['name', 'pattern', 'encodeFormat', 'decodeFormats', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
-
-  backend: attr('string', { readOnly: true }),
+  writeAttrs: computed(function () {
+    return expandAttributeMeta(this, ['name', 'pattern', 'alphabet']);
+  }),
 });
 
 export default attachCapabilities(M, {

@@ -189,7 +189,7 @@ type TLSConfig struct {
 // The default Address is https://127.0.0.1:8200, but this can be overridden by
 // setting the `VAULT_ADDR` environment variable.
 //
-// If an error is encountered, this will return nil.
+// If an error is encountered, the Error field on the returned *Config will be populated with the specific error.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:      "https://127.0.0.1:8200",

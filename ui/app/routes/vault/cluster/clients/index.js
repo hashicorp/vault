@@ -15,20 +15,35 @@ export default Route.extend(ClusterRoute, {
     },
   },
 
-  async getLicense() {
+  async getActivity(start_time) {
     try {
-      return await this.store.queryRecord('license', {});
+      return this.store.queryRecord('clients/activity', { start_time });
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   },
 
-  async getActivity(start_time) {
+  async getVersionHistory() {
     try {
-      return await this.store.queryRecord('clients/activity', { start_time });
+      let arrayOfModels = [];
+      let response = await this.store.findAll('clients/version-history'); // returns a class with nested models
+      response.forEach((model) => {
+        arrayOfModels.push({
+          id: model.id,
+          perviousVersion: model.previousVersion,
+          timestampInstalled: model.timestampInstalled,
+        });
+      });
+      return arrayOfModels;
     } catch (e) {
-      // ARG TODO handle
+      return null;
+    }
+  },
+
+  async getLicense() {
+    try {
+      return await this.store.queryRecord('license', {});
+    } catch (e) {
       return e;
     }
   },
@@ -37,7 +52,6 @@ export default Route.extend(ClusterRoute, {
     try {
       return await this.store.queryRecord('clients/monthly', {});
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   },
@@ -59,6 +73,7 @@ export default Route.extend(ClusterRoute, {
     let license = await this.getLicense(); // get default start_time
     let activity = await this.getActivity(license.startTime); // returns client counts using license start_time.
     let monthly = await this.getMonthly(); // returns the partial month endpoint
+    let versionHistory = await this.getVersionHistory();
     let endTimeFromResponse = activity ? this.rfc33395ToMonthYear(activity.endTime) : null;
     let startTimeFromLicense = this.rfc33395ToMonthYear(license.startTime);
 
@@ -69,6 +84,7 @@ export default Route.extend(ClusterRoute, {
       config,
       endTimeFromResponse,
       startTimeFromLicense,
+      versionHistory,
     });
   },
 
