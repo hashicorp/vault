@@ -62,7 +62,7 @@ type PluginClient struct {
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
 	client      *plugin.Client
-	clientConn  *pluginClientConn
+	clientConn  grpc.ClientConnInterface
 	protocol    plugin.ClientProtocol
 	cleanupFunc func() error
 }
@@ -277,11 +277,15 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.Runn
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
 
-	// Wrap rpcClient with our implementation so that we can inject the
-	// ID into the context
-	pc.clientConn = &pluginClientConn{
-		ClientConn: clientConn,
-		id:         id,
+	if pluginRunner.MultiplexingSupport {
+		// Wrap rpcClient with our implementation so that we can inject the
+		// ID into the context
+		pc.clientConn = &pluginClientConn{
+			ClientConn: clientConn,
+			id:         id,
+		}
+	} else {
+		pc.clientConn = clientConn
 	}
 	pc.protocol = rpcClient
 	mpc.connections[id] = pc

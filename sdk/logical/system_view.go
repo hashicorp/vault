@@ -56,6 +56,8 @@ type SystemView interface {
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
 	LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error)
 
+	// NewPluginClient returns a client for managing the lifecycle of plugin
+	// processes
 	NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error)
 
 	// MlockEnabled returns the configuration setting for enabling mlock on

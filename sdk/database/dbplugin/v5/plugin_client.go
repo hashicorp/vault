@@ -50,14 +50,13 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// We should have a database type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	var db Database
-	switch raw.(type) {
+	switch c := raw.(type) {
 	case gRPCClient:
-		gRPCClient := raw.(gRPCClient)
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
-		gRPCClient.client = proto.NewDatabaseClient(pluginClient.Conn())
+		c.client = proto.NewDatabaseClient(pluginClient.Conn())
 
-		db = gRPCClient
+		db = c
 	default:
 		return nil, errors.New("unsupported client type")
 	}
