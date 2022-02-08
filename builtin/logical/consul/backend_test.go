@@ -39,7 +39,7 @@ func testBackendConfigAccess(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "consul", version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -104,7 +104,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "consul", version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -209,7 +209,7 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "consul", version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -321,7 +321,7 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "consul", "")
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -464,7 +464,7 @@ func testBackendManagement(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "consul", version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -508,7 +508,7 @@ func testBackendBasic(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "consul", version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -703,20 +703,19 @@ func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 }
 
 func TestBackend_Enterprise_Namespace(t *testing.T) {
-	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); hasLicense {
-		testBackendEntNamespace(t)
-	} else {
+	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); !hasLicense {
 		t.Skip("Skipping: No enterprise license found")
 	}
+
+	testBackendEntNamespace(t)
 }
 
 func TestBackend_Enterprise_Partition(t *testing.T) {
-	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); hasLicense {
-		testBackendEntPartition(t)
-	} else {
+	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); !hasLicense {
 		t.Skip("Skipping: No enterprise license found")
 	}
 
+	testBackendEntPartition(t)
 }
 
 func testBackendEntNamespace(t *testing.T) {
@@ -727,7 +726,7 @@ func testBackendEntNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "hashicorp/consul-enterprise", "")
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -782,7 +781,11 @@ func testBackendEntNamespace(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
+	t.Logf("Generated namespace '%s' token: %s with accessor %s", d.ConsulNamespace, d.Token, d.Accessor)
+
+	if d.ConsulNamespace != "ns1" {
+		t.Fatalf("Failed to access namespace")
+	}
 
 	// Build a client and verify that the credentials work
 	consulapiConfig := consulapi.DefaultNonPooledConfig()
@@ -843,7 +846,7 @@ func testBackendEntPartition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "hashicorp/consul-enterprise", "")
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -898,7 +901,11 @@ func testBackendEntPartition(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
+	t.Logf("Generated partition '%s' token: %s with accessor %s", d.Partition, d.Token, d.Accessor)
+
+	if d.Partition != "part1" {
+		t.Fatalf("Failed to access partition")
+	}
 
 	// Build a client and verify that the credentials work
 	consulapiConfig := consulapi.DefaultNonPooledConfig()

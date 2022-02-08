@@ -26,7 +26,7 @@ func (c *Config) APIConfig() *consulapi.Config {
 // the Consul version used will be given by the environment variable
 // CONSUL_DOCKER_VERSION, or if that's empty, whatever we've hardcoded as the
 // the latest Consul version.
-func PrepareTestContainer(t *testing.T, repo string, version string) (func(), *Config) {
+func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func(), *Config) {
 	if retAddress := os.Getenv("CONSUL_HTTP_ADDR"); retAddress != "" {
 		shp, err := docker.NewServiceHostPortParse(retAddress)
 		if err != nil {
@@ -49,16 +49,19 @@ func PrepareTestContainer(t *testing.T, repo string, version string) (func(), *C
 	}
 
 	name := "consul"
-	isEnterprise := false
+	repo := "consul"
 	var envVars []string
-
 	// If running the enterprise container, set the appropriate values below.
-	if strings.HasSuffix(repo, "enterprise") {
+	if isEnterprise {
 		version += "-ent"
-		name += "-enterprise"
-		isEnterprise = true
-		license, _ := os.LookupEnv("CONSUL_LICENSE")
+		name = "consul-enterprise"
+		repo = "hashicorp/consul-enterprise"
+		license, hasLicense := os.LookupEnv("CONSUL_LICENSE")
 		envVars = append(envVars, "CONSUL_LICENSE="+license)
+
+		if !hasLicense {
+			t.Fatalf("Failed to find enterprise license")
+		}
 	}
 
 	if dockerRepo, hasEnvRepo := os.LookupEnv("CONSUL_DOCKER_REPO"); hasEnvRepo {
