@@ -25,13 +25,13 @@ module('Integration | Component | client count current', function (hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('Tracking is disabled');
   });
 
-  test('it shows zeroes when enabled and no data', async function (assert) {
+  test('it shows empty state when enabled and no data', async function (assert) {
     Object.assign(this.model.config, { enabled: 'On', queriesAvailable: false });
     await render(hbs`
     <div id="modal-wormhole"></div>
     <Clients::Current @model={{this.model}} />`);
-    assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty state does not exist');
-    assert.dom('[data-test-usage-stats]').exists('Client count data exists');
+    assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
+    assert.dom('[data-test-empty-state-title]').hasText('No partial history');
   });
 
   test('it shows zeroed data when enabled but no counts', async function (assert) {

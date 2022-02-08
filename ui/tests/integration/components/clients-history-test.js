@@ -38,6 +38,24 @@ module('Integration | Component | client count history', function (hooks) {
   test('it shows empty state when no data for queried date range', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true });
     Object.assign(this.model, { startTimeFromLicense: ['2021', 5] });
+    Object.assign(this.model.activity, {
+      byNamespace: [
+        {
+          label: 'namespace24/',
+          clients: 8301,
+          entity_clients: 4387,
+          non_entity_clients: 3914,
+          mounts: [],
+        },
+        {
+          label: 'namespace88/',
+          clients: 7752,
+          entity_clients: 3632,
+          non_entity_clients: 4120,
+          mounts: [],
+        },
+      ],
+    });
     await render(hbs`
     <div id="modal-wormhole"></div>
     <Clients::History @model={{this.model}} />`);
