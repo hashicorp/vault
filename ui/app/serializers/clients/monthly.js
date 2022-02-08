@@ -49,6 +49,9 @@ export default class MonthlySerializer extends ApplicationSerializer {
   }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    if (payload.id === 'no-data') {
+      return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
+    }
     let response_timestamp = formatISO(new Date());
     let transformedPayload = {
       ...payload,

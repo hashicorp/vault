@@ -9,52 +9,61 @@ module('Integration | Component | client count current', function (hooks) {
   hooks.beforeEach(function () {
     let model = EmberObject.create({
       config: {},
-      activity: {},
+      monthly: {},
+      versionHistory: [],
     });
     this.model = model;
-    this.tab = 'current';
   });
 
   test('it shows empty state when disabled and no data available', async function (assert) {
     Object.assign(this.model.config, { enabled: 'Off', queriesAvailable: false });
-    await render(hbs`<Clients::History @tab={{this.tab}} @model={{this.model}} />`);
-
+    await render(hbs`
+    <div id="modal-wormhole"></div>
+    <Clients::Dashboard @model={{this.model}} />
+    <Clients::Current @model={{this.model}} />
+    `);
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
     assert.dom('[data-test-empty-state-title]').hasText('Tracking is disabled');
   });
 
-  test('it shows zeroes when enabled and no data', async function (assert) {
+  test('it shows empty state when enabled and no data', async function (assert) {
     Object.assign(this.model.config, { enabled: 'On', queriesAvailable: false });
-    Object.assign(this.model.activity, {
-      clients: 0,
-      distinct_entities: 0,
-      non_entity_tokens: 0,
-    });
-    await render(hbs`<Clients::History @tab={{this.tab}} @model={{this.model}} />`);
-    assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty state does not exist');
-    assert.dom('[data-test-client-count-stats]').exists('Client count data exists');
+    await render(hbs`
+    <div id="modal-wormhole"></div>
+    <Clients::Current @model={{this.model}} />`);
+    assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
+    assert.dom('[data-test-empty-state-title]').hasText('No partial history');
   });
 
   test('it shows zeroed data when enabled but no counts', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true, enabled: 'On' });
-    await render(hbs`<Clients::History @tab={{this.tab}} @model={{this.model}} />`);
-    assert.dom('[data-test-pricing-metrics-form]').doesNotExist('Date range component should not exists');
+    Object.assign(this.model.monthly, {
+      total: { clients: 0, entity_clients: 0, non_entity_clients: 0 },
+    });
+    await render(hbs`
+    <div id="modal-wormhole"></div>
+    <Clients::Current @model={{this.model}} />
+    `);
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty state does not exist');
-    assert.dom('[data-test-client-count-stats]').exists('Client count data exists');
+    assert.dom('[data-test-usage-stats]').exists('Client count data exists');
     assert.dom('[data-test-stat-text-container]').includesText('0');
   });
 
   test('it shows data when available from query', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true, configPath: { canRead: true } });
-    Object.assign(this.model.activity, {
-      clients: 1234,
-      distinct_entities: 234,
-      non_entity_tokens: 232,
+    Object.assign(this.model.monthly, {
+      total: {
+        clients: 1234,
+        entity_clients: 234,
+        non_entity_clients: 232,
+      },
     });
 
-    await render(hbs`<Clients::History @tab={{this.tab}} @model={{this.model}} />`);
+    await render(hbs`
+    <div id="modal-wormhole"></div>
+    <Clients::Current @model={{this.model}} />`);
     assert.dom('[data-test-pricing-metrics-form]').doesNotExist('Date range component should not exists');
     assert.dom('[data-test-tracking-disabled]').doesNotExist('Flash message does not exists');
-    assert.dom('[data-test-client-count-stats]').exists('Client count data exists');
+    assert.dom('[data-test-usage-stats]').exists('Client count data exists');
   });
 });

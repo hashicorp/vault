@@ -450,6 +450,10 @@
         "path": "system/license"
       },
       {
+        "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
+        "path": "system/managed-keys"
+      },
+      {
         "title": "<code>/sys/metrics</code>",
         "path": "system/metrics"
       },

@@ -1,4 +1,4 @@
-<div class="chart-wrapper">
+<div class="chart-wrapper" data-test-usage-stats>
   <div class="chart-header has-header-link has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">{{@title}}</h2>
@@ -12,7 +12,7 @@
   </div>
 
   <div class="columns">
-    <div class="column" data-test-client-count-stats>
+    <div class="column">
       <StatText
         @label="Total clients"
         @value={{or @totalUsageCounts.clients "0"}}

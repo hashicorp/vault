@@ -7,12 +7,17 @@ export default class Current extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  @tracked namespaceArray = this.args.model.monthly?.byNamespace.map((namespace) => {
+  @tracked selectedNamespace = null;
+  @tracked namespaceArray = this.byNamespaceCurrent.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
-  @tracked selectedNamespace = null;
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0
-  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled; // returns RFC3339 timestamp
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
+
+  // API client count data by namespace for current/partial month
+  get byNamespaceCurrent() {
+    return this.args.model.monthly?.byNamespace || [];
+  }
 
   get countsIncludeOlderData() {
     let firstUpgrade = this.args.model.versionHistory[0];
@@ -22,15 +27,6 @@ export default class Current extends Component {
     let versionDate = new Date(firstUpgrade.timestampInstalled);
     // compare against this month and this year to show message or not.
     return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
-  }
-
-  get licenseStartDate() {
-    return this.args.licenseStartDate || null;
-  }
-
-  // API client count data by namespace for current/partial month
-  get byNamespaceCurrent() {
-    return this.args.model.monthly?.byNamespace || null;
   }
 
   // top level TOTAL client counts for current/partial month
