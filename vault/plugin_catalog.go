@@ -41,19 +41,19 @@ type PluginCatalog struct {
 	directory       string
 	logger          log.Logger
 
-	// multiplexedClients holds plugin process connections by plugin name
+	// externalPlugins holds plugin process connections by plugin name
 	//
 	// This allows plugins that suppport multiplexing to use a single grpc
 	// connection to communicate with multiple "backends". Each backend
 	// configuration using the same plugin will be routed to the existing
 	// plugin process.
-	multiplexedClients map[string]*MultiplexedClient
+	externalPlugins map[string]*externalPlugin
 
 	lock sync.RWMutex
 }
 
-// PluginClient represents a connection to a plugin process
-type PluginClient struct {
+// pluginClient represents a connection to a plugin process
+type pluginClient struct {
 	logger log.Logger
 
 	// id is the connection ID
@@ -67,16 +67,16 @@ type PluginClient struct {
 	cleanupFunc func() error
 }
 
-// MultiplexedClient holds client connections for multiplexed and
+// externalPlugin holds client connections for multiplexed and
 // non-multiplexed plugin processes
-type MultiplexedClient struct {
+type externalPlugin struct {
 	logger log.Logger
 
 	// name is the plugin name
 	name string
 
 	// connections holds client connections by ID
-	connections map[string]*PluginClient
+	connections map[string]*pluginClient
 }
 
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
@@ -124,12 +124,12 @@ func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc,
 	return d.ClientConn.NewStream(idCtx, desc, method, opts...)
 }
 
-func (p *PluginClient) Conn() grpc.ClientConnInterface {
+func (p *pluginClient) Conn() grpc.ClientConnInterface {
 	return p.clientConn
 }
 
 // MultiplexingSupport determines if a plugin client supports multiplexing
-func (p *PluginClient) MultiplexingSupport() (bool, error) {
+func (p *pluginClient) MultiplexingSupport() (bool, error) {
 	if p.client == nil {
 		return false, fmt.Errorf("plugin client is nil")
 	}
@@ -139,13 +139,13 @@ func (p *PluginClient) MultiplexingSupport() (bool, error) {
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
 // the plugin client and the PluginCatalog. This implements the
 // plugin.ClientProtocol interface.
-func (p *PluginClient) Close() error {
+func (p *pluginClient) Close() error {
 	p.logger.Debug("cleaning up plugin client connection", "id", p.id)
 	return p.cleanupFunc()
 }
 
 // Dispense implements the plugin.ClientProtocol interface.
-func (p *PluginClient) Dispense(name string) (interface{}, error) {
+func (p *pluginClient) Dispense(name string) (interface{}, error) {
 	pluginInstance, err := p.protocol.Dispense(name)
 	if err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func (p *PluginClient) Dispense(name string) (interface{}, error) {
 }
 
 // Ping implements the plugin.ClientProtocol interface.
-func (p *PluginClient) Ping() error {
+func (p *pluginClient) Ping() error {
 	err := p.protocol.Ping()
 	if err != nil {
 		return err
@@ -164,58 +164,58 @@ func (p *PluginClient) Ping() error {
 
 func (c *PluginCatalog) removePluginClient(name, id string) error {
 	var err error
-	mpc, ok := c.multiplexedClients[name]
+	extPlugin, ok := c.externalPlugins[name]
 	if !ok {
 		return fmt.Errorf("plugin client not found")
 	}
 
-	pluginClient := mpc.connections[id]
+	pluginClient := extPlugin.connections[id]
 	multiplexingSupport, err := pluginClient.MultiplexingSupport()
 	if err != nil {
 		return err
 	}
 
-	delete(mpc.connections, id)
+	delete(extPlugin.connections, id)
 	if !multiplexingSupport {
 		pluginClient.client.Kill()
 		err = pluginClient.protocol.Close()
 
-		if len(mpc.connections) == 0 {
-			delete(c.multiplexedClients, name)
+		if len(extPlugin.connections) == 0 {
+			delete(c.externalPlugins, name)
 		}
-	} else if len(mpc.connections) == 0 {
+	} else if len(extPlugin.connections) == 0 {
 		pluginClient.client.Kill()
 		err = pluginClient.protocol.Close()
-		delete(c.multiplexedClients, name)
+		delete(c.externalPlugins, name)
 	}
 	return err
 }
 
-func (c *PluginCatalog) getMultiplexedClient(pluginName string) *MultiplexedClient {
-	if mpc, ok := c.multiplexedClients[pluginName]; ok {
-		return mpc
+func (c *PluginCatalog) getExternalPlugin(pluginName string) *externalPlugin {
+	if extPlugin, ok := c.externalPlugins[pluginName]; ok {
+		return extPlugin
 	}
 
-	return c.newMultiplexedClient(pluginName)
+	return c.newExternalPlugin(pluginName)
 }
 
-func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClient {
-	if c.multiplexedClients == nil {
-		c.multiplexedClients = make(map[string]*MultiplexedClient)
+func (c *PluginCatalog) newExternalPlugin(pluginName string) *externalPlugin {
+	if c.externalPlugins == nil {
+		c.externalPlugins = make(map[string]*externalPlugin)
 	}
 
-	mpc := &MultiplexedClient{
-		connections: make(map[string]*PluginClient),
+	extPlugin := &externalPlugin{
+		connections: make(map[string]*pluginClient),
 		logger:      c.logger,
 	}
 
-	c.multiplexedClients[pluginName] = mpc
-	return mpc
+	c.externalPlugins[pluginName] = extPlugin
+	return extPlugin
 }
 
 // NewPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
+func (c *PluginCatalog) NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
 	c.lock.Lock()
 	pc, err := c.newPluginClient(ctx, sys, pluginRunner, config)
 	c.lock.Unlock()
@@ -224,22 +224,22 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, sys pluginutil.Runn
 
 // newPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*PluginClient, error) {
-	mpc := c.getMultiplexedClient(pluginRunner.Name)
+func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
+	extPlugin := c.getExternalPlugin(pluginRunner.Name)
 
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
 	}
 
-	pc := &PluginClient{
+	pc := &pluginClient{
 		id:     id,
 		logger: c.logger,
 		cleanupFunc: func() error {
 			return c.removePluginClient(pluginRunner.Name, id)
 		},
 	}
-	if !pluginRunner.MultiplexingSupport || len(mpc.connections) == 0 {
+	if !pluginRunner.MultiplexingSupport || len(extPlugin.connections) == 0 {
 		c.logger.Debug("spawning a new plugin process", "id", id)
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.Runner(sys),
@@ -258,8 +258,8 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.Runn
 		c.logger.Debug("returning existing plugin client for multiplexed plugin", "id", id)
 
 		// get the first client, since they are all the same
-		for k := range mpc.connections {
-			pc.client = mpc.connections[k].client
+		for k := range extPlugin.connections {
+			pc.client = extPlugin.connections[k].client
 			break
 		}
 
@@ -288,10 +288,10 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.Runn
 		pc.clientConn = clientConn
 	}
 	pc.protocol = rpcClient
-	mpc.connections[id] = pc
-	mpc.name = pluginRunner.Name
+	extPlugin.connections[id] = pc
+	extPlugin.name = pluginRunner.Name
 
-	return mpc.connections[id], nil
+	return extPlugin.connections[id], nil
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
