@@ -292,9 +292,10 @@ export default Service.extend({
   },
 
   setLastFetch(timestamp) {
+    const now = this.now();
     this.set('lastFetch', timestamp);
-    // if expiration was allowed we want to go ahead and renew here
-    if (this.allowExpiration) {
+    // if expiration was allowed and we're over half the ttl we want to go ahead and renew here
+    if (this.allowExpiration && now >= this.renewAfterEpoch) {
       this.renew();
     }
     this.set('allowExpiration', false);
