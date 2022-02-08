@@ -99,18 +99,20 @@
       {{#if @isLoading}}
         <LayoutLoading />
       {{else}}
-        {{#if this.totalClientsData}}
+        {{#if this.totalUsageCounts}}
           <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
-          <Clients::Attribution
-            @chartLegend={{this.chartLegend}}
-            @totalClientsData={{this.totalClientsData}}
-            @totalUsageCounts={{this.totalUsageCounts}}
-            @selectedNamespace={{this.selectedNamespace}}
-            @startTimeDisplay={{this.startTimeDisplay}}
-            @endTimeDisplay={{this.endTimeDisplay}}
-            @isDateRange={{this.isDateRange}}
-            @timestamp={{this.responseTimestamp}}
-          />
+          {{#if this.totalClientsData}}
+            <Clients::Attribution
+              @chartLegend={{this.chartLegend}}
+              @totalClientsData={{this.totalClientsData}}
+              @totalUsageCounts={{this.totalUsageCounts}}
+              @selectedNamespace={{this.selectedNamespace}}
+              @startTimeDisplay={{this.startTimeDisplay}}
+              @endTimeDisplay={{this.endTimeDisplay}}
+              @isDateRange={{this.isDateRange}}
+              @timestamp={{this.responseTimestamp}}
+            />
+          {{/if}}
         {{else}}
           <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
