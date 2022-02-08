@@ -8,31 +8,29 @@
       @message="Tracking is disabled and data is not being collected. To turn it on edit the configuration."
     >
       {{#if @model.config.configPath.canUpdate}}
-        <LinkTo @route="vault.cluster.clients.edit">
+        <LinkTo @route="vault.cluster.clients.config">
           Go to configuration
         </LinkTo>
       {{/if}}
     </EmptyState>
   {{else}}
-    {{#if this.totalClientsData}}
-      <div class="is-subtitle-gray has-bottom-margin-m">
-        FILTERS
-        <Toolbar>
-          <ToolbarFilters>
-            <SearchSelect
-              @id="namespace-search-select-monthly"
-              @options={{this.namespaceArray}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{this.selectNamespace}}
-              @placeholder={{"Filter by namespace"}}
-              @displayInherit={{true}}
-            />
-          </ToolbarFilters>
-        </Toolbar>
-      </div>
-    {{/if}}
+    <div class="is-subtitle-gray has-bottom-margin-m">
+      FILTERS
+      <Toolbar>
+        <ToolbarFilters>
+          <SearchSelect
+            @id="namespace-search-select-monthly"
+            @options={{this.namespaceArray}}
+            @selectLimit="1"
+            @disallowNewItems={{true}}
+            @fallbackComponent="input-search"
+            @onChange={{this.selectNamespace}}
+            @placeholder={{"Filter by namespace"}}
+            @displayInherit={{true}}
+          />
+        </ToolbarFilters>
+      </Toolbar>
+    </div>
     {{#if this.countsIncludeOlderData}}
       <AlertBanner @type="warning" @title="Warning">
         {{concat "You upgraded to Vault " this.firstUpgradeVersion " on " (date-format this.upgradeDate "MMMM d, yyyy.")}}
@@ -46,20 +44,24 @@
     {{#if @isLoading}}
       <LayoutLoading />
     {{else}}
-      <Clients::UsageStats
-        @title={{date-format this.responseTimestamp "MMMM"}}
-        @totalUsageCounts={{this.totalUsageCounts}}
-      />
-      {{#if this.totalClientsData}}
-        <Clients::Attribution
-          @chartLegend={{this.chartLegend}}
-          @totalClientsData={{this.totalClientsData}}
+      {{#if this.totalUsageCounts}}
+        <Clients::UsageStats
+          @title={{date-format this.responseTimestamp "MMMM"}}
           @totalUsageCounts={{this.totalUsageCounts}}
-          @selectedNamespace={{this.selectedNamespace}}
-          @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
-          @isDateRange={{false}}
-          @timestamp={{this.responseTimestamp}}
         />
+        {{#if this.totalClientsData}}
+          <Clients::Attribution
+            @chartLegend={{this.chartLegend}}
+            @totalClientsData={{this.totalClientsData}}
+            @totalUsageCounts={{this.totalUsageCounts}}
+            @selectedNamespace={{this.selectedNamespace}}
+            @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
+            @isDateRange={{false}}
+            @timestamp={{this.responseTimestamp}}
+          />
+        {{/if}}
+      {{else}}
+        <EmptyState @title={{concat "No partial history"}} @message="There is no data in the current month yet." />
       {{/if}}
     {{/if}}
   {{/if}}
