@@ -10,6 +10,7 @@ module('Integration | Component | client count current', function (hooks) {
     let model = EmberObject.create({
       config: {},
       monthly: {},
+      versionHistory: [],
     });
     this.model = model;
   });

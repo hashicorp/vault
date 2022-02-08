@@ -11,6 +11,7 @@ module('Integration | Component | client count history', function (hooks) {
     let model = EmberObject.create({
       config: {},
       activity: {},
+      versionHistory: [],
     });
     this.model = model;
   });

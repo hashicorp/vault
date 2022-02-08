@@ -27,11 +27,11 @@ export default class ClientsRoute extends Route {
       // swallowing error so activity can show if no config permissions
       return {};
     });
-    let versionHistory = await this.getVersionHistory();
+
     return RSVP.hash({
       config,
       monthly: await this.store.queryRecord('clients/monthly', {}),
-      versionHistory,
+      versionHistory: this.getVersionHistory(),
     });
   }
 
@@ -39,9 +39,11 @@ export default class ClientsRoute extends Route {
   async loading(transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
     let controller = this.controllerFor('vault.cluster.clients.index');
-    controller.currentlyLoading = true;
-    transition.promise.finally(function () {
-      controller.currentlyLoading = false;
-    });
+    if (controller) {
+      controller.currentlyLoading = true;
+      transition.promise.finally(function () {
+        controller.currentlyLoading = false;
+      });
+    }
   }
 }

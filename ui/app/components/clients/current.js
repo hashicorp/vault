@@ -16,7 +16,7 @@ export default class Current extends Component {
 
   // API client count data by namespace for current/partial month
   get byNamespaceCurrent() {
-    return this.args.model.monthly?.byNamespace || null;
+    return this.args.model.monthly?.byNamespace || [];
   }
 
   get countsIncludeOlderData() {

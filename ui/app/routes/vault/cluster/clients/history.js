@@ -60,7 +60,7 @@ export default class HistoryRoute extends Route {
       activity,
       startTimeFromLicense: this.parseRFC3339(license.startTime),
       endTimeFromResponse: activity ? this.parseRFC3339(activity.endTime) : null,
-      versionHistory: await this.getVersionHistory(),
+      versionHistory: this.getVersionHistory(),
     });
   }
 
@@ -68,9 +68,11 @@ export default class HistoryRoute extends Route {
   async loading(transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
     let controller = this.controllerFor('vault.cluster.clients.history');
-    controller.set('currentlyLoading', true);
-    transition.promise.finally(function () {
-      controller.set('currentlyLoading', false);
-    });
+    if (controller) {
+      controller.currentlyLoading = true;
+      transition.promise.finally(function () {
+        controller.currentlyLoading = false;
+      });
+    }
   }
 }
