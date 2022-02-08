@@ -48,6 +48,7 @@ export default class Dashboard extends Component {
   @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0 // ARG TODO USE in warning message
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -103,12 +104,11 @@ export default class Dashboard extends Component {
   }
 
   get upgradeDate() {
-    let keyInfoObject = this.args.model.versionHistory.keyInfo;
-    if (!keyInfoObject) {
+    let firstUpgrade = this.args.model.versionHistory[0];
+    if (!firstUpgrade) {
       return false;
     }
-    let earliestUpgradeVersion = Object.keys(keyInfoObject)[0];
-    let versionDate = new Date(keyInfoObject[earliestUpgradeVersion].timestamp_installed);
+    let versionDate = new Date(firstUpgrade.timestampInstalled);
     // compare against this startTimeFromResponse to show message or not.
     return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
   }

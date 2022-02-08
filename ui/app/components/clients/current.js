@@ -11,14 +11,14 @@ export default class Current extends Component {
     return { name: namespace['label'], id: namespace['label'] };
   });
   @tracked selectedNamespace = null;
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0 // ARG TODO USE in warning message
 
   get upgradeDate() {
-    let keyInfoObject = this.args.model.versionHistory.keyInfo;
-    if (!keyInfoObject) {
+    let firstUpgrade = this.args.model.versionHistory[0];
+    if (!firstUpgrade) {
       return false;
     }
-    let earliestUpgradeVersion = Object.keys(keyInfoObject)[0]; // key name here will change, but we want the first one as this indicates when they upgraded to 1.9 or above
-    let versionDate = new Date(keyInfoObject[earliestUpgradeVersion].timestamp_installed);
+    let versionDate = new Date(firstUpgrade.timestampInstalled);
     // compare against this month and this year to show message or not.
     return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
   }
