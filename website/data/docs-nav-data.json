@@ -1829,6 +1829,10 @@
         "path": "enterprise/control-groups"
       },
       {
+        "title": "Managed Keys",
+        "path": "enterprise/managed-keys"
+      },
+      {
         "title": "MFA",
         "routes": [
           {
