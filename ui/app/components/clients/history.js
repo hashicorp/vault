@@ -47,7 +47,7 @@ export default class History extends Component {
   @tracked startYear = null;
   @tracked selectedNamespace = null;
   @tracked noActivityDate = '';
-  @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
+  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
 
