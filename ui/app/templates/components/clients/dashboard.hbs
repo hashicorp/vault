@@ -76,7 +76,7 @@
           </ToolbarFilters>
         </Toolbar>
       </div>
-      {{#if this.upgradeDate}}
+      {{#if this.countsIncludeOlderData}}
         <AlertBanner @type="warning" @title="Warning">
           <ul>
             {{#if this.responseRangeDiffMessage}}

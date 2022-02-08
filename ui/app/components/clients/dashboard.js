@@ -48,7 +48,8 @@ export default class Dashboard extends Component {
   @tracked namespaceArray = this.args.model.activity?.byNamespace.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0 // ARG TODO USE in warning message
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled; // returns RFC3339 timestamp
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
@@ -103,7 +104,7 @@ export default class Dashboard extends Component {
     return this.args.model.activity?.responseTimestamp;
   }
 
-  get upgradeDate() {
+  get countsIncludeOlderData() {
     let firstUpgrade = this.args.model.versionHistory[0];
     if (!firstUpgrade) {
       return false;

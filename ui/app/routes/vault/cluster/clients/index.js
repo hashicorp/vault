@@ -36,7 +36,7 @@ export default Route.extend(ClusterRoute, {
       });
       return arrayOfModels;
     } catch (e) {
-      return e;
+      return null;
     }
   },
 
