@@ -24,7 +24,7 @@ func (c *VersionHistoryCommand) Synopsis() string {
 
 func (c *VersionHistoryCommand) Help() string {
 	helpText := `
-Usage: vault version
+Usage: vault version-history
 
   Prints the version history of the target Vault server.
 
