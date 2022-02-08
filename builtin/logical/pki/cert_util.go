@@ -354,9 +354,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				// is enabled
 				if data.role.AllowBareDomains &&
 					(strings.EqualFold(name, currDomain) ||
-						(isEmail && strings.EqualFold(emailDomain, currDomain)) ||
-						// Handle the use case of AllowedDomain being an email address
-						(isEmail && strings.EqualFold(name, currDomain))) {
+						(isEmail && strings.EqualFold(emailDomain, currDomain))) {
 					valid = true
 					break
 				}
