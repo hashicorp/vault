@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth } from 'date-fns';
+import { isSameMonth, isAfter } from 'date-fns';
 
 export default class History extends Component {
   // TODO CMB alphabetize and delete unused vars (particularly @tracked)
@@ -50,6 +50,8 @@ export default class History extends Component {
   @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
@@ -103,6 +105,17 @@ export default class History extends Component {
   get responseTimestamp() {
     return this.getActivityResponse.responseTimestamp;
   }
+
+  get countsIncludeOlderData() {
+    let firstUpgrade = this.args.model.versionHistory[0];
+    if (!firstUpgrade) {
+      return false;
+    }
+    let versionDate = new Date(firstUpgrade.timestampInstalled);
+    // compare against this startTimeFromResponse to show message or not.
+    return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
+  }
+
   // HELPERS
   areArraysTheSame(a1, a2) {
     return (

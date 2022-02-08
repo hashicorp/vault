@@ -1,28 +1,32 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { isAfter, startOfMonth } from 'date-fns';
 import { action } from '@ember/object';
 export default class Current extends Component {
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  @tracked namespaceArray = this.args.model.monthly?.byNamespace.map((namespace) => {
+  @tracked selectedNamespace = null;
+  @tracked namespaceArray = this.byNamespaceCurrent.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
-  @tracked selectedNamespace = null;
-
-  // TODO CMB get from model
-  get upgradeDate() {
-    return this.args.upgradeDate || null;
-  }
-
-  get licenseStartDate() {
-    return this.args.licenseStartDate || null;
-  }
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
 
   // API client count data by namespace for current/partial month
   get byNamespaceCurrent() {
     return this.args.model.monthly?.byNamespace || null;
+  }
+
+  get countsIncludeOlderData() {
+    let firstUpgrade = this.args.model.versionHistory[0];
+    if (!firstUpgrade) {
+      return false;
+    }
+    let versionDate = new Date(firstUpgrade.timestampInstalled);
+    // compare against this month and this year to show message or not.
+    return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
   }
 
   // top level TOTAL client counts for current/partial month

@@ -3,10 +3,35 @@ import RSVP from 'rsvp';
 import { action } from '@ember/object';
 
 export default class ClientsRoute extends Route {
-  model() {
+  async getVersionHistory() {
+    try {
+      let arrayOfModels = [];
+      let response = await this.store.findAll('clients/version-history'); // returns a class with nested models
+      response.forEach((model) => {
+        arrayOfModels.push({
+          id: model.id,
+          perviousVersion: model.previousVersion,
+          timestampInstalled: model.timestampInstalled,
+        });
+      });
+      return arrayOfModels;
+    } catch (e) {
+      console.debug(e);
+      return [];
+    }
+  }
+
+  async model() {
+    let config = await this.store.queryRecord('clients/config', {}).catch((e) => {
+      console.debug(e);
+      // swallowing error so activity can show if no config permissions
+      return {};
+    });
+    let versionHistory = await this.getVersionHistory();
     return RSVP.hash({
-      config: this.store.queryRecord('clients/config', {}),
-      monthly: this.store.queryRecord('clients/monthly', {}),
+      config,
+      monthly: await this.store.queryRecord('clients/monthly', {}),
+      versionHistory,
     });
   }
 
@@ -14,9 +39,9 @@ export default class ClientsRoute extends Route {
   async loading(transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
     let controller = this.controllerFor('vault.cluster.clients.index');
-    controller.set('currentlyLoading', true);
+    controller.currentlyLoading = true;
     transition.promise.finally(function () {
-      controller.set('currentlyLoading', false);
+      controller.currentlyLoading = false;
     });
   }
 }
