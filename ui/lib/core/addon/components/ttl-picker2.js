@@ -8,7 +8,7 @@
  * ```js
  * <TtlPicker2 @onChange={{handleChange}} @time={{defaultTime}} @unit={{defaultUnit}}/>
  * ```
- * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}.
+ * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
  * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle.
  * @param helperTextDisabled="Allow tokens to be used indefinitely" {String} - This helper text is shown under the label when the toggle is switched off
  * @param helperTextEnabled="Disable the use of the token after" {String} - This helper text is shown under the label when the toggle is switched on
@@ -36,6 +36,11 @@ const secondsMap = {
 const validUnits = ['s', 'm', 'h', 'd'];
 const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
+};
+const goSafeConvertFromSeconds = (seconds, unit) => {
+  // Go only accepts s, m, or h units
+  let u = unit === 'd' ? 'h' : unit;
+  return convertFromSeconds(seconds, u) + u;
 };
 
 export default TtlForm.extend({
@@ -111,6 +116,7 @@ export default TtlForm.extend({
       enabled: enableTTL,
       seconds,
       timeString: time + unit,
+      goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
     };
     this.onChange(ttl);
   },
