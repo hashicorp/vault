@@ -9,13 +9,11 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/version"
 )
 
 type PluginClientConfig struct {
 	Name            string
-	PluginType      consts.PluginType
 	PluginSets      map[int]plugin.PluginSet
 	HandshakeConfig plugin.HandshakeConfig
 	Logger          log.Logger

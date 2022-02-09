@@ -58,7 +58,7 @@ type SystemView interface {
 
 	// NewPluginClient returns a client for managing the lifecycle of plugin
 	// processes
-	NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginInstance, error)
+	NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error)
 
 	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
@@ -156,7 +156,7 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }
 
-func (d StaticSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginInstance, error) {
+func (d StaticSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error) {
 	return nil, errors.New("NewPluginClient is not implemented in StaticSystemView")
 }
 
