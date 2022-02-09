@@ -416,6 +416,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"code_challenge_method": {
 					Type:        framework.TypeString,
 					Description: "The method that was used to derive the code challenge. The following methods are supported: 'S256', 'plain'. Defaults to 'plain'.",
+					Default:     codeChallengeMethodPlain,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
