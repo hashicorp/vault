@@ -127,8 +127,8 @@ require (
 	github.com/kr/pretty v0.3.0
 	github.com/kr/text v0.2.0
 	github.com/lib/pq v1.10.3
-	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mattn/go-colorable v0.1.12
+	github.com/mholt/archiver/v3 v3.5.1
 	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/copystructure v1.0.0
