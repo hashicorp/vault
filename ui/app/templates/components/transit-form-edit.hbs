@@ -3,17 +3,6 @@
     <MessageError @model={{@key}} />
     <NamespaceReminder @mode="edit" @noun="transit key" />
     <div class="field">
-      <TtlPicker2
-        @initialValue={{or @key.autoRotateInterval "1h"}}
-        @initialEnabled={{not (eq @key.autoRotateInterval "0s")}}
-        @label="Auto-rotation interval"
-        @helperTextDisabled="Key will never be automatically rotated"
-        @helperTextEnabled="Key will be automatically rotated every"
-        @onChange={{@handleAutoRotateChange}}
-        @errorMessage={{if @autoRotateInvalid "Duration must be longer than 1 hour"}}
-      />
-    </div>
-    <div class="field">
       <div class="b-checkbox">
         <input
           id="key-allows-delete"
@@ -26,6 +15,17 @@
           Allow deletion
         </label>
       </div>
+    </div>
+    <div class="field">
+      <TtlPicker2
+        @initialValue={{or @key.autoRotateInterval "1h"}}
+        @initialEnabled={{not (eq @key.autoRotateInterval "0s")}}
+        @label="Auto-rotation interval"
+        @helperTextDisabled="Key will never be automatically rotated"
+        @helperTextEnabled="Key will be automatically rotated every"
+        @onChange={{@handleAutoRotateChange}}
+        @errorMessage={{if @autoRotateInvalid "Duration must be longer than 1 hour"}}
+      />
     </div>
     <div class="field">
       <label for="key-min-decrypt-version" class="is-label">Minimum decryption version</label>
