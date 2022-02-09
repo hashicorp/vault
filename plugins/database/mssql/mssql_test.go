@@ -404,6 +404,44 @@ func TestDeleteUserContainedDB(t *testing.T) {
 	assertContainedDBCredsDoNotExist(t, connURL, dbUser)
 }
 
+func TestContainedDBSQLSanitization(t *testing.T) {
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	injectionString := "vaultuser]"
+	dbUser := "vaultuser"
+	initPassword := "p4$sw0rd"
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+
+	db := new()
+
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
+
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLContainedLogin)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
+	}
+
+	assertCredsExist(t, connURL, dbUser, initPassword)
+
+	deleteReq := dbplugin.DeleteUserRequest{
+		Username: injectionString,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err = db.DeleteUser(ctx, deleteReq)
+
+	assert.EqualError(t, err, "mssql: Cannot alter the login 'vaultuser]', because it does not exist or you do not have permission.")
+}
+
 func TestSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
