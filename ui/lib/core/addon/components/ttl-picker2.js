@@ -33,7 +33,6 @@ const secondsMap = {
   h: 3600,
   d: 86400,
 };
-const validUnits = ['s', 'm', 'h', 'd'];
 const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
 };
@@ -79,12 +78,18 @@ export default TtlForm.extend({
     } else {
       try {
         const seconds = Duration.parse(value).seconds();
-        const lastDigit = value.toString().substring(value.length - 1);
-        if (validUnits.indexOf(lastDigit) >= 0 && lastDigit !== 's') {
-          time = convertFromSeconds(seconds, lastDigit);
-          unit = lastDigit;
-        } else {
-          time = seconds;
+        time = seconds;
+        // get largest unit with no remainder
+        if (seconds % secondsMap.d === 0) {
+          unit = 'd';
+        } else if (seconds % secondsMap.h === 0) {
+          unit = 'h';
+        } else if (seconds % secondsMap.m === 0) {
+          unit = 'm';
+        }
+
+        if (unit !== 's') {
+          time = convertFromSeconds(seconds, unit);
         }
       } catch (e) {
         // if parsing fails leave as default 30s
