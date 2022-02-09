@@ -48,6 +48,7 @@ type PluginCatalog struct {
 	// configuration using the same plugin will be routed to the existing
 	// plugin process.
 	externalPlugins map[string]*externalPlugin
+	mlockPlugins    bool
 
 	lock sync.RWMutex
 }
@@ -79,12 +80,13 @@ type externalPlugin struct {
 	connections map[string]*pluginClient
 }
 
-func (c *Core) setupPluginCatalog(ctx context.Context) error {
+func (c *Core) setupPluginCatalog(ctx context.Context, mlockPlugins bool) error {
 	c.pluginCatalog = &PluginCatalog{
 		builtinRegistry: c.builtinRegistry,
 		catalogView:     NewBarrierView(c.barrier, pluginCatalogPath),
 		directory:       c.pluginDirectory,
 		logger:          c.logger,
+		mlockPlugins:    mlockPlugins,
 	}
 
 	// Run upgrade if untyped plugins exist
@@ -215,18 +217,32 @@ func (c *PluginCatalog) newExternalPlugin(pluginName string) *externalPlugin {
 
 // NewPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
+func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (*pluginClient, error) {
 	c.lock.Lock()
-	pc, err := c.newPluginClient(ctx, sys, pluginRunner, config)
+	pc, err := c.newPluginClient(ctx, config)
 	c.lock.Unlock()
 	return pc, err
 }
 
 // newPluginClient returns a client for managing the lifecycle of a plugin
 // process
-func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
-	extPlugin := c.getExternalPlugin(pluginRunner.Name)
+func (c *PluginCatalog) newPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (*pluginClient, error) {
+	if config.Name == "" {
+		return nil, fmt.Errorf("no name provided for plugin")
+	}
+	if config.PluginType == consts.PluginTypeUnknown {
+		return nil, fmt.Errorf("no plugin type provided")
+	}
 
+	pluginRunner, err := c.get(ctx, config.Name, config.PluginType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup plugin: %w", err)
+	}
+	if pluginRunner == nil {
+		return nil, fmt.Errorf("no plugin found")
+	}
+
+	extPlugin := c.getExternalPlugin(pluginRunner.Name)
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
@@ -239,15 +255,17 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, sys pluginutil.Runn
 			return c.removePluginClient(pluginRunner.Name, id)
 		},
 	}
+
 	if !pluginRunner.MultiplexingSupport || len(extPlugin.connections) == 0 {
 		c.logger.Debug("spawning a new plugin process", "id", id)
 		client, err := pluginRunner.RunConfig(ctx,
-			pluginutil.Runner(sys),
 			pluginutil.PluginSets(config.PluginSets),
 			pluginutil.HandshakeConfig(config.HandshakeConfig),
 			pluginutil.Logger(config.Logger),
 			pluginutil.MetadataMode(config.IsMetadataMode),
-			pluginutil.AutoMTLS(config.AutoMTLS),
+
+			// NewPluginClient only supports AutoMTLS today
+			pluginutil.AutoMTLS(true),
 		)
 		if err != nil {
 			return nil, err
