@@ -146,7 +146,7 @@ export default class History extends Component {
     // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
-      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021) // TODO CHANGE TO ARRAY
+      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
       this.endTimeRequested = null;
     }
     // clicked "Custom End Month" from the calendar-widget
@@ -179,7 +179,7 @@ export default class History extends Component {
       }
       this.queriedActivityResponse = response;
     } catch (e) {
-      // ARG TODO handle error
+      return e;
     }
   }
 

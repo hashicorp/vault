@@ -7,9 +7,10 @@ export default class HistoryRoute extends Route {
     try {
       // on init ONLY make network request if we have a start time from the license
       // otherwise user needs to manually input
-      return start_time ? await this.store.queryRecord('clients/activity', { start_time }) : {};
+      return start_time
+        ? await this.store.queryRecord('clients/activity', { start_time })
+        : { endTime: null };
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   }
@@ -21,7 +22,7 @@ export default class HistoryRoute extends Route {
       return license.startTime || null;
     } catch (e) {
       // if error due to permission denied, return null so user can input date manually
-      return e.httpStatus === 403 ? null : console.debug(e);
+      return null;
     }
   }
 
@@ -63,7 +64,7 @@ export default class HistoryRoute extends Route {
       config,
       activity,
       startTimeFromLicense: this.parseRFC3339(licenseStart),
-      endTimeFromResponse: this.parseRFC3339(activity.endTime),
+      endTimeFromResponse: this.parseRFC3339(activity?.endTime),
       versionHistory: this.getVersionHistory(),
     });
   }
