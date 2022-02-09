@@ -25,6 +25,8 @@
   <TransitFormCreate
     @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
     @setValueOnKey={{action "setValueOnKey" "exportable"}}
+    @autoRotateInvalid={{this.autoRotateInvalid}}
+    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
     @derivedChange={{action "derivedChange" value="target.checked"}}
     @convergentEncryptionChange={{action "convergentEncryptionChange" value="target.checked"}}
     @key={{this.key}}
@@ -34,6 +36,8 @@
   <TransitFormEdit
     @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
     @setValueOnKey={{action "setValueOnKey" "deletionAllowed"}}
+    @autoRotateInvalid={{this.autoRotateInvalid}}
+    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
     @deleteKey={{action "deleteKey"}}
     @key={{this.key}}
     @requestInFlight={{this.requestInFlight}}
