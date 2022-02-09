@@ -75,13 +75,13 @@ Defaults to 'client'.`,
 			"consul_namespace": {
 				Type: framework.TypeString,
 				Description: `Indicates which namespace that the token will be
-created within. Defaults to 'default'.`,
+created within. Defaults to 'default'. Available in Consul 1.7 and above.`,
 			},
 
 			"partition": {
 				Type: framework.TypeString,
 				Description: `Indicates which admin partition that the token
-will be created within. Defaults to 'default'.`,
+will be created within. Defaults to 'default'. Available in Consul 1.11 and above.`,
 			},
 		},
 
