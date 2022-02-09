@@ -35,6 +35,7 @@ export default class History extends Component {
   });
 
   @service store;
+  @service version;
 
   @tracked queriedActivityResponse = null;
   @tracked barChartSelection = false;
