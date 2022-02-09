@@ -219,14 +219,7 @@ func (c *PluginCatalog) newExternalPlugin(pluginName string) *externalPlugin {
 // process
 func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (*pluginClient, error) {
 	c.lock.Lock()
-	pc, err := c.newPluginClient(ctx, config)
-	c.lock.Unlock()
-	return pc, err
-}
-
-// newPluginClient returns a client for managing the lifecycle of a plugin
-// process
-func (c *PluginCatalog) newPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (*pluginClient, error) {
+	defer c.lock.Unlock()
 	if config.Name == "" {
 		return nil, fmt.Errorf("no name provided for plugin")
 	}
@@ -238,6 +231,23 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, config pluginutil.P
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup plugin: %w", err)
 	}
+	if pluginRunner == nil {
+		return nil, fmt.Errorf("no plugin found")
+	}
+	pc, err := c.newPluginClient(ctx, pluginRunner, config)
+	return pc, err
+}
+
+// newPluginClient returns a client for managing the lifecycle of a plugin
+// process
+func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
+	if config.Name == "" {
+		return nil, fmt.Errorf("no name provided for plugin")
+	}
+	if config.PluginType == consts.PluginTypeUnknown {
+		return nil, fmt.Errorf("no plugin type provided")
+	}
+
 	if pluginRunner == nil {
 		return nil, fmt.Errorf("no plugin found")
 	}
@@ -366,13 +376,14 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	config := pluginutil.PluginClientConfig{
 		Name:            pluginRunner.Name,
 		PluginSets:      v5.PluginSets,
+		PluginType:      consts.PluginTypeDatabase,
 		HandshakeConfig: v5.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
 	}
 	// Attempt to run as database V5 or V6 multiplexed plugin
-	v5Client, err := c.newPluginClient(ctx, nil, pluginRunner, config)
+	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// At this point the pluginRunner does not know if multiplexing is
 		// supported or not. So we need to ask the plugin client itself.
