@@ -16,11 +16,11 @@ const vaultVersionPath string = "core/versions/"
 // timestamps were initially stored in local time. UTC should be used. Existing
 // entries can be overwritten via the force flag. A bool will be returned
 // denoting whether the entry was updated
-func (c *Core) storeVersionTimestamp(ctx context.Context, version string, installationTime time.Time, force bool) (bool, error) {
+func (c *Core) storeVersionTimestamp(ctx context.Context, version string, timestampInstalled time.Time, force bool) (bool, error) {
 	key := vaultVersionPath + version
 
 	vaultVersion := VaultVersion{
-		TimestampInstalled: installationTime.UTC(),
+		TimestampInstalled: timestampInstalled.UTC(),
 		Version:            version,
 	}
 
@@ -85,16 +85,16 @@ func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
 // loadVersionTimestamps loads all the vault versions and associated upgrade
 // timestamps from storage. Version timestamps were originally stored in local
 // time. A timestamp that is not in UTC will be rewritten to storage as UTC.
-func (c *Core) loadVersionTimestamps(ctx context.Context) (retErr error) {
+func (c *Core) loadVersionTimestamps(ctx context.Context) error {
 	vaultVersions, err := c.barrier.List(ctx, vaultVersionPath)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve vault versions from storage: %+w", err)
+		return fmt.Errorf("unable to retrieve vault versions from storage: %w", err)
 	}
 
 	for _, versionPath := range vaultVersions {
 		version, err := c.barrier.Get(ctx, vaultVersionPath+versionPath)
 		if err != nil {
-			return fmt.Errorf("unable to read vault version at path %s: err %+w", versionPath, err)
+			return fmt.Errorf("unable to read vault version at path %s: err %w", versionPath, err)
 		}
 		if version == nil {
 			return fmt.Errorf("nil version stored at path %s", versionPath)
@@ -120,12 +120,8 @@ func (c *Core) loadVersionTimestamps(ctx context.Context) (retErr error) {
 			}
 
 			if isUpdated {
-				c.logger.Info("Self-healed pre-existing vault version in UTC",
+				c.logger.Info("self-healed pre-existing vault version in UTC",
 					"vault version", vaultVersion.Version, "UTC time", timestampInstalled)
-			}
-
-			if err != nil {
-				return err
 			}
 		}
 
