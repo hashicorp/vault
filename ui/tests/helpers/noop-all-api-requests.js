@@ -1,13 +1,13 @@
 import Pretender from 'pretender';
 
-const noop = response => {
-  return function() {
+const noop = (response) => {
+  return function () {
     return [response, { 'Content-Type': 'application/json' }, JSON.stringify({})];
   };
 };
 
-export default function(options = { usePassthrough: false }) {
-  return new Pretender(function() {
+export default function (options = { usePassthrough: false }) {
+  return new Pretender(function () {
     let fn = noop();
     if (options.usePassthrough) {
       fn = this.passthrough;

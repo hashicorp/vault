@@ -23,7 +23,7 @@ const (
 	// barrierSealConfigPath is the path used to store our seal configuration.
 	// This value is stored in plaintext, since we must be able to read it even
 	// with the Vault sealed. This is required so that we know how many secret
-	// parts must be used to reconstruct the master key.
+	// parts must be used to reconstruct the unseal key.
 	barrierSealConfigPath = "core/seal-config"
 
 	// recoverySealConfigPath is the path to the recovery key seal
@@ -55,17 +55,14 @@ type Seal interface {
 	SetCore(*Core)
 	Init(context.Context) error
 	Finalize(context.Context) error
-
 	StoredKeysSupported() seal.StoredKeysSupport
 	SealWrapable() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
-
 	BarrierType() string
 	BarrierConfig(context.Context) (*SealConfig, error)
 	SetBarrierConfig(context.Context, *SealConfig) error
 	SetCachedBarrierConfig(*SealConfig)
-
 	RecoveryKeySupported() bool
 	RecoveryType() string
 	RecoveryConfig(context.Context) (*SealConfig, error)
@@ -74,7 +71,6 @@ type Seal interface {
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error
-
 	GetAccess() *seal.Access
 }
 
@@ -132,7 +128,7 @@ func (d *defaultSeal) StoredKeysSupported() seal.StoredKeysSupport {
 	case d.LegacySeal():
 		return seal.StoredKeysNotSupported
 	default:
-		return seal.StoredKeysSupportedShamirMaster
+		return seal.StoredKeysSupportedShamirRoot
 	}
 }
 

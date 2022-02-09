@@ -14,7 +14,7 @@ export default ApplicationSerializer.extend({
     const isCreate = requestType === 'createRecord';
     const backends = isCreate
       ? payload.data
-      : Object.keys(payload.data).map(path => this.normalizeBackend(path, payload.data[path]));
+      : Object.keys(payload.data).map((path) => this.normalizeBackend(path, payload.data[path]));
 
     return this._super(store, primaryModelClass, backends, id, requestType);
   },

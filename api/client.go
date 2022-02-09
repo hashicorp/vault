@@ -20,9 +20,9 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
-	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -132,12 +132,21 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
+	// track of the name of the TLS certs and keys when OutputCurlString is set.
+	// Cloning a client will also not clone those values.
+	curlCACert, curlCAPath        string
+	curlClientCert, curlClientKey string
+
 	// SRVLookup enables the client to lookup the host through DNS SRV lookup
 	SRVLookup bool
 
 	// CloneHeaders ensures that the source client's headers are copied to
 	// its clone.
 	CloneHeaders bool
+
+	// CloneToken from parent.
+	CloneToken bool
 
 	// ReadYourWrites ensures isolated read-after-write semantics by
 	// providing discovered cluster replication states in each request.
@@ -180,7 +189,7 @@ type TLSConfig struct {
 // The default Address is https://127.0.0.1:8200, but this can be overridden by
 // setting the `VAULT_ADDR` environment variable.
 //
-// If an error is encountered, this will return nil.
+// If an error is encountered, the Error field on the returned *Config will be populated with the specific error.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:      "https://127.0.0.1:8200",
@@ -222,9 +231,9 @@ func DefaultConfig() *Config {
 	return config
 }
 
-// ConfigureTLS takes a set of TLS configurations and applies those to the
-// HTTP client.
-func (c *Config) ConfigureTLS(t *TLSConfig) error {
+// configureTLS is a lock free version of ConfigureTLS that can be used in
+// ReadEnvironment where the lock is already hold
+func (c *Config) configureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
@@ -241,11 +250,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 			return err
 		}
 		foundClientCert = true
+		c.curlClientCert = t.ClientCert
+		c.curlClientKey = t.ClientKey
 	case t.ClientCert != "" || t.ClientKey != "":
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || t.CAPath != "" {
+		c.curlCACert = t.CACert
+		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
 			CAFile: t.CACert,
 			CAPath: t.CAPath,
@@ -273,6 +286,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	}
 
 	return nil
+}
+
+// ConfigureTLS takes a set of TLS configurations and applies those to the
+// HTTP client.
+func (c *Config) ConfigureTLS(t *TLSConfig) error {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	return c.configureTLS(t)
 }
 
 // ReadEnvironment reads configuration information from the environment. If
@@ -379,7 +401,7 @@ func (c *Config) ReadEnvironment() error {
 	c.SRVLookup = envSRVLookup
 	c.Limiter = limit
 
-	if err := c.ConfigureTLS(t); err != nil {
+	if err := c.configureTLS(t); err != nil {
 		return err
 	}
 
@@ -547,6 +569,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
+	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
@@ -873,6 +896,26 @@ func (c *Client) CloneHeaders() bool {
 	return c.config.CloneHeaders
 }
 
+// SetCloneToken from parent
+func (c *Client) SetCloneToken(cloneToken bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.CloneToken = cloneToken
+}
+
+// CloneToken gets the configured CloneToken value.
+func (c *Client) CloneToken() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.CloneToken
+}
+
 // SetReadYourWrites to prevent reading stale cluster replication state.
 func (c *Client) SetReadYourWrites(preventStaleReads bool) {
 	c.modifyLock.Lock()
@@ -880,8 +923,10 @@ func (c *Client) SetReadYourWrites(preventStaleReads bool) {
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
 
-	if preventStaleReads && c.replicationStateStore == nil {
-		c.replicationStateStore = &replicationStateStore{}
+	if preventStaleReads {
+		if c.replicationStateStore == nil {
+			c.replicationStateStore = &replicationStateStore{}
+		}
 	} else {
 		c.replicationStateStore = nil
 	}
@@ -902,12 +947,25 @@ func (c *Client) ReadYourWrites() bool {
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
-// clone.
+// clone. The headers are cloned based on the CloneHeaders property of the
+// source config
 //
 // Also, only the client's config is currently copied; this means items not in
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
+	return c.clone(c.config.CloneHeaders)
+}
+
+// CloneWithHeaders creates a new client similar to Clone, with the difference
+// being that the  headers are always cloned
+func (c *Client) CloneWithHeaders() (*Client, error) {
+	return c.clone(true)
+}
+
+// clone creates a new client, with the headers being cloned based on the
+// passed in cloneheaders boolean
+func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
 
@@ -930,6 +988,7 @@ func (c *Client) Clone() (*Client, error) {
 		AgentAddress:     config.AgentAddress,
 		SRVLookup:        config.SRVLookup,
 		CloneHeaders:     config.CloneHeaders,
+		CloneToken:       config.CloneToken,
 		ReadYourWrites:   config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
@@ -937,8 +996,12 @@ func (c *Client) Clone() (*Client, error) {
 		return nil, err
 	}
 
-	if config.CloneHeaders {
+	if cloneHeaders {
 		client.SetHeaders(c.Headers().Clone())
+	}
+
+	if config.CloneToken {
+		client.SetToken(c.token)
 	}
 
 	client.replicationStateStore = c.replicationStateStore
@@ -1078,6 +1141,10 @@ START:
 		LastOutputStringError = &OutputStringError{
 			Request:       req,
 			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
+			ClientCert:    c.config.curlClientCert,
+			ClientKey:     c.config.curlClientKey,
+			ClientCACert:  c.config.curlCACert,
+			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
 	}

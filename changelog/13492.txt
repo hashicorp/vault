@@ -1,0 +1,3 @@
+```release-note:bug
+auth/oidc: Fixes OIDC auth from the Vault UI when using the implicit flow and `form_post` response mode.
+```

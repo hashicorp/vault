@@ -23,7 +23,7 @@ const M = Model.extend({
       'Enable or disable client tracking. Keep in mind that disabling tracking will delete the data for the current month.',
   }),
 
-  configAttrs: computed(function() {
+  configAttrs: computed(function () {
     let keys = ['enabled', 'defaultReportMonths', 'retentionMonths'];
     return expandAttributeMeta(this, keys);
   }),

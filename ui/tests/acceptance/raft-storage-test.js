@@ -5,11 +5,11 @@ import { click, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 
-module('Acceptance | raft storage', function(hooks) {
+module('Acceptance | raft storage', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(async function() {
+  hooks.beforeEach(async function () {
     this.config = this.server.create('configuration', 'withRaft');
     this.server.get('/sys/internal/ui/resultant-acl', () =>
       this.server.create('configuration', { data: { root: true } })
@@ -17,11 +17,11 @@ module('Acceptance | raft storage', function(hooks) {
     this.server.get('/sys/license/features', () => ({}));
     await authPage.login();
   });
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     return logout.visit();
   });
 
-  test('it should render correct number of raft peers', async function(assert) {
+  test('it should render correct number of raft peers', async function (assert) {
     assert.expect(3);
 
     let didRemovePeer = false;
@@ -49,7 +49,7 @@ module('Acceptance | raft storage', function(hooks) {
     assert.dom('[data-raft-row]').exists({ count: 1 }, 'Only raft nodes from response are rendered');
   });
 
-  test('it should remove raft peer', async function(assert) {
+  test('it should remove raft peer', async function (assert) {
     assert.expect(3);
 
     this.server.get('/sys/storage/raft/configuration', () => this.config);
@@ -67,7 +67,7 @@ module('Acceptance | raft storage', function(hooks) {
     assert.dom('[data-raft-row]').exists({ count: 2 }, '2 raft peers render in table');
     await click('[data-raft-row]:nth-child(2) [data-test-popup-menu-trigger]');
     await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button');
+    await click('[data-test-confirm-button]');
     assert.dom('[data-raft-row]').exists({ count: 1 }, 'Raft peer successfully removed');
   });
 });

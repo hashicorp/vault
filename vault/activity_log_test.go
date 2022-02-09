@@ -2,8 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -114,13 +112,16 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	a.fragmentLock.Unlock()
 	const namespace_id = "ns123"
 
-	a.HandleTokenUsage(&logical.TokenEntry{
+	te := &logical.TokenEntry{
 		Path:         "test",
 		Policies:     []string{responseWrappingPolicyName},
 		CreationTime: time.Now().Unix(),
 		TTL:          3600,
 		NamespaceID:  namespace_id,
-	})
+	}
+
+	id, isTWE := te.CreateClientID()
+	a.HandleTokenUsage(te, id, isTWE)
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -128,13 +129,16 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 	a.fragmentLock.Unlock()
 
-	a.HandleTokenUsage(&logical.TokenEntry{
+	teNew := &logical.TokenEntry{
 		Path:         "test",
 		Policies:     []string{controlGroupPolicyName},
 		CreationTime: time.Now().Unix(),
 		TTL:          3600,
 		NamespaceID:  namespace_id,
-	})
+	}
+
+	id, isTWE = teNew.CreateClientID()
+	a.HandleTokenUsage(teNew, id, isTWE)
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -359,13 +363,15 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	tokenEntryOne := logical.TokenEntry{NamespaceID: "ns1_id", Policies: []string{"hi"}}
 	entityEntry := logical.TokenEntry{EntityID: "foo", NamespaceID: "ns1_id", Policies: []string{"hi"}}
 
-	id, _ := a.CreateClientID(&tokenEntryOne)
+	idNonEntity, isTWE := tokenEntryOne.CreateClientID()
 
 	for i := 0; i < 3; i++ {
-		a.HandleTokenUsage(&tokenEntryOne)
+		a.HandleTokenUsage(&tokenEntryOne, idNonEntity, isTWE)
 	}
+
+	idEntity, isTWE := entityEntry.CreateClientID()
 	for i := 0; i < 2; i++ {
-		a.HandleTokenUsage(&entityEntry)
+		a.HandleTokenUsage(&entityEntry, idEntity, isTWE)
 	}
 	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
@@ -394,14 +400,14 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	for _, client := range out.Clients {
 		if client.NonEntity == true {
 			nonEntityTokenFlag = true
-			if client.ClientID != id {
-				t.Fatalf("expected a client ID of %s, but saved instead %s", id, client.ClientID)
+			if client.ClientID != idNonEntity {
+				t.Fatalf("expected a client ID of %s, but saved instead %s", idNonEntity, client.ClientID)
 			}
 		}
 		if client.NonEntity == false {
 			entityTokenFlag = true
-			if client.ClientID != "foo" {
-				t.Fatalf("expected a client ID of %s, but saved instead %s", "foo", client.ClientID)
+			if client.ClientID != idEntity {
+				t.Fatalf("expected a client ID of %s, but saved instead %s", idEntity, client.ClientID)
 			}
 		}
 	}
@@ -1517,65 +1523,6 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	if !ActiveEntitiesEqual(activeClients, expectedActive.Clients) {
 		// we expect activeClients to be loaded for the entire month
 		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Clients, activeClients)
-	}
-}
-
-// TestCreateClientID verifies that CreateClientID uses the entity ID for a token
-// entry if one exists, and creates an appropriate client ID otherwise.
-func TestCreateClientID(t *testing.T) {
-	entry := logical.TokenEntry{NamespaceID: "namespaceFoo", Policies: []string{"bar", "baz", "foo", "banana"}}
-	activityLog := ActivityLog{}
-	id, isTWE := activityLog.CreateClientID(&entry)
-	if !isTWE {
-		t.Fatalf("TWE token should return true value in isTWE bool")
-	}
-	expectedIDPlaintext := "banana" + string(sortedPoliciesTWEDelimiter) + "bar" +
-		string(sortedPoliciesTWEDelimiter) + "baz" +
-		string(sortedPoliciesTWEDelimiter) + "foo" + string(clientIDTWEDelimiter) + "namespaceFoo"
-
-	hashed := sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID := base64.StdEncoding.EncodeToString(hashed[:])
-	if expectedID != id {
-		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
-	}
-	// Test with entityID
-	entry = logical.TokenEntry{EntityID: "entityFoo", NamespaceID: "namespaceFoo", Policies: []string{"bar", "baz", "foo", "banana"}}
-	id, isTWE = activityLog.CreateClientID(&entry)
-	if isTWE {
-		t.Fatalf("token with entity should return false value in isTWE bool")
-	}
-	if id != "entityFoo" {
-		t.Fatalf("client ID should be entity ID")
-	}
-
-	// Test without namespace
-	entry = logical.TokenEntry{Policies: []string{"bar", "baz", "foo", "banana"}}
-	id, isTWE = activityLog.CreateClientID(&entry)
-	if !isTWE {
-		t.Fatalf("TWE token should return true value in isTWE bool")
-	}
-	expectedIDPlaintext = "banana" + string(sortedPoliciesTWEDelimiter) + "bar" +
-		string(sortedPoliciesTWEDelimiter) + "baz" +
-		string(sortedPoliciesTWEDelimiter) + "foo" + string(clientIDTWEDelimiter)
-
-	hashed = sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID = base64.StdEncoding.EncodeToString(hashed[:])
-	if expectedID != id {
-		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
-	}
-
-	// Test without policies
-	entry = logical.TokenEntry{NamespaceID: "namespaceFoo"}
-	id, isTWE = activityLog.CreateClientID(&entry)
-	if !isTWE {
-		t.Fatalf("TWE token should return true value in isTWE bool")
-	}
-	expectedIDPlaintext = "namespaceFoo"
-
-	hashed = sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID = base64.StdEncoding.EncodeToString(hashed[:])
-	if expectedID != id {
-		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
 	}
 }
 
@@ -2830,7 +2777,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 	}
 }
 
-//TestActivityLog_PrecomputeNonEntityTokensWithID is the same test as
+// TestActivityLog_PrecomputeNonEntityTokensWithID is the same test as
 // TestActivityLog_Precompute, except all the clients are tokens without
 // entities. This ensures the deduplication logic and separation logic between
 // entities and TWE clients is correct.
@@ -3435,7 +3382,6 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 		if int(entityCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
 			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(entityCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
-
 		}
 		if int(tokenCounts[clientCount.NamespaceID]) != clientCount.Counts.NonEntityTokens {
 			t.Errorf("bad token count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(tokenCounts[clientCount.NamespaceID]), clientCount.Counts.NonEntityTokens)

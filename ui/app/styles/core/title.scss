@@ -16,3 +16,9 @@
 .form-section .title {
   margin-bottom: $spacing-s;
 }
+
+.is-subtitle-gray {
+  text-transform: uppercase;
+  font-size: $size-7;
+  color: $ui-gray-500;
+}

@@ -2,14 +2,11 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"net/http"
 	"net/url"
 	"sort"
@@ -403,7 +400,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"nonce": {
 					Type:        framework.TypeString,
 					Description: "The value that will be returned in the ID token nonce claim after a token exchange.",
-					Required:    true,
 				},
 				"max_age": {
 					Type:        framework.TypeInt,
@@ -793,9 +789,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 		}
 
 		for key := range tmp {
-			if strutil.StrListContains(requiredClaims, key) {
+			if strutil.StrListContains(reservedClaims, key) {
 				return logical.ErrorResponse(`top level key %q not allowed. Restricted keys: %s`,
-					key, strings.Join(requiredClaims, ", ")), nil
+					key, strings.Join(reservedClaims, ", ")), nil
 			}
 		}
 	}
@@ -1424,7 +1420,7 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 
 	// Collect the key IDs
 	var keyIDs []string
-	for name, _ := range keyNames {
+	for name := range keyNames {
 		entry, err := s.Get(ctx, namedKeyConfigPath+name)
 		if err != nil {
 			return nil, err
@@ -1514,14 +1510,9 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	if redirectURI == "" {
 		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
 	}
-	if !strutil.StrListContains(client.RedirectURIs, redirectURI) {
-		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
-	}
 
-	// Validate the nonce
-	nonce := d.Get("nonce").(string)
-	if nonce == "" {
-		return authResponse("", state, ErrAuthInvalidRequest, "nonce parameter is required")
+	if !validRedirect(redirectURI, client.RedirectURIs) {
+		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
 	// We don't support the request or request_uri parameters. If they're provided,
@@ -1556,6 +1547,10 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		return authResponse("", state, ErrAuthAccessDenied, "identity entity not authorized by client assignment")
 	}
 
+	// A nonce is optional for the authorization code flow. If not
+	// provided, the nonce claim will be omitted from the ID token.
+	nonce := d.Get("nonce").(string)
+
 	// Create the auth code cache entry
 	authCodeEntry := &authCodeCacheEntry{
 		provider:    name,
@@ -1567,10 +1562,9 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 
 	// Validate the optional max_age parameter to check if an active re-authentication
-	// of the user should occur. Re-authentication will be requested if max_age=0 or the
-	// last time the token actively authenticated exceeds the given max_age requirement.
-	// Returning ErrAuthMaxAgeReAuthenticate will enforce the user to re-authenticate via
-	// the user agent.
+	// of the user should occur. Re-authentication will be requested if the last time
+	// the token actively authenticated exceeds the given max_age requirement. Returning
+	// ErrAuthMaxAgeReAuthenticate will enforce the user to re-authenticate via the user agent.
 	if maxAgeRaw, ok := d.GetOk("max_age"); ok {
 		maxAge := maxAgeRaw.(int)
 		if maxAge < 1 {
@@ -2160,39 +2154,6 @@ func (i *IdentityStore) populateScopeTemplates(ctx context.Context, s logical.St
 	}
 
 	return populatedTemplates, false, nil
-}
-
-// computeHashClaim computes the hash value to be used for the at_hash
-// and c_hash claims. For details on how this value is computed and the
-// class of attacks it's used to prevent, see the spec at
-// - https://openid.net/specs/openid-connect-core-1_0.html#CodeIDToken
-// - https://openid.net/specs/openid-connect-core-1_0.html#HybridIDToken
-// - https://openid.net/specs/openid-connect-core-1_0.html#TokenSubstitution
-func computeHashClaim(alg string, input string) (string, error) {
-	signatureAlgToHash := map[jose.SignatureAlgorithm]func() hash.Hash{
-		jose.RS256: sha256.New,
-		jose.RS384: sha512.New384,
-		jose.RS512: sha512.New,
-		jose.ES256: sha256.New,
-		jose.ES384: sha512.New384,
-		jose.ES512: sha512.New,
-
-		// We use the Ed25519 curve key for EdDSA, which uses
-		// SHA-512 for its digest algorithm. See details at
-		// https://bitbucket.org/openid/connect/issues/1125.
-		jose.EdDSA: sha512.New,
-	}
-
-	newHash, ok := signatureAlgToHash[jose.SignatureAlgorithm(alg)]
-	if !ok {
-		return "", fmt.Errorf("unsupported signature algorithm: %q", alg)
-	}
-	h := newHash()
-
-	// Writing to the hash will never return an error
-	_, _ = h.Write([]byte(input))
-	sum := h.Sum(nil)
-	return base64.RawURLEncoding.EncodeToString(sum[:len(sum)/2]), nil
 }
 
 // entityHasAssignment returns true if the entity is enabled and a member of any

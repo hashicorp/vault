@@ -1,12 +1,8 @@
-<AlertBanner
-  @type="warning"
-  @message="Vault is sealed"
-  @yieldWithoutColumn={{true}}
-  class="is-marginless"
->
+<AlertBanner @type="warning" @message="Vault is sealed" @yieldWithoutColumn={{true}} class="is-marginless">
   <div class="is-flex is-flex-v-centered">
     <div>
-    <span class="message-title">Warning</span> Vault is sealed
+      <span class="message-title">Warning</span>
+      Vault is sealed
     </div>
   </div>
 </AlertBanner>
@@ -26,7 +22,7 @@
     />
   </div>
 {{else}}
-  <form onsubmit={{action "advanceFirstScreen" }} data-test-join-choice>
+  <form onsubmit={{action "advanceFirstScreen"}} data-test-join-choice>
     <div class="box is-marginless is-shadowless">
       <h2 class="title is-6">
         This server is configured to use Raft Storage.
@@ -37,23 +33,23 @@
       <RadioButton
         @value="join"
         @groupValue={{this.preference}}
-        @changed={{action (mut this.preference) }}
+        @changed={{action (mut this.preference)}}
         @name="setup-pref"
         @radioId="join"
         @classNames="vlt-radio is-block"
       >
-        <label for="join" />
+        <label for="join"></label>
         Join an existing Raft cluster
       </RadioButton>
       <RadioButton
         @value="init"
         @groupValue={{this.preference}}
-        @changed={{action (mut this.preference) }}
+        @changed={{action (mut this.preference)}}
         @name="setup-pref"
         @radioId="init"
         @classNames="vlt-radio is-block"
       >
-        <label for="init" data-test-join-init />
+        <label for="init" data-test-join-init></label>
         Create a new Raft cluster
       </RadioButton>
     </div>

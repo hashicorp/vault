@@ -1,20 +1,21 @@
-<div class="wizard-section {{class}}">
+<div class="wizard-section {{this.class}}">
   <h2 class="title is-6">
-    {{#if headerIcon}}
-      <Icon @glyph={{headerIcon}} @size="l" aria-hidden="true" />
+    {{#if this.headerIcon}}
+      <Icon @name={{this.headerIcon}} aria-hidden="true" />
     {{/if}}
-    {{headerText}}
+    {{this.headerText}}
   </h2>
   {{yield}}
-  {{#if instructions}}
+  {{#if this.instructions}}
     <div class="wizard-instructions">
       <h2 class="title is-6">What to do</h2>
-      <p>{{instructions}}</p>
+      <p>{{this.instructions}}</p>
     </div>
   {{/if}}
-  {{#if docText}}
-    <DocLink @path={{docPath}}>
-      <Icon @glyph="learn" aria-hidden="true" /> {{docText}}
+  {{#if this.docText}}
+    <DocLink @path={{this.docPath}}>
+      <Icon @name="learn-link" />
+      {{this.docText}}
     </DocLink>
   {{/if}}
 </div>

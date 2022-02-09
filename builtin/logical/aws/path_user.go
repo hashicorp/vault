@@ -32,7 +32,7 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
 			},
-			"role_session_name": &framework.FieldSchema{
+			"role_session_name": {
 				Type:        framework.TypeString,
 				Description: "Session name to use when assuming role. Max chars: 64",
 			},

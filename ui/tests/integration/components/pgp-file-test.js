@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { settled, render, click, fillIn, triggerEvent, waitUntil } from '@ember/test-helpers';
+import { render, click, fillIn, triggerEvent, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 let file;
@@ -11,10 +11,10 @@ const fileEvent = () => {
   return ['change', { files: [file] }];
 };
 
-module('Integration | Component | pgp file', function(hooks) {
+module('Integration | Component | pgp file', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     file = null;
     this.lastOnChangeCall = null;
     this.set('change', (index, key) => {
@@ -23,23 +23,35 @@ module('Integration | Component | pgp file', function(hooks) {
     });
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     this.set('key', { value: '' });
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
 
     assert.dom('[data-test-pgp-label]').hasText('PGP KEY 1');
     assert.dom('[data-test-pgp-file-input-label]').hasText('Choose a file…');
   });
 
-  test('it accepts files', async function(assert) {
+  test('it accepts files', async function (assert) {
     const key = { value: '' };
     const event = fileEvent();
     this.set('key', key);
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
     triggerEvent('[data-test-pgp-file-input]', ...event);
 
     // FileReader is async, but then we need extra run loop wait to re-render
@@ -53,13 +65,19 @@ module('Integration | Component | pgp file', function(hooks) {
     assert.equal(this.lastOnChangeCall[1].value, key.value, 'the key gets reset when the input is cleared');
   });
 
-  test('it allows for text entry', async function(assert) {
+  test('it allows for text entry', async function (assert) {
     const key = { value: '' };
     const text = 'a really long pgp key';
     this.set('key', key);
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
     await click('[data-test-text-toggle]');
     assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
 
@@ -70,15 +88,21 @@ module('Integration | Component | pgp file', function(hooks) {
     assert.equal(this.lastOnChangeCall[1].value, text, 'the key value is passed to onChange');
   });
 
-  test('toggling back and forth', async function(assert) {
+  test('toggling back and forth', async function (assert) {
     const key = { value: '' };
     const event = fileEvent();
     this.set('key', key);
     this.set('index', 0);
 
-    await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
+    await render(hbs`
+      <PgpFile
+        @index={{this.index}}
+        @key={{this.key}}
+        @onChange={{action this.change}}
+      />
+    `);
     await triggerEvent('[data-test-pgp-file-input]', ...event);
-    await settled();
+
     await click('[data-test-text-toggle]');
     assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
     assert

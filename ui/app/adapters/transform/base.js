@@ -41,7 +41,7 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(query) {
     const { backend, modelName, id } = query;
-    return this.ajax(this.url(backend, modelName, id), 'GET').then(resp => {
+    return this.ajax(this.url(backend, modelName, id), 'GET').then((resp) => {
       return {
         ...resp,
         backend,
@@ -54,7 +54,7 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(store, type, query) {
-    return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then(result => {
+    return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then((result) => {
       // CBS TODO: Add name to response and unmap name <> id on models
       return {
         id: query.id,
