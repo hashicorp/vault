@@ -245,6 +245,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			pluginutil.HandshakeConfig(config.HandshakeConfig),
 			pluginutil.Logger(config.Logger),
 			pluginutil.MetadataMode(config.IsMetadataMode),
+			pluginutil.MLock(c.mlockPlugins),
 
 			// NewPluginClient only supports AutoMTLS today
 			pluginutil.AutoMTLS(true),
