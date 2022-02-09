@@ -1829,7 +1829,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 			return tokenResponse(nil, ErrTokenInvalidGrant, err.Error())
 		}
 
-		if codeChallenge != authCodeEntry.codeChallenge {
+		if subtle.ConstantTimeCompare([]byte(codeChallenge), []byte(authCodeEntry.codeChallenge)) == 0 {
 			return tokenResponse(nil, ErrTokenInvalidGrant, "invalid code_verifier for token exchange")
 		}
 	}
