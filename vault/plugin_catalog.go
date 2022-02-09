@@ -79,13 +79,13 @@ type externalPlugin struct {
 	connections map[string]*pluginClient
 }
 
-func (c *Core) setupPluginCatalog(ctx context.Context, mlockPlugins bool) error {
+func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	c.pluginCatalog = &PluginCatalog{
 		builtinRegistry: c.builtinRegistry,
 		catalogView:     NewBarrierView(c.barrier, pluginCatalogPath),
 		directory:       c.pluginDirectory,
 		logger:          c.logger,
-		mlockPlugins:    mlockPlugins,
+		mlockPlugins:    c.enableMlock,
 	}
 
 	// Run upgrade if untyped plugins exist
