@@ -116,23 +116,6 @@ export default class History extends Component {
     return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
   }
 
-  // HELPERS
-  areArraysTheSame(a1, a2) {
-    return (
-      a1 === a2 ||
-      (a1 !== null &&
-        a2 !== null &&
-        a1.length === a2.length &&
-        a1
-          .map(function (val, idx) {
-            return val === a2[idx];
-          })
-          .reduce(function (prev, cur) {
-            return prev && cur;
-          }, true))
-    );
-  }
-
   // ACTIONS
   @action
   async handleClientActivityQuery(month, year, dateType) {
