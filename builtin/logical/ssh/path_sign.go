@@ -447,7 +447,7 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 }
 
 func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *sshRole) error {
-	if len(role.AllowedUserKeyLengths) != 0 {
+	if len(role.AllowedUserKeyTypesLengths) != 0 {
 		var kstr string
 		var kbits int
 
@@ -473,31 +473,36 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			return fmt.Errorf("pubkey not suitable for crypto (expected ssh.CryptoPublicKey but found %T)", k)
 		}
 
-		if value, ok := role.AllowedUserKeyLengths[kstr]; ok {
+		if allowed_values, ok := role.AllowedUserKeyTypesLengths[kstr]; ok {
 			var pass bool
-			switch kstr {
-			case "rsa":
-				if kbits == value {
+			for _, value := range allowed_values {
+				switch kstr {
+				case "rsa":
+					if kbits == value {
+						pass = true
+						break
+					}
+				case "dsa":
+					if kbits == value {
+						pass = true
+						break
+					}
+				case "ecdsa":
+					if kbits == value {
+						pass = true
+						break
+					}
+				case "ed25519":
+					// ed25519 public keys are always 256 bits in length,
+					// so there is no need to inspect their value
 					pass = true
+					break
 				}
-			case "dsa":
-				if kbits == value {
-					pass = true
-				}
-			case "ecdsa":
-				if kbits == value {
-					pass = true
-				}
-			case "ed25519":
-				// ed25519 public keys are always 256 bits in length,
-				// so there is no need to inspect their value
-				pass = true
 			}
 
 			if !pass {
 				return fmt.Errorf("key is of an invalid size: %v", kbits)
 			}
-
 		} else {
 			return fmt.Errorf("key type of %s is not allowed", kstr)
 		}

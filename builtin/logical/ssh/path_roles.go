@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
 )
@@ -20,40 +21,44 @@ const (
 	KeyTypeDynamic = "dynamic"
 	// KeyTypeCA is an key of type CA
 	KeyTypeCA = "ca"
+
+	roleEntryVersion = 1
 )
 
 // Structure that represents a role in SSH backend. This is a common role structure
 // for both OTP and Dynamic roles. Not all the fields are mandatory for both type.
 // Some are applicable for one and not for other. It doesn't matter.
 type sshRole struct {
-	KeyType                   string            `mapstructure:"key_type" json:"key_type"`
-	KeyName                   string            `mapstructure:"key" json:"key"`
-	KeyBits                   int               `mapstructure:"key_bits" json:"key_bits"`
-	AdminUser                 string            `mapstructure:"admin_user" json:"admin_user"`
-	DefaultUser               string            `mapstructure:"default_user" json:"default_user"`
-	CIDRList                  string            `mapstructure:"cidr_list" json:"cidr_list"`
-	ExcludeCIDRList           string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
-	Port                      int               `mapstructure:"port" json:"port"`
-	InstallScript             string            `mapstructure:"install_script" json:"install_script"`
-	AllowedUsers              string            `mapstructure:"allowed_users" json:"allowed_users"`
-	AllowedUsersTemplate      bool              `mapstructure:"allowed_users_template" json:"allowed_users_template"`
-	AllowedDomains            string            `mapstructure:"allowed_domains" json:"allowed_domains"`
-	KeyOptionSpecs            string            `mapstructure:"key_option_specs" json:"key_option_specs"`
-	MaxTTL                    string            `mapstructure:"max_ttl" json:"max_ttl"`
-	TTL                       string            `mapstructure:"ttl" json:"ttl"`
-	DefaultCriticalOptions    map[string]string `mapstructure:"default_critical_options" json:"default_critical_options"`
-	DefaultExtensions         map[string]string `mapstructure:"default_extensions" json:"default_extensions"`
-	DefaultExtensionsTemplate bool              `mapstructure:"default_extensions_template" json:"default_extensions_template"`
-	AllowedCriticalOptions    string            `mapstructure:"allowed_critical_options" json:"allowed_critical_options"`
-	AllowedExtensions         string            `mapstructure:"allowed_extensions" json:"allowed_extensions"`
-	AllowUserCertificates     bool              `mapstructure:"allow_user_certificates" json:"allow_user_certificates"`
-	AllowHostCertificates     bool              `mapstructure:"allow_host_certificates" json:"allow_host_certificates"`
-	AllowBareDomains          bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
-	AllowSubdomains           bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
-	AllowUserKeyIDs           bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
-	KeyIDFormat               string            `mapstructure:"key_id_format" json:"key_id_format"`
-	AllowedUserKeyLengths     map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
-	AlgorithmSigner           string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
+	KeyType                    string            `mapstructure:"key_type" json:"key_type"`
+	KeyName                    string            `mapstructure:"key" json:"key"`
+	KeyBits                    int               `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser                  string            `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser                string            `mapstructure:"default_user" json:"default_user"`
+	CIDRList                   string            `mapstructure:"cidr_list" json:"cidr_list"`
+	ExcludeCIDRList            string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
+	Port                       int               `mapstructure:"port" json:"port"`
+	InstallScript              string            `mapstructure:"install_script" json:"install_script"`
+	AllowedUsers               string            `mapstructure:"allowed_users" json:"allowed_users"`
+	AllowedUsersTemplate       bool              `mapstructure:"allowed_users_template" json:"allowed_users_template"`
+	AllowedDomains             string            `mapstructure:"allowed_domains" json:"allowed_domains"`
+	KeyOptionSpecs             string            `mapstructure:"key_option_specs" json:"key_option_specs"`
+	MaxTTL                     string            `mapstructure:"max_ttl" json:"max_ttl"`
+	TTL                        string            `mapstructure:"ttl" json:"ttl"`
+	DefaultCriticalOptions     map[string]string `mapstructure:"default_critical_options" json:"default_critical_options"`
+	DefaultExtensions          map[string]string `mapstructure:"default_extensions" json:"default_extensions"`
+	DefaultExtensionsTemplate  bool              `mapstructure:"default_extensions_template" json:"default_extensions_template"`
+	AllowedCriticalOptions     string            `mapstructure:"allowed_critical_options" json:"allowed_critical_options"`
+	AllowedExtensions          string            `mapstructure:"allowed_extensions" json:"allowed_extensions"`
+	AllowUserCertificates      bool              `mapstructure:"allow_user_certificates" json:"allow_user_certificates"`
+	AllowHostCertificates      bool              `mapstructure:"allow_host_certificates" json:"allow_host_certificates"`
+	AllowBareDomains           bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
+	AllowSubdomains            bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
+	AllowUserKeyIDs            bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
+	KeyIDFormat                string            `mapstructure:"key_id_format" json:"key_id_format"`
+	OldAllowedUserKeyLengths   map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths,omitempty"`
+	AllowedUserKeyTypesLengths map[string][]int  `mapstructure:"allowed_user_key_types_lengths" json:"allowed_user_key_types_lengths"`
+	AlgorithmSigner            string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
+	Version                    int               `mapstructure:"role_version" json:"role_version"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -431,6 +436,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			KeyType:         KeyTypeOTP,
 			Port:            port,
 			AllowedUsers:    allowedUsers,
+			Version:         roleEntryVersion,
 		}
 	} else if keyType == KeyTypeDynamic {
 		defaultUser := d.Get("default_user").(string)
@@ -484,6 +490,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			InstallScript:   installScript,
 			AllowedUsers:    allowedUsers,
 			KeyOptionSpecs:  keyOptionSpecs,
+			Version:         roleEntryVersion,
 		}
 	} else if keyType == KeyTypeCA {
 		algorithmSigner := ""
@@ -539,6 +546,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		KeyIDFormat:               data.Get("key_id_format").(string),
 		KeyType:                   KeyTypeCA,
 		AlgorithmSigner:           signer,
+		Version:                   roleEntryVersion,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -547,7 +555,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 
 	defaultCriticalOptions := convertMapToStringValue(data.Get("default_critical_options").(map[string]interface{}))
 	defaultExtensions := convertMapToStringValue(data.Get("default_extensions").(map[string]interface{}))
-	allowedUserKeyLengths, err := convertMapToIntValue(data.Get("allowed_user_key_lengths").(map[string]interface{}))
+	allowedUserKeyLengths, err := convertMapToIntSlice(data.Get("allowed_user_key_lengths").(map[string]interface{}))
 	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("error processing allowed_user_key_lengths: %s", err.Error()))
 	}
@@ -562,7 +570,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 	role.MaxTTL = maxTTL.String()
 	role.DefaultCriticalOptions = defaultCriticalOptions
 	role.DefaultExtensions = defaultExtensions
-	role.AllowedUserKeyLengths = allowedUserKeyLengths
+	role.AllowedUserKeyTypesLengths = allowedUserKeyLengths
 
 	return role, nil
 }
@@ -579,6 +587,38 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ss
 	var result sshRole
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	modified := false
+
+	// Role version introduced at version 1, migrating OldAllowedUserKeyLengths
+	// to the newer AllowedUserKeyTypesLengths field.
+	if result.Version <= 0 {
+		// Only migrate if we have old data and no new data to avoid clobbering.
+		if len(result.OldAllowedUserKeyLengths) > 0 && len(result.AllowedUserKeyTypesLengths) == 0 {
+			result.AllowedUserKeyTypesLengths = make(map[string][]int)
+			for k, v := range result.OldAllowedUserKeyLengths {
+				result.AllowedUserKeyTypesLengths[k] = []int{v}
+			}
+			result.OldAllowedUserKeyLengths = nil
+		}
+
+		result.Version += 1
+		modified = true
+	}
+
+	// Condition copied from PKI builtin.
+	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		jsonEntry, err := logical.StorageEntryJSON("roles/"+n, &result)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.Put(ctx, jsonEntry); err != nil {
+			// Only perform upgrades on replication primary
+			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return nil, err
+			}
+		}
 	}
 
 	return &result, nil
@@ -630,7 +670,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_critical_options":    role.DefaultCriticalOptions,
 			"default_extensions":          role.DefaultExtensions,
 			"default_extensions_template": role.DefaultExtensionsTemplate,
-			"allowed_user_key_lengths":    role.AllowedUserKeyLengths,
+			"allowed_user_key_lengths":    role.AllowedUserKeyTypesLengths,
 			"algorithm_signer":            role.AlgorithmSigner,
 		}
 	case KeyTypeDynamic:
