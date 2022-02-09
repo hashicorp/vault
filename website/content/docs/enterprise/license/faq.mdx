@@ -131,7 +131,7 @@ Follow these steps to migrate from one autoloaded license to another autoloaded 
 1. Replace the old license file on each Vault server with the new one.
 1. Invoke the [reload command](/api-docs/system/config-reload#reload-license-file) on each individual Vault server, starting with the standbys and doing the leader last. Invoking in this manner reduces possible disruptions if something was performed incorrectly with the above steps.
 
-~> **Note**: You can either use the reload command or send a SIGHUP.
+  ~> **Note**: You can either use the reload command or send a SIGHUP.
 
 1. On each node, ensure that the new license is in use by using the [vault license get](/docs/commands/license/get) command and/or checking the logs.
 
