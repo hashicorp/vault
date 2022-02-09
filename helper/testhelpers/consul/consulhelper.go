@@ -193,7 +193,6 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func
 			Token:           consulToken,
 		}, nil
 	})
-
 	if err != nil {
 		t.Fatalf("Could not start docker Consul: %s", err)
 	}
