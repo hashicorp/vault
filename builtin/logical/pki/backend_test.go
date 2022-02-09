@@ -4018,14 +4018,14 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		// allowed_domains contains one or more wildcards and bare domains allowed,
 		// resulting in the cert being issued.
 		/* 18 */ {[]string{"*.foo"}, MTrue, MAny, MAny, MAny, "*.foo", true},
-		/* 19 */ {[]string{"*.*.foo"}, MTrue, MAny, MAny, MAny, "*.*.foo", true},
+		/* 19 */ {[]string{"*.*.foo"}, MTrue, MAny, MAny, MAny, "*.*.foo", false}, // Does not conform to RFC 6125
 
 		// === Double Leading Glob Testing === //
 
 		// Allowed contains globs, but glob allowed so certain matches work.
 		// The value of bare and localhost does not impact these results.
 		/* 20 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "baz.fud.bar.foo", true}, // glob domains allow infinite subdomains
-		/* 21 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "*.fud.bar.foo", true}, // ???? does glob domain allow wildcard of subdomains?
+		/* 21 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "*.fud.bar.foo", true}, // glob domain allows wildcard of subdomains
 		/* 22 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "fud.bar.foo", true},
 		/* 23 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "*.bar.foo", true}, // Regression fix: Vault#13530
 		/* 24 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "bar.foo", false},
@@ -4048,9 +4048,9 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		// Allowed contains globs, but glob allowed so certain matches work.
 		// The value of bare and localhost does not impact these results.
 		/* 34 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "baz.fud.bar.foo", true}, // glob domains allow infinite subdomains
-		/* 35 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "*.fud.bar.foo", true}, // ???? does glob domain allow wildcard of subdomains?
+		/* 35 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "*.fud.bar.foo", true}, // glob domain allows wildcard of subdomains
 		/* 36 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "fud.bar.foo", true}, // glob domains allow infinite subdomains
-		/* 37 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "*.bar.foo", true}, // ???? does glob domain allow wildcards of subdomains?
+		/* 37 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "*.bar.foo", true}, // glob domain allows wildcards of subdomains
 		/* 38 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "bar.foo", true},
 		/* 39 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "foo", false},
 
@@ -4100,29 +4100,27 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		/* 67 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "xercex.bar.foo", false}, // x.foo isn't matched
 		/* 68 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "bar.foo", false}, // x*x isn't matched.
 		/* 69 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "*.foo", false}, // unrelated wildcard
-		/* 70 */ {[]string{"x*x.foo"}, MAny, MTrue, MFalse, MAny, "*.x*x.foo", false}, // ???? double wildcard doesn't match glob without subdomains enabled
-		/* 71 */ {[]string{"x*x.foo"}, MAny, MTrue, MTrue, MAny, "*.x*x.foo", true}, // ???? as above, but with subdomains enabled
-		/* 72 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "*.xyx.foo", false}, // ???? single wildcard matching glob fails (even with subdomains=true)
+		/* 70 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "*.x*x.foo", false}, // Does not conform to RFC 6125
+		/* 71 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "*.xyx.foo", false}, // ???? single wildcard matching glob fails (even with subdomains=true)
 
 		// Various requirements around x*x.foo wildcard matching.
-		/* 73 */ {[]string{"x*x.foo"}, MFalse, MFalse, MAny, MAny, "x*x.foo", false}, // base disabled, shouldn't match wildcard
-		/* 74 */ {[]string{"x*x.foo"}, MFalse, MTrue, MAny, MAny, "x*x.foo", true}, // base disallowed, but globbing allowed and should match
-		/* 75 */ {[]string{"x*x.foo"}, MTrue, MAny, MAny, MAny, "x*x.foo", true}, // base allowed, should match wildcard
+		/* 72 */ {[]string{"x*x.foo"}, MFalse, MFalse, MAny, MAny, "x*x.foo", false}, // base disabled, shouldn't match wildcard
+		/* 73 */ {[]string{"x*x.foo"}, MFalse, MTrue, MAny, MAny, "x*x.foo", true}, // base disallowed, but globbing allowed and should match
+		/* 74 */ {[]string{"x*x.foo"}, MTrue, MAny, MAny, MAny, "x*x.foo", true}, // base allowed, should match wildcard
 
 		// Basic glob matching requirements with internal dots.
-		/* 76 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xerox.foo", false}, // missing dots
-		/* 77 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "x.ero.x.foo", true},
-		/* 78 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xylophone.files.pyrex.foo", false}, // missing dots
-		/* 79 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "x.ylophone.files.pyre.x.foo", true}, // globs can match across subdomains
-		/* 80 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xercex.bar.foo", false}, // x.foo isn't matched
-		/* 81 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "bar.foo", false}, // x.*.x isn't matched.
-		/* 82 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "*.foo", false}, // unrelated wildcard
-		/* 83 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MFalse, MAny, "*.x.*.x.foo", false}, // ???? double wildcard doesn't match glob without subdomains enabled
-		/* 84 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MTrue, MAny, "*.x.*.x.foo", true}, // ???? as above, but with subdomains enabled
-		/* 85 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "*.x.y.x.foo", false}, // ???? single wildcard with internal glob match fails (even with subdomains=true)
+		/* 75 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xerox.foo", false}, // missing dots
+		/* 76 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "x.ero.x.foo", true},
+		/* 77 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xylophone.files.pyrex.foo", false}, // missing dots
+		/* 78 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "x.ylophone.files.pyre.x.foo", true}, // globs can match across subdomains
+		/* 79 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xercex.bar.foo", false}, // x.foo isn't matched
+		/* 80 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "bar.foo", false}, // x.*.x isn't matched.
+		/* 81 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "*.foo", false}, // unrelated wildcard
+		/* 82 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "*.x.*.x.foo", false}, // Does not conform to RFC 6125
+		/* 83 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "*.x.y.x.foo", false}, // ???? single wildcard with internal glob match fails (even with subdomains=true)
 	}
 
-	if len(testCases) != 86 {
+	if len(testCases) != 84 {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 
