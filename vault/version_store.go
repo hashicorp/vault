@@ -116,7 +116,7 @@ func (c *Core) loadVersionTimestamps(ctx context.Context) (retErr error) {
 			isUpdated, err := c.storeVersionTimestamp(ctx, vaultVersion.Version, timestampInstalled, true)
 
 			if err != nil {
-				c.logger.Warn("error rewriting vault version timestamp as UTC: %w", err)
+				c.logger.Warn("failed to rewrite vault version timestamp as UTC", "error", err)
 			}
 
 			if isUpdated {
