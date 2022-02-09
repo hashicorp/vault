@@ -27,6 +27,8 @@ func (c *Config) APIConfig() *consulapi.Config {
 // CONSUL_DOCKER_VERSION, or if that's empty, whatever we've hardcoded as the
 // the latest Consul version.
 func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func(), *Config) {
+	t.Helper()
+
 	if retAddress := os.Getenv("CONSUL_HTTP_ADDR"); retAddress != "" {
 		shp, err := docker.NewServiceHostPortParse(retAddress)
 		if err != nil {
@@ -136,6 +138,8 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func
 
 		// Configure a namespace and parition if testing enterprise Consul
 		if isEnterprise {
+
+			// Namespaces require Consul 1.7 or newer
 			namespace := &consulapi.Namespace{
 				Name:        "ns1",
 				Description: "ns1 test",
@@ -159,6 +163,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func
 				return nil, err
 			}
 
+			// Partitions require Consul 1.11 or newer
 			partition := &consulapi.Partition{
 				Name:        "part1",
 				Description: "part1 test",
