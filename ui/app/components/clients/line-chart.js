@@ -48,11 +48,13 @@ export default class LineChart extends Component {
     // DEFINE AXES SCALES
     let yScale = scaleLinear()
       .domain([0, max(dataset.map((d) => d[this.yKey]))])
-      .range([0, 100]);
+      .range([0, 100])
+      .nice();
 
     let yAxisScale = scaleLinear()
       .domain([0, max(dataset.map((d) => d[this.yKey]))])
-      .range([SVG_DIMENSIONS.height, 0]);
+      .range([SVG_DIMENSIONS.height, 0])
+      .nice();
 
     let xScale = scalePoint() // use scaleTime()?
       .domain(dataset.map((d) => d[this.xKey]))
