@@ -204,8 +204,15 @@ func validateURISAN(b *backend, data *inputBundle, uri string) bool {
 // If one does not pass, it is returned in the string argument.
 func validateNames(b *backend, data *inputBundle, names []string) string {
 	for _, name := range names {
-		sanitizedName := name
-		emailDomain := sanitizedName
+		// Previously, reducedName was called sanitizedName but this made
+		// little sense under the previous interpretation of wildcards,
+		// leading to two bugs in this implementation. We presently call it
+		// "reduced" to indicate that it is still untrusted input (potentially
+		// different from the bare Common Name entry we're validating), it
+		// might have been modified such as by the removal of wildcard labels
+		// or the email prefix.
+		reducedName := name
+		emailDomain := reducedName
 		isEmail := false
 		isWildcard := false
 
@@ -215,12 +222,12 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// ends up being problematic for users, I guess that could be separated
 		// into dns_names and email_names in the future to be explicit, but I
 		// don't think this is likely.
-		if strings.Contains(sanitizedName, "@") {
-			splitEmail := strings.Split(sanitizedName, "@")
+		if strings.Contains(reducedName, "@") {
+			splitEmail := strings.Split(reducedName, "@")
 			if len(splitEmail) != 2 {
 				return name
 			}
-			sanitizedName = splitEmail[1]
+			reducedName = splitEmail[1]
 			emailDomain = splitEmail[1]
 			isEmail = true
 		}
@@ -228,8 +235,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// If we have an asterisk as the first part of the domain name, mark it
 		// as wildcard and set the sanitized name to the remainder of the
 		// domain
-		if strings.HasPrefix(sanitizedName, "*.") {
-			sanitizedName = sanitizedName[2:]
+		if strings.HasPrefix(reducedName, "*.") {
+			reducedName = reducedName[2:]
 			isWildcard = true
 		}
 
@@ -247,7 +254,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				idna.StrictDomainName(true),
 				idna.VerifyDNSLength(true),
 			)
-			converted, err := p.ToASCII(sanitizedName)
+			converted, err := p.ToASCII(reducedName)
 			if err != nil {
 				return name
 			}
@@ -278,8 +285,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// Variances are noted in-line
 
 		if data.role.AllowLocalhost {
-			if sanitizedName == "localhost" ||
-				sanitizedName == "localdomain" ||
+			if reducedName == "localhost" ||
+				reducedName == "localdomain" ||
 				(isEmail && emailDomain == "localhost") ||
 				(isEmail && emailDomain == "localdomain") {
 				continue
@@ -287,14 +294,14 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 			if data.role.AllowSubdomains {
 				// It is possible, if unlikely, to have a subdomain of "localhost"
-				if strings.HasSuffix(sanitizedName, ".localhost") ||
-					(isWildcard && sanitizedName == "localhost") {
+				if strings.HasSuffix(reducedName, ".localhost") ||
+					(isWildcard && reducedName == "localhost") {
 					continue
 				}
 
 				// A subdomain of "localdomain" is also not entirely uncommon
-				if strings.HasSuffix(sanitizedName, ".localdomain") ||
-					(isWildcard && sanitizedName == "localdomain") {
+				if strings.HasSuffix(reducedName, ".localdomain") ||
+					(isWildcard && reducedName == "localdomain") {
 					continue
 				}
 			}
@@ -316,15 +323,15 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 							// Compare the sanitized name against the hostname
 							// portion of the email address in the broken
 							// display name
-							if strings.HasSuffix(sanitizedName, "."+splitDisplay[1]) {
+							if strings.HasSuffix(reducedName, "."+splitDisplay[1]) {
 								continue
 							}
 						}
 					}
 				}
 
-				if strings.HasSuffix(sanitizedName, "."+data.req.DisplayName) ||
-					(isWildcard && sanitizedName == data.req.DisplayName) {
+				if strings.HasSuffix(reducedName, "."+data.req.DisplayName) ||
+					(isWildcard && reducedName == data.req.DisplayName) {
 					continue
 				}
 			}
@@ -360,8 +367,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				}
 
 				if data.role.AllowSubdomains {
-					if strings.HasSuffix(sanitizedName, "."+currDomain) ||
-						(isWildcard && strings.EqualFold(sanitizedName, currDomain)) {
+					if strings.HasSuffix(reducedName, "."+currDomain) ||
+						(isWildcard && strings.EqualFold(reducedName, currDomain)) {
 						valid = true
 						break
 					}
