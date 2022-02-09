@@ -10,7 +10,7 @@ import (
 )
 
 type DatabasePluginClient struct {
-	client pluginutil.PluginInstance
+	client pluginutil.PluginClient
 	Database
 }
 

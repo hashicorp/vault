@@ -22,7 +22,7 @@ type Looker interface {
 // configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
-	NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginInstance, error)
+	NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error)
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
@@ -33,7 +33,7 @@ type LookRunnerUtil interface {
 	RunnerUtil
 }
 
-type PluginInstance interface {
+type PluginClient interface {
 	Conn() grpc.ClientConnInterface
 	MultiplexingSupport() (bool, error)
 
