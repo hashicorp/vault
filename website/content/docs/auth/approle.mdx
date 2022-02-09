@@ -364,7 +364,7 @@ namespace Examples
             }
 
             var roleId = Environment.GetEnvironmentVariable("APPROLE_ROLE_ID");
-            if(String.IsNullOrEmpty(vaultAddr))
+            if(String.IsNullOrEmpty(roleId))
             {
                 throw new System.ArgumentNullException("AppRole Role Id");
             }
