@@ -64,15 +64,14 @@ type pluginClient struct {
 	// multiplexed plugins share the same client
 	client      *plugin.Client
 	clientConn  grpc.ClientConnInterface
-	protocol    plugin.ClientProtocol
 	cleanupFunc func() error
+
+	plugin.ClientProtocol
 }
 
 // externalPlugin holds client connections for multiplexed and
 // non-multiplexed plugin processes
 type externalPlugin struct {
-	logger log.Logger
-
 	// name is the plugin name
 	name string
 
@@ -146,24 +145,6 @@ func (p *pluginClient) Close() error {
 	return p.cleanupFunc()
 }
 
-// Dispense implements the plugin.ClientProtocol interface.
-func (p *pluginClient) Dispense(name string) (interface{}, error) {
-	pluginInstance, err := p.protocol.Dispense(name)
-	if err != nil {
-		return nil, err
-	}
-	return pluginInstance, nil
-}
-
-// Ping implements the plugin.ClientProtocol interface.
-func (p *pluginClient) Ping() error {
-	err := p.protocol.Ping()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *PluginCatalog) removePluginClient(name, id string) error {
 	var err error
 	extPlugin, ok := c.externalPlugins[name]
@@ -180,14 +161,12 @@ func (c *PluginCatalog) removePluginClient(name, id string) error {
 	delete(extPlugin.connections, id)
 	if !multiplexingSupport {
 		pluginClient.client.Kill()
-		err = pluginClient.protocol.Close()
 
 		if len(extPlugin.connections) == 0 {
 			delete(c.externalPlugins, name)
 		}
 	} else if len(extPlugin.connections) == 0 {
 		pluginClient.client.Kill()
-		err = pluginClient.protocol.Close()
 		delete(c.externalPlugins, name)
 	}
 	return err
@@ -208,7 +187,7 @@ func (c *PluginCatalog) newExternalPlugin(pluginName string) *externalPlugin {
 
 	extPlugin := &externalPlugin{
 		connections: make(map[string]*pluginClient),
-		logger:      c.logger,
+		name:        pluginName,
 	}
 
 	c.externalPlugins[pluginName] = extPlugin
@@ -241,13 +220,6 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 // newPluginClient returns a client for managing the lifecycle of a plugin
 // process
 func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
-	if config.Name == "" {
-		return nil, fmt.Errorf("no name provided for plugin")
-	}
-	if config.PluginType == consts.PluginTypeUnknown {
-		return nil, fmt.Errorf("no plugin type provided")
-	}
-
 	if pluginRunner == nil {
 		return nil, fmt.Errorf("no plugin found")
 	}
@@ -260,7 +232,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	pc := &pluginClient{
 		id:     id,
-		logger: c.logger,
+		logger: c.logger.Named(pluginRunner.Name),
 		cleanupFunc: func() error {
 			return c.removePluginClient(pluginRunner.Name, id)
 		},
@@ -315,7 +287,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	} else {
 		pc.clientConn = clientConn
 	}
-	pc.protocol = rpcClient
+	pc.ClientProtocol = rpcClient
 	extPlugin.connections[id] = pc
 	extPlugin.name = pluginRunner.Name
 
