@@ -99,7 +99,7 @@ func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[st
 	return info, nil
 }
 
-func (s *gRPCSystemViewClient) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error) {
+func (s *gRPCSystemViewClient) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginInstance, error) {
 	return nil, fmt.Errorf("cannot call NewPluginClient from a plugin backend")
 }
 

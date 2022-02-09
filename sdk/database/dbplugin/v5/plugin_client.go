@@ -10,7 +10,7 @@ import (
 )
 
 type DatabasePluginClient struct {
-	client pluginutil.Multiplexer
+	client pluginutil.PluginInstance
 	Database
 }
 
@@ -35,8 +35,8 @@ var PluginSets = map[int]plugin.PluginSet{
 
 // NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin.
-func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (Database, error) {
-	pluginClient, err := sys.NewPluginClient(ctx, pluginRunner, config)
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config pluginutil.PluginClientConfig) (Database, error) {
+	pluginClient, err := sys.NewPluginClient(ctx, config)
 	if err != nil {
 		return nil, err
 	}

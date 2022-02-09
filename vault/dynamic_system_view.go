@@ -215,8 +215,15 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	return resp.WrapInfo, nil
 }
 
-func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (pluginutil.Multiplexer, error) {
-	c, err := d.core.pluginCatalog.NewPluginClient(ctx, d, pluginRunner, config)
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginInstance, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
+
+	c, err := d.core.pluginCatalog.NewPluginClient(ctx, config)
 	if err != nil {
 		return nil, err
 	}
