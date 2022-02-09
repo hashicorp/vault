@@ -350,6 +350,25 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			},
 		},
 		{
+			name: "valid token request with default plain code_challenge_method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					// code_challenge_method intentionally not provided
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge"] = "a1b2c3d4"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "a1b2c3d4"
+					return req
+				}(),
+			},
+		},
+		{
 			name: "valid token request with S256 code_challenge_method",
 			args: args{
 				clientReq:     testClientReq(s),
