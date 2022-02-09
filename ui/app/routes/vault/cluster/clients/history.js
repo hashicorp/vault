@@ -17,10 +17,11 @@ export default class HistoryRoute extends Route {
   async getLicenseStartTime() {
     try {
       let license = await this.store.queryRecord('license', {});
+      // if license.startTime is 'undefined' return 'null' for consistency
       return license.startTime || null;
     } catch (e) {
-      // ARG TODO handle
-      return e;
+      // if error due to permission denied, return null so user can input date manually
+      return e.httpStatus === 403 ? null : console.debug(e);
     }
   }
 
