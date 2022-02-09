@@ -230,9 +230,6 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, config pluginutil.P
 	if config.Name == "" {
 		return nil, fmt.Errorf("no name provided for plugin")
 	}
-	if config.PluginType == consts.PluginTypeUnknown {
-		return nil, fmt.Errorf("no plugin type provided")
-	}
 
 	pluginRunner, err := c.get(ctx, config.Name, config.PluginType)
 	if err != nil {
