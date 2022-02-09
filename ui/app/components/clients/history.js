@@ -60,7 +60,6 @@ export default class History extends Component {
 
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
-      // otherwise will return date of new Date(null)
       return null;
     }
     let month = this.startTimeFromResponse[1];

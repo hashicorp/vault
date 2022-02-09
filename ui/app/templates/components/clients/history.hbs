@@ -8,10 +8,14 @@
     Billing start month
   </h1>
   <div data-test-start-date-editor class="is-flex-align-baseline">
-    <p class="is-size-6">{{this.startTimeDisplay}}</p>
-    <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
-      Edit
-    </button>
+    {{#if this.startTimeDisplay}}
+      <p class="is-size-6">{{this.startTimeDisplay}}</p>
+      <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
+        Edit
+      </button>
+    {{else}}
+      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @dateType={{"startTime"}} />
+    {{/if}}
   </div>
   <p class="is-8 has-text-grey has-bottom-margin-xl">
     This date comes from your license, and defines when client counting starts. Without this starting point, the data shown
