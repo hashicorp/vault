@@ -47,7 +47,10 @@ func (c *VersionHistoryCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-const versionTrackingWarning = "Note: Version tracking was added in 1.9.0. Earlier versions have not been tracked."
+const versionTrackingWarning = `Note:
+Use of this command requires a server running Vault 1.10.0 or greater.
+Version tracking was added in 1.9.0. Earlier versions have not been tracked.
+`
 
 func (c *VersionHistoryCommand) Run(args []string) int {
 	f := c.Flags()
