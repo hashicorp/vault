@@ -16,11 +16,11 @@ const vaultVersionPath string = "core/versions/"
 // timestamps were initially stored in local time. UTC should be used. Existing
 // entries can be overwritten via the force flag. A bool will be returned
 // denoting whether the entry was updated
-func (c *Core) storeVersionTimestamp(ctx context.Context, version string, currentTime time.Time, force bool) (bool, error) {
+func (c *Core) storeVersionTimestamp(ctx context.Context, version string, installationTime time.Time, force bool) (bool, error) {
 	key := vaultVersionPath + version
 
 	vaultVersion := VaultVersion{
-		TimestampInstalled: currentTime,
+		TimestampInstalled: installationTime.UTC(),
 		Version:            version,
 	}
 
