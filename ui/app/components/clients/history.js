@@ -52,6 +52,7 @@ export default class History extends Component {
   });
   @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
   @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
+  @tracked isLoadingQuery = false;
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
@@ -158,6 +159,7 @@ export default class History extends Component {
     }
 
     try {
+      this.isLoadingQuery = true;
       let response = await this.store.queryRecord('clients/activity', {
         start_time: this.startTimeRequested,
         end_time: this.endTimeRequested,
@@ -181,6 +183,8 @@ export default class History extends Component {
       this.queriedActivityResponse = response;
     } catch (e) {
       // ARG TODO handle error
+    } finally {
+      this.isLoadingQuery = false;
     }
   }
 

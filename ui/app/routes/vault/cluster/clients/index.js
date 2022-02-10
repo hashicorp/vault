@@ -1,6 +1,5 @@
 import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
-import { action } from '@ember/object';
 
 export default class ClientsRoute extends Route {
   async getVersionHistory() {
@@ -33,17 +32,5 @@ export default class ClientsRoute extends Route {
       monthly: await this.store.queryRecord('clients/monthly', {}),
       versionHistory: this.getVersionHistory(),
     });
-  }
-
-  @action
-  async loading(transition) {
-    // eslint-disable-next-line ember/no-controller-access-in-routes
-    let controller = this.controllerFor('vault.cluster.clients.index');
-    if (controller) {
-      controller.currentlyLoading = true;
-      transition.promise.finally(function () {
-        controller.currentlyLoading = false;
-      });
-    }
   }
 }
