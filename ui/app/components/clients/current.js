@@ -7,16 +7,26 @@ export default class Current extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
+
   @tracked selectedNamespace = null;
   @tracked namespaceArray = this.byNamespaceCurrent.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
-  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
 
-  // API client count data by namespace for current/partial month
+  // Response client count data by namespace for current/partial month
   get byNamespaceCurrent() {
     return this.args.model.monthly?.byNamespace || [];
+  }
+
+  get isGatheringData() {
+    // return true if tracking IS enabled but no data collected yet
+    return this.args.model.config?.enabled === 'On' && this.byNamespaceCurrent.length === 0;
+  }
+
+  get hasAttributionData() {
+    return this.totalUsageCounts.clients !== 0 && this.totalClientsData.length !== 0;
   }
 
   get countsIncludeOlderData() {

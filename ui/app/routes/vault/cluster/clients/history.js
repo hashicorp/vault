@@ -5,19 +5,24 @@ import { action } from '@ember/object';
 export default class HistoryRoute extends Route {
   async getActivity(start_time) {
     try {
-      return this.store.queryRecord('clients/activity', { start_time });
+      // on init ONLY make network request if we have a start time from the license
+      // otherwise user needs to manually input
+      return start_time
+        ? await this.store.queryRecord('clients/activity', { start_time })
+        : { endTime: null };
     } catch (e) {
-      // ARG TODO handle
       return e;
     }
   }
 
-  async getLicense() {
+  async getLicenseStartTime() {
     try {
-      return this.store.queryRecord('license', {});
+      let license = await this.store.queryRecord('license', {});
+      // if license.startTime is 'undefined' return 'null' for consistency
+      return license.startTime || null;
     } catch (e) {
-      // ARG TODO handle
-      return e;
+      // if error due to permission denied, return null so user can input date manually
+      return null;
     }
   }
 
@@ -48,18 +53,18 @@ export default class HistoryRoute extends Route {
 
   async model() {
     let config = await this.store.queryRecord('clients/config', {}).catch((e) => {
-      console.debug(e);
       // swallowing error so activity can show if no config permissions
+      console.debug(e);
       return {};
     });
-    let license = await this.getLicense();
-    let activity = await this.getActivity(license.startTime);
+    let licenseStart = await this.getLicenseStartTime();
+    let activity = await this.getActivity(licenseStart);
 
     return RSVP.hash({
       config,
       activity,
-      startTimeFromLicense: this.parseRFC3339(license.startTime),
-      endTimeFromResponse: activity ? this.parseRFC3339(activity.endTime) : null,
+      startTimeFromLicense: this.parseRFC3339(licenseStart),
+      endTimeFromResponse: this.parseRFC3339(activity?.endTime),
       versionHistory: this.getVersionHistory(),
     });
   }

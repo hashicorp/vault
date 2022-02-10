@@ -13,6 +13,11 @@
         </LinkTo>
       {{/if}}
     </EmptyState>
+  {{else if this.isGatheringData}}
+    <EmptyState
+      @title="No data received"
+      @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+    />
   {{else}}
     <div class="is-subtitle-gray has-bottom-margin-m">
       FILTERS
@@ -48,7 +53,7 @@
           @title={{date-format this.responseTimestamp "MMMM"}}
           @totalUsageCounts={{this.totalUsageCounts}}
         />
-        {{#if this.totalClientsData}}
+        {{#if this.hasAttributionData}}
           <Clients::Attribution
             @chartLegend={{this.chartLegend}}
             @totalClientsData={{this.totalClientsData}}
@@ -59,8 +64,6 @@
             @timestamp={{this.responseTimestamp}}
           />
         {{/if}}
-      {{else}}
-        <EmptyState @title={{concat "No partial history"}} @message="There is no data in the current month yet." />
       {{/if}}
     {{/if}}
   {{/if}}

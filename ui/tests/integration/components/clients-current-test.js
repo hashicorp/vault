@@ -32,12 +32,13 @@ module('Integration | Component | client count current', function (hooks) {
     <div id="modal-wormhole"></div>
     <Clients::Current @model={{this.model}} />`);
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
-    assert.dom('[data-test-empty-state-title]').hasText('No partial history');
+    assert.dom('[data-test-empty-state-title]').hasText('No data received');
   });
 
   test('it shows zeroed data when enabled but no counts', async function (assert) {
     Object.assign(this.model.config, { queriesAvailable: true, enabled: 'On' });
     Object.assign(this.model.monthly, {
+      byNamespace: [{ label: 'root', clients: 0, entity_clients: 0, non_entity_clients: 0 }],
       total: { clients: 0, entity_clients: 0, non_entity_clients: 0 },
     });
     await render(hbs`
