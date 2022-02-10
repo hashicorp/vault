@@ -26,7 +26,7 @@ func pathRoles(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the role",
+				Description: "Name of the role.",
 			},
 
 			"policy": {
@@ -71,6 +71,18 @@ Defaults to 'client'.`,
 				Description: "Use ttl instead.",
 				Deprecated:  true,
 			},
+
+			"consul_namespace": {
+				Type: framework.TypeString,
+				Description: `Indicates which namespace that the token will be
+created within. Defaults to 'default'. Available in Consul 1.7 and above.`,
+			},
+
+			"partition": {
+				Type: framework.TypeString,
+				Description: `Indicates which admin partition that the token
+will be created within. Defaults to 'default'. Available in Consul 1.11 and above.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -113,11 +125,13 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease":      int64(result.TTL.Seconds()),
-			"ttl":        int64(result.TTL.Seconds()),
-			"max_ttl":    int64(result.MaxTTL.Seconds()),
-			"token_type": result.TokenType,
-			"local":      result.Local,
+			"lease":            int64(result.TTL.Seconds()),
+			"ttl":              int64(result.TTL.Seconds()),
+			"max_ttl":          int64(result.MaxTTL.Seconds()),
+			"token_type":       result.TokenType,
+			"local":            result.Local,
+			"consul_namespace": result.ConsulNamespace,
+			"partition":        result.Partition,
 		},
 	}
 	if result.Policy != "" {
@@ -126,16 +140,14 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 	if len(result.Policies) > 0 {
 		resp.Data["policies"] = result.Policies
 	}
+
 	return resp, nil
 }
 
 func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
-	name := d.Get("name").(string)
 	policies := d.Get("policies").([]string)
-	local := d.Get("local").(bool)
-
 	if len(policies) == 0 {
 		switch tokenType {
 		case "client":
@@ -173,13 +185,19 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		maxTTL = time.Second * time.Duration(maxTTLRaw.(int))
 	}
 
+	name := d.Get("name").(string)
+	local := d.Get("local").(bool)
+	namespace := d.Get("consul_namespace").(string)
+	partition := d.Get("partition").(string)
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
-		Policy:    string(policyRaw),
-		Policies:  policies,
-		TokenType: tokenType,
-		TTL:       ttl,
-		MaxTTL:    maxTTL,
-		Local:     local,
+		Policy:          string(policyRaw),
+		Policies:        policies,
+		TokenType:       tokenType,
+		TTL:             ttl,
+		MaxTTL:          maxTTL,
+		Local:           local,
+		ConsulNamespace: namespace,
+		Partition:       partition,
 	})
 	if err != nil {
 		return nil, err
@@ -201,10 +219,12 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 }
 
 type roleConfig struct {
-	Policy    string        `json:"policy"`
-	Policies  []string      `json:"policies"`
-	TTL       time.Duration `json:"lease"`
-	MaxTTL    time.Duration `json:"max_ttl"`
-	TokenType string        `json:"token_type"`
-	Local     bool          `json:"local"`
+	Policy          string        `json:"policy"`
+	Policies        []string      `json:"policies"`
+	TTL             time.Duration `json:"lease"`
+	MaxTTL          time.Duration `json:"max_ttl"`
+	TokenType       string        `json:"token_type"`
+	Local           bool          `json:"local"`
+	ConsulNamespace string        `json:"consul_namespace"`
+	Partition       string        `json:"partition"`
 }

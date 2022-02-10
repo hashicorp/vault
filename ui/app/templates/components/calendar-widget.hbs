@@ -39,18 +39,46 @@
     {{#if this.showCalendar}}
       <div class="calendar-widget-container">
         <div class="select-year">
-          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
-            <Chevron @direction="left" @size="s" class="has-text-grey" />
+          <button
+            id="previous-year"
+            type="button"
+            class="button is-transparent"
+            disabled={{this.disablePastYear}}
+            {{on "click" this.subYear}}
+          >
+            <Chevron
+              @direction="left"
+              @size="s"
+              class="has-text-grey"
+              {{on "mouseover" this.addTooltip}}
+              {{on "mouseleave" this.removeTooltip}}
+            />
           </button>
           <p>{{this.displayYear}}</p>
           <button
             type="button"
-            class="button is-transparent padding-right"
+            class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
             disabled={{this.disableFutureYear}}
             {{on "click" this.addYear}}
           >
             <Chevron @direction="right" @size="s" class="has-text-grey" />
           </button>
+          {{#if this.tooltipTarget}}
+            {{! Component must be in curly bracket notation }}
+            {{! template-lint-disable no-curly-component-invocation }}
+            {{#modal-dialog
+              tagName="div"
+              tetherTarget=this.tooltipTarget
+              targetAttachment="top right"
+              attachment="top middle"
+              offset="150px 0"
+            }}
+              <div class={{"calendar-tooltip"}}>
+                <p>{{this.tooltipText}}</p>
+              </div>
+              <div class="chart-tooltip-arrow"></div>
+            {{/modal-dialog}}
+          {{/if}}
         </div>
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
           {{#each @arrayOfMonths as |month index|}}
