@@ -9,11 +9,11 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -762,10 +762,10 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 
 	if resp.Data["ttl"].(int64) != 10 {
-		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
+		t.Fatalf("bad: ttl; expected: 10, actual: %d", resp.Data["ttl"])
 	}
 	if resp.Data["max_ttl"].(int64) != 20 {
-		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
+		t.Fatalf("bad: max_ttl; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
 	if resp.Data["period"].(int64) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])

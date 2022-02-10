@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -32,11 +31,11 @@ var (
 // The term used to encrypt a key is prefixed to the key written out.
 // All data is encrypted with the latest key, but storing the old keys
 // allows for decryption of keys written previously. Along with the encryption
-// keys, the keyring also tracks the master key. This is necessary so that
-// when a new key is added to the keyring, we can encrypt with the master key
+// keys, the keyring also tracks the root key. This is necessary so that
+// when a new key is added to the keyring, we can encrypt with the root key
 // and write out the new keyring.
 type Keyring struct {
-	masterKey      []byte
+	rootKey        []byte
 	keys           map[uint32]*Key
 	activeTerm     uint32
 	rotationConfig KeyRotationConfig
@@ -73,7 +72,7 @@ func (k *Key) Serialize() ([]byte, error) {
 func DeserializeKey(buf []byte) (*Key, error) {
 	k := new(Key)
 	if err := jsonutil.DecodeJSON(buf, k); err != nil {
-		return nil, errwrap.Wrapf("deserialization failed: {{err}}", err)
+		return nil, fmt.Errorf("deserialization failed: %w", err)
 	}
 	return k, nil
 }
@@ -91,7 +90,7 @@ func NewKeyring() *Keyring {
 // Clone returns a new copy of the keyring
 func (k *Keyring) Clone() *Keyring {
 	clone := &Keyring{
-		masterKey:      k.masterKey,
+		rootKey:        k.rootKey,
 		keys:           make(map[uint32]*Key, len(k.keys)),
 		activeTerm:     k.activeTerm,
 		rotationConfig: k.rotationConfig,
@@ -171,25 +170,25 @@ func (k *Keyring) TermKey(term uint32) *Key {
 	return k.keys[term]
 }
 
-// SetMasterKey is used to update the master key
-func (k *Keyring) SetMasterKey(val []byte) *Keyring {
+// SetRootKey is used to update the root key
+func (k *Keyring) SetRootKey(val []byte) *Keyring {
 	valCopy := make([]byte, len(val))
 	copy(valCopy, val)
 	clone := k.Clone()
-	clone.masterKey = valCopy
+	clone.rootKey = valCopy
 	return clone
 }
 
-// MasterKey returns the master key
-func (k *Keyring) MasterKey() []byte {
-	return k.masterKey
+// RootKey returns the root key
+func (k *Keyring) RootKey() []byte {
+	return k.rootKey
 }
 
 // Serialize is used to create a byte encoded keyring
 func (k *Keyring) Serialize() ([]byte, error) {
 	// Create the encoded entry
 	enc := EncodedKeyring{
-		MasterKey:      k.masterKey,
+		MasterKey:      k.rootKey,
 		RotationConfig: k.rotationConfig,
 	}
 	for _, key := range k.keys {
@@ -206,12 +205,12 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	// Deserialize the keyring
 	var enc EncodedKeyring
 	if err := jsonutil.DecodeJSON(buf, &enc); err != nil {
-		return nil, errwrap.Wrapf("deserialization failed: {{err}}", err)
+		return nil, fmt.Errorf("deserialization failed: %w", err)
 	}
 
 	// Create a new keyring
 	k := NewKeyring()
-	k.masterKey = enc.MasterKey
+	k.rootKey = enc.MasterKey
 	k.rotationConfig = enc.RotationConfig
 	k.rotationConfig.Sanitize()
 	for _, key := range enc.Keys {
@@ -230,8 +229,8 @@ func (k *Keyring) Zeroize(keysToo bool) {
 	if k == nil {
 		return
 	}
-	if k.masterKey != nil {
-		memzero(k.masterKey)
+	if k.rootKey != nil {
+		memzero(k.rootKey)
 	}
 	if !keysToo || k.keys == nil {
 		return

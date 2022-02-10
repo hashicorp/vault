@@ -38,7 +38,6 @@ func (b BackendType) String() string {
 // allows for a "procfs" like interaction, as internal state can be exposed by
 // acting like a logical backend and being mounted.
 type Backend interface {
-
 	// Initialize is used to initialize a plugin after it has been mounted.
 	Initialize(context.Context, *InitializationRequest) error
 
@@ -117,6 +116,10 @@ type Paths struct {
 	Root []string
 
 	// Unauthenticated are the paths that can be accessed without any auth.
+	// These can't be regular expressions, it is either exact match, a prefix
+	// match and/or a wildcard match. For prefix match, append '*' as a suffix.
+	// For a wildcard match, use '+' in the segment to match any identifier
+	// (e.g. 'foo/+/bar'). Note that '+' can't be adjacent to a non-slash.
 	Unauthenticated []string
 
 	// LocalStorage are paths (prefixes) that are local to this instance; this

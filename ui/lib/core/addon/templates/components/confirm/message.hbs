@@ -1,29 +1,21 @@
-{{#if showConfirm}}
-  {{#maybe-in-element wormholeReference false}}
+{{#if this.showConfirm}}
+  {{#maybe-in-element this.wormholeReference false}}
     <div class="confirm-action-message">
       <div class="message is-highlight">
         <div class="message-title">
-          <Icon @glyph="alert-triangle" />
-          {{title}}
+          <Icon @name="alert-triangle-fill" />
+          {{this.title}}
         </div>
         <p>
-          {{message}}
+          {{this.message}}
         </p>
       </div>
       <div class="confirm-action-options">
-        <button
-          type="button"
-          class="link is-destroy"
-          data-test-confirm-button="true"
-          onclick={{action "onConfirm"}}>
-          {{confirmButtonText}}
+        <button type="button" class="link is-destroy" data-test-confirm-button="true" onclick={{action "onConfirm"}}>
+          {{this.confirmButtonText}}
         </button>
-        <button
-          type="button"
-          class="link"
-          data-test-confirm-cancel-button="true"
-          {{action this.onCancel}}>
-          {{cancelButtonText}}
+        <button type="button" class="link" data-test-confirm-cancel-button="true" {{action this.onCancel}}>
+          {{this.cancelButtonText}}
         </button>
       </div>
     </div>
@@ -33,10 +25,10 @@
 <button
   type="button"
   class="link is-destroy"
-  disabled={{showConfirm}}
-  onclick={{action this.onTrigger id}}
-  data-test-confirm-action-trigger={{id}}
+  disabled={{this.showConfirm}}
+  onclick={{action this.onTrigger this.id}}
+  data-test-confirm-action-trigger={{this.id}}
   ...attributes
-  >
-  {{triggerText}}
+>
+  {{this.triggerText}}
 </button>

@@ -52,7 +52,7 @@ func TestSysMounts(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -73,9 +73,10 @@ func TestSysMounts(t *testing.T) {
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -106,7 +107,7 @@ func TestSysMounts(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -127,9 +128,10 @@ func TestSysMounts(t *testing.T) {
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -220,7 +222,7 @@ func TestSysMount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -241,9 +243,10 @@ func TestSysMount(t *testing.T) {
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -287,7 +290,7 @@ func TestSysMount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -308,9 +311,10 @@ func TestSysMount(t *testing.T) {
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -420,7 +424,7 @@ func TestSysRemount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -441,9 +445,10 @@ func TestSysRemount(t *testing.T) {
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -487,7 +492,7 @@ func TestSysRemount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -508,9 +513,10 @@ func TestSysRemount(t *testing.T) {
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -588,7 +594,7 @@ func TestSysUnmount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -609,9 +615,10 @@ func TestSysUnmount(t *testing.T) {
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -642,7 +649,7 @@ func TestSysUnmount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -663,9 +670,10 @@ func TestSysUnmount(t *testing.T) {
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -842,7 +850,7 @@ func TestSysTuneMount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -863,9 +871,10 @@ func TestSysTuneMount(t *testing.T) {
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -909,7 +918,7 @@ func TestSysTuneMount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -930,9 +939,10 @@ func TestSysTuneMount(t *testing.T) {
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1049,7 +1059,7 @@ func TestSysTuneMount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -1070,9 +1080,10 @@ func TestSysTuneMount(t *testing.T) {
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -1116,7 +1127,7 @@ func TestSysTuneMount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -1137,9 +1148,10 @@ func TestSysTuneMount(t *testing.T) {
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1503,6 +1515,89 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 	// Unset the mount tune value
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
 		"passthrough_request_headers": "",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Check results
+	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
+	testResponseStatus(t, resp, 200)
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"description":       "key/value secret storage",
+			"default_lease_ttl": json.Number("2764800"),
+			"max_lease_ttl":     json.Number("2764800"),
+			"force_no_cache":    false,
+			"options":           map[string]interface{}{"version": "1"},
+		},
+		"description":       "key/value secret storage",
+		"default_lease_ttl": json.Number("2764800"),
+		"max_lease_ttl":     json.Number("2764800"),
+		"force_no_cache":    false,
+		"options":           map[string]interface{}{"version": "1"},
+	}
+	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+}
+
+func TestSysTuneMount_allowedManagedKeys(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	// Mount-tune the allowed_managed_keys
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
+		"allowed_managed_keys": "test_key",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Check results
+	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
+	testResponseStatus(t, resp, 200)
+
+	actual := map[string]interface{}{}
+	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"description":          "key/value secret storage",
+			"default_lease_ttl":    json.Number("2764800"),
+			"max_lease_ttl":        json.Number("2764800"),
+			"options":              map[string]interface{}{"version": "1"},
+			"force_no_cache":       false,
+			"allowed_managed_keys": []interface{}{"test_key"},
+		},
+		"description":          "key/value secret storage",
+		"default_lease_ttl":    json.Number("2764800"),
+		"max_lease_ttl":        json.Number("2764800"),
+		"options":              map[string]interface{}{"version": "1"},
+		"force_no_cache":       false,
+		"allowed_managed_keys": []interface{}{"test_key"},
+	}
+	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+
+	// Unset the mount tune value
+	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
+		"allowed_managed_keys": "",
 	})
 	testResponseStatus(t, resp, 204)
 

@@ -152,7 +152,7 @@ func (d databaseVersionWrapper) changePasswordLegacy(ctx context.Context, userna
 	err = d.changeUserPasswordLegacy(ctx, username, passwordChange)
 
 	// If changing the root user's password but SetCredentials is unimplemented, fall back to RotateRootCredentials
-	if isRootUser && status.Code(err) == codes.Unimplemented {
+	if isRootUser && (err == v4.ErrPluginStaticUnsupported || status.Code(err) == codes.Unimplemented) {
 		saveConfig, err = d.changeRootUserPasswordLegacy(ctx, passwordChange)
 		if err != nil {
 			return nil, err

@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -95,7 +94,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 
 	err = jsonutil.DecodeJSON(body, &instance)
 	if err != nil {
-		retErr = errwrap.Wrapf("error parsing instance metadata response: {{err}}", err)
+		retErr = fmt.Errorf("error parsing instance metadata response: %w", err)
 		return
 	}
 
@@ -112,7 +111,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 
 	err = jsonutil.DecodeJSON(body, &identity)
 	if err != nil {
-		retErr = errwrap.Wrapf("error parsing identity metadata response: {{err}}", err)
+		retErr = fmt.Errorf("error parsing identity metadata response: %w", err)
 		return
 	}
 
@@ -158,7 +157,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error fetching metadata from %s: {{err}}", endpoint), err)
+		return nil, fmt.Errorf("error fetching metadata from %s: %w", endpoint, err)
 	}
 
 	if resp == nil {
@@ -168,7 +167,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error reading metadata from %s: {{err}}", endpoint), err)
+		return nil, fmt.Errorf("error reading metadata from %s: %w", endpoint, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {

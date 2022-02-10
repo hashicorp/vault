@@ -1,0 +1,3 @@
+```release-note:feature
+**Oracle DB in the UI**: Oracle DB connection is now supported in the UI
+```

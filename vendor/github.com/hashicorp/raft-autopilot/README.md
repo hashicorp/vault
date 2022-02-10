@@ -1,2 +1,0 @@
-# raft-autopilot
-Raft Autopilot

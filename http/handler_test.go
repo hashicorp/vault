@@ -289,6 +289,45 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	}
 }
 
+func TestHandler_InFlightRequest(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/in-flight-req", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if resp == nil {
+		t.Fatalf("nil response")
+	}
+
+	var actual map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if actual == nil || len(actual) == 0 {
+		t.Fatal("expected to get at least one in-flight request, got nil or zero length map")
+	}
+	for _, v := range actual {
+		reqInfo, ok := v.(map[string]interface{})
+		if !ok {
+			t.Fatal("failed to read in-flight request")
+		}
+		if reqInfo["request_path"] != "/v1/sys/in-flight-req" {
+			t.Fatalf("expected /v1/sys/in-flight-req in-flight request path, got %s", actual["request_path"])
+		}
+	}
+}
+
 // TestHandler_MissingToken tests the response / error code if a request comes
 // in with a missing client token. See
 // https://github.com/hashicorp/vault/issues/8377
@@ -310,8 +349,8 @@ func TestHandler_MissingToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode != 400 {
-		t.Fatalf("expected code 400, got: %d", resp.StatusCode)
+	if resp.StatusCode != 403 {
+		t.Fatalf("expected code 403, got: %d", resp.StatusCode)
 	}
 }
 
@@ -386,7 +425,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -407,9 +446,10 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -440,7 +480,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -461,9 +501,10 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -650,7 +691,8 @@ func TestHandler_requestAuth(t *testing.T) {
 	for _, r := range []*http.Request{rWithVault, rWithAuthorization} {
 		req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 		r = r.WithContext(rootCtx)
-		req, err = requestAuth(core, r, req)
+		requestAuth(r, req)
+		err = core.PopulateTokenEntry(rootCtx, req)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -675,24 +717,13 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 
-	req, err = requestAuth(core, rNothing, req)
+	requestAuth(rNothing, req)
+	err = core.PopulateTokenEntry(rootCtx, req)
 	if err != nil {
 		t.Fatalf("expected no error, got %s", err)
 	}
 	if req.ClientToken != "" {
 		t.Fatalf("client token should not be filled, got %s", req.ClientToken)
-	}
-
-	rFragmentedHeader, err := http.NewRequest("GET", "v1/test/path", nil)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	rFragmentedHeader.Header.Set("Authorization", "Bearer something somewhat")
-	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
-
-	_, err = requestAuth(core, rFragmentedHeader, req)
-	if err == nil {
-		t.Fatalf("expected an error, got none")
 	}
 }
 

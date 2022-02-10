@@ -19,8 +19,9 @@ type KVMetadataPutCommand struct {
 	*BaseCommand
 
 	flagMaxVersions        int
-	flagCASRequired        bool
+	flagCASRequired        BoolPtr
 	flagDeleteVersionAfter time.Duration
+	flagCustomMetadata     map[string]string
 	testStdin              io.Reader // for tests
 }
 
@@ -51,6 +52,10 @@ Usage: vault metadata kv put [options] KEY
 
       $ vault kv metadata put -cas-required secret/foo
 
+  Set custom metadata on the key:
+
+      $ vault kv metadata put -custom-metadata=foo=abc -custom-metadata=bar=123 secret/foo
+
   Additional flags and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
@@ -66,15 +71,14 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:    "max-versions",
 		Target:  &c.flagMaxVersions,
-		Default: 0,
+		Default: -1,
 		Usage:   `The number of versions to keep. If not set, the backend’s configured max version is used.`,
 	})
 
-	f.BoolVar(&BoolVar{
-		Name:    "cas-required",
-		Target:  &c.flagCASRequired,
-		Default: false,
-		Usage:   `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   "cas-required",
+		Target: &c.flagCASRequired,
+		Usage:  `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
 	})
 
 	f.DurationVar(&DurationVar{
@@ -88,6 +92,14 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 		greater than the backend's delete-version-after. The delete-version-after is
 		specified as a numeric string with a suffix like "30s" or
 		"3h25m19s".`,
+	})
+
+	f.StringMapVar(&StringMapVar{
+		Name:    "custom-metadata",
+		Target:  &c.flagCustomMetadata,
+		Default: map[string]string{},
+		Usage: "Specifies arbitrary version-agnostic key=value metadata meant to describe a secret." +
+			"This can be specified multiple times to add multiple pieces of metadata.",
 	})
 
 	return set
@@ -138,13 +150,22 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	}
 
 	path = addPrefixToVKVPath(path, mountPath, "metadata")
-	data := map[string]interface{}{
-		"max_versions": c.flagMaxVersions,
-		"cas_required": c.flagCASRequired,
+	data := map[string]interface{}{}
+
+	if c.flagMaxVersions >= 0 {
+		data["max_versions"] = c.flagMaxVersions
 	}
 
 	if c.flagDeleteVersionAfter >= 0 {
 		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
+	}
+
+	if c.flagCASRequired.IsSet() {
+		data["cas_required"] = c.flagCASRequired.Get()
+	}
+
+	if len(c.flagCustomMetadata) > 0 {
+		data["custom_metadata"] = c.flagCustomMetadata
 	}
 
 	secret, err := client.Logical().Write(path, data)

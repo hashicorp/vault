@@ -9,8 +9,10 @@ export default class MyDocument extends Document {
 
   render() {
     return (
-      <Html>
-        <HashiHead is={Head} />
+      <Html lang="en">
+        <Head>
+          <HashiHead />
+        </Head>
         <body>
           <Main />
           <NextScript />

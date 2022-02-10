@@ -1,0 +1,28 @@
+.regex-label-wrapper {
+  display: flex;
+  align-items: flex-end;
+}
+.regex-label {
+  flex: 1 0 auto;
+}
+.regex-toggle {
+  flex: 0 1 auto;
+}
+.regex-group {
+  font-family: $family-monospace;
+  font-size: $size-8;
+  color: $ui-gray-600;
+}
+.regex-group-position {
+  background-color: $ui-gray-200;
+  border-radius: 3px;
+  padding-top: 5px;
+  padding-bottom: 4px;
+  margin-right: 4px;
+  span {
+    margin-left: 6px;
+  }
+}
+.regex-group-value {
+  margin-right: $spacing-m;
+}

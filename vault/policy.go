@@ -6,15 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -27,6 +26,7 @@ const (
 	ListCapability   = "list"
 	SudoCapability   = "sudo"
 	RootCapability   = "root"
+	PatchCapability  = "patch"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -43,6 +43,14 @@ const (
 	DeleteCapabilityInt
 	ListCapabilityInt
 	SudoCapabilityInt
+	PatchCapabilityInt
+)
+
+// Error constants for testing
+const (
+	// ControlledCapabilityPolicySubsetError is thrown when a control group's controlled capabilities
+	// are not a subset of the policy's capabilities.
+	ControlledCapabilityPolicySubsetError = "control group factor capabilities must be a subset of the policy's capabilities"
 )
 
 type PolicyType uint32
@@ -77,6 +85,7 @@ var cap2Int = map[string]uint32{
 	DeleteCapability: DeleteCapabilityInt,
 	ListCapability:   ListCapabilityInt,
 	SudoCapability:   SudoCapabilityInt,
+	PatchCapability:  PatchCapabilityInt,
 }
 
 type egpPath struct {
@@ -140,8 +149,9 @@ type ControlGroup struct {
 }
 
 type ControlGroupFactor struct {
-	Name     string
-	Identity *IdentityFactor `hcl:"identity"`
+	Name                   string
+	Identity               *IdentityFactor `hcl:"identity"`
+	ControlledCapabilities []string        `hcl:"controlled_capabilities"`
 }
 
 type IdentityFactor struct {
@@ -233,7 +243,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Top-level item should be the object list
@@ -248,7 +258,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		"path",
 	}
 	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Create the initial policy and store the raw text of the rules
@@ -258,12 +268,12 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		namespace: ns,
 	}
 	if err := hcl.DecodeObject(&p, list); err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
 		if err := parsePaths(&p, o, performTemplating, entity, groups); err != nil {
-			return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse policy: %w", err)
 		}
 	}
 
@@ -298,7 +308,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				String:            key,
 			})
 			if err != nil {
-				return errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
+				return fmt.Errorf("failed to validate policy templating: %w", err)
 			}
 			if hasTemplating {
 				result.Templated = true
@@ -383,7 +393,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
@@ -406,14 +416,14 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		if pc.MinWrappingTTLHCL != nil {
 			dur, err := parseutil.ParseDurationSecond(pc.MinWrappingTTLHCL)
 			if err != nil {
-				return errwrap.Wrapf("error parsing min_wrapping_ttl: {{err}}", err)
+				return fmt.Errorf("error parsing min_wrapping_ttl: %w", err)
 			}
 			pc.Permissions.MinWrappingTTL = dur
 		}
 		if pc.MaxWrappingTTLHCL != nil {
 			dur, err := parseutil.ParseDurationSecond(pc.MaxWrappingTTLHCL)
 			if err != nil {
-				return errwrap.Wrapf("error parsing max_wrapping_ttl: {{err}}", err)
+				return fmt.Errorf("error parsing max_wrapping_ttl: %w", err)
 			}
 			pc.Permissions.MaxWrappingTTL = dur
 		}
@@ -428,11 +438,10 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			if pc.ControlGroupHCL.TTL != nil {
 				dur, err := parseutil.ParseDurationSecond(pc.ControlGroupHCL.TTL)
 				if err != nil {
-					return errwrap.Wrapf("error parsing control group max ttl: {{err}}", err)
+					return fmt.Errorf("error parsing control group max ttl: %w", err)
 				}
 				pc.Permissions.ControlGroup.TTL = dur
 			}
-
 			var factors []*ControlGroupFactor
 			if pc.ControlGroupHCL.Factors != nil {
 				for key, factor := range pc.ControlGroupHCL.Factors {
@@ -447,9 +456,27 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 						return errors.New("must provide more than one identity group and approvals > 0")
 					}
 
+					// Ensure that configured ControlledCapabilities for factor are a subset of the
+					// Capabilities of the policy.
+					if len(factor.ControlledCapabilities) > 0 {
+						var found bool
+						for _, controlledCapability := range factor.ControlledCapabilities {
+							found = false
+							for _, policyCap := range pc.Capabilities {
+								if controlledCapability == policyCap {
+									found = true
+								}
+							}
+							if !found {
+								return errors.New(ControlledCapabilityPolicySubsetError)
+							}
+						}
+					}
+
 					factors = append(factors, &ControlGroupFactor{
-						Name:     key,
-						Identity: factor.Identity,
+						Name:                   key,
+						Identity:               factor.Identity,
+						ControlledCapabilities: factor.ControlledCapabilities,
 					})
 				}
 			}

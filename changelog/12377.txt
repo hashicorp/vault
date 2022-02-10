@@ -1,0 +1,3 @@
+```release-note: bug
+physical/raft: Fix safeio.Rename error when restoring snapshots on windows
+```

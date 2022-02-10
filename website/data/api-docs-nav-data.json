@@ -38,6 +38,11 @@
         "path": "secret/azure"
       },
       {
+        "title": "Cassandra",
+        "path": "secret/cassandra",
+        "hidden": true
+      },
+      {
         "title": "Consul",
         "path": "secret/consul"
       },
@@ -128,6 +133,10 @@
           {
             "title": "AWS KMS",
             "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
           }
         ]
       },
@@ -182,6 +191,10 @@
           {
             "title": "Lookup",
             "path": "secret/identity/lookup"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "secret/identity/oidc-provider"
           }
         ]
       },
@@ -352,6 +365,10 @@
         "path": "system/config-cors"
       },
       {
+        "title": "<code>/sys/config/reload</code>",
+        "path": "system/config-reload"
+      },
+      {
         "title": "<code>/sys/config/state</code>",
         "path": "system/config-state"
       },
@@ -364,6 +381,11 @@
         "path": "system/control-group"
       },
       {
+        "title": "<code>/sys/generate-recovery-token</code>",
+        "path": "system/generate-recovery-token",
+        "hidden": true
+      },
+      {
         "title": "<code>/sys/generate-root</code>",
         "path": "system/generate-root"
       },
@@ -374,6 +396,10 @@
       {
         "title": "<code>/sys/host-info</code>",
         "path": "system/host-info"
+      },
+      {
+        "title": "<code>/sys/in-flight-req</code>",
+        "path": "system/in-flight-req"
       },
       {
         "title": "<code>/sys/init</code>",
@@ -396,8 +422,20 @@
         "path": "system/internal-ui-mounts"
       },
       {
+        "title": "<code>/sys/internal/ui/namespaces</code>",
+        "path": "system/internal-ui-namespaces"
+      },
+      {
+        "title": "<code>/sys/internal/ui/resultant-acl</code>",
+        "path": "system/internal-ui-resultant-acl"
+      },
+      {
         "title": "<code>/sys/key-status</code>",
         "path": "system/key-status"
+      },
+      {
+        "title": "<code>/sys/ha-status</code>",
+        "path": "system/ha-status"
       },
       {
         "title": "<code>/sys/leader</code>",
@@ -410,6 +448,10 @@
       {
         "title": "<code>/sys/license</code>",
         "path": "system/license"
+      },
+      {
+        "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
+        "path": "system/managed-keys"
       },
       {
         "title": "<code>/sys/metrics</code>",

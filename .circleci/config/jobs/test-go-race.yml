@@ -1,7 +1,7 @@
 executor: docker-env-go-test-race
 parallelism: 8
 steps:
-  - check-branch-name
+  - exit-if-ui-or-docs-branch
   - checkout
   - go_test:
       extra_flags: "-race"

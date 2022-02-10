@@ -1,0 +1,4 @@
+```release-note:bug
+storage/postgres: Update postgres library (github.com/lib/pq) to properly remove terminated TLS connections from the connection pool.
+database/postgres: Update postgres library (github.com/lib/pq) to properly remove terminated TLS connections from the connection pool.
+```

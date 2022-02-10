@@ -27,6 +27,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg = new(ldaputil.ConfigEntry)
 	cfg.UserDN = "ou=people,dc=planetexpress,dc=com"
 	cfg.UserAttr = "cn"
+	cfg.UserFilter = "({{.UserAttr}}={{.Username}})"
 	cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
 	cfg.BindPassword = "GoodNewsEveryone"
 	cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"

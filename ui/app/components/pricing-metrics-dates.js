@@ -18,16 +18,7 @@
 import { set, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import {
-  differenceInSeconds,
-  isValid,
-  subMonths,
-  startOfToday,
-  format,
-  endOfMonth,
-  startOfMonth,
-  isBefore,
-} from 'date-fns';
+import { subMonths, startOfToday, format, endOfMonth, startOfMonth, isBefore } from 'date-fns';
 import layout from '../templates/components/pricing-metrics-dates';
 import { parseDateString } from 'vault/helpers/parse-date-string';
 
@@ -46,7 +37,7 @@ export default Component.extend({
   defaultSpan: 12,
   retentionMonths: 24,
 
-  startDate: computed('start', function() {
+  startDate: computed('start', function () {
     if (!this.start) return null;
     let date;
     try {
@@ -57,7 +48,7 @@ export default Component.extend({
       return null;
     }
   }),
-  endDate: computed('end', function() {
+  endDate: computed('end', function () {
     if (!this.end) return null;
     let date;
     try {
@@ -69,36 +60,7 @@ export default Component.extend({
     }
   }),
 
-  // We don't want the warning to show when inputs are being updated before query is made
-  /* eslint-disable-next-line ember/require-computed-property-dependencies */
-  showResultsWarning: computed('resultEnd', 'resultStart', function() {
-    if (!this.queryStart || !this.queryEnd || !this.resultStart || !this.resultEnd) {
-      return false;
-    }
-    const resultStart = new Date(this.resultStart);
-    const resultEnd = new Date(this.resultEnd);
-    let queryStart, queryEnd;
-    try {
-      queryStart = parseDateString(this.queryStart, '-');
-      queryEnd = parseDateString(this.queryEnd, '-');
-    } catch (e) {
-      // Log error for debugging purposes
-      console.debug(e);
-    }
-
-    if (!queryStart || !queryEnd || !isValid(resultStart) || !isValid(resultEnd)) {
-      return false;
-    }
-    if (Math.abs(differenceInSeconds(queryStart, resultStart)) >= 86400) {
-      return true;
-    }
-    if (Math.abs(differenceInSeconds(resultEnd, endOfMonth(queryEnd))) >= 86400) {
-      return true;
-    }
-    return false;
-  }),
-
-  error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function() {
+  error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function () {
     if (!this.startDate) {
       return 'Start date is invalid. Please use format MM/yyyy';
     }
@@ -148,7 +110,7 @@ export default Component.extend({
     handleQuery() {
       const start = format(this.startDate, 'MM-yyyy');
       const end = format(this.endDate, 'MM-yyyy');
-      this.router.transitionTo('vault.cluster.metrics', {
+      this.router.transitionTo('vault.cluster.clients', {
         queryParams: {
           start,
           end,

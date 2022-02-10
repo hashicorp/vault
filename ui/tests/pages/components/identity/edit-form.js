@@ -7,6 +7,8 @@ export default {
   cancelLink: clickable('[data-test-cancel-link]'),
   name: fillable('[data-test-input="name"]'),
   disabled: clickable('[data-test-input="disabled"]'),
+  metadataKey: fillable('[data-test-kv-key]'),
+  metadataValue: fillable('[data-test-kv-value]'),
   type: fillable('[data-test-input="type"]'),
   submit: clickable('[data-test-identity-submit]'),
   delete: clickable('[data-test-confirm-action-trigger]'),

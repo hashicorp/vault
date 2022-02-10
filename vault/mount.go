@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -60,10 +60,11 @@ const (
 	identityMountPath  = "identity/"
 	cubbyholeMountPath = "cubbyhole/"
 
-	systemMountType    = "system"
-	identityMountType  = "identity"
-	cubbyholeMountType = "cubbyhole"
-	pluginMountType    = "plugin"
+	systemMountType      = "system"
+	identityMountType    = "identity"
+	cubbyholeMountType   = "cubbyhole"
+	pluginMountType      = "plugin"
+	mountTypeNSCubbyhole = "ns_cubbyhole"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -303,6 +304,7 @@ type MountConfig struct {
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 logical.TokenType     `json:"token_type,omitempty" structs:"token_type" mapstructure:"token_type"`
+	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
@@ -321,6 +323,7 @@ type APIMountConfig struct {
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
+	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
@@ -377,6 +380,12 @@ func (e *MountEntry) SyncCache() {
 		e.synthesizedConfigCache.Delete("allowed_response_headers")
 	} else {
 		e.synthesizedConfigCache.Store("allowed_response_headers", e.Config.AllowedResponseHeaders)
+	}
+
+	if len(e.Config.AllowedManagedKeys) == 0 {
+		e.synthesizedConfigCache.Delete("allowed_managed_keys")
+	} else {
+		e.synthesizedConfigCache.Store("allowed_managed_keys", e.Config.AllowedManagedKeys)
 	}
 }
 
@@ -1365,7 +1374,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	// Set up conf to pass in plugin_name
-	conf := make(map[string]string, len(entry.Options)+1)
+	conf := make(map[string]string)
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
@@ -1490,6 +1499,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             sysUUID,
 		Accessor:         sysAccessor,
 		BackendAwareUUID: sysBackendUUID,
+		SealWrap:         true, // Enable SealWrap since SystemBackend utilizes SealWrapStorage, see factory in addExtraLogicalBackends().
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Accept"},
 		},
@@ -1515,6 +1525,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             identityUUID,
 		Accessor:         identityAccessor,
 		BackendAwareUUID: identityBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Authorization"},
+		},
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

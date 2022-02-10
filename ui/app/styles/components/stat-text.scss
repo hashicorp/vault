@@ -1,0 +1,105 @@
+.stat-text-container {
+  line-height: normal;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &.l,
+  &.m {
+    .stat-label {
+      font-size: $size-5;
+      font-weight: $font-weight-semibold;
+      margin-bottom: $spacing-xxs;
+      line-height: inherit;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: inherit;
+    }
+    .stat-value {
+      font-size: $size-3;
+      font-weight: $font-weight-normal;
+      margin-top: $spacing-s;
+    }
+  }
+
+  &.s {
+    .stat-label {
+      font-size: $size-5;
+      font-weight: $font-weight-semibold;
+      line-height: inherit;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: inherit;
+    }
+    .stat-value {
+      font-size: $size-5;
+      font-weight: $font-weight-normal;
+      margin-top: $spacing-s;
+    }
+  }
+
+  &.l-no-subText {
+    .stat-label {
+      font-size: $size-5;
+      font-weight: $font-weight-semibold;
+      line-height: inherit;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: inherit;
+    }
+    .stat-value {
+      font-size: $size-3;
+      font-weight: $font-weight-normal;
+      margin-top: $spacing-xxs;
+    }
+  }
+
+  &.m-no-subText {
+    .stat-label {
+      font-size: $size-8;
+      font-weight: $font-weight-bold;
+      line-height: inherit;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: inherit;
+    }
+    .stat-value {
+      font-size: $size-5;
+      font-weight: $font-weight-normal;
+      margin-top: $spacing-xxs;
+    }
+  }
+
+  &.s-no-subText {
+    .stat-label {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-500;
+      line-height: inherit;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: inherit;
+    }
+    .stat-value {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-800;
+      line-height: inherit;
+    }
+  }
+}

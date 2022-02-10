@@ -27,7 +27,7 @@ export default Component.extend({
     'model.{isError,adapterError.message,adapterError.errors.@each}',
     'errors',
     'errors.[]',
-    function() {
+    function () {
       const errorMessage = this.errorMessage;
       const errors = this.errors;
       const modelIsError = this.model?.isError;
@@ -44,7 +44,7 @@ export default Component.extend({
           return;
         }
         if (this.model.adapterError.errors.length > 0) {
-          return this.model.adapterError.errors.map(e => {
+          return this.model.adapterError.errors.map((e) => {
             if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
             return e;
           });

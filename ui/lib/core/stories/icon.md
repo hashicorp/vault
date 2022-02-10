@@ -3,17 +3,19 @@
 ## Icon
 `Icon` components are glyphs used to indicate important information.
 
+Flight icon documentation at https://flight-hashicorp.vercel.app/
+
 **Params**
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| glyph | <code>String</code> | <code></code> | The name of the SVG to render inline. |
-| [size] | <code>String</code> | <code>&#x27;m&#x27;</code> | The size of the Icon, can be one of 's', 'm', 'l', 'xlm', 'xl', 'xxl'. The default is 'm'. |
+| name | <code>string</code> | <code>null</code> | The name of the SVG to render inline. |
+| [size] | <code>string</code> | <code>16</code> | size for flight icon, can be 16 or 24 |
 
 **Example**
   
 ```js
-<Icon @glyph="cancel-square-outline" />
+<Icon @name="cancel-square-outline" @size="24" />
 ```
 
 **See**

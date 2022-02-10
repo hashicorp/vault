@@ -696,8 +696,8 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 func testCore_MountTable_UpgradeToTyped_Common(
 	t *testing.T,
 	c *Core,
-	testType string) {
-
+	testType string,
+) {
 	var path string
 	var mt *MountTable
 	switch testType {
@@ -783,6 +783,9 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	if err != nil {
 		t.Fatal(err)
 	}
+	if entry == nil {
+		t.Fatal("nil value")
+	}
 
 	decompressedBytes, uncompressed, err := compressutil.Decompress(entry.Value)
 	if err != nil {
@@ -837,6 +840,9 @@ func verifyDefaultTable(t *testing.T, table *MountTable, expected int) {
 		case "sys/":
 			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
+			}
+			if !entry.SealWrap {
+				t.Fatalf("expected SealWrap to be enabled: %v", entry)
 			}
 		case "identity/":
 			if entry.Type != "identity" {

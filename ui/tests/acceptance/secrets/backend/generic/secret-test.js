@@ -13,19 +13,19 @@ import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 const cli = create(consolePanel);
 
-module('Acceptance | secrets/generic/create', function(hooks) {
+module('Acceptance | secrets/generic/create', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
-  test('it creates and can view a secret with the generic backend', async function(assert) {
+  test('it creates and can view a secret with the generic backend', async function (assert) {
     const path = `generic-${new Date().getTime()}`;
     const kvPath = `generic-kv-${new Date().getTime()}`;
     await cli.runCommands([`write sys/mounts/${path} type=generic`, `write ${path}/foo bar=baz`]);
@@ -39,7 +39,7 @@ module('Acceptance | secrets/generic/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
-  test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', async function(assert) {
+  test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', async function (assert) {
     const path = `generic-${new Date().getTime()}`;
     const kvPath = `generic-kv-${new Date().getTime()}`;
     await cli.runCommands([

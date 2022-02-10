@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
-	influx "github.com/influxdata/influxdb/client/v2"
+	influx "github.com/influxdata/influxdb1-client/v2"
+	"github.com/stretchr/testify/require"
 )
 
 const createUserStatements = `CREATE USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL ON "vault" TO "{{username}}";`
@@ -78,12 +78,12 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 		})
 		cli, err := influx.NewHTTPClient(c.apiConfig())
 		if err != nil {
-			return nil, errwrap.Wrapf("error creating InfluxDB client: {{err}}", err)
+			return nil, fmt.Errorf("error creating InfluxDB client: %w", err)
 		}
 		defer cli.Close()
 		_, _, err = cli.Ping(1)
 		if err != nil {
-			return nil, errwrap.Wrapf("error checking cluster status: {{err}}", err)
+			return nil, fmt.Errorf("error checking cluster status: %w", err)
 		}
 
 		return c, nil
@@ -221,7 +221,7 @@ func makeConfig(rootConfig map[string]interface{}, keyValues ...interface{}) map
 	return config
 }
 
-func TestInfluxdb_CreateUser(t *testing.T) {
+func TestInfluxdb_CreateUser_DefaultUsernameTemplate(t *testing.T) {
 	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
@@ -235,8 +235,8 @@ func TestInfluxdb_CreateUser(t *testing.T) {
 	password := "nuozxby98523u89bdfnkjl"
 	newUserReq := dbplugin.NewUserRequest{
 		UsernameConfig: dbplugin.UsernameMetadata{
-			DisplayName: "test",
-			RoleName:    "test",
+			DisplayName: "token",
+			RoleName:    "mylongrolenamewithmanycharacters",
 		},
 		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
@@ -251,6 +251,46 @@ func TestInfluxdb_CreateUser(t *testing.T) {
 	}
 
 	assertCredsExist(t, config.URL().String(), resp.Username, password)
+
+	require.Regexp(t, `^v_token_mylongrolenamew_[a-z0-9]{20}_[0-9]{10}$`, resp.Username)
+}
+
+func TestInfluxdb_CreateUser_CustomUsernameTemplate(t *testing.T) {
+	cleanup, config := prepareInfluxdbTestContainer(t)
+	defer cleanup()
+
+	db := new()
+
+	conf := config.connectionParams()
+	conf["username_template"] = "{{.DisplayName}}_{{random 10}}"
+
+	req := dbplugin.InitializeRequest{
+		Config:           conf,
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, req)
+
+	password := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "token",
+			RoleName:    "mylongrolenamewithmanycharacters",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	resp := dbtesting.AssertNewUser(t, db, newUserReq)
+
+	if resp.Username == "" {
+		t.Fatalf("Missing username")
+	}
+
+	assertCredsExist(t, config.URL().String(), resp.Username, password)
+
+	require.Regexp(t, `^token_[a-zA-Z0-9]{10}$`, resp.Username)
 }
 
 func TestUpdateUser_expiration(t *testing.T) {
@@ -421,20 +461,20 @@ func testCredsExist(address, username, password string) error {
 	}
 	cli, err := influx.NewHTTPClient(conf)
 	if err != nil {
-		return errwrap.Wrapf("Error creating InfluxDB Client: ", err)
+		return fmt.Errorf("Error creating InfluxDB Client: %w", err)
 	}
 	defer cli.Close()
 	_, _, err = cli.Ping(1)
 	if err != nil {
-		return errwrap.Wrapf("error checking server ping: {{err}}", err)
+		return fmt.Errorf("error checking server ping: %w", err)
 	}
 	q := influx.NewQuery("SHOW SERIES ON vault", "", "")
 	response, err := cli.Query(q)
 	if err != nil {
-		return errwrap.Wrapf("error querying influxdb server: {{err}}", err)
+		return fmt.Errorf("error querying influxdb server: %w", err)
 	}
 	if response != nil && response.Error() != nil {
-		return errwrap.Wrapf("error using the correct influx database: {{err}}", response.Error())
+		return fmt.Errorf("error using the correct influx database: %w", response.Error())
 	}
 	return nil
 }

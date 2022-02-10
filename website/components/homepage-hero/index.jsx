@@ -15,17 +15,11 @@ export default function HomepageHero({
     <div className={styles.homepageHero}>
       <Hero
         data={{
-          backgroundImage: {
-            alt: null,
-            size: 55617,
-            url: 'https://www.datocms-assets.com/2885/1539894412-vault-bg.jpg',
-            width: 3196,
-          },
           backgroundTheme: 'light',
           buttons: buttons.slice(0, 2),
           centered: false,
           description: description,
-          theme: 'vault-gray',
+          product: 'vault',
           title: title,
           videos: [
             {
@@ -53,7 +47,7 @@ export default function HomepageHero({
       />
       {/* A hack to inject a third link styled in tertiary style
            this is very much a non-ideal way to handle this. */}
-      <div className={classNames('g-container', styles.thirdLinkWrapper)}>
+      <div className={classNames('g-grid-container', styles.thirdLinkWrapper)}>
         {buttons[2] && (
           <div className="third-link">
             <Button

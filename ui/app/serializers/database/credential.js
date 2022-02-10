@@ -1,12 +1,11 @@
 import RESTSerializer from '@ember-data/serializer/rest';
 
 export default RESTSerializer.extend({
-  primaryKey: 'request_id',
+  primaryKey: 'username',
 
   normalizePayload(payload) {
     if (payload.data) {
-      const credentials = {
-        request_id: payload.request_id,
+      return {
         username: payload.data.username,
         password: payload.data.password,
         leaseId: payload.lease_id,
@@ -14,8 +13,9 @@ export default RESTSerializer.extend({
         lastVaultRotation: payload.data.last_vault_rotation,
         rotationPeriod: payload.data.rotation_period,
         ttl: payload.data.ttl,
+        // roleType is added on adapter
+        roleType: payload.roleType,
       };
-      return credentials;
     }
   },
 

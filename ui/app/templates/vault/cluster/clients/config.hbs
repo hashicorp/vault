@@ -1,0 +1,14 @@
+{{! TODO CMB CHECK THIS ENTIRE VIEW WITH DESIGN }}
+<Clients::Dashboard @model={{@model}} />
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if @model.configPath.canUpdate}}
+      <LinkTo @route="vault.cluster.clients.edit" class="toolbar-link">
+        Edit configuration
+      </LinkTo>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+<Clients::Config @model={{@model}} @isLoading={{this.currentlyLoading}} />

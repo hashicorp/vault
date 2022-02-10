@@ -175,6 +175,8 @@ func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, p
 }
 
 type gRPCSystemViewServer struct {
+	pb.UnimplementedSystemViewServer
+
 	impl logical.SystemView
 }
 

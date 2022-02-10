@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
@@ -6,7 +7,9 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
+
 const BACKENDS = supportedAuthBackends();
 
 /**
@@ -115,7 +118,7 @@ export default Component.extend(DEFAULTS, {
     'methods.[]',
     'selectedAuth',
     'selectedAuthIsPath',
-    function() {
+    function () {
       let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
       if (!methods && !wrappedToken) {
         return {};
@@ -127,64 +130,79 @@ export default Component.extend(DEFAULTS, {
     }
   ),
 
-  providerPartialName: computed('selectedAuthBackend.type', function() {
+  providerName: computed('selectedAuthBackend.type', function () {
     if (!this.selectedAuthBackend) {
       return;
     }
     let type = this.selectedAuthBackend.type || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);
-    return `partials/auth-form/${templateName}`;
+    return templateName;
   }),
 
   hasCSPError: alias('csp.connectionViolations.firstObject'),
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
-  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function() {
+  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function () {
     let hasMethodsWithPath = this.hasMethodsWithPath;
     let methodsToShow = this.methodsToShow;
     return hasMethodsWithPath ? methodsToShow.concat(BACKENDS) : methodsToShow;
   }),
 
-  hasMethodsWithPath: computed('methodsToShow', function() {
+  hasMethodsWithPath: computed('methodsToShow', function () {
     return this.methodsToShow.isAny('path');
   }),
-  methodsToShow: computed('methods', function() {
+  methodsToShow: computed('methods', function () {
     let methods = this.methods || [];
-    let shownMethods = methods.filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()));
+    let shownMethods = methods.filter((m) =>
+      BACKENDS.find((b) => b.type.toLowerCase() === m.type.toLowerCase())
+    );
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
-  unwrapToken: task(function*(token) {
-    // will be using the Token Auth Method, so set it here
-    this.set('selectedAuth', 'token');
-    let adapter = this.store.adapterFor('tools');
-    try {
-      let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
-      this.set('token', response.auth.client_token);
-      this.send('doSubmit');
-    } catch (e) {
-      this.set('error', `Token unwrap failed: ${e.errors[0]}`);
-    }
-  }).withTestWaiter(),
+  unwrapToken: task(
+    waitFor(function* (token) {
+      // will be using the Token Auth Method, so set it here
+      this.set('selectedAuth', 'token');
+      let adapter = this.store.adapterFor('tools');
+      try {
+        let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
+        this.set('token', response.auth.client_token);
+        this.send('doSubmit');
+      } catch (e) {
+        this.set('error', `Token unwrap failed: ${e.errors[0]}`);
+      }
+    })
+  ),
 
-  fetchMethods: task(function*() {
-    let store = this.store;
-    try {
-      let methods = yield store.findAll('auth-method', {
-        adapterOptions: {
-          unauthenticated: true,
-        },
-      });
-      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
-      next(() => {
-        store.unloadAll('auth-method');
-      });
-    } catch (e) {
-      this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
-    }
-  }).withTestWaiter(),
+  fetchMethods: task(
+    waitFor(function* () {
+      let store = this.store;
+      try {
+        let methods = yield store.findAll('auth-method', {
+          adapterOptions: {
+            unauthenticated: true,
+          },
+        });
+        this.set(
+          'methods',
+          methods.map((m) => {
+            const method = m.serialize({ includeId: true });
+            return {
+              ...method,
+              mountDescription: method.description,
+            };
+          })
+        );
+        next(() => {
+          store.unloadAll('auth-method');
+        });
+      } catch (e) {
+        this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
+      }
+    })
+  ),
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
@@ -192,7 +210,7 @@ export default Component.extend(DEFAULTS, {
     this.set('loading', false);
     let errors;
     if (e.errors) {
-      errors = e.errors.map(error => {
+      errors = e.errors.map((error) => {
         if (error.detail) {
           return error.detail;
         }
@@ -205,35 +223,49 @@ export default Component.extend(DEFAULTS, {
     this.set('error', `${message}${errors.join('.')}`);
   },
 
-  authenticate: task(function*(backendType, data) {
-    let clusterId = this.cluster.id;
-    try {
-      let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
-
-      let { isRoot, namespace } = authResponse;
-      let transition;
-      let { redirectTo } = this;
-      if (redirectTo) {
-        // reset the value on the controller because it's bound here
-        this.set('redirectTo', '');
-        // here we don't need the namespace because it will be encoded in redirectTo
-        transition = this.router.transitionTo(redirectTo);
-      } else {
-        transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
-      }
-      // returning this w/then because if we keep it
-      // in the task, it will get cancelled when the component in un-rendered
-      yield transition.followRedirects().then(() => {
-        if (isRoot) {
-          this.flashMessages.warning(
-            'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-          );
+  authenticate: task(
+    waitFor(function* (backendType, data) {
+      let clusterId = this.cluster.id;
+      try {
+        if (backendType === 'okta') {
+          this.delayAuthMessageReminder.perform();
         }
-      });
-    } catch (e) {
-      this.handleError(e);
+        let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
+
+        let { isRoot, namespace } = authResponse;
+        let transition;
+        let { redirectTo } = this;
+        if (redirectTo) {
+          // reset the value on the controller because it's bound here
+          this.set('redirectTo', '');
+          // here we don't need the namespace because it will be encoded in redirectTo
+          transition = this.router.transitionTo(redirectTo);
+        } else {
+          transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
+        }
+        // returning this w/then because if we keep it
+        // in the task, it will get cancelled when the component in un-rendered
+        yield transition.followRedirects().then(() => {
+          if (isRoot) {
+            this.flashMessages.warning(
+              'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+            );
+          }
+        });
+      } catch (e) {
+        this.handleError(e);
+      }
+    })
+  ),
+
+  delayAuthMessageReminder: task(function* () {
+    if (Ember.testing) {
+      this.showLoading = true;
+      yield timeout(0);
+      return;
     }
-  }).withTestWaiter(),
+    yield timeout(5000);
+  }),
 
   actions: {
     doSubmit() {
@@ -252,7 +284,7 @@ export default Component.extend(DEFAULTS, {
       });
       let backend = this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
-        b => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
+        (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
       let attributes = (backendMeta || {}).formAttributes || [];
 
