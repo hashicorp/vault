@@ -129,10 +129,7 @@ Follow these steps to migrate from one autoloaded license to another autoloaded 
 1. Use the [vault license inspect](/docs/commands/license/inspect) command to compare the new license against the output of the [vault license get](/docs/commands/license/get) command. This is to ensure that you have the correct license.
 1. Backup the old license file in a safe location.
 1. Replace the old license file on each Vault server with the new one.
-1. Invoke the [reload command](/api-docs/system/config-reload#reload-license-file) on each individual Vault server, starting with the standbys and doing the leader last. Invoking in this manner reduces possible disruptions if something was performed incorrectly with the above steps.
-
-~> **Note**: You can either use the reload command or send a SIGHUP.
-
+1. Invoke the [reload command](/api-docs/system/config-reload#reload-license-file) on each individual Vault server, starting with the standbys and doing the leader last. Invoking in this manner reduces possible disruptions if something was performed incorrectly with the above steps. You can either use the [reload command](/api-docs/system/config-reload#reload-license-file) or send a SIGHUP.
 1. On each node, ensure that the new license is in use by using the [vault license get](/docs/commands/license/get) command and/or checking the logs.
 
 # ADP Licensing
