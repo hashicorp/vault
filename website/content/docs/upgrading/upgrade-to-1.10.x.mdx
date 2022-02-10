@@ -1,0 +1,20 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.10.x - Guides
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.10.x. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.10.x compared to 1.9. Please read it carefully.
+
+## SSH Secrets Engine
+
+The new default value of `algorithm_signer` for SSH CA roles has been changed
+to `rsa-sha2-256` from `ssh-rsa`. Existing roles will be migrated to
+explicitly specify the `algorithm_signer=ssh-rsa` for RSA keys if they used
+the implicit (empty) default, but newly created roles will use the new default
+value (preferring `rsa-sha2-256`.
