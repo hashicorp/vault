@@ -956,8 +956,8 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.11.4 h1:rL/hvd7uGB8CGpw1FKxxUD/dBJ
 github.com/hashicorp/vault-plugin-auth-jwt v0.11.4/go.mod h1:jzjDdssus8sw8G6NOP7kNFMEeIvrjXvPHUR3pEn5+r0=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0 h1:oORxeqOraVVLQrb+z3fj5JayPmH/JBxJWGywZ8ZRJt0=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0/go.mod h1:eqjae8tMBpAWgJNk1NjV/vtJYXQRZnYudUkBFowz3bY=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20220107030939-d289258274b7 h1:/VoIuHApeOStEIgLIF8J77OsLuCPLEhsfGnt3iYEivw=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20220107030939-d289258274b7/go.mod h1:HNcW9fnQIKw9g5qnxRQn6pHfGnSuVwBJAGb/v2/2dvw=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20220207145307-c9fa6acdfe0e h1:72g9l5spX1sXeXunZl5GyPnOEy6E+P236CxWohkcfrE=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20220207145307-c9fa6acdfe0e/go.mod h1:HNcW9fnQIKw9g5qnxRQn6pHfGnSuVwBJAGb/v2/2dvw=
 github.com/hashicorp/vault-plugin-auth-oci v0.9.0 h1:5wuHuPsW/MM5x0yvbr5ZwFLviNdF7q2t+z9saL7zjcI=
 github.com/hashicorp/vault-plugin-auth-oci v0.9.0/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
 github.com/hashicorp/vault-plugin-database-couchbase v0.5.1 h1:WsXcOHHVwphwsrNGxpxRHcFzVgApN17ZNiE5RVD+q78=
