@@ -62,7 +62,6 @@ storage. Suppose you decide that the additional operational complexity of extern
 | Data location                  | The encrypted Vault data is stored on the same host where the Vault server process runs.                                                                                                                 | The encrypted Vault data is stored where the external storage is located. Therefore, the Vault server and the data storage are hosted on physically separate hosts.                                                |
 | System requirements            | Avoid "burstable" CPU and storage options. SSDs should be used for the hard drive. <p />See the [Reference Architecture](https://learn.hashicorp.com/tutorials/vault/raft-reference-architecture) guide. | The host machine should be optimized for the performance of the selected storage backend.                                                                                                                          |
 
-Another factor to consider may be the cost of running an external system to
 store Vault data. However, cost is relative to where you run the external storage.
 
 ### Integrated storage vs. Consul as Vault storage
