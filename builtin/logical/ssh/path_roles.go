@@ -22,6 +22,9 @@ const (
 	// KeyTypeCA is an key of type CA
 	KeyTypeCA = "ca"
 
+	// Present version of the sshRole struct; when adding a new field or are
+	// needing to perform a migration, increment this struct and read the note
+	// in checkUpgrade(...).
 	roleEntryVersion = 1
 )
 
@@ -589,12 +592,33 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ss
 		return nil, err
 	}
 
+	if err := b.checkUpgrade(ctx, s, n, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole) error {
 	modified := false
+
+	// NOTE: When introducing a new migration, increment roleEntryVersion and
+	// check if the version is less than the version this change was introduced
+	// at and perform the change. At the end, set modified and update the
+	// version to the version this migration was introduced at! Additionally,
+	// add new migrations after all existing migrations.
+	//
+	// Otherwise, past or future migrations may not execute!
+	if result.Version == roleEntryVersion {
+		return nil
+	}
 
 	// Role version introduced at version 1, migrating OldAllowedUserKeyLengths
 	// to the newer AllowedUserKeyTypesLengths field.
-	if result.Version <= 0 {
+	if result.Version < 1 {
 		// Only migrate if we have old data and no new data to avoid clobbering.
+		//
+		// This change introduced the first role version, value of 1.
 		if len(result.OldAllowedUserKeyLengths) > 0 && len(result.AllowedUserKeyTypesLengths) == 0 {
 			result.AllowedUserKeyTypesLengths = make(map[string][]int)
 			for k, v := range result.OldAllowedUserKeyLengths {
@@ -603,25 +627,27 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ss
 			result.OldAllowedUserKeyLengths = nil
 		}
 
-		result.Version += 1
+		result.Version = 1
 		modified = true
 	}
 
+	// Add new migrations just before here.
+	//
 	// Condition copied from PKI builtin.
 	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		jsonEntry, err := logical.StorageEntryJSON("roles/"+n, &result)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if err := s.Put(ctx, jsonEntry); err != nil {
 			// Only perform upgrades on replication primary
 			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	return &result, nil
+	return nil
 }
 
 // parseRole converts a sshRole object into its map[string]interface representation,
