@@ -5,7 +5,9 @@ import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
 
 export default class History extends Component {
-  // TODO CMB alphabetize and delete unused vars (particularly @tracked)
+  @service store;
+  @service version;
+
   arrayOfMonths = [
     'January',
     'February',
@@ -26,7 +28,7 @@ export default class History extends Component {
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
 
-  // needed for startTime modal picker
+  // FOR START DATE EDIT & MODAL //
   months = Array.from({ length: 12 }, (item, i) => {
     return new Date(0, i).toLocaleString('en-US', { month: 'long' });
   });
@@ -34,25 +36,31 @@ export default class History extends Component {
     return new Date().getFullYear() - i;
   });
 
-  @service store;
-  @service version;
-
-  @tracked queriedActivityResponse = null;
-  @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
-  @tracked responseRangeDiffMessage = null;
-  @tracked startTimeRequested = null;
-  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
-  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
   @tracked startMonth = null;
   @tracked startYear = null;
+
+  // FOR HISTORY COMPONENT //
+
+  // RESPONSE
+  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
+  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
+  @tracked startTimeRequested = null;
+  @tracked queriedActivityResponse = null;
+
+  // VERSION/UPGRADE INFO
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
+
+  // SEARCH SELECT
   @tracked selectedNamespace = null;
-  @tracked noActivityDate = '';
   @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
-  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
+
+  // TEMPLATE MESSAGING
+  @tracked noActivityDate = '';
+  @tracked responseRangeDiffMessage = null;
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
@@ -70,7 +78,6 @@ export default class History extends Component {
 
   get endTimeDisplay() {
     if (!this.endTimeFromResponse) {
-      // otherwise will return date of new Date(null)
       return null;
     }
     let month = this.endTimeFromResponse[1];
@@ -116,24 +123,7 @@ export default class History extends Component {
     return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
   }
 
-  // HELPERS
-  areArraysTheSame(a1, a2) {
-    return (
-      a1 === a2 ||
-      (a1 !== null &&
-        a2 !== null &&
-        a1.length === a2.length &&
-        a1
-          .map(function (val, idx) {
-            return val === a2[idx];
-          })
-          .reduce(function (prev, cur) {
-            return prev && cur;
-          }, true))
-    );
-  }
-
-  // ACTIONS
+  // ACTIONS //
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
@@ -195,6 +185,7 @@ export default class History extends Component {
     this.selectedNamespace = value;
   }
 
+  // FOR START DATE MODAL
   @action
   selectStartMonth(month) {
     this.startMonth = month;
@@ -205,7 +196,23 @@ export default class History extends Component {
     this.startYear = year;
   }
 
-  // HELPERS
+  // HELPERS //
+  areArraysTheSame(a1, a2) {
+    return (
+      a1 === a2 ||
+      (a1 !== null &&
+        a2 !== null &&
+        a1.length === a2.length &&
+        a1
+          .map(function (val, idx) {
+            return val === a2[idx];
+          })
+          .reduce(function (prev, cur) {
+            return prev && cur;
+          }, true))
+    );
+  }
+
   filterByNamespace(namespace) {
     return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
   }
