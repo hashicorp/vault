@@ -13,7 +13,9 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -78,13 +80,15 @@ func TestGRPCServer_Initialize(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				factoryFunc: func() (interface{}, error) {
+					return test.db, nil
+				},
+				instances: make(map[string]Database),
 			}
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
+			idCtx := idCtx(t, "12345")
 
-			resp, err := g.Initialize(ctx, test.req)
+			resp, err := g.Initialize(idCtx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -253,13 +257,17 @@ func TestGRPCServer_NewUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				factoryFunc: func() (interface{}, error) {
+					return test.db, nil
+				},
+				instances: make(map[string]Database),
 			}
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
+			id := "12345"
+			idCtx := idCtx(t, id)
+			g.instances[id] = test.db
 
-			resp, err := g.NewUser(ctx, test.req)
+			resp, err := g.NewUser(idCtx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -363,13 +371,17 @@ func TestGRPCServer_UpdateUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				factoryFunc: func() (interface{}, error) {
+					return test.db, nil
+				},
+				instances: make(map[string]Database),
 			}
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
+			id := "12345"
+			idCtx := idCtx(t, id)
+			g.instances[id] = test.db
 
-			resp, err := g.UpdateUser(ctx, test.req)
+			resp, err := g.UpdateUser(idCtx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -431,13 +443,17 @@ func TestGRPCServer_DeleteUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				factoryFunc: func() (interface{}, error) {
+					return test.db, nil
+				},
+				instances: make(map[string]Database),
 			}
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
+			id := "12345"
+			idCtx := idCtx(t, id)
+			g.instances[id] = test.db
 
-			resp, err := g.DeleteUser(ctx, test.req)
+			resp, err := g.DeleteUser(idCtx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -489,13 +505,17 @@ func TestGRPCServer_Type(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				factoryFunc: func() (interface{}, error) {
+					return test.db, nil
+				},
+				instances: make(map[string]Database),
 			}
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
+			id := "12345"
+			idCtx := idCtx(t, id)
+			g.instances[id] = test.db
 
-			resp, err := g.Type(ctx, &proto.Empty{})
+			resp, err := g.Type(idCtx, &proto.Empty{})
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -540,13 +560,17 @@ func TestGRPCServer_Close(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				factoryFunc: func() (interface{}, error) {
+					return test.db, nil
+				},
+				instances: make(map[string]Database),
 			}
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
+			id := "12345"
+			idCtx := idCtx(t, id)
+			g.instances[id] = test.db
 
-			_, err := g.Close(ctx, &proto.Empty{})
+			_, err := g.Close(idCtx, &proto.Empty{})
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -560,6 +584,64 @@ func TestGRPCServer_Close(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetMultiplexIDFromContext(t *testing.T) {
+	type testCase struct {
+		ctx          context.Context
+		expectedResp string
+		expectedErr  error
+	}
+
+	tests := map[string]testCase{
+		"missing plugin multiplexing metadata": {
+			ctx:          context.Background(),
+			expectedResp: "",
+			expectedErr:  fmt.Errorf("missing plugin multiplexing metadata"),
+		},
+		"unexpected number of IDs in metadata": {
+			ctx: metadata.NewIncomingContext(
+				context.Background(),
+				metadata.Pairs(pluginutil.MultiplexingCtxKey, "12345", pluginutil.MultiplexingCtxKey, "67891"),
+			),
+			expectedResp: "",
+			expectedErr:  fmt.Errorf("unexpected number of IDs in metadata: (2)"),
+		},
+		"empty multiplex ID in metadata": {
+			ctx:          idCtx(t, ""),
+			expectedResp: "",
+			expectedErr:  fmt.Errorf("empty multiplex ID in metadata"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			resp, err := getMultiplexIDFromContext(test.ctx)
+
+			if test.expectedErr.Error() != "" && err == nil {
+				t.Fatalf("err expected, got nil")
+			} else if !reflect.DeepEqual(err, test.expectedErr) {
+				t.Fatalf("Actual error: %#v\nExpected error: %#v", err, test.expectedErr)
+			}
+
+			if test.expectedErr.Error() == "" && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			if !reflect.DeepEqual(resp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", resp, test.expectedResp)
+			}
+		})
+	}
+}
+
+// idCtx is a test helper that will return an ID and a context with the ID set
+// in its metadata
+func idCtx(t *testing.T, id string) context.Context {
+	// Context doesn't need to timeout since this is just passed through
+	ctx := context.Background()
+	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, id)
+	return metadata.NewIncomingContext(ctx, md)
 }
 
 func marshal(t *testing.T, m map[string]interface{}) *structpb.Struct {
