@@ -8,10 +8,14 @@
     Billing start month
   </h1>
   <div data-test-start-date-editor class="is-flex-align-baseline">
-    <p class="is-size-6">{{this.startTimeDisplay}}</p>
-    <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
-      Edit
-    </button>
+    {{#if this.startTimeDisplay}}
+      <p class="is-size-6">{{this.startTimeDisplay}}</p>
+      <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
+        Edit
+      </button>
+    {{else}}
+      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} />
+    {{/if}}
   </div>
   <p class="is-8 has-text-grey has-bottom-margin-xl">
     This date comes from your license, and defines when client counting starts. Without this starting point, the data shown
@@ -76,27 +80,28 @@
           </ToolbarFilters>
         </Toolbar>
       </div>
-      {{#if this.countsIncludeOlderData}}
+      {{#if (or this.countsIncludeOlderData this.responseRangeDiffMessage)}}
         <AlertBanner @type="warning" @title="Warning">
-          <ul>
+          <ul class={{if (and this.countsIncludeOlderData this.responseRangeDiffMessage) "bullet"}}>
             {{#if this.responseRangeDiffMessage}}
               <li>{{this.responseRangeDiffMessage}}</li>
             {{/if}}
-            <li>
-              {{concat
-                "You upgraded to Vault "
-                this.firstUpgradeVersion
-                " on "
-                (date-format this.upgradeDate "MMMM d, yyyy.")
-              }}
-              How we count clients changed in 1.9, so please keep in mind when looking at the data below. Furthermore,
-              namespace attribution is available only for 1.9 data.
-              <DocLink
-                @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
-              >
-                Learn more here.
-              </DocLink>
-            </li>
+            {{#if this.countsIncludeOlderData}}
+              <li>
+                {{concat
+                  "You upgraded to Vault "
+                  this.firstUpgradeVersion
+                  " on "
+                  (date-format this.upgradeDate "MMMM d, yyyy.")
+                }}
+                How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
+                <DocLink
+                  @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+                >
+                  read more here.
+                </DocLink>
+              </li>
+            {{/if}}
           </ul>
         </AlertBanner>
       {{/if}}
@@ -105,7 +110,7 @@
       {{else}}
         {{#if this.totalUsageCounts}}
           <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
-          {{#if this.totalClientsData}}
+          {{#if this.hasAttributionData}}
             <Clients::Attribution
               @chartLegend={{this.chartLegend}}
               @totalClientsData={{this.totalClientsData}}
@@ -122,10 +127,17 @@
         {{/if}}
       {{/if}}
     {{else}}
-      <EmptyState
-        @title="No billing start date found"
-        @message="In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate."
-      />
+      {{#if this.version.isEnterprise}}
+        <EmptyState
+          @title="No billing start date found"
+          @message="In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate."
+        />
+      {{else}}
+        <EmptyState
+          @title="No start date found"
+          @message="In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month."
+        />
+      {{/if}}
     {{/if}}
   {{/if}}
 
