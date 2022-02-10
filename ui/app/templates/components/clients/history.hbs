@@ -109,7 +109,7 @@
       {{else}}
         {{#if this.totalUsageCounts}}
           <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
-          {{#if this.totalClientsData}}
+          {{#if (not (eq this.totalUsageCounts.clients 0))}}
             <Clients::Attribution
               @chartLegend={{this.chartLegend}}
               @totalClientsData={{this.totalClientsData}}

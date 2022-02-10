@@ -13,7 +13,7 @@
         </LinkTo>
       {{/if}}
     </EmptyState>
-  {{else if this.isGatheringData}}
+  {{else if (eq this.isGatheringData true)}}
     <EmptyState
       @title="No data received"
       @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
@@ -54,7 +54,7 @@
           @title={{date-format this.responseTimestamp "MMMM"}}
           @totalUsageCounts={{this.totalUsageCounts}}
         />
-        {{#if this.totalClientsData}}
+        {{#if (not (eq this.totalUsageCounts.clients 0))}}
           <Clients::Attribution
             @chartLegend={{this.chartLegend}}
             @totalClientsData={{this.totalClientsData}}
