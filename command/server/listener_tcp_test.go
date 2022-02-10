@@ -34,7 +34,7 @@ func TestTCPListener(t *testing.T) {
 	testListenerImpl(t, ln, connFn, "", 0, "127.0.0.1", 0, false)
 }
 
-func TestTCPListenerAllowAuthorized(t *testing.T) {
+func TestTCPListenerDifferentBehaviours(t *testing.T) {
 	for name, tc := range map[string]struct {
 		AuthorizedAddr string
 		Behaviour      string
