@@ -75,6 +75,7 @@ then
   vault write sys/license text="$VAULT_LICENSE"
   vault secrets enable kmip
   vault secrets enable transform
+  vault secrets enable keymgmt
 fi
 
 # Output OpenAPI, optionally formatted
