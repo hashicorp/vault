@@ -11,7 +11,7 @@ import (
 
 type testListenerConnFn func(net.Listener) (net.Conn, error)
 
-func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, certName string, expectedVersion uint16) {
+func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, certName string, expectedVersion uint16, expectedAddr string, expectedPort int, expectError bool) {
 	serverCh := make(chan net.Conn, 1)
 	go func() {
 		server, err := ln.Accept()
@@ -24,6 +24,14 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 			tlsConn.Handshake()
 		}
 		serverCh <- server
+
+		addr := server.RemoteAddr().(*net.TCPAddr)
+		if addr.IP.String() != expectedAddr {
+			t.Errorf("bad: %v", addr)
+		}
+		if expectedPort != 0 && addr.Port != expectedPort {
+			t.Errorf("bad: %v", addr)
+		}
 	}()
 
 	client, err := connFn(ln)
@@ -57,7 +65,11 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 		if client != nil {
 			client.Close()
 		}
-		t.Fatalf("Server rejected the client connection")
+		if !expectError {
+			// Something failed already so we abort the test early
+			t.Fatal("aborting test because the server did not accept the connection")
+		}
+		return
 	}
 	defer client.Close()
 	defer server.Close()
@@ -77,7 +89,10 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 
 	<-copyCh
 	if buf.String() != "foo" {
-		t.Fatalf("bad: %v", buf.String())
+		if !expectError {
+			t.Fatalf("bad: %v", buf.String())
+		}
+		return
 	}
 }
 

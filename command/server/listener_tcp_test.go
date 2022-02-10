@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/mitchellh/cli"
+	piresproto "github.com/pires/go-proxyproto"
 )
 
 func TestTCPListener(t *testing.T) {
@@ -30,30 +31,82 @@ func TestTCPListener(t *testing.T) {
 		return net.Dial("tcp", ln.Addr().String())
 	}
 
-	testListenerImpl(t, ln, connFn, "", 0)
+	testListenerImpl(t, ln, connFn, "", 0, "127.0.0.1", 0, false)
 }
 
 func TestTCPListenerAllowAuthorized(t *testing.T) {
-	sa, err := sockaddr.NewSockAddr("127.0.0.2:0")
-	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
-		Address:               "127.0.0.1:0",
-		TLSDisable:            true,
-		ProxyProtocolBehavior: "allow_authorized",
-		ProxyProtocolAuthorizedAddrs: []*sockaddr.SockAddrMarshaler{
-			{
-				SockAddr: sa,
-			},
+	for name, tc := range map[string]struct {
+		AuthorizedAddr string
+		Behaviour      string
+		ExpectedAddr   string
+		ExpectedPort   int
+		ExpectError    bool
+	}{
+		"always_allow": {
+			AuthorizedAddr: "127.0.0.2:0",
+			Behaviour:      "use_always",
+			ExpectedAddr:   "10.1.1.1",
+			ExpectedPort:   1000,
 		},
-	}, nil, cli.NewMockUi())
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		"allow_authorized_same_network": {
+			AuthorizedAddr: "127.0.0.1/32",
+			Behaviour:      "allow_authorized",
+			ExpectedAddr:   "10.1.1.1",
+			ExpectedPort:   1000,
+		},
+		"allow_authorized_different_network": {
+			AuthorizedAddr: "127.0.0.2:0",
+			Behaviour:      "allow_authorized",
+			ExpectedAddr:   "127.0.0.1",
+		},
+		"deny_unauthorized_same_network": {
+			AuthorizedAddr: "127.0.0.1/32",
+			Behaviour:      "deny_unauthorized",
+			ExpectedAddr:   "10.1.1.1",
+			ExpectedPort:   1000,
+		},
+		"deny_unauthorized_different_network": {
+			AuthorizedAddr: "127.0.0.2:0",
+			Behaviour:      "deny_unauthorized",
+			ExpectedAddr:   "127.0.0.1",
+			ExpectError:    true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			sa, err := sockaddr.NewSockAddr(tc.AuthorizedAddr)
+			if err != nil {
+				t.Fatalf("bad authorized address")
+			}
+			ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+				Address:               "127.0.0.1:0",
+				TLSDisable:            true,
+				ProxyProtocolBehavior: tc.Behaviour,
+				ProxyProtocolAuthorizedAddrs: []*sockaddr.SockAddrMarshaler{
+					{
+						SockAddr: sa,
+					},
+				},
+			}, nil, cli.NewMockUi())
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
 
-	connFn := func(lnReal net.Listener) (net.Conn, error) {
-		return net.Dial("tcp", ln.Addr().String())
-	}
+			connFn := func(lnReal net.Listener) (net.Conn, error) {
+				conn, err := net.Dial("tcp", ln.Addr().String())
+				if err != nil {
+					return nil, err
+				}
 
-	testListenerImpl(t, ln, connFn, "", 0)
+				// Write out the header for proxy proto V1!
+				header := "PROXY TCP4 10.1.1.1 20.2.2.2 1000 2000\r\n"
+				conn.Write([]byte(header))
+
+				return conn, err
+			}
+
+			testListenerImpl(t, ln, connFn, "", 0, tc.ExpectedAddr, tc.ExpectedPort, tc.ExpectError)
+		})
+	}
 }
 
 func TestTCPListenerDenyUnauthorize(t *testing.T) {
@@ -76,7 +129,7 @@ func TestTCPListenerDenyUnauthorize(t *testing.T) {
 		return net.Dial("tcp", ln.Addr().String())
 	}
 
-	testListenerImpl(t, ln, connFn, "", 0)
+	testListenerImpl(t, ln, connFn, "", 0, "127.0.0.2", 0, true)
 }
 
 // TestTCPListener_tls tests TLS generally
@@ -133,7 +186,7 @@ func TestTCPListener_tls(t *testing.T) {
 		}
 	}
 
-	testListenerImpl(t, ln, connFn(true), "foo.example.com", 0)
+	testListenerImpl(t, ln, connFn(true), "foo.example.com", 0, "127.0.0.1", 0, false)
 
 	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
 		Address:                       "127.0.0.1:0",
@@ -158,7 +211,7 @@ func TestTCPListener_tls(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	testListenerImpl(t, ln, connFn(false), "foo.example.com", 0)
+	testListenerImpl(t, ln, connFn(false), "foo.example.com", 0, "127.0.0.1", 0, false)
 }
 
 func TestTCPListener_tls13(t *testing.T) {
@@ -215,7 +268,7 @@ func TestTCPListener_tls13(t *testing.T) {
 		}
 	}
 
-	testListenerImpl(t, ln, connFn(true), "foo.example.com", tls.VersionTLS13)
+	testListenerImpl(t, ln, connFn(true), "foo.example.com", tls.VersionTLS13, "127.0.0.1", 0, false)
 
 	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
 		Address:                       "127.0.0.1:0",
@@ -242,7 +295,7 @@ func TestTCPListener_tls13(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	testListenerImpl(t, ln, connFn(false), "foo.example.com", tls.VersionTLS13)
+	testListenerImpl(t, ln, connFn(false), "foo.example.com", tls.VersionTLS13, "127.0.0.1", 0, false)
 
 	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
 		Address:               "127.0.0.1:0",
@@ -256,5 +309,237 @@ func TestTCPListener_tls13(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	testListenerImpl(t, ln, connFn(false), "foo.example.com", tls.VersionTLS12)
+	testListenerImpl(t, ln, connFn(false), "foo.example.com", tls.VersionTLS12, "127.0.0.1", 0, false)
+}
+
+// Porting over the same tests as in the target PR but using existing proxyproto
+// In addition, using pires proxyproto to format the proxy proto header
+// for v1 and v2
+func TestTCPListener_proxyProtocol(t *testing.T) {
+	for name, tc := range map[string]struct {
+		Behavior       string
+		Header         *piresproto.Header
+		AuthorizedAddr string
+		ExpectedAddr   string
+		ExpectedPort   int
+		ExpectError    bool
+		Unknown        bool
+	}{
+		"none-no-header": {
+			Behavior:     "",
+			ExpectedAddr: "127.0.0.1",
+			Header:       nil,
+		},
+		"none-v1": {
+			Behavior:     "",
+			ExpectedAddr: "127.0.0.1",
+			ExpectError:  true,
+			Header: &piresproto.Header{
+				Version:           1,
+				Command:           piresproto.PROXY,
+				TransportProtocol: piresproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: &net.TCPAddr{
+					IP:   net.ParseIP("20.2.2.2"),
+					Port: 2000,
+				},
+			},
+		},
+		"none-v2": {
+			Behavior:     "",
+			ExpectedAddr: "127.0.0.1",
+			ExpectError:  true,
+			Header: &piresproto.Header{
+				Version:           2,
+				Command:           piresproto.PROXY,
+				TransportProtocol: piresproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: &net.TCPAddr{
+					IP:   net.ParseIP("20.2.2.2"),
+					Port: 2000,
+				},
+			},
+		},
+
+		// use_always makes it possible to send the PROXY header but does not
+		// require it
+		"use_always-no-header": {
+			Behavior:     "use_always",
+			ExpectedAddr: "127.0.0.1",
+			Header:       nil,
+		},
+
+		"use_always-header-v1": {
+			Behavior:     "use_always",
+			ExpectedAddr: "10.1.1.1",
+			ExpectedPort: 1000,
+			Header: &piresproto.Header{
+				Version:           1,
+				Command:           piresproto.PROXY,
+				TransportProtocol: piresproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: &net.TCPAddr{
+					IP:   net.ParseIP("20.2.2.2"),
+					Port: 2000,
+				},
+			},
+		},
+		// current proxyproto does not support V2
+		"use_always-header-v2-unknown": {
+			Behavior:     "use_always",
+			ExpectedAddr: "127.0.0.1",
+			ExpectError:  true,
+			Header: &piresproto.Header{
+				Version:           2,
+				Command:           piresproto.LOCAL,
+				TransportProtocol: piresproto.UNSPEC,
+			},
+		},
+		"allow_authorized-no-header-in": {
+			Behavior:       "allow_authorized",
+			AuthorizedAddr: "127.0.0.1/32",
+			ExpectedAddr:   "127.0.0.1",
+		},
+		"allow_authorized-no-header-not-in": {
+			Behavior:       "allow_authorized",
+			AuthorizedAddr: "10.0.0.1/32",
+			ExpectedAddr:   "127.0.0.1",
+		},
+		"allow_authorized-v1-in": {
+			Behavior:       "allow_authorized",
+			AuthorizedAddr: "127.0.0.1/32",
+			ExpectedAddr:   "10.1.1.1",
+			Header: &piresproto.Header{
+				Version:           1,
+				Command:           piresproto.PROXY,
+				TransportProtocol: piresproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: &net.TCPAddr{
+					IP:   net.ParseIP("20.2.2.2"),
+					Port: 2000,
+				},
+			},
+		},
+
+		// allow_authorized still accepts the PROXY header when not in the
+		// authorized addresses but discards it silently
+		"allow_authorized-v1-not-in": {
+			Behavior:       "allow_authorized",
+			AuthorizedAddr: "10.0.0.1/32",
+			ExpectedAddr:   "127.0.0.1",
+			Header: &piresproto.Header{
+				Version:           1,
+				Command:           piresproto.PROXY,
+				TransportProtocol: piresproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: &net.TCPAddr{
+					IP:   net.ParseIP("20.2.2.2"),
+					Port: 2000,
+				},
+			},
+		},
+
+		"deny_unauthorized-no-header-in": {
+			Behavior:       "deny_unauthorized",
+			AuthorizedAddr: "127.0.0.1/32",
+			ExpectedAddr:   "127.0.0.1",
+		},
+		"deny_unauthorized-no-header-not-in": {
+			Behavior:       "deny_unauthorized",
+			AuthorizedAddr: "10.0.0.1/32",
+			ExpectedAddr:   "127.0.0.1",
+			ExpectError:    true,
+		},
+		"deny_unauthorized-v1-in": {
+			Behavior:       "deny_unauthorized",
+			AuthorizedAddr: "127.0.0.1/32",
+			ExpectedAddr:   "10.1.1.1",
+			ExpectedPort:   1000,
+			Header: &piresproto.Header{
+				Version:           1,
+				Command:           piresproto.PROXY,
+				TransportProtocol: piresproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: &net.TCPAddr{
+					IP:   net.ParseIP("20.2.2.2"),
+					Port: 2000,
+				},
+			},
+		},
+		"deny_unauthorized-v1-not-in": {
+			Behavior:       "deny_unauthorized",
+			AuthorizedAddr: "10.0.0.1/32",
+			ExpectedAddr:   "127.0.0.1",
+			ExpectError:    true,
+			Header: &piresproto.Header{
+				Version:           1,
+				Command:           piresproto.PROXY,
+				TransportProtocol: piresproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: &net.TCPAddr{
+					IP:   net.ParseIP("20.2.2.2"),
+					Port: 2000,
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			proxyProtocolAuthorizedAddrs := []*sockaddr.SockAddrMarshaler{}
+			if tc.AuthorizedAddr != "" {
+				sockAddr, err := sockaddr.NewSockAddr(tc.AuthorizedAddr)
+				if err != nil {
+					t.Fatal(err)
+				}
+				proxyProtocolAuthorizedAddrs = append(
+					proxyProtocolAuthorizedAddrs,
+					&sockaddr.SockAddrMarshaler{SockAddr: sockAddr},
+				)
+			}
+
+			ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+				Address:                      "127.0.0.1:0",
+				TLSDisable:                   true,
+				ProxyProtocolBehavior:        tc.Behavior,
+				ProxyProtocolAuthorizedAddrs: proxyProtocolAuthorizedAddrs,
+			}, nil, cli.NewMockUi())
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			connFn := func(lnReal net.Listener) (net.Conn, error) {
+				conn, err := net.Dial("tcp", ln.Addr().String())
+				if err != nil {
+					return nil, err
+				}
+
+				if tc.Header != nil {
+					_, err = tc.Header.WriteTo(conn)
+				}
+				return conn, err
+			}
+
+			testListenerImpl(t, ln, connFn, "", 0, tc.ExpectedAddr, tc.ExpectedPort, tc.ExpectError)
+		})
+	}
 }
