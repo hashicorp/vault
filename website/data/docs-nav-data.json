@@ -1046,7 +1046,6 @@
             "path": "secrets/identity/oidc-provider"
           }
         ]
-
       },
       {
         "title": "MongoDB Atlas",
@@ -1873,6 +1872,10 @@
             "path": "enterprise/sentinel/properties"
           }
         ]
+      },
+      {
+        "title": "HCP Vault",
+        "href": "https://cloud.hashicorp.com/docs/vault"
       }
     ]
   }
