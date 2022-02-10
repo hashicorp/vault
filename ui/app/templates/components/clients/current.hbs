@@ -13,7 +13,7 @@
         </LinkTo>
       {{/if}}
     </EmptyState>
-  {{else if (eq this.isGatheringData true)}}
+  {{else if this.isGatheringData}}
     <EmptyState
       @title="No data received"
       @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
