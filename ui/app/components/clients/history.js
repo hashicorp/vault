@@ -112,8 +112,12 @@ export default class History extends Component {
       return false;
     }
     let versionDate = new Date(firstUpgrade.timestampInstalled);
+    let startTimeFromResponseAsDateObject = new Date(
+      Number(this.startTimeFromResponse[0]),
+      this.startTimeFromResponse[1]
+    );
     // compare against this startTimeFromResponse to show message or not.
-    return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
+    return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
   }
 
   // ACTIONS
