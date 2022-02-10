@@ -155,7 +155,9 @@ export default class History extends Component {
         this.endTimeFromResponse = response.formattedEndTime;
       }
       // compare if the response startTime comes after the requested startTime. If true throw a warning.
+      // only display if they selected a startTime
       if (
+        dateType === 'startTime' &&
         isAfter(
           new Date(this.getActivityResponse.startTime),
           new Date(this.startTimeRequested[0], this.startTimeRequested[1])
