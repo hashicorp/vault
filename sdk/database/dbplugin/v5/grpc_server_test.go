@@ -612,19 +612,24 @@ func TestGetMultiplexIDFromContext(t *testing.T) {
 			expectedResp: "",
 			expectedErr:  fmt.Errorf("empty multiplex ID in metadata"),
 		},
+		"happy path, id is returned from metadata": {
+			ctx:          idCtx(t, "12345"),
+			expectedResp: "12345",
+			expectedErr:  nil,
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			resp, err := getMultiplexIDFromContext(test.ctx)
 
-			if test.expectedErr.Error() != "" && err == nil {
+			if test.expectedErr != nil && test.expectedErr.Error() != "" && err == nil {
 				t.Fatalf("err expected, got nil")
 			} else if !reflect.DeepEqual(err, test.expectedErr) {
 				t.Fatalf("Actual error: %#v\nExpected error: %#v", err, test.expectedErr)
 			}
 
-			if test.expectedErr.Error() == "" && err != nil {
+			if test.expectedErr != nil && test.expectedErr.Error() == "" && err != nil {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
