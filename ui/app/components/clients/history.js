@@ -66,6 +66,10 @@ export default class History extends Component {
     return this.queriedActivityResponse || this.args.model.activity;
   }
 
+  get hasAttributionData() {
+    return this.totalUsageCounts.clients !== 0 && this.totalClientsData.length !== 0;
+  }
+
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
       return null;

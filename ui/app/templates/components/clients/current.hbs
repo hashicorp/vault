@@ -54,7 +54,7 @@
           @title={{date-format this.responseTimestamp "MMMM"}}
           @totalUsageCounts={{this.totalUsageCounts}}
         />
-        {{#if (not (eq this.totalUsageCounts.clients 0))}}
+        {{#if this.hasAttributionData}}
           <Clients::Attribution
             @chartLegend={{this.chartLegend}}
             @totalClientsData={{this.totalClientsData}}

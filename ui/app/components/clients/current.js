@@ -25,6 +25,10 @@ export default class Current extends Component {
     return this.args.model.config?.enabled === 'On' && this.byNamespaceCurrent.length === 0;
   }
 
+  get hasAttributionData() {
+    return this.totalUsageCounts.clients !== 0 && this.totalClientsData.length !== 0;
+  }
+
   get countsIncludeOlderData() {
     let firstUpgrade = this.args.model.versionHistory[0];
     if (!firstUpgrade) {
