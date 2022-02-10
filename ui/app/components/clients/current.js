@@ -21,7 +21,7 @@ export default class Current extends Component {
 
   get isGatheringData() {
     // return true if tracking IS enabled but no data collected yet
-    return this.args.model.config?.enabled === 'On' && this.byNamespaceCurrent.length === 0 ? true : false;
+    return this.args.model.config?.enabled === 'On' && this.byNamespaceCurrent.length === 0;
   }
 
   get countsIncludeOlderData() {
