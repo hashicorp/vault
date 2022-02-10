@@ -42,6 +42,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 	} else {
 		config := pluginutil.PluginClientConfig{
 			Name:            pluginName,
+			PluginType:      consts.PluginTypeDatabase,
 			PluginSets:      PluginSets,
 			HandshakeConfig: HandshakeConfig,
 			Logger:          namedLogger,
@@ -49,7 +50,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 			AutoMTLS:        true,
 		}
 		// create a DatabasePluginClient instance
-		db, err = NewPluginClient(ctx, sys, pluginRunner, config)
+		db, err = NewPluginClient(ctx, sys, config)
 		if err != nil {
 			return nil, err
 		}

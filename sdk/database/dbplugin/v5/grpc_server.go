@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -29,7 +30,7 @@ func getMultiplexIDFromContext(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("missing plugin multiplexing metadata")
 	}
 
-	multiplexIDs := md[multiplexingCtxKey]
+	multiplexIDs := md[pluginutil.MultiplexingCtxKey]
 	if len(multiplexIDs) != 1 {
 		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
 	}
