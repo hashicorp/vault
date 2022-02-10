@@ -112,25 +112,12 @@ export default class History extends Component {
       return false;
     }
     let versionDate = new Date(firstUpgrade.timestampInstalled);
-    // compare against this startTimeFromResponse to show message or not.
-    return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
-  }
-
-  // HELPERS
-  areArraysTheSame(a1, a2) {
-    return (
-      a1 === a2 ||
-      (a1 !== null &&
-        a2 !== null &&
-        a1.length === a2.length &&
-        a1
-          .map(function (val, idx) {
-            return val === a2[idx];
-          })
-          .reduce(function (prev, cur) {
-            return prev && cur;
-          }, true))
+    let startTimeFromResponseAsDateObject = new Date(
+      Number(this.startTimeFromResponse[0]),
+      this.startTimeFromResponse[1]
     );
+    // compare against this startTimeFromResponse to show message or not.
+    return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
   }
 
   // ACTIONS
@@ -171,9 +158,15 @@ export default class History extends Component {
         this.startTimeFromResponse = response.formattedStartTime;
         this.endTimeFromResponse = response.formattedEndTime;
       }
-      // compare if the response and what you requested are the same. If they are not throw a warning.
-      // this only gets triggered if the data was returned, which does not happen if the user selects a startTime after for which we have data. That's an adapter error and is captured differently.
-      if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {
+      // compare if the response startTime comes after the requested startTime. If true throw a warning.
+      // only display if they selected a startTime
+      if (
+        dateType === 'startTime' &&
+        isAfter(
+          new Date(this.getActivityResponse.startTime),
+          new Date(this.startTimeRequested[0], this.startTimeRequested[1])
+        )
+      ) {
         this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
       } else {
         this.responseRangeDiffMessage = null;

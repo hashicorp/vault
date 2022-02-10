@@ -31,6 +31,8 @@ class CalendarWidget extends Component {
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
   @tracked showCalendar = false;
+  @tracked tooltipTarget = null;
+  @tracked tooltipText = null;
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -52,6 +54,15 @@ class CalendarWidget extends Component {
   }
 
   // ACTIONS (alphabetically) //
+  @action
+  addTooltip() {
+    if (this.isObsoleteYear()) {
+      let previousYear = Number(this.displayYear) - 1;
+      this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
+      this.tooltipTarget = '#previous-year';
+    }
+  }
+
   @action
   addYear() {
     this.displayYear = this.displayYear + 1;
@@ -88,15 +99,24 @@ class CalendarWidget extends Component {
         }
       }
       // Compare values so the user cannot select an endTime after the endTime returned from counters/activity response on page load.
-      // ARG TODO will need to test if no data is returned on page load.
-      if (this.displayYear.toString() === this.args.endTimeFromResponse[0]) {
-        let endMonth = this.args.endTimeFromResponse[1];
+      let yearEndTimeFromResponse = Number(this.args.endTimeFromResponse[0]);
+      let endMonth = this.args.endTimeFromResponse[1];
+      if (this.displayYear === yearEndTimeFromResponse) {
         // add readOnly class to any month that is older (higher) than the endMonth index. (e.g. if nov is the endMonth of the endTimeDisplay, then 11 and 12 should not be displayed 10 < 11 and 10 < 12.)
         if (endMonth < elementMonthId) {
           e.classList.add('is-readOnly');
         }
       }
+      // if the year display higher than the endTime e.g. you're looking at 2022 and the returned endTime is 2021, all months should be disabled.
+      if (this.displayYear > yearEndTimeFromResponse) {
+        // all months should be disabled.
+        e.classList.add('is-readOnly');
+      }
     });
+  }
+
+  @action removeTooltip() {
+    this.tooltipTarget = null;
   }
 
   @action
