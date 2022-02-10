@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 )
 
 type testListenerConnFn func(net.Listener) (net.Conn, error)
@@ -44,7 +45,20 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 		}
 	}
 
-	server := <-serverCh
+	var server net.Conn
+	ticker := time.NewTicker(10 * time.Second)
+	select {
+	case <-ticker.C:
+		break
+	case server = <-serverCh:
+	}
+
+	if server == nil {
+		if client != nil {
+			client.Close()
+		}
+		t.Fatalf("Server rejected the client connection")
+	}
 	defer client.Close()
 	defer server.Close()
 

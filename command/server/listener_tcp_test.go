@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
+
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/mitchellh/cli"
 )
@@ -19,6 +21,52 @@ func TestTCPListener(t *testing.T) {
 	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
 		Address:    "127.0.0.1:0",
 		TLSDisable: true,
+	}, nil, cli.NewMockUi())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	connFn := func(lnReal net.Listener) (net.Conn, error) {
+		return net.Dial("tcp", ln.Addr().String())
+	}
+
+	testListenerImpl(t, ln, connFn, "", 0)
+}
+
+func TestTCPListenerAllowAuthorized(t *testing.T) {
+	sa, err := sockaddr.NewSockAddr("127.0.0.2:0")
+	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+		Address:               "127.0.0.1:0",
+		TLSDisable:            true,
+		ProxyProtocolBehavior: "allow_authorized",
+		ProxyProtocolAuthorizedAddrs: []*sockaddr.SockAddrMarshaler{
+			{
+				SockAddr: sa,
+			},
+		},
+	}, nil, cli.NewMockUi())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	connFn := func(lnReal net.Listener) (net.Conn, error) {
+		return net.Dial("tcp", ln.Addr().String())
+	}
+
+	testListenerImpl(t, ln, connFn, "", 0)
+}
+
+func TestTCPListenerDenyUnauthorize(t *testing.T) {
+	sa, err := sockaddr.NewSockAddr("127.0.0.2:0")
+	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+		Address:               "127.0.0.1:0",
+		TLSDisable:            true,
+		ProxyProtocolBehavior: "deny_unauthorized",
+		ProxyProtocolAuthorizedAddrs: []*sockaddr.SockAddrMarshaler{
+			{
+				SockAddr: sa,
+			},
+		},
 	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
