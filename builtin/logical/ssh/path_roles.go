@@ -22,10 +22,13 @@ const (
 	// KeyTypeCA is an key of type CA
 	KeyTypeCA = "ca"
 
+	// DefaultAlgorithmSigner is the default RSA signing algorithm
+	DefaultAlgorithmSigner = "default"
+
 	// Present version of the sshRole struct; when adding a new field or are
 	// needing to perform a migration, increment this struct and read the note
 	// in checkUpgrade(...).
-	roleEntryVersion = 1
+	roleEntryVersion = 2
 )
 
 // Structure that represents a role in SSH backend. This is a common role structure
@@ -354,7 +357,7 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `
 				When supplied, this value specifies a signing algorithm for the key. Possible values:
-				ssh-rsa, rsa-sha2-256, rsa-sha2-512.
+				ssh-rsa, rsa-sha2-256, rsa-sha2-512, default, or the empty string.
 				`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Signing Algorithm",
@@ -496,15 +499,17 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			Version:         roleEntryVersion,
 		}
 	} else if keyType == KeyTypeCA {
-		algorithmSigner := ""
+		algorithmSigner := DefaultAlgorithmSigner
 		algorithmSignerRaw, ok := d.GetOk("algorithm_signer")
 		if ok {
 			algorithmSigner = algorithmSignerRaw.(string)
 			switch algorithmSigner {
 			case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
-			case "":
+			case "", DefaultAlgorithmSigner:
 				// This case is valid, and the sign operation will use the signer's
-				// default algorithm.
+				// default algorithm. Explicitly reset the value to the default value
+				// rather than use the more vague implicit empty string.
+				algorithmSigner = DefaultAlgorithmSigner
 			default:
 				return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
 			}
@@ -629,6 +634,42 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 
 		result.Version = 1
 		modified = true
+	}
+
+	// Role version 2 migrates an empty AlgorithmSigner to an explicit ssh-rsa
+	// value WHEN the SSH CA key is a RSA key.
+	if result.Version < 2 {
+		// In order to perform the version 2 upgrade, we need knowledge of the
+		// signing key type as we want to make ssh-rsa an explicitly notated
+		// algorithm choice.
+		var publicKey ssh.PublicKey
+		publicKeyEntry, err := caKey(ctx, s, caPublicKey)
+		if err != nil {
+			b.Logger().Debug(fmt.Sprintf("failed to load public key entry while attempting to migrate: %v", err))
+			goto SKIPVERSION2
+		}
+		if publicKeyEntry == nil || publicKeyEntry.Key == "" {
+			b.Logger().Debug(fmt.Sprintf("got empty public key entry while attempting to migrate"))
+			goto SKIPVERSION2
+		}
+
+		publicKey, err = parsePublicSSHKey(publicKeyEntry.Key)
+		if err == nil {
+			// Move an empty signing algorithm to an explicit ssh-rsa (SHA-1)
+			// if this key is of type RSA. This isn't a secure default but
+			// exists for backwards compatibility with existing versions of
+			// Vault. By making it explicit, operators can see that this is
+			// the value and move it to a newer algorithm in the future.
+			if publicKey.Type() == ssh.KeyAlgoRSA && result.AlgorithmSigner == "" {
+				result.AlgorithmSigner = ssh.SigAlgoRSA
+			}
+
+			result.Version = 2
+			modified = true
+		}
+
+	SKIPVERSION2:
+		err = nil
 	}
 
 	// Add new migrations just before here.
