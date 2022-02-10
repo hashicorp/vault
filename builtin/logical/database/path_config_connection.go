@@ -317,7 +317,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
-		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
 
 		initReq := v5.InitializeRequest{
 			Config:           config.ConnectionDetails,
@@ -329,6 +328,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 		config.ConnectionDetails = initResp.Config
+
+		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
 
 		b.Lock()
 		defer b.Unlock()

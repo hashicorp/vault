@@ -9,16 +9,19 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/version"
 )
 
 type PluginClientConfig struct {
 	Name            string
+	PluginType      consts.PluginType
 	PluginSets      map[int]plugin.PluginSet
 	HandshakeConfig plugin.HandshakeConfig
 	Logger          log.Logger
 	IsMetadataMode  bool
 	AutoMTLS        bool
+	MLock           bool
 }
 
 type runConfig struct {
@@ -40,7 +43,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	cmd.Env = append(cmd.Env, rc.env...)
 
 	// Add the mlock setting to the ENV of the plugin
-	if rc.wrapper != nil && rc.wrapper.MlockEnabled() {
+	if rc.MLock || (rc.wrapper != nil && rc.wrapper.MlockEnabled()) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
@@ -148,6 +151,12 @@ func MetadataMode(isMetadataMode bool) RunOpt {
 func AutoMTLS(autoMTLS bool) RunOpt {
 	return func(rc *runConfig) {
 		rc.AutoMTLS = autoMTLS
+	}
+}
+
+func MLock(mlock bool) RunOpt {
+	return func(rc *runConfig) {
+		rc.MLock = mlock
 	}
 }
 

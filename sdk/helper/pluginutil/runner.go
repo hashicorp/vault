@@ -22,7 +22,7 @@ type Looker interface {
 // configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
-	NewPluginClient(ctx context.Context, pluginRunner *PluginRunner, config PluginClientConfig) (Multiplexer, error)
+	NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error)
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
@@ -33,13 +33,14 @@ type LookRunnerUtil interface {
 	RunnerUtil
 }
 
-type Multiplexer interface {
-	ID() string
-	Conn() *grpc.ClientConn
-	MultiplexingSupport() bool
+type PluginClient interface {
+	Conn() grpc.ClientConnInterface
+	MultiplexingSupport() (bool, error)
 
 	plugin.ClientProtocol
 }
+
+const MultiplexingCtxKey string = "multiplex_id"
 
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
@@ -98,6 +99,8 @@ func CtxCancelIfCanceled(f context.CancelFunc, ctxCanceler context.Context) chan
 	return quitCh
 }
 
+// MultiplexingSupport returns true if a plugin supports multiplexing.
+// Currently this is hardcoded for database plugins.
 func MultiplexingSupport(version int) bool {
 	return version == 6
 }
