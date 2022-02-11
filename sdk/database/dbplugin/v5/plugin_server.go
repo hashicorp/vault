@@ -25,7 +25,8 @@ func ServeConfig(db Database) *plugin.ServeConfig {
 	pluginSets := map[int]plugin.PluginSet{
 		5: {
 			"database": &GRPCDatabasePlugin{
-				Impl: db,
+				Impl:                db,
+				multiplexingSupport: false,
 			},
 		},
 	}
@@ -54,7 +55,8 @@ func ServeConfigMultiplex(factory Factory) *plugin.ServeConfig {
 	pluginSets := map[int]plugin.PluginSet{
 		6: {
 			"database": &GRPCDatabasePlugin{
-				FactoryFunc: factory,
+				FactoryFunc:         factory,
+				multiplexingSupport: true,
 			},
 		},
 	}
