@@ -279,7 +279,7 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["code_challenge_method"] = "plain"
-					req.Data["code_challenge"] = "a1b2c3d4"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 				tokenReq: func() *logical.Request {
@@ -314,7 +314,7 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["code_challenge_method"] = "plain"
-					req.Data["code_challenge"] = "a1b2c3d4"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 				tokenReq: func() *logical.Request {
@@ -334,7 +334,7 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["code_challenge_method"] = "S256"
-					req.Data["code_challenge"] = "a1b2c3d4"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 				tokenReq: func() *logical.Request {
@@ -354,12 +354,12 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["code_challenge_method"] = "plain"
-					req.Data["code_challenge"] = "a1b2c3d4"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 				tokenReq: func() *logical.Request {
 					req := testTokenReq(s, "", clientID, clientSecret)
-					req.Data["code_verifier"] = "a1b2c3d4"
+					req.Data["code_verifier"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 			},
@@ -373,12 +373,12 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					// code_challenge_method intentionally not provided
 					req := testAuthorizeReq(s, clientID)
-					req.Data["code_challenge"] = "a1b2c3d4"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 				tokenReq: func() *logical.Request {
 					req := testTokenReq(s, "", clientID, clientSecret)
-					req.Data["code_verifier"] = "a1b2c3d4"
+					req.Data["code_verifier"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 			},
@@ -392,12 +392,12 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["code_challenge_method"] = "S256"
-					req.Data["code_challenge"] = "fc9Af6hKDgUZx5kRVMQUjeAkTXWJAgwNmELbnvrYIJQ"
+					req.Data["code_challenge"] = "hMn-5TBH-t3uN00FEaGsQtYPhyC4Otbx-9vDcPTYHmc"
 					return req
 				}(),
 				tokenReq: func() *logical.Request {
 					req := testTokenReq(s, "", clientID, clientSecret)
-					req.Data["code_verifier"] = "a1b2c3d4"
+					req.Data["code_verifier"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 			},
@@ -854,14 +854,14 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["code_challenge_method"] = "S512"
-					req.Data["code_challenge"] = "a1b2c3d4"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
 					return req
 				}(),
 			},
 			wantErr: ErrAuthInvalidRequest,
 		},
 		{
-			name: "invalid authorize request with valid code_challenge_method and empty code_challenge",
+			name: "invalid authorize request with code_challenge length < 43 characters",
 			args: args{
 				entityID:      entityID,
 				clientReq:     testClientReq(s),
@@ -871,6 +871,26 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					req := testAuthorizeReq(s, clientID)
 					req.Data["code_challenge_method"] = "S256"
 					req.Data["code_challenge"] = ""
+					return req
+				}(),
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with code_challenge length > 128 characters",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = `
+					129_char_abcdefghijklmnopqrstuvwxyzabcd
+					129_char_abcdefghijklmnopqrstuvwxyzabcd
+					129_char_abcdefghijklmnopqrstuvwxyzabcd
+					`
 					return req
 				}(),
 			},

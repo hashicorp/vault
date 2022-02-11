@@ -1595,7 +1595,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		}
 
 		// Validate the code challenge
-		if codeChallenge == "" {
+		if len(codeChallenge) < 43 || len(codeChallenge) > 128 {
 			return authResponse("", state, ErrAuthInvalidRequest, "invalid code_challenge")
 		}
 
