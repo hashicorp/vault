@@ -26,10 +26,10 @@ func (dc *DatabasePluginClient) Close() error {
 // pluginSets is the map of plugins we can dispense.
 var PluginSets = map[int]plugin.PluginSet{
 	5: {
-		"database": &GRPCDatabasePlugin{},
+		"database": &GRPCDatabasePlugin{multiplexingSupport: false},
 	},
 	6: {
-		"database": &GRPCDatabasePlugin{},
+		"database": &GRPCDatabasePlugin{multiplexingSupport: true},
 	},
 }
 
