@@ -13,7 +13,9 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -77,14 +79,9 @@ func TestGRPCServer_Initialize(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				impl: test.db,
-			}
+			idCtx, g := testGrpcServer(t, test.db)
+			resp, err := g.Initialize(idCtx, test.req)
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
-
-			resp, err := g.Initialize(ctx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -252,14 +249,9 @@ func TestGRPCServer_NewUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				impl: test.db,
-			}
+			idCtx, g := testGrpcServer(t, test.db)
+			resp, err := g.NewUser(idCtx, test.req)
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
-
-			resp, err := g.NewUser(ctx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -362,14 +354,9 @@ func TestGRPCServer_UpdateUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				impl: test.db,
-			}
+			idCtx, g := testGrpcServer(t, test.db)
+			resp, err := g.UpdateUser(idCtx, test.req)
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
-
-			resp, err := g.UpdateUser(ctx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -430,14 +417,9 @@ func TestGRPCServer_DeleteUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				impl: test.db,
-			}
+			idCtx, g := testGrpcServer(t, test.db)
+			resp, err := g.DeleteUser(idCtx, test.req)
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
-
-			resp, err := g.DeleteUser(ctx, test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -488,14 +470,9 @@ func TestGRPCServer_Type(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				impl: test.db,
-			}
+			idCtx, g := testGrpcServer(t, test.db)
+			resp, err := g.Type(idCtx, &proto.Empty{})
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
-
-			resp, err := g.Type(ctx, &proto.Empty{})
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -539,14 +516,9 @@ func TestGRPCServer_Close(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				impl: test.db,
-			}
+			idCtx, g := testGrpcServer(t, test.db)
+			_, err := g.Close(idCtx, &proto.Empty{})
 
-			// Context doesn't need to timeout since this is just passed through
-			ctx := context.Background()
-
-			_, err := g.Close(ctx, &proto.Empty{})
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -560,6 +532,86 @@ func TestGRPCServer_Close(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetMultiplexIDFromContext(t *testing.T) {
+	type testCase struct {
+		ctx          context.Context
+		expectedResp string
+		expectedErr  error
+	}
+
+	tests := map[string]testCase{
+		"missing plugin multiplexing metadata": {
+			ctx:          context.Background(),
+			expectedResp: "",
+			expectedErr:  fmt.Errorf("missing plugin multiplexing metadata"),
+		},
+		"unexpected number of IDs in metadata": {
+			ctx:          idCtx(t, "12345", "67891"),
+			expectedResp: "",
+			expectedErr:  fmt.Errorf("unexpected number of IDs in metadata: (2)"),
+		},
+		"empty multiplex ID in metadata": {
+			ctx:          idCtx(t, ""),
+			expectedResp: "",
+			expectedErr:  fmt.Errorf("empty multiplex ID in metadata"),
+		},
+		"happy path, id is returned from metadata": {
+			ctx:          idCtx(t, "12345"),
+			expectedResp: "12345",
+			expectedErr:  nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			resp, err := getMultiplexIDFromContext(test.ctx)
+
+			if test.expectedErr != nil && test.expectedErr.Error() != "" && err == nil {
+				t.Fatalf("err expected, got nil")
+			} else if !reflect.DeepEqual(err, test.expectedErr) {
+				t.Fatalf("Actual error: %#v\nExpected error: %#v", err, test.expectedErr)
+			}
+
+			if test.expectedErr != nil && test.expectedErr.Error() == "" && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			if !reflect.DeepEqual(resp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", resp, test.expectedResp)
+			}
+		})
+	}
+}
+
+func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
+	t.Helper()
+	g := gRPCServer{
+		factoryFunc: func() (interface{}, error) {
+			return db, nil
+		},
+		instances: make(map[string]Database),
+	}
+
+	id := "12345"
+	idCtx := idCtx(t, id)
+	g.instances[id] = db
+
+	return idCtx, g
+}
+
+// idCtx is a test helper that will return a context with the IDs set in its
+// metadata
+func idCtx(t *testing.T, ids ...string) context.Context {
+	t.Helper()
+	// Context doesn't need to timeout since this is just passed through
+	ctx := context.Background()
+	md := metadata.MD{}
+	for _, id := range ids {
+		md.Append(pluginutil.MultiplexingCtxKey, id)
+	}
+	return metadata.NewIncomingContext(ctx, md)
 }
 
 func marshal(t *testing.T, m map[string]interface{}) *structpb.Struct {
