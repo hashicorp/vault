@@ -269,25 +269,27 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	role := &roleEntry{
-		OU:                    data.Get("ou").([]string),
-		Organization:          data.Get("organization").([]string),
-		Country:               data.Get("country").([]string),
-		Locality:              data.Get("locality").([]string),
-		Province:              data.Get("province").([]string),
-		StreetAddress:         data.Get("street_address").([]string),
-		PostalCode:            data.Get("postal_code").([]string),
-		TTL:                   time.Duration(data.Get("ttl").(int)) * time.Second,
-		AllowLocalhost:        true,
-		AllowAnyName:          true,
-		AllowIPSANs:           true,
-		EnforceHostnames:      false,
-		KeyType:               "any",
-		AllowedOtherSANs:      []string{"*"},
-		AllowedSerialNumbers:  []string{"*"},
-		AllowedURISANs:        []string{"*"},
-		AllowExpirationPastCA: true,
-		NotAfter:              data.Get("not_after").(string),
+		OU:                        data.Get("ou").([]string),
+		Organization:              data.Get("organization").([]string),
+		Country:                   data.Get("country").([]string),
+		Locality:                  data.Get("locality").([]string),
+		Province:                  data.Get("province").([]string),
+		StreetAddress:             data.Get("street_address").([]string),
+		PostalCode:                data.Get("postal_code").([]string),
+		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		AllowedOtherSANs:          []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		AllowedURISANs:            []string{"*"},
+		AllowExpirationPastCA:     true,
+		NotAfter:                  data.Get("not_after").(string),
 	}
+	*role.AllowWildcardCertificates = true
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
 		role.UseCSRCommonName = true
