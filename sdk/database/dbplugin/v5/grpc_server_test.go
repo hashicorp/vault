@@ -24,11 +24,12 @@ var invalidExpiration = time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
 
 func TestGRPCServer_Initialize(t *testing.T) {
 	type testCase struct {
-		db           Database
-		req          *proto.InitializeRequest
-		expectedResp *proto.InitializeResponse
-		expectErr    bool
-		expectCode   codes.Code
+		db            Database
+		req           *proto.InitializeRequest
+		expectedResp  *proto.InitializeResponse
+		expectErr     bool
+		expectCode    codes.Code
+		grpcSetupFunc func(*testing.T, Database) (context.Context, gRPCServer)
 	}
 
 	tests := map[string]testCase{
@@ -36,10 +37,11 @@ func TestGRPCServer_Initialize(t *testing.T) {
 			db: fakeDatabase{
 				initErr: errors.New("initialization error"),
 			},
-			req:          &proto.InitializeRequest{},
-			expectedResp: &proto.InitializeResponse{},
-			expectErr:    true,
-			expectCode:   codes.Internal,
+			req:           &proto.InitializeRequest{},
+			expectedResp:  &proto.InitializeResponse{},
+			expectErr:     true,
+			expectCode:    codes.Internal,
+			grpcSetupFunc: testGrpcServer,
 		},
 		"newConfig can't marshal to JSON": {
 			db: fakeDatabase{
@@ -49,12 +51,13 @@ func TestGRPCServer_Initialize(t *testing.T) {
 					},
 				},
 			},
-			req:          &proto.InitializeRequest{},
-			expectedResp: &proto.InitializeResponse{},
-			expectErr:    true,
-			expectCode:   codes.Internal,
+			req:           &proto.InitializeRequest{},
+			expectedResp:  &proto.InitializeResponse{},
+			expectErr:     true,
+			expectCode:    codes.Internal,
+			grpcSetupFunc: testGrpcServer,
 		},
-		"happy path with config data": {
+		"happy path with config data for multiplexed plugin": {
 			db: fakeDatabase{
 				initResp: InitializeResponse{
 					Config: map[string]interface{}{
@@ -72,14 +75,37 @@ func TestGRPCServer_Initialize(t *testing.T) {
 					"foo": "bar",
 				}),
 			},
-			expectErr:  false,
-			expectCode: codes.OK,
+			expectErr:     false,
+			expectCode:    codes.OK,
+			grpcSetupFunc: testGrpcServer,
+		},
+		"happy path with config data for non-multiplexed plugin": {
+			db: fakeDatabase{
+				initResp: InitializeResponse{
+					Config: map[string]interface{}{
+						"foo": "bar",
+					},
+				},
+			},
+			req: &proto.InitializeRequest{
+				ConfigData: marshal(t, map[string]interface{}{
+					"foo": "bar",
+				}),
+			},
+			expectedResp: &proto.InitializeResponse{
+				ConfigData: marshal(t, map[string]interface{}{
+					"foo": "bar",
+				}),
+			},
+			expectErr:     false,
+			expectCode:    codes.OK,
+			grpcSetupFunc: testGrpcServerSingleImpl,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			idCtx, g := testGrpcServer(t, test.db)
+			idCtx, g := test.grpcSetupFunc(t, test.db)
 			resp, err := g.Initialize(idCtx, test.req)
 
 			if test.expectErr && err == nil {
@@ -494,9 +520,11 @@ func TestGRPCServer_Type(t *testing.T) {
 
 func TestGRPCServer_Close(t *testing.T) {
 	type testCase struct {
-		db         Database
-		expectErr  bool
-		expectCode codes.Code
+		db            Database
+		expectErr     bool
+		expectCode    codes.Code
+		grpcSetupFunc func(*testing.T, Database) (context.Context, gRPCServer)
+		assertFunc    func(t *testing.T, g gRPCServer)
 	}
 
 	tests := map[string]testCase{
@@ -504,19 +532,33 @@ func TestGRPCServer_Close(t *testing.T) {
 			db: fakeDatabase{
 				closeErr: errors.New("close error"),
 			},
-			expectErr:  true,
-			expectCode: codes.Internal,
+			expectErr:     true,
+			expectCode:    codes.Internal,
+			grpcSetupFunc: testGrpcServer,
+			assertFunc:    nil,
 		},
-		"happy path": {
-			db:         fakeDatabase{},
-			expectErr:  false,
-			expectCode: codes.OK,
+		"happy path for multiplexed plugin": {
+			db:            fakeDatabase{},
+			expectErr:     false,
+			expectCode:    codes.OK,
+			grpcSetupFunc: testGrpcServer,
+			assertFunc: func(t *testing.T, g gRPCServer) {
+				if len(g.instances) != 0 {
+					t.Fatalf("err expected instances map to be empty")
+				}
+			},
+		},
+		"happy path for non-multiplexed plugin": {
+			db:            fakeDatabase{},
+			expectErr:     false,
+			expectCode:    codes.OK,
+			grpcSetupFunc: testGrpcServerSingleImpl,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			idCtx, g := testGrpcServer(t, test.db)
+			idCtx, g := test.grpcSetupFunc(t, test.db)
 			_, err := g.Close(idCtx, &proto.Empty{})
 
 			if test.expectErr && err == nil {
@@ -585,9 +627,12 @@ func TestGetMultiplexIDFromContext(t *testing.T) {
 	}
 }
 
+// testGrpcServer is a test helper that returns a context with an ID set in its
+// metadata and a gRPCServer instance for a multiplexed plugin
 func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
 	t.Helper()
 	g := gRPCServer{
+		multiplexingSupport: true,
 		factoryFunc: func() (interface{}, error) {
 			return db, nil
 		},
@@ -599,6 +644,16 @@ func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
 	g.instances[id] = db
 
 	return idCtx, g
+}
+
+// testGrpcServerSingleImpl is a test helper that returns a context and a
+// gRPCServer instance for a non-multiplexed plugin
+func testGrpcServerSingleImpl(t *testing.T, db Database) (context.Context, gRPCServer) {
+	t.Helper()
+	return context.Background(), gRPCServer{
+		multiplexingSupport: false,
+		singleImpl:          db,
+	}
 }
 
 // idCtx is a test helper that will return a context with the IDs set in its

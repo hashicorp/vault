@@ -24,6 +24,8 @@ type GRPCDatabasePlugin struct {
 	FactoryFunc Factory
 	Impl        Database
 
+	multiplexingSupport bool
+
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
 }
@@ -34,9 +36,16 @@ var (
 )
 
 func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
-	server := gRPCServer{factoryFunc: d.FactoryFunc, instances: make(map[string]Database)}
-	if d.Impl != nil {
-		server = gRPCServer{singleImpl: d.Impl}
+	var server gRPCServer
+
+	if d.multiplexingSupport {
+		server = gRPCServer{
+			multiplexingSupport: true,
+			factoryFunc:         d.FactoryFunc,
+			instances:           make(map[string]Database),
+		}
+	} else {
+		server = gRPCServer{multiplexingSupport: false, singleImpl: d.Impl}
 	}
 
 	proto.RegisterDatabaseServer(s, server)
