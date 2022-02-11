@@ -1819,8 +1819,8 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	// If the code verifier is provided and PKCE was not used in granting the
 	// authorization code, an error is returned. See details at
 	// https://datatracker.ietf.org/doc/html/rfc7636#section-4.6.
-	codeVerifier := d.Get("code_verifier").(string)
 	usePKCE := authCodeUsedPKCE(authCodeEntry)
+	codeVerifier := d.Get("code_verifier").(string)
 	if codeVerifier != "" && !usePKCE {
 		return tokenResponse(nil, ErrTokenInvalidRequest, "unexpected code_verifier for token exchange")
 	}
