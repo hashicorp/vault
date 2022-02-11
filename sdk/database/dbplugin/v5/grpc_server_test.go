@@ -79,16 +79,9 @@ func TestGRPCServer_Initialize(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				factoryFunc: func() (interface{}, error) {
-					return test.db, nil
-				},
-				instances: make(map[string]Database),
-			}
-
-			idCtx := idCtx(t, "12345")
-
+			idCtx, g := testGrpcServer(t, test.db)
 			resp, err := g.Initialize(idCtx, test.req)
+
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -256,18 +249,9 @@ func TestGRPCServer_NewUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				factoryFunc: func() (interface{}, error) {
-					return test.db, nil
-				},
-				instances: make(map[string]Database),
-			}
-
-			id := "12345"
-			idCtx := idCtx(t, id)
-			g.instances[id] = test.db
-
+			idCtx, g := testGrpcServer(t, test.db)
 			resp, err := g.NewUser(idCtx, test.req)
+
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -370,18 +354,9 @@ func TestGRPCServer_UpdateUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				factoryFunc: func() (interface{}, error) {
-					return test.db, nil
-				},
-				instances: make(map[string]Database),
-			}
-
-			id := "12345"
-			idCtx := idCtx(t, id)
-			g.instances[id] = test.db
-
+			idCtx, g := testGrpcServer(t, test.db)
 			resp, err := g.UpdateUser(idCtx, test.req)
+
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -442,18 +417,9 @@ func TestGRPCServer_DeleteUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				factoryFunc: func() (interface{}, error) {
-					return test.db, nil
-				},
-				instances: make(map[string]Database),
-			}
-
-			id := "12345"
-			idCtx := idCtx(t, id)
-			g.instances[id] = test.db
-
+			idCtx, g := testGrpcServer(t, test.db)
 			resp, err := g.DeleteUser(idCtx, test.req)
+
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -504,18 +470,9 @@ func TestGRPCServer_Type(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				factoryFunc: func() (interface{}, error) {
-					return test.db, nil
-				},
-				instances: make(map[string]Database),
-			}
-
-			id := "12345"
-			idCtx := idCtx(t, id)
-			g.instances[id] = test.db
-
+			idCtx, g := testGrpcServer(t, test.db)
 			resp, err := g.Type(idCtx, &proto.Empty{})
+
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -559,18 +516,9 @@ func TestGRPCServer_Close(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			g := gRPCServer{
-				factoryFunc: func() (interface{}, error) {
-					return test.db, nil
-				},
-				instances: make(map[string]Database),
-			}
-
-			id := "12345"
-			idCtx := idCtx(t, id)
-			g.instances[id] = test.db
-
+			idCtx, g := testGrpcServer(t, test.db)
 			_, err := g.Close(idCtx, &proto.Empty{})
+
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -600,10 +548,7 @@ func TestGetMultiplexIDFromContext(t *testing.T) {
 			expectedErr:  fmt.Errorf("missing plugin multiplexing metadata"),
 		},
 		"unexpected number of IDs in metadata": {
-			ctx: metadata.NewIncomingContext(
-				context.Background(),
-				metadata.Pairs(pluginutil.MultiplexingCtxKey, "12345", pluginutil.MultiplexingCtxKey, "67891"),
-			),
+			ctx:          idCtx(t, "12345", "67891"),
 			expectedResp: "",
 			expectedErr:  fmt.Errorf("unexpected number of IDs in metadata: (2)"),
 		},
@@ -640,12 +585,32 @@ func TestGetMultiplexIDFromContext(t *testing.T) {
 	}
 }
 
-// idCtx is a test helper that will return an ID and a context with the ID set
-// in its metadata
-func idCtx(t *testing.T, id string) context.Context {
+func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
+	t.Helper()
+	g := gRPCServer{
+		factoryFunc: func() (interface{}, error) {
+			return db, nil
+		},
+		instances: make(map[string]Database),
+	}
+
+	id := "12345"
+	idCtx := idCtx(t, id)
+	g.instances[id] = db
+
+	return idCtx, g
+}
+
+// idCtx is a test helper that will return a context with the IDs set in its
+// metadata
+func idCtx(t *testing.T, ids ...string) context.Context {
+	t.Helper()
 	// Context doesn't need to timeout since this is just passed through
 	ctx := context.Background()
-	md := metadata.Pairs(pluginutil.MultiplexingCtxKey, id)
+	md := metadata.MD{}
+	for _, id := range ids {
+		md.Append(pluginutil.MultiplexingCtxKey, id)
+	}
 	return metadata.NewIncomingContext(ctx, md)
 }
 
