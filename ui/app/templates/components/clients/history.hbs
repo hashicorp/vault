@@ -105,7 +105,7 @@
           </ul>
         </AlertBanner>
       {{/if}}
-      {{#if @isLoading}}
+      {{#if this.isLoadingQuery}}
         <LayoutLoading />
       {{else}}
         {{#if this.totalUsageCounts}}
@@ -212,8 +212,8 @@
         type="button"
         class="button is-primary"
         onclick={{queue
-          (action "handleClientActivityQuery" this.startMonth this.startYear "startTime")
           (action (mut this.isEditStartMonthOpen) false)
+          (action "handleClientActivityQuery" this.startMonth this.startYear "startTime")
         }}
         disabled={{if (and this.startMonth this.startYear) false true}}
       >
@@ -224,7 +224,7 @@
         class="button is-secondary"
         {{on
           "click"
-          (queue (fn this.handleClientActivityQuery 0 0 "cancel") (action (mut this.isEditStartMonthOpen) false))
+          (queue (action (mut this.isEditStartMonthOpen) false) (fn this.handleClientActivityQuery 0 0 "cancel"))
         }}
       >
         Cancel
