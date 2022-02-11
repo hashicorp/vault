@@ -9,9 +9,8 @@ export default class HistoryRoute extends Route {
     try {
       // on init ONLY make network request if we have a start time from the license
       // otherwise user needs to manually input
-      return start_time
-        ? await this.store.queryRecord('clients/activity', { start_time })
-        : { endTime: null };
+      // TODO CMB what to return here?
+      return start_time ? await this.store.queryRecord('clients/activity', { start_time }) : {};
     } catch (e) {
       return e;
     }
@@ -23,7 +22,8 @@ export default class HistoryRoute extends Route {
       // if license.startTime is 'undefined' return 'null' for consistency
       return license.startTime || null;
     } catch (e) {
-      // if error due to permission denied, return null so user can input date manually
+      // return null so user can input date manually
+      // if already inputted manually, will be in localStorage
       return getStorage().getItem(CLIENT_COUNTING_START) || null;
     }
   }

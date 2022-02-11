@@ -65,7 +65,7 @@ export default class History extends Component {
   @tracked responseRangeDiffMessage = null;
 
   get getVersionCopy() {
-    return !this.version.isEnterprise
+    return this.version.isEnterprise
       ? {
           label: 'Billing start month',
           description:
@@ -153,9 +153,6 @@ export default class History extends Component {
     return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
   }
 
-  storage() {
-    return getStorage();
-  }
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
@@ -170,7 +167,6 @@ export default class History extends Component {
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
       this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
-      this.storage().setItem(CLIENT_COUNTING_START, this.startTimeRequested);
       this.endTimeRequested = null;
     }
     // clicked "Custom End Month" from the calendar-widget
@@ -190,10 +186,12 @@ export default class History extends Component {
         this.startTimeFromResponse = this.startTimeRequested;
         this.noActivityDate = this.startTimeDisplay;
       } else {
-        // note: this.startTimeDisplay (getter) is updated by this.startTimeFromResponse
+        // note: this.startTimeDisplay (getter) is updated by the @tracked startTimeFromResponse
         this.startTimeFromResponse = response.formattedStartTime;
         this.endTimeFromResponse = response.formattedEndTime;
+        this.storage().setItem(CLIENT_COUNTING_START, this.startTimeFromResponse);
       }
+      this.queriedActivityResponse = response;
       // compare if the response startTime comes after the requested startTime. If true throw a warning.
       // only display if they selected a startTime
       if (
@@ -207,8 +205,8 @@ export default class History extends Component {
       } else {
         this.responseRangeDiffMessage = null;
       }
-      this.queriedActivityResponse = response;
     } catch (e) {
+      // TODO CMB surface API errors when user selects start date after end date
       return e;
     }
   }
@@ -238,5 +236,9 @@ export default class History extends Component {
   // HELPERS //
   filterByNamespace(namespace) {
     return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+  }
+
+  storage() {
+    return getStorage();
   }
 }
