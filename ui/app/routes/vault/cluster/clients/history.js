@@ -1,6 +1,5 @@
 import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
-import { action } from '@ember/object';
 
 export default class HistoryRoute extends Route {
   async getActivity(start_time) {
@@ -67,17 +66,5 @@ export default class HistoryRoute extends Route {
       endTimeFromResponse: this.parseRFC3339(activity?.endTime),
       versionHistory: this.getVersionHistory(),
     });
-  }
-
-  @action
-  async loading(transition) {
-    // eslint-disable-next-line ember/no-controller-access-in-routes
-    let controller = this.controllerFor('vault.cluster.clients.history');
-    if (controller) {
-      controller.set('currentlyLoading', true);
-      transition.promise.finally(function () {
-        controller.set('currentlyLoading', false);
-      });
-    }
   }
 }

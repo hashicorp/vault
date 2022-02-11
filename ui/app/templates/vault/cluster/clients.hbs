@@ -23,4 +23,8 @@
     </ul>
   </nav>
 </div>
-{{outlet}}
+{{#if this.currentlyLoading}}
+  <LayoutLoading />
+{{else}}
+  {{outlet}}
+{{/if}}
