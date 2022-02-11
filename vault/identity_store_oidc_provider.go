@@ -1815,18 +1815,23 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenInvalidRequest, "identity entity not authorized by client assignment")
 	}
 
-	// Validate the code verifier if a code challenge and code challenge
-	// method are associated with the authorization code. See details at
-	// https://datatracker.ietf.org/doc/html/rfc7636#section-4.6
-	if authCodeEntry.codeChallenge != "" && authCodeEntry.codeChallengeMethod != "" {
-		codeVerifier := d.Get("code_verifier").(string)
+	// Validate the code verifier if the authorization code was granted using PKCE.
+	// If the code verifier is provided and PKCE was not used in granting the
+	// authorization code, an error is returned. See details at
+	// https://datatracker.ietf.org/doc/html/rfc7636#section-4.6.
+	codeVerifier := d.Get("code_verifier").(string)
+	usePKCE := authCodeUsedPKCE(authCodeEntry)
+	if codeVerifier != "" && !usePKCE {
+		return tokenResponse(nil, ErrTokenInvalidRequest, "unexpected code_verifier for token exchange")
+	}
+	if usePKCE {
 		if codeVerifier == "" {
-			return tokenResponse(nil, ErrTokenInvalidGrant, "invalid code_verifier for token exchange")
+			return tokenResponse(nil, ErrTokenInvalidRequest, "expected code_verifier for token exchange")
 		}
 
 		codeChallenge, err := computeCodeChallenge(codeVerifier, authCodeEntry.codeChallengeMethod)
 		if err != nil {
-			return tokenResponse(nil, ErrTokenInvalidGrant, err.Error())
+			return tokenResponse(nil, ErrTokenServerError, err.Error())
 		}
 
 		if subtle.ConstantTimeCompare([]byte(codeChallenge), []byte(authCodeEntry.codeChallenge)) == 0 {

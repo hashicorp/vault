@@ -90,3 +90,8 @@ func computeCodeChallenge(verifier string, method string) (string, error) {
 		return "", fmt.Errorf("invalid code challenge method %q", method)
 	}
 }
+
+// authCodeUsedPKCE returns true if the given entry was granted using PKCE.
+func authCodeUsedPKCE(entry *authCodeCacheEntry) bool {
+	return entry.codeChallenge != "" && entry.codeChallengeMethod != ""
+}

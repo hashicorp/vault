@@ -288,7 +288,22 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 					return req
 				}(),
 			},
-			wantErr: ErrTokenInvalidGrant,
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with code_verifier provided for non-PKCE flow",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "pkce_not_used_in_authorize_request"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidRequest,
 		},
 		{
 			name: "invalid token request with incorrect plain code_verifier",
