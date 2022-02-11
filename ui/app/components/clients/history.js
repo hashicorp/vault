@@ -3,6 +3,9 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
+import getStorage from 'vault/lib/token-storage';
+
+const CLIENT_COUNTING_START = 'vault:ui-client-counting-start';
 export default class History extends Component {
   @service store;
   @service version;
@@ -130,6 +133,9 @@ export default class History extends Component {
     return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
   }
 
+  storage() {
+    return getStorage();
+  }
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
@@ -142,8 +148,10 @@ export default class History extends Component {
     }
     // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
+      // this.storage().removeItem(CLIENT_COUNTING_START);
       let monthIndex = this.arrayOfMonths.indexOf(month);
       this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
+      this.storage().setItem(CLIENT_COUNTING_START, this.startTimeRequested);
       this.endTimeRequested = null;
     }
     // clicked "Custom End Month" from the calendar-widget

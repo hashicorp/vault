@@ -1,7 +1,9 @@
 import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
 import { action } from '@ember/object';
+import getStorage from 'vault/lib/token-storage';
 
+const CLIENT_COUNTING_START = 'vault:ui-client-counting-start';
 export default class HistoryRoute extends Route {
   async getActivity(start_time) {
     try {
@@ -22,7 +24,7 @@ export default class HistoryRoute extends Route {
       return license.startTime || null;
     } catch (e) {
       // if error due to permission denied, return null so user can input date manually
-      return null;
+      return getStorage().getItem(CLIENT_COUNTING_START) || null;
     }
   }
 
@@ -46,6 +48,10 @@ export default class HistoryRoute extends Route {
 
   parseRFC3339(timestamp) {
     // convert '2021-03-21T00:00:00Z' --> ['2021', 2] (e.g. 2021 March, month is zero indexed)
+    if (Array.isArray(timestamp)) {
+      // return if already formatted correctly
+      return timestamp;
+    }
     return timestamp
       ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
       : null;
