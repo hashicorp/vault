@@ -22,21 +22,6 @@ func pathToken(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-
-			"policies": {
-				Type:        framework.TypeCommaStringSlice,
-				Description: `List of policies to attach to the token.`,
-			},
-
-			"consul_namespace": {
-				Type:        framework.TypeString,
-				Description: "Namespace to create the token in.",
-			},
-
-			"partition": {
-				Type:        framework.TypeString,
-				Description: "Admin partition to create the token in.",
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
