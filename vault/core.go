@@ -74,6 +74,10 @@ const (
 	coreKeyringCanaryPath = "core/canary-keyring"
 
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
+
+	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
+	// MfaAuthResponse when the value is not specified in the server config
+	defaultMFAAuthResponseTTL = 300 * time.Second
 )
 
 var (
@@ -331,7 +335,8 @@ type Core struct {
 	auditedHeaders *AuditedHeadersConfig
 
 	// systemBackend is the backend which is used to manage internal operations
-	systemBackend *SystemBackend
+	systemBackend   *SystemBackend
+	loginMFABackend *LoginMFABackend
 
 	// cubbyholeBackend is the backend which manages the per-token storage
 	cubbyholeBackend *CubbyholeBackend
@@ -367,6 +372,10 @@ type Core struct {
 
 	// inFlightReqMap is used to store info about in-flight requests
 	inFlightReqData *InFlightRequests
+
+	// mfaResponseAuthQueue is used to cache the auth response per request ID
+	mfaResponseAuthQueue     *LoginMFAPriorityQueue
+	mfaResponseAuthQueueLock sync.Mutex
 
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
@@ -976,6 +985,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		c.ha = conf.HAPhysical
 	}
+
+	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
@@ -2064,6 +2075,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
+	c.setupCachedMFAResponseAuth()
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
 			return err
@@ -2234,6 +2246,11 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clear any cached auth response
+	c.mfaResponseAuthQueueLock.Lock()
+	c.mfaResponseAuthQueue = nil
+	c.mfaResponseAuthQueueLock.Unlock()
+
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
@@ -2971,6 +2988,57 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+type MFACachedAuthResponse struct {
+	CachedAuth            *logical.Auth
+	RequestPath           string
+	RequestNSID           string
+	RequestNSPath         string
+	RequestConnRemoteAddr string
+	TimeOfStorage         time.Time
+	RequestID             string
+}
+
+func (c *Core) setupCachedMFAResponseAuth() {
+	c.mfaResponseAuthQueueLock.Lock()
+	c.mfaResponseAuthQueue = NewLoginMFAPriorityQueue()
+	mfaQueue := c.mfaResponseAuthQueue
+	c.mfaResponseAuthQueueLock.Unlock()
+
+	ctx := c.activeContext
+
+	go func() {
+		ticker := time.Tick(5 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker:
+				err := mfaQueue.RemoveExpiredMfaAuthResponse(defaultMFAAuthResponseTTL, time.Now())
+				if err != nil {
+					c.Logger().Error("failed to remove stale MFA auth response", "error", err)
+				}
+			}
+		}
+	}()
+	return
+}
+
+// PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
+// it returns the cached auth response or an error
+func (c *Core) PopMFAResponseAuthByID(reqID string) (*MFACachedAuthResponse, error) {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.PopByKey(reqID)
+}
+
+// SaveMFAResponseAuth pushes an MFACachedAuthResponse to the mfaResponseAuthQueue.
+// it returns an error in case of failure
+func (c *Core) SaveMFAResponseAuth(respAuth *MFACachedAuthResponse) error {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.Push(respAuth)
 }
 
 type InFlightRequests struct {

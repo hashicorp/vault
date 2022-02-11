@@ -25,11 +25,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -72,14 +72,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
 	b := &SystemBackend{
-		Core:      core,
-		db:        db,
-		logger:    logger,
-		mfaLogger: core.baseLogger.Named("mfa"),
-		mfaLock:   &sync.RWMutex{},
+		Core:       core,
+		db:         db,
+		logger:     logger,
+		mfaBackend: NewPolicyMFABackend(core, logger),
 	}
 
-	core.AddLogger(b.mfaLogger)
+	core.AddLogger(b.mfaBackend.mfaLogger)
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
@@ -147,6 +146,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"rekey-recovery-key/init",
 				"rekey-recovery-key/update",
 				"rekey-recovery-key/verify",
+				"mfa/validate",
 			},
 
 			LocalStorage: []string{
@@ -223,11 +223,10 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core      *Core
-	db        *memdb.MemDB
-	mfaLock   *sync.RWMutex
-	mfaLogger log.Logger
-	logger    log.Logger
+	Core       *Core
+	db         *memdb.MemDB
+	logger     log.Logger
+	mfaBackend *PolicyMFABackend
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration

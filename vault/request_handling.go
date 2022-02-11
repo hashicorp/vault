@@ -7,12 +7,14 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -1073,7 +1075,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error.
 	if resp != nil && resp.Auth != nil {
-		if !strings.HasPrefix(req.Path, "auth/token/") {
+		if !strings.HasPrefix(req.Path, "auth/token/") && req.Path != "sys/mfa/validate" {
 			c.logger.Error("unexpected Auth response for non-token backend", "request_path", req.Path)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -1399,94 +1401,104 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	CREATE_TOKEN:
 		// Determine the source of the login
 		source := c.router.MatchingMount(ctx, req.Path)
-		source = strings.TrimPrefix(source, credentialRoutePrefix)
-		source = strings.Replace(source, "/", "-", -1)
 
-		// Prepend the source to the display name
-		auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
-
-		sysView := c.router.MatchingSystemView(ctx, req.Path)
-		if sysView == nil {
-			c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
-			return nil, nil, ErrInternalError
-		}
-
-		tokenTTL, warnings, err := framework.CalculateTTL(sysView, 0, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Time{})
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, warning := range warnings {
-			resp.AddWarning(warning)
-		}
-
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+		// Login MFA
+		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
+		// finding the MFAEnforcementConfig that matches the ns and either of
+		// entityID, MountAccessor, GroupID, or Auth type.
+		matchedMfaEnforcementList, err := c.buildMFAEnforcementConfigList(ctx, entity, req.Path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to find MFAEnforcement configuration, error: %v", err)
+		}
 
-		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
-		allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
+		// (for the context, a response warning above says: "primary cluster
+		// doesn't yet issue entities for local auth mounts; falling back
+		// to not issuing entities for local auth mounts")
+		// based on the above, if the entity is nil, check if MFAEnforcementConfig
+		// is configured or not. If not, continue as usual, but if there
+		// is something, then report an error indicating that the user is not
+		// allowed to login because there is no entity associated with it.
+		// This is because an entity is needed to enforce MFA.
+		if entity == nil && len(matchedMfaEnforcementList) > 0 {
+			// this logic means that an MFAEnforcementConfig was configured with
+			// only mount type or mount accessor
+			return nil, nil, logical.ErrPermissionDenied
+		}
 
-		// Prevent internal policies from being assigned to tokens. We check
-		// this on auth.Policies including derived ones from Identity before
-		// actually making the token.
-		for _, policy := range allPolicies {
-			if policy == "root" {
-				return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
+		// The resp.Auth has been populated with the information that is required for MFA validation
+		// This is why, the MFA check is placed at this point. The resp.Auth is going to be fully cached
+		// in memory so that it would be used to return to the user upon MFA validation is completed.
+		if entity != nil {
+			if len(matchedMfaEnforcementList) == 0 && len(req.MFACreds) > 0 {
+				resp.AddWarning("Found MFA header but failed to find MFA Enforcement Config")
 			}
-			if strutil.StrListContains(nonAssignablePolicies, policy) {
-				return logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), nil, logical.ErrInvalidRequest
+
+			// If X-Vault-MFA header is supplied to the login request,
+			// run single-phase login MFA check, else run two-phase login MFA check
+			if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) > 0 {
+				for _, eConfig := range matchedMfaEnforcementList {
+					err = c.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, req.MFACreds)
+					if err != nil {
+						return nil, nil, logical.ErrPermissionDenied
+					}
+				}
+			} else if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) == 0 {
+				mfaRequestID, err := uuid.GenerateUUID()
+				if err != nil {
+					return nil, nil, err
+				}
+				// sending back the MFARequirement config
+				mfaRequirement := &logical.MFARequirement{
+					MFARequestID:   mfaRequestID,
+					MFAConstraints: make(map[string]*logical.MFAConstraintAny),
+				}
+				for _, eConfig := range matchedMfaEnforcementList {
+					mfaAny, err := c.buildMfaEnforcementResponse(eConfig)
+					if err != nil {
+						return nil, nil, err
+					}
+					mfaRequirement.MFAConstraints[eConfig.Name] = mfaAny
+				}
+
+				// for two phased MFA enforcement, we should not return the regular auth
+				// response. This flag is indicate to store the auth response for later
+				// and return MFARequirement only
+				respAuth := &MFACachedAuthResponse{
+					CachedAuth:            resp.Auth,
+					RequestPath:           req.Path,
+					RequestNSID:           ns.ID,
+					RequestNSPath:         ns.Path,
+					RequestConnRemoteAddr: req.Connection.RemoteAddr, // this is needed for the DUO method
+					TimeOfStorage:         time.Now(),
+					RequestID:             req.ID,
+				}
+				err = c.SaveMFAResponseAuth(respAuth)
+				if err != nil {
+					return nil, nil, err
+				}
+				auth = nil
+				resp.Auth = &logical.Auth{
+					MFARequirement: mfaRequirement,
+				}
+				// going to return early before generating the token
+				// the user receives the mfaRequirement, and need to use the
+				// login MFA validate endpoint to get the token
+				return resp, auth, retErr
 			}
 		}
-
-		var registerFunc RegisterAuthFunc
-		var funcGetErr error
-		// Batch tokens should not be forwarded to perf standby
-		if auth.TokenType == logical.TokenTypeBatch {
-			registerFunc = c.RegisterAuth
-		} else {
-			registerFunc, funcGetErr = getAuthRegisterFunc(c)
-		}
-		if funcGetErr != nil {
-			retErr = multierror.Append(retErr, funcGetErr)
-			return nil, auth, retErr
-		}
-
-		err = registerFunc(ctx, tokenTTL, req.Path, auth)
-		switch {
-		case err == nil:
-			if auth.TokenType != logical.TokenTypeBatch {
-				leaseGenerated = true
-			}
-		case err == ErrInternalError:
-			return nil, auth, err
-		default:
-			return logical.ErrorResponse(err.Error()), auth, logical.ErrInvalidRequest
-		}
-
-		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies[ns.ID], policyutil.DoNotAddDefaultPolicy)
-		delete(identityPolicies, ns.ID)
-		auth.ExternalNamespacePolicies = identityPolicies
-		auth.Policies = allPolicies
 
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		// Count the successful token creation
-		ttl_label := metricsutil.TTLBucket(tokenTTL)
-		// Do not include namespace path in mount point; already present as separate label.
-		mountPointWithoutNs := ns.TrimmedPath(req.MountPoint)
-		c.metricSink.IncrCounterWithLabels(
-			[]string{"token", "creation"},
-			1,
-			[]metrics.Label{
-				metricsutil.NamespaceLabel(ns),
-				{"auth_method", req.MountType},
-				{"mount_point", mountPointWithoutNs},
-				{"creation_ttl", ttl_label},
-				{"token_type", auth.TokenType.String()},
-			},
-		)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp)
+		leaseGenerated = leaseGen
+		if errCreateToken != nil {
+			return respTokenCreate, nil, errCreateToken
+		}
+		resp = respTokenCreate
 	}
 
 	// if we were already going to return some error from this login, do that.
@@ -1507,6 +1519,126 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	return resp, auth, routeErr
+}
+
+// LoginCreateToken creates a token as a result of a login request.
+// If MFA is enforced, mfa/validate endpoint calls this functions
+// after successful MFA validation to generate the token.
+func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response) (bool, *logical.Response, error) {
+	auth := resp.Auth
+
+	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
+	source = strings.Replace(source, "/", "-", -1)
+
+	// Prepend the source to the display name
+	auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
+
+	// Determine mount type
+	mountEntry := c.router.MatchingMountEntry(ctx, reqPath)
+	if mountEntry == nil {
+		return false, nil, fmt.Errorf("failed to find a matching mount")
+	}
+
+	sysView := c.router.MatchingSystemView(ctx, reqPath)
+	if sysView == nil {
+		c.logger.Error("unable to look up sys view for login path", "request_path", reqPath)
+		return false, nil, ErrInternalError
+	}
+
+	tokenTTL, warnings, err := framework.CalculateTTL(sysView, 0, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Time{})
+	if err != nil {
+		return false, nil, err
+	}
+	for _, warning := range warnings {
+		resp.AddWarning(warning)
+	}
+
+	_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+	if err != nil {
+		return false, nil, ErrInternalError
+	}
+
+	auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
+	allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
+
+	// Prevent internal policies from being assigned to tokens. We check
+	// this on auth.Policies including derived ones from Identity before
+	// actually making the token.
+	for _, policy := range allPolicies {
+		if policy == "root" {
+			return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+		}
+		if strutil.StrListContains(nonAssignablePolicies, policy) {
+			return false, logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), logical.ErrInvalidRequest
+		}
+	}
+
+	var registerFunc RegisterAuthFunc
+	var funcGetErr error
+	// Batch tokens should not be forwarded to perf standby
+	if auth.TokenType == logical.TokenTypeBatch {
+		registerFunc = c.RegisterAuth
+	} else {
+		registerFunc, funcGetErr = getAuthRegisterFunc(c)
+	}
+	if funcGetErr != nil {
+		return false, nil, funcGetErr
+	}
+
+	leaseGenerated := false
+	err = registerFunc(ctx, tokenTTL, reqPath, auth)
+	switch {
+	case err == nil:
+		if auth.TokenType != logical.TokenTypeBatch {
+			leaseGenerated = true
+		}
+	case err == ErrInternalError:
+		return false, nil, err
+	default:
+		return false, logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies[ns.ID], policyutil.DoNotAddDefaultPolicy)
+	delete(identityPolicies, ns.ID)
+	auth.ExternalNamespacePolicies = identityPolicies
+	auth.Policies = allPolicies
+
+	// Count the successful token creation
+	ttl_label := metricsutil.TTLBucket(tokenTTL)
+	// Do not include namespace path in mount point; already present as separate label.
+	mountPointWithoutNs := ns.TrimmedPath(mountPoint)
+	c.metricSink.IncrCounterWithLabels(
+		[]string{"token", "creation"},
+		1,
+		[]metrics.Label{
+			metricsutil.NamespaceLabel(ns),
+			{"auth_method", mountEntry.Type},
+			{"mount_point", mountPointWithoutNs},
+			{"creation_ttl", ttl_label},
+			{"token_type", auth.TokenType.String()},
+		},
+	)
+
+	return leaseGenerated, resp, nil
+}
+
+func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*logical.MFAConstraintAny, error) {
+	mfaAny := &logical.MFAConstraintAny{
+		Any: []*logical.MFAMethodID{},
+	}
+	for _, methodID := range eConfig.MFAMethodIDs {
+		mConfig, err := c.loginMFABackend.MemDBMFAConfigByID(methodID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get methodID %s from MFA config table, error: %v", methodID, err)
+		}
+		mfaMethod := &logical.MFAMethodID{
+			Type:         mConfig.Type,
+			ID:           methodID,
+			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || mConfig.Type == mfaMethodTypeDuo,
+		}
+		mfaAny.Any = append(mfaAny.Any, mfaMethod)
+	}
+	return mfaAny, nil
 }
 
 func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
