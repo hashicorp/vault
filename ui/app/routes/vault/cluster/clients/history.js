@@ -19,7 +19,7 @@ export default class HistoryRoute extends Route {
     try {
       let license = await this.store.queryRecord('license', {});
       // if license.startTime is 'undefined' return 'null' for consistency
-      return license.startTime || null;
+      return license.startTime || getStorage().getItem(CLIENT_COUNTING_START) || null;
     } catch (e) {
       // return null so user can input date manually
       // if already inputted manually, will be in localStorage
