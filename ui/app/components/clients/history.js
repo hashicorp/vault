@@ -64,6 +64,26 @@ export default class History extends Component {
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
 
+  get getVersionCopy() {
+    return !this.version.isEnterprise
+      ? {
+          label: 'Billing start month',
+          description:
+            'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
+          title: 'No billing start date found',
+          message:
+            'In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate.',
+        }
+      : {
+          label: 'Client counting start date',
+          description:
+            'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
+          title: 'No start date found',
+          message:
+            'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.',
+        };
+  }
+
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
     return this.queriedActivityResponse || this.args.model.activity;
@@ -148,7 +168,6 @@ export default class History extends Component {
     }
     // clicked "Edit" Billing start month in Dashboard which opens a modal.
     if (dateType === 'startTime') {
-      // this.storage().removeItem(CLIENT_COUNTING_START);
       let monthIndex = this.arrayOfMonths.indexOf(month);
       this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
       this.storage().setItem(CLIENT_COUNTING_START, this.startTimeRequested);
