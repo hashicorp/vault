@@ -141,7 +141,7 @@ export default class History extends Component {
       this.startTimeRequested = this.args.model.startTimeFromLicense;
       this.endTimeRequested = null;
     }
-    // clicked "Edit" Billing start month in Clients which opens a modal.
+    // clicked "Edit" Billing start month in History which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
       this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
