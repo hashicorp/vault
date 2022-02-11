@@ -111,9 +111,9 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		})
 	}
 
-	roleLink := []*api.ACLTokenRoleLink{}
+	roleLinks := []*api.ACLTokenRoleLink{}
 	for _, roleName := range roleConfigData.Roles {
-		roleLink = append(roleLink, &api.ACLTokenRoleLink{
+		roleLinks = append(roleLinks, &api.ACLTokenRoleLink{
 			Name: roleName,
 		})
 	}
@@ -121,7 +121,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
 		Policies:    policyLinks,
-		Roles:       roleLink,
+		Roles:       roleLinks,
 		Local:       roleConfigData.Local,
 		Namespace:   roleConfigData.ConsulNamespace,
 		Partition:   roleConfigData.Partition,

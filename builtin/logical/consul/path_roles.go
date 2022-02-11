@@ -37,14 +37,14 @@ for 'client' tokens. Required for Consul pre-1.4.`,
 
 			"policies": {
 				Type: framework.TypeCommaStringSlice,
-				Description: `List of policies to attach to the token. Policies required
-for Consul 1.4 or above, roles can be used for Consul 1.5 and above.`,
+				Description: `List of policies to attach to the token. Either policies or 
+roles are required for Consul 1.5 and above, or just policies if using Consul 1.4.`,
 			},
 
 			"roles": {
 				Type: framework.TypeCommaStringSlice,
-				Description: `List of roles to attach to the token. Policies / roles required
-				for Consul 1.5 or above.`,
+				Description: `List of roles to attach to the token. Either policies or
+roles are required for Consul 1.5 and above.`,
 			},
 
 			"local": {
@@ -56,10 +56,8 @@ and instead be local to the current datacenter.  Available in Consul 1.4 and abo
 			"token_type": {
 				Type:    framework.TypeString,
 				Default: "client",
-				Description: `Which type of token to create: 'client'
-or 'management'. If a 'management' token,
-the "policy" parameter is not required.
-Defaults to 'client'.`,
+				Description: `Which type of token to create: 'client' or 'management'. If
+a 'management' token, the "policy" parameter is not required. Defaults to 'client'.`,
 			},
 
 			"ttl": {
@@ -119,35 +117,35 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 		return nil, nil
 	}
 
-	var result roleConfig
-	if err := entry.DecodeJSON(&result); err != nil {
+	var roleConfigData roleConfig
+	if err := entry.DecodeJSON(&roleConfigData); err != nil {
 		return nil, err
 	}
 
-	if result.TokenType == "" {
-		result.TokenType = "client"
+	if roleConfigData.TokenType == "" {
+		roleConfigData.TokenType = "client"
 	}
 
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease":            int64(result.TTL.Seconds()),
-			"ttl":              int64(result.TTL.Seconds()),
-			"max_ttl":          int64(result.MaxTTL.Seconds()),
-			"token_type":       result.TokenType,
-			"local":            result.Local,
-			"consul_namespace": result.ConsulNamespace,
-			"partition":        result.Partition,
+			"lease":            int64(roleConfigData.TTL.Seconds()),
+			"ttl":              int64(roleConfigData.TTL.Seconds()),
+			"max_ttl":          int64(roleConfigData.MaxTTL.Seconds()),
+			"token_type":       roleConfigData.TokenType,
+			"local":            roleConfigData.Local,
+			"consul_namespace": roleConfigData.ConsulNamespace,
+			"partition":        roleConfigData.Partition,
 		},
 	}
-	if result.Policy != "" {
-		resp.Data["policy"] = base64.StdEncoding.EncodeToString([]byte(result.Policy))
+	if roleConfigData.Policy != "" {
+		resp.Data["policy"] = base64.StdEncoding.EncodeToString([]byte(roleConfigData.Policy))
 	}
-	if len(result.Policies) > 0 {
-		resp.Data["policies"] = result.Policies
+	if len(roleConfigData.Policies) > 0 {
+		resp.Data["policies"] = roleConfigData.Policies
 	}
-	if len(result.Roles) > 0 {
-		resp.Data["roles"] = result.Roles
+	if len(roleConfigData.Roles) > 0 {
+		resp.Data["roles"] = roleConfigData.Roles
 	}
 	return resp, nil
 }
