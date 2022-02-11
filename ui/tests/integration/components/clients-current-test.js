@@ -19,7 +19,6 @@ module('Integration | Component | client count current', function (hooks) {
     Object.assign(this.model.config, { enabled: 'Off', queriesAvailable: false });
     await render(hbs`
     <div id="modal-wormhole"></div>
-    <Clients::Dashboard @model={{this.model}} />
     <Clients::Current @model={{this.model}} />
     `);
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');

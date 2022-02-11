@@ -30,7 +30,6 @@ export default class ClientsRoute extends Route {
 
     return RSVP.hash({
       config,
-      // monthly: await this.store.queryRecord('clients/monthly', {}),
       versionHistory: this.getVersionHistory(),
     });
   }
