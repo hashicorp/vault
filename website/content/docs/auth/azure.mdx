@@ -16,6 +16,11 @@ signed by Azure Active Directory for the configured tenant.
 This method supports authentication for system-assigned and user-assigned
 managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview) for more information about these resources.
 
+~> System-assigned identities are unique to every virtual machine in Azure. If the 
+virtual machines using Azure auth are recreated frequently, using system-assigned 
+identities could result in a lot of Vault entities. For environments with high ephemeral 
+workloads, user-assigned identities are recommended.
+
 ## Prerequisites:
 
 The following documentation assumes that the method has been

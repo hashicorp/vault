@@ -1,4 +1,3 @@
-{{! this dashboard template displays in three routes so @model varies slightly: index, history and config }}
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -10,7 +9,7 @@
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
   <nav class="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.clients.index" class="nav-tab-link">
+      <LinkTo @route="vault.cluster.clients.current" class="nav-tab-link">
         Current month
       </LinkTo>
       <LinkTo @route="vault.cluster.clients.history" class="nav-tab-link">
@@ -24,3 +23,8 @@
     </ul>
   </nav>
 </div>
+{{#if this.currentlyLoading}}
+  <LayoutLoading />
+{{else}}
+  {{outlet}}
+{{/if}}
