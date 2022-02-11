@@ -74,9 +74,9 @@ export default class HistoryRoute extends Route {
     // eslint-disable-next-line ember/no-controller-access-in-routes
     let controller = this.controllerFor('vault.cluster.clients.history');
     if (controller) {
-      controller.currentlyLoading = true;
+      controller.set('currentlyLoading', true);
       transition.promise.finally(function () {
-        controller.currentlyLoading = false;
+        controller.set('currentlyLoading', false);
       });
     }
   }
