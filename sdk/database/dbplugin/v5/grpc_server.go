@@ -74,10 +74,6 @@ func (g gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) {
 		return nil, err
 	}
 
-	if id == "" {
-		return nil, fmt.Errorf("no instance ID found for multiplexed plugin")
-	}
-
 	if db, ok := g.instances[id]; ok {
 		return db, nil
 	}
