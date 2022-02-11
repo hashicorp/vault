@@ -30,7 +30,6 @@ export default class ClientsRoute extends Route {
 
     return RSVP.hash({
       config,
-      monthly: await this.store.queryRecord('clients/monthly', {}),
       versionHistory: this.getVersionHistory(),
     });
   }
@@ -38,12 +37,10 @@ export default class ClientsRoute extends Route {
   @action
   async loading(transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
-    let controller = this.controllerFor('vault.cluster.clients.index');
-    if (controller) {
-      controller.currentlyLoading = true;
-      transition.promise.finally(function () {
-        controller.currentlyLoading = false;
-      });
-    }
+    let controller = this.controllerFor(this.routeName);
+    controller.set('currentlyLoading', true);
+    transition.promise.finally(function () {
+      controller.set('currentlyLoading', false);
+    });
   }
 }

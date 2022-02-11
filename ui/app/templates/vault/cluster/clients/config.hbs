@@ -1,6 +1,3 @@
-{{! TODO CMB CHECK THIS ENTIRE VIEW WITH DESIGN }}
-<Clients::Dashboard @model={{@model}} />
-
 <Toolbar>
   <ToolbarActions>
     {{#if @model.configPath.canUpdate}}
@@ -11,4 +8,4 @@
   </ToolbarActions>
 </Toolbar>
 
-<Clients::Config @model={{@model}} @isLoading={{this.currentlyLoading}} />
+<Clients::Config @model={{@model}} />

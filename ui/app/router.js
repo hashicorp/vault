@@ -18,6 +18,7 @@ Router.map(function () {
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
       this.route('clients', function () {
+        this.route('current');
         this.route('history');
         this.route('config');
         this.route('edit');

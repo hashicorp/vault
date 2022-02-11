@@ -152,7 +152,7 @@
         <ul class="menu-list">
           <li class="action">
             {{! template-lint-disable no-unknown-arguments-for-builtin-components }}
-            <LinkTo @route="vault.cluster.clients.index" @invokeAction={{@onLinkClick}}>
+            <LinkTo @route="vault.cluster.clients.current" @invokeAction={{@onLinkClick}}>
               <div class="level is-mobile">
                 <span class="level-left">Client count</span>
                 <Chevron class="has-text-grey-light level-right" />

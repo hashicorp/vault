@@ -60,6 +60,7 @@ export default class History extends Component {
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
+  @tracked isLoadingQuery = false;
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
@@ -140,7 +141,7 @@ export default class History extends Component {
       this.startTimeRequested = this.args.model.startTimeFromLicense;
       this.endTimeRequested = null;
     }
-    // clicked "Edit" Billing start month in Dashboard which opens a modal.
+    // clicked "Edit" Billing start month in History which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
       this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
@@ -154,6 +155,7 @@ export default class History extends Component {
     }
 
     try {
+      this.isLoadingQuery = true;
       let response = await this.store.queryRecord('clients/activity', {
         start_time: this.startTimeRequested,
         end_time: this.endTimeRequested,
@@ -183,6 +185,8 @@ export default class History extends Component {
       this.queriedActivityResponse = response;
     } catch (e) {
       return e;
+    } finally {
+      this.isLoadingQuery = false;
     }
   }
 
