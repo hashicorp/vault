@@ -35,6 +35,9 @@ var (
 
 func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	server := gRPCServer{factoryFunc: d.FactoryFunc, instances: make(map[string]Database)}
+	if d.Impl != nil {
+		server = gRPCServer{singleImpl: d.Impl}
+	}
 
 	proto.RegisterDatabaseServer(s, server)
 	return nil
