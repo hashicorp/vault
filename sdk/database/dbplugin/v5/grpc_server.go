@@ -24,8 +24,6 @@ type gRPCServer struct {
 	factoryFunc func() (interface{}, error)
 	instances   map[string]Database
 
-	multiplexingSupport bool
-
 	sync.RWMutex
 }
 
@@ -52,7 +50,7 @@ func (g gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
 	defer g.Unlock()
 
-	if !g.multiplexingSupport && g.singleImpl != nil {
+	if g.singleImpl != nil {
 		return g.singleImpl, nil
 	}
 
@@ -78,7 +76,7 @@ func (g gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 
 // getDatabaseInternal returns the database but does not hold a lock
 func (g gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) {
-	if !g.multiplexingSupport && g.singleImpl != nil {
+	if g.singleImpl != nil {
 		return g.singleImpl, nil
 	}
 
@@ -294,7 +292,8 @@ func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, er
 		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
 
-	if g.multiplexingSupport {
+	if g.singleImpl == nil {
+		// only cleanup instances map when multiplexing is supported
 		id, err := getMultiplexIDFromContext(ctx)
 		if err != nil {
 			return nil, err
