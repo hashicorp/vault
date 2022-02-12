@@ -553,6 +553,7 @@ func TestGRPCServer_Close(t *testing.T) {
 			expectErr:     false,
 			expectCode:    codes.OK,
 			grpcSetupFunc: testGrpcServerSingleImpl,
+			assertFunc:    nil,
 		},
 	}
 
@@ -571,6 +572,10 @@ func TestGRPCServer_Close(t *testing.T) {
 			actualCode := status.Code(err)
 			if actualCode != test.expectCode {
 				t.Fatalf("Actual code: %s Expected code: %s", actualCode, test.expectCode)
+			}
+
+			if test.assertFunc != nil {
+				test.assertFunc(t, g)
 			}
 		})
 	}
@@ -632,7 +637,6 @@ func TestGetMultiplexIDFromContext(t *testing.T) {
 func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
 	t.Helper()
 	g := gRPCServer{
-		multiplexingSupport: true,
 		factoryFunc: func() (interface{}, error) {
 			return db, nil
 		},
@@ -651,8 +655,7 @@ func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
 func testGrpcServerSingleImpl(t *testing.T, db Database) (context.Context, gRPCServer) {
 	t.Helper()
 	return context.Background(), gRPCServer{
-		multiplexingSupport: false,
-		singleImpl:          db,
+		singleImpl: db,
 	}
 }
 
