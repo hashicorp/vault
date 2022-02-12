@@ -19,10 +19,13 @@ var _ proto.DatabaseServer = gRPCServer{}
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
 
+	// holds the non-multiplexed Database
+	// when this is set the plugin does not support multiplexing
 	singleImpl Database
 
-	factoryFunc func() (interface{}, error)
+	// instances holds the multiplexed Databases
 	instances   map[string]Database
+	factoryFunc func() (interface{}, error)
 
 	sync.RWMutex
 }
