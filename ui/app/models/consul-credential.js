@@ -18,7 +18,7 @@ export default Model.extend({
     if (this.accessKey || this.securityToken) {
       return expandAttributeMeta(this, DISPLAY_FIELDS.slice(0));
     }
-    return expandAttributeMeta(this, []]);
+    return expandAttributeMeta(this, []);
   }),
 
   toCreds: computed('accessor', 'token', 'local', function() {
