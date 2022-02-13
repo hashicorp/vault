@@ -15,6 +15,11 @@
     "title": "Browser Support",
     "path": "browser-support"
   },
+
+  {
+    "title": "Installing Vault",
+    "path": "install"
+  },
   {
     "title": "Developer Quick Starts",
     "routes": [
@@ -28,10 +33,6 @@
         "path": "developer/first-secret"
       }
     ]
-  },
-  {
-    "title": "Installing Vault",
-    "path": "install"
   },
   {
     "title": "Internals",
