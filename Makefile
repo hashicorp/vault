@@ -232,6 +232,9 @@ cassandra-database-plugin:
 influxdb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/influxdb-database-plugin ./plugins/database/influxdb/influxdb-database-plugin
 
+influxdbv2-database-plugin:
+	@CGO_ENABLED=0 $(GO_CMD) build -o bin/influxdbv2-database-plugin ./plugins/database/influxdbv2/influxdbv2-database-plugin
+
 postgresql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/postgresql-database-plugin ./plugins/database/postgresql/postgresql-database-plugin
 
