@@ -16,6 +16,20 @@
     "path": "browser-support"
   },
   {
+    "title": "Developer Quick Starts",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "developer"
+      },
+
+      {
+        "title": "Your First Secret",
+        "path": "developer/first-secret"
+      }
+    ]
+  },
+  {
     "title": "Installing Vault",
     "path": "install"
   },
