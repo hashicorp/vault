@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/database/influxdbv2: Use Vault to dynamically create and manage InfluxDB v2.0+ users
+```

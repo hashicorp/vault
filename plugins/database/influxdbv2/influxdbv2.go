@@ -3,6 +3,7 @@ package influxdbv2
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/template"
@@ -114,7 +115,6 @@ func (i *InfluxdbV2) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 // attemptRollback will attempt to roll back user creation if an error occurs in
 // deleteUser
 func deleteUser(ctx context.Context, cli influxdb2.Client, username string) error {
-
 	user, err := cli.UsersAPI().FindUserByName(ctx, username)
 	if err != nil {
 		return err

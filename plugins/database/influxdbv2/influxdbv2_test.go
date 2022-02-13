@@ -436,7 +436,6 @@ func assertCredsDoNotExist(t testing.TB, username, password string, c Config, ct
 }
 
 func testCredsExist(username, password string, c Config, ctx context.Context) error {
-
 	cli := influx.NewClient(c.URL().String(), c.Token)
 	defer cli.Close()
 	_, err := cli.Ping(ctx)

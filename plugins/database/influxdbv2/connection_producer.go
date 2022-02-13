@@ -157,7 +157,6 @@ func (i *influxdbConnectionProducer) Close() error {
 }
 
 func (i *influxdbConnectionProducer) createClient() (influxdb2.Client, error) {
-
 	var cli influxdb2.Client
 	if i.TLS {
 		tlsConfig := &tls.Config{}
@@ -205,7 +204,6 @@ func (i *influxdbConnectionProducer) createClient() (influxdb2.Client, error) {
 
 		cli = influxdb2.NewClientWithOptions(fmt.Sprintf("http://%s:%s", i.Host, i.Port), i.Token, &options)
 	} else {
-
 		cli = influxdb2.NewClient(fmt.Sprintf("http://%s:%s", i.Host, i.Port), i.Token)
 	}
 
