@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -40,6 +41,10 @@ func (c *Config) connectionParams() map[string]interface{} {
 func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config, context.Context) {
 	c := &Config{
 		Token: "influx_token",
+	}
+	if host := os.Getenv("INFLUXDB_HOST"); host != "" {
+		c.ServiceURL = *docker.NewServiceURL(url.URL{Scheme: "http", Host: host})
+		return func() {}, c, context.Background()
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
