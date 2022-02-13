@@ -22,6 +22,7 @@ specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
 advertise the correct address to other nodes.
 
 ## Listener's custom response headers
+
 As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
 The headers are defined based on the returned status code. For example, a user can define a list of
 custom response headers for the `200` status code, and another list of custom response headers for
@@ -37,6 +38,7 @@ the `X-Vault-` prefix will not be accepted. A message will be logged in the Vaul
 upon start up indicating the header with `X-Vault-` prefix is not accepted.
 
 ### Order of precedence
+
 If the same header is configured in both the configuration file and
 in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui), the header in the configuration file takes precedence.
 For example, the `"Content-Security-Policy"` header is defined by default in the
@@ -47,7 +49,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 ## `tcp` Listener Parameters
 
 - `address` `(string: "127.0.0.1:8200")` – Specifies the address to bind to for
-  listening.  This can be dynamically defined with a
+  listening. This can be dynamically defined with a
   [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
   that is resolved at runtime.
 
@@ -145,9 +147,9 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
   server's ciphersuite over the client ciphersuites.
 
   ~> **Warning**: The `tls_prefer_server_cipher_suites` parameter is
-                  deprecated. Setting it has no effect. See the above
-                  [Go blog post][go-tls-blog] for more information about
-                  this change.
+  deprecated. Setting it has no effect. See the above
+  [Go blog post][go-tls-blog] for more information about
+  this change.
 
 - `tls_require_and_verify_client_cert` `(string: "false")` – Turns on client
   authentication for this listener; the listener will require a presented
@@ -159,6 +161,8 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 - `tls_disable_client_certs` `(string: "false")` – Turns off client
   authentication for this listener. The default behavior (when this is false)
   is for Vault to request client certificates when available.
+
+  ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are both sets to true. TLS client verification remains optional with default settings and is not enforced.
 
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
   Specifies the list of source IP CIDRs for which an X-Forwarded-For header
@@ -192,20 +196,20 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 ### `custom_response_headers` Parameters
 
 - `default` `(key-value-map: {})` - A map of string header names to an array of
- string values. The default headers are set on all endpoints regardless of
- the status code value. For an example, please refer to the
- "Configuring custom http response headers" section.
+  string values. The default headers are set on all endpoints regardless of
+  the status code value. For an example, please refer to the
+  "Configuring custom http response headers" section.
 
 - `<specific status code>` `(key-value-map: {})` - A map of string header names
- to an array of string values. These headers are set only when the specific status
- code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
- is set when the http response status code is `"200"`.
+  to an array of string values. These headers are set only when the specific status
+  code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`.
 
 - `<collective status code>` `(key-value-map: {})` - A map of string header names
- to an array of string values. These headers are set only when the response status
- code falls under the collective status code.
- For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
- is set when the http response status code is `"200"`, `"204"`, etc.
+  to an array of string values. These headers are set only when the response status
+  code falls under the collective status code.
+  For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`, `"204"`, etc.
 
 ## `tcp` Listener Examples
 
@@ -262,10 +266,9 @@ listener "tcp" {
 }
 ```
 
-
 ### Configuring custom http response headers
 
-Note: Requires Vault version 1.9 or newer. This example shows configuring custom http response headers. 
+Note: Requires Vault version 1.9 or newer. This example shows configuring custom http response headers.
 Operators can configure `"custom_response_headers"` sub-stanza in the listener stanza to set custom http
 headers appropriate to their applications. Examples of such headers are `"Strict-Transport-Security"`
 and `"Content-Security-Policy"` which are known HTTP headers, and could be configured to harden
