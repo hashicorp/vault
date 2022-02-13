@@ -22,7 +22,7 @@
       </LinkTo>
     </div>
     <div class="column has-text-right">
-      <PopupMenu @name="role-aws-nav" @contentClass="is-wide">
+      <PopupMenu @name="role-consul-nav" @contentClass="is-wide">
         <Confirm as |c|>
           <nav class="menu">
             <ul class="menu-list">
@@ -34,7 +34,7 @@
                 </li>
               {{else if @item.canGenerate}}
                 <li class="action">
-                  <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} data-test-role-aws-link="generate">
+                  <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} data-test-role-consul-link="generate">
                     Generate credentials
                   </LinkTo>
                 </li>
@@ -70,7 +70,7 @@
                     <c.Message
                       @id={{@item.id}}
                       @onConfirm={{@delete}}
-                      data-test-aws-role-delete={{@item.id}}/>
+                      data-test-consul-role-delete={{@item.id}}/>
                   </li>
                 {{/if}}
               {{/if}}
