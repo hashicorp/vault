@@ -76,7 +76,7 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config, context.Contex
 			return nil, fmt.Errorf("error creating InfluxDB client: %w", err)
 		}
 		defer cli.Close()
-		time.Sleep(2 * time.Second)
+		time.Sleep(10 * time.Second)
 		_, err = cli.Ping(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error checking cluster status: %w", err)
