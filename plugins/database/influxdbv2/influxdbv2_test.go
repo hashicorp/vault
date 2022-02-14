@@ -280,6 +280,38 @@ func TestInfluxdb_CreateUser_CustomUsernameTemplate(t *testing.T) {
 	require.Regexp(t, `^token_[a-zA-Z0-9]{10}$`, resp.Username)
 }
 
+func TestInfluxdb_CreateUser_AddedToOrganization(t *testing.T) {
+	cleanup, config, ctx := prepareInfluxdbTestContainer(t)
+	defer cleanup()
+
+	db := new()
+	req := dbplugin.InitializeRequest{
+		Config:           config.connectionParams(),
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, req)
+
+	password := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "token",
+			RoleName:    "mylongrolenamewithmanycharacters",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	resp := dbtesting.AssertNewUser(t, db, newUserReq)
+
+	if resp.Username == "" {
+		t.Fatalf("Missing username")
+	}
+
+	assertUserHasOrganization(t, resp.Username, config.connectionParams()["organization"].(string), *config, ctx)
+}
+
 func TestUpdateUser_expiration(t *testing.T) {
 	// This test should end up with a no-op since the expiration doesn't do anything in Influx
 
@@ -440,6 +472,14 @@ func assertCredsDoNotExist(t testing.TB, username, password string, c Config, ct
 	}
 }
 
+func assertUserHasOrganization(t testing.TB, username, organizationName string, c Config, ctx context.Context) {
+	t.Helper()
+	err := testUserHasOrganization(username, organizationName, c, ctx)
+	if err != nil {
+		t.Fatalf("User %q does not belong to organization %q when it should", username, organizationName)
+	}
+}
+
 func testCredsExist(username, password string, c Config, ctx context.Context) error {
 	cli := influx.NewClient(c.URL().String(), c.Token)
 	defer cli.Close()
@@ -452,4 +492,24 @@ func testCredsExist(username, password string, c Config, ctx context.Context) er
 		return fmt.Errorf("error querying influxdb server: %w", err)
 	}
 	return nil
+}
+
+func testUserHasOrganization(username, organizationName string, c Config, ctx context.Context) error {
+	cli := influx.NewClient(c.URL().String(), c.Token)
+	defer cli.Close()
+	_, err := cli.Ping(ctx)
+	if err != nil {
+		return fmt.Errorf("error checking server ping: %w", err)
+	}
+	res, err := cli.UsersAPI().FindUserByName(ctx, username)
+	if err != nil {
+		return fmt.Errorf("error querying influxdb server: %w", err)
+	}
+	organizations, err := cli.OrganizationsAPI().FindOrganizationsByUserID(ctx, *res.Id)
+	for _, organization := range *organizations {
+		if organization.Name == organizationName {
+			return nil
+		}
+	}
+	return fmt.Errorf("user %s does not belong to organization %s", username, organizationName)
 }

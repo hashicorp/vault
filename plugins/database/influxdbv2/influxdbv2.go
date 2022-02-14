@@ -96,7 +96,33 @@ func (i *InfluxdbV2) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 
 	user, err := cli.UsersAPI().CreateUserWithName(ctx, username)
+	if err != nil {
+		// Attempt rollback only when the response has an error
+		err2 := cli.UsersAPI().DeleteUser(ctx, user)
+		if err2 != nil {
+			return dbplugin.NewUserResponse{}, fmt.Errorf("failed to rollback query in InfluxDB: %w : %s", err, err2)
+		}
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
+	}
 	err = cli.UsersAPI().UpdateUserPassword(ctx, user, req.Password)
+	if err != nil {
+		// Attempt rollback only when the response has an error
+		err2 := cli.UsersAPI().DeleteUser(ctx, user)
+		if err2 != nil {
+			return dbplugin.NewUserResponse{}, fmt.Errorf("failed to rollback query in InfluxDB: %w : %s", err, err2)
+		}
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
+	}
+	organization, err := cli.OrganizationsAPI().FindOrganizationByName(ctx, i.Organization)
+	if err != nil {
+		// Attempt rollback only when the response has an error
+		err2 := cli.UsersAPI().DeleteUser(ctx, user)
+		if err2 != nil {
+			return dbplugin.NewUserResponse{}, fmt.Errorf("failed to rollback query in InfluxDB: %w : %s", err, err2)
+		}
+		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
+	}
+	_, err = cli.OrganizationsAPI().AddMember(ctx, organization, user)
 	// err can be nil with response.Err() being not nil, so both need to be handled
 	if err != nil {
 		// Attempt rollback only when the response has an error

@@ -3,6 +3,7 @@ package influxdbv2
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -213,6 +214,15 @@ func (i *influxdbConnectionProducer) createClient() (influxdb2.Client, error) {
 		return nil, fmt.Errorf("error checking cluster status: %w", err)
 	}
 
+	// verifying infos about the connection
+	isSufficientAccess, err := isTokenSufficientAccess(context.Background(), cli, i.Token)
+	if err != nil {
+		return nil, fmt.Errorf("error getting if provided username is admin: %w", err)
+	}
+	if !isSufficientAccess {
+		return nil, fmt.Errorf("the provided user is missing permissions on the influxDB server")
+	}
+
 	return cli, nil
 }
 
@@ -222,4 +232,39 @@ func (i *influxdbConnectionProducer) secretValues() map[string]string {
 		i.PemBundle: "[pem_bundle]",
 		i.PemJSON:   "[pem_json]",
 	}
+}
+
+func isTokenSufficientAccess(ctx context.Context, cli influxdb2.Client, token string) (bool, error) {
+	authorizations, err := cli.AuthorizationsAPI().GetAuthorizations(ctx)
+	if err != nil {
+		return false, errors.New("cannot access authorizations API to check token")
+	}
+	hasUserRead := false
+	hasUserWrite := false
+	hasOrganizationsRead := false
+	hasOrganizationsWrite := false
+	for _, authorization := range *authorizations {
+		if *authorization.Token == token {
+			for _, permission := range *authorization.Permissions {
+				if permission.Action == "read" && permission.Resource.Type == "users" {
+					hasUserRead = true
+				}
+				if permission.Action == "write" && permission.Resource.Type == "users" {
+					hasUserWrite = true
+				}
+			}
+			for _, permission := range *authorization.Permissions {
+				if permission.Action == "read" && permission.Resource.Type == "orgs" {
+					hasOrganizationsRead = true
+				}
+				if permission.Action == "write" && permission.Resource.Type == "orgs" {
+					hasOrganizationsWrite = true
+				}
+			}
+		}
+	}
+	if hasUserRead && hasUserWrite && hasOrganizationsRead && hasOrganizationsWrite {
+		return true, nil
+	}
+	return false, fmt.Errorf("the provided token does not have sufficient permissions in influxdb hasUserRead: %t, hasUserWrite: %t, hasOrganizationsRead: %t, hasOrganizationsWrite: %t", hasUserRead, hasUserWrite, hasOrganizationsRead, hasOrganizationsWrite)
 }
