@@ -1,4 +1,4 @@
-import { findAll, visit } from '@ember/test-helpers';
+import { findAll, visit, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -37,7 +37,10 @@ module('Acceptance | not-found', function (hooks) {
   test('vault route not-found', async function (assert) {
     await visit('/vault/404');
     assert.dom('[data-test-not-found]').exists('renders the not found component');
-    assert.ok(findAll('[data-test-header-with-nav]').length, 'renders header with nav');
+    assert.ok(
+      await waitUntil(() => findAll('[data-test-header-with-nav]').length),
+      'renders header with nav'
+    );
   });
 
   test('cluster route not-found', async function (assert) {
