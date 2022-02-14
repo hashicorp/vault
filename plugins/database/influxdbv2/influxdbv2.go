@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	influxdbTypeName = "influxdb"
+	influxdbTypeName = "influxdbv2"
 
 	defaultUserNameTemplate = `{{ printf "v_%s_%s_%s_%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 | replace "-" "_" | lowercase }}`
 )
