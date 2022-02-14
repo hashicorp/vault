@@ -49,7 +49,6 @@ export default class ConfigComponent extends Component {
     try {
       yield this.args.model.save();
     } catch (err) {
-      console.log(err, 'ERRR');
       this.error = err.message;
       return;
     }
