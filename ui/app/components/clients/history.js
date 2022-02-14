@@ -65,7 +65,7 @@ export default class History extends Component {
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
 
-  get getVersionCopy() {
+  get versionText() {
     return this.version.isEnterprise
       ? {
           label: 'Billing start month',
