@@ -49,7 +49,7 @@ func getMultiplexIDFromContext(ctx context.Context) (string, error) {
 	return multiplexID, nil
 }
 
-func (g gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
+func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
 	defer g.Unlock()
 
@@ -78,7 +78,7 @@ func (g gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 }
 
 // getDatabaseInternal returns the database but does not hold a lock
-func (g gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) {
+func (g *gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) {
 	if g.singleImpl != nil {
 		return g.singleImpl, nil
 	}
@@ -96,7 +96,7 @@ func (g gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) {
 }
 
 // getDatabase holds a read lock and returns the database
-func (g gRPCServer) getDatabase(ctx context.Context) (Database, error) {
+func (g *gRPCServer) getDatabase(ctx context.Context) (Database, error) {
 	g.RLock()
 	impl, err := g.getDatabaseInternal(ctx)
 	g.RUnlock()
@@ -104,7 +104,7 @@ func (g gRPCServer) getDatabase(ctx context.Context) (Database, error) {
 }
 
 // Initialize the database plugin
-func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeRequest) (*proto.InitializeResponse, error) {
+func (g *gRPCServer) Initialize(ctx context.Context, request *proto.InitializeRequest) (*proto.InitializeResponse, error) {
 	impl, err := g.getOrCreateDatabase(ctx)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeReq
 	return resp, nil
 }
 
-func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*proto.NewUserResponse, error) {
+func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*proto.NewUserResponse, error) {
 	if req.GetUsernameConfig() == nil {
 		return &proto.NewUserResponse{}, status.Errorf(codes.InvalidArgument, "missing username config")
 	}
@@ -176,7 +176,7 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 	return resp, nil
 }
 
-func (g gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest) (*proto.UpdateUserResponse, error) {
+func (g *gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest) (*proto.UpdateUserResponse, error) {
 	if req.GetUsername() == "" {
 		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
 	}
@@ -243,7 +243,7 @@ func hasChange(dbReq UpdateUserRequest) bool {
 	return false
 }
 
-func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest) (*proto.DeleteUserResponse, error) {
+func (g *gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest) (*proto.DeleteUserResponse, error) {
 	if req.GetUsername() == "" {
 		return &proto.DeleteUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
 	}
@@ -264,7 +264,7 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 	return &proto.DeleteUserResponse{}, nil
 }
 
-func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeResponse, error) {
+func (g *gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeResponse, error) {
 	impl, err := g.getOrCreateDatabase(ctx)
 	if err != nil {
 		return nil, err
@@ -281,7 +281,7 @@ func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeRespon
 	return resp, nil
 }
 
-func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
+func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
 	g.Lock()
 	defer g.Unlock()
 
