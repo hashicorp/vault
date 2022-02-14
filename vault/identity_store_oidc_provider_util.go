@@ -6,9 +6,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
+	"net/http"
 	"net/url"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -94,4 +96,12 @@ func computeCodeChallenge(verifier string, method string) (string, error) {
 // authCodeUsedPKCE returns true if the given entry was granted using PKCE.
 func authCodeUsedPKCE(entry *authCodeCacheEntry) bool {
 	return entry.codeChallenge != "" && entry.codeChallengeMethod != ""
+}
+
+// basicAuth returns the username/password provided in the logical.Request's
+// authorization header and a bool indicating if the request used basic
+// authentication.
+func basicAuth(req *logical.Request) (string, string, bool) {
+	headerReq := &http.Request{Header: req.Headers}
+	return headerReq.BasicAuth()
 }
