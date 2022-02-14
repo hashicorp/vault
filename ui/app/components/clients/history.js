@@ -5,7 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 
-const CLIENT_COUNTING_START = 'vault:ui-client-counting-start';
+const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 export default class History extends Component {
   @service store;
   @service version;
@@ -191,7 +191,7 @@ export default class History extends Component {
         // note: this.startTimeDisplay (getter) is updated by the @tracked startTimeFromResponse
         this.startTimeFromResponse = response.formattedStartTime;
         this.endTimeFromResponse = response.formattedEndTime;
-        this.storage().setItem(CLIENT_COUNTING_START, this.startTimeFromResponse);
+        this.storage().setItem(INPUTTED_START_DATE, this.startTimeFromResponse);
       }
       this.queriedActivityResponse = response;
       // compare if the response startTime comes after the requested startTime. If true throw a warning.

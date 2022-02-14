@@ -2,7 +2,7 @@ import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 
-const CLIENT_COUNTING_START = 'vault:ui-client-counting-start';
+const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 export default class HistoryRoute extends Route {
   async getActivity(start_time) {
     try {
@@ -19,11 +19,11 @@ export default class HistoryRoute extends Route {
     try {
       let license = await this.store.queryRecord('license', {});
       // if license.startTime is 'undefined' return 'null' for consistency
-      return license.startTime || getStorage().getItem(CLIENT_COUNTING_START) || null;
+      return license.startTime || getStorage().getItem(INPUTTED_START_DATE) || null;
     } catch (e) {
       // return null so user can input date manually
       // if already inputted manually, will be in localStorage
-      return getStorage().getItem(CLIENT_COUNTING_START) || null;
+      return getStorage().getItem(INPUTTED_START_DATE) || null;
     }
   }
 

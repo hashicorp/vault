@@ -3,7 +3,7 @@ import RSVP from 'rsvp';
 import { action } from '@ember/object';
 import getStorage from 'vault/lib/token-storage';
 
-const CLIENT_COUNTING_START = 'vault:ui-client-counting-start';
+const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 export default class ClientsRoute extends Route {
   async getVersionHistory() {
     try {
@@ -49,6 +49,6 @@ export default class ClientsRoute extends Route {
   @action
   deactivate() {
     // when navigating away from parent route, delete manually inputted license start date
-    getStorage().removeItem(CLIENT_COUNTING_START);
+    getStorage().removeItem(INPUTTED_START_DATE);
   }
 }
