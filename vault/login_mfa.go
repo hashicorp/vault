@@ -2575,6 +2575,18 @@ func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configI
 	b.mfaLock.Lock()
 	defer b.mfaLock.Unlock()
 
+	eConfigIter, err := b.MemDBMFALoginEnforcementConfigIterator()
+	if err != nil {
+		return err
+	}
+
+	for eConfigRaw := eConfigIter.Next(); eConfigRaw != nil; eConfigRaw = eConfigIter.Next() {
+		eConfig := eConfigRaw.(*mfa.MFAEnforcementConfig)
+		if strutil.StrListContains(eConfig.MFAMethodIDs, configID) {
+			return fmt.Errorf("methodID is still used by an enforcement configuration with ID: %s", eConfig.ID)
+		}
+	}
+
 	// Delete the config from storage
 	entryIndex := prefix + configID
 	err = b.Core.systemBarrierView.Delete(ctx, entryIndex)
