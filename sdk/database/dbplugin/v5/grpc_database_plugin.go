@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc"
 )
 
@@ -44,6 +45,12 @@ func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) err
 			factoryFunc: d.FactoryFunc,
 			instances:   make(map[string]Database),
 		}
+
+		// Multiplexing is enabled for this plugin, register the server so we
+		// can tell the client in Vault.
+		pluginutil.RegisterPluginMultiplexingServer(s, pluginutil.PluginMultiplexingServerImpl{
+			Supported: true,
+		})
 	}
 
 	proto.RegisterDatabaseServer(s, server)

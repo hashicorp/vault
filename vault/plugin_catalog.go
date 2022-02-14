@@ -130,11 +130,11 @@ func (p *pluginClient) Conn() grpc.ClientConnInterface {
 }
 
 // MultiplexingSupport determines if a plugin client supports multiplexing
-func (p *pluginClient) MultiplexingSupport() (bool, error) {
-	if p.client == nil {
+func (p *pluginClient) MultiplexingSupport(ctx context.Context) (bool, error) {
+	if p.clientConn == nil {
 		return false, fmt.Errorf("plugin client is nil")
 	}
-	return pluginutil.MultiplexingSupport(p.client.NegotiatedVersion()), nil
+	return pluginutil.MultiplexingSupported(ctx, p.clientConn)
 }
 
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
@@ -145,7 +145,7 @@ func (p *pluginClient) Close() error {
 	return p.cleanupFunc()
 }
 
-func (c *PluginCatalog) removePluginClient(name, id string) error {
+func (c *PluginCatalog) removePluginClient(ctx context.Context, name, id string) error {
 	var err error
 	extPlugin, ok := c.externalPlugins[name]
 	if !ok {
@@ -153,7 +153,7 @@ func (c *PluginCatalog) removePluginClient(name, id string) error {
 	}
 
 	pluginClient := extPlugin.connections[id]
-	multiplexingSupport, err := pluginClient.MultiplexingSupport()
+	multiplexingSupport, err := pluginClient.MultiplexingSupport(ctx)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		id:     id,
 		logger: c.logger.Named(pluginRunner.Name),
 		cleanupFunc: func() error {
-			return c.removePluginClient(pluginRunner.Name, id)
+			return c.removePluginClient(ctx, pluginRunner.Name, id)
 		},
 	}
 
@@ -360,7 +360,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	if err == nil {
 		// At this point the pluginRunner does not know if multiplexing is
 		// supported or not. So we need to ask the plugin client itself.
-		multiplexingSupport, err := v5Client.MultiplexingSupport()
+		multiplexingSupport, err := pluginutil.MultiplexingSupported(ctx, v5Client.clientConn)
 		if err != nil {
 			return false, err
 		}
