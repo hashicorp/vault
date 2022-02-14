@@ -758,6 +758,10 @@
         "path": "commands/version"
       },
       {
+        "title": "<code>version-history</code>",
+        "path": "commands/version-history"
+      },
+      {
         "title": "<code>write</code>",
         "path": "commands/write"
       },
