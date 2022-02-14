@@ -146,11 +146,16 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
+	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32, start time.Time) {
 		defer wg.Done()
 
 		resp, err := rlq.allow(context.Background(), &Request{ClientAddress: addr})
 		if err != nil {
+			return
+		}
+
+		// Avoid slow CI passing the BlockInterval of the rate limiter.
+		if time.Now().After(start.Add(rlq.BlockInterval)) {
 			return
 		}
 
@@ -177,7 +182,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 				cr = results[addr]
 			}
 
-			go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
+			go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail, start)
 
 			time.Sleep(2 * time.Millisecond)
 		}
