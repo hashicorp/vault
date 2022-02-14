@@ -68,11 +68,11 @@ export default Controller.extend({
 
   actions: {
     onAuthResponse(authResponse, backend, data) {
-      const { mfa_enforcement } = authResponse;
+      const { mfa_requirement } = authResponse;
       // mfa methods handled by the backend are validated immediately in the auth service
-      // mfa_enforcement returned for totp only
-      if (mfa_enforcement) {
-        this.set('mfaAuthData', { mfa_enforcement, backend, data });
+      // if the user must choose between methods or enter passcodes further action is required
+      if (mfa_requirement) {
+        this.set('mfaAuthData', { mfa_requirement, backend, data });
       } else {
         this.authSuccess(authResponse);
       }

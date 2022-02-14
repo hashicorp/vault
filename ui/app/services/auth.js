@@ -3,6 +3,7 @@ import { resolve, reject } from 'rsvp';
 import { assign } from '@ember/polyfills';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
+import { capitalize } from '@ember/string';
 
 import fetch from 'fetch';
 import { getOwner } from '@ember/application';
@@ -324,6 +325,39 @@ export default Service.extend({
     });
   },
 
+  _parseMfaResponse(mfa_requirement) {
+    // mfa_requirement response comes back in a shape that is not easy to work with
+    // convert to array of objects and add necessary properties to satisfy the view
+    if (mfa_requirement) {
+      const { mfa_request_id, mfa_constraints } = mfa_requirement;
+      let requiresAction; // if multiple constraints or methods or passcode input is needed further action will be required
+      const constraints = [];
+      for (let key in mfa_constraints) {
+        const methods = mfa_constraints[key].any;
+        const isMulti = methods.length > 1;
+        if (isMulti || methods.findBy('uses_passcode')) {
+          requiresAction = true;
+        }
+        // friendly label for display in MfaForm
+        methods.forEach((m) => {
+          const typeFormatted = m.type === 'totp' ? m.type.toUpperCase() : capitalize(m.type);
+          m.label = `${typeFormatted} ${m.uses_passcode ? 'passcode' : 'push notification'}`;
+        });
+        constraints.push({
+          name: key,
+          methods,
+          selectedMethod: isMulti ? null : methods[0],
+        });
+      }
+
+      return {
+        mfa_requirement: { mfa_request_id, mfa_constraints: constraints },
+        requiresAction,
+      };
+    }
+    return {};
+  },
+
   async authenticate(/*{clusterId, backend, data}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
@@ -341,15 +375,14 @@ export default Service.extend({
       throw e;
     }
 
-    const mfa_enforcement = resp.auth?.mfa_enforcement;
-    if (mfa_enforcement) {
-      const usesPasscode = mfa_enforcement.mfa_constraints.findBy('uses_passcode');
-      if (usesPasscode) {
-        return { mfa_enforcement };
+    const { mfa_requirement, requiresAction } = this._parseMfaResponse(resp.auth?.mfa_requirement);
+    if (mfa_requirement) {
+      if (requiresAction) {
+        return { mfa_requirement };
       }
       // silently make request to validate endpoint when passcode is not required
       try {
-        resp = await adapter.mfaValidate(mfa_enforcement);
+        resp = await adapter.mfaValidate(mfa_requirement);
       } catch (e) {
         // it's not clear in the auth-form component whether mfa validation is taking place for non-totp method
         // since mfa errors display a screen rather than flash message handle separately
@@ -361,8 +394,8 @@ export default Service.extend({
     return this.authSuccess(options, resp.auth || resp.data);
   },
 
-  async totpValidate({ mfa_enforcement, ...options }, passcode) {
-    const resp = await this.clusterAdapter().mfaValidate(mfa_enforcement, passcode);
+  async totpValidate({ mfa_requirement, ...options }) {
+    const resp = await this.clusterAdapter().mfaValidate(mfa_requirement);
     return this.authSuccess(options, resp.auth || resp.data);
   },
 
