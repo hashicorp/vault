@@ -6,6 +6,7 @@ import { isSameMonth, isAfter } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
 export default class History extends Component {
   @service store;
   @service version;
