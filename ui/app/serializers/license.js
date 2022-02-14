@@ -15,7 +15,6 @@ export default ApplicationSerializer.extend({
       };
     }
     transformedPayload.id = transformedPayload.license_id;
-    // delete transformedPayload.start_time;
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 });
