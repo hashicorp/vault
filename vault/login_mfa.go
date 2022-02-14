@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/mitchellh/mapstructure"
+	"github.com/patrickmn/go-cache"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
@@ -102,6 +103,7 @@ type MFABackend struct {
 	mfaLogger   hclog.Logger
 	namespacer  Namespacer
 	methodTable string
+	usedCodes   *cache.Cache
 }
 
 type LoginMFABackend struct {
@@ -141,6 +143,7 @@ func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs [
 		mfaLogger:   logger.Named("mfa"),
 		namespacer:  core,
 		methodTable: prefix,
+		usedCodes:   cache.New(0, 30*time.Second),
 	}
 }
 
@@ -556,7 +559,7 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	for _, eConfig := range matchedMfaEnforcementList {
 		err = b.Core.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, mfaCreds)
 		if err != nil {
-			return logical.ErrorResponse("failed to satisfy enforcement %s", eConfig.Name), logical.ErrPermissionDenied
+			return logical.ErrorResponse(fmt.Sprintf("failed to satisfy enforcement %s. error: %s", eConfig.Name, err.Error())), logical.ErrPermissionDenied
 		}
 	}
 
@@ -1850,9 +1853,16 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		return fmt.Errorf("invalid response from Duo preauth: %q", preauth.Response.Result)
 	}
 
+	var usedName string
 	options := []func(*url.Values){}
 	factor := "push"
 	if passcode != "" {
+		usedName = fmt.Sprintf("%s_%s", mConfig.ID, passcode)
+		_, ok := c.loginMFABackend.usedCodes.Get(usedName)
+		if ok {
+			return fmt.Errorf("code already used; wait until the next time period")
+		}
+
 		factor = "passcode"
 		options = append(options, authapi.AuthPasscode(passcode))
 	} else {
@@ -1894,6 +1904,10 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		case "deny":
 			return fmt.Errorf("duo authentication failed: %q", statusResult.Response.Status_Msg)
 		case "allow":
+			err = c.loginMFABackend.usedCodes.Add(usedName, nil, 30*time.Second)
+			if err != nil {
+				return fmt.Errorf("error adding code to used cache: %s", err)
+			}
 			return nil
 		}
 
@@ -2246,6 +2260,13 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		return fmt.Errorf("more than one TOTP passcode supplied")
 	}
 
+	usedName := fmt.Sprintf("%s_%s", configID, creds[0])
+
+	_, ok := c.loginMFABackend.usedCodes.Get(usedName)
+	if ok {
+		return fmt.Errorf("code already used; wait until the next time period")
+	}
+
 	totpSecret := entityMethodSecret.GetTOTPSecret()
 	if totpSecret == nil {
 		return fmt.Errorf("entity does not contain the TOTP secret")
@@ -2274,6 +2295,17 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 
 	if !valid {
 		return fmt.Errorf("failed to validate TOTP passcode")
+	}
+
+	// Adding the used code to the cache
+	// Take the key skew, add two for behind and in front, and multiply that by
+	// the period to cover the full possibility of the validity of the key
+	err = c.loginMFABackend.usedCodes.Add(usedName, nil, time.Duration(
+		int64(time.Second)*
+			int64(totpSecret.Period)*
+			int64(2+totpSecret.Skew)))
+	if err != nil {
+		return fmt.Errorf("error adding code to used cache: %s", err)
 	}
 
 	return nil
