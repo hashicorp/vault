@@ -11,15 +11,15 @@
     "title": "Get Started",
     "routes": [
       {
-        "title": "CLI Quickstart",
+        "title": "CLI Quick Start",
         "href": "https://learn.hashicorp.com/collections/vault/getting-started"
       },
       {
-        "title": "HCP Quickstart",
+        "title": "HCP Quick Start",
         "href": "https://learn.hashicorp.com/collections/vault/cloud"
       },
       {
-        "title": "Developer Quickstart",
+        "title": "Developer Quick Start",
         "path": "get-started/developer-qs"
       }
     ]
