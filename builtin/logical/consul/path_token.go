@@ -97,7 +97,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	roleLinks := []*api.ACLTokenRoleLink{}
-	for _, roleName := range roleConfigData.Roles {
+	for _, roleName := range roleConfigData.ConsulRoles {
 		roleLinks = append(roleLinks, &api.ACLTokenRoleLink{
 			Name: roleName,
 		})
