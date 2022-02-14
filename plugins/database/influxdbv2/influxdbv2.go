@@ -79,8 +79,7 @@ func (i *InfluxdbV2) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 	return i.influxdbConnectionProducer.Initialize(ctx, req)
 }
 
-// NewUser generates the username/password on the underlying Influxdb secret backend as instructed by
-// the statements provided.
+// NewUser generates the username/password on the underlying Influxdb secret backend
 func (i *InfluxdbV2) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (resp dbplugin.NewUserResponse, err error) {
 	i.Lock()
 	defer i.Unlock()
@@ -123,7 +122,6 @@ func (i *InfluxdbV2) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 		return dbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
 	}
 	_, err = cli.OrganizationsAPI().AddMember(ctx, organization, user)
-	// err can be nil with response.Err() being not nil, so both need to be handled
 	if err != nil {
 		// Attempt rollback only when the response has an error
 		err2 := cli.UsersAPI().DeleteUser(ctx, user)
@@ -138,8 +136,6 @@ func (i *InfluxdbV2) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	return resp, nil
 }
 
-// attemptRollback will attempt to roll back user creation if an error occurs in
-// deleteUser
 func deleteUser(ctx context.Context, cli influxdb2.Client, username string) error {
 	user, err := cli.UsersAPI().FindUserByName(ctx, username)
 	if err != nil {
