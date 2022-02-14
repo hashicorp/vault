@@ -1631,10 +1631,18 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 		if err != nil {
 			return nil, fmt.Errorf("failed to get methodID %s from MFA config table, error: %v", methodID, err)
 		}
+		var duoUsePasscode bool
+		if mConfig.Type == mfaMethodTypeDuo {
+			duoConf, ok := mConfig.Config.(*mfa.Config_DuoConfig)
+			if !ok {
+				return nil, fmt.Errorf("invalid MFA configuration type")
+			}
+			duoUsePasscode = duoConf.DuoConfig.UsePasscode
+		}
 		mfaMethod := &logical.MFAMethodID{
 			Type:         mConfig.Type,
 			ID:           methodID,
-			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || mConfig.Type == mfaMethodTypeDuo,
+			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || duoUsePasscode,
 		}
 		mfaAny.Any = append(mfaAny.Any, mfaMethod)
 	}
