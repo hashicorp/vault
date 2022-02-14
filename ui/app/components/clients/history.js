@@ -3,6 +3,10 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
+import getStorage from 'vault/lib/token-storage';
+
+const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
 export default class History extends Component {
   @service store;
   @service version;
@@ -61,6 +65,26 @@ export default class History extends Component {
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
+
+  get versionText() {
+    return this.version.isEnterprise
+      ? {
+          label: 'Billing start month',
+          description:
+            'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
+          title: 'No billing start date found',
+          message:
+            'In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate.',
+        }
+      : {
+          label: 'Client counting start date',
+          description:
+            'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
+          title: 'No start date found',
+          message:
+            'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.',
+        };
+  }
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
@@ -165,10 +189,12 @@ export default class History extends Component {
         this.startTimeFromResponse = this.startTimeRequested;
         this.noActivityDate = this.startTimeDisplay;
       } else {
-        // note: this.startTimeDisplay (getter) is updated by this.startTimeFromResponse
+        // note: this.startTimeDisplay (getter) is updated by the @tracked startTimeFromResponse
         this.startTimeFromResponse = response.formattedStartTime;
         this.endTimeFromResponse = response.formattedEndTime;
+        this.storage().setItem(INPUTTED_START_DATE, this.startTimeFromResponse);
       }
+      this.queriedActivityResponse = response;
       // compare if the response startTime comes after the requested startTime. If true throw a warning.
       // only display if they selected a startTime
       if (
@@ -182,8 +208,8 @@ export default class History extends Component {
       } else {
         this.responseRangeDiffMessage = null;
       }
-      this.queriedActivityResponse = response;
     } catch (e) {
+      // TODO CMB surface API errors when user selects start date after end date
       return e;
     } finally {
       this.isLoadingQuery = false;
@@ -215,5 +241,9 @@ export default class History extends Component {
   // HELPERS //
   filterByNamespace(namespace) {
     return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+  }
+
+  storage() {
+    return getStorage();
   }
 }
