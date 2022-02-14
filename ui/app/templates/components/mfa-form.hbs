@@ -1,24 +1,47 @@
-<div class="auth-form">
+<div class="auth-form" data-test-mfa-form>
   <div class="box is-marginless is-shadowless">
-    <p>
-      Multi-factor authentication is enabled for your account. Enter your authentication code to log in.
+    <p data-test-mfa-description>
+      {{this.description}}
     </p>
     <form id="auth-form" {{on "submit" this.submit}}>
+      <MessageError @errors={{this.errors}} class="has-top-margin-s" />
       <div class="field has-top-margin-l">
-        <label for="passcode" class="is-label">Authentication code</label>
-        <div class="control">
-          <Input
-            id="passcode"
-            name="passcode"
-            class="input"
-            autocomplete="off"
-            spellcheck="false"
-            autofocus="true"
-            disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
-            @value={{this.passcode}}
-            data-test-mfa-passcode={{true}}
-          />
-        </div>
+        {{#each this.constraints as |constraint index|}}
+          {{#if index}}
+            <hr />
+          {{/if}}
+          {{#if (gt constraint.methods.length 1)}}
+            <Select
+              @label="Multi-factor authentication method"
+              @options={{constraint.methods}}
+              @valueAttribute={{"id"}}
+              @labelAttribute={{"label"}}
+              @isFullwidth={{true}}
+              @noDefault={{true}}
+              @selectedValue={{constraint.selectedId}}
+              @onChange={{fn this.onSelect constraint}}
+              data-test-mfa-select={{index}}
+            />
+          {{/if}}
+          {{#if constraint.selectedMethod.uses_passcode}}
+            <label for="passcode" class="is-label" data-test-mfa-passcode-label>
+              {{constraint.selectedMethod.label}}
+            </label>
+            <div class="control">
+              <Input
+                id="passcode"
+                name="passcode"
+                class="input"
+                autocomplete="off"
+                spellcheck="false"
+                autofocus="true"
+                disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
+                @value={{constraint.passcode}}
+                data-test-mfa-passcode={{index}}
+              />
+            </div>
+          {{/if}}
+        {{/each}}
       </div>
       {{#if this.newCodeDelay.isRunning}}
         <div>
