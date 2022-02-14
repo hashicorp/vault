@@ -45,25 +45,21 @@
         </DocLink>
       </AlertBanner>
     {{/if}}
-    {{#if @isLoading}}
-      <LayoutLoading />
-    {{else}}
-      {{#if this.totalUsageCounts}}
-        <Clients::UsageStats
-          @title={{date-format this.responseTimestamp "MMMM"}}
+    {{#if this.totalUsageCounts}}
+      <Clients::UsageStats
+        @title={{date-format this.responseTimestamp "MMMM"}}
+        @totalUsageCounts={{this.totalUsageCounts}}
+      />
+      {{#if this.hasAttributionData}}
+        <Clients::Attribution
+          @chartLegend={{this.chartLegend}}
+          @totalClientsData={{this.totalClientsData}}
           @totalUsageCounts={{this.totalUsageCounts}}
+          @selectedNamespace={{this.selectedNamespace}}
+          @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
+          @isDateRange={{false}}
+          @timestamp={{this.responseTimestamp}}
         />
-        {{#if this.hasAttributionData}}
-          <Clients::Attribution
-            @chartLegend={{this.chartLegend}}
-            @totalClientsData={{this.totalClientsData}}
-            @totalUsageCounts={{this.totalUsageCounts}}
-            @selectedNamespace={{this.selectedNamespace}}
-            @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
-            @isDateRange={{false}}
-            @timestamp={{this.responseTimestamp}}
-          />
-        {{/if}}
       {{/if}}
     {{/if}}
   {{/if}}
