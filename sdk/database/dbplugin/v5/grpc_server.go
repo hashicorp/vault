@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ proto.DatabaseServer = gRPCServer{}
+var _ proto.DatabaseServer = &gRPCServer{}
 
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
