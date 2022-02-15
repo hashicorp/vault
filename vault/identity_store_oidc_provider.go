@@ -97,21 +97,21 @@ type client struct {
 	Key            string        `json:"key"`
 	IDTokenTTL     time.Duration `json:"id_token_ttl"`
 	AccessTokenTTL time.Duration `json:"access_token_ttl"`
-	Type           ClientType    `json:"type"`
+	Type           clientType    `json:"type"`
 
 	// Generated values that are used in OIDC endpoints
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 }
 
-type ClientType int
+type clientType int
 
 const (
-	confidential ClientType = iota
+	confidential clientType = iota
 	public
 )
 
-func (k ClientType) String() string {
+func (k clientType) String() string {
 	switch k {
 	case confidential:
 		return "confidential"

@@ -1521,8 +1521,8 @@ func TestOIDC_Path_OIDC_Client_Type(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		createClientType ClientType
-		updateClientType ClientType
+		createClientType clientType
+		updateClientType clientType
 		wantCreateErr    bool
 		wantUpdateErr    bool
 	}{
@@ -1550,7 +1550,7 @@ func TestOIDC_Path_OIDC_Client_Type(t *testing.T) {
 		},
 		{
 			name:             "create an invalid client type",
-			createClientType: ClientType(300),
+			createClientType: clientType(300),
 			wantCreateErr:    true,
 		},
 	}
