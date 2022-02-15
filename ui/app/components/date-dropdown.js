@@ -12,9 +12,15 @@ import { tracked } from '@glimmer/tracking';
  * ```
  * @param {function} handleDateSelection - is the action from the parent that the date picker triggers
  * @param {string} [name] - optional argument passed from date dropdown to parent function
+ * @param {string} [submitText] - optional argument to change submit button text
  */
-
 export default class DateDropdown extends Component {
+  currentDate = new Date();
+  currentYear = this.currentDate.getFullYear(); // integer of year
+  currentMonth = this.currentDate.getMonth(); // index of month
+
+  @tracked allowedMonthMax = 12;
+  @tracked disabledYear = null;
   @tracked startMonth = null;
   @tracked startYear = null;
 
@@ -28,11 +34,22 @@ export default class DateDropdown extends Component {
   @action
   selectStartMonth(month) {
     this.startMonth = month;
+    // disables months if in the future
+    this.months.indexOf(month) >= this.currentMonth
+      ? (this.disabledYear = this.currentYear)
+      : (this.disabledYear = null);
   }
 
   @action
   selectStartYear(year) {
     this.startYear = year;
+    if (year === this.currentYear) {
+      // only enables past months
+      this.allowedMonthMax = this.currentMonth;
+    } else {
+      // if prior year selected, no months are disabled
+      this.allowedMonthMax = 12;
+    }
   }
 
   @action
