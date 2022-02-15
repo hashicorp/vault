@@ -50,8 +50,21 @@ func ServeConfigMultiplex(factory Factory) *plugin.ServeConfig {
 		return nil
 	}
 
+	db, err := factory()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	database := db.(Database)
+
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
+		5: {
+			"database": &GRPCDatabasePlugin{
+				Impl: database,
+			},
+		},
 		6: {
 			"database": &GRPCDatabasePlugin{
 				FactoryFunc: factory,
