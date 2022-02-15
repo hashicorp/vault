@@ -57,7 +57,12 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 # # in RAM and bootstraps itself. Don't use this configuration for production.
 CMD ["server", "-dev"]
 
-#This is the docker official image
+
+
+# This is the docker official image for Vault - https://hub.docker.com/_/vault.
+# See https://docs.docker.com/docker-hub/official_images/ for more info.
+# This target is for official image use and will fail to build locally
+# until the specified version is released.
 FROM alpine:3.14 as default
 
 # This is the release of Vault to pull in.
