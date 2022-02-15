@@ -34,4 +34,9 @@ export default class DateDropdown extends Component {
   selectStartYear(year) {
     this.startYear = year;
   }
+
+  @action
+  saveDateSelection() {
+    this.args.handleDateSelection(this.startMonth, this.startYear, this.args.name);
+  }
 }

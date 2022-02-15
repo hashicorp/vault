@@ -34,7 +34,6 @@ module('Integration | Component | client count config', function (hooks) {
       configAttrs: [
         createAttr('enabled', 'string', { editType: 'boolean' }),
         createAttr('retentionMonths', 'number'),
-        createAttr('defaultReportMonths', 'number'),
       ],
       changedAttributes: () => ({}),
       save: () => {},
@@ -54,7 +53,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     assert.dom('[data-test-pricing-metrics-config-table]').exists('Pricing metrics config table exists');
     const rows = document.querySelectorAll('.info-table-row');
-    assert.equal(rows.length, 3, 'renders 3 infotable rows');
+    assert.equal(rows.length, 2, 'renders 2 infotable rows');
     assert.ok(
       find('[data-test-row-value="Usage data collection"]').textContent.includes('On'),
       'Enabled value matches model'
@@ -62,10 +61,6 @@ module('Integration | Component | client count config', function (hooks) {
     assert.ok(
       find('[data-test-row-value="Retention period"]').textContent.includes('24'),
       'Retention period value matches model'
-    );
-    assert.ok(
-      find('[data-test-row-value="Default display"]').textContent.includes('12'),
-      'Default display value matches model'
     );
   });
 
@@ -77,7 +72,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
     const fields = document.querySelectorAll('[data-test-field]');
-    assert.equal(fields.length, 3, 'renders 3 fields');
+    assert.equal(fields.length, 2, 'renders 2 fields');
   });
 
   test('it shows a modal with correct messaging when disabling', async function (assert) {
@@ -126,7 +121,7 @@ module('Integration | Component | client count config', function (hooks) {
   test('it does not show a modal on save if enable left unchanged', async function (assert) {
     // Simulates the model when something other than enabled changed
     const simModel = generateModel({
-      changedAttributes: () => ({ defaultReportMonths: [24, '48'] }),
+      changedAttributes: () => ({ retentionMonths: [24, '48'] }),
     });
     this.set('model', simModel);
     await render(hbs`

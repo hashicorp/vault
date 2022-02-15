@@ -22,9 +22,8 @@ export default ApplicationSerializer.extend({
       const oldEnabled = json.enabled;
       json.enabled = oldEnabled === 'On' ? 'enable' : 'disable';
     }
-    json.default_report_months = parseInt(json.default_report_months, 10);
     json.retention_months = parseInt(json.retention_months, 10);
-    if (isNaN(json.default_report_months) || isNaN(json.retention_months)) {
+    if (isNaN(json.retention_months)) {
       throw new Error('Invalid number value');
     }
     delete json.queries_available;
