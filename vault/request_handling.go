@@ -1075,7 +1075,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error.
 	if resp != nil && resp.Auth != nil {
-		if !strings.HasPrefix(req.Path, "auth/token/") && req.Path != "sys/mfa/validate" {
+		if !strings.HasPrefix(req.Path, "auth/token/") {
 			c.logger.Error("unexpected Auth response for non-token backend", "request_path", req.Path)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -1303,7 +1303,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return
 	}
 	// If the response generated an authentication, then generate the token
-	if resp != nil && resp.Auth != nil {
+	if resp != nil && resp.Auth != nil && req.Path != "sys/mfa/validate" {
 		leaseGenerated := false
 
 		// by placing this after the authorization check, we don't leak
