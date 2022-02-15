@@ -1507,6 +1507,127 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 	}
 }
 
+func TestOIDC_Path_OIDC_Client_Type(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	tests := []struct {
+		name             string
+		createClientType ClientType
+		updateClientType ClientType
+		wantCreateErr    bool
+		wantUpdateErr    bool
+	}{
+		{
+			name:             "create confidential client and update to public client",
+			createClientType: confidential,
+			updateClientType: public,
+			wantUpdateErr:    true,
+		},
+		{
+			name:             "create confidential client and update to confidential client",
+			createClientType: confidential,
+			updateClientType: confidential,
+		},
+		{
+			name:             "create public client and update to confidential client",
+			createClientType: public,
+			updateClientType: confidential,
+			wantUpdateErr:    true,
+		},
+		{
+			name:             "create public client and update to public client",
+			createClientType: public,
+			updateClientType: public,
+		},
+		{
+			name:             "create an invalid client type",
+			createClientType: ClientType(300),
+			wantCreateErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a client with the given client type
+			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.CreateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"key":         "test-key",
+					"client_type": tt.createClientType.String(),
+				},
+			})
+			if tt.wantCreateErr {
+				expectError(t, resp, err)
+				return
+			}
+			expectSuccess(t, resp, err)
+
+			// Read the client
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.ReadOperation,
+				Storage:   storage,
+			})
+			expectSuccess(t, resp, err)
+
+			// Assert that the client type is properly set
+			clientType := resp.Data["client_type"].(string)
+			require.Equal(t, tt.createClientType.String(), clientType)
+
+			// Assert that all client types have a client ID
+			clientID := resp.Data["client_id"].(string)
+			require.Len(t, clientID, clientIDLength)
+
+			// Assert that confidential clients have a client secret
+			if tt.createClientType == confidential {
+				clientSecret := resp.Data["client_secret"].(string)
+				require.Contains(t, clientSecret, clientSecretPrefix)
+			}
+
+			// Assert that public clients do not have a client secret
+			if tt.createClientType == public {
+				_, ok := resp.Data["client_secret"]
+				require.False(t, ok)
+			}
+
+			// Update the client and expect error if the type is different
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"key":         "test-key",
+					"client_type": tt.updateClientType.String(),
+				},
+			})
+			if tt.wantUpdateErr {
+				expectError(t, resp, err)
+			} else {
+				expectSuccess(t, resp, err)
+			}
+
+			// Delete the client
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.DeleteOperation,
+				Storage:   storage,
+			})
+			expectSuccess(t, resp, err)
+		})
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter tests that a client cannot
 // be created without a key parameter
 func TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter(t *testing.T) {
@@ -1738,6 +1859,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1792,6 +1914,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1851,6 +1974,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 			"id_token_ttl":  "1m",
 			"assignments":   []string{"test-assignment1", "test-assignment1"},
 			"redirect_uris": []string{"http://example.com", "http://notduplicate.com", "http://example.com"},
+			"client_type":   public.String(),
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -1869,7 +1993,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 		"id_token_ttl":     int64(60),
 		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
-		"client_secret":    resp.Data["client_secret"],
+		"client_type":      public.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1931,6 +2055,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"access_token_ttl": int64(3600),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1964,6 +2089,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
