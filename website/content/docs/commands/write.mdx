@@ -13,9 +13,16 @@ The `write` command writes data to Vault at the given path. The data can be
 credentials, secrets, configuration, or arbitrary data. The specific behavior of
 this command is determined at the thing mounted at the path.
 
-Data is specified as "key=value" pairs. If the value begins with an "@", then it
-is loaded from a file. If the value is "-", Vault will read the value from
-stdin.
+Data is specified as "key=value" pairs on the command line. If the value begins
+with an "@", then it is loaded from a file. If the value for a key is "-", Vault
+will read the value from stdin rather than the command line.
+
+Some API fields require more advanced structures such as maps. These cannot
+directly be represented on the command line. However, direct control of the
+request parameters can be achieved by using `-` as the only data argument.
+This causes `vault write` to read a JSON blob containing all request parameters
+from stdin. This argument will be ignored if used in conjunction with any
+"key=value" pairs.
 
 For a full list of examples and paths, please see the documentation that
 corresponds to the secrets engines in use.
