@@ -53,14 +53,23 @@ export default class History extends Component {
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => {
-    return { name: namespace['label'], id: namespace['label'] };
-  });
+  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => ({
+    name: namespace.label,
+    id: namespace.label,
+  }));
+  @tracked selectedAuthMethod = null;
 
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
+
+  @tracked authMethodOptions = [];
+
+  @action
+  setAuthMethod([authMount]) {
+    this.selectedAuthMethod = authMount;
+  }
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
@@ -68,7 +77,7 @@ export default class History extends Component {
   }
 
   get hasAttributionData() {
-    return this.totalUsageCounts.clients !== 0 && this.totalClientsData.length !== 0;
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
   }
 
   get startTimeDisplay() {
@@ -98,16 +107,13 @@ export default class History extends Component {
 
   // top level TOTAL client counts for given date range
   get totalUsageCounts() {
-    return this.selectedNamespace
-      ? this.filterByNamespace(this.selectedNamespace)
-      : this.getActivityResponse.total;
+    return this.selectedNamespace ? this.filteredActivity : this.getActivityResponse.total;
   }
 
   // total client data for horizontal bar chart in attribution component
   get totalClientsData() {
     if (this.selectedNamespace) {
-      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
-      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
+      return this.filteredActivity?.mounts || null;
     } else {
       return this.getActivityResponse?.byNamespace;
     }
@@ -199,6 +205,12 @@ export default class History extends Component {
   selectNamespace([value]) {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
+    // Side effect: set auth namespaces
+    const mounts = this.filteredActivity.mounts?.map((mount) => ({
+      id: mount.label,
+      name: mount.label,
+    }));
+    this.authMethodOptions = mounts;
   }
 
   // FOR START DATE MODAL
@@ -212,8 +224,17 @@ export default class History extends Component {
     this.startYear = year;
   }
 
-  // HELPERS //
-  filterByNamespace(namespace) {
-    return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    }
+    return this.getActivityResponse.byNamespace
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
   }
 }
