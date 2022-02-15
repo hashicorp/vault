@@ -258,7 +258,7 @@ jobs:
         uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{env.version}}
-          target: CRT
+          target: crt
           arch: ${{matrix.arch}}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
           tags: |
