@@ -4278,7 +4278,6 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	}
 
 	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
-
 }
 
 func sanitizePath(path string) string {
