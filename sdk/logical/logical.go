@@ -123,7 +123,8 @@ type Paths struct {
 	Unauthenticated []string
 
 	// LocalStorage are storage paths (prefixes) that are local to this cluster;
-	// this indicates that these paths should not be replicated across clusters
+	// this indicates that these paths should not be replicated across performance clusters
+	// (DR replication is unaffected).
 	LocalStorage []string
 
 	// SealWrapStorage are storage paths that, when using a capable seal,
