@@ -77,6 +77,8 @@ type externalPlugin struct {
 
 	// connections holds client connections by ID
 	connections map[string]*pluginClient
+
+	multiplexingSupport bool
 }
 
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
@@ -145,24 +147,21 @@ func (p *pluginClient) Close() error {
 	return p.cleanupFunc()
 }
 
-func (c *PluginCatalog) removePluginClient(name, id string) error {
+// cleanupExternalPlugin will kill plugin processes and perform any necessary cleanup on the
+// externalPlugins map for multiplexed and non-multiplexed plugins.
+func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	var err error
 	extPlugin, ok := c.externalPlugins[name]
 	if !ok {
 		return fmt.Errorf("plugin client not found")
 	}
 
 	pluginClient := extPlugin.connections[id]
-	multiplexingSupport, err := pluginClient.MultiplexingSupport()
-	if err != nil {
-		return err
-	}
 
 	delete(extPlugin.connections, id)
-	if !multiplexingSupport {
+	if !extPlugin.multiplexingSupport {
 		pluginClient.client.Kill()
 
 		if len(extPlugin.connections) == 0 {
@@ -172,6 +171,7 @@ func (c *PluginCatalog) removePluginClient(name, id string) error {
 		pluginClient.client.Kill()
 		delete(c.externalPlugins, name)
 	}
+
 	return nil
 }
 
@@ -238,7 +238,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		id:     id,
 		logger: c.logger.Named(pluginRunner.Name),
 		cleanupFunc: func() error {
-			return c.removePluginClient(pluginRunner.Name, id)
+			return c.cleanupExternalPlugin(pluginRunner.Name, id)
 		},
 	}
 
@@ -292,9 +292,12 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	} else {
 		pc.clientConn = clientConn
 	}
+
 	pc.ClientProtocol = rpcClient
+
 	extPlugin.connections[id] = pc
 	extPlugin.name = pluginRunner.Name
+	extPlugin.multiplexingSupport = pluginRunner.MultiplexingSupport
 
 	return extPlugin.connections[id], nil
 }
