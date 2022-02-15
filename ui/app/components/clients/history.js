@@ -57,16 +57,29 @@ export default class History extends Component {
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => {
-    return { name: namespace['label'], id: namespace['label'] };
-  });
 
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
 
+  get namespaceArray() {
+    if (!this.getActivityResponse) {
+      return [];
+    }
+    return this.getActivityResponse.byNamespace.map((namespace) => {
+      return { name: namespace['label'], id: namespace['label'] };
+    });
+  }
+
   get versionText() {
+    // if adapter error
+    if (!this.getActivityResponse) {
+      return {
+        title: 'There was an error',
+        message: 'Something went wrong. Check the console to see the failed response.',
+      };
+    }
     return this.version.isEnterprise
       ? {
           label: 'Billing start month',
@@ -88,7 +101,16 @@ export default class History extends Component {
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
-    return this.queriedActivityResponse || this.args.model.activity;
+    // this.args.model.activity can return an adapter error so check for that first.
+    if (this.queriedActivityResponse) {
+      return this.queriedActivityResponse;
+    } else if (this.args.model.activity.isAdapterError) {
+      return null;
+    } else {
+      return this.args.model.activity;
+    }
+
+    // return this.queriedActivityResponse || this.args.model.activity;
   }
 
   get hasAttributionData() {
@@ -114,14 +136,19 @@ export default class History extends Component {
   }
 
   get isDateRange() {
-    return !isSameMonth(
+    let test = !isSameMonth(
       new Date(this.getActivityResponse.startTime),
       new Date(this.getActivityResponse.endTime)
     );
+    console.log(test, 'TEST');
+    return test;
   }
 
   // top level TOTAL client counts for given date range
   get totalUsageCounts() {
+    if (!this.getActivityResponse) {
+      return 0;
+    }
     return this.selectedNamespace
       ? this.filterByNamespace(this.selectedNamespace)
       : this.getActivityResponse.total;
@@ -200,7 +227,7 @@ export default class History extends Component {
       if (
         dateType === 'startTime' &&
         isAfter(
-          new Date(this.getActivityResponse.startTime),
+          new Date(this.getActivityResponse?.startTime),
           new Date(this.startTimeRequested[0], this.startTimeRequested[1])
         )
       ) {
@@ -240,7 +267,7 @@ export default class History extends Component {
 
   // HELPERS //
   filterByNamespace(namespace) {
-    return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    return this.getActivityResponse?.byNamespace.find((ns) => ns.label === namespace);
   }
 
   storage() {

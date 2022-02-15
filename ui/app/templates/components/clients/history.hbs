@@ -50,8 +50,9 @@
         to enable tracking again.
       </AlertBanner>
     {{/if}}
+    {{! check for adapterError on activity response }}
     {{! check for startTimeFromLicense or startTimeFromResponse otherwise emptyState}}
-    {{#if (or @model.startTimeFromLicense this.startTimeFromResponse)}}
+    {{#if (and this.getActivityResponse (or @model.startTimeFromLicense this.startTimeFromResponse))}}
       <div class="is-subtitle-gray has-bottom-margin-m">
         FILTERS
         <Toolbar>
