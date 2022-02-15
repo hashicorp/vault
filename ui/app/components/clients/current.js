@@ -15,6 +15,9 @@ export default class Current extends Component {
     return { name: namespace['label'], id: namespace['label'] };
   });
 
+  @tracked selectedAuthMethod = null;
+  @tracked authMethodOptions = [];
+
   // Response client count data by namespace for current/partial month
   get byNamespaceCurrent() {
     return this.args.model.monthly?.byNamespace || [];
@@ -26,7 +29,7 @@ export default class Current extends Component {
   }
 
   get hasAttributionData() {
-    return this.totalUsageCounts.clients !== 0 && this.totalClientsData.length !== 0;
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
   }
 
   get countsIncludeOlderData() {
@@ -41,16 +44,13 @@ export default class Current extends Component {
 
   // top level TOTAL client counts for current/partial month
   get totalUsageCounts() {
-    return this.selectedNamespace
-      ? this.filterByNamespace(this.selectedNamespace)
-      : this.args.model.monthly?.total;
+    return this.selectedNamespace ? this.filteredActivity : this.args.model.monthly?.total;
   }
 
   // total client data for horizontal bar chart in attribution component
   get totalClientsData() {
     if (this.selectedNamespace) {
-      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
-      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
+      return this.filteredActivity?.mounts || null;
     } else {
       return this.byNamespaceCurrent;
     }
@@ -61,8 +61,18 @@ export default class Current extends Component {
   }
 
   // HELPERS
-  filterByNamespace(namespace) {
-    return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
+    }
+    return this.byNamespaceCurrent
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
   }
 
   // ACTIONS
@@ -70,5 +80,21 @@ export default class Current extends Component {
   selectNamespace([value]) {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
+    if (!value) {
+      // on clear, also make sure auth method is cleared
+      this.selectedAuthMethod = null;
+    } else {
+      // Side effect: set auth namespaces
+      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+        id: mount.label,
+        name: mount.label,
+      }));
+      this.authMethodOptions = mounts;
+    }
+  }
+
+  @action
+  setAuthMethod([authMount]) {
+    this.selectedAuthMethod = authMount;
   }
 }

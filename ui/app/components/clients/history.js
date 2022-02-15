@@ -61,19 +61,14 @@ export default class History extends Component {
     name: namespace.label,
     id: namespace.label,
   }));
-  @tracked selectedAuthMethod = null;
 
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
 
+  @tracked selectedAuthMethod = null;
   @tracked authMethodOptions = [];
-
-  @action
-  setAuthMethod([authMount]) {
-    this.selectedAuthMethod = authMount;
-  }
 
   get versionText() {
     return this.version.isEnterprise
@@ -231,12 +226,22 @@ export default class History extends Component {
   selectNamespace([value]) {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
-    // Side effect: set auth namespaces
-    const mounts = this.filteredActivity.mounts?.map((mount) => ({
-      id: mount.label,
-      name: mount.label,
-    }));
-    this.authMethodOptions = mounts;
+    if (!value) {
+      // on clear, also make sure auth method is cleared
+      this.selectedAuthMethod = null;
+    } else {
+      // Side effect: set auth namespaces
+      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+        id: mount.label,
+        name: mount.label,
+      }));
+      this.authMethodOptions = mounts;
+    }
+  }
+
+  @action
+  setAuthMethod([authMount]) {
+    this.selectedAuthMethod = authMount;
   }
 
   // FOR START DATE MODAL
