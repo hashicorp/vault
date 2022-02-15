@@ -21,7 +21,8 @@ func (pm PluginMultiplexingServerImpl) MultiplexingSupport(ctx context.Context, 
 }
 
 func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface) (bool, error) {
-	resp, err := NewPluginMultiplexingClient(cc).MultiplexingSupport(ctx, nil)
+	req := new(MultiplexingSupportRequest)
+	resp, err := NewPluginMultiplexingClient(cc).MultiplexingSupport(ctx, req)
 	if err != nil {
 
 		// If the server does not implement the multiplexing server then we can
