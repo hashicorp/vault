@@ -14,13 +14,22 @@
         Edit
       </button>
     {{else}}
-      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} />
+      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="Save" />
     {{/if}}
   </div>
   <p class="is-8 has-text-grey has-bottom-margin-xl">
     {{this.versionText.description}}
   </p>
-  {{#if (eq @model.config.queriesAvailable false)}}
+  {{#if this.licenseStartIsCurrentMonth}}
+    <EmptyState
+      @title="No data for this billing period"
+      @subTitle="Your billing period has just begun, so there is no data yet. Data will be available here on the first of next month."
+      @message="To view data from a previous billing period, you can enter your previous billing start date."
+      @bottomBorder={{true}}
+    >
+      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="View" />
+    </EmptyState>
+  {{else if (eq @model.config.queriesAvailable false)}}
     {{#if (eq @model.config.enabled "On")}}
       <EmptyState
         @title={{concat "No monthly history " (if this.noActivityDate "from ") this.noActivityDate}}
@@ -125,8 +134,10 @@
           <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
       {{/if}}
-    {{else}}
+    {{else if (or (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
+    {{else}}
+      <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
     {{/if}}
   {{/if}}
 
@@ -218,7 +229,7 @@
         Cancel
       </button>
       {{#if this.isFormError}}
-        <FormError>Start date must be before {{this.endTimeDisplay}}</FormError>
+        <FormError>Start date must be before {{or this.endTimeDisplay "this month"}}</FormError>
       {{/if}}
     </footer>
   </Modal>

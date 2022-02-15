@@ -65,6 +65,7 @@ export default class History extends Component {
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
+  @tracked licenseStartIsCurrentMonth = this.args.model.activity?.isLicenseDateError || false;
 
   get versionText() {
     return this.version.isEnterprise
@@ -156,10 +157,12 @@ export default class History extends Component {
   }
 
   get isFormError() {
-    return isAfter(
-      new Date(this.startYear, this.arrayOfMonths.indexOf(this.startMonth)),
-      new Date(Number(this.endTimeFromResponse[0]), this.endTimeFromResponse[1])
-    );
+    let dateSelected = new Date(this.startYear, this.arrayOfMonths.indexOf(this.startMonth));
+    if (this.endTimeFromResponse) {
+      return isAfter(dateSelected, (Number(this.endTimeFromResponse[0]), this.endTimeFromResponse[1]));
+    } else {
+      return isSameMonth(dateSelected, new Date());
+    }
   }
 
   @action
@@ -202,6 +205,7 @@ export default class History extends Component {
         this.storage().setItem(INPUTTED_START_DATE, this.startTimeFromResponse);
       }
       this.queriedActivityResponse = response;
+      this.licenseStartIsCurrentMonth = response.isLicenseDateError;
       // compare if the response startTime comes after the requested startTime. If true throw a warning.
       // only display if they selected a startTime
       if (
@@ -216,7 +220,6 @@ export default class History extends Component {
         this.responseRangeDiffMessage = null;
       }
     } catch (e) {
-      // TODO CMB surface API errors when user selects start date after end date
       return e;
     } finally {
       this.isLoadingQuery = false;
