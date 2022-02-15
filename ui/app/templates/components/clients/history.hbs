@@ -203,7 +203,7 @@
           (action (mut this.isEditStartMonthOpen) false)
           (action "handleClientActivityQuery" this.startMonth this.startYear "startTime")
         }}
-        disabled={{if (and this.startMonth this.startYear) false true}}
+        disabled={{or (if (and this.startMonth this.startYear) false true) this.isFormError}}
       >
         Save
       </button>
@@ -217,6 +217,9 @@
       >
         Cancel
       </button>
+      {{#if this.isFormError}}
+        <FormError>Start date must be before {{this.endTimeDisplay}}</FormError>
+      {{/if}}
     </footer>
   </Modal>
 </div>

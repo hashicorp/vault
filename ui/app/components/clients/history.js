@@ -155,6 +155,13 @@ export default class History extends Component {
     return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
   }
 
+  get isFormError() {
+    return isAfter(
+      new Date(this.startYear, this.arrayOfMonths.indexOf(this.startMonth)),
+      new Date(Number(this.endTimeFromResponse[0]), this.endTimeFromResponse[1])
+    );
+  }
+
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
