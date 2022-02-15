@@ -146,6 +146,9 @@ func (p *pluginClient) Close() error {
 }
 
 func (c *PluginCatalog) removePluginClient(name, id string) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	var err error
 	extPlugin, ok := c.externalPlugins[name]
 	if !ok {
@@ -199,6 +202,7 @@ func (c *PluginCatalog) newExternalPlugin(pluginName string) *externalPlugin {
 func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (*pluginClient, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	if config.Name == "" {
 		return nil, fmt.Errorf("no name provided for plugin")
 	}
