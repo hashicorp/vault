@@ -33,12 +33,15 @@ func TestVersionStore_GetOldestVersion(t *testing.T) {
 	upgradeTimePlusEpsilon := time.Now().UTC()
 
 	// 1.6.2 is stored before 1.6.1, so even though it is a higher number, it should be returned.
-	versionEntries := []struct{version string; ts time.Time}{
-		{"1.6.2", upgradeTimePlusEpsilon.Add(-4*time.Hour)},
-		{"1.6.1", upgradeTimePlusEpsilon.Add(2*time.Hour)},
+	versionEntries := []struct {
+		version string
+		ts      time.Time
+	}{
+		{"1.6.2", upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{"1.6.1", upgradeTimePlusEpsilon.Add(2 * time.Hour)},
 	}
 
-	for _, entry := range versionEntries{
+	for _, entry := range versionEntries {
 		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
 		if err != nil {
 			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
@@ -74,12 +77,15 @@ func TestVersionStore_SelfHealUTC(t *testing.T) {
 
 	nowEST := time.Now().In(estLoc)
 
-	versionEntries := []struct{version string; ts time.Time}{
-		{"1.9.0", nowEST.Add(24*time.Hour)},
-		{"1.9.1", nowEST.Add(48*time.Hour)},
+	versionEntries := []struct {
+		version string
+		ts      time.Time
+	}{
+		{"1.9.0", nowEST.Add(24 * time.Hour)},
+		{"1.9.1", nowEST.Add(48 * time.Hour)},
 	}
 
-	for _, entry := range versionEntries{
+	for _, entry := range versionEntries {
 		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
 		if err != nil {
 			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())

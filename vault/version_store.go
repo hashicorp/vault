@@ -114,7 +114,6 @@ func (c *Core) loadVersionTimestamps(ctx context.Context) error {
 		if timestampInstalled.Location() != time.UTC {
 			timestampInstalled = timestampInstalled.UTC()
 			isUpdated, err := c.storeVersionTimestamp(ctx, vaultVersion.Version, timestampInstalled, true)
-
 			if err != nil {
 				c.logger.Warn("failed to rewrite vault version timestamp as UTC", "error", err)
 			}
