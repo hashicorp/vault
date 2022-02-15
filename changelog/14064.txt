@@ -1,3 +1,0 @@
-```release-note:bug
-ui: Fixes tooltip styling issue
-```
