@@ -132,11 +132,11 @@ func (p *pluginClient) Conn() grpc.ClientConnInterface {
 }
 
 // MultiplexingSupport determines if a plugin client supports multiplexing
-func (p *pluginClient) MultiplexingSupport() (bool, error) {
-	if p.client == nil {
+func (p *pluginClient) MultiplexingSupport(ctx context.Context) (bool, error) {
+	if p.clientConn == nil {
 		return false, fmt.Errorf("plugin client is nil")
 	}
-	return pluginutil.MultiplexingSupport(p.client.NegotiatedVersion()), nil
+	return pluginutil.MultiplexingSupported(ctx, p.clientConn)
 }
 
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
@@ -150,9 +150,6 @@ func (p *pluginClient) Close() error {
 // cleanupExternalPlugin will kill plugin processes and perform any necessary cleanup on the
 // externalPlugins map for multiplexed and non-multiplexed plugins.
 func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	extPlugin, ok := c.externalPlugins[name]
 	if !ok {
 		return fmt.Errorf("plugin client not found")
@@ -367,7 +364,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	if err == nil {
 		// At this point the pluginRunner does not know if multiplexing is
 		// supported or not. So we need to ask the plugin client itself.
-		multiplexingSupport, err := v5Client.MultiplexingSupport()
+		multiplexingSupport, err := pluginutil.MultiplexingSupported(ctx, v5Client.clientConn)
 		if err != nil {
 			return false, err
 		}

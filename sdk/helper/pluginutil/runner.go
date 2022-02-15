@@ -35,7 +35,6 @@ type LookRunnerUtil interface {
 
 type PluginClient interface {
 	Conn() grpc.ClientConnInterface
-
 	plugin.ClientProtocol
 }
 
