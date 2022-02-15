@@ -6,7 +6,7 @@ description: Learn how to store and retrieve your first secret.
 
 # Developer Quick Start
 
-In this quick start, we’ll explore how to use Vault client libraries inside your application code to store and retrieve your first secret value. Vault takes the security burden away from developers by providing a secure, centralized secret store for an application’s sensitive data: credentials, certificates, encryption keys, and more.
+This quick start will explore how to use Vault client libraries inside your application code to store and retrieve your first secret value. Vault takes the security burden away from developers by providing a secure, centralized secret store for an application’s sensitive data: credentials, certificates, encryption keys, and more.
 
 For an out-of-the-box runnable demo application showcasing these concepts and more, see the hello-vault repositories ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet)).
 
@@ -23,11 +23,15 @@ Run the Vault server in a non-production "dev" mode in one of the following ways
 
 **For Docker users, run this command**:
 
-`$ docker run -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' vault`
+```shell-session 
+$ docker run -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' vault
+```
 
 **For non-Docker users, run this command**:
 
-`$ vault server -dev -dev-root-token-id="dev-only-token"`
+```shell-session
+$ vault server -dev -dev-root-token-id="dev-only-token"
+```
 
 The `-dev-root-token-id` flag for dev servers tells the Vault server to allow full root access to anyone who presents a token with the specified value (in this case "dev-only-token").
 
@@ -42,19 +46,43 @@ Let's install the Vault client library for your language of choice.
 
 -> **Note**: Some of these libraries are currently community-maintained.
 
-- [Go](https://pkg.go.dev/github.com/hashicorp/vault/api) (official): `go get github.com/hashicorp/vault/api`
-- [Ruby](https://github.com/hashicorp/vault-ruby) (official): `gem install vault`
-- [C#](https://github.com/rajanadar/VaultSharp): `dotnet add package VaultSharp`
-- [Python](https://github.com/hvac/hvac): `pip install hvac`
-- [Java (Spring)](https://spring.io/projects/spring-vault): Add the following to pom.xml:
+- [Go](https://pkg.go.dev/github.com/hashicorp/vault/api) (official)
+   
+   ```shell-session 
+   $ go get github.com/hashicorp/vault/api
+   ```
+   
+- [Ruby](https://github.com/hashicorp/vault-ruby) (official)
+   
+   ```shell-session 
+   $ gem install vault
+   ```
+   
+- [C#](https://github.com/rajanadar/VaultSharp)
+   
+   ```shell-session
+   $ dotnet add package VaultSharp
+   ```
+   
+- [Python](https://github.com/hvac/hvac)
+   
+   ```shell-session 
+   $ pip install hvac
+   ```
+   
+- [Java (Spring)](https://spring.io/projects/spring-vault)
+   
+   Add the following to pom.xml:
 
-```
-<dependency>
-     <groupId>org.springframework.vault</groupId>
-     <artifactId>spring-vault-core</artifactId>
-     <version>2.3.1</version>
-</dependency>
-```
+   ```xml
+   <dependency>
+        <groupId>org.springframework.vault</groupId>
+        <artifactId>spring-vault-core</artifactId>
+        <version>2.3.1</version>
+   </dependency>
+   ```
+
+### Import Vault library
 
 Now, let's add the import statements for the client library to the top of the file.
 
