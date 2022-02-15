@@ -1,4 +1,4 @@
-FROM alpine:3.14 as CRT
+FROM alpine:3.14 as crt
 
 ARG BIN_NAME
 # NAME and VERSION are the name of the software in releases.hashicorp.com
