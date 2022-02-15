@@ -96,9 +96,3 @@ func CtxCancelIfCanceled(f context.CancelFunc, ctxCanceler context.Context) chan
 	}()
 	return quitCh
 }
-
-// MultiplexingSupport returns true if a plugin supports multiplexing.
-// Currently this is hardcoded for database plugins.
-func MultiplexingSupport(version int) bool {
-	return version == 6
-}

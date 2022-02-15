@@ -236,6 +236,8 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		id:     id,
 		logger: c.logger.Named(pluginRunner.Name),
 		cleanupFunc: func() error {
+			c.lock.Lock()
+			defer c.lock.Unlock()
 			return c.cleanupExternalPlugin(pluginRunner.Name, id)
 		},
 	}
@@ -371,7 +373,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		}
 
 		// Close the client and cleanup the plugin process
-		err = v5Client.Close()
+		err = c.cleanupExternalPlugin(pluginRunner.Name, v5Client.id)
 		if err != nil {
 			c.logger.Error("error closing plugin client", "error", err)
 		}
