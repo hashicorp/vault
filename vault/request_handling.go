@@ -1473,7 +1473,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					RequestNSPath:         ns.Path,
 					RequestConnRemoteAddr: req.Connection.RemoteAddr, // this is needed for the DUO method
 					TimeOfStorage:         time.Now(),
-					RequestID:             req.ID,
+					RequestID:             mfaRequestID,
 				}
 				err = c.SaveMFAResponseAuth(respAuth)
 				if err != nil {
