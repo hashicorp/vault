@@ -169,7 +169,7 @@ func (c *PluginCatalog) removePluginClient(name, id string) error {
 		pluginClient.client.Kill()
 		delete(c.externalPlugins, name)
 	}
-	return err
+	return nil
 }
 
 func (c *PluginCatalog) getExternalPlugin(pluginName string) *externalPlugin {
@@ -218,7 +218,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 }
 
 // newPluginClient returns a client for managing the lifecycle of a plugin
-// process
+// process. Callers should have the write lock held.
 func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
 	if pluginRunner == nil {
 		return nil, fmt.Errorf("no plugin found")
@@ -239,7 +239,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	}
 
 	if !pluginRunner.MultiplexingSupport || len(extPlugin.connections) == 0 {
-		c.logger.Debug("spawning a new plugin process", "id", id)
+		c.logger.Debug("spawning a new plugin process", "plugin_name", pluginRunner.Name, "id", id)
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.PluginSets(config.PluginSets),
 			pluginutil.HandshakeConfig(config.HandshakeConfig),
