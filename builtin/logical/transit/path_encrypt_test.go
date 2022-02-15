@@ -15,6 +15,41 @@ import (
 
 // Case1: Ensure that batch encryption did not affect the normal flow of
 // encrypting the plaintext with a pre-existing key.
+func TestTransit_MissingPlaintext(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create the policy
+	policyReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/existing_key",
+		Storage:   s,
+	}
+	resp, err = b.HandleRequest(context.Background(), policyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	encData := map[string]interface{}{
+		"plaintext": nil,
+	}
+
+	encReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "encrypt/existing_key",
+		Storage:   s,
+		Data:      encData,
+	}
+	resp, err = b.HandleRequest(context.Background(), encReq)
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+}
+
+// Case1: Ensure that batch encryption did not affect the normal flow of
+// encrypting the plaintext with a pre-existing key.
 func TestTransit_BatchEncryptionCase1(t *testing.T) {
 	var resp *logical.Response
 	var err error

@@ -249,14 +249,18 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
-		valueRaw, ok := d.GetOk("plaintext")
+		valueRaw, ok := d.Raw["plaintext"]
 		if !ok {
 			return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
+		}
+		plaintext, ok := valueRaw.(string)
+		if !ok {
+			return logical.ErrorResponse("expected plaintext of type 'string', got unconvertible type '%T'", valueRaw), logical.ErrInvalidRequest
 		}
 
 		batchInputItems = make([]BatchRequestItem, 1)
 		batchInputItems[0] = BatchRequestItem{
-			Plaintext:  valueRaw.(string),
+			Plaintext:  plaintext,
 			Context:    d.Get("context").(string),
 			Nonce:      d.Get("nonce").(string),
 			KeyVersion: d.Get("key_version").(int),

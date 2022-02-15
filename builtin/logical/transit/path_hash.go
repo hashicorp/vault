@@ -63,7 +63,16 @@ Defaults to "sha2-256".`,
 }
 
 func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	inputB64 := d.Get("input").(string)
+	rawInput, ok := d.Raw["input"]
+	if !ok {
+		return logical.ErrorResponse("input missing"), logical.ErrInvalidRequest
+	}
+
+	inputB64, ok := rawInput.(string)
+	if !ok {
+		return logical.ErrorResponse("expected input of type 'string', got unconvertible type '%T'", rawInput), logical.ErrInvalidRequest
+	}
+
 	format := d.Get("format").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {
