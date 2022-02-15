@@ -115,7 +115,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 2
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "data")
+	path = addPrefixToKVPath(path, mountPath, "data")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2

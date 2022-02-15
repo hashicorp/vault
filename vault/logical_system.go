@@ -4088,7 +4088,7 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
-		return fmt.Errorf("invalid listing visilibity type")
+		return fmt.Errorf("invalid listing visibility type")
 	}
 
 	return nil
