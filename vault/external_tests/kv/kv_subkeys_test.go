@@ -255,13 +255,26 @@ func TestKV_Subkeys_CurrentVersion(t *testing.T) {
 
 	resp, err := c.Logical().Write("kv/data/foo", kvData)
 	if err != nil {
-		t.Fatalf("write failed - err :%v, resp: %#v\n", err, resp)
+		t.Fatalf("write failed, err :%v, resp: %#v\n", err, resp)
 	}
 
-	resp, err = c.Logical().Read("kv/subkeys/foo")
+	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
+	apiResp, err := c.RawRequestWithContext(context.Background(), req)
+	if resp != nil {
+		defer apiResp.Body.Close()
+	}
 
+	if err != nil || apiResp == nil {
+		t.Fatalf("subkeys request failed, err :%v, resp: %#v", err, apiResp)
+	}
+
+	if apiResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected subkeys request to succeed with %d status code, resp: %#v", http.StatusOK, apiResp)
+	}
+
+	secret, err := api.ParseSecret(apiResp.Body)
 	if err != nil {
-		t.Fatalf("read failed - err :%v", err)
+		t.Fatalf("failed to parse resp body, err: %v", err)
 	}
 
 	expectedSubkeys := map[string]interface{}{
@@ -274,7 +287,7 @@ func TestKV_Subkeys_CurrentVersion(t *testing.T) {
 		},
 	}
 
-	if diff := deep.Equal(resp.Data["subkeys"], expectedSubkeys); len(diff) > 0 {
+	if diff := deep.Equal(secret.Data["subkeys"], expectedSubkeys); len(diff) > 0 {
 		t.Fatalf("resp and expected data mismatch, diff: %#v", diff)
 	}
 }
