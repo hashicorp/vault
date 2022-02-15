@@ -147,8 +147,9 @@ func (p *pluginClient) Close() error {
 	return p.cleanupFunc()
 }
 
-// cleanupExternalPlugin will kill plugin processes and perform any necessary cleanup on the
-// externalPlugins map for multiplexed and non-multiplexed plugins.
+// cleanupExternalPlugin will kill plugin processes and perform any necessary
+// cleanup on the externalPlugins map for multiplexed and non-multiplexed
+// plugins.
 func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	extPlugin, ok := c.externalPlugins[name]
 	if !ok {
@@ -371,7 +372,9 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 
 		// Close the client and cleanup the plugin process
 		err = v5Client.Close()
-		c.logger.Error("error closing plugin client", "error", err)
+		if err != nil {
+			c.logger.Error("error closing plugin client", "error", err)
+		}
 
 		return multiplexingSupport, nil
 	}
@@ -381,7 +384,9 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		err = v4Client.Close()
-		c.logger.Error("error closing plugin client", "error", err)
+		if err != nil {
+			c.logger.Error("error closing plugin client", "error", err)
+		}
 
 		return false, nil
 	}
