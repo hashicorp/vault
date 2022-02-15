@@ -65,7 +65,7 @@ $ curl \
   unique throughout all types in the namespace.
 
 - `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
-  Supported options are `pkcs11`.
+  Supported options are `pkcs11`, `awskms`, and 'gcpckms'.
 
 - `allow_generate_key` `(string: "false")` - If no existing key can be found in the referenced backend, instructs
   Vault to generate a key within the backend.
@@ -133,6 +133,28 @@ $ curl \
   `"true"`). This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
 
+
+#### AWS KMS Parameters
+- `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in the
+`AWS_ACCESS_KEY_ID environment variable.
+- `region` `(string: <required>)`: The AWS region where the keys are stored (or will be stored). This
+may also be provided in the `AWS_REGION` environment variable.
+- `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in the
+`AWS_SECRET_ACCESS_KEY` environment variable.
+- `signature_algorithm` `(string: <required>)`: The algorithm to be used for signatures. The values
+are defined by AWS KMS here: https://docs.aws.amazon.com/sdk-for-go/api/service/kms/#pkg-constants.
+Supported values for RSA keys are:
+    - `RSASSA_PSS_SHA_256`
+    - `RSASSA_PSS_SHA_384`
+    - `RSASSA_PSS_SHA_512`
+    - `RSASSA_PKCS1_V1_5_SHA_256`
+    - `RSASSA_PKCS1_V1_5_SHA_384`
+    - `RSASSA_PKCS1_V1_5_SHA_512`
+Supported values for ECDSA keys are:
+    - `ECDSA_SHA_256`
+    - `ECDSA_SHA_384`
+    - `ECDSA_SHA_512`
+
 ## Read managed key
 
 This endpoint returns the managed key configuration at the given path.
@@ -145,6 +167,15 @@ This endpoint returns the managed key configuration at the given path.
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
 - `type` `(string: <required>)` – The backend type for the managed key.
+
+
+#### AWS KMS Parameters
+- `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in the
+`AWS_ACCESS_KEY_ID environment variable.
+- `region` `(string: <required>)`: The AWS region where the keys are stored (or will be stored). This
+may also be provided in the `AWS_REGION` environment variable.
+- `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in the
+`AWS_SECRET_ACCESS_KEY` environment variable.
 
 ### Sample Request
 
@@ -218,6 +249,14 @@ listed within any mount point's `allowed_managed_keys`.
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
 - `type` `(string: <required>)` – The backend type for the managed key.
+
+#### AWS KMS Parameters
+- `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in the
+`AWS_ACCESS_KEY_ID environment variable.`
+- `region` `(string: <required>)`: The AWS region where the keys are stored (or will be stored). This
+may also be provided in the `AWS_REGION` environment variable.
+- `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in the
+`AWS_SECRET_ACCESS_KEY` environment variable.
 
 ### Sample Request
 
