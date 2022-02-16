@@ -34,7 +34,7 @@
             @displayInherit={{true}}
             class="is-marginless"
           />
-          {{#if this.selectedNamespace}}
+          {{#if (not (is-empty this.authMethodOptions))}}
             <SearchSelect
               @id="auth-method-search-select"
               @options={{this.authMethodOptions}}
