@@ -92,7 +92,7 @@ module('Acceptance | mfa', function (hooks) {
     assert
       .dom('[data-test-mfa-description]')
       .includesText(
-        '2 methods are required for successful authentication.',
+        'Two methods are required for successful authentication.',
         'Mfa form displays with correct description'
       );
     assert.dom('[data-test-mfa-select]').doesNotExist('Selects do not render for single methods');
@@ -110,7 +110,7 @@ module('Acceptance | mfa', function (hooks) {
     assert
       .dom('[data-test-mfa-description]')
       .includesText(
-        '2 methods are required for successful authentication.',
+        'Two methods are required for successful authentication.',
         'Mfa form displays with correct description'
       );
     assert.dom('[data-test-mfa-select]').doesNotExist('Select is hidden for single method');
@@ -124,7 +124,7 @@ module('Acceptance | mfa', function (hooks) {
     assert
       .dom('[data-test-mfa-description]')
       .includesText(
-        '2 methods are required for successful authentication.',
+        'Two methods are required for successful authentication.',
         'Mfa form displays with correct description'
       );
     await this.select();

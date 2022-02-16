@@ -59,7 +59,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     assert
       .dom('[data-test-mfa-description]')
       .includesText(
-        '2 methods are required for successful authentication.',
+        'Two methods are required for successful authentication.',
         'Correct description renders for multiple constraints'
       );
   });
