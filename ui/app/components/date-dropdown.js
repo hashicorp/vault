@@ -35,21 +35,13 @@ export default class DateDropdown extends Component {
   selectStartMonth(month) {
     this.startMonth = month;
     // disables months if in the future
-    this.months.indexOf(month) >= this.currentMonth
-      ? (this.disabledYear = this.currentYear)
-      : (this.disabledYear = null);
+    this.disabledYear = this.months.indexOf(month) >= this.currentMonth ? this.currentYear : null;
   }
 
   @action
   selectStartYear(year) {
     this.startYear = year;
-    if (year === this.currentYear) {
-      // only enables past months
-      this.allowedMonthMax = this.currentMonth;
-    } else {
-      // if prior year selected, no months are disabled
-      this.allowedMonthMax = 12;
-    }
+    this.allowedMonthMax = year === this.currentYear ? this.currentMonth : 12;
   }
 
   @action
