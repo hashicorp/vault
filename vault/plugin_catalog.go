@@ -549,19 +549,20 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 
 	var multiplexingSupport bool
 
-	// If the plugin type is unknown, we want to attempt to determine the type
-	if pluginType == consts.PluginTypeUnknown {
-		// entryTmp should only be used for the below type check, it uses the
-		// full command instead of the relative command.
-		entryTmp := &pluginutil.PluginRunner{
-			Name:    name,
-			Command: commandFull,
-			Args:    args,
-			Env:     env,
-			Sha256:  sha256,
-			Builtin: false,
-		}
+	// entryTmp should only be used for the below type check, it uses the
+	// full command instead of the relative command.
+	entryTmp := &pluginutil.PluginRunner{
+		Name:    name,
+		Command: commandFull,
+		Args:    args,
+		Env:     env,
+		Sha256:  sha256,
+		Builtin: false,
+	}
 
+	// If the plugin type is unknown, we want to attempt to determine the type
+	switch pluginType {
+	case consts.PluginTypeUnknown:
 		pluginType, multiplexingSupport, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
 		if err != nil {
 			return nil, err
@@ -569,6 +570,12 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		if pluginType == consts.PluginTypeUnknown {
 			return nil, ErrPluginBadType
 		}
+	case consts.PluginTypeDatabase:
+		muxSupport, err := c.isDatabasePlugin(ctx, entryTmp)
+		if err != nil {
+			return nil, err
+		}
+		multiplexingSupport = muxSupport
 	}
 
 	entry := &pluginutil.PluginRunner{
