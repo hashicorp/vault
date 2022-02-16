@@ -32,6 +32,20 @@ export default class Current extends Component {
     return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
   }
 
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
+    }
+    return this.byNamespaceCurrent
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
+  }
+
   get countsIncludeOlderData() {
     let firstUpgrade = this.args.model.versionHistory[0];
     if (!firstUpgrade) {
@@ -58,21 +72,6 @@ export default class Current extends Component {
 
   get responseTimestamp() {
     return this.args.model.monthly?.responseTimestamp;
-  }
-
-  // HELPERS
-  get filteredActivity() {
-    const namespace = this.selectedNamespace;
-    const auth = this.selectedAuthMethod;
-    if (!namespace && !auth) {
-      return this.getActivityResponse;
-    }
-    if (!auth) {
-      return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
-    }
-    return this.byNamespaceCurrent
-      .find((ns) => ns.label === namespace)
-      .mounts?.find((mount) => mount.label === auth);
   }
 
   // ACTIONS
