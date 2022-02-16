@@ -6,44 +6,14 @@ import authPage from 'vault/tests/pages/auth';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
-import { generateConfigResponse, generateNamespaceBlock, SELECTORS, sendResponse } from '../helpers/clients';
+import {
+  generateConfigResponse,
+  generateCurrentMonthResponse,
+  SELECTORS,
+  sendResponse,
+} from '../helpers/clients';
 
 const searchSelect = create(ss);
-
-function generateCurrentMonthResponse(namespaceCount, skipMounts = false) {
-  if (!namespaceCount) {
-    return {
-      request_id: 'monthly-response-id',
-      data: {
-        by_namespace: [],
-        clients: 0,
-        entity_clients: 0,
-        non_entity_clients: 0,
-      },
-    };
-  }
-  // generate by_namespace data
-  const by_namespace = Array.from(Array(namespaceCount)).map((ns, idx) =>
-    generateNamespaceBlock(idx, skipMounts)
-  );
-  const counts = by_namespace.reduce(
-    (prev, curr) => {
-      return {
-        clients: prev.clients + curr.counts.clients,
-        entity_clients: prev.entity_clients + curr.counts.entity_clients,
-        non_entity_clients: prev.non_entity_clients + curr.counts.non_entity_clients,
-      };
-    },
-    { clients: 0, entity_clients: 0, non_entity_clients: 0 }
-  );
-  return {
-    request_id: 'monthly-response-id',
-    data: {
-      by_namespace,
-      ...counts,
-    },
-  };
-}
 
 module('Acceptance | client current', function (hooks) {
   setupApplicationTest(hooks);

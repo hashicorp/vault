@@ -54,7 +54,7 @@
     {{#if (or @model.startTimeFromLicense this.startTimeFromResponse)}}
       <div class="is-subtitle-gray has-bottom-margin-m">
         FILTERS
-        <Toolbar>
+        <Toolbar data-test-clients-filter-bar>
           <ToolbarFilters>
             <CalendarWidget
               @arrayOfMonths={{this.arrayOfMonths}}
@@ -77,7 +77,7 @@
                 class="is-marginless"
               />
             {{/if}}
-            {{#if this.selectedNamespace}}
+            {{#if (not (is-empty this.authMethodOptions))}}
               <SearchSelect
                 @id="auth-method-search-select"
                 @options={{this.authMethodOptions}}
