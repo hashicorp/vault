@@ -11,7 +11,7 @@
         {{or this.leftSideVersionSelected @model.currentVersion}}
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
-      <D.Content class="popup-menu-content">
+      <D.Content @defaultClass="popup-menu-content">
         <nav class="box menu">
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |leftSideSecretVersion|}}
@@ -54,7 +54,7 @@
         {{or this.rightSideVersionSelected this.rightSideVersionInit}}
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
-      <D.Content class="popup-menu-content">
+      <D.Content @defaultClass="popup-menu-content">
         <nav class="box menu">
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |rightSideSecretVersion|}}

@@ -83,6 +83,19 @@
                 @onChange={{this.selectNamespace}}
                 @placeholder={{"Filter by namespace"}}
                 @displayInherit={{true}}
+                class="is-marginless"
+              />
+            {{/if}}
+            {{#if this.selectedNamespace}}
+              <SearchSelect
+                @id="auth-method-search-select"
+                @options={{this.authMethodOptions}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{this.setAuthMethod}}
+                @placeholder={{"Filter by auth method"}}
+                @displayInherit={{true}}
               />
             {{/if}}
           </ToolbarFilters>
@@ -163,7 +176,7 @@
             {{or this.startMonth "Month"}}
             <Chevron @direction="down" @isButton={{true}} />
           </D.Trigger>
-          <D.Content class="popup-menu-content is-wide">
+          <D.Content @defaultClass="popup-menu-content is-wide">
             <nav class="box menu scroll">
               <ul class="menu-list">
                 {{#each this.months as |month index|}}
@@ -189,7 +202,7 @@
             {{or this.startYear "Year"}}
             <Chevron @direction="down" @isButton={{true}} />
           </D.Trigger>
-          <D.Content class="popup-menu-content is-wide">
+          <D.Content @defaultClass="popup-menu-content is-wide">
             <nav class="box menu">
               <ul class="menu-list">
                 {{#each this.years as |year|}}

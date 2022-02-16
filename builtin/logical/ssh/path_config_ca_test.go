@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -166,5 +167,75 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
+	}
+
+	// Delete the configured keys
+	caReq.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(context.Background(), caReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v, resp:%v", err, resp)
+	}
+}
+
+func createDeleteHelper(t *testing.T, b logical.Backend, config *logical.BackendConfig, index int, keyType string, keyBits int) {
+	// Check that we can create a new key of the specified type
+	caReq := &logical.Request{
+		Path:      "config/ca",
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+	}
+	caReq.Data = map[string]interface{}{
+		"generate_signing_key": true,
+		"key_type":             keyType,
+		"key_bits":             keyBits,
+	}
+	resp, err := b.HandleRequest(context.Background(), caReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad case %v: err: %v, resp:%v", index, err, resp)
+	}
+	if !strings.Contains(resp.Data["public_key"].(string), caReq.Data["key_type"].(string)) {
+		t.Fatalf("bad case %v: expected public key of type %v but was %v", index, caReq.Data["key_type"], resp.Data["public_key"])
+	}
+
+	// Delete the configured keys
+	caReq.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(context.Background(), caReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad case %v: err: %v, resp:%v", index, err, resp)
+	}
+}
+
+func TestSSH_ConfigCAKeyTypes(t *testing.T) {
+	var err error
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	cases := []struct {
+		keyType string
+		keyBits int
+	}{
+		{"ssh-rsa", 2048},
+		{"ssh-rsa", 4096},
+		{"ssh-rsa", 0},
+		{"rsa", 2048},
+		{"rsa", 4096},
+		{"ecdsa-sha2-nistp256", 0},
+		{"ecdsa-sha2-nistp384", 0},
+		{"ecdsa-sha2-nistp521", 0},
+		{"ec", 256},
+		{"ec", 384},
+		{"ec", 521},
+		{"ec", 0},
+		{"ssh-ed25519", 0},
+		{"ed25519", 0},
+	}
+
+	for index, scenario := range cases {
+		createDeleteHelper(t, b, config, index, scenario.keyType, scenario.keyBits)
 	}
 }
