@@ -3,9 +3,14 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
+import getStorage from 'vault/lib/token-storage';
+
+const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
 export default class History extends Component {
-  // TODO CMB alphabetize and delete unused vars (particularly @tracked)
+  @service store;
+  @service version;
+
   arrayOfMonths = [
     'January',
     'February',
@@ -26,7 +31,7 @@ export default class History extends Component {
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
 
-  // needed for startTime modal picker
+  // FOR START DATE EDIT & MODAL //
   months = Array.from({ length: 12 }, (item, i) => {
     return new Date(0, i).toLocaleString('en-US', { month: 'long' });
   });
@@ -34,33 +39,68 @@ export default class History extends Component {
     return new Date().getFullYear() - i;
   });
 
-  @service store;
-
-  @tracked queriedActivityResponse = null;
-  @tracked barChartSelection = false;
   @tracked isEditStartMonthOpen = false;
-  @tracked responseRangeDiffMessage = null;
-  @tracked startTimeRequested = null;
-  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
-  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
   @tracked startMonth = null;
   @tracked startYear = null;
-  @tracked selectedNamespace = null;
-  @tracked noActivityDate = '';
-  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => {
-    return { name: namespace['label'], id: namespace['label'] };
-  });
+
+  // FOR HISTORY COMPONENT //
+
+  // RESPONSE
+  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
+  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
+  @tracked startTimeRequested = null;
+  @tracked queriedActivityResponse = null;
+
+  // VERSION/UPGRADE INFO
   @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
   @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
+
+  // SEARCH SELECT
+  @tracked selectedNamespace = null;
+  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => ({
+    name: namespace.label,
+    id: namespace.label,
+  }));
+
+  // TEMPLATE MESSAGING
+  @tracked noActivityDate = '';
+  @tracked responseRangeDiffMessage = null;
+  @tracked isLoadingQuery = false;
+
+  @tracked selectedAuthMethod = null;
+  @tracked authMethodOptions = [];
+
+  get versionText() {
+    return this.version.isEnterprise
+      ? {
+          label: 'Billing start month',
+          description:
+            'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
+          title: 'No billing start date found',
+          message:
+            'In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate.',
+        }
+      : {
+          label: 'Client counting start date',
+          description:
+            'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
+          title: 'No start date found',
+          message:
+            'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.',
+        };
+  }
 
   // on init API response uses license start_date, getter updates when user queries dates
   get getActivityResponse() {
     return this.queriedActivityResponse || this.args.model.activity;
   }
 
+  get hasAttributionData() {
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
+  }
+
   get startTimeDisplay() {
     if (!this.startTimeFromResponse) {
-      // otherwise will return date of new Date(null)
       return null;
     }
     let month = this.startTimeFromResponse[1];
@@ -70,7 +110,6 @@ export default class History extends Component {
 
   get endTimeDisplay() {
     if (!this.endTimeFromResponse) {
-      // otherwise will return date of new Date(null)
       return null;
     }
     let month = this.endTimeFromResponse[1];
@@ -87,16 +126,13 @@ export default class History extends Component {
 
   // top level TOTAL client counts for given date range
   get totalUsageCounts() {
-    return this.selectedNamespace
-      ? this.filterByNamespace(this.selectedNamespace)
-      : this.getActivityResponse.total;
+    return this.selectedNamespace ? this.filteredActivity : this.getActivityResponse.total;
   }
 
   // total client data for horizontal bar chart in attribution component
   get totalClientsData() {
     if (this.selectedNamespace) {
-      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
-      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
+      return this.filteredActivity?.mounts || null;
     } else {
       return this.getActivityResponse?.byNamespace;
     }
@@ -112,28 +148,14 @@ export default class History extends Component {
       return false;
     }
     let versionDate = new Date(firstUpgrade.timestampInstalled);
-    // compare against this startTimeFromResponse to show message or not.
-    return isAfter(versionDate, new Date(this.startTimeFromResponse)) ? versionDate : false;
-  }
-
-  // HELPERS
-  areArraysTheSame(a1, a2) {
-    return (
-      a1 === a2 ||
-      (a1 !== null &&
-        a2 !== null &&
-        a1.length === a2.length &&
-        a1
-          .map(function (val, idx) {
-            return val === a2[idx];
-          })
-          .reduce(function (prev, cur) {
-            return prev && cur;
-          }, true))
+    let startTimeFromResponseAsDateObject = new Date(
+      Number(this.startTimeFromResponse[0]),
+      this.startTimeFromResponse[1]
     );
+    // compare against this startTimeFromResponse to show message or not.
+    return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
   }
 
-  // ACTIONS
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
@@ -144,10 +166,10 @@ export default class History extends Component {
       this.startTimeRequested = this.args.model.startTimeFromLicense;
       this.endTimeRequested = null;
     }
-    // clicked "Edit" Billing start month in Dashboard which opens a modal.
+    // clicked "Edit" Billing start month in History which opens a modal.
     if (dateType === 'startTime') {
       let monthIndex = this.arrayOfMonths.indexOf(month);
-      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021) // TODO CHANGE TO ARRAY
+      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
       this.endTimeRequested = null;
     }
     // clicked "Custom End Month" from the calendar-widget
@@ -158,6 +180,7 @@ export default class History extends Component {
     }
 
     try {
+      this.isLoadingQuery = true;
       let response = await this.store.queryRecord('clients/activity', {
         start_time: this.startTimeRequested,
         end_time: this.endTimeRequested,
@@ -167,20 +190,30 @@ export default class History extends Component {
         this.startTimeFromResponse = this.startTimeRequested;
         this.noActivityDate = this.startTimeDisplay;
       } else {
-        // note: this.startTimeDisplay (getter) is updated by this.startTimeFromResponse
+        // note: this.startTimeDisplay (getter) is updated by the @tracked startTimeFromResponse
         this.startTimeFromResponse = response.formattedStartTime;
         this.endTimeFromResponse = response.formattedEndTime;
+        this.storage().setItem(INPUTTED_START_DATE, this.startTimeFromResponse);
       }
-      // compare if the response and what you requested are the same. If they are not throw a warning.
-      // this only gets triggered if the data was returned, which does not happen if the user selects a startTime after for which we have data. That's an adapter error and is captured differently.
-      if (!this.areArraysTheSame(this.startTimeFromResponse, this.startTimeRequested)) {
+      this.queriedActivityResponse = response;
+      // compare if the response startTime comes after the requested startTime. If true throw a warning.
+      // only display if they selected a startTime
+      if (
+        dateType === 'startTime' &&
+        isAfter(
+          new Date(this.getActivityResponse.startTime),
+          new Date(this.startTimeRequested[0], this.startTimeRequested[1])
+        )
+      ) {
         this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
       } else {
         this.responseRangeDiffMessage = null;
       }
-      this.queriedActivityResponse = response;
     } catch (e) {
-      // ARG TODO handle error
+      // TODO CMB surface API errors when user selects start date after end date
+      return e;
+    } finally {
+      this.isLoadingQuery = false;
     }
   }
 
@@ -193,8 +226,25 @@ export default class History extends Component {
   selectNamespace([value]) {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
+    if (!value) {
+      // on clear, also make sure auth method is cleared
+      this.selectedAuthMethod = null;
+    } else {
+      // Side effect: set auth namespaces
+      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+        id: mount.label,
+        name: mount.label,
+      }));
+      this.authMethodOptions = mounts;
+    }
   }
 
+  @action
+  setAuthMethod([authMount]) {
+    this.selectedAuthMethod = authMount;
+  }
+
+  // FOR START DATE MODAL
   @action
   selectStartMonth(month) {
     this.startMonth = month;
@@ -205,8 +255,21 @@ export default class History extends Component {
     this.startYear = year;
   }
 
-  // HELPERS
-  filterByNamespace(namespace) {
-    return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    }
+    return this.getActivityResponse.byNamespace
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
+  }
+
+  storage() {
+    return getStorage();
   }
 }

@@ -1070,8 +1070,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // handleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
-	currentTime := time.Now()
-	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime)
+	currentTime := time.Now().UTC()
+	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime, false)
 	if err != nil {
 		return fmt.Errorf("error storing vault version: %w", err)
 	}

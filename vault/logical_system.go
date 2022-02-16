@@ -4245,6 +4245,41 @@ type HAStatusNode struct {
 	LastEcho       *time.Time `json:"last_echo"`
 }
 
+func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	versions := make([]VaultVersion, 0)
+	respKeys := make([]string, 0)
+
+	for versionString, ts := range b.Core.versionTimestamps {
+		versions = append(versions, VaultVersion{
+			Version:            versionString,
+			TimestampInstalled: ts,
+		})
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].TimestampInstalled.Before(versions[j].TimestampInstalled)
+	})
+
+	respKeyInfo := map[string]interface{}{}
+
+	for i, v := range versions {
+		respKeys = append(respKeys, v.Version)
+
+		entry := map[string]interface{}{
+			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"previous_version":    nil,
+		}
+
+		if i > 0 {
+			entry["previous_version"] = versions[i-1].Version
+		}
+
+		respKeyInfo[v.Version] = entry
+	}
+
+	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4263,7 +4298,7 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
-		return fmt.Errorf("invalid listing visilibity type")
+		return fmt.Errorf("invalid listing visibility type")
 	}
 
 	return nil
@@ -5035,5 +5070,14 @@ This path responds to the following HTTP methods.
 	"list-leases": {
 		"List leases associated with this Vault cluster",
 		"Requires sudo capability. List leases associated with this Vault cluster",
+	},
+	"version-history": {
+		"List historical version changes sorted by installation time in ascending order.",
+		`
+This path responds to the following HTTP methods.
+
+    LIST /
+        Returns a list historical version changes sorted by installation time in ascending order.
+		`,
 	},
 }

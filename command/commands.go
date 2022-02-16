@@ -653,6 +653,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"version-history": func() (cli.Command, error) {
+			return &VersionHistoryCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"write": func() (cli.Command, error) {
 			return &WriteCommand{
 				BaseCommand: getBaseCommand(),
