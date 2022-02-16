@@ -95,10 +95,10 @@ export default Component.extend(FocusOnInsertMixin, {
 
     handleAutoRotateChange(ttlObj) {
       if (ttlObj.enabled) {
-        set(this.key, 'autoRotateInterval', ttlObj.goSafeTimeString);
+        set(this.key, 'autoRotatePeriod', ttlObj.goSafeTimeString);
         this.set('autoRotateInvalid', ttlObj.seconds < 3600);
       } else {
-        set(this.key, 'autoRotateInterval', 0);
+        set(this.key, 'autoRotatePeriod', 0);
       }
     },
 
