@@ -79,7 +79,7 @@ func TestTransit_Trim(t *testing.T) {
 	}
 	doErrReq(t, req)
 
-	// Set min_encryption_version to 4
+	// Set min_encryption_version to 0
 	req.Path = "keys/aes/config"
 	req.Data = map[string]interface{}{
 		"min_encryption_version": 0,
