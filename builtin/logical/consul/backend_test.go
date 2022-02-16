@@ -22,7 +22,7 @@ func TestBackend_Config_Access(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendConfigAccess(t, "1.3.0")
+			testBackendConfigAccess(t, "1.3.1")
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
@@ -82,7 +82,7 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendRenewRevoke(t, "1.3.0")
+			testBackendRenewRevoke(t, "1.3.1")
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
@@ -118,7 +118,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,14 +128,14 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		"policy": base64.StdEncoding.EncodeToString([]byte(testPolicy)),
 		"lease":  "6h",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +223,7 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,14 +233,14 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		"policies": []string{"test"},
 		"lease":    "6h",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +335,7 @@ func TestBackend_LocalToken(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +346,7 @@ func TestBackend_LocalToken(t *testing.T) {
 		"ttl":      "6h",
 		"local":    false,
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,14 +357,14 @@ func TestBackend_LocalToken(t *testing.T) {
 		"ttl":      "6h",
 		"local":    true,
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -447,12 +447,14 @@ func TestBackend_Management(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendManagement(t, "1.3.0")
+			testBackendManagement(t, "1.3.1")
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
 			testBackendManagement(t, "1.4.4")
 		})
+
+		testBackendManagement(t, "1.10.8")
 	})
 }
 
@@ -487,15 +489,16 @@ func TestBackend_Basic(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendBasic(t, "1.3.0")
+			testBackendBasic(t, "1.3.1")
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
 			t.Run("legacy", func(t *testing.T) {
 				t.Parallel()
-				testBackendRenewRevoke(t, "1.4.4")
+				testBackendBasic(t, "1.4.4")
 			})
-			testBackendBasic(t, "1.4.4")
+
+			testBackendBasic(t, "1.10.8")
 		})
 	})
 }
@@ -724,7 +727,7 @@ func TestBackend_Roles(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,14 +738,14 @@ func TestBackend_Roles(t *testing.T) {
 		"consul_roles": []string{"role-test"},
 		"lease":        "6h",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test-consul-roles"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -791,7 +794,7 @@ func TestBackend_Roles(t *testing.T) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -853,7 +856,7 @@ func testBackendEntNamespace(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -865,14 +868,14 @@ func testBackendEntNamespace(t *testing.T) {
 		"lease":            "6h",
 		"consul_namespace": "ns1",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test-ns"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -926,7 +929,7 @@ func testBackendEntNamespace(t *testing.T) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -973,7 +976,7 @@ func testBackendEntPartition(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -985,14 +988,14 @@ func testBackendEntPartition(t *testing.T) {
 		"lease":     "6h",
 		"partition": "part1",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test-part"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1046,7 +1049,7 @@ func testBackendEntPartition(t *testing.T) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
