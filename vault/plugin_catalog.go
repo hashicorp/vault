@@ -551,13 +551,17 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 
 	// entryTmp should only be used for the below type check, it uses the
 	// full command instead of the relative command.
+	//
+	// At this point we don't know if the plugin can be multiplexed or not,
+	// so we pass in false and let the checks tell us that
 	entryTmp := &pluginutil.PluginRunner{
-		Name:    name,
-		Command: commandFull,
-		Args:    args,
-		Env:     env,
-		Sha256:  sha256,
-		Builtin: false,
+		Name:                name,
+		Command:             commandFull,
+		Args:                args,
+		Env:                 env,
+		Sha256:              sha256,
+		Builtin:             false,
+		MultiplexingSupport: false,
 	}
 
 	// If the plugin type is unknown, we want to attempt to determine the type
