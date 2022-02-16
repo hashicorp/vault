@@ -1065,7 +1065,14 @@ func (b *AESGCMBarrier) Decrypt(_ context.Context, key string, ciphertext []byte
 		return nil, ErrBarrierSealed
 	}
 
+	if len(ciphertext) == 0 {
+		return nil, fmt.Errorf("empty ciphertext")
+	}
+
 	// Verify the term
+	if len(ciphertext) < 4 {
+		return nil, fmt.Errorf("invalid ciphertext term")
+	}
 	term := binary.BigEndian.Uint32(ciphertext[:4])
 
 	// Get the GCM by term
