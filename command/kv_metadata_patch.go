@@ -151,7 +151,7 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	path = addPrefixToKVPath(path, mountPath, "metadata")
 
 	data := map[string]interface{}{}
 

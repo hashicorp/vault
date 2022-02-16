@@ -7,14 +7,15 @@
     {{or this.startMonth "Month"}}
     <Chevron @direction="down" @isButton={{true}} />
   </D.Trigger>
-  <D.Content class="popup-menu-content is-wide">
+  <D.Content @defaultClass="popup-menu-content is-wide">
     <nav class="box menu scroll">
       <ul class="menu-list">
-        {{#each this.months as |month|}}
+        {{#each this.months as |month index|}}
           <button
             type="button"
-            class="link"
-            {{on "click" (queue (fn this.selectStartMonth month) (action D.actions.close))}}
+            class="button link"
+            disabled={{if (lt index this.allowedMonthMax) false true}}
+            {{on "click" (fn this.selectStartMonth month D.actions)}}
           >
             {{month}}
           </button>
@@ -32,11 +33,16 @@
     {{or this.startYear "Year"}}
     <Chevron @direction="down" @isButton={{true}} />
   </D.Trigger>
-  <D.Content class="popup-menu-content is-wide">
+  <D.Content @defaultClass="popup-menu-content is-wide">
     <nav class="box menu">
       <ul class="menu-list">
         {{#each this.years as |year|}}
-          <button type="button" class="link" {{on "click" (queue (fn this.selectStartYear year) (action D.actions.close))}}>
+          <button
+            type="button"
+            class="button link"
+            disabled={{if (eq year this.disabledYear) true false}}
+            {{on "click" (fn this.selectStartYear year D.actions)}}
+          >
             {{year}}
           </button>
         {{/each}}
@@ -48,7 +54,7 @@
   type="button"
   class="button is-primary"
   disabled={{if (and this.startMonth this.startYear) false true}}
-  {{on "click" (fn @handleDateSelection this.startMonth this.startYear @name)}}
+  {{on "click" this.saveDateSelection}}
 >
-  Save
+  {{or @submitText "Submit"}}
 </button>

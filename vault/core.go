@@ -310,6 +310,10 @@ type Core struct {
 	// change underneath a calling function
 	mountsLock sync.RWMutex
 
+	// mountMigrationTracker tracks past and ongoing remount operations
+	// against their migration ids
+	mountMigrationTracker *sync.Map
+
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
@@ -853,6 +857,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableAutopilot:               conf.DisableAutopilot,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:          &sync.Map{},
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -1081,8 +1086,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // handleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
-	currentTime := time.Now()
-	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime)
+	currentTime := time.Now().UTC()
+	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime, false)
 	if err != nil {
 		return fmt.Errorf("error storing vault version: %w", err)
 	}

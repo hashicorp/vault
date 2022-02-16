@@ -2,6 +2,7 @@ package transit_test
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -176,10 +177,17 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 				if resp == nil {
 					t.Fatal("expected non-nil response")
 				}
-				got := resp.Data["auto_rotate_interval"]
-				want := test.expectedValue.String()
+				gotRaw, ok := resp.Data["auto_rotate_interval"].(json.Number)
+				if !ok {
+					t.Fatal("returned value is of unexpected type")
+				}
+				got, err := gotRaw.Int64()
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := int64(test.expectedValue.Seconds())
 				if got != want {
-					t.Fatalf("incorrect auto_rotate_interval returned, got: %s, want: %s", got, want)
+					t.Fatalf("incorrect auto_rotate_interval returned, got: %d, want: %d", got, want)
 				}
 			}
 		})

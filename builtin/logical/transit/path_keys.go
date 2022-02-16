@@ -238,7 +238,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
-			"auto_rotate_interval":   p.AutoRotateInterval.String(),
+			"auto_rotate_interval":   int64(p.AutoRotateInterval.Seconds()),
 		},
 	}
 
