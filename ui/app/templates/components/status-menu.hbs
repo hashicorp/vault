@@ -11,7 +11,7 @@
     </div>
     <Chevron @direction="down" class="has-text-white is-status-chevron" />
   </d.Trigger>
-  <d.Content class={{concat "status-menu-content status-menu-content-" this.type}}>
+  <d.Content @defaultClass={{concat "status-menu-content status-menu-content-" this.type}}>
     {{#if (eq this.type "user")}}
       {{#if (and this.cluster.name this.auth.currentToken)}}
         <AuthInfo @activeClusterName={{this.cluster.name}} @onLinkClick={{action this.onLinkClick}} />

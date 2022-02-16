@@ -23,7 +23,7 @@ hyphen-separated octal`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRevokeWrite,
+			logical.UpdateOperation: b.metricsWrap("revoke", noRole, b.pathRevokeWrite),
 		},
 
 		HelpSynopsis:    pathRevokeHelpSyn,
@@ -44,7 +44,7 @@ func pathRotateCRL(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *roleEntry) (*logical.Response, error) {
 	serial := data.Get("serial_number").(string)
 	if len(serial) == 0 {
 		return logical.ErrorResponse("The serial number must be provided"), nil

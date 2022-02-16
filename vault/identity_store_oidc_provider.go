@@ -2,14 +2,11 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"net/http"
 	"net/url"
 	"sort"
@@ -29,13 +26,15 @@ import (
 
 const (
 	// OIDC-related constants
-	openIDScope             = "openid"
-	scopesDelimiter         = " "
-	accessTokenScopesMeta   = "scopes"
-	accessTokenClientIDMeta = "client_id"
-	clientIDLength          = 32
-	clientSecretLength      = 64
-	clientSecretPrefix      = "hvo_secret_"
+	openIDScope              = "openid"
+	scopesDelimiter          = " "
+	accessTokenScopesMeta    = "scopes"
+	accessTokenClientIDMeta  = "client_id"
+	clientIDLength           = 32
+	clientSecretLength       = 64
+	clientSecretPrefix       = "hvo_secret_"
+	codeChallengeMethodPlain = "plain"
+	codeChallengeMethodS256  = "S256"
 
 	// Storage path constants
 	oidcProviderPrefix = "oidc_provider/"
@@ -98,10 +97,29 @@ type client struct {
 	Key            string        `json:"key"`
 	IDTokenTTL     time.Duration `json:"id_token_ttl"`
 	AccessTokenTTL time.Duration `json:"access_token_ttl"`
+	Type           clientType    `json:"type"`
 
 	// Generated values that are used in OIDC endpoints
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
+}
+
+type clientType int
+
+const (
+	confidential clientType = iota
+	public
+)
+
+func (k clientType) String() string {
+	switch k {
+	case confidential:
+		return "confidential"
+	case public:
+		return "public"
+	default:
+		return "unknown"
+	}
 }
 
 type provider struct {
@@ -130,13 +148,15 @@ type providerDiscovery struct {
 }
 
 type authCodeCacheEntry struct {
-	provider    string
-	clientID    string
-	entityID    string
-	redirectURI string
-	nonce       string
-	scopes      []string
-	authTime    time.Time
+	provider            string
+	clientID            string
+	entityID            string
+	redirectURI         string
+	nonce               string
+	scopes              []string
+	authTime            time.Time
+	codeChallenge       string
+	codeChallengeMethod string
 }
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -258,6 +278,11 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeDurationSecond,
 					Description: "The time-to-live for access tokens obtained by the client.",
 					Default:     "24h",
+				},
+				"client_type": {
+					Type:        framework.TypeString,
+					Description: "The client type based on its ability to maintain confidentiality of credentials. The following client types are supported: 'confidential', 'public'. Defaults to 'confidential'.",
+					Default:     "confidential",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -408,6 +433,15 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeInt,
 					Description: "The allowable elapsed time in seconds since the last time the end-user was actively authenticated.",
 				},
+				"code_challenge": {
+					Type:        framework.TypeString,
+					Description: "The code challenge derived from the code verifier.",
+				},
+				"code_challenge_method": {
+					Type:        framework.TypeString,
+					Description: "The method that was used to derive the code challenge. The following methods are supported: 'S256', 'plain'. Defaults to 'plain'.",
+					Default:     codeChallengeMethodPlain,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -446,10 +480,23 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Description: "The callback location where the authentication response was sent.",
 					Required:    true,
 				},
-				// The client_id and client_secret are provided to the token endpoint via
-				// the client_secret_basic authentication method, which uses the HTTP Basic
-				// authentication scheme. See the OIDC spec for details at:
+				"code_verifier": {
+					Type:        framework.TypeString,
+					Description: "The code verifier associated with the authorization code.",
+				},
+				// For confidential clients, the client_id and client_secret are provided to
+				// the token endpoint via the 'client_secret_basic' authentication method, which
+				// uses the HTTP Basic authentication scheme. See the OIDC spec for details at:
 				// https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+
+				// For public clients, the client_id is required and a client_secret does
+				// not exist. This means that public clients use the 'none' authentication
+				// method. However, public clients are required to use Proof Key for Code
+				// Exchange (PKCE) when using the authorization code flow.
+				"client_id": {
+					Type:        framework.TypeString,
+					Description: "The ID of the requesting client.",
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
@@ -987,6 +1034,22 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.AccessTokenTTL = time.Duration(d.Get("access_token_ttl").(int)) * time.Second
 	}
 
+	if clientTypeRaw, ok := d.GetOk("client_type"); ok {
+		clientType := clientTypeRaw.(string)
+		if req.Operation == logical.UpdateOperation && client.Type.String() != clientType {
+			return logical.ErrorResponse("client_type modification is not allowed"), nil
+		}
+
+		switch clientType {
+		case confidential.String():
+			client.Type = confidential
+		case public.String():
+			client.Type = public
+		default:
+			return logical.ErrorResponse("invalid client_type %q", clientType), nil
+		}
+	}
+
 	if client.ClientID == "" {
 		// generate client_id
 		clientID, err := base62.Random(clientIDLength)
@@ -996,7 +1059,8 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.ClientID = clientID
 	}
 
-	if client.ClientSecret == "" {
+	// client secrets are only generated for confidential clients
+	if client.Type == confidential && client.ClientSecret == "" {
 		// generate client_secret
 		clientSecret, err := base62.Random(clientSecretLength)
 		if err != nil {
@@ -1043,7 +1107,7 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"redirect_uris":    client.RedirectURIs,
 			"assignments":      client.Assignments,
@@ -1051,9 +1115,15 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 			"id_token_ttl":     int64(client.IDTokenTTL.Seconds()),
 			"access_token_ttl": int64(client.AccessTokenTTL.Seconds()),
 			"client_id":        client.ClientID,
-			"client_secret":    client.ClientSecret,
+			"client_type":      client.Type.String(),
 		},
-	}, nil
+	}
+
+	if client.Type == confidential {
+		resp.Data["client_secret"] = client.ClientSecret
+	}
+
+	return resp, nil
 }
 
 // pathOIDCDeleteClient is used to delete a client
@@ -1423,7 +1493,7 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 
 	// Collect the key IDs
 	var keyIDs []string
-	for name, _ := range keyNames {
+	for name := range keyNames {
 		entry, err := s.Get(ctx, namedKeyConfigPath+name)
 		if err != nil {
 			return nil, err
@@ -1513,7 +1583,8 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	if redirectURI == "" {
 		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
 	}
-	if !strutil.StrListContains(client.RedirectURIs, redirectURI) {
+
+	if !validRedirect(redirectURI, client.RedirectURIs) {
 		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
@@ -1561,6 +1632,37 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		redirectURI: redirectURI,
 		nonce:       nonce,
 		scopes:      scopes,
+	}
+
+	// Validate the Proof Key for Code Exchange (PKCE) code challenge and code challenge
+	// method. PKCE is required for public clients and optional for confidential clients.
+	// See details at https://datatracker.ietf.org/doc/html/rfc7636.
+	codeChallengeRaw, okCodeChallenge := d.GetOk("code_challenge")
+	if !okCodeChallenge && client.Type == public {
+		return authResponse("", state, ErrAuthInvalidRequest, "PKCE is required for public clients")
+	}
+	if okCodeChallenge {
+		codeChallenge := codeChallengeRaw.(string)
+
+		// Validate the code challenge method
+		codeChallengeMethod := d.Get("code_challenge_method").(string)
+		switch codeChallengeMethod {
+		case codeChallengeMethodPlain, codeChallengeMethodS256:
+		case "":
+			codeChallengeMethod = codeChallengeMethodPlain
+		default:
+			return authResponse("", state, ErrAuthInvalidRequest, "invalid code_challenge_method")
+		}
+
+		// Validate the code challenge
+		if len(codeChallenge) < 43 || len(codeChallenge) > 128 {
+			return authResponse("", state, ErrAuthInvalidRequest, "invalid code_challenge")
+		}
+
+		// Associate the code challenge and method with the authorization code.
+		// This will be used to verify the code verifier in the token exchange.
+		authCodeEntry.codeChallenge = codeChallenge
+		authCodeEntry.codeChallengeMethod = codeChallengeMethod
 	}
 
 	// Validate the optional max_age parameter to check if an active re-authentication
@@ -1664,13 +1766,13 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenInvalidRequest, "provider not found")
 	}
 
-	// Authenticate the client using the client_secret_basic authentication method.
-	// The authentication method uses the HTTP Basic authentication scheme. Details at
-	// https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
-	headerReq := &http.Request{Header: req.Headers}
-	clientID, clientSecret, ok := headerReq.BasicAuth()
-	if !ok {
-		return tokenResponse(nil, ErrTokenInvalidRequest, "client failed to authenticate")
+	// Get the client ID
+	clientID, clientSecret, okBasicAuth := basicAuth(req)
+	if !okBasicAuth {
+		clientID = d.Get("client_id").(string)
+		if clientID == "" {
+			return tokenResponse(nil, ErrTokenInvalidRequest, "client_id parameter is required")
+		}
 	}
 	client, err := i.clientByID(ctx, req.Storage, clientID)
 	if err != nil {
@@ -1680,7 +1782,12 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		i.Logger().Debug("client failed to authenticate with client not found", "client_id", clientID)
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
-	if subtle.ConstantTimeCompare([]byte(client.ClientSecret), []byte(clientSecret)) == 0 {
+
+	// Authenticate the client using the client_secret_basic authentication method if it's a
+	// confidential client. The authentication method uses the HTTP Basic authentication scheme.
+	// Details at https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+	if client.Type == confidential &&
+		subtle.ConstantTimeCompare([]byte(client.ClientSecret), []byte(clientSecret)) == 0 {
 		i.Logger().Debug("client failed to authenticate with invalid client secret", "client_id", clientID)
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
@@ -1771,6 +1878,28 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	}
 	if !isMember {
 		return tokenResponse(nil, ErrTokenInvalidRequest, "identity entity not authorized by client assignment")
+	}
+
+	// Validate the PKCE code verifier. See details at
+	// https://datatracker.ietf.org/doc/html/rfc7636#section-4.6.
+	usedPKCE := authCodeUsedPKCE(authCodeEntry)
+	codeVerifier := d.Get("code_verifier").(string)
+	switch {
+	case !usedPKCE && client.Type == public:
+		return tokenResponse(nil, ErrTokenInvalidRequest, "PKCE is required for public clients")
+	case !usedPKCE && codeVerifier != "":
+		return tokenResponse(nil, ErrTokenInvalidRequest, "unexpected code_verifier for token exchange")
+	case usedPKCE && codeVerifier == "":
+		return tokenResponse(nil, ErrTokenInvalidRequest, "expected code_verifier for token exchange")
+	case usedPKCE:
+		codeChallenge, err := computeCodeChallenge(codeVerifier, authCodeEntry.codeChallengeMethod)
+		if err != nil {
+			return tokenResponse(nil, ErrTokenServerError, err.Error())
+		}
+
+		if subtle.ConstantTimeCompare([]byte(codeChallenge), []byte(authCodeEntry.codeChallenge)) == 0 {
+			return tokenResponse(nil, ErrTokenInvalidGrant, "invalid code_verifier for token exchange")
+		}
 	}
 
 	// The access token is a Vault batch token with a policy that only
@@ -2158,39 +2287,6 @@ func (i *IdentityStore) populateScopeTemplates(ctx context.Context, s logical.St
 	return populatedTemplates, false, nil
 }
 
-// computeHashClaim computes the hash value to be used for the at_hash
-// and c_hash claims. For details on how this value is computed and the
-// class of attacks it's used to prevent, see the spec at
-// - https://openid.net/specs/openid-connect-core-1_0.html#CodeIDToken
-// - https://openid.net/specs/openid-connect-core-1_0.html#HybridIDToken
-// - https://openid.net/specs/openid-connect-core-1_0.html#TokenSubstitution
-func computeHashClaim(alg string, input string) (string, error) {
-	signatureAlgToHash := map[jose.SignatureAlgorithm]func() hash.Hash{
-		jose.RS256: sha256.New,
-		jose.RS384: sha512.New384,
-		jose.RS512: sha512.New,
-		jose.ES256: sha256.New,
-		jose.ES384: sha512.New384,
-		jose.ES512: sha512.New,
-
-		// We use the Ed25519 curve key for EdDSA, which uses
-		// SHA-512 for its digest algorithm. See details at
-		// https://bitbucket.org/openid/connect/issues/1125.
-		jose.EdDSA: sha512.New,
-	}
-
-	newHash, ok := signatureAlgToHash[jose.SignatureAlgorithm(alg)]
-	if !ok {
-		return "", fmt.Errorf("unsupported signature algorithm: %q", alg)
-	}
-	h := newHash()
-
-	// Writing to the hash will never return an error
-	_, _ = h.Write([]byte(input))
-	sum := h.Sum(nil)
-	return base64.RawURLEncoding.EncodeToString(sum[:len(sum)/2]), nil
-}
-
 // entityHasAssignment returns true if the entity is enabled and a member of any
 // of the assignments' groups or entities. Otherwise, returns false or an error.
 func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Storage, entity *identity.Entity, assignments []string) (bool, error) {
@@ -2199,12 +2295,12 @@ func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Stora
 	}
 
 	// Get the group IDs that the entity is a member of
-	entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
+	groups, inheritedGroups, err := i.groupsByEntityID(entity.GetID())
 	if err != nil {
 		return false, err
 	}
 	entityGroupIDs := make(map[string]bool)
-	for _, group := range entityGroups {
+	for _, group := range append(groups, inheritedGroups...) {
 		entityGroupIDs[group.GetID()] = true
 	}
 

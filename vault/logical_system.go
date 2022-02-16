@@ -153,6 +153,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				expirationSubPath,
 				countersSubPath,
 			},
+
+			SealWrapStorage: []string{
+				managedKeyRegistrySubPath,
+			},
 		},
 	}
 
@@ -669,6 +673,9 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 	aEntry, err := b.Core.tokenStore.lookupByAccessor(ctx, accessor, false, false)
 	if err != nil {
 		return nil, err
+	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
 	}
 
 	d.Raw["token"] = aEntry.TokenID
@@ -1930,6 +1937,40 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
+
+	for _, entry := range b.Core.auth.Entries {
+		// Only show entry for current namespace
+		if entry.Namespace().Path != ns.Path || entry.Path != path {
+			continue
+		}
+
+		cont, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		if err != nil {
+			return nil, err
+		}
+		if cont {
+			continue
+		}
+
+		return &logical.Response{
+			Data: mountInfo(entry),
+		}, nil
+	}
+
+	return logical.ErrorResponse("No auth engine at %s", path), nil
+}
+
 func expandStringValsWithCommas(configMap map[string]interface{}) error {
 	configParamNameSlice := []string{
 		"audit_non_hmac_request_keys",
@@ -2341,6 +2382,16 @@ const (
 	minPasswordLength = 4
 	maxPasswordLength = 100
 )
+
+// handlePoliciesPasswordList returns the list of password policies
+func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	keys, err := req.Storage.List(ctx, "password_policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(keys), nil
+}
 
 // handlePoliciesPasswordSet saves/updates password policies
 func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
@@ -4194,6 +4245,41 @@ type HAStatusNode struct {
 	LastEcho       *time.Time `json:"last_echo"`
 }
 
+func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	versions := make([]VaultVersion, 0)
+	respKeys := make([]string, 0)
+
+	for versionString, ts := range b.Core.versionTimestamps {
+		versions = append(versions, VaultVersion{
+			Version:            versionString,
+			TimestampInstalled: ts,
+		})
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].TimestampInstalled.Before(versions[j].TimestampInstalled)
+	})
+
+	respKeyInfo := map[string]interface{}{}
+
+	for i, v := range versions {
+		respKeys = append(respKeys, v.Version)
+
+		entry := map[string]interface{}{
+			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"previous_version":    nil,
+		}
+
+		if i > 0 {
+			entry["previous_version"] = versions[i-1].Version
+		}
+
+		respKeyInfo[v.Version] = entry
+	}
+
+	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4212,7 +4298,7 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
-		return fmt.Errorf("invalid listing visilibity type")
+		return fmt.Errorf("invalid listing visibility type")
 	}
 
 	return nil
@@ -4984,5 +5070,14 @@ This path responds to the following HTTP methods.
 	"list-leases": {
 		"List leases associated with this Vault cluster",
 		"Requires sudo capability. List leases associated with this Vault cluster",
+	},
+	"version-history": {
+		"List historical version changes sorted by installation time in ascending order.",
+		`
+This path responds to the following HTTP methods.
+
+    LIST /
+        Returns a list historical version changes sorted by installation time in ascending order.
+		`,
 	},
 }

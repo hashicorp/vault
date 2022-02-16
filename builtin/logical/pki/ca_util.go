@@ -16,6 +16,7 @@ func (b *backend) getGenerationParams(
 	case "exported":
 		exported = true
 	case "internal":
+	case "kms":
 	default:
 		errorResp = logical.ErrorResponse(
 			`the "exported" path parameter must be "internal" or "exported"`)
@@ -27,6 +28,17 @@ func (b *backend) getGenerationParams(
 		errorResp = logical.ErrorResponse(
 			`the "format" path parameter must be "pem", "der", "der_pkcs", or "pem_bundle"`)
 		return
+	}
+
+	if exportedStr == "kms" {
+		_, okKeyType := data.Raw["key_type"]
+		_, okKeyBits := data.Raw["key_bits"]
+
+		if okKeyType || okKeyBits {
+			errorResp = logical.ErrorResponse(
+				`invalid parameter for the kms path parameter, key_type nor key_bits arguments can be set in this mode`)
+			return
+		}
 	}
 
 	role = &roleEntry{

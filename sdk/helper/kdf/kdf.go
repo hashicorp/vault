@@ -38,7 +38,7 @@ func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32
 		rounds++
 	}
 
-	if len(context) > math.MaxInt - 8 {
+	if len(context) > math.MaxInt-8 {
 		return nil, fmt.Errorf("too much context specified; would overflow: %d bytes", len(context))
 	}
 

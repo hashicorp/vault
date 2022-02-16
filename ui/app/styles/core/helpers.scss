@@ -78,6 +78,10 @@
   display: flex !important;
   justify-content: flex-end;
 }
+.is-flex-start {
+  display: flex !important;
+  justify-content: flex-start;
+}
 .is-flex-full {
   flex-basis: 100%;
 }
@@ -208,4 +212,7 @@ ul.bullet {
 }
 .is-v-centered {
   vertical-align: middle;
+}
+.has-text-grey-400 {
+  color: $ui-gray-400;
 }

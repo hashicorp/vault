@@ -38,7 +38,6 @@ func (b BackendType) String() string {
 // allows for a "procfs" like interaction, as internal state can be exposed by
 // acting like a logical backend and being mounted.
 type Backend interface {
-
 	// Initialize is used to initialize a plugin after it has been mounted.
 	Initialize(context.Context, *InitializationRequest) error
 
@@ -113,18 +112,19 @@ type Factory func(context.Context, *BackendConfig) (Backend, error)
 
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {
-	// Root are the paths that require a root token to access
+	// Root are the API paths that require a root token to access
 	Root []string
 
-	// Unauthenticated are the paths that can be accessed without any auth.
+	// Unauthenticated are the API paths that can be accessed without any auth.
 	// These can't be regular expressions, it is either exact match, a prefix
 	// match and/or a wildcard match. For prefix match, append '*' as a suffix.
 	// For a wildcard match, use '+' in the segment to match any identifier
 	// (e.g. 'foo/+/bar'). Note that '+' can't be adjacent to a non-slash.
 	Unauthenticated []string
 
-	// LocalStorage are paths (prefixes) that are local to this instance; this
-	// indicates that these paths should not be replicated
+	// LocalStorage are storage paths (prefixes) that are local to this cluster;
+	// this indicates that these paths should not be replicated across performance clusters
+	// (DR replication is unaffected).
 	LocalStorage []string
 
 	// SealWrapStorage are storage paths that, when using a capable seal,

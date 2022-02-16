@@ -450,6 +450,10 @@
         "path": "system/license"
       },
       {
+        "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
+        "path": "system/managed-keys"
+      },
+      {
         "title": "<code>/sys/metrics</code>",
         "path": "system/metrics"
       },
@@ -611,6 +615,10 @@
       {
         "title": "<code>/sys/unseal</code>",
         "path": "system/unseal"
+      },
+      {
+        "title": "<code>/sys/version-history</code>",
+        "path": "system/version-history"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

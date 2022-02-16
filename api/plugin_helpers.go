@@ -182,7 +182,6 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 			Certificates: []tls.Certificate{cert},
 			ServerName:   serverCert.Subject.CommonName,
 		}
-		tlsConfig.BuildNameToCertificate()
 
 		return tlsConfig, nil
 	}

@@ -4,27 +4,27 @@
     class={{concat "toolbar-link" (if D.isOpen " is-active")}}
     @htmlTag="button"
   >
-    {{@startDate}}
+    {{@startTimeDisplay}}
     -
-    {{this.endDateDisplay}}
+    {{@endTimeDisplay}}
     <Chevron @direction="down" @isButton={{true}} />
   </D.Trigger>
-  <D.Content class="popup-menu-content calendar-content">
+  <D.Content @defaultClass="popup-menu-content calendar-content">
     <nav class="box menu">
-      <div class="calendar-title popup-menu-item">Date options</div>
+      <div class="calendar-title is-subtitle-gray">DATE OPTIONS</div>
       <ul class="menu-list">
         <li class="action">
           <button
             class="link link-plain has-text-weight-semibold is-ghost"
             type="button"
-            {{on "click" this.selectCurrentBillingPeriod}}
+            {{on "click" (fn this.selectCurrentBillingPeriod D)}}
           >
             Current billing period
           </button>
         </li>
         <li class="action">
           <button
-            class="link link-plain has-text-weight-semibold is-ghost"
+            class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
             type="button"
             {{on "click" this.toggleShowCalendar}}
           >
@@ -34,74 +34,59 @@
             </div>
           </button>
         </li>
-        <li class="action">
-          <button
-            class="link link-plain has-text-weight-semibold is-ghost"
-            type="button"
-            {{on "click" this.toggleSingleMonth}}
-          >
-            <div class="level is-mobile">
-              <span class="level-left">Single Month</span>
-              <Chevron class="has-text-grey-light level-right" />
-            </div>
-          </button>
-        </li>
       </ul>
     </nav>
     {{#if this.showCalendar}}
       <div class="calendar-widget-container">
         <div class="select-year">
-          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
-            <Chevron @direction="left" @size="s" class="has-text-grey" />
+          <button
+            id="previous-year"
+            type="button"
+            class="button is-transparent"
+            disabled={{this.disablePastYear}}
+            {{on "click" this.subYear}}
+          >
+            <Chevron
+              @direction="left"
+              @size="s"
+              class="has-text-grey"
+              {{on "mouseover" this.addTooltip}}
+              {{on "mouseleave" this.removeTooltip}}
+            />
           </button>
           <p>{{this.displayYear}}</p>
           <button
             type="button"
-            class="button is-transparent padding-right"
+            class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
             disabled={{this.disableFutureYear}}
             {{on "click" this.addYear}}
           >
             <Chevron @direction="right" @size="s" class="has-text-grey" />
           </button>
+          {{#if this.tooltipTarget}}
+            {{! Component must be in curly bracket notation }}
+            {{! template-lint-disable no-curly-component-invocation }}
+            {{#modal-dialog
+              tagName="div"
+              tetherTarget=this.tooltipTarget
+              targetAttachment="top right"
+              attachment="top middle"
+              offset="150px 0"
+            }}
+              <div class={{"calendar-tooltip"}}>
+                <p>{{this.tooltipText}}</p>
+              </div>
+              <div class="chart-tooltip-arrow"></div>
+            {{/modal-dialog}}
+          {{/if}}
         </div>
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-          {{#each this.arrayOfMonths as |month index|}}
+          {{#each @arrayOfMonths as |month index|}}
             <button
               type="button"
-              {{on "click" (fn this.selectEndMonth index this.displayYear)}}
+              {{on "click" (fn this.selectEndMonth index this.displayYear D)}}
               class="is-month-list"
               id={{concat index "-" this.displayYear}}
-            >
-              {{month}}
-            </button>
-          {{/each}}
-        </div>
-      </div>
-    {{/if}}
-
-    {{#if this.showSingleMonth}}
-      <div class="calendar-widget-container">
-        <div class="select-year">
-          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
-            <Chevron @direction="left" @size="s" class="has-text-grey" />
-          </button>
-          <p>{{this.displayYear}}</p>
-          <button
-            type="button"
-            class="button is-transparent padding-right"
-            disabled={{this.disableFutureYear}}
-            {{on "click" this.addYear}}
-          >
-            <Chevron @direction="right" @size="s" class="has-text-grey" />
-          </button>
-        </div>
-        <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-          {{#each this.arrayOfMonths as |month index|}}
-            <button
-              type="button"
-              {{on "click" (fn this.selectSingleMonth index this.displayYear)}}
-              class="is-month-list"
-              id={{concat index "-" this.displayYear "-single"}}
             >
               {{month}}
             </button>

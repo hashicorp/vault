@@ -121,7 +121,7 @@
                     Save
                   </button>
                 </T.Trigger>
-                <T.Content class="tool-tip">
+                <T.Content @defaultClass="tool-tip">
                   <div class="box">
                     You don't have permissions required to
                     {{if (eq @mode "create") "create" "update"}}

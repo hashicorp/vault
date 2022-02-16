@@ -21,7 +21,7 @@ import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/
  */
 
 export default class LineChart extends Component {
-  // TODO make just one tracked variable tooltipText?
+  // TODO CMB make just one tracked variable tooltipText?
   @tracked tooltipTarget = '';
   @tracked tooltipMonth = '';
   @tracked tooltipTotal = '';
@@ -43,7 +43,7 @@ export default class LineChart extends Component {
       .range([0, 100]);
 
     let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.clients))])
       .range([SVG_DIMENSIONS.height, 0]);
 
     let xScale = scalePoint() // use scaleTime()?
@@ -113,7 +113,7 @@ export default class LineChart extends Component {
     hoverCircles.on('mouseover', (data) => {
       this.tooltipMonth = data.month;
       this.tooltipTotal = `${data.clients} total clients`;
-      this.tooltipNew = `${data.new} new clients`;
+      this.tooltipNew = `${data.new_clients.clients} new clients`;
       let node = hoverCircles.filter((plot) => plot.month === data.month).node();
       this.tooltipTarget = node;
     });

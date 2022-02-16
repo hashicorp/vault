@@ -1,8 +1,12 @@
 <div class="chart-wrapper stacked-charts">
   <div class="single-chart-grid">
-    <div class="chart-header">
-      <h2 class="chart-title">{{@title}}</h2>
-      <p class="chart-description">{{@description}}</p>
+    <div class="chart-header has-bottom-margin-xl">
+      <h2 class="chart-title">Vault client counts</h2>
+      <p class="chart-description">
+        A unique active client is any user or service that interacts with Vault. They are made up of direct entities and
+        non-entity tokens. As Vault’s primary billing metric, your total client count is the number for which you will be
+        charged at the end of your billing period.
+      </p>
     </div>
 
     <div class="chart-container-wide">
@@ -15,13 +19,33 @@
     </div>
 
     <div class="data-details-top">
-      <h3 class="data-details">{{capitalize @chartLegend.0.label}}</h3>
-      <p class="data-details">1,307</p>
+      {{#let (get this.getTotalClients 0) as |stat|}}
+        <h3 class="data-details">{{capitalize stat.label}}</h3>
+        <p class="data-details">
+          {{#if stat.total}}
+            {{format-number stat.total}}
+          {{else}}
+            <span class="has-text-danger is-size-8">
+              <Icon @name="x-square-fill" />Error getting total
+            </span>
+          {{/if}}
+        </p>
+      {{/let}}
     </div>
 
     <div class="data-details-bottom">
-      <h3 class="data-details">{{capitalize @chartLegend.1.label}}</h3>
-      <p class="data-details">8,005</p>
+      {{#let (get this.getTotalClients 1) as |stat|}}
+        <h3 class="data-details">{{capitalize stat.label}}</h3>
+        <p class="data-details">
+          {{#if stat.total}}
+            {{format-number stat.total}}
+          {{else}}
+            <span class="has-text-danger is-size-8">
+              <Icon @name="x-square-fill" />Error getting total
+            </span>
+          {{/if}}
+        </p>
+      {{/let}}
     </div>
 
     <div class="legend-right">
@@ -43,13 +67,33 @@
     </div>
 
     <div class="data-details-top">
-      <h3 class="data-details">Average new {{@chartLegend.0.label}} per month</h3>
-      <p class="data-details">{{@dataOneData}}</p>
+      {{#let (get this.getAverageNewClients 0) as |stat|}}
+        <h3 class="data-details">Average new {{stat.label}} per month</h3>
+        <p class="data-details">
+          {{#if stat.average}}
+            {{format-number stat.average}}
+          {{else}}
+            <span class="has-text-danger is-size-8">
+              <Icon @name="x-square-fill" />Average cannot be calculated
+            </span>
+          {{/if}}
+        </p>
+      {{/let}}
     </div>
 
     <div class="data-details-bottom">
-      <h3 class="data-details">Average new {{@chartLegend.1.label}} per month</h3>
-      <p class="data-details">{{@dataTwoData}}</p>
+      {{#let (get this.getAverageNewClients 1) as |stat|}}
+        <h3 class="data-details">Average new {{stat.label}} per month</h3>
+        <p class="data-details">
+          {{#if stat.average}}
+            {{format-number stat.average}}
+          {{else}}
+            <span class="has-text-danger is-size-8">
+              <Icon @name="x-square-fill" />Average cannot be calculated
+            </span>
+          {{/if}}
+        </p>
+      {{/let}}
     </div>
 
     <div class="timestamp">

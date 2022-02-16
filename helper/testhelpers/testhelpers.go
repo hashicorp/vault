@@ -655,7 +655,7 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	// If the collection is non-empty, it means that the peer was not found in
 	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+		t.Fatalf("failed to read configuration successfully, expected peers not found in configuration list: %v", expected)
 	}
 }
 
