@@ -2,6 +2,7 @@ package pluginutil
 
 import (
 	context "context"
+	"fmt"
 
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -21,6 +22,10 @@ func (pm PluginMultiplexingServerImpl) MultiplexingSupport(ctx context.Context, 
 }
 
 func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface) (bool, error) {
+	if cc == nil {
+		return false, fmt.Errorf("client connection is nil")
+	}
+
 	req := new(MultiplexingSupportRequest)
 	resp, err := NewPluginMultiplexingClient(cc).MultiplexingSupport(ctx, req)
 	if err != nil {

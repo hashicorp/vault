@@ -53,6 +53,18 @@ type PluginCatalog struct {
 	lock sync.RWMutex
 }
 
+// externalPlugin holds client connections for multiplexed and
+// non-multiplexed plugin processes
+type externalPlugin struct {
+	// name is the plugin name
+	name string
+
+	// connections holds client connections by ID
+	connections map[string]*pluginClient
+
+	multiplexingSupport bool
+}
+
 // pluginClient represents a connection to a plugin process
 type pluginClient struct {
 	logger log.Logger
@@ -67,18 +79,6 @@ type pluginClient struct {
 	cleanupFunc func() error
 
 	plugin.ClientProtocol
-}
-
-// externalPlugin holds client connections for multiplexed and
-// non-multiplexed plugin processes
-type externalPlugin struct {
-	// name is the plugin name
-	name string
-
-	// connections holds client connections by ID
-	connections map[string]*pluginClient
-
-	multiplexingSupport bool
 }
 
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
@@ -129,14 +129,6 @@ func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc,
 
 func (p *pluginClient) Conn() grpc.ClientConnInterface {
 	return p.clientConn
-}
-
-// MultiplexingSupport determines if a plugin client supports multiplexing
-func (p *pluginClient) MultiplexingSupport(ctx context.Context) (bool, error) {
-	if p.clientConn == nil {
-		return false, fmt.Errorf("plugin client is nil")
-	}
-	return pluginutil.MultiplexingSupported(ctx, p.clientConn)
 }
 
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
@@ -539,7 +531,11 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.setInternal(ctx, name, pluginType, false, command, args, env, sha256)
+	// During plugin registration, we can't know if a plugin is multiplexed or
+	// not until we run it. So we set it to false here. Once started, we ask
+	// the plugin if it is multiplexed and set this value accordingly.
+	multiplexingSupport := false
+	return c.setInternal(ctx, name, pluginType, multiplexingSupport, command, args, env, sha256)
 }
 
 func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, multiplexingSupport bool, command string, args []string, env []string, sha256 []byte) error {
