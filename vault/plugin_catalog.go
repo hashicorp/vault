@@ -141,7 +141,7 @@ func (p *pluginClient) Close() error {
 
 // cleanupExternalPlugin will kill plugin processes and perform any necessary
 // cleanup on the externalPlugins map for multiplexed and non-multiplexed
-// plugins.
+// plugins. This should be called with the write lock held.
 func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	extPlugin, ok := c.externalPlugins[name]
 	if !ok {
