@@ -1,8 +1,7 @@
 import { Factory } from 'ember-cli-mirage';
-import faker from 'faker';
 
 export default Factory.extend({
-  type: () => faker.random.arrayElement('duo', 'okta', 'pingid', 'totp'),
+  type: 'okta',
   uses_passcode: false,
 
   afterCreate(mfaMethod) {

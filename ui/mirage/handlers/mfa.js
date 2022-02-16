@@ -1,4 +1,3 @@
-import faker from 'faker';
 import { Response } from 'miragejs';
 import Ember from 'ember';
 import fetch from 'fetch';
@@ -45,7 +44,11 @@ export default function (server) {
     } else if (user === 'mfa-i') {
       [mfa_constraints, methods] = generator([m('okta'), m('totp')], [m('totp')]); // 2 constraints 1 passcode/1 non-passcode 1 non-passcode
     }
-    const mfa_request_id = faker.datatype.uuid();
+    const numbers = (length) =>
+      Math.random()
+        .toString()
+        .substring(2, length + 2);
+    const mfa_request_id = `${numbers(8)}-${numbers(4)}-${numbers(4)}-${numbers(4)}-${numbers(12)}`;
     const mfa_requirement = {
       mfa_request_id,
       mfa_constraints,
