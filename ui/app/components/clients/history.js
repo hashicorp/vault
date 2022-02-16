@@ -123,6 +123,20 @@ export default class History extends Component {
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    }
+    return this.getActivityResponse.byNamespace
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
+  }
+
   get isDateRange() {
     return !isSameMonth(
       new Date(this.getActivityResponse.startTime),
@@ -164,6 +178,7 @@ export default class History extends Component {
 
   @action
   async handleClientActivityQuery(month, year, dateType) {
+    this.isEditStartMonthOpen = false;
     if (dateType === 'cancel') {
       return;
     }
@@ -252,30 +267,18 @@ export default class History extends Component {
 
   // FOR START DATE MODAL
   @action
-  selectStartMonth(month) {
+  selectStartMonth(month, event) {
     this.startMonth = month;
     // disables months if in the future
     this.disabledYear = this.months.indexOf(month) >= this.currentMonth ? this.currentYear : null;
+    event.close();
   }
 
   @action
-  selectStartYear(year) {
+  selectStartYear(year, event) {
     this.startYear = year;
     this.allowedMonthMax = year === this.currentYear ? this.currentMonth : 12;
-  }
-
-  get filteredActivity() {
-    const namespace = this.selectedNamespace;
-    const auth = this.selectedAuthMethod;
-    if (!namespace && !auth) {
-      return this.getActivityResponse;
-    }
-    if (!auth) {
-      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
-    }
-    return this.getActivityResponse.byNamespace
-      .find((ns) => ns.label === namespace)
-      .mounts?.find((mount) => mount.label === auth);
+    event.close();
   }
 
   storage() {

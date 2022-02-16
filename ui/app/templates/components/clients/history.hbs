@@ -184,7 +184,7 @@
                     type="button"
                     class="button link"
                     disabled={{if (lt index this.allowedMonthMax) false true}}
-                    {{on "click" (queue (fn this.selectStartMonth month) (action D.actions.close))}}
+                    {{on "click" (fn this.selectStartMonth month D.actions)}}
                   >
                     {{month}}
                   </button>
@@ -210,7 +210,7 @@
                     type="button"
                     class="button link"
                     disabled={{if (eq year this.disabledYear) true false}}
-                    {{on "click" (queue (fn this.selectStartYear year) (action D.actions.close))}}
+                    {{on "click" (fn this.selectStartYear year D.actions)}}
                   >
                     {{year}}
                   </button>
@@ -225,22 +225,12 @@
       <button
         type="button"
         class="button is-primary"
-        onclick={{queue
-          (action (mut this.isEditStartMonthOpen) false)
-          (action "handleClientActivityQuery" this.startMonth this.startYear "startTime")
-        }}
-        disabled={{or (if (and this.startMonth this.startYear) false true) this.isFormError}}
+        disabled={{or (if (and this.startMonth this.startYear) false true)}}
+        {{on "click" (fn this.handleClientActivityQuery this.startMonth this.startYear "startTime")}}
       >
         Save
       </button>
-      <button
-        type="button"
-        class="button is-secondary"
-        {{on
-          "click"
-          (queue (action (mut this.isEditStartMonthOpen) false) (fn this.handleClientActivityQuery 0 0 "cancel"))
-        }}
-      >
+      <button type="button" class="button is-secondary" {{on "click" (fn this.handleClientActivityQuery 0 0 "cancel")}}>
         Cancel
       </button>
     </footer>

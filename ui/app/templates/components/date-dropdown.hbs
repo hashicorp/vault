@@ -15,7 +15,7 @@
             type="button"
             class="button link"
             disabled={{if (lt index this.allowedMonthMax) false true}}
-            {{on "click" (queue (fn this.selectStartMonth month) (action D.actions.close))}}
+            {{on "click" (fn this.selectStartMonth month D.actions)}}
           >
             {{month}}
           </button>
@@ -41,7 +41,7 @@
             type="button"
             class="button link"
             disabled={{if (eq year this.disabledYear) true false}}
-            {{on "click" (queue (fn this.selectStartYear year) (action D.actions.close))}}
+            {{on "click" (fn this.selectStartYear year D.actions)}}
           >
             {{year}}
           </button>
