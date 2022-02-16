@@ -154,8 +154,6 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	if !extPlugin.multiplexingSupport {
 		pluginClient.client.Kill()
 
-		pluginClient.client.Exited()
-
 		if len(extPlugin.connections) == 0 {
 			delete(c.externalPlugins, name)
 		}
