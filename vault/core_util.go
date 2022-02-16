@@ -127,6 +127,10 @@ func (c *Core) namepaceByPath(string) *namespace.Namespace {
 	return namespace.RootNamespace
 }
 
+func (c *Core) HasWALState(required *logical.WALState, perfStandby bool) bool {
+	return true
+}
+
 func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { return nil }
 
 func (c *Core) perfStandbyCount() int { return 0 }

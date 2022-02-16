@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
+	"github.com/hashicorp/vault/vault/tokens"
 	uberAtomic "go.uber.org/atomic"
 )
 

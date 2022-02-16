@@ -36,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/hashicorp/vault/vault/tokens"
 	"github.com/mitchellh/mapstructure"
 )
 
