@@ -63,6 +63,8 @@ message DuoConfig {
 	string api_hostname = 3;
 	// @inject_tag: sentinel:"-"
 	string push_info = 4;
+	// @inject_tag: sentinel:"-"
+	bool use_passcode = 5;
 }
 
 // OktaConfig contains Okta configuration parameters required to perform Okta

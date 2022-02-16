@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -26,13 +25,11 @@ import (
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault-licensing/license"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	osslicense "github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -64,7 +61,7 @@ type totpKey struct {
 
 // loginMfaPaths returns the API endpoints to configure the new style
 // login MFA. The following paths are supported:
-// mfa/method-id/:mfa_method - management of MFA method IDs, which can be used for configuration
+// mfa/method/:mfa_method - management of MFA method IDs, which can be used for configuration
 // mfa/login_enforcement/:config_name - configures single or two phase MFA auth
 func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 	return []*framework.Path{
@@ -828,289 +825,6 @@ func (b *LoginMFABackend) validateAuthEntriesForAccessorOrType(ctx context.Conte
 	return false, nil
 }
 
-func (b *SystemBackend) mfaPaths() []*framework.Path {
-	return []*framework.Path{
-		{
-			Pattern:         "mfa/method/?",
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.mfaBackend.pathMFAMethodsList,
-			},
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["methods-list"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["methods-list"][1]),
-		},
-		{
-			Pattern:         "mfa/method/totp/" + framework.GenericNameRegex("name") + "/generate$",
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the MFA method.",
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.mfaBackend.handleMFAGenerateRead,
-			},
-
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["totp-generate"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["totp-generate"][1]),
-		},
-		{
-			Pattern:         "mfa/method/totp/" + framework.GenericNameRegex("name") + "/admin-generate$",
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the MFA method.",
-				},
-				"entity_id": {
-					Type:        framework.TypeString,
-					Description: "Entity ID on which the generated secret needs to get stored.",
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.mfaBackend.handleMFAAdminGenerateUpdate,
-			},
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["totp-admin-generate"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["totp-admin-generate"][1]),
-		},
-		{
-			Pattern:         "mfa/method/totp/" + framework.GenericNameRegex("name") + "/admin-destroy$",
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the MFA method.",
-				},
-				"entity_id": {
-					Type:        framework.TypeString,
-					Description: "Identifier of the entity from which the MFA method secret needs to be removed.",
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.mfaBackend.handleMFAAdminDestroyUpdate,
-			},
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["totp-admin-destroy"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["totp-admin-destroy"][1]),
-		},
-		{
-			Pattern:         "mfa/method/totp/" + framework.GenericNameRegex("name"),
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: `Name of the MFA method.`,
-				},
-				"issuer": {
-					Type:        framework.TypeString,
-					Description: `The name of the key's issuing organization.`,
-				},
-				"period": {
-					Type:        framework.TypeDurationSecond,
-					Default:     30,
-					Description: `The length of time used to generate a counter for the TOTP token calculation.`,
-				},
-				"key_size": {
-					Type:        framework.TypeInt,
-					Default:     20,
-					Description: "Determines the size in bytes of the generated key.",
-				},
-				"qr_size": {
-					Type:        framework.TypeInt,
-					Default:     200,
-					Description: `The pixel size of the generated square QR code.`,
-				},
-				"algorithm": {
-					Type:        framework.TypeString,
-					Default:     "SHA1",
-					Description: `The hashing algorithm used to generate the TOTP token. Options include SHA1, SHA256 and SHA512.`,
-				},
-				"digits": {
-					Type:        framework.TypeInt,
-					Default:     6,
-					Description: `The number of digits in the generated TOTP token. This value can either be 6 or 8.`,
-				},
-				"skew": {
-					Type:        framework.TypeInt,
-					Default:     1,
-					Description: `The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1.`,
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: validateRootNS(b.mfaBackend.handleTOTPConfigUpdate),
-				logical.DeleteOperation: validateRootNS(b.mfaBackend.handleMFAConfigDelete),
-				logical.ReadOperation:   validateRootNS(b.mfaBackend.handleMFAConfigRead),
-			},
-
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["totp-method"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["totp-method"][1]),
-		},
-		{
-			Pattern:         "mfa/method/okta/" + framework.GenericNameRegex("name"),
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: `Name of the MFA method.`,
-				},
-				"mount_accessor": {
-					Type:        framework.TypeString,
-					Description: `The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.`,
-				},
-				"username_format": {
-					Type: framework.TypeString,
-					Description: `A format string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings:
-
-alias.name: The name returned by the mount configured via the mount_accessor parameter
-
-If blank, the Alias's name field will be used as-is.
-`,
-				},
-				"org_name": {
-					Type:        framework.TypeString,
-					Description: "Name of the organization to be used in the Okta API.",
-				},
-				"api_token": {
-					Type:        framework.TypeString,
-					Description: "Okta API key.",
-				},
-				"base_url": {
-					Type:        framework.TypeString,
-					Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
-				},
-				"primary_email": {
-					Type:        framework.TypeBool,
-					Description: `If true, the username will only match the primary email for the account. Defaults to false.`,
-				},
-				"production": {
-					Type:        framework.TypeBool,
-					Description: "(DEPRECATED) Use base_url instead.",
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: validateRootNS(b.mfaBackend.handleOktaConfigUpdate),
-				logical.DeleteOperation: validateRootNS(b.mfaBackend.handleMFAConfigDelete),
-				logical.ReadOperation:   validateRootNS(b.mfaBackend.handleMFAConfigRead),
-			},
-
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["okta-method"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["okta-method"][1]),
-		},
-		{
-			Pattern:         "mfa/method/duo/" + framework.GenericNameRegex("name"),
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: `Name of the MFA method.`,
-				},
-				"mount_accessor": {
-					Type:        framework.TypeString,
-					Description: `The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.`,
-				},
-				"username_format": {
-					Type: framework.TypeString,
-					Description: `A format string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings:
-
-alias.name: The name returned by the mount configured via the mount_accessor parameter
-
-If blank, the Alias's name field will be used as-is.
-`,
-				},
-				"secret_key": {
-					Type:        framework.TypeString,
-					Description: "Secret key for Duo.",
-				},
-				"integration_key": {
-					Type:        framework.TypeString,
-					Description: "Integration key for Duo.",
-				},
-				"api_hostname": {
-					Type:        framework.TypeString,
-					Description: "API host name for Duo.",
-				},
-				"push_info": {
-					Type:        framework.TypeString,
-					Description: "Push information for Duo.",
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: validateRootNS(b.mfaBackend.handleDuoConfigUpdate),
-				logical.DeleteOperation: validateRootNS(b.mfaBackend.handleMFAConfigDelete),
-				logical.ReadOperation:   validateRootNS(b.mfaBackend.handleMFAConfigRead),
-			},
-
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["duo-method"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["duo-method"][1]),
-		},
-		{
-			Pattern:         "mfa/method/pingid/" + framework.GenericNameRegex("name"),
-			FeatureRequired: osslicense.Features(license.FeatureMFA),
-
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: `Name of the MFA method.`,
-				},
-				"mount_accessor": {
-					Type:        framework.TypeString,
-					Description: `The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.`,
-				},
-				"username_format": {
-					Type: framework.TypeString,
-					Description: `A format string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings:
-
-alias.name: The name returned by the mount configured via the mount_accessor parameter
-
-If blank, the Alias's name field will be used as-is.
-`,
-				},
-				"settings_file_base64": {
-					Type:        framework.TypeString,
-					Description: "The settings file provided by Ping, Base64-encoded. This must be a settings file suitable for third-party clients, not the PingID SDK or PingFederate.",
-				},
-			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: validateRootNS(b.mfaBackend.handlePingIDConfigUpdate),
-				logical.DeleteOperation: validateRootNS(b.mfaBackend.handleMFAConfigDelete),
-				logical.ReadOperation:   validateRootNS(b.mfaBackend.handleMFAConfigRead),
-			},
-
-			HelpSynopsis:    strings.TrimSpace(mfaHelp["pingid-method"][0]),
-			HelpDescription: strings.TrimSpace(mfaHelp["pingid-method"][1]),
-		},
-	}
-}
-
-func validateRootNS(f framework.OperationFunc) framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if ns == nil {
-			return nil, namespace.ErrNoNamespace
-		}
-		if ns.ID != namespace.RootNamespaceID {
-			return logical.ErrorResponse("this API path can only be called from the root namespace"), nil
-		}
-		return f(ctx, req, d)
-	}
-}
-
 func (c *Core) PersistTOTPKey(ctx context.Context, methodID, entityID, key string) error {
 	ks := &totpKey{
 		Key: key,
@@ -1268,6 +982,7 @@ func parseDuoConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 		IntegrationKey: integrationKey,
 		APIHostname:    apiHostname,
 		PushInfo:       d.Get("push_info").(string),
+		UsePasscode:    d.Get("use_passcode").(bool),
 	}
 
 	mConfig.Config = &mfa.Config_DuoConfig{
@@ -1453,6 +1168,7 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 		respData["pushinfo"] = duoConfig.PushInfo
 		respData["mount_accessor"] = mConfig.MountAccessor
 		respData["username_format"] = mConfig.UsernameFormat
+		respData["use_passcode"] = duoConfig.UsePasscode
 	case *mfa.Config_PingIDConfig:
 		pingConfig := mConfig.GetPingIDConfig()
 		respData["use_signature"] = pingConfig.UseSignature
@@ -2311,28 +2027,6 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 	return nil
 }
 
-func mfaConfigTableSchema() *memdb.TableSchema {
-	return &memdb.TableSchema{
-		Name: memDBMFAConfigsTable,
-		Indexes: map[string]*memdb.IndexSchema{
-			"id": {
-				Name:   "id",
-				Unique: true,
-				Indexer: &memdb.StringFieldIndex{
-					Field: "ID",
-				},
-			},
-			"name": {
-				Name:   "name",
-				Unique: true,
-				Indexer: &memdb.StringFieldIndex{
-					Field: "Name",
-				},
-			},
-		},
-	}
-}
-
 func loginMFAConfigTableSchema() *memdb.TableSchema {
 	return &memdb.TableSchema{
 		Name: memDBLoginMFAConfigsTable,
@@ -2553,7 +2247,12 @@ func (b *LoginMFABackend) deleteMFALoginEnforcementConfigByNameAndNamespace(ctx 
 	}
 
 	entryIndex := mfaLoginEnforcementPrefix + eConfig.ID
-	barrierView := b.barrierViewForNamespace(eConfig.NamespaceID)
+
+	barrierView, err := b.Core.barrierViewForNamespace(eConfig.NamespaceID)
+	if err != nil {
+		return err
+	}
+
 	err = barrierView.Delete(ctx, entryIndex)
 	if err != nil {
 		return err
@@ -2606,6 +2305,18 @@ func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configI
 
 	b.mfaLock.Lock()
 	defer b.mfaLock.Unlock()
+
+	eConfigIter, err := b.MemDBMFALoginEnforcementConfigIterator()
+	if err != nil {
+		return err
+	}
+
+	for eConfigRaw := eConfigIter.Next(); eConfigRaw != nil; eConfigRaw = eConfigIter.Next() {
+		eConfig := eConfigRaw.(*mfa.MFAEnforcementConfig)
+		if strutil.StrListContains(eConfig.MFAMethodIDs, configID) {
+			return fmt.Errorf("methodID is still used by an enforcement configuration with ID: %s", eConfig.ID)
+		}
+	}
 
 	// Delete the config from storage
 	entryIndex := prefix + configID
@@ -2707,7 +2418,10 @@ func (b *LoginMFABackend) MemDBDeleteMFAConfigByIDInTxn(txn *memdb.Txn, configID
 }
 
 func (b *LoginMFABackend) putMFAConfigByID(ctx context.Context, mConfig *mfa.Config) error {
-	barrierView := b.barrierViewForNamespace(mConfig.NamespaceID)
+	barrierView, err := b.Core.barrierViewForNamespace(mConfig.NamespaceID)
+	if err != nil {
+		return err
+	}
 	return b.putMFAConfigCommon(ctx, mConfig, loginMFAConfigPrefix, mConfig.ID, barrierView)
 }
 
@@ -2750,7 +2464,11 @@ func (b *LoginMFABackend) putMFALoginEnforcementConfig(ctx context.Context, eCon
 		return err
 	}
 
-	barrierView := b.barrierViewForNamespace(eConfig.NamespaceID)
+	barrierView, err := b.Core.barrierViewForNamespace(eConfig.NamespaceID)
+	if err != nil {
+		return err
+	}
+
 	return barrierView.Put(ctx, &logical.StorageEntry{
 		Key:   entryIndex,
 		Value: marshaledEntry,
@@ -2758,7 +2476,10 @@ func (b *LoginMFABackend) putMFALoginEnforcementConfig(ctx context.Context, eCon
 }
 
 func (b *LoginMFABackend) getMFALoginEnforcementConfig(ctx context.Context, key, namespaceId string) (*mfa.MFAEnforcementConfig, error) {
-	barrierView := b.barrierViewForNamespace(namespaceId)
+	barrierView, err := b.Core.barrierViewForNamespace(namespaceId)
+	if err != nil {
+		return nil, err
+	}
 	entry, err := barrierView.Get(ctx, mfaLoginEnforcementPrefix+key)
 	if err != nil {
 		return nil, err
@@ -2774,17 +2495,6 @@ func (b *LoginMFABackend) getMFALoginEnforcementConfig(ctx context.Context, key,
 	}
 
 	return &eConfig, nil
-}
-
-func (b *LoginMFABackend) barrierViewForNamespace(namespaceId string) *BarrierView {
-	var barrierView *BarrierView
-	if namespaceId == namespace.RootNamespaceID {
-		barrierView = b.Core.systemBarrierView
-	} else {
-		barrierView = b.Core.nsView.SubView(path.Join(namespaceId, systemBarrierPrefix) + "/")
-	}
-
-	return barrierView
 }
 
 var mfaHelp = map[string][2]string{

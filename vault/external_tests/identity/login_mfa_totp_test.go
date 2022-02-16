@@ -265,6 +265,7 @@ func TestLoginMfaGenerateTOTPRoleTest(t *testing.T) {
 		if secret.Auth == nil || secret.Auth.MFARequirement == nil {
 			t.Fatalf("two phase login returned nil MFARequirement")
 		}
+
 		_, err = user2Client.Logical().Write("sys/mfa/validate", map[string]interface{}{
 			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 			"mfa_payload": map[string][]string{
