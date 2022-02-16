@@ -83,7 +83,7 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	path = addPrefixToKVPath(path, mountPath, "metadata")
 	if secret, err := client.Logical().Delete(path); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
 		if secret != nil {

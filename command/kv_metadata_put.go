@@ -96,8 +96,8 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	})
 
 	f.StringMapVar(&StringMapVar{
-		Name: "custom-metadata",
-		Target: &c.flagCustomMetadata,
+		Name:    "custom-metadata",
+		Target:  &c.flagCustomMetadata,
 		Default: map[string]string{},
 		Usage: "Specifies arbitrary version-agnostic key=value metadata meant to describe a secret." +
 			"This can be specified multiple times to add multiple pieces of metadata.",
@@ -150,10 +150,10 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	path = addPrefixToKVPath(path, mountPath, "metadata")
 	data := map[string]interface{}{
-		"max_versions":  c.flagMaxVersions,
-		"cas_required":  c.flagCASRequired,
+		"max_versions":    c.flagMaxVersions,
+		"cas_required":    c.flagCASRequired,
 		"custom_metadata": c.flagCustomMetadata,
 	}
 
