@@ -20,10 +20,15 @@ export default function (server) {
     };
   });
 
-  server.get('sys/internal/counters/config', function (db) {
+  server.get('sys/internal/counters/config', function () {
     return {
       request_id: '00001',
-      data: db['clients/configs'].first(),
+      data: {
+        default_report_months: 12,
+        enabled: 'default-enable',
+        queries_available: true,
+        retention_months: 24,
+      },
     };
   });
 
@@ -5573,6 +5578,24 @@ export default function (server) {
               non_entity_tokens: 15,
               clients: 100,
             },
+            mounts: [
+              {
+                path: 'auth/method/uMGBU',
+                counts: {
+                  clients: 35,
+                  entity_clients: 20,
+                  non_entity_clients: 15,
+                },
+              },
+              {
+                path: 'auth/method/woiej',
+                counts: {
+                  clients: 35,
+                  entity_clients: 20,
+                  non_entity_clients: 15,
+                },
+              },
+            ],
           },
           {
             namespace_id: 'RxD81',
@@ -5582,6 +5605,24 @@ export default function (server) {
               non_entity_tokens: 20,
               clients: 55,
             },
+            mounts: [
+              {
+                path: 'auth/method/ABCD1',
+                counts: {
+                  clients: 35,
+                  entity_clients: 20,
+                  non_entity_clients: 15,
+                },
+              },
+              {
+                path: 'auth/method/ABCD2',
+                counts: {
+                  clients: 35,
+                  entity_clients: 20,
+                  non_entity_clients: 15,
+                },
+              },
+            ],
           },
           {
             namespace_id: 'root',
@@ -5591,6 +5632,24 @@ export default function (server) {
               non_entity_tokens: 8,
               clients: 20,
             },
+            mounts: [
+              {
+                path: 'auth/method/XYZZ2',
+                counts: {
+                  clients: 35,
+                  entity_clients: 20,
+                  non_entity_clients: 15,
+                },
+              },
+              {
+                path: 'auth/method/XYZZ1',
+                counts: {
+                  clients: 35,
+                  entity_clients: 20,
+                  non_entity_clients: 15,
+                },
+              },
+            ],
           },
         ],
         distinct_entities: 132,
