@@ -327,13 +327,13 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		}
 
 		switch {
-		case checkExists == false:
+		case !checkExists:
 			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
 			req.Operation = logical.UpdateOperation
 		case resourceExists:
 			// It exists, so force an update operation
 			req.Operation = logical.UpdateOperation
-		case resourceExists == false:
+		case !resourceExists:
 			// It doesn't exist, force a create operation
 			req.Operation = logical.CreateOperation
 		default:

@@ -318,7 +318,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 		}
 		c.disableRegistration = true
 
-		if c.disableRegistration == false {
+		if !c.disableRegistration {
 			addr := os.Getenv("CONSUL_HTTP_ADDR")
 			if addr == "" {
 				continue

@@ -403,8 +403,7 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 			if client.ClientID != idNonEntity {
 				t.Fatalf("expected a client ID of %s, but saved instead %s", idNonEntity, client.ClientID)
 			}
-		}
-		if client.NonEntity == false {
+		} else {
 			entityTokenFlag = true
 			if client.ClientID != idEntity {
 				t.Fatalf("expected a client ID of %s, but saved instead %s", idEntity, client.ClientID)
@@ -1806,7 +1805,7 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 func checkAPIWarnings(t *testing.T, originalEnabled, newEnabled bool, resp *logical.Response) {
 	t.Helper()
 
-	expectWarning := originalEnabled && newEnabled == false
+	expectWarning := originalEnabled && !newEnabled
 
 	switch {
 	case !expectWarning && resp != nil:
