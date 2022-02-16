@@ -38,10 +38,15 @@ export default class History extends Component {
   years = Array.from({ length: 5 }, (item, i) => {
     return new Date().getFullYear() - i;
   });
+  currentDate = new Date();
+  currentYear = this.currentDate.getFullYear(); // integer of year
+  currentMonth = this.currentDate.getMonth(); // index of month
 
   @tracked isEditStartMonthOpen = false;
   @tracked startMonth = null;
   @tracked startYear = null;
+  @tracked allowedMonthMax = 12;
+  @tracked disabledYear = null;
 
   // FOR HISTORY COMPONENT //
 
@@ -156,15 +161,6 @@ export default class History extends Component {
     return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
   }
 
-  get isFormError() {
-    let dateSelected = new Date(this.startYear, this.arrayOfMonths.indexOf(this.startMonth));
-    if (this.endTimeFromResponse) {
-      return isAfter(dateSelected, (Number(this.endTimeFromResponse[0]), this.endTimeFromResponse[1]));
-    } else {
-      return isSameMonth(dateSelected, new Date());
-    }
-  }
-
   @action
   async handleClientActivityQuery(month, year, dateType) {
     if (dateType === 'cancel') {
@@ -241,10 +237,22 @@ export default class History extends Component {
   @action
   selectStartMonth(month) {
     this.startMonth = month;
+    // disables months if in the future
+    this.months.indexOf(month) >= this.currentMonth
+      ? (this.disabledYear = this.currentYear)
+      : (this.disabledYear = null);
   }
 
   @action
   selectStartYear(year) {
+    this.startYear = year;
+    if (year === this.currentYear) {
+      // only enables past months
+      this.allowedMonthMax = this.currentMonth;
+    } else {
+      // if prior year selected, no months are disabled
+      this.allowedMonthMax = 12;
+    }
     this.startYear = year;
   }
 
