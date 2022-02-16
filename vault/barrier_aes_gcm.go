@@ -1014,6 +1014,9 @@ func termLabel(term uint32) []metrics.Label {
 
 // decrypt is used to decrypt a value using the keyring
 func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]byte, error) {
+	if len(cipher) < 5+gcm.NonceSize() {
+		return nil, fmt.Errorf("invalid cipher length")
+	}
 	// Capture the parts
 	nonce := cipher[5 : 5+gcm.NonceSize()]
 	raw := cipher[5+gcm.NonceSize():]
