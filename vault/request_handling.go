@@ -453,15 +453,9 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
 	}
 	resp, err = c.handleCancelableRequest(ctx, req)
-	if err != nil {
-		req.SetTokenEntry(nil)
-		cancel()
-		return resp, err
-	}
-
 	req.SetTokenEntry(nil)
 	cancel()
-	return resp, nil
+	return resp, err
 }
 
 func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
