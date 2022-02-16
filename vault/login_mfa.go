@@ -1622,7 +1622,7 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		case "allow":
 			err = c.loginMFABackend.usedCodes.Add(usedName, nil, 30*time.Second)
 			if err != nil {
-				return fmt.Errorf("error adding code to used cache: %s", err)
+				return fmt.Errorf("error adding code to used cache: %w", err)
 			}
 			return nil
 		}
@@ -2021,7 +2021,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 			int64(totpSecret.Period)*
 			int64(2+totpSecret.Skew)))
 	if err != nil {
-		return fmt.Errorf("error adding code to used cache: %s", err)
+		return fmt.Errorf("error adding code to used cache: %w", err)
 	}
 
 	return nil
