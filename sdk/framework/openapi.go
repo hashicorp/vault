@@ -32,6 +32,9 @@ func NewOASDocument() *OASDocument {
 			},
 		},
 		Paths: make(map[string]*OASPathItem),
+		Components: OASComponents{
+			Schemas: make(map[string]*OASSchema),
+		},
 	}
 }
 
@@ -78,9 +81,14 @@ func NewOASDocumentFromMap(input map[string]interface{}) (*OASDocument, error) {
 }
 
 type OASDocument struct {
-	Version string                  `json:"openapi" mapstructure:"openapi"`
-	Info    OASInfo                 `json:"info"`
-	Paths   map[string]*OASPathItem `json:"paths"`
+	Version    string                  `json:"openapi" mapstructure:"openapi"`
+	Info       OASInfo                 `json:"info"`
+	Paths      map[string]*OASPathItem `json:"paths"`
+	Components OASComponents           `json:"components"`
+}
+
+type OASComponents struct {
+	Schemas map[string]*OASSchema `json:"schemas"`
 }
 
 type OASInfo struct {
@@ -148,6 +156,7 @@ type OASMediaTypeObject struct {
 }
 
 type OASSchema struct {
+	Ref         string                `json:"$ref,omitempty"`
 	Type        string                `json:"type,omitempty"`
 	Description string                `json:"description,omitempty"`
 	Properties  map[string]*OASSchema `json:"properties,omitempty"`
@@ -358,10 +367,13 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
+					// requestBodyName := fmt.Sprintf("%s%sRequest", strings.Title(path), backendName)
+					// doc.Components.Schemas[requestBodyName] = s
 					op.RequestBody = &OASRequestBody{
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
 								Schema: s,
+								// Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestBodyName)},
 							},
 						},
 					}

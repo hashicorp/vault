@@ -3904,7 +3904,15 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	doc := framework.NewOASDocument()
 
 	procMountGroup := func(group, mountPrefix string) error {
-		for mount := range resp.Data[group].(map[string]interface{}) {
+		for mount, entry := range resp.Data[group].(map[string]interface{}) {
+			var pluginType string
+
+			mi := entry.(map[string]interface{})
+
+			if mi != nil && mi["type"] != nil {
+				pluginType = mi["type"].(string)
+			}
+
 			backend := b.Core.router.MatchingBackend(ctx, mountPrefix+mount)
 
 			if backend == nil {
@@ -3967,8 +3975,38 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 					}
 				}
 
+				if obj.Post != nil &&
+					obj.Post.RequestBody != nil &&
+					obj.Post.RequestBody.Content != nil {
+
+					var requestBodyName string
+
+					for _, token := range strings.FieldsFunc(pluginType+"/"+path, func(r rune) bool {
+						return r == '/' || r == '_' || r == '-'
+					}) {
+						if !strings.ContainsAny(token, "{}") {
+							requestBodyName += strings.Title(token)
+						}
+					}
+
+					requestBodyName += "Request"
+
+					log.L().Warn("ANTONLOG ", requestBodyName)
+
+					if content, ok := obj.Post.RequestBody.Content["application/json"]; ok {
+						doc.Components.Schemas[requestBodyName] = content.Schema
+
+						content.Schema = &framework.OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestBodyName)}
+					}
+				}
+
 				doc.Paths["/"+mountPrefix+mount+path] = obj
 			}
+
+			// Merge backend schema components
+			// for e, schema := range backendDoc.Components.Schemas {
+			// 	doc.Components.Schemas[e] = schema
+			// }
 		}
 		return nil
 	}
