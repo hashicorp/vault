@@ -9,7 +9,7 @@
     {{@endTimeDisplay}}
     <Chevron @direction="down" @isButton={{true}} />
   </D.Trigger>
-  <D.Content @defaultClass="popup-menu-content calendar-content">
+  <D.Content @defaultClass={{concat "popup-menu-content calendar-content" (if this.showCalendar " calendar-open")}}>
     <nav class="box menu">
       <div class="calendar-title is-subtitle-gray">DATE OPTIONS</div>
       <ul class="menu-list">
@@ -24,6 +24,7 @@
         </li>
         <li class="action">
           <button
+            data-test-show-calendar
             class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
             type="button"
             {{on "click" this.toggleShowCalendar}}
@@ -37,7 +38,7 @@
       </ul>
     </nav>
     {{#if this.showCalendar}}
-      <div class="calendar-widget-container">
+      <div class="calendar-widget-container" data-test-calendar-widget-container>
         <div class="select-year">
           <button
             id="previous-year"
