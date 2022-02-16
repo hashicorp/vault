@@ -1,9 +1,14 @@
-import { module, test } from 'qunit';
-import { visit, currentURL } from '@ember/test-helpers';
+import { module, test, skip } from 'qunit';
+import { visit, currentURL, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
 import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
+import { create } from 'ember-cli-page-object';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import ss from 'vault/tests/pages/components/search-select';
+
+const searchSelect = create(ss);
 
 function generateNamespaceBlock(idx = 0, skipMounts = false) {
   let mountCount = 1;
@@ -11,9 +16,9 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
     namespace_id: `${idx}UUID`,
     namespace_path: `my-namespace-${idx}/`,
     counts: {
-      entity_clients: mountCount * 15,
+      entity_clients: mountCount * 5,
       non_entity_clients: mountCount * 10,
-      clients: mountCount * 5,
+      clients: mountCount * 15,
     },
   };
   if (!skipMounts) {
@@ -25,9 +30,9 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
           id: index,
           path: `auth/method/authid${index}`,
           counts: {
-            clients: 15,
-            entity_clients: 10,
-            non_entity_clients: 5,
+            clients: 5,
+            entity_clients: 3,
+            non_entity_clients: 2,
           },
         });
       });
@@ -37,7 +42,7 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   return nsBlock;
 }
 
-function generateConfigResponse() {
+function generateConfigResponse(overrides = {}) {
   return {
     request_id: 'some-config-id',
     data: {
@@ -45,13 +50,14 @@ function generateConfigResponse() {
       enabled: 'default-enable',
       queries_available: true,
       retention_months: 24,
+      ...overrides,
     },
   };
 }
 function generateActivityResponse(nsCount = 1, startDate, endDate) {
   if (nsCount === 0) {
     return {
-      id: 'some-activity-id',
+      request_id: 'some-activity-id',
       data: {
         start_time: formatRFC3339(startDate),
         end_time: formatRFC3339(endDate),
@@ -80,7 +86,7 @@ function generateActivityResponse(nsCount = 1, startDate, endDate) {
   });
   console.log({ namespaces });
   return {
-    id: 'some-activity-id',
+    request_id: 'some-activity-id',
     data: {
       start_time: formatRFC3339(startDate),
       end_time: formatRFC3339(endDate),
@@ -94,8 +100,8 @@ function generateActivityResponse(nsCount = 1, startDate, endDate) {
     },
   };
 }
-function generateMonthlyResponse(namespaces) {
-  if (!namespaces) {
+function generateCurrentMonthResponse(namespaceCount) {
+  if (!namespaceCount) {
     return {
       request_id: 'monthly-response-id',
       data: {
@@ -107,13 +113,16 @@ function generateMonthlyResponse(namespaces) {
     };
   }
   // generate by_namespace data
-  const by_namespace = namespaces.map((ns, idx) => generateNamespaceBlock(idx));
+  const by_namespace = Array.from(Array(namespaceCount)).map((ns, idx) => generateNamespaceBlock(idx));
   const counts = by_namespace.reduce(
-    (prev, curr) => ({
-      clients: prev.clients + curr.clients,
-      entity_clients: prev.entity_clients + curr.entity_clients,
-      non_entity_clients: prev.non_entity_clients + curr.non_entity_clients,
-    }),
+    (prev, curr) => {
+      console.log(prev, curr, 'combine namespaces');
+      return {
+        clients: prev.clients + curr.counts.clients,
+        entity_clients: prev.entity_clients + curr.counts.entity_clients,
+        non_entity_clients: prev.non_entity_clients + curr.counts.non_entity_clients,
+      };
+    },
     { clients: 0, entity_clients: 0, non_entity_clients: 0 }
   );
   return {
@@ -139,11 +148,15 @@ function generateLicenseResponse(startDate, endDate) {
 function send(data, httpStatus = 200) {
   return [httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data)];
 }
-// const RES = {
-//   permissionDenied: [403, {}, JSON.stringify({ errors: ['permission denied'] })],
-//   empty: [204, {}],
-//   empty200: [200, {}, JSON.stringify({ id: 'empty', data: {} })],
-// };
+
+const SELECTORS = {
+  activeTab: '.nav-tab-link.is-active',
+  emptyStateTitle: '[data-test-empty-state-title]',
+  usageStats: '[data-test-usage-stats]',
+  dateDisplay: '[data-test-date-display]',
+  attributionBlock: '[data-test-clients-attribution]',
+};
+
 module('Acceptance | clients route', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -151,40 +164,188 @@ module('Acceptance | clients route', function (hooks) {
     return authPage.login();
   });
 
-  test('visiting /clients with zero data and config on', async function (assert) {
+  hooks.afterEach(function () {
+    this.server.shutdown();
+  });
+
+  test('shows empty state and warning when config disabled, queries available, no data', async function (assert) {
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
-    const config = generateConfigResponse();
-    const monthly = generateMonthlyResponse();
-    const activity = generateActivityResponse(0, licenseStart, licenseEnd);
     const license = generateLicenseResponse(licenseStart, licenseEnd);
+    const config = generateConfigResponse({ enabled: 'default-disable' });
+    const monthly = generateCurrentMonthResponse();
+    const activity = generateActivityResponse(0, licenseStart, licenseEnd);
     this.server = new Pretender(function () {
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
       this.get('/v1/sys/license/status', () => send(license));
       this.get('/v1/sys/internal/counters/activity', () => send(activity));
       this.get('/v1/sys/internal/counters/activity/monthly', () => send(monthly));
       this.get('/v1/sys/internal/counters/config', () => send(config));
       this.get('/v1/sys/version-history', () => send({ keys: [] }));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
     });
-    await visit('/vault/clients');
-    assert.equal(currentURL(), '/vault/clients');
-    assert.dom('.nav-tab-link.is-active').hasText('Current month', 'current month tab is active');
-    assert.dom('[data-test-usage-stats]').exists('usage stats block exists');
-    assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    assert.dom('[data-test-clients-attribution]').doesNotExist('Does not show attribution with no data');
-    // History Tab, zero data
+    // Current Tab
+    await visit('/vault/clients/current');
+    assert.equal(currentURL(), '/vault/clients/current');
+    assert.dom(SELECTORS.activeTab).hasText('Current month', 'current month tab is active');
+    assert.dom(SELECTORS.emptyStateTitle).hasText('Tracking is disabled');
+    // History Tab
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom('.nav-tab-link.is-active').hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+
+    assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
+    // TODO: still allows query by previous dates
+  });
+
+  test('shows empty state and warning when no queries', async function (assert) {
+    const licenseStart = startOfMonth(subMonths(new Date(), 6));
+    const licenseEnd = addMonths(new Date(), 6);
+    const license = generateLicenseResponse(licenseStart, licenseEnd);
+    const config = generateConfigResponse({ queries_available: false });
+    const monthly = generateCurrentMonthResponse();
+    const activity = generateActivityResponse(0, licenseStart, licenseEnd);
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => send(license));
+      this.get('/v1/sys/internal/counters/activity', () => send(activity));
+      this.get('/v1/sys/internal/counters/activity/monthly', () => send(monthly));
+      this.get('/v1/sys/internal/counters/config', () => send(config));
+      this.get('/v1/sys/version-history', () => send({ keys: [] }));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    // Current tab
+    await visit('/vault/clients/current');
+    assert.equal(currentURL(), '/vault/clients/current');
+    assert.dom(SELECTORS.activeTab).hasText('Current month', 'current month tab is active');
+    assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
+    // History Tab
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history');
+    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+
+    assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly history');
+  });
+  test('visiting history tab with no data and config on', async function (assert) {
+    const licenseStart = startOfMonth(subMonths(new Date(), 6));
+    const licenseEnd = addMonths(new Date(), 6);
+    const config = generateConfigResponse();
+    const activity = generateActivityResponse(0, licenseStart, licenseEnd);
+    const license = generateLicenseResponse(licenseStart, licenseEnd);
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => send(license));
+      this.get('/v1/sys/internal/counters/activity', () => send(activity));
+      this.get('/v1/sys/internal/counters/config', () => send(config));
+      this.get('/v1/sys/version-history', () => send({ keys: [] }));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history');
     assert
-      .dom('[data-test-date-display]')
+      .dom(SELECTORS.dateDisplay)
       .hasText(format(licenseStart, 'MMMM yyyy'), 'billing start month is correctly parsed from license');
-    assert.dom('[data-test-clients-attribution]').exists('Attribution block is shown');
-    // TODO: Export attribution data not shown
-    assert.dom('[data-test-clients-attribution] [data-test-empty-state-title]').hasText('No data received');
-    // TODO: Attribution empty state text is correct
+    assert.dom(SELECTORS.attributionBlock).doesNotExist('Attribution block is not shown when no data');
+    assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
     // TODO: Filters correct
+    // TODO: don't show namespace filter if none exist
+  });
+  test('filters correctly on current with full data', async function (assert) {
+    const config = generateConfigResponse();
+    const monthly = generateCurrentMonthResponse(3);
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/internal/counters/activity/monthly', () => send(monthly));
+      this.get('/v1/sys/internal/counters/config', () => send(config));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/current');
+    assert.equal(currentURL(), '/vault/clients/current');
+    assert.dom(SELECTORS.activeTab).hasText('Current month', 'current month tab is active');
+    assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
+    assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
+    const { clients, entity_clients, non_entity_clients } = monthly.data;
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText(clients.toString());
+    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText(entity_clients.toString());
+    assert
+      .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
+      .hasText(non_entity_clients.toString());
+    assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
+    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
+    assert.dom('[data-test-top-attribution]').hasText('Top namespace');
+    // Filter by namespace
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
+    await settled();
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
+    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
+    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
+    assert.dom('[data-test-horizontal-bar-chart]').exists('Still shows attribution bar chart');
+    assert.dom('[data-test-top-attribution]').hasText('Top auth method');
+    // Filter by auth method
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
+    await settled();
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('5');
+    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('3');
+    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('2');
+    assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
+  });
+  test('filters correctly on history with full data', async function (assert) {
+    const licenseStart = startOfMonth(subMonths(new Date(), 6));
+    const licenseEnd = addMonths(new Date(), 6);
+    const config = generateConfigResponse();
+    const activity = generateActivityResponse(5, licenseStart, licenseEnd);
+    const license = generateLicenseResponse(licenseStart, licenseEnd);
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => send(license));
+      this.get('/v1/sys/internal/counters/activity', () => send(activity));
+      this.get('/v1/sys/internal/counters/config', () => send(config));
+      this.get('/v1/sys/version-history', () => send({ keys: [] }));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    console.log({ activity });
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history');
+    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
+    assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
+    const { clients, entity_clients, non_entity_clients } = activity.data.total;
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText(clients.toString());
+    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText(entity_clients.toString());
+    assert
+      .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
+      .hasText(non_entity_clients.toString());
+    await this.pauseTest();
+    assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
+    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
+    assert.dom('[data-test-top-attribution]').hasText('Top namespace');
+    // Filter by namespace
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
+    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
+    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
+    assert.dom('[data-test-horizontal-bar-chart]').exists('Still shows attribution bar chart');
+    assert.dom('[data-test-top-attribution]').hasText('Top auth method');
+    // Filter by auth method
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('5');
+    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('2');
+    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('3');
+    assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
+    await this.pauseTest();
+    await click('#allowed_roles [data-test-selected-list-button="delete"]');
   });
 });
