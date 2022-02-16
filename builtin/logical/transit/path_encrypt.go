@@ -127,10 +127,19 @@ to the min_encryption_version configured on the key.`,
 	}
 }
 
+func decodeEncryptBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
+	return decodeBatchRequestItems(src, true, false, dst)
+}
+
+func decodeDecryptBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
+	return decodeBatchRequestItems(src, false, true, dst)
+}
+
 // decodeBatchRequestItems is a fast path alternative to mapstructure.Decode to decode []BatchRequestItem.
 // It aims to behave as closely possible to the original mapstructure.Decode and will return the same errors.
+// Note, however, that an error will also be returned if one of the required fields is missing.
 // https://github.com/hashicorp/vault/pull/8775/files#r437709722
-func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
+func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiphertext bool, dst *[]BatchRequestItem) error {
 	if src == nil || dst == nil {
 		return nil
 	}
@@ -173,15 +182,18 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T'", i, item["ciphertext"]))
 			}
+		} else if requireCiphertext {
+			errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' missing ciphertext to decrypt", i))
 		}
 
-		// don't allow "null" to be passed in for the plaintext value
 		if v, has := item["plaintext"]; has {
 			if casted, ok := v.(string); ok {
 				(*dst)[i].Plaintext = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' expected type 'string', got unconvertible type '%T'", i, item["plaintext"]))
 			}
+		} else if requirePlaintext {
+			errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' missing plaintext to encrypt", i))
 		}
 
 		if v, has := item["nonce"]; has {
@@ -240,7 +252,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []BatchRequestItem
 	if batchInputRaw != nil {
-		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
+		err = decodeEncryptBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}

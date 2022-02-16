@@ -13,8 +13,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Case1: Ensure that batch encryption did not affect the normal flow of
-// encrypting the plaintext with a pre-existing key.
 func TestTransit_MissingPlaintext(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -44,7 +42,43 @@ func TestTransit_MissingPlaintext(t *testing.T) {
 	}
 	resp, err = b.HandleRequest(context.Background(), encReq)
 	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected error due to missing plaintext in request, err:%v resp:%#v", err, resp)
+	}
+}
+
+func TestTransit_MissingPlaintextInBatchInput(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create the policy
+	policyReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/existing_key",
+		Storage:   s,
+	}
+	resp, err = b.HandleRequest(context.Background(), policyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	batchInput := []interface{}{
+		map[string]interface{}{}, // Note that there is no map entry for plaintext
+	}
+
+	batchData := map[string]interface{}{
+		"batch_input": batchInput,
+	}
+	batchReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/upserted_key",
+		Storage:   s,
+		Data:      batchData,
+	}
+	resp, err = b.HandleRequest(context.Background(), batchReq)
+	if err == nil {
+		t.Fatalf("expected error due to missing plaintext in request, err:%v resp:%#v", err, resp)
 	}
 }
 
@@ -644,6 +678,8 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 	tests := []struct {
 		name            string
 		src             interface{}
+		requirePlaintext bool
+		requireCiphertext bool
 		dest            []BatchRequestItem
 		wantErrContains string
 	}{
@@ -764,16 +800,51 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			src:  []interface{}{map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "nonce": "null"}},
 			dest: []BatchRequestItem{},
 		},
+		// required fields
+		{
+			name: "required_plaintext_present",
+			src:  []interface{}{map[string]interface{}{"plaintext": ""}},
+			requirePlaintext: true,
+			dest: []BatchRequestItem{},
+		},
+		{
+			name: "required_plaintext_missing",
+			src:  []interface{}{map[string]interface{}{}},
+			requirePlaintext: true,
+			dest: []BatchRequestItem{},
+			wantErrContains: "missing plaintext",
+		},
+		{
+			name: "required_ciphertext_present",
+			src:  []interface{}{map[string]interface{}{"ciphertext": "dGhlIHF1aWNrIGJyb3duIGZveA=="}},
+			requireCiphertext: true,
+			dest: []BatchRequestItem{},
+		},
+		{
+			name: "required_ciphertext_missing",
+			src:  []interface{}{map[string]interface{}{}},
+			requireCiphertext: true,
+			dest: []BatchRequestItem{},
+			wantErrContains: "missing ciphertext",
+		},
+		{
+			name: "required_plaintext_and_ciphertext_missing",
+			src:  []interface{}{map[string]interface{}{}},
+			requirePlaintext: true,
+			requireCiphertext: true,
+			dest: []BatchRequestItem{},
+			wantErrContains: "missing ciphertext",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			expectedDest := append(tt.dest[:0:0], tt.dest...) // copy of the dest state
-			expectedErr := mapstructure.Decode(tt.src, &expectedDest)
+			expectedErr := mapstructure.Decode(tt.src, &expectedDest) != nil || tt.wantErrContains != ""
 
-			gotErr := decodeBatchRequestItems(tt.src, &tt.dest)
+			gotErr := decodeBatchRequestItems(tt.src, tt.requirePlaintext, tt.requireCiphertext, &tt.dest)
 			gotDest := tt.dest
 
-			if expectedErr != nil {
+			if expectedErr {
 				if gotErr == nil {
 					t.Fatal("decodeBatchRequestItems unexpected error value; expected error but got none")
 				}
