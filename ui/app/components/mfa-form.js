@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, set } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
+import { numberToWord } from 'vault/helpers/number-to-word';
 /**
  * @module MfaForm
  * The MfaForm component is used to enter a passcode when mfa is required to login
@@ -48,7 +49,8 @@ export default class MfaForm extends Component {
       base += ' Select the MFA method you wish to use.';
     }
     if (this.multiConstraint) {
-      base += ` ${this.constraints.length} methods are required for successful authentication.`;
+      const num = this.constraints.length;
+      base += ` ${numberToWord(num, true)} methods are required for successful authentication.`;
     }
     return base;
   }
