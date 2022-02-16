@@ -474,7 +474,7 @@ func TestEncrypt_Unique(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if bytes.Equal(first, second) == true {
+	if bytes.Equal(first, second) {
 		t.Fatalf("improper random seeding detected")
 	}
 }

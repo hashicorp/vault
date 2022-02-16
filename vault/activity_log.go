@@ -1716,7 +1716,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	walkEntities := func(l *activity.EntityActivityLog) {
 		for _, e := range l.Clients {
 			createNs(e.NamespaceID)
-			if e.NonEntity == true {
+			if e.NonEntity {
 				byNamespace[e.NamespaceID].NonEntities[e.ClientID] = struct{}{}
 			} else {
 				byNamespace[e.NamespaceID].Entities[e.ClientID] = struct{}{}
@@ -1994,7 +1994,7 @@ func createClientCountTable(entityMap map[string]uint64, nonEntityMap map[string
 func (ct *ClientTracker) addClient(e *activity.EntityRecord) {
 	if _, ok := ct.activeClients[e.ClientID]; !ok {
 		ct.activeClients[e.ClientID] = struct{}{}
-		if e.NonEntity == true {
+		if e.NonEntity {
 			ct.nonEntityCountByNamespaceID[e.NamespaceID] += 1
 		} else {
 			ct.entityCountByNamespaceID[e.NamespaceID] += 1

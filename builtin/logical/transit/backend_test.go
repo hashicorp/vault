@@ -608,7 +608,7 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Derived != derived {
