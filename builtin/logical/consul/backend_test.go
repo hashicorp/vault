@@ -702,6 +702,119 @@ func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
+func TestBackend_Roles(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false)
+	defer cleanup()
+
+	connData := map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
+	}
+
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      connData,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the consul_roles role
+	req.Path = "roles/test-consul-roles"
+	req.Data = map[string]interface{}{
+		"consul_roles": []string{"role-test"},
+		"lease":        "6h",
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test-consul-roles"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
+	}
+
+	generatedSecret := resp.Secret
+	generatedSecret.TTL = 6 * time.Hour
+
+	var d struct {
+		Token    string `mapstructure:"token"`
+		Accessor string `mapstructure:"accessor"`
+	}
+	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Generated consul_roles token: %s with accessor %s", d.Token, d.Accessor)
+
+	// Build a client and verify that the credentials work
+	consulapiConfig := consulapi.DefaultNonPooledConfig()
+	consulapiConfig.Address = connData["address"].(string)
+	consulapiConfig.Token = d.Token
+	client, err := consulapi.NewClient(consulapiConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("Verifying that the generated token works...")
+	_, err = client.Catalog(), nil
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.RenewOperation
+	req.Secret = generatedSecret
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+
+	req.Operation = logical.RevokeOperation
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Build a management client and verify that the token does not exist anymore
+	consulmgmtConfig := consulapi.DefaultNonPooledConfig()
+	consulmgmtConfig.Address = connData["address"].(string)
+	consulmgmtConfig.Token = connData["token"].(string)
+	mgmtclient, err := consulapi.NewClient(consulmgmtConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := &consulapi.QueryOptions{
+		Datacenter: "DC1",
+	}
+
+	t.Log("Verifying that the generated token does not exist...")
+	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
+	if err == nil {
+		t.Fatal("err: expected error")
+	}
+}
+
 func TestBackend_Enterprise_Namespace(t *testing.T) {
 	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); !hasLicense {
 		t.Skip("Skipping: No enterprise license found")
@@ -961,5 +1074,4 @@ func testBackendEntPartition(t *testing.T) {
 const testPolicy = `
 key "" {
 	policy = "write"
-}
-`
+}`

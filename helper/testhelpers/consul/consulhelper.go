@@ -136,6 +136,20 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func
 			return nil, err
 		}
 
+		// Create a Consul role that contains the test policy, for Consul 1.5 and newer
+		ACLList := []*consulapi.ACLLink{{Name: "test"}}
+
+		role := &consulapi.ACLRole{
+			Name:        "role-test",
+			Description: "consul roles test",
+			Policies:    ACLList,
+		}
+
+		_, _, err = consul.ACL().RoleCreate(role, q)
+		if err != nil {
+			return nil, err
+		}
+
 		// Configure a namespace and parition if testing enterprise Consul
 		if isEnterprise {
 
