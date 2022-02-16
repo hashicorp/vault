@@ -1576,7 +1576,7 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		usedName = fmt.Sprintf("%s_%s", mConfig.ID, passcode)
 		_, ok := c.loginMFABackend.usedCodes.Get(usedName)
 		if ok {
-			return fmt.Errorf("code already used; wait until the next time period")
+			return fmt.Errorf("code already used; new code is available in 30 seconds")
 		}
 
 		factor = "passcode"
@@ -1976,16 +1976,20 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		return fmt.Errorf("more than one TOTP passcode supplied")
 	}
 
+	totpSecret := entityMethodSecret.GetTOTPSecret()
+	if totpSecret == nil {
+		return fmt.Errorf("entity does not contain the TOTP secret")
+	}
+
+	// Take the key skew, add two for behind and in front, and multiply that by
+	// the period to cover the full possibility of the validity of the key
+	validityPeriod := time.Duration(int64(time.Second) * int64(totpSecret.Period) * int64(2+totpSecret.Skew))
+
 	usedName := fmt.Sprintf("%s_%s", configID, creds[0])
 
 	_, ok := c.loginMFABackend.usedCodes.Get(usedName)
 	if ok {
-		return fmt.Errorf("code already used; wait until the next time period")
-	}
-
-	totpSecret := entityMethodSecret.GetTOTPSecret()
-	if totpSecret == nil {
-		return fmt.Errorf("entity does not contain the TOTP secret")
+		return fmt.Errorf("code already used; new code is available in %v seconds", validityPeriod)
 	}
 
 	key, err := c.fetchTOTPKey(ctx, configID, entityID)
@@ -2014,12 +2018,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 	}
 
 	// Adding the used code to the cache
-	// Take the key skew, add two for behind and in front, and multiply that by
-	// the period to cover the full possibility of the validity of the key
-	err = c.loginMFABackend.usedCodes.Add(usedName, nil, time.Duration(
-		int64(time.Second)*
-			int64(totpSecret.Period)*
-			int64(2+totpSecret.Skew)))
+	err = c.loginMFABackend.usedCodes.Add(usedName, nil, validityPeriod)
 	if err != nil {
 		return fmt.Errorf("error adding code to used cache: %w", err)
 	}
