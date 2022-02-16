@@ -361,6 +361,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Push information for Duo.",
 				},
+				"use_passcode": {
+					Type:        framework.TypeBool,
+					Description: `If true, the user is reminded to use the passcode upon MFA validation. This option does not enforce using the passcode. Defaults to false.`,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{

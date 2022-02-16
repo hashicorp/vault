@@ -979,6 +979,7 @@ func parseDuoConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 		IntegrationKey: integrationKey,
 		APIHostname:    apiHostname,
 		PushInfo:       d.Get("push_info").(string),
+		UsePasscode:    d.Get("use_passcode").(bool),
 	}
 
 	mConfig.Config = &mfa.Config_DuoConfig{
@@ -1164,6 +1165,7 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 		respData["pushinfo"] = duoConfig.PushInfo
 		respData["mount_accessor"] = mConfig.MountAccessor
 		respData["username_format"] = mConfig.UsernameFormat
+		respData["use_passcode"] = duoConfig.UsePasscode
 	case *mfa.Config_PingIDConfig:
 		pingConfig := mConfig.GetPingIDConfig()
 		respData["use_signature"] = pingConfig.UseSignature
