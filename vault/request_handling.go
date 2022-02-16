@@ -1483,6 +1483,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				resp.Auth = &logical.Auth{
 					MFARequirement: mfaRequirement,
 				}
+				resp.AddWarning("A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint.")
 				// going to return early before generating the token
 				// the user receives the mfaRequirement, and need to use the
 				// login MFA validate endpoint to get the token

@@ -2,7 +2,9 @@ package identity
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
@@ -115,7 +117,7 @@ func TestLoginMfaGenerateTOTPRoleTest(t *testing.T) {
 		// create a config
 		resp1, err := client.Logical().Write("identity/mfa/method/totp", map[string]interface{}{
 			"issuer":    "yCorp",
-			"period":    10000,
+			"period":    5,
 			"algorithm": "SHA1",
 			"digits":    6,
 			"skew":      1,
@@ -206,6 +208,10 @@ func TestLoginMfaGenerateTOTPRoleTest(t *testing.T) {
 			t.Fatalf("MFA failed: %v", err)
 		}
 
+		if len(secret.Warnings) == 0 || !strings.Contains(strings.Join(secret.Warnings, ""), "A login request was issued that is subject to MFA validation") {
+			t.Fatalf("first phase of login did not have a warning")
+		}
+
 		if secret.Auth == nil || secret.Auth.MFARequirement == nil {
 			t.Fatalf("two phase login returned nil MFARequirement")
 		}
@@ -229,6 +235,15 @@ func TestLoginMfaGenerateTOTPRoleTest(t *testing.T) {
 		}
 
 		// validation
+		// waiting for 5 seconds so that a fresh code could be generated
+		time.Sleep(5 * time.Second)
+		// getting a fresh totp passcode for the validation step
+		totpResp, err := client.Logical().Read("totp/code/loginMFA")
+		if err != nil {
+			t.Fatalf("failed to create totp passcode: %v", err)
+		}
+		totpPasscode = totpResp.Data["code"].(string)
+
 		secret, err = user2Client.Logical().Write("sys/mfa/validate", map[string]interface{}{
 			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 			"mfa_payload": map[string][]string{
@@ -249,6 +264,19 @@ func TestLoginMfaGenerateTOTPRoleTest(t *testing.T) {
 
 		if secret.Auth == nil || secret.Auth.MFARequirement == nil {
 			t.Fatalf("two phase login returned nil MFARequirement")
+		}
+
+		_, err = user2Client.Logical().Write("sys/mfa/validate", map[string]interface{}{
+			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
+			"mfa_payload": map[string][]string{
+				methodID: {totpPasscode},
+			},
+		})
+		if err == nil {
+			t.Fatalf("MFA succeeded with an already used passcode")
+		}
+		if !strings.Contains(err.Error(), "code already used") {
+			t.Fatalf("expected error message to mention code already used")
 		}
 
 		// Destroy the secret so that the token can self generate
