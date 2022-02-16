@@ -30,6 +30,9 @@ export function sendResponse(data, httpStatus = 200) {
       JSON.stringify({ errors: ['permission denied'] }),
     ];
   }
+  if (httpStatus === 204) {
+    return [httpStatus, { 'Content-Type': 'application/json' }];
+  }
   return [httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data)];
 }
 
@@ -52,9 +55,11 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
     namespace_id: `${idx}UUID`,
     namespace_path: `my-namespace-${idx}/`,
     counts: {
+      clients: mountCount * 15,
       entity_clients: mountCount * 5,
       non_entity_clients: mountCount * 10,
-      clients: mountCount * 15,
+      distinct_entities: mountCount * 5,
+      non_entity_tokens: mountCount * 10,
     },
   };
   if (!skipMounts) {
@@ -63,12 +68,13 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
     if (!skipMounts) {
       Array.from(Array(mountCount)).forEach((v, index) => {
         mounts.push({
-          id: index,
-          path: `auth/method/authid${index}`,
+          path: `auth/authid${index}`,
           counts: {
             clients: 5,
             entity_clients: 3,
             non_entity_clients: 2,
+            distinct_entities: 3,
+            non_entity_tokens: 2,
           },
         });
       });
@@ -114,9 +120,9 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
       start_time: formatRFC3339(startDate),
       end_time: formatRFC3339(endDate),
       total: {
-        clients: 3637,
-        entity_clients: 1643,
-        non_entity_clients: 1994,
+        clients: 999,
+        entity_clients: 666,
+        non_entity_clients: 333,
       },
       by_namespace: namespaces,
       // months: [],

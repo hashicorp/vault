@@ -96,10 +96,11 @@ export default class History extends Component {
   }
 
   get hasAttributionData() {
+    if (this.selectedAuthMethod) return false;
     if (this.selectedNamespace) {
       return this.authMethodOptions.length > 0;
     }
-    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData;
   }
 
   get startTimeDisplay() {

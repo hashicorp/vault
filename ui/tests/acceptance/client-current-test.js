@@ -15,7 +15,7 @@ import {
 
 const searchSelect = create(ss);
 
-module('Acceptance | client current', function (hooks) {
+module('Acceptance | clients current', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
