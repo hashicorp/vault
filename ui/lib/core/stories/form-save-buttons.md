@@ -23,6 +23,6 @@
 **See**
 
 - [Uses of FormSaveButtons](https://github.com/hashicorp/vault/search?l=Handlebars&q=FormSaveButtons+OR+form-save-buttons)
-- [FormSaveButtons Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/form-save-buttons.js)
+- [FormSaveButtons Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/form-save-buttons.js)
 
 ---
