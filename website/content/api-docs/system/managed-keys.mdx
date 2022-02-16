@@ -65,7 +65,7 @@ $ curl \
   unique throughout all types in the namespace.
 
 - `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
-  Supported options are `pkcs11`, `awskms`, and 'gcpckms'.
+  Supported options are `pkcs11` and `awskms`.
 
 - `allow_generate_key` `(string: "false")` - If no existing key can be found in the referenced backend, instructs
   Vault to generate a key within the backend.
@@ -167,15 +167,6 @@ This endpoint returns the managed key configuration at the given path.
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
 - `type` `(string: <required>)` – The backend type for the managed key.
-
-
-#### AWS KMS Parameters
-- `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in the
-`AWS_ACCESS_KEY_ID environment variable.
-- `region` `(string: <required>)`: The AWS region where the keys are stored (or will be stored). This
-may also be provided in the `AWS_REGION` environment variable.
-- `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in the
-`AWS_SECRET_ACCESS_KEY` environment variable.
 
 ### Sample Request
 
