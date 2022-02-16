@@ -74,6 +74,11 @@ const (
 	coreKeyringCanaryPath = "core/canary-keyring"
 
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
+
+	// ForwardSSCTokenToActive is the value that must be set in the
+	// forwardToActive to trigger forwarding if a perf standby encounters
+	// an SSC Token that it does not have the WAL state for.
+	ForwardSSCTokenToActive = "new_token"
 )
 
 var (
@@ -576,6 +581,13 @@ type Core struct {
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
 
+	// disableSSCTokens is used to disable server side consistent token creation/usage
+	disableSSCTokens bool
+	// forwardToActive is a server config used to determine when the node should forward
+	// requests to the active node. This value must be set to "new_token" in order for
+	// forwarding to take effect.
+	forwardToActive string
+
 	// versionTimestamps is a map of vault versions to timestamps when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
@@ -702,6 +714,12 @@ type CoreConfig struct {
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
+
+	// DisableSSCTokens is used to disable the use of server side consistent tokens
+	DisableSSCTokens bool
+	// ForwardToActive is a server configuration that will determine when requests
+	// should be forwarded to the active node
+	ForwardToActive string
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -844,6 +862,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableAutopilot:               conf.DisableAutopilot,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
+		disableSSCTokens:               conf.DisableSSCTokens,
+		forwardToActive:                conf.ForwardToActive,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -1096,6 +1116,17 @@ func (c *Core) HostnameHeaderEnabled() bool {
 // to HTTP responses.
 func (c *Core) RaftNodeIDHeaderEnabled() bool {
 	return c.enableResponseHeaderRaftNodeID
+}
+
+// DisableSSCTokens determines whether to use server side consistent tokens or not.
+func (c *Core) DisableSSCTokens() bool {
+	return c.disableSSCTokens
+}
+
+// ForwardToActive returns the core configuration that determines whether requests
+// should be forwarded to the active node.
+func (c *Core) ForwardToActive() string {
+	return c.forwardToActive
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It

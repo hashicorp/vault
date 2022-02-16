@@ -669,6 +669,7 @@ func TestHandler_error(t *testing.T) {
 
 func TestHandler_requestAuth(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
+	token, _ = core.DecodeSSCToken(token)
 
 	rootCtx := namespace.RootContext(nil)
 	te, err := core.LookupToken(rootCtx, token)

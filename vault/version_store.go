@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const vaultVersionPath string = "core/versions/"
+const (
+	vaultVersionPath string = "core/versions/"
+)
 
 // storeVersionTimestamp will store the version and timestamp pair to storage
 // only if no entry for that version already exists in storage. Version
@@ -127,4 +131,24 @@ func (c *Core) loadVersionTimestamps(ctx context.Context) error {
 		c.versionTimestamps[vaultVersion.Version] = timestampInstalled
 	}
 	return nil
+}
+
+func IsJWT(token string) bool {
+	return len(token) > 3 && strings.Count(token, ".") == 2 &&
+		(token[3] != '.' && token[1] != '.')
+}
+
+func IsSSCToken(token string) bool {
+	return len(token) > MaxNsIdLength+TokenLength+TokenPrefixLength &&
+		strings.HasPrefix(token, consts.ServiceTokenPrefix)
+}
+
+func IsServiceToken(token string) bool {
+	return strings.HasPrefix(token, consts.ServiceTokenPrefix) ||
+		strings.HasPrefix(token, consts.LegacyServiceTokenPrefix)
+}
+
+func IsBatchToken(token string) bool {
+	return strings.HasPrefix(token, consts.LegacyBatchTokenPrefix) ||
+		strings.HasPrefix(token, consts.BatchTokenPrefix)
 }

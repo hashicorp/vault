@@ -1157,6 +1157,15 @@ func (c *ServerCommand) Run(args []string) int {
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
+	if disableSSC := os.Getenv(DisableSSCTokens); disableSSC != "" {
+		var err error
+		config.DisableSSCTokens, err = strconv.ParseBool(disableSSC)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
+				"setting to default value false"))
+		}
+	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
@@ -2484,6 +2493,8 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
+		DisableSSCTokens:               config.DisableSSCTokens,
+		ForwardToActive:                config.ForwardToActive,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

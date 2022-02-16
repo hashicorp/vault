@@ -1,22 +1,35 @@
 package token
 
 import (
+	"context"
 	"encoding/base64"
+	"fmt"
+	"net/http"
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/cluster"
+	"go.uber.org/atomic"
 )
 
 func TestTokenStore_CreateOrphanResponse(t *testing.T) {
@@ -674,5 +687,267 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	tokensLeft := len(secret.Data["keys"].([]interface{}))
 	if tokensLeft != expectedTokens {
 		t.Fatalf("found %d tokens left, expected %d", tokensLeft, expectedTokens)
+	}
+}
+
+// TestSSCToken_ContainsWAL checks that server side consistent tokens in a
+// cluster have a legitimate WAL index.
+func TestSSCToken_ContainsWAL(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
+
+	inmemCluster, err := cluster.NewInmemLayerCluster("pri-cluster", 3, logger.Named("pri-cluster"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	priCluster, core := testhelpers.ConfClusterAndCore(t, nil, &vault.TestClusterOptions{
+		HandlerFunc:   vaulthttp.Handler,
+		ClusterLayers: inmemCluster,
+		Logger:        logger.Named("pri"),
+	})
+	priCluster.Start()
+	defer priCluster.Cleanup()
+
+	client := core.Client
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("missing auth data: %#v", secret)
+	}
+	plainToken, err := core.DecodeSSCTokenInternal(secret.Auth.ClientToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lInd := plainToken.LocalIndex
+
+	if lInd == 0 {
+		t.Fatal("server side consistent token in cluster should not be created with WAL index of 0")
+	}
+}
+
+// TestSSCToken_WALMismatch checks that a perf standby will either error
+// or forward to the active node when it encounters a token with a higher WAL index.
+func TestSSCToken_WALMismatch(t *testing.T) {
+	// Setup cluster
+	// Generate a IBT token (T1)
+	// turn off and generate a token (T2)
+	// Make server side consistent token from T2 token via helper method with the index
+	// being > T1 + 100
+	// Turn IBT on
+	// Use IBT T2 on a perf standby and ensure you get the right error
+}
+
+type clusterOpts struct {
+	allowForwardingClientHeader bool
+	allowForwardingServer       string
+}
+
+// testCluster is copied over from the consistencyheaders package
+func testCluster(t *testing.T, customOpts *clusterOpts) *vault.TestCluster {
+	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
+	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
+	conf.LogicalBackends = map[string]logical.Factory{
+		"pki": pki.Factory,
+	}
+	conf.CredentialBackends = map[string]logical.Factory{
+		"userpass": userpass.Factory,
+	}
+	conf.Replication = testhelpers.ReplicationConfig(0)
+	if customOpts != nil {
+	}
+	if customOpts != nil {
+		conf.Replication.AllowForwardingViaHeader = customOpts.allowForwardingClientHeader
+		conf.ForwardToActive = customOpts.allowForwardingServer
+	}
+	opts.Logger = logger
+	pri := vault.NewTestCluster(t, conf, opts)
+	pri.Start()
+	testhelpers.WaitForActiveNodeAndPerfStandbys(t, pri)
+
+	return pri
+}
+
+// CountingRetryPolicy is copied over from the consistencyheaders package
+func CountingRetryPolicy(dest *atomic.Int32) func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		retry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+		if err != nil || retry {
+			return retry, err
+		}
+		if resp.StatusCode == 412 {
+			dest.Inc()
+		}
+		return resp.StatusCode == 412, nil
+	}
+}
+
+// setupCoreClient is copied over from the consistencyheaders package
+func setupCoreClient(tc *vault.TestClusterCore, retryCounter *atomic.Int32) func() {
+	retry, apply, cleanup := wrapRetryPolicyTriggerApply(CountingRetryPolicy(retryCounter))
+	tc.CoreConfig.Physical.(*raft.RaftBackend).SetFSMApplyCallback(apply)
+	tc.Client.SetCheckRetry(retry)
+	tc.Client.SetMaxRetries(10)
+	return cleanup
+}
+
+// wrapRetryPolicyTriggerApply is copied over from the consistencyheaders package
+func wrapRetryPolicyTriggerApply(r retryablehttp.CheckRetry) (retryablehttp.CheckRetry, func(), func()) {
+	var wg sync.WaitGroup
+	var markedDone atomic.Bool
+	done := func() {
+		if markedDone.CAS(false, true) {
+			wg.Done()
+		}
+	}
+	wg.Add(1)
+	newRetryPolicy := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		retry, err := r(ctx, resp, err)
+		if err != nil {
+			return false, err
+		}
+		if retry {
+			done()
+		}
+		return retry, nil
+	}
+	return newRetryPolicy, wg.Wait, done
+}
+
+// TestSSCToken_Negative tests that the correct error is thrown
+// when a standby node receives an server side consistent token for which it has
+// no corresponding WAL index.
+func TestSSCToken_Negative(t *testing.T) {
+	pri := testCluster(t, nil)
+	defer pri.Cleanup()
+
+	client := pri.Cores[0].Client
+	priPSClient := pri.Cores[1].Client
+	testhelpers.EnsureCoreIsPerfStandby(t, priPSClient)
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	// Create a token policy for kv writes
+	kvWritePolicy := `path "kv/*" { capabilities = ["create", "update", "read", "patch"] }`
+	if err := client.Sys().PutPolicy("kvWritePolicy", kvWritePolicy); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a tokens on the active node and use it on
+	// the perf standby.
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"kvWritePolicy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("missing auth data: %#v", secret)
+	}
+	priPSClient.SetToken(secret.Auth.ClientToken)
+	if _, err := priPSClient.Logical().Write("kv/data/foo", map[string]interface{}{
+		"data": map[string]interface{}{
+			"foo": "bar",
+			"bar": "baz",
+		},
+	}); err == nil {
+		t.Fatalf("write succeeded when it should have failed\n")
+	} else {
+		if !strings.Contains(err.Error(), logical.ErrMissingRequiredState.Error()) {
+			t.Fatalf("wrong error found: %s\n", err.Error())
+		}
+	}
+}
+
+// TestSSCToken_RenewToken ensures that the renew endpoint
+// returns the same token as was initially passed in.
+func TestSSCToken_RenewToken(t *testing.T) {
+	t.Parallel()
+	pri := testCluster(t, nil)
+	defer pri.Cleanup()
+	client := pri.Cores[0].Client
+	priPSClient := pri.Cores[1].Client
+	testhelpers.EnsureCoreIsPerfStandby(t, priPSClient)
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+	// Create a tokens on the active node and use it on
+	// the perf standby.
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"root"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("missing auth data: %#v", secret)
+	}
+
+	token, _ := secret.Auth.ClientToken, secret.Auth.Accessor
+	client.SetToken(token)
+
+	secret, err = client.Auth().Token().RenewSelf(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth.ClientToken != token {
+		t.Fatalf("renew self token ID does not match original ID: %s vs %s", secret.Auth.ClientToken, token)
+	}
+}
+
+// TestSSCToken_AllowForwarding verifies that when forwarding is turned on,
+// a perf standby is able to return valid responses to tokens for which it has no
+// corresponding WAL Index by forwarding the token to the active node.
+func TestSSCToken_AllowForwarding(t *testing.T) {
+	t.Parallel()
+	pri := testCluster(t, &clusterOpts{allowForwardingServer: vault.ForwardSSCTokenToActive})
+	defer pri.Cleanup()
+	client := pri.Cores[0].Client
+	priPSClient := pri.Cores[1].Client
+	testhelpers.EnsureCoreIsPerfStandby(t, priPSClient)
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	// Create a token policy for kv writes
+	kvWritePolicy := `path "kv/*" { capabilities = ["create", "update", "read", "patch"] }`
+	if err := client.Sys().PutPolicy("kvWritePolicy", kvWritePolicy); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a tokens on the active node and use it on
+	// the perf standby.
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"kvWritePolicy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("missing auth data: %#v", secret)
+	}
+	fmt.Printf("returned client token in test is %s", secret.Auth.ClientToken)
+	priPSClient.SetToken(secret.Auth.ClientToken)
+	if _, err := priPSClient.Logical().Write("kv/data/foo", map[string]interface{}{
+		"data": map[string]interface{}{
+			"foo": "bar",
+			"bar": "baz",
+		},
+	}); err != nil {
+		t.Fatalf("invalid token should be forwarded to the active node: error was %s", err.Error())
 	}
 }
