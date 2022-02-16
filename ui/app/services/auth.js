@@ -366,7 +366,7 @@ export default Service.extend({
     try {
       resp = await adapter.authenticate(options);
     } catch (e) {
-      // check for totp not configured mfa error before throwing
+      // TODO: check for totp not configured mfa error before throwing
       const errors = this.handleError(e);
       // stubbing error - verify once API is finalized
       if (errors.includes(TOTP_NOT_CONFIGURED)) {

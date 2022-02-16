@@ -62,7 +62,7 @@ export default class MfaForm extends Component {
       this.args.onSuccess(response);
     } catch (error) {
       this.errors = error.errors;
-      // update if specific error can be parsed for incorrect passcode
+      // TODO: update if specific error can be parsed for incorrect passcode
       // this.newCodeDelay.perform();
     }
   }
