@@ -68,6 +68,10 @@ func systemBackendMemDBSchema() *memdb.DBSchema {
 	return systemSchema
 }
 
+type PolicyMFABackend struct {
+	*MFABackend
+}
+
 func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
@@ -77,8 +81,6 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		logger:     logger,
 		mfaBackend: NewPolicyMFABackend(core, logger),
 	}
-
-	core.AddLogger(b.mfaBackend.mfaLogger)
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
@@ -185,6 +187,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
