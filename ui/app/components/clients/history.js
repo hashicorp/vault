@@ -62,10 +62,12 @@ export default class History extends Component {
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => ({
-    name: namespace.label,
-    id: namespace.label,
-  }));
+  @tracked namespaceArray = this.getActivityResponse.byNamespace
+    ? this.getActivityResponse.byNamespace.map((namespace) => ({
+        name: namespace.label,
+        id: namespace.label,
+      }))
+    : [];
 
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
@@ -102,10 +104,11 @@ export default class History extends Component {
   }
 
   get hasAttributionData() {
+    if (this.selectedAuthMethod) return false;
     if (this.selectedNamespace) {
       return this.authMethodOptions.length > 0;
     }
-    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData;
   }
 
   get startTimeDisplay() {
