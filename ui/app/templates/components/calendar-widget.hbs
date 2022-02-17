@@ -15,6 +15,7 @@
       <ul class="menu-list">
         <li class="action">
           <button
+            data-test-current-billing-period
             class="link link-plain has-text-weight-semibold is-ghost"
             type="button"
             {{on "click" (fn this.selectCurrentBillingPeriod D)}}
@@ -41,6 +42,7 @@
       <div class="calendar-widget-container" data-test-calendar-widget-container>
         <div class="select-year">
           <button
+            data-test-previous-year
             id="previous-year"
             type="button"
             class="button is-transparent"
@@ -55,8 +57,9 @@
               {{on "mouseleave" this.removeTooltip}}
             />
           </button>
-          <p>{{this.displayYear}}</p>
+          <p data-test-display-year>{{this.displayYear}}</p>
           <button
+            data-test-future-year
             type="button"
             class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
             disabled={{this.disableFutureYear}}
@@ -84,6 +87,7 @@
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
           {{#each @arrayOfMonths as |month index|}}
             <button
+              data-test-calendar-month={{month}}
               type="button"
               {{on "click" (fn this.selectEndMonth index this.displayYear D)}}
               class="is-month-list"

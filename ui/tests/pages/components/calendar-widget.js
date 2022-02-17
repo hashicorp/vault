@@ -1,8 +1,11 @@
 import { clickable, create, isPresent } from 'ember-cli-page-object';
 
 export default create({
-  menuToggle: clickable('[data-test-popup-menu-trigger="true"]'),
+  clickFutureYear: clickable('[data-test-future-year]'),
+  clickPreviousYear: clickable('[data-test-previous-year]'),
+  clickCurrentBillingPeriod: clickable('[data-test-current-billing-period]'),
   customEndMonthBtn: clickable('[data-test-show-calendar]'),
+  menuToggle: clickable('[data-test-popup-menu-trigger="true"]'),
   showsCalendar: isPresent('[data-test-calendar-widget-container]'),
 
   async openCalendar() {
