@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const tokenLength string = "28"
+var tokenLength string = fmt.Sprintf("%d", vault.TokenLength+vault.TokenPrefixLength)
 
 func TestSysGenerateRootAttempt_Status(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
