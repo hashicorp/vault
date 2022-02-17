@@ -354,7 +354,9 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
 	}
+
 	// Attempt to run as database V5 or V6 multiplexed plugin
+	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// At this point the pluginRunner does not know if multiplexing is
@@ -374,6 +376,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
+	c.logger.Debug("attempting to load database plugin as v4", "name", pluginRunner.Name)
 	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
