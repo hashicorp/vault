@@ -38,6 +38,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
+
 	cluster.Start()
 	defer cluster.Cleanup()
 

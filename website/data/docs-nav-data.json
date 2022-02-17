@@ -7,6 +7,23 @@
     "title": "Use Cases",
     "path": "use-cases"
   },
+  {
+    "title": "Get Started",
+    "routes": [
+      {
+        "title": "CLI Quick Start",
+        "href": "https://learn.hashicorp.com/collections/vault/getting-started"
+      },
+      {
+        "title": "HCP Quick Start",
+        "href": "https://learn.hashicorp.com/collections/vault/cloud"
+      },
+      {
+        "title": "Developer Quick Start",
+        "path": "get-started/developer-qs"
+      }
+    ]
+  },
 
   {
     "divider": true
@@ -15,6 +32,7 @@
     "title": "Browser Support",
     "path": "browser-support"
   },
+
   {
     "title": "Installing Vault",
     "path": "install"

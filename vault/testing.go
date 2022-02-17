@@ -183,6 +183,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.NumExpirationWorkers = numExpirationWorkersTest
 	conf.RawConfig = opts.RawConfig
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
+	conf.DisableSSCTokens = opts.DisableSSCTokens
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -327,7 +328,11 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	return result.SecretShares, result.RecoveryShares, result.RootToken
+	innerToken, err := core.DecodeSSCToken(result.RootToken)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	return result.SecretShares, result.RecoveryShares, innerToken
 }
 
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {

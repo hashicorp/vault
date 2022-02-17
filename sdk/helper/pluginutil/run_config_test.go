@@ -38,19 +38,21 @@ func TestMakeConfig(t *testing.T) {
 				args:    []string{"foo", "bar"},
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
-				pluginSets: map[int]plugin.PluginSet{
-					1: {
-						"bogus": nil,
+				PluginClientConfig: PluginClientConfig{
+					PluginSets: map[int]plugin.PluginSet{
+						1: {
+							"bogus": nil,
+						},
 					},
+					HandshakeConfig: plugin.HandshakeConfig{
+						ProtocolVersion:  1,
+						MagicCookieKey:   "magic_cookie_key",
+						MagicCookieValue: "magic_cookie_value",
+					},
+					Logger:         hclog.NewNullLogger(),
+					IsMetadataMode: true,
+					AutoMTLS:       false,
 				},
-				hs: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				logger:         hclog.NewNullLogger(),
-				isMetadataMode: true,
-				autoMTLS:       false,
 			},
 
 			responseWrapInfoTimes: 0,
@@ -97,19 +99,21 @@ func TestMakeConfig(t *testing.T) {
 				args:    []string{"foo", "bar"},
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
-				pluginSets: map[int]plugin.PluginSet{
-					1: {
-						"bogus": nil,
+				PluginClientConfig: PluginClientConfig{
+					PluginSets: map[int]plugin.PluginSet{
+						1: {
+							"bogus": nil,
+						},
 					},
+					HandshakeConfig: plugin.HandshakeConfig{
+						ProtocolVersion:  1,
+						MagicCookieKey:   "magic_cookie_key",
+						MagicCookieValue: "magic_cookie_value",
+					},
+					Logger:         hclog.NewNullLogger(),
+					IsMetadataMode: false,
+					AutoMTLS:       false,
 				},
-				hs: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				logger:         hclog.NewNullLogger(),
-				isMetadataMode: false,
-				autoMTLS:       false,
 			},
 
 			responseWrapInfo: &wrapping.ResponseWrapInfo{
@@ -161,19 +165,21 @@ func TestMakeConfig(t *testing.T) {
 				args:    []string{"foo", "bar"},
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
-				pluginSets: map[int]plugin.PluginSet{
-					1: {
-						"bogus": nil,
+				PluginClientConfig: PluginClientConfig{
+					PluginSets: map[int]plugin.PluginSet{
+						1: {
+							"bogus": nil,
+						},
 					},
+					HandshakeConfig: plugin.HandshakeConfig{
+						ProtocolVersion:  1,
+						MagicCookieKey:   "magic_cookie_key",
+						MagicCookieValue: "magic_cookie_value",
+					},
+					Logger:         hclog.NewNullLogger(),
+					IsMetadataMode: true,
+					AutoMTLS:       true,
 				},
-				hs: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				logger:         hclog.NewNullLogger(),
-				isMetadataMode: true,
-				autoMTLS:       true,
 			},
 
 			responseWrapInfoTimes: 0,
@@ -220,19 +226,21 @@ func TestMakeConfig(t *testing.T) {
 				args:    []string{"foo", "bar"},
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
-				pluginSets: map[int]plugin.PluginSet{
-					1: {
-						"bogus": nil,
+				PluginClientConfig: PluginClientConfig{
+					PluginSets: map[int]plugin.PluginSet{
+						1: {
+							"bogus": nil,
+						},
 					},
+					HandshakeConfig: plugin.HandshakeConfig{
+						ProtocolVersion:  1,
+						MagicCookieKey:   "magic_cookie_key",
+						MagicCookieValue: "magic_cookie_value",
+					},
+					Logger:         hclog.NewNullLogger(),
+					IsMetadataMode: false,
+					AutoMTLS:       true,
 				},
-				hs: plugin.HandshakeConfig{
-					ProtocolVersion:  1,
-					MagicCookieKey:   "magic_cookie_key",
-					MagicCookieValue: "magic_cookie_value",
-				},
-				logger:         hclog.NewNullLogger(),
-				isMetadataMode: false,
-				autoMTLS:       true,
 			},
 
 			responseWrapInfoTimes: 0,
@@ -327,6 +335,11 @@ var _ RunnerUtil = &mockRunnerUtil{}
 
 type mockRunnerUtil struct {
 	mock.Mock
+}
+
+func (m *mockRunnerUtil) NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error) {
+	args := m.Called(ctx, config)
+	return args.Get(0).(PluginClient), args.Error(1)
 }
 
 func (m *mockRunnerUtil) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {

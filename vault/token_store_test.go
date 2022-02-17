@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -22,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -223,7 +226,7 @@ func TestTokenStore_Salting(t *testing.T) {
 		t.Fatalf("expected sha1 hash; got sha2-256 hmac")
 	}
 
-	saltedID, err = ts.SaltID(namespace.RootContext(nil), "s.foo")
+	saltedID, err = ts.SaltID(namespace.RootContext(nil), "hvs.foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +243,7 @@ func TestTokenStore_Salting(t *testing.T) {
 		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
 	}
 
-	saltedID, err = ts.SaltID(nsCtx, "s.foo")
+	saltedID, err = ts.SaltID(nsCtx, "hvs.foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -753,7 +756,8 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 
 	// Revoke root to make the number of accessors match
-	salted, err := ts.SaltID(namespace.RootContext(nil), root)
+	internalRoot, _ := c.DecodeSSCToken(root)
+	salted, err := ts.SaltID(namespace.RootContext(nil), internalRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1000,9 +1004,7 @@ func TestTokenStore_RootToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(out, te) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", te, out)
-	}
+	deepEqualTokenEntries(t, out, te)
 }
 
 func TestTokenStore_NoRootBatch(t *testing.T) {
@@ -1045,9 +1047,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
@@ -1061,9 +1061,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 }
 
 func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
@@ -1089,9 +1087,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
@@ -1105,9 +1101,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 }
 
 func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
@@ -1150,9 +1144,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 
 	// Set to expired lease time
 	le.ExpireTime = time.Now().Add(-1 * time.Hour)
@@ -1384,9 +1376,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	// Unset the expected token parent's ID
 	ent2.Parent = ""
 
-	if !reflect.DeepEqual(out, ent2) {
-		t.Fatalf("bad:\nexpected:%#v\nactual:%#v", ent2, out)
-	}
+	deepEqualTokenEntries(t, out, ent2)
 }
 
 // This was the original function name, and now it just calls
@@ -1661,6 +1651,12 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
+	}
+}
+
+func deepEqualTokenEntries(t *testing.T, a *logical.TokenEntry, b *logical.TokenEntry) {
+	if diff := cmp.Diff(a, b, cmpopts.IgnoreFields(logical.TokenEntry{}, "ExternalID")); diff != "" {
+		t.Fatalf("bad diff in token entries: %s", diff)
 	}
 }
 
@@ -2421,8 +2417,10 @@ func testTokenStoreHandleRequestLookup(t *testing.T, batch, periodic bool) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	internalRoot, _ := c.DecodeSSCToken(root)
+
 	exp := map[string]interface{}{
-		"id":               root,
+		"id":               internalRoot,
 		"accessor":         resp.Data["accessor"].(string),
 		"policies":         []string{"root"},
 		"path":             "auth/token/root",
@@ -6000,7 +5998,7 @@ func TestTokenStore_TokenID(t *testing.T) {
 		c, _, initToken := TestCoreUnsealed(t)
 		ts := c.tokenStore
 
-		// Ensure that a regular service token has a "s." prefix
+		// Ensure that a regular service token has a consts.ServiceTokenPrefix prefix
 		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
 			ClientToken: initToken,
 			Path:        "create",
@@ -6009,8 +6007,8 @@ func TestTokenStore_TokenID(t *testing.T) {
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 		}
-		if !strings.HasPrefix(resp.Auth.ClientToken, "s.") {
-			t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
+		if !strings.HasPrefix(resp.Auth.ClientToken, consts.ServiceTokenPrefix) {
+			t.Fatalf("token %q does not have a 'hvs.' prefix", resp.Auth.ClientToken)
 		}
 	})
 
@@ -6041,19 +6039,19 @@ func TestTokenStore_TokenID(t *testing.T) {
 		c, _, initToken := TestCoreUnsealed(t)
 		ts := c.tokenStore
 
-		// Ensure that custom token ID having a "s." prefix fails
+		// Ensure that custom token ID having a consts.ServiceTokenPrefix prefix fails
 		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
 			ClientToken: initToken,
 			Path:        "create",
 			Operation:   logical.UpdateOperation,
 			Data: map[string]interface{}{
-				"id": "s.foobar",
+				"id": "hvs.foobar",
 			},
 		})
 		if err == nil {
 			t.Fatalf("expected an error")
 		}
-		if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
+		if resp.Error().Error() != "custom token ID cannot have the 'hvs.' prefix" {
 			t.Fatalf("expected input error not present in error response")
 		}
 	})

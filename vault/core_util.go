@@ -65,7 +65,7 @@ func NewPolicyMFABackend(core *Core, logger hclog.Logger) *PolicyMFABackend { re
 
 func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error) {
 	if namespaceId != namespace.RootNamespaceID {
-		return nil, fmt.Errorf("faild to find barrier view for non-root namespace")
+		return nil, fmt.Errorf("failed to find barrier view for non-root namespace")
 	}
 
 	return c.systemBarrierView, nil
@@ -135,6 +135,10 @@ func (c *Core) collectNamespaces() []*namespace.Namespace {
 	}
 }
 
+func (c *Core) HasWALState(required *logical.WALState, perfStandby bool) bool {
+	return true
+}
+
 func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { return nil }
 
 func (c *Core) perfStandbyCount() int { return 0 }
@@ -183,6 +187,10 @@ func (c *Core) namespaceByPath(path string) *namespace.Namespace {
 
 func (c *Core) AllowForwardingViaHeader() bool {
 	return false
+}
+
+func (c *Core) ForwardToActive() string {
+	return ""
 }
 
 func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {

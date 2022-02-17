@@ -68,6 +68,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.2
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/hashicorp/go-plugin v1.4.3
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.0
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -76,14 +77,15 @@ require (
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.1
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.1
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.2
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.3
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
-	github.com/hashicorp/go-secure-stdlib/strutil v0.1.1
+	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/go-version v1.4.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault-3
 	github.com/hashicorp/nomad/api v0.0.0-20211006193434-215bf04bc650
@@ -107,7 +109,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.11.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.10.2
-	github.com/hashicorp/vault-plugin-secrets-azure v0.11.3
+	github.com/hashicorp/vault-plugin-secrets-azure v0.11.4
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.11.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20220112155832-c2eb38b5f5b6
@@ -137,7 +139,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.0
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/gox v1.0.1
-	github.com/mitchellh/mapstructure v1.4.2
+	github.com/mitchellh/mapstructure v1.4.3
 	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
@@ -278,10 +280,8 @@ require (
 	github.com/hashicorp/cronexpr v1.1.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0 // indirect
-	github.com/hashicorp/go-plugin v1.4.3 // indirect
 	github.com/hashicorp/go-slug v0.7.0 // indirect
 	github.com/hashicorp/go-tfe v0.20.0 // indirect
-	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
@@ -307,6 +307,7 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/miekg/dns v1.1.41 // indirect
+	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a // indirect
 	github.com/mitchellh/hashstructure v1.0.0 // indirect
 	github.com/mitchellh/iochan v1.0.0 // indirect
 	github.com/mitchellh/pointerstructure v1.2.0 // indirect
