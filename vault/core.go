@@ -306,6 +306,10 @@ type Core struct {
 	// change underneath a calling function
 	mountsLock sync.RWMutex
 
+	// mountMigrationTracker tracks past and ongoing remount operations
+	// against their migration ids
+	mountMigrationTracker *sync.Map
+
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
@@ -844,6 +848,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableAutopilot:               conf.DisableAutopilot,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:          &sync.Map{},
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)

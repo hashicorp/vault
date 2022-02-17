@@ -3,21 +3,25 @@
 ## AuthForm
 The `AuthForm` is used to sign users into Vault.
 
-**Params**
 
-| Param | Type | Description |
-| --- | --- | --- |
-| wrappedToken | <code>string</code> | The auth method that is currently selected in the dropdown. |
-| cluster | <code>object</code> | The auth method that is currently selected in the dropdown. This corresponds to an Ember Model. |
-| namespace- | <code>string</code> | The currently active namespace. |
-| selectedAuth | <code>string</code> | The auth method that is currently selected in the dropdown. |
-| onSuccess | <code>function</code> | Fired on auth success |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| wrappedToken | <code>String</code> | <code></code> | The auth method that is currently selected in the dropdown. |
+| cluster | <code>Object</code> | <code></code> | The auth method that is currently selected in the dropdown. This corresponds to an Ember Model. |
+| namespace | <code>String</code> | <code></code> | The currently active namespace. |
+| redirectTo | <code>String</code> | <code></code> | The name of the route to redirect to. |
+| selectedAuth | <code>String</code> | <code></code> | The auth method that is currently selected in the dropdown. |
 
 **Example**
   
 ```js
 // All properties are passed in via query params.
-<AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}} />```
+  <AuthForm
+    @wrappedToken={{wrappedToken}}
+    @cluster={{model}}
+    @namespace={{namespaceQueryParam}}
+    @redirectTo={{redirectTo}}
+    @selectedAuth={{authMethod}}/>```
 
 **See**
 

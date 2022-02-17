@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/mikesmitty/edkey"
 )
 
 const (
@@ -357,9 +360,9 @@ func generateSSHKeyPair(randomSource io.Reader, keyType string, keyBits int) (st
 			return "", "", err
 		}
 
-		marshalled, err := x509.MarshalPKCS8PrivateKey(privateSeed)
-		if err != nil {
-			return "", "", err
+		marshalled := edkey.MarshalED25519PrivateKey(privateSeed)
+		if marshalled == nil {
+			return "", "", errors.New("unable to marshal ed25519 private key")
 		}
 
 		privateBlock = &pem.Block{
