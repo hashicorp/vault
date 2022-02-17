@@ -146,6 +146,11 @@ func (c *WriteCommand) Run(args []string) int {
 		return 0
 	}
 
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
+			"MFA validation. Please make sure to validate the login by sending another "+
+			"request to mfa/validate endpoint.") + "\n")
+	}
 	// Handle single field output
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)

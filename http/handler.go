@@ -1127,7 +1127,7 @@ func parseMFAHeader(req *logical.Request) error {
 
 		shardSplits := strings.SplitN(mfaHeaderValue, ":", 2)
 		if shardSplits[0] == "" {
-			return fmt.Errorf("invalid data in header %q; missing method name", MFAHeaderName)
+			return fmt.Errorf("invalid data in header %q; missing method name or ID", MFAHeaderName)
 		}
 
 		if shardSplits[1] == "" {
