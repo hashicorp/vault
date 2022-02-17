@@ -691,12 +691,18 @@ func TestSystemBackend_remount(t *testing.T) {
 	req.Data["to"] = "foo"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
+	RetryUntil(t, 5*time.Second, func() error {
+		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
+		}
+		return nil
+	})
 }
 
 func TestSystemBackend_remount_invalid(t *testing.T) {
@@ -710,8 +716,8 @@ func TestSystemBackend_remount_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `no matching mount at "unknown/"` {
-		t.Fatalf("bad: %v", resp)
+	if !strings.Contains(resp.Data["error"].(string), "no matching mount at \"unknown/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
 	}
 }
 
@@ -725,8 +731,8 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `cannot remount "sys/"` {
-		t.Fatalf("bad: %v", resp)
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount \"sys/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
 	}
 }
 
@@ -741,7 +747,7 @@ func TestSystemBackend_remount_clean(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path 'foo//bar' does not match cleaned path 'foo/bar'` {
+	if resp.Data["error"] != `invalid destination mount: path 'foo//bar/' does not match cleaned path 'foo/bar/'` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -757,7 +763,7 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain non-printable characters` {
+	if resp.Data["error"] != `invalid destination mount: path cannot contain non-printable characters` {
 		t.Fatalf("bad: %v", resp)
 	}
 }

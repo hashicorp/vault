@@ -39,6 +39,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			EntityID:         input.Auth.EntityID,
 			TokenType:        input.Auth.TokenType.String(),
 			Orphan:           input.Auth.Orphan,
+			MFARequirement:   input.Auth.MFARequirement,
 			NumUses:          input.Auth.NumUses,
 		}
 	}
@@ -109,6 +110,7 @@ type HTTPAuth struct {
 	EntityID         string            `json:"entity_id"`
 	TokenType        string            `json:"token_type"`
 	Orphan           bool              `json:"orphan"`
+	MFARequirement   *MFARequirement   `json:"mfa_requirement"`
 	NumUses          int               `json:"num_uses"`
 }
 

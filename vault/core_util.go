@@ -4,7 +4,9 @@ package vault
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -57,6 +59,16 @@ func coreInit(c *Core, conf *CoreConfig) error {
 
 func (c *Core) setupReplicationResolverHandler() error {
 	return nil
+}
+
+func NewPolicyMFABackend(core *Core, logger hclog.Logger) *PolicyMFABackend { return nil }
+
+func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error) {
+	if namespaceId != namespace.RootNamespaceID {
+		return nil, fmt.Errorf("failed to find barrier view for non-root namespace")
+	}
+
+	return c.systemBarrierView, nil
 }
 
 // GetCoreConfigInternal returns the server configuration
