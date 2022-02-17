@@ -9,10 +9,14 @@ import (
 )
 
 func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/auth")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.ListAuthContext(ctx)
+}
+
+func (c *Sys) ListAuthContext(ctx context.Context) (map[string]*AuthMount, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/auth")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -45,13 +49,17 @@ func (c *Sys) EnableAuth(path, authType, desc string) error {
 }
 
 func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.EnableAuthWithOptionsContext(ctx, path, options)
+}
+
+func (c *Sys) EnableAuthWithOptionsContext(ctx context.Context, path string, options *EnableAuthOptions) error {
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s", path))
 	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
@@ -62,10 +70,14 @@ func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) err
 }
 
 func (c *Sys) DisableAuth(path string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.DisableAuthContext(ctx, path)
+}
+
+func (c *Sys) DisableAuthContext(ctx context.Context, path string) error {
+	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()

@@ -8,10 +8,14 @@ import (
 )
 
 func (c *Sys) CORSStatus() (*CORSResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/config/cors")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.CORSStatusContext(ctx)
+}
+
+func (c *Sys) CORSStatusContext(ctx context.Context) (*CORSResponse, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/config/cors")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -36,13 +40,17 @@ func (c *Sys) CORSStatus() (*CORSResponse, error) {
 }
 
 func (c *Sys) ConfigureCORS(req *CORSRequest) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.ConfigureCORSContext(ctx, req)
+}
+
+func (c *Sys) ConfigureCORSContext(ctx context.Context, req *CORSRequest) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/config/cors")
 	if err := r.SetJSONBody(req); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
@@ -51,10 +59,14 @@ func (c *Sys) ConfigureCORS(req *CORSRequest) error {
 }
 
 func (c *Sys) DisableCORS() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/config/cors")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.DisableCORSContext(ctx)
+}
+
+func (c *Sys) DisableCORSContext(ctx context.Context) error {
+	r := c.c.NewRequest("DELETE", "/v1/sys/config/cors")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()

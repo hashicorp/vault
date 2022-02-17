@@ -9,10 +9,14 @@ import (
 )
 
 func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/mounts")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.ListMountsContext(ctx)
+}
+
+func (c *Sys) ListMountsContext(ctx context.Context) (map[string]*MountOutput, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/mounts")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -37,13 +41,17 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 }
 
 func (c *Sys) Mount(path string, mountInfo *MountInput) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.MountContext(ctx, path, mountInfo)
+}
+
+func (c *Sys) MountContext(ctx context.Context, path string, mountInfo *MountInput) error {
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
 	if err := r.SetJSONBody(mountInfo); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
@@ -54,10 +62,14 @@ func (c *Sys) Mount(path string, mountInfo *MountInput) error {
 }
 
 func (c *Sys) Unmount(path string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.UnmountContext(ctx, path)
+}
+
+func (c *Sys) UnmountContext(ctx context.Context, path string) error {
+	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
@@ -66,6 +78,12 @@ func (c *Sys) Unmount(path string) error {
 }
 
 func (c *Sys) Remount(from, to string) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RemountContext(ctx, from, to)
+}
+
+func (c *Sys) RemountContext(ctx context.Context, from, to string) error {
 	body := map[string]interface{}{
 		"from": from,
 		"to":   to,
@@ -76,8 +94,6 @@ func (c *Sys) Remount(from, to string) error {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
@@ -86,13 +102,17 @@ func (c *Sys) Remount(from, to string) error {
 }
 
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.TuneMountContext(ctx, path, config)
+}
+
+func (c *Sys) TuneMountContext(ctx context.Context, path string, config MountConfigInput) error {
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
@@ -101,10 +121,14 @@ func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 }
 
 func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.MountConfigContext(ctx, path)
+}
+
+func (c *Sys) MountConfigContext(ctx context.Context, path string) (*MountConfigOutput, error) {
+	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err

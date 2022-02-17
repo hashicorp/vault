@@ -6,10 +6,14 @@ import (
 )
 
 func (c *Sys) Leader() (*LeaderResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/leader")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.LeaderContext(ctx)
+}
+
+func (c *Sys) LeaderContext(ctx context.Context) (*LeaderResponse, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/leader")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err

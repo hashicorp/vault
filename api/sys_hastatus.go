@@ -6,10 +6,14 @@ import (
 )
 
 func (c *Sys) HAStatus() (*HAStatusResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/ha-status")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.HAStatusContext(ctx)
+}
+
+func (c *Sys) HAStatusContext(ctx context.Context) (*HAStatusResponse, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/ha-status")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
