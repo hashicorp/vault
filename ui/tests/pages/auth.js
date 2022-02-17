@@ -10,6 +10,8 @@ export default create({
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
+    // clear local storage to ensure we have a clean state
+    window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
     if (token) {

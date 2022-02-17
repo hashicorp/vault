@@ -2,10 +2,8 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 
@@ -376,24 +374,8 @@ func TestSysRemount(t *testing.T) {
 		"from": "foo",
 		"to":   "bar",
 	})
-	testResponseStatus(t, resp, 200)
+	testResponseStatus(t, resp, 204)
 
-	// Poll until the remount succeeds
-	var remountResp map[string]interface{}
-	testResponseBody(t, resp, &remountResp)
-	vault.RetryUntil(t, 5*time.Second, func() error {
-		resp = testHttpGet(t, token, addr+"/v1/sys/remount/status/"+remountResp["migration_id"].(string))
-		testResponseStatus(t, resp, 200)
-
-		var remountStatusResp map[string]interface{}
-		testResponseBody(t, resp, &remountStatusResp)
-
-		status := remountStatusResp["data"].(map[string]interface{})["migration_info"].(map[string]interface{})["status"]
-		if status != "success" {
-			return fmt.Errorf("Expected migration status to be successful, got %q", status)
-		}
-		return nil
-	})
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts")
 
 	var actual map[string]interface{}
