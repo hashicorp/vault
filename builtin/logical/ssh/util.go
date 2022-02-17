@@ -224,38 +224,15 @@ func convertMapToIntSlice(initial map[string]interface{}) (map[string][]int, err
 	result := map[string][]int{}
 
 	for key, value := range initial {
-		// Three parse strategies;
-		//  1. Parse directly into an int slice; unlikely,
-		v_slice, ok := value.([]int)
-		if ok {
-			result[key] = v_slice
-			continue
+		sliced, err := parseutil.ParseIntSlice(value)
+		if err != nil {
+			return nil, err
 		}
 
-		//  2. We successfully use ParseInt and place the result in a new
-		//     slice, or
-		v_int, int_err := parseutil.ParseInt(value)
-		if int_err == nil {
-			result[key] = []int{int(v_int)}
-			continue
+		result[key] = make([]int, 0, len(sliced))
+		for _, value := range sliced {
+			result[key] = append(result[key], int(value))
 		}
-
-		//  3. We call ParseCommaStringSlice and create a slice from there.
-		v_comma, comma_err := parseutil.ParseCommaStringSlice(value)
-		if comma_err == nil {
-			for _, v_element := range v_comma {
-				v_int, int_err := parseutil.ParseInt(v_element)
-				if int_err != nil {
-					return nil, int_err
-				}
-
-				result[key] = append(result[key], int(v_int))
-			}
-			continue
-		}
-
-		// Nothing matched, so return an err here.
-		return nil, fmt.Errorf("failed to parse member %v; unknown type %T; got err parsing as int (%v) and comma-separated list (%v)", key, value, int_err, comma_err)
 	}
 
 	return result, nil
