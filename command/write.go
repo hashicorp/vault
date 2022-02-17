@@ -152,10 +152,10 @@ WRITE:
 	}
 
 	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
-		c.UI.Warn(wrapAtLength("WARNING! A login request was issued that is subject to "+
+		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to mfa/validate endpoint.") + "\n")
-		ok := YesNoPrompt("Would you like to interactively validate MFA?", true)
+		ok := YesNoPrompt("Would you like to interactively validate MFA methods?", true)
 		if ok {
 			mfaPayload := make(map[string][]string, 0)
 			for name, mfaConstraintAny := range secret.Auth.MFARequirement.MFAConstraints {
@@ -241,5 +241,6 @@ func PasswordPrompt(label string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read the password")
 	}
+	fmt.Println()
 	return string(b), nil
 }
