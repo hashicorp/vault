@@ -1,7 +1,6 @@
 import { clickable, create, isPresent } from 'ember-cli-page-object';
 
 export default create({
-  clickFutureYear: clickable('[data-test-future-year]'),
   clickPreviousYear: clickable('[data-test-previous-year]'),
   clickCurrentBillingPeriod: clickable('[data-test-current-billing-period]'),
   customEndMonthBtn: clickable('[data-test-show-calendar]'),

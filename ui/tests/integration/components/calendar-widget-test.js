@@ -63,7 +63,6 @@ module('Integration | Component | calendar-widget', function (hooks) {
 
     await calendarDropdown.clickPreviousYear();
     assert.dom('[data-test-display-year]').hasText('2021', 'shows the previous year');
-    // confirm the month before teh startDate of Feb. 2021 is-readOnly (e.g. January 2021 is disabled).
     assert.dom('[data-test-calendar-month="January"]').hasClass('is-readOnly', 'January 2021 is disabled');
   });
 
