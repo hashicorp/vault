@@ -50,7 +50,7 @@ module('Integration | Component | calendar-widget', function (hooks) {
     await render(hbs`
       <CalendarWidget
         @arrayOfMonths={{arrayOfMonths}}
-        @endTimeDisplay={{"January 2022"}}
+        @endTimeDisplay={{"March 2022"}}
         @endTimeFromResponse={{endTimeFromResponse}}
         @handleClientActivityQuery={{handleClientActivityQuery}}
         @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
@@ -63,7 +63,9 @@ module('Integration | Component | calendar-widget', function (hooks) {
 
     await calendarDropdown.clickPreviousYear();
     assert.dom('[data-test-display-year]').hasText('2021', 'shows the previous year');
-    assert.dom('[data-test-calendar-month="January"]').hasClass('is-readOnly', 'January 2021 is disabled');
+    assert
+      .dom('[data-test-calendar-month="January"]')
+      .hasClass('is-readOnly', 'January 2021 is disabled because it comes before February 2021');
   });
 
   test('it enables the current month but disables future months', async function (assert) {
