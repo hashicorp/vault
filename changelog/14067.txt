@@ -1,3 +1,0 @@
-```release-note:improvement
-api: Define constants for X-Vault-Forward and X-Vault-Inconsistent headers
-```

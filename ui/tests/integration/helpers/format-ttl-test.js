@@ -6,14 +6,6 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Helper | format-ttl', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it does not fail if no input', async function (assert) {
-    this.set('inputValue', '');
-
-    await render(hbs`{{format-ttl inputValue}}`);
-
-    assert.equal(this.element.textContent.trim(), '');
-  });
-
   test('it renders the input if no match found', async function (assert) {
     this.set('inputValue', '1234');
 

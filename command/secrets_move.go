@@ -29,8 +29,8 @@ Usage: vault secrets move [options] SOURCE DESTINATION
   secrets engine are revoked, but all configuration associated with the engine
   is preserved.
 
-  This command works within or across namespaces, both source and destination paths
-  can be prefixed with a namespace heirarchy relative to the current namespace.
+  This command only works within a namespace; it cannot be used to move engines
+  to different namespaces.
 
   WARNING! Moving an existing secrets engine will revoke any leases from the
   old engine.
@@ -38,11 +38,6 @@ Usage: vault secrets move [options] SOURCE DESTINATION
   Move the existing secrets engine at secret/ to generic/:
 
       $ vault secrets move secret/ generic/
-
-  Move the existing secrets engine at ns1/secret/ across namespaces to ns2/generic/, 
-  where ns1 and ns2 are child namespaces of the current namespace:
-
-      $ vault secrets move ns1/secret/ ns2/generic/
 
 ` + c.Flags().Help()
 
@@ -89,12 +84,11 @@ func (c *SecretsMoveCommand) Run(args []string) int {
 		return 2
 	}
 
-	remountResp, err := client.Sys().StartRemount(source, destination)
-	if err != nil {
+	if err := client.Sys().Remount(source, destination); err != nil {
 		c.UI.Error(fmt.Sprintf("Error moving secrets engine %s to %s: %s", source, destination, err))
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Started moving secrets engine %s to %s, with migration ID %s", source, destination, remountResp.MigrationID))
+	c.UI.Output(fmt.Sprintf("Success! Moved secrets engine %s to: %s", source, destination))
 	return 0
 }

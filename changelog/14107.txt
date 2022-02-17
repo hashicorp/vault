@@ -1,3 +1,0 @@
-```release-note:bug
-auth/approle: Fix wrapping of nil errors in `login` endpoint
-```

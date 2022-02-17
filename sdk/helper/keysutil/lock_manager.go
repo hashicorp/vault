@@ -52,7 +52,7 @@ type PolicyRequest struct {
 	AllowPlaintextBackup bool
 
 	// How frequently the key should automatically rotate
-	AutoRotatePeriod time.Duration
+	AutoRotateInterval time.Duration
 }
 
 type LockManager struct {
@@ -383,7 +383,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 			Derived:              req.Derived,
 			Exportable:           req.Exportable,
 			AllowPlaintextBackup: req.AllowPlaintextBackup,
-			AutoRotatePeriod:     req.AutoRotatePeriod,
+			AutoRotateInterval:   req.AutoRotateInterval,
 		}
 
 		if req.Derived {

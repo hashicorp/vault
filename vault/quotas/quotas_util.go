@@ -60,10 +60,6 @@ func (l LeaseCountQuota) close(_ context.Context) error {
 	panic("implement me")
 }
 
-func (l LeaseCountQuota) Clone() Quota {
-	panic("implement me")
-}
-
-func (l LeaseCountQuota) handleRemount(mountPath, nsPath string) {
+func (l LeaseCountQuota) handleRemount(s string) {
 	panic("implement me")
 }

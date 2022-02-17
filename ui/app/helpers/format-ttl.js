@@ -3,7 +3,6 @@ import { helper } from '@ember/component/helper';
 export default helper(function formatTtl([timestring], { removeZero = false }) {
   // Expects a number followed by one of s, m, or h
   // eg. 40m or 1h20m0s
-  if (!timestring) return timestring;
   let matches = timestring?.match(/([0-9]+[h|m|s])/g);
   if (!matches) {
     return timestring;

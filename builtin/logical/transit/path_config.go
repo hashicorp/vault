@@ -49,7 +49,7 @@ the latest version of the key is allowed.`,
 				Description: `Enables taking a backup of the named key in plaintext format. Once set, this cannot be disabled.`,
 			},
 
-			"auto_rotate_period": {
+			"auto_rotate_interval": {
 				Type: framework.TypeDurationSecond,
 				Description: `Amount of time the key should live before
 being automatically rotated. A value of 0
@@ -193,19 +193,19 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
-	autoRotatePeriodRaw, ok, err := d.GetOkErr("auto_rotate_period")
+	autoRotateIntervalRaw, ok, err := d.GetOkErr("auto_rotate_interval")
 	if err != nil {
 		return nil, err
 	}
 	if ok {
-		autoRotatePeriod := time.Second * time.Duration(autoRotatePeriodRaw.(int))
+		autoRotateInterval := time.Second * time.Duration(autoRotateIntervalRaw.(int))
 		// Provided value must be 0 to disable or at least an hour
-		if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
-			return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
+		if autoRotateInterval != 0 && autoRotateInterval < time.Hour {
+			return logical.ErrorResponse("auto rotate interval must be 0 to disable or at least an hour"), nil
 		}
 
-		if autoRotatePeriod != p.AutoRotatePeriod {
-			p.AutoRotatePeriod = autoRotatePeriod
+		if autoRotateInterval != p.AutoRotateInterval {
+			p.AutoRotateInterval = autoRotateInterval
 			persistNeeded = true
 		}
 	}
