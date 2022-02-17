@@ -133,6 +133,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 		NamespacePath: "qa",
 		MountPath:     "/foo/bar",
 		Rate:          16.7,
+		Interval:      5 * time.Second,
 		BlockInterval: 10 * time.Second,
 
 		// override values to lower durations for testing purposes
@@ -146,16 +147,11 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32, start time.Time) {
+	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
 		defer wg.Done()
 
 		resp, err := rlq.allow(context.Background(), &Request{ClientAddress: addr})
 		if err != nil {
-			return
-		}
-
-		// Avoid slow CI passing the BlockInterval of the rate limiter.
-		if time.Now().After(start.Add(rlq.BlockInterval)) {
 			return
 		}
 
@@ -182,7 +178,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 				cr = results[addr]
 			}
 
-			go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail, start)
+			go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
 
 			time.Sleep(2 * time.Millisecond)
 		}
@@ -196,7 +192,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 		// Since blocking is enabled, each client should only have 'rate' successful
 		// requests, whereas all subsequent requests fail.
-		require.Equal(t, int32(17), numAllow)
+		require.Equal(t, int32(17), numAllow, "Expected 17 got %d allows with %d failures", numAllow, numFail)
 		require.NotZero(t, numFail)
 	}
 
