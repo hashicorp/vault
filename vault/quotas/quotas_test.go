@@ -18,7 +18,7 @@ func TestQuotas_MountPathOverwrite(t *testing.T) {
 
 	quota := NewRateLimitQuota("tq", "", "kv1/", 10, time.Second, 0)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, false))
-	quota = quota.Clone().(*RateLimitQuota)
+	quota = quota.Clone()
 	quota.MountPath = "kv2/"
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, false))
 

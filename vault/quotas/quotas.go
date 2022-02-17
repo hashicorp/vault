@@ -11,7 +11,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -184,11 +183,8 @@ type Quota interface {
 	// rule is deleted.
 	close(context.Context) error
 
-	// Clone creates a clone of the calling quota
-	Clone() Quota
-
-	// handleRemount updates the mount and namesapce paths of the quota
-	handleRemount(string, string)
+	// handleRemount takes in the new mount path in the quota
+	handleRemount(string)
 }
 
 // Response holds information about the result of the Allow() call. The response
@@ -272,40 +268,16 @@ func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loadi
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
-// setQuotaLocked creates a transaction, passes it into setQuotaLockedWithTxn and manages its lifecycle
-// along with updating lease quota counts
-func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota, loading bool) error {
-	txn := m.db.Txn(true)
-	defer txn.Abort()
-
-	err := m.setQuotaLockedWithTxn(ctx, qType, quota, loading, txn)
-	if err != nil {
-		return err
-	}
-
-	if loading {
-		txn.Commit()
-		return nil
-	}
-
-	// For the lease count type, recompute the counters
-	if !loading && qType == TypeLeaseCount.String() {
-		if err := m.recomputeLeaseCounts(ctx, txn); err != nil {
-			return err
-		}
-	}
-
-	txn.Commit()
-	return nil
-}
-
-// setQuotaLockedWithTxn adds or updates a quota rule, modifying the db as well as
-// any runtime elements such as goroutines, using the transaction passed in
+// setQuotaLocked adds or updates a quota rule, modifying the db as well as
+// any runtime elements such as goroutines.
 // It should be called with the write lock held.
-func (m *Manager) setQuotaLockedWithTxn(ctx context.Context, qType string, quota Quota, loading bool, txn *memdb.Txn) error {
+func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota, loading bool) error {
 	if qType == TypeLeaseCount.String() {
 		m.setIsPerfStandby(quota)
 	}
+
+	txn := m.db.Txn(true)
+	defer txn.Abort()
 
 	raw, err := txn.First(qType, indexID, quota.quotaID())
 	if err != nil {
@@ -334,6 +306,19 @@ func (m *Manager) setQuotaLockedWithTxn(ctx context.Context, qType string, quota
 		return err
 	}
 
+	if loading {
+		txn.Commit()
+		return nil
+	}
+
+	// For the lease count type, recompute the counters
+	if !loading && qType == TypeLeaseCount.String() {
+		if err := m.recomputeLeaseCounts(ctx, txn); err != nil {
+			return err
+		}
+	}
+
+	txn.Commit()
 	return nil
 }
 
@@ -952,30 +937,23 @@ func QuotaStoragePath(quotaType, name string) string {
 
 // HandleRemount updates the quota subsystem about the remount operation that
 // took place. Quota manager will trigger the quota specific updates including
-// the mount path update and the namespace update
-func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPathDetails) error {
+// the mount path update..
+func (m *Manager) HandleRemount(ctx context.Context, nsPath, fromPath, toPath string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	// Grab a write transaction, as we want to save the updated quota in memdb
 	txn := m.db.Txn(true)
 	defer txn.Abort()
 
-	// quota namespace would have been made non-empty during insertion. Use non-empty value
+	// nsPath would have been made non-empty during insertion. Use non-empty value
 	// during query as well.
-	fromNs := from.Namespace.Path
-	if fromNs == "" {
-		fromNs = namespace.RootNamespaceID
-	}
-
-	toNs := to.Namespace.Path
-	if toNs == "" {
-		toNs = namespace.RootNamespaceID
+	if nsPath == "" {
+		nsPath = "root"
 	}
 
 	idx := indexNamespaceMount
 	leaseQuotaUpdated := false
-	args := []interface{}{fromNs, from.MountPath}
+	args := []interface{}{nsPath, fromPath}
 	for _, quotaType := range quotaTypes() {
 		iter, err := txn.Get(quotaType, idx, args...)
 		if err != nil {
@@ -983,19 +961,12 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 		}
 		for raw := iter.Next(); raw != nil; raw = iter.Next() {
 			quota := raw.(Quota)
-
-			// Clone the object and update it
-			clonedQuota := quota.Clone()
-			clonedQuota.handleRemount(to.MountPath, toNs)
-			// Update both underlying storage and memdb with the quota change
+			quota.handleRemount(toPath)
 			entry, err := logical.StorageEntryJSON(QuotaStoragePath(quotaType, quota.QuotaName()), quota)
 			if err != nil {
 				return err
 			}
 			if err := m.storage.Put(ctx, entry); err != nil {
-				return err
-			}
-			if err := m.setQuotaLockedWithTxn(ctx, quotaType, clonedQuota, false, txn); err != nil {
 				return err
 			}
 			if quotaType == TypeLeaseCount.String() {

@@ -31,7 +31,49 @@ func ServeConfig(db Database) *plugin.ServeConfig {
 	}
 
 	conf := &plugin.ServeConfig{
-		HandshakeConfig:  handshakeConfig,
+		HandshakeConfig:  HandshakeConfig,
+		VersionedPlugins: pluginSets,
+		GRPCServer:       plugin.DefaultGRPCServer,
+	}
+
+	return conf
+}
+
+func ServeMultiplex(factory Factory) {
+	plugin.Serve(ServeConfigMultiplex(factory))
+}
+
+func ServeConfigMultiplex(factory Factory) *plugin.ServeConfig {
+	err := pluginutil.OptionallyEnableMlock()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	db, err := factory()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	database := db.(Database)
+
+	// pluginSets is the map of plugins we can dispense.
+	pluginSets := map[int]plugin.PluginSet{
+		5: {
+			"database": &GRPCDatabasePlugin{
+				Impl: database,
+			},
+		},
+		6: {
+			"database": &GRPCDatabasePlugin{
+				FactoryFunc: factory,
+			},
+		},
+	}
+
+	conf := &plugin.ServeConfig{
+		HandshakeConfig:  HandshakeConfig,
 		VersionedPlugins: pluginSets,
 		GRPCServer:       plugin.DefaultGRPCServer,
 	}

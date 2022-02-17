@@ -101,7 +101,7 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, b
 	}
 }
 
-func (q *RateLimitQuota) Clone() Quota {
+func (q *RateLimitQuota) Clone() *RateLimitQuota {
 	rlq := &RateLimitQuota{
 		ID:            q.ID,
 		Name:          q.Name,
@@ -337,7 +337,6 @@ func (rlq *RateLimitQuota) close(ctx context.Context) error {
 	return nil
 }
 
-func (rlq *RateLimitQuota) handleRemount(mountpath, nspath string) {
-	rlq.MountPath = mountpath
-	rlq.NamespacePath = nspath
+func (rlq *RateLimitQuota) handleRemount(toPath string) {
+	rlq.MountPath = toPath
 }

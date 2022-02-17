@@ -10,7 +10,7 @@ export default ApplicationSerializer.extend({
       id: payload.id,
       data: {
         ...payload.data,
-        enabled: payload.data.enabled?.includes('enable') ? 'On' : 'Off',
+        enabled: payload.data.enabled.includes('enable') ? 'On' : 'Off',
       },
     };
     return this._super(store, primaryModelClass, normalizedPayload, id, requestType);

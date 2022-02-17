@@ -51,8 +51,6 @@ const (
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
 	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
 	HeaderIndex           = "X-Vault-Index"
-	HeaderForward         = "X-Vault-Forward"
-	HeaderInconsistent    = "X-Vault-Inconsistent"
 )
 
 // Deprecated values
@@ -1397,7 +1395,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 // conjunction with RequireState.
 func ForwardInconsistent() RequestCallback {
 	return func(req *Request) {
-		req.Headers.Set(HeaderInconsistent, "forward-active-node")
+		req.Headers.Set("X-Vault-Inconsistent", "forward-active-node")
 	}
 }
 
@@ -1406,7 +1404,7 @@ func ForwardInconsistent() RequestCallback {
 // This feature must be enabled in Vault's configuration.
 func ForwardAlways() RequestCallback {
 	return func(req *Request) {
-		req.Headers.Set(HeaderForward, "active-node")
+		req.Headers.Set("X-Vault-Forward", "active-node")
 	}
 }
 

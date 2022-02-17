@@ -29,7 +29,7 @@ management tool.
     `acl_master_token` from your Consul configuration file or another management
     token:
 
-    ```sh
+    ```shell-session
     $ curl \
         --header "X-Consul-Token: my-management-token" \
         --request PUT \
@@ -48,7 +48,7 @@ management tool.
 
     For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
 
-    ```sh
+    ```text
     $ CONSUL_HTTP_TOKEN=d54fe46a-1f57-a589-3583-6b78e334b03b consul acl token create -policy-name=global-management
     AccessorID:   865dc5e9-e585-3180-7b49-4ddc0fc45135
     SecretID:     ef35f0f1-885b-0cab-573c-7c91b65a7a7e
@@ -70,19 +70,27 @@ management tool.
 
 4.  Configure a role that maps a name in Vault to a Consul ACL policy. Depending on your Consul version,
     you will either provide a policy document and a token_type, or a set of policies.
-    When users generate credentials, they are generated against this role. For Consul versions below 1.4:
+    When users generate credentials, they are generated against this role.
+    
+    For Consul versions below 1.4, the policy must be base64-encoded. The policy language is [documented by Consul](https://www.consul.io/docs/security/acl/acl-legacy).
+    Write a policy and proceed to link it to the role:
 
     ```text
     $ vault write consul/roles/my-role policy=$(base64 <<< 'key "" { policy = "read" }')
     Success! Data written to: consul/roles/my-role
     ```
 
-    The policy must be base64-encoded. The policy language is [documented by Consul](https://www.consul.io/docs/internals/acl.html).
-
     For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html), and proceed to link it to the role:
 
     ```text
     $ vault write consul/roles/my-role policies=readonly
+    Success! Data written to: consul/roles/my-role
+    ```
+
+    For Consul versions 1.5 and above, [generate a role in Consul](https://www.consul.io/api/acl/roles), and proceed to link it to the role:
+
+    ```text
+    $ vault write consul/roles/my-role consul_roles=api-server
     Success! Data written to: consul/roles/my-role
     ```
 
