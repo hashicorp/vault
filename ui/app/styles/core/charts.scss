@@ -61,8 +61,8 @@
   grid-row-start: 2;
   grid-row-end: span 3;
   justify-self: center;
-  height: 341px;
-  max-width: 730px;
+  height: 300px;
+  max-width: 700px;
 
   svg.chart {
     width: 100%;
@@ -105,8 +105,10 @@
 }
 
 .chart-empty-state {
-  grid-column-start: 1;
-  grid-column-end: -1;
+  justify-self: center;
+  height: 80%;
+  width: 80%;
+  grid-row-end: span 3;
 }
 
 .chart-subTitle {
