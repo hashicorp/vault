@@ -645,8 +645,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Headers = nil
 
 	// Cache the saved request SSC token
-	inboundToken := req.RequestSSCToken
-	req.RequestSSCToken = ""
+	inboundToken := req.InboundSSCToken
+	req.InboundSSCToken = ""
 
 	// Filter and add passthrough headers to the backend
 	var passthroughRequestHeaders []string
@@ -701,7 +701,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 		req.MFACreds = originalMFACreds
 
-		req.RequestSSCToken = inboundToken
+		req.InboundSSCToken = inboundToken
 
 		// Before resetting the tokenEntry, see if an ExternalID was added
 		if req.TokenEntry() != nil && req.TokenEntry().ExternalID != "" {

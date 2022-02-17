@@ -311,10 +311,6 @@ type Core struct {
 	// change underneath a calling function
 	mountsLock sync.RWMutex
 
-	// mountMigrationTracker tracks past and ongoing remount operations
-	// against their migration ids
-	mountMigrationTracker *sync.Map
-
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
@@ -587,10 +583,6 @@ type Core struct {
 
 	// disableSSCTokens is used to disable server side consistent token creation/usage
 	disableSSCTokens bool
-	// forwardToActive is a server config used to determine when the node should forward
-	// requests to the active node. This value must be set to "new_token" in order for
-	// forwarding to take effect.
-	forwardToActive string
 
 	// versionTimestamps is a map of vault versions to timestamps when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
@@ -721,9 +713,6 @@ type CoreConfig struct {
 
 	// DisableSSCTokens is used to disable the use of server side consistent tokens
 	DisableSSCTokens bool
-	// ForwardToActive is a server configuration that will determine when requests
-	// should be forwarded to the active node
-	ForwardToActive string
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -867,8 +856,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 		disableSSCTokens:               conf.DisableSSCTokens,
-		forwardToActive:                conf.ForwardToActive,
-		mountMigrationTracker:          &sync.Map{},
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -1126,12 +1113,6 @@ func (c *Core) RaftNodeIDHeaderEnabled() bool {
 // DisableSSCTokens determines whether to use server side consistent tokens or not.
 func (c *Core) DisableSSCTokens() bool {
 	return c.disableSSCTokens
-}
-
-// ForwardToActive returns the core configuration that determines whether requests
-// should be forwarded to the active node.
-func (c *Core) ForwardToActive() string {
-	return c.forwardToActive
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It

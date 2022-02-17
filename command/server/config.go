@@ -86,7 +86,6 @@ type Config struct {
 	License          string `hcl:"-"`
 	LicensePath      string `hcl:"license_path"`
 	DisableSSCTokens bool   `hcl:"-"`
-	ForwardToActive  string `hcl:"forward_to_active"`
 }
 
 const (

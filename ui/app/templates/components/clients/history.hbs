@@ -14,22 +14,13 @@
         Edit
       </button>
     {{else}}
-      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="Save" />
+      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} />
     {{/if}}
   </div>
   <p class="is-8 has-text-grey has-bottom-margin-xl">
     {{this.versionText.description}}
   </p>
-  {{#if this.licenseStartIsCurrentMonth}}
-    <EmptyState
-      @title="No data for this billing period"
-      @subTitle="Your billing period has just begun, so there is no data yet. Data will be available here on the first of next month."
-      @message="To view data from a previous billing period, you can enter your previous billing start date."
-      @bottomBorder={{true}}
-    >
-      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="View" />
-    </EmptyState>
-  {{else if (eq @model.config.queriesAvailable false)}}
+  {{#if (eq @model.config.queriesAvailable false)}}
     {{#if (eq @model.config.enabled "On")}}
       <EmptyState
         @title={{concat "No monthly history " (if this.noActivityDate "from ") this.noActivityDate}}
@@ -83,19 +74,6 @@
                 @onChange={{this.selectNamespace}}
                 @placeholder={{"Filter by namespace"}}
                 @displayInherit={{true}}
-                class="is-marginless"
-              />
-            {{/if}}
-            {{#if this.selectedNamespace}}
-              <SearchSelect
-                @id="auth-method-search-select"
-                @options={{this.authMethodOptions}}
-                @selectLimit="1"
-                @disallowNewItems={{true}}
-                @fallbackComponent="input-search"
-                @onChange={{this.setAuthMethod}}
-                @placeholder={{"Filter by auth method"}}
-                @displayInherit={{true}}
               />
             {{/if}}
           </ToolbarFilters>
@@ -147,10 +125,8 @@
           <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
       {{/if}}
-    {{else if (or (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
-      <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
-      <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
+      <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{/if}}
   {{/if}}
 
@@ -179,12 +155,11 @@
           <D.Content @defaultClass="popup-menu-content is-wide">
             <nav class="box menu scroll">
               <ul class="menu-list">
-                {{#each this.months as |month index|}}
+                {{#each this.months as |month|}}
                   <button
                     type="button"
-                    class="button link"
-                    disabled={{if (lt index this.allowedMonthMax) false true}}
-                    {{on "click" (fn this.selectStartMonth month D.actions)}}
+                    class="link"
+                    {{on "click" (queue (fn this.selectStartMonth month) (action D.actions.close))}}
                   >
                     {{month}}
                   </button>
@@ -208,9 +183,8 @@
                 {{#each this.years as |year|}}
                   <button
                     type="button"
-                    class="button link"
-                    disabled={{if (eq year this.disabledYear) true false}}
-                    {{on "click" (fn this.selectStartYear year D.actions)}}
+                    class="link"
+                    {{on "click" (queue (fn this.selectStartYear year) (action D.actions.close))}}
                   >
                     {{year}}
                   </button>
@@ -225,12 +199,22 @@
       <button
         type="button"
         class="button is-primary"
-        disabled={{or (if (and this.startMonth this.startYear) false true)}}
-        {{on "click" (fn this.handleClientActivityQuery this.startMonth this.startYear "startTime")}}
+        onclick={{queue
+          (action (mut this.isEditStartMonthOpen) false)
+          (action "handleClientActivityQuery" this.startMonth this.startYear "startTime")
+        }}
+        disabled={{if (and this.startMonth this.startYear) false true}}
       >
         Save
       </button>
-      <button type="button" class="button is-secondary" {{on "click" (fn this.handleClientActivityQuery 0 0 "cancel")}}>
+      <button
+        type="button"
+        class="button is-secondary"
+        {{on
+          "click"
+          (queue (action (mut this.isEditStartMonthOpen) false) (fn this.handleClientActivityQuery 0 0 "cancel"))
+        }}
+      >
         Cancel
       </button>
     </footer>

@@ -2494,7 +2494,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
-		ForwardToActive:                config.ForwardToActive,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

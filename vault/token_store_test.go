@@ -1004,9 +1004,7 @@ func TestTokenStore_RootToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !DeepEqualTokenEntries(out, te) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", te, out)
-	}
+	deepEqualTokenEntries(t, out, te)
 }
 
 func TestTokenStore_NoRootBatch(t *testing.T) {
@@ -1049,9 +1047,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !DeepEqualTokenEntries(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
@@ -1065,9 +1061,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !DeepEqualTokenEntries(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 }
 
 func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
@@ -1093,9 +1087,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !DeepEqualTokenEntries(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
@@ -1109,9 +1101,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !DeepEqualTokenEntries(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 }
 
 func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
@@ -1154,9 +1144,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !DeepEqualTokenEntries(out, ent) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
-	}
+	deepEqualTokenEntries(t, out, ent)
 
 	// Set to expired lease time
 	le.ExpireTime = time.Now().Add(-1 * time.Hour)
@@ -1388,9 +1376,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	// Unset the expected token parent's ID
 	ent2.Parent = ""
 
-	if !DeepEqualTokenEntries(out, ent2) {
-		t.Fatalf("bad:\nexpected:%#v\nactual:%#v", ent2, out)
-	}
+	deepEqualTokenEntries(t, out, ent2)
 }
 
 // This was the original function name, and now it just calls
@@ -1668,11 +1654,10 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	}
 }
 
-func DeepEqualTokenEntries(a *logical.TokenEntry, b *logical.TokenEntry) bool {
+func deepEqualTokenEntries(t *testing.T, a *logical.TokenEntry, b *logical.TokenEntry) {
 	if diff := cmp.Diff(a, b, cmpopts.IgnoreFields(logical.TokenEntry{}, "ExternalID")); diff != "" {
-		return false
+		t.Fatalf("bad diff in token entries: %s", diff)
 	}
-	return true
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {

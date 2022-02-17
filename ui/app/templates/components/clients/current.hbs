@@ -32,20 +32,7 @@
             @onChange={{this.selectNamespace}}
             @placeholder={{"Filter by namespace"}}
             @displayInherit={{true}}
-            class="is-marginless"
           />
-          {{#if this.selectedNamespace}}
-            <SearchSelect
-              @id="auth-method-search-select"
-              @options={{this.authMethodOptions}}
-              @selectLimit="1"
-              @disallowNewItems={{true}}
-              @fallbackComponent="input-search"
-              @onChange={{this.setAuthMethod}}
-              @placeholder={{"Filter by auth method"}}
-              @displayInherit={{true}}
-            />
-          {{/if}}
         </ToolbarFilters>
       </Toolbar>
     </div>

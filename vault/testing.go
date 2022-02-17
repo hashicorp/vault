@@ -184,7 +184,6 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.RawConfig = opts.RawConfig
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
 	conf.DisableSSCTokens = opts.DisableSSCTokens
-	conf.ForwardToActive = opts.ForwardToActive
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -1509,7 +1508,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
-		coreConfig.ForwardToActive = base.ForwardToActive
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry

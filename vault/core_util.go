@@ -181,6 +181,10 @@ func (c *Core) AllowForwardingViaHeader() bool {
 	return false
 }
 
+func (c *Core) ForwardToActive() string {
+	return ""
+}
+
 func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 	return false
 }

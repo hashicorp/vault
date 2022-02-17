@@ -43,11 +43,7 @@ func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combi
 func (g *generateRecoveryToken) generate(ctx context.Context, c *Core) (string, func(), error) {
 	var id string
 	var err error
-	if c.DisableSSCTokens() {
-		id, err = base62.Random(TokenLength)
-	} else {
-		id, err = base62.Random(TokenLength)
-	}
+	id, err = base62.Random(TokenLength)
 	if err != nil {
 		return "", nil, err
 	}

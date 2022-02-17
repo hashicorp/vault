@@ -10,12 +10,11 @@
   <D.Content @defaultClass="popup-menu-content is-wide">
     <nav class="box menu scroll">
       <ul class="menu-list">
-        {{#each this.months as |month index|}}
+        {{#each this.months as |month|}}
           <button
             type="button"
-            class="button link"
-            disabled={{if (lt index this.allowedMonthMax) false true}}
-            {{on "click" (fn this.selectStartMonth month D.actions)}}
+            class="link"
+            {{on "click" (queue (fn this.selectStartMonth month) (action D.actions.close))}}
           >
             {{month}}
           </button>
@@ -37,12 +36,7 @@
     <nav class="box menu">
       <ul class="menu-list">
         {{#each this.years as |year|}}
-          <button
-            type="button"
-            class="button link"
-            disabled={{if (eq year this.disabledYear) true false}}
-            {{on "click" (fn this.selectStartYear year D.actions)}}
-          >
+          <button type="button" class="link" {{on "click" (queue (fn this.selectStartYear year) (action D.actions.close))}}>
             {{year}}
           </button>
         {{/each}}
@@ -56,5 +50,5 @@
   disabled={{if (and this.startMonth this.startYear) false true}}
   {{on "click" this.saveDateSelection}}
 >
-  {{or @submitText "Submit"}}
+  Save
 </button>

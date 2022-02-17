@@ -1036,7 +1036,7 @@ func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WA
 	// create a walState with nil values to signify that these values should
 	// be ignored
 	if walState == nil {
-		ts.logger.Info("no WAL state found when generating Index Bearing vault token")
+		ts.logger.Debug("no wal state found when generating token")
 		walState = &logical.WALState{}
 	}
 	if te.IsRoot() {
@@ -1070,10 +1070,6 @@ func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WA
 	if err != nil {
 		ts.logger.Error("unable to marshal signed token", "error", err)
 		return prependServicePrefix(innerToken)
-	}
-
-	if walState == nil {
-		ts.logger.Debug("no wal state for token", "token", base64.RawURLEncoding.EncodeToString(marshalledSignedToken))
 	}
 	generatedSSCToken := base64.RawURLEncoding.EncodeToString(marshalledSignedToken)
 	return prependServicePrefix(generatedSSCToken)

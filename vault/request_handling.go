@@ -568,7 +568,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			if IsSSCToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("server side consistent token check failed: %w", err)
 				}
 				req.Data["token"] = token
 			}
@@ -644,8 +644,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		if _, ok := resp.Data["error"]; !ok {
 			if requestBodyToken != "" {
 				resp.Data["id"] = requestBodyToken
-			} else if returnRequestAuthToken && req.RequestSSCToken != "" {
-				resp.Data["id"] = req.RequestSSCToken
+			} else if returnRequestAuthToken && req.InboundSSCToken != "" {
+				resp.Data["id"] = req.InboundSSCToken
 			}
 		}
 	}
@@ -1148,9 +1148,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// We build the "policies" list to be returned by starting with
 			// token policies, and add identity policies right after this
 			// conditional
-			tok, _ := c.DecodeSSCToken(req.RequestSSCToken)
+			tok, _ := c.DecodeSSCToken(req.InboundSSCToken)
 			if resp.Auth.ClientToken == tok {
-				resp.Auth.ClientToken = req.RequestSSCToken
+				resp.Auth.ClientToken = req.InboundSSCToken
 			}
 			resp.Auth.Policies = policyutil.SanitizePolicies(resp.Auth.TokenPolicies, policyutil.DoNotAddDefaultPolicy)
 		} else {
@@ -1644,7 +1644,7 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	// JWTs.
 	token := req.ClientToken
 	var err error
-	req.RequestSSCToken = token
+	req.InboundSSCToken = token
 	if IsSSCToken(token) {
 		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
 		if err != nil {
