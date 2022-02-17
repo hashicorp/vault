@@ -7,9 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
@@ -27,9 +25,10 @@ const (
 type azureMethod struct {
 	logger    hclog.Logger
 	mountPath string
-
-	role     string
-	resource string
+	clientID  string
+	objectID  string
+	role      string
+	resource  string
 }
 
 func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -73,7 +72,7 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, header http.Header, retData map[string]interface{}, retErr error) {
+func (a *azureMethod) Authenticate(ctx context.Context) (retPath string, header http.Header, retData map[string]interface{}, retErr error) {
 	a.logger.Trace("beginning authentication")
 
 	// Fetch instance data
@@ -154,7 +153,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 	req.Header.Set("User-Agent", useragent.String())
 	req = req.WithContext(ctx)
 
-	client := cleanhttp.DefaultClient()
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching metadata from %s: %w", endpoint, err)
@@ -175,4 +174,34 @@ func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, er
 	}
 
 	return body, nil
+}
+
+func verifyIdentity(ctx context.Context) (retPath string, header http.Header, retData map[string]interface{}, retErr error) {
+
+	// after given IDMS given access token we want to only auth with a particular given client and object id
+	// example curl https://management.azure.com/subscriptions/<SUBSCRIPTION ID>/resourceGroups/<RESOURCE GROUP>?api-version=2016-09-01 -H "Authorization: Bearer <ACCESS TOKEN>"
+
+	// Fetch instance data
+	var instance struct {
+		Compute struct {
+			Name              string
+			ResourceGroupName string
+			SubscriptionID    string
+			VMScaleSetName    string
+		}
+	}
+
+	body, err := getMetadataInfo(ctx, instanceEndpoint, "")
+	if err != nil {
+		retErr = err
+		return
+	}
+
+	err = jsonutil.DecodeJSON(body, &instance)
+	if err != nil {
+		retErr = fmt.Errorf("error parsing instance metadata response: %w", err)
+		return
+	}
+
+	return
 }
