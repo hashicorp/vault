@@ -147,7 +147,7 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
-		c.UI.Warn(wrapAtLength("WARNING! A login request was issued that is subject to "+
+		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to mfa/validate endpoint.") + "\n")
 	}

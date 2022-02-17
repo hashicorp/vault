@@ -1487,7 +1487,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				// going to return early before generating the token
 				// the user receives the mfaRequirement, and need to use the
 				// login MFA validate endpoint to get the token
-				return resp, auth, retErr
+				return resp, auth, nil
 			}
 		}
 
