@@ -646,6 +646,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Cache the saved request SSC token
 	inboundToken := req.InboundSSCToken
+
+	// Ensure that the inbound token we cache in the
+	// request during token creation isn't sent to backends
 	req.InboundSSCToken = ""
 
 	// Filter and add passthrough headers to the backend
