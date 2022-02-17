@@ -1,10 +1,14 @@
 package command
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+	"syscall"
+
+	"golang.org/x/term"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -130,6 +134,7 @@ func (c *WriteCommand) Run(args []string) int {
 		return 2
 	}
 
+WRITE:
 	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
@@ -150,11 +155,91 @@ func (c *WriteCommand) Run(args []string) int {
 		c.UI.Warn(wrapAtLength("WARNING! A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to mfa/validate endpoint.") + "\n")
+		ok := YesNoPrompt("Would you like to interactively validate MFA?", true)
+		if ok {
+			mfaPayload := make(map[string][]string, 0)
+			for name, mfaConstraintAny := range secret.Auth.MFARequirement.MFAConstraints {
+				methodIDs := make([]string, 0)
+				for _, m := range mfaConstraintAny.Any {
+					methodIDs = append(methodIDs, m.ID)
+				}
+				mfaMethodID := StringPrompt(fmt.Sprintf("From MFARequirement %q, please select one of the following methodIDs %q:\n", name, methodIDs))
+				if mfaMethodID == "" {
+					c.UI.Warn("Invalid method ID detected, please validate the login by sending a request to mfa/validate")
+					goto SKIP
+				}
+				passcode, err := PasswordPrompt(fmt.Sprintf("Please insert the passcode for methodID %q: ", mfaMethodID))
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Failed to read the passcode with error %q. please validate the login by sending a request to mfa/validate.", err.Error()))
+					goto SKIP
+				}
+				// passcode could be an empty string
+				mfaPayload[mfaMethodID] = []string{passcode}
+			}
+
+			// updating data and path
+			data = map[string]interface{}{
+				"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
+				"mfa_payload":    mfaPayload,
+			}
+			path = "sys/mfa/validate"
+			goto WRITE
+		}
 	}
+
+SKIP:
 	// Handle single field output
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
 	return OutputSecret(c.UI, secret)
+}
+
+func StringPrompt(label string) string {
+	var s string
+	r := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Fprint(os.Stderr, label+" ")
+		s, _ = r.ReadString('\n')
+		if s != "" {
+			break
+		}
+	}
+	return strings.TrimSpace(s)
+}
+
+func YesNoPrompt(label string, def bool) bool {
+	choices := "Y/n"
+	if !def {
+		choices = "y/N"
+	}
+
+	r := bufio.NewReader(os.Stdin)
+	var s string
+
+	for {
+		fmt.Fprintf(os.Stderr, "%s (%s) ", label, choices)
+		s, _ = r.ReadString('\n')
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return def
+		}
+		s = strings.ToLower(s)
+		if s == "y" || s == "yes" {
+			return true
+		}
+		if s == "n" || s == "no" {
+			return false
+		}
+	}
+}
+
+func PasswordPrompt(label string) (string, error) {
+	fmt.Fprint(os.Stderr, label+" ")
+	b, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", fmt.Errorf("failed to read the password")
+	}
+	return string(b), nil
 }
