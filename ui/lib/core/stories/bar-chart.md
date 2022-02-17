@@ -32,6 +32,6 @@ BarChart components are used to display data in the form of a stacked bar chart,
 **See**
 
 - [Uses of BarChart](https://github.com/hashicorp/vault/search?l=Handlebars&q=BarChart+OR+bar-chart)
-- [BarChart Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/bar-chart.js)
+- [BarChart Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/bar-chart.js)
 
 ---

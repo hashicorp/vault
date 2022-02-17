@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	consulapi "github.com/hashicorp/consul/api"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
@@ -43,7 +44,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func
 		if consulVersion != "" {
 			version = consulVersion
 		} else {
-			version = "1.11.2" // Latest Consul version, update as new releases come out
+			version = "1.11.3" // Latest Consul version, update as new releases come out
 		}
 	}
 	if strings.HasPrefix(version, "1.3") {
@@ -136,55 +137,78 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool) (func
 			return nil, err
 		}
 
+		// Create a Consul role that contains the test policy, for Consul 1.5 and newer
+		currVersion, _ := goversion.NewVersion(version)
+		roleVersion, _ := goversion.NewVersion("1.5")
+		if currVersion.GreaterThanOrEqual(roleVersion) {
+			ACLList := []*consulapi.ACLLink{{Name: "test"}}
+
+			role := &consulapi.ACLRole{
+				Name:        "role-test",
+				Description: "consul roles test",
+				Policies:    ACLList,
+			}
+
+			_, _, err = consul.ACL().RoleCreate(role, q)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		// Configure a namespace and parition if testing enterprise Consul
 		if isEnterprise {
-
 			// Namespaces require Consul 1.7 or newer
-			namespace := &consulapi.Namespace{
-				Name:        "ns1",
-				Description: "ns1 test",
-			}
+			namespaceVersion, _ := goversion.NewVersion("1.7")
+			if currVersion.GreaterThanOrEqual(namespaceVersion) {
+				namespace := &consulapi.Namespace{
+					Name:        "ns1",
+					Description: "ns1 test",
+				}
 
-			_, _, err = consul.Namespaces().Create(namespace, q)
-			if err != nil {
-				return nil, err
-			}
+				_, _, err = consul.Namespaces().Create(namespace, q)
+				if err != nil {
+					return nil, err
+				}
 
-			nsPolicy := &consulapi.ACLPolicy{
-				Name:        "ns-test",
-				Description: "namespace test",
-				Namespace:   "ns1",
-				Rules: `service_prefix "" {
+				nsPolicy := &consulapi.ACLPolicy{
+					Name:        "ns-test",
+					Description: "namespace test",
+					Namespace:   "ns1",
+					Rules: `service_prefix "" {
 							policy = "read"
 						}`,
-			}
-			_, _, err = consul.ACL().PolicyCreate(nsPolicy, q)
-			if err != nil {
-				return nil, err
+				}
+				_, _, err = consul.ACL().PolicyCreate(nsPolicy, q)
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			// Partitions require Consul 1.11 or newer
-			partition := &consulapi.Partition{
-				Name:        "part1",
-				Description: "part1 test",
-			}
+			partitionVersion, _ := goversion.NewVersion("1.11")
+			if currVersion.GreaterThanOrEqual(partitionVersion) {
+				partition := &consulapi.Partition{
+					Name:        "part1",
+					Description: "part1 test",
+				}
 
-			_, _, err = consul.Partitions().Create(ctx, partition, q)
-			if err != nil {
-				return nil, err
-			}
+				_, _, err = consul.Partitions().Create(ctx, partition, q)
+				if err != nil {
+					return nil, err
+				}
 
-			partPolicy := &consulapi.ACLPolicy{
-				Name:        "part-test",
-				Description: "partition test",
-				Partition:   "part1",
-				Rules: `service_prefix "" {
+				partPolicy := &consulapi.ACLPolicy{
+					Name:        "part-test",
+					Description: "partition test",
+					Partition:   "part1",
+					Rules: `service_prefix "" {
 							policy = "read"
 						}`,
-			}
-			_, _, err = consul.ACL().PolicyCreate(partPolicy, q)
-			if err != nil {
-				return nil, err
+				}
+				_, _, err = consul.ACL().PolicyCreate(partPolicy, q)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 

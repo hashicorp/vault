@@ -476,7 +476,7 @@ func TestCore_RemountConcurrent(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test1", "foo", true)
+		err := c2.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test1", "foo", true)
 		if err != nil {
 			t.Logf("err: %v", err)
 		}
@@ -485,7 +485,7 @@ func TestCore_RemountConcurrent(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test2", "foo", true)
+		err := c2.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test2", "foo", true)
 		if err != nil {
 			t.Logf("err: %v", err)
 		}
@@ -504,7 +504,7 @@ func TestCore_RemountConcurrent(t *testing.T) {
 
 func TestCore_Remount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "secret", "foo", true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -612,7 +612,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Remount, this should cleanup
-	if err := c.remount(namespace.RootContext(nil), "test/", "new/", true); err != nil {
+	if err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test/", "new/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -641,7 +641,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "sys", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "sys", "foo", true)
 	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
 	}

@@ -3,6 +3,7 @@ package command
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mitchellh/cli"
 )
@@ -91,11 +92,15 @@ func TestSecretsMoveCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Moved secrets engine secret/ to: generic/"
+		expected := "Success! Started moving secrets engine secret/ to generic/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
+
+		// Wait for the move command to complete. Ideally we'd check remount status
+		// explicitly but we don't have migration id here
+		time.Sleep(1 * time.Second)
 
 		mounts, err := client.Sys().ListMounts()
 		if err != nil {
