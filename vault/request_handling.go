@@ -1175,11 +1175,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					retErr = multierror.Append(retErr, ErrInternalError)
 					return nil, auth, retErr
 				}
-				defer func() {
-					if registeredTokenEntry.ExternalID != "" {
-						resp.Auth.ClientToken = registeredTokenEntry.ExternalID
-					}
-				}()
+				if registeredTokenEntry.ExternalID != "" {
+					resp.Auth.ClientToken = registeredTokenEntry.ExternalID
+				}
 				leaseGenerated = true
 			}
 		}
@@ -1776,18 +1774,11 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return "", err
 	}
 	ep := int(plainToken.IndexEpoch)
-	lInd := plainToken.LocalIndex
 	if ep < c.tokenStore.GetSSCTokensGenerationCounter() {
 		return plainToken.Random, nil
 	}
-	// The token in question isn't leveraging the WAL index. This can happen for a variety
-	// of reasons, though most notably root tokens do not have a WAL Index to keep the lengths
-	// consistent, so we simply pass the check here.
-	if lInd == 0 {
-		return plainToken.Random, nil
-	}
 
-	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: lInd, ReplicatedIndex: 0}
+	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}
