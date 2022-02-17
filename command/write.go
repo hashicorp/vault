@@ -177,6 +177,11 @@ WRITE:
 				mfaPayload[mfaMethodID] = []string{passcode}
 			}
 
+			if len(mfaPayload) == 0 {
+				c.UI.Error("did not get any input, please validate the login by sending a request to mfa/validate")
+				goto SKIP
+			}
+
 			// updating data and path
 			data = map[string]interface{}{
 				"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
