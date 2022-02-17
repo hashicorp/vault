@@ -1569,16 +1569,9 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		return fmt.Errorf("invalid response from Duo preauth: %q", preauth.Response.Result)
 	}
 
-	var usedName string
 	options := []func(*url.Values){}
 	factor := "push"
 	if passcode != "" {
-		usedName = fmt.Sprintf("%s_%s", mConfig.ID, passcode)
-		_, ok := c.loginMFABackend.usedCodes.Get(usedName)
-		if ok {
-			return fmt.Errorf("code already used; new code is available in 30 seconds")
-		}
-
 		factor = "passcode"
 		options = append(options, authapi.AuthPasscode(passcode))
 	} else {
@@ -1620,10 +1613,6 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		case "deny":
 			return fmt.Errorf("duo authentication failed: %q", statusResult.Response.Status_Msg)
 		case "allow":
-			err = c.loginMFABackend.usedCodes.Add(usedName, nil, 30*time.Second)
-			if err != nil {
-				return fmt.Errorf("error adding code to used cache: %w", err)
-			}
 			return nil
 		}
 
