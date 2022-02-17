@@ -16,8 +16,10 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution @chartLegend={{chartLegend}} />
     `);
-    assert.dom('[data-test-export-attribution-data]').doesNotExist('Export button not rendered');
+
+    assert.dom('[data-test-component="empty-state"]').exists();
+    assert.dom('[data-test-empty-state-title]').hasText('No data found');
     // Shows "problem gathering data" messages
-    await this.pauseTest();
+    // await this.pauseTest();
   });
 });

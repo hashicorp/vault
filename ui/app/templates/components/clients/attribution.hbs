@@ -12,15 +12,17 @@
       {{/if}}
     </div>
   </div>
-
-  <div class="chart-container-wide">
-    <Clients::HorizontalBarChart
-      @dataset={{this.barChartTotalClients}}
-      @chartLegend={{@chartLegend}}
-      @totalUsageCounts={{@totalUsageCounts}}
-    />
-  </div>
-
+  {{#if this.barChartTotalClients}}
+    <div class="chart-container-wide">
+      <Clients::HorizontalBarChart
+        @dataset={{this.barChartTotalClients}}
+        @chartLegend={{@chartLegend}}
+        @totalUsageCounts={{@totalUsageCounts}}
+      />
+    </div>
+  {{else}}
+    <EmptyState icon="alert-circle" title="No data found" />
+  {{/if}}
   <div class="chart-subTitle">
     <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
   </div>
