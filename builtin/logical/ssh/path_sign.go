@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
@@ -220,7 +220,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
 		if role.AllowedUsersTemplate {
 			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`^{{.+?}}$`, principal)
+			matched, _ := regexp.MatchString(`{{.+?}}`, principal)
 			if matched {
 				if req.EntityID != "" {
 					// Retrieve principal based on template + entityID from request.
@@ -362,19 +362,21 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 
 	if len(unparsedExtensions) > 0 {
 		extensions := convertMapToStringValue(unparsedExtensions)
-		if role.AllowedExtensions != "" {
-			notAllowed := []string{}
-			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		if role.AllowedExtensions == "*" {
+			// Allowed extensions was configured to allow all
+			return extensions, nil
+		}
 
-			for extensionKey, _ := range extensions {
-				if !strutil.StrListContains(allowedExtensions, extensionKey) {
-					notAllowed = append(notAllowed, extensionKey)
-				}
+		notAllowed := []string{}
+		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		for extensionKey := range extensions {
+			if !strutil.StrListContains(allowedExtensions, extensionKey) {
+				notAllowed = append(notAllowed, extensionKey)
 			}
+		}
 
-			if len(notAllowed) != 0 {
-				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
-			}
+		if len(notAllowed) != 0 {
+			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 		}
 		return extensions, nil
 	}
@@ -445,7 +447,7 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 }
 
 func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *sshRole) error {
-	if len(role.AllowedUserKeyLengths) != 0 {
+	if len(role.AllowedUserKeyTypesLengths) != 0 {
 		var kstr string
 		var kbits int
 
@@ -471,31 +473,36 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			return fmt.Errorf("pubkey not suitable for crypto (expected ssh.CryptoPublicKey but found %T)", k)
 		}
 
-		if value, ok := role.AllowedUserKeyLengths[kstr]; ok {
+		if allowed_values, ok := role.AllowedUserKeyTypesLengths[kstr]; ok {
 			var pass bool
-			switch kstr {
-			case "rsa":
-				if kbits == value {
+			for _, value := range allowed_values {
+				switch kstr {
+				case "rsa":
+					if kbits == value {
+						pass = true
+						break
+					}
+				case "dsa":
+					if kbits == value {
+						pass = true
+						break
+					}
+				case "ecdsa":
+					if kbits == value {
+						pass = true
+						break
+					}
+				case "ed25519":
+					// ed25519 public keys are always 256 bits in length,
+					// so there is no need to inspect their value
 					pass = true
+					break
 				}
-			case "dsa":
-				if kbits == value {
-					pass = true
-				}
-			case "ecdsa":
-				if kbits == value {
-					pass = true
-				}
-			case "ed25519":
-				// ed25519 public keys are always 256 bits in length,
-				// so there is no need to inspect their value
-				pass = true
 			}
 
 			if !pass {
 				return fmt.Errorf("key is of an invalid size: %v", kbits)
 			}
-
 		} else {
 			return fmt.Errorf("key type of %s is not allowed", kstr)
 		}

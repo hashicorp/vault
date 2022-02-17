@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -166,7 +165,7 @@ DONELISTHANDLING:
 		},
 	)
 
-	resp.WrapInfo.Token = te.ID
+	resp.WrapInfo.Token = te.ExternalID
 	resp.WrapInfo.Accessor = te.Accessor
 	resp.WrapInfo.CreationTime = creationTime
 	// If this is not a rewrap, store the request path as creation_path
@@ -182,6 +181,11 @@ DONELISTHANDLING:
 	// case put the accessor in the wrap info.
 	if resp.Auth != nil {
 		resp.WrapInfo.WrappedAccessor = resp.Auth.Accessor
+	}
+
+	// Store the accessor of the approle secret in WrappedAccessor
+	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok && resp.Auth == nil && req.MountType == "approle" {
+		resp.WrapInfo.WrappedAccessor = secretIdAccessor.(string)
 	}
 
 	switch resp.WrapInfo.Format {
@@ -334,7 +338,7 @@ DONELISTHANDLING:
 // validateWrappingToken checks whether a token is a wrapping token. The passed
 // in logical request will be updated if the wrapping token was provided within
 // a JWT token.
-func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
+func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
 	}
@@ -342,9 +346,6 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	if c.Sealed() {
 		return false, consts.ErrSealed
 	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 
 	if c.standby && !c.perfStandby {
 		return false, consts.ErrStandby
@@ -401,7 +402,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	// token to be a JWT -- namespaced tokens have two dots too, but Vault
 	// token types (for now at least) begin with a letter representing a type
 	// and then a dot.
-	if strings.Count(token, ".") == 2 && token[1] != '.' {
+	if IsJWT(token) {
 		// Implement the jose library way
 		parsedJWT, err := squarejwt.ParseSigned(token)
 		if err != nil {
@@ -444,11 +445,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		return false, nil
 	}
 
-	if len(te.Policies) != 1 {
-		return false, nil
-	}
-
-	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
+	if !IsWrappingToken(te) {
 		return false, nil
 	}
 
@@ -459,4 +456,16 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	return true, nil
+}
+
+func IsWrappingToken(te *logical.TokenEntry) bool {
+	if len(te.Policies) != 1 {
+		return false
+	}
+
+	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
+		return false
+	}
+
+	return true
 }

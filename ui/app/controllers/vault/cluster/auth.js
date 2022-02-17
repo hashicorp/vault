@@ -9,9 +9,10 @@ export default Controller.extend({
   namespaceService: service('namespace'),
   featureFlagService: service('featureFlag'),
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
-  queryParams: [{ authMethod: 'with' }],
+  queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   wrappedToken: alias('vaultController.wrappedToken'),
   authMethod: '',
+  oidcProvider: '',
   redirectTo: alias('vaultController.redirectTo'),
   managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
 
@@ -25,7 +26,7 @@ export default Controller.extend({
     return '';
   },
 
-  updateManagedNamespace: task(function*(value) {
+  updateManagedNamespace: task(function* (value) {
     // debounce
     yield timeout(500);
     // TODO: Move this to shared fn
@@ -34,7 +35,7 @@ export default Controller.extend({
     this.set('namespaceQueryParam', newNamespace);
   }).restartable(),
 
-  updateNamespace: task(function*(value) {
+  updateNamespace: task(function* (value) {
     // debounce
     yield timeout(500);
     this.namespaceService.setNamespace(value, true);

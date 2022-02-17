@@ -90,7 +90,7 @@ func (c *KVListCommand) Run(args []string) int {
 	}
 
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "metadata")
+		path = addPrefixToKVPath(path, mountPath, "metadata")
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -101,6 +101,11 @@ func (c *KVListCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))
 		return 2
+	}
+
+	// If the secret is wrapped, return the wrapped response.
+	if secret != nil && secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
 	}
 
 	_, ok := extractListData(secret)
@@ -114,11 +119,6 @@ func (c *KVListCommand) Run(args []string) int {
 	if secret == nil || secret.Data == nil {
 		c.UI.Error(fmt.Sprintf("No value found at %s", path))
 		return 2
-	}
-
-	// If the secret is wrapped, return the wrapped response.
-	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
-		return OutputSecret(c.UI, secret)
 	}
 
 	if !ok {

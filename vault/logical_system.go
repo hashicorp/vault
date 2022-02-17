@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -20,10 +21,14 @@ import (
 	"time"
 	"unicode"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -34,8 +39,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -106,6 +109,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-force/*",
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
+				"leases",
 			},
 
 			Unauthenticated: []string{
@@ -124,6 +128,9 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/update-primary",
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
+				"replication/dr/secondary/license/signed",
+				"replication/dr/secondary/license/status",
+				"replication/dr/secondary/sys/config/reload/license",
 				"replication/dr/secondary/reindex",
 				"storage/raft/bootstrap/challenge",
 				"storage/raft/bootstrap/answer",
@@ -146,6 +153,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				expirationSubPath,
 				countersSubPath,
 			},
+
+			SealWrapStorage: []string{
+				managedKeyRegistrySubPath,
+			},
 		},
 	}
 
@@ -167,9 +178,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.remountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.inFlightRequestPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
@@ -182,12 +194,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
-	// If the node is in a DR secondary cluster, we need to allow the ability to
-	// remove a Raft peer without being authenticated by instead providing a DR
-	// operation token.
+	// If the node is in a DR secondary cluster, gate some raft operations by
+	// the DR operation token.
 	if core.IsDRSecondary() {
-		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/state")
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -661,6 +674,9 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 	if err != nil {
 		return nil, err
 	}
+	if aEntry == nil {
+		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
+	}
 
 	d.Raw["token"] = aEntry.TokenID
 	return b.handleCapabilities(ctx, req, d)
@@ -821,6 +837,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
 		entryConfig["allowed_response_headers"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
+		entryConfig["allowed_managed_keys"] = rawVal.([]string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -893,6 +912,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -1008,6 +1034,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	if len(apiConfig.AllowedResponseHeaders) > 0 {
 		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
 	}
+	if len(apiConfig.AllowedManagedKeys) > 0 {
+		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
+	}
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -1029,6 +1058,21 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	return nil, nil
+}
+
+func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	entry := b.Core.router.MatchingMountEntry(ctx, path)
+
+	if entry == nil {
+		return logical.ErrorResponse("No secret engine mount at %s", path), nil
+	}
+
+	return &logical.Response{
+		Data: mountInfo(entry),
+	}, nil
 }
 
 // used to intercept an HTTPCodedError so it goes back to callee
@@ -1155,11 +1199,33 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 			logical.ErrInvalidRequest
 	}
 
-	if err = validateMountPath(toPath); err != nil {
-		return handleError(fmt.Errorf("'to' %v", err))
+	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
+	toPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, toPath)
+
+	if err = validateMountPath(toPathDetails.MountPath); err != nil {
+		return handleError(fmt.Errorf("invalid destination mount: %v", err))
 	}
 
-	entry := b.Core.router.MatchingMountEntry(ctx, fromPath)
+	// Prevent target and source mounts from being in a protected path
+	for _, p := range protectedMounts {
+		if strings.HasPrefix(fromPathDetails.MountPath, p) {
+			return handleError(fmt.Errorf("cannot remount %q", fromPathDetails.MountPath))
+		}
+
+		if strings.HasPrefix(toPathDetails.MountPath, p) {
+			return handleError(fmt.Errorf("cannot remount to destination %+v", toPathDetails.MountPath))
+		}
+	}
+
+	entry := b.Core.router.MatchingMountEntry(ctx, sanitizePath(fromPath))
+
+	if entry == nil {
+		return handleError(fmt.Errorf("no matching mount at %q", sanitizePath(fromPath)))
+	}
+
+	if match := b.Core.router.MatchingMount(ctx, toPath); match != "" {
+		return handleError(fmt.Errorf("existing mount at %q", match))
+	}
 	// If we are a performance secondary cluster we should forward the request
 	// to the primary. We fail early here since the view in use isn't marked as
 	// readonly
@@ -1167,31 +1233,76 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return nil, logical.ErrReadOnly
 	}
 
+	migrationID, err := b.Core.createMigrationStatus(fromPathDetails, toPathDetails)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating migration status %+v", err)
+	}
+	// Start up a goroutine to handle the remount operations, and return early to the caller
+	go func(migrationID string) {
+		b.Core.stateLock.RLock()
+		defer b.Core.stateLock.RUnlock()
+
+		logger := b.Core.Logger().Named("mounts.migration").With("migration_id", migrationID, "namespace", ns.Path, "to_path", toPath, "from_path", fromPath)
+
+		var err error
+		if !strings.Contains(fromPath, "auth") {
+			err = b.moveSecretsEngine(ns, logger, migrationID, entry.ViewPath(), fromPathDetails, toPathDetails)
+		} else {
+			logger.Error("Remount is unsupported for the source mount", "err", err)
+		}
+		if err != nil {
+			logger.Error("remount failed", "error", err)
+			if err := b.Core.setMigrationStatus(migrationID, MigrationFailureStatus); err != nil {
+				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationFailureStatus)
+			}
+		}
+	}(migrationID)
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"migration_id": migrationID,
+		},
+	}
+	resp.AddWarning("Mount move has been queued. Progress will be reported in Vault's server log, tagged with the returned migration_id")
+	return resp, nil
+}
+
+// moveSecretsEngine carries out a remount operation on the secrets engine, updating the migration status as required
+// It is expected to be called asynchronously outside of a request context, hence it creates a context derived from the active one
+// and intermittently checks to see if it is still open.
+func (b *SystemBackend) moveSecretsEngine(ns *namespace.Namespace, logger log.Logger, migrationID, viewPath string, fromPathDetails, toPathDetails namespace.MountPathDetails) error {
+	logger.Info("Starting to update the mount table and revoke leases")
+	revokeCtx := namespace.ContextWithNamespace(b.Core.activeContext, ns)
 	// Attempt remount
-	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.PerfStandby()); err != nil {
-		b.Backend.Logger().Error("remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
-		return handleError(err)
+	if err := b.Core.remountSecretsEngine(revokeCtx, fromPathDetails, toPathDetails, !b.Core.perfStandby); err != nil {
+		return err
 	}
 
-	// Get the view path if available
-	var viewPath string
-	if entry != nil {
-		viewPath = entry.ViewPath()
+	if err := revokeCtx.Err(); err != nil {
+		return err
 	}
 
+	logger.Info("Removing the source mount from filtered paths on secondaries")
 	// Remove from filtered mounts and restart evaluation process
-	if err := b.Core.removePathFromFilteredPaths(ctx, ns.Path+fromPath, viewPath); err != nil {
-		b.Backend.Logger().Error("filtered path removal failed", fromPath, "error", err)
-		return handleError(err)
+	if err := b.Core.removePathFromFilteredPaths(revokeCtx, fromPathDetails.GetFullPath(), viewPath); err != nil {
+		return err
 	}
 
-	// Update quotas with the new path
-	if err := b.Core.quotaManager.HandleRemount(ctx, ns.Path, sanitizePath(fromPath), sanitizePath(toPath)); err != nil {
-		b.Core.logger.Error("failed to update quotas after remount", "ns_path", ns.Path, "from_path", fromPath, "to_path", toPath, "error", err)
-		return handleError(err)
+	if err := revokeCtx.Err(); err != nil {
+		return err
 	}
 
-	return nil, nil
+	logger.Info("Updating quotas associated with the source mount")
+	// Update quotas with the new path and namespace
+	if err := b.Core.quotaManager.HandleRemount(revokeCtx, fromPathDetails, toPathDetails); err != nil {
+		return err
+	}
+
+	if err := b.Core.setMigrationStatus(migrationID, MigrationSuccessStatus); err != nil {
+		return err
+	}
+	logger.Info("Completed mount move operations")
+	return nil
 }
 
 // handleAuthTuneRead is used to get config settings on a auth path
@@ -1203,6 +1314,34 @@ func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Req
 			logical.ErrInvalidRequest
 	}
 	return b.handleTuneReadCommon(ctx, "auth/"+path)
+}
+
+func (b *SystemBackend) handleRemountStatusCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
+
+	migrationID := data.Get("migration_id").(string)
+	if migrationID == "" {
+		return logical.ErrorResponse(
+				"migrationID must be specified"),
+			logical.ErrInvalidRequest
+	}
+
+	migrationInfo := b.Core.readMigrationStatus(migrationID)
+	if migrationInfo == nil {
+		// If the migration info is not found and this is a perf secondary
+		// forward the request to the primary cluster
+		if repState.HasState(consts.ReplicationPerformanceSecondary) {
+			return nil, logical.ErrReadOnly
+		}
+		return nil, nil
+	}
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"migration_id":   migrationID,
+			"migration_info": migrationInfo,
+		},
+	}
+	return resp, nil
 }
 
 // handleMountTuneRead is used to get config settings on a backend
@@ -1272,6 +1411,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
 		resp.Data["allowed_response_headers"] = rawVal.([]string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
+		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
 	if len(mountEntry.Options) > 0 {
@@ -1559,7 +1702,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
 		headers := rawVal.([]string)
-
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
 
@@ -1580,6 +1722,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of allowed_response_headers successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
+		allowedManagedKeys := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AllowedManagedKeys
+		mountEntry.Config.AllowedManagedKeys = allowedManagedKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AllowedManagedKeys = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of allowed_managed_keys successful", "path", path)
 		}
 	}
 
@@ -1864,6 +2032,66 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
+
+	for _, entry := range b.Core.auth.Entries {
+		// Only show entry for current namespace
+		if entry.Namespace().Path != ns.Path || entry.Path != path {
+			continue
+		}
+
+		cont, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		if err != nil {
+			return nil, err
+		}
+		if cont {
+			continue
+		}
+
+		return &logical.Response{
+			Data: mountInfo(entry),
+		}, nil
+	}
+
+	return logical.ErrorResponse("No auth engine at %s", path), nil
+}
+
+func expandStringValsWithCommas(configMap map[string]interface{}) error {
+	configParamNameSlice := []string{
+		"audit_non_hmac_request_keys",
+		"audit_non_hmac_response_keys",
+		"passthrough_request_headers",
+		"allowed_response_headers",
+		"allowed_managed_keys",
+	}
+	for _, paramName := range configParamNameSlice {
+		if raw, ok := configMap[paramName]; ok {
+			switch t := raw.(type) {
+			case string:
+				// To be consistent with auth tune, and in cases where a single comma separated strings
+				// is provided in the curl command, we split the entries by the commas.
+				rawNew := raw.(string)
+				res, err := parseutil.ParseCommaStringSlice(rawNew)
+				if err != nil {
+					return fmt.Errorf("invalid input parameter %v of type %v", paramName, t)
+				}
+				configMap[paramName] = res
+			}
+		}
+	}
+	return nil
+}
+
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1890,6 +2118,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -1993,6 +2228,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.AllowedResponseHeaders) > 0 {
 		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
+	}
+	if len(apiConfig.AllowedManagedKeys) > 0 {
+		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
 	// Create the mount entry
@@ -2239,6 +2477,16 @@ const (
 	minPasswordLength = 4
 	maxPasswordLength = 100
 )
+
+// handlePoliciesPasswordList returns the list of password policies
+func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	keys, err := req.Storage.List(ctx, "password_policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(keys), nil
+}
 
 // handlePoliciesPasswordSet saves/updates password policies
 func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
@@ -2580,6 +2828,9 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
+		if b.Core.ExistCustomResponseHeader(header) {
+			return logical.ErrorResponse("This header already exists in the server configuration and cannot be set in the UI."), logical.ErrInvalidRequest
+		}
 		value.Add(header, v)
 	}
 	err := b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
@@ -2772,6 +3023,10 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	if unwrapNS == nil {
+		return nil, errors.New("token is not from a valid namespace")
+	}
+
 	unwrapCtx := namespace.ContextWithNamespace(ctx, unwrapNS)
 
 	var response string
@@ -2905,6 +3160,28 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
+func (b *SystemBackend) handleInFlightRequestData(_ context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "text/plain",
+			logical.HTTPStatusCode:  http.StatusInternalServerError,
+		},
+	}
+
+	currentInFlightReqMap := b.Core.LoadInFlightReqData()
+
+	content, err := json.Marshal(currentInFlightReqMap)
+	if err != nil {
+		resp.Data[logical.HTTPRawBody] = fmt.Sprintf("error while marshalling the in-flight requests data: %s", err)
+		return resp, nil
+	}
+	resp.Data[logical.HTTPContentType] = "application/json"
+	resp.Data[logical.HTTPRawBody] = content
+	resp.Data[logical.HTTPStatusCode] = http.StatusOK
+
+	return resp, nil
+}
+
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
 	w := req.ResponseWriter
@@ -2920,7 +3197,16 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
-		return logical.ErrorResponse("streaming not supported"), nil
+		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
+		// access the underlying functionality
+		nw, ok := w.ResponseWriter.(logical.WrappingResponseWriter)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
+		flusher, ok = nw.Wrapped().(http.Flusher)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
 	}
 
 	isJson := b.Core.LogFormat() == "json"
@@ -3248,6 +3534,14 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 		hf = sha512.New384()
 	case "sha2-512":
 		hf = sha512.New()
+	case "sha3-224":
+		hf = sha3.New224()
+	case "sha3-256":
+		hf = sha3.New256()
+	case "sha3-384":
+		hf = sha3.New384()
+	case "sha3-512":
+		hf = sha3.New512()
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
 	}
@@ -3352,7 +3646,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&ListCapabilityInt > 0,
 			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
-			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
+			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
+			perms.CapabilitiesBitmap&PatchCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -3543,18 +3838,9 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	counters, err := b.Core.loadAllRequestCounters(ctx, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	resp := logical.ErrorResponse("The functionality has been removed on this path")
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": counters,
-		},
-	}
-
-	return resp, nil
+	return resp, logical.ErrPathFunctionalityRemoved
 }
 
 func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -3646,6 +3932,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		}
 		if perms.CapabilitiesBitmap&UpdateCapabilityInt > 0 {
 			capabilities = append(capabilities, UpdateCapability)
+		}
+		if perms.CapabilitiesBitmap&PatchCapabilityInt > 0 {
+			capabilities = append(capabilities, PatchCapability)
 		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,
@@ -4010,6 +4299,82 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 	return nil
 }
 
+func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// We're always the leader if we're handling this request.
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	nodes := []HAStatusNode{
+		{
+			Hostname:       hostname,
+			APIAddress:     b.Core.redirectAddr,
+			ClusterAddress: b.Core.ClusterAddr(),
+			ActiveNode:     true,
+		},
+	}
+
+	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
+		lastEcho := peerNode.LastEcho
+		nodes = append(nodes, HAStatusNode{
+			Hostname:       peerNode.Hostname,
+			APIAddress:     peerNode.APIAddress,
+			ClusterAddress: peerNode.ClusterAddress,
+			LastEcho:       &lastEcho,
+		})
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"nodes": nodes,
+		},
+	}, nil
+}
+
+type HAStatusNode struct {
+	Hostname       string     `json:"hostname"`
+	APIAddress     string     `json:"api_address"`
+	ClusterAddress string     `json:"cluster_address"`
+	ActiveNode     bool       `json:"active_node"`
+	LastEcho       *time.Time `json:"last_echo"`
+}
+
+func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	versions := make([]VaultVersion, 0)
+	respKeys := make([]string, 0)
+
+	for versionString, ts := range b.Core.versionTimestamps {
+		versions = append(versions, VaultVersion{
+			Version:            versionString,
+			TimestampInstalled: ts,
+		})
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].TimestampInstalled.Before(versions[j].TimestampInstalled)
+	})
+
+	respKeyInfo := map[string]interface{}{}
+
+	for i, v := range versions {
+		respKeys = append(respKeys, v.Version)
+
+		entry := map[string]interface{}{
+			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"previous_version":    nil,
+		}
+
+		if i > 0 {
+			entry["previous_version"] = versions[i-1].Version
+		}
+
+		respKeyInfo[v.Version] = entry
+	}
+
+	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4028,7 +4393,7 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
-		return fmt.Errorf("invalid listing visilibity type")
+		return fmt.Errorf("invalid listing visibility type")
 	}
 
 	return nil
@@ -4249,12 +4614,21 @@ in the plugin catalog.`,
 	},
 
 	"remount": {
-		"Move the mount point of an already-mounted backend.",
+		"Move the mount point of an already-mounted backend, within or across namespaces",
 		`
 This path responds to the following HTTP methods.
 
     POST /sys/remount
         Changes the mount point of an already-mounted backend.
+		`,
+	},
+
+	"remount-status": {
+		"Check the status of a mount move operation",
+		`
+This path responds to the following HTTP methods.
+    GET /sys/remount/status/:migration_id
+		Check the status of a mount move operation for the given migration_id
 		`,
 	},
 
@@ -4497,6 +4871,13 @@ This path responds to the following HTTP methods.
 		`Enable or disable audit backends.`,
 		`
 Enable a new audit backend or disable an existing backend.
+		`,
+	},
+
+	"ha-status": {
+		"Provides information about the nodes in an HA cluster.",
+		`
+		Provides the list of hosts known to the active node and when they were last heard from.
 		`,
 	},
 
@@ -4748,9 +5129,17 @@ This path responds to the following HTTP methods.
 		"Export the metrics aggregated for telemetry purpose.",
 		"",
 	},
+	"in-flight-req": {
+		"reports in-flight requests",
+		`
+This path responds to the following HTTP methods.
+		GET /
+			Returns a map of in-flight requests.
+		`,
+	},
 	"internal-counters-requests": {
-		"Count of requests seen by this Vault cluster over time.",
-		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 	"internal-counters-tokens": {
 		"Count of active tokens in this Vault cluster.",
@@ -4784,6 +5173,15 @@ This path responds to the following HTTP methods.
 	},
 	"list-leases": {
 		"List leases associated with this Vault cluster",
-		"List leases associated with this Vault cluster",
+		"Requires sudo capability. List leases associated with this Vault cluster",
+	},
+	"version-history": {
+		"List historical version changes sorted by installation time in ascending order.",
+		`
+This path responds to the following HTTP methods.
+
+    LIST /
+        Returns a list historical version changes sorted by installation time in ascending order.
+		`,
 	},
 }

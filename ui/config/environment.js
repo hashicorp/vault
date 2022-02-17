@@ -1,8 +1,8 @@
 /* eslint-env node */
 'use strict';
 
-module.exports = function(environment) {
-  var ENV = {
+module.exports = function (environment) {
+  let ENV = {
     modulePrefix: 'vault',
     environment: environment,
     rootURL: '/ui/',
@@ -45,6 +45,12 @@ module.exports = function(environment) {
     ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
+    if (process.env.MIRAGE_DEV_HANDLER !== undefined) {
+      ENV['ember-cli-mirage'] = {
+        enabled: true,
+        handler: process.env.MIRAGE_DEV_HANDLER,
+      };
+    }
   }
 
   if (environment === 'test') {

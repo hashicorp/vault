@@ -2,15 +2,18 @@ package vault
 
 import (
 	"context"
+	"crypto/hmac"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -21,10 +24,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
+	"github.com/hashicorp/vault/vault/tokens"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -38,6 +41,10 @@ var (
 	DefaultMaxRequestDuration = 90 * time.Second
 
 	egpDebugLogging bool
+
+	// if this returns an error, the request should be blocked and the error
+	// should be returned to the client
+	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
@@ -53,10 +60,10 @@ type HandlerProperties struct {
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
 // ID. If the entity is merged into a different entity object, the entity into
 // which the given entity ID is merged into will be returned. This function
-// also returns the cumulative list of policies that the entity is entitled to.
-// This list includes the policies from the entity itself and from all the
-// groups in which the given entity ID is a member of.
-func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *namespace.Namespace, entityID string) (*identity.Entity, map[string][]string, error) {
+// also returns the cumulative list of policies that the entity is entitled to
+// if skipDeriveEntityPolicies is set to false. This list includes the policies from the
+// entity itself and from all the groups in which the given entity ID is a member of.
+func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *namespace.Namespace, entityID string, skipDeriveEntityPolicies bool) (*identity.Entity, map[string][]string, error) {
 	if entityID == "" || c.identityStore == nil {
 		return nil, nil, nil
 	}
@@ -82,7 +89,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 	}
 
 	policies := make(map[string][]string)
-	if entity != nil {
+	if entity != nil && !skipDeriveEntityPolicies {
 		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
@@ -123,7 +130,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure there is a client token
 	if req.ClientToken == "" {
-		return nil, nil, nil, nil, &logical.StatusBadRequest{Err: "missing client token"}
+		return nil, nil, nil, nil, logical.ErrPermissionDenied
 	}
 
 	if c.tokenStore == nil {
@@ -138,7 +145,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		var err error
 		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		if err != nil {
-			c.logger.Error("failed to lookup token", "error", err)
+			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
 		}
 		// Set the token entry here since it has not been cached yet
@@ -173,9 +180,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 	}
 
-	policies := make(map[string][]string)
+	policyNames := make(map[string][]string)
 	// Add tokens policies
-	policies[te.NamespaceID] = append(policies[te.NamespaceID], te.Policies...)
+	policyNames[te.NamespaceID] = append(policyNames[te.NamespaceID], te.Policies...)
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, c)
 	if err != nil {
@@ -188,21 +195,21 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	// Add identity policies from all the namespaces
-	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
 	if err != nil {
 		return nil, nil, nil, nil, ErrInternalError
 	}
 	for nsID, nsPolicies := range identityPolicies {
-		policies[nsID] = append(policies[nsID], nsPolicies...)
+		policyNames[nsID] = append(policyNames[nsID], nsPolicies...)
 	}
 
 	// Attach token's namespace information to the context. Wrapping tokens by
 	// should be able to be used anywhere, so we also special case behavior.
 	var tokenCtx context.Context
-	if len(policies) == 1 &&
-		len(policies[te.NamespaceID]) == 1 &&
-		(policies[te.NamespaceID][0] == responseWrappingPolicyName ||
-			policies[te.NamespaceID][0] == controlGroupPolicyName) &&
+	if len(policyNames) == 1 &&
+		len(policyNames[te.NamespaceID]) == 1 &&
+		(policyNames[te.NamespaceID][0] == responseWrappingPolicyName ||
+			policyNames[te.NamespaceID][0] == controlGroupPolicyName) &&
 		(strings.HasSuffix(req.Path, "sys/wrapping/unwrap") ||
 			strings.HasSuffix(req.Path, "sys/wrapping/lookup") ||
 			strings.HasSuffix(req.Path, "sys/wrapping/rewrap")) {
@@ -214,9 +221,19 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		tokenCtx = namespace.ContextWithNamespace(ctx, tokenNS)
 	}
 
+	// Add the inline policy if it's set
+	policies := make([]*Policy, 0)
+	if te.InlinePolicy != "" {
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
+		if err != nil {
+			return nil, nil, nil, nil, ErrInternalError
+		}
+		policies = append(policies, inlinePolicy)
+	}
+
 	// Construct the corresponding ACL object. ACL construction should be
 	// performed on the token's namespace.
-	acl, err := c.policyStore.ACL(tokenCtx, entity, policies)
+	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
 		if errwrap.ContainsType(err, new(TemplateError)) {
 			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
@@ -333,6 +350,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Accessor:    req.ClientTokenAccessor,
 	}
 
+	var clientID string
+	var isTWE bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
@@ -349,6 +368,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		if te.CreationTime > 0 {
 			auth.IssueTime = time.Unix(te.CreationTime, 0)
 		}
+		clientID, isTWE = te.CreateClientID()
+		req.ClientID = clientID
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -383,6 +404,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return auth, te, retErr
 	}
 
+	// If it is an authenticated ( i.e with vault token ) request, increment client count
+	if !unauth && c.activityLog != nil {
+		c.activityLog.HandleTokenUsage(te, clientID, isTWE)
+	}
 	return auth, te, nil
 }
 
@@ -421,16 +446,19 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 		cancel()
 		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
+
 	ctx = namespace.ContextWithNamespace(ctx, ns)
-
-	resp, err = c.handleCancelableRequest(ctx, ns, req)
-
+	inFlightReqID, ok := httpCtx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
+	}
+	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
 	return resp, err
 }
 
-func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namespace, req *logical.Request) (resp *logical.Response, err error) {
+func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -439,7 +467,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 	// backends. Basically, it's all just terrible, so don't allow it.
 	if strings.HasSuffix(req.Path, "/") &&
 		(req.Operation == logical.UpdateOperation ||
-			req.Operation == logical.CreateOperation) {
+			req.Operation == logical.CreateOperation ||
+			req.Operation == logical.PatchOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
@@ -453,6 +482,149 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		defer waitGroup.Done()
 	}
 
+	if c.MissingRequiredState(req.RequiredState(), c.perfStandby) {
+		return nil, logical.ErrMissingRequiredState
+	}
+
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Always forward requests that are using a limited use count token.
+	if c.perfStandby && req.ClientTokenRemainingUses > 0 {
+		// Prevent forwarding on local-only requests.
+		return nil, logical.ErrPerfStandbyPleaseForward
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
+	}
+	var requestBodyToken string
+	var returnRequestAuthToken bool
+
+	// req.Path will be relative by this point. The prefix check is first
+	// to fail faster if we're not in this situation since it's a hot path
+	switch {
+	case strings.HasPrefix(req.Path, "sys/wrapping/"), strings.HasPrefix(req.Path, "auth/token/"):
+		// Get the token ns info; if we match the paths below we want to
+		// swap in the token context (but keep the relative path)
+		te := req.TokenEntry()
+		newCtx := ctx
+		if te != nil {
+			ns, err := NamespaceByID(ctx, te.NamespaceID, c)
+			if err != nil {
+				c.Logger().Warn("error looking up namespace from the token's namespace ID", "error", err)
+				return nil, err
+			}
+			if ns != nil {
+				newCtx = namespace.ContextWithNamespace(ctx, ns)
+			}
+		}
+		switch req.Path {
+		// Route the token wrapping request to its respective sys NS
+		case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
+			ctx = newCtx
+			// A lookup on a token that is about to expire returns nil, which means by the
+			// time we can validate a wrapping token lookup will return nil since it will
+			// be revoked after the call. So we have to do the validation here.
+			valid, err := c.validateWrappingToken(ctx, req)
+			if err != nil {
+				return nil, fmt.Errorf("error validating wrapping token: %w", err)
+			}
+			if !valid {
+				return nil, consts.ErrInvalidWrappingToken
+			}
+
+		// The -self paths have no meaning outside of the token NS, so
+		// requests for these paths always go to the token NS
+		case "auth/token/lookup-self", "auth/token/renew-self", "auth/token/revoke-self":
+			ctx = newCtx
+			returnRequestAuthToken = true
+
+		// For the following operations, we can set the proper namespace context
+		// using the token's embedded nsID if a relative path was provided.
+		// The operation will still be gated by ACLs, which are checked later.
+		case "auth/token/lookup", "auth/token/renew", "auth/token/revoke", "auth/token/revoke-orphan":
+			token, ok := req.Data["token"]
+			// If the token is not present (e.g. a bad request), break out and let the backend
+			// handle the error
+			if !ok {
+				// If this is a token lookup request and if the token is not
+				// explicitly provided, it will use the client token so we simply set
+				// the context to the client token's context.
+				if req.Path == "auth/token/lookup" {
+					ctx = newCtx
+				}
+				break
+			}
+			if token == nil {
+				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
+			}
+			// We don't care if the token is an server side consistent token or not. Either way, we're going
+			// to be returning it for these paths instead of the short token stored in vault.
+			requestBodyToken = token.(string)
+			if IsSSCToken(token.(string)) {
+				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
+				if err != nil {
+					return nil, fmt.Errorf("server side consistent token check failed: %w", err)
+				}
+				req.Data["token"] = token
+			}
+			_, nsID := namespace.SplitIDFromString(token.(string))
+			if nsID != "" {
+				ns, err := NamespaceByID(ctx, nsID, c)
+				if err != nil {
+					c.Logger().Warn("error looking up namespace from the token's namespace ID", "error", err)
+					return nil, err
+				}
+				if ns != nil {
+					ctx = namespace.ContextWithNamespace(ctx, ns)
+				}
+			}
+		}
+
+	// The following relative sys/leases/ paths handles re-routing requests
+	// to the proper namespace using the lease ID on applicable paths.
+	case strings.HasPrefix(req.Path, "sys/leases/"):
+		switch req.Path {
+		// For the following operations, we can set the proper namespace context
+		// using the lease's embedded nsID if a relative path was provided.
+		// The operation will still be gated by ACLs, which are checked later.
+		case "sys/leases/lookup", "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
+			leaseID, ok := req.Data["lease_id"]
+			// If lease ID is not present, break out and let the backend handle the error
+			if !ok {
+				break
+			}
+			_, nsID := namespace.SplitIDFromString(leaseID.(string))
+			if nsID != "" {
+				ns, err := NamespaceByID(ctx, nsID, c)
+				if err != nil {
+					c.Logger().Warn("error looking up namespace from the lease's namespace ID", "error", err)
+					return nil, err
+				}
+				if ns != nil {
+					ctx = namespace.ContextWithNamespace(ctx, ns)
+				}
+			}
+		}
+
+	// Prevent any metrics requests to be forwarded from a standby node.
+	// Instead, we return an error since we cannot be sure if we have an
+	// active token store to validate the provided token.
+	case strings.HasPrefix(req.Path, "sys/metrics"):
+		if c.standby && !c.perfStandby {
+			return nil, ErrCannotForwardLocalOnly
+		}
+	}
+
+	ns, err = namespace.FromContext(ctx)
+	if err != nil {
+		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
+	}
+
 	if !hasNamespaces(c) && ns.Path != "" {
 		return nil, logical.CodedError(403, "namespaces feature not enabled")
 	}
@@ -460,10 +632,30 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.router.LoginPath(ctx, req.Path) {
+	if c.isLoginRequest(ctx, req) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
+	}
+
+	// If we saved the token in the request, we should return it in the response
+	// data.
+	if resp != nil && resp.Data != nil {
+		if _, ok := resp.Data["error"]; !ok {
+			if requestBodyToken != "" {
+				resp.Data["id"] = requestBodyToken
+			} else if returnRequestAuthToken && req.InboundSSCToken != "" {
+				resp.Data["id"] = req.InboundSSCToken
+			}
+		}
+	}
+	if resp != nil && resp.Auth != nil && requestBodyToken != "" {
+		// if a client token has already been set and the request body token's internal token
+		// is equal to that value, then we can return the original request body token
+		tok, _ := c.DecodeSSCToken(requestBodyToken)
+		if resp.Auth.ClientToken == tok {
+			resp.Auth.ClientToken = requestBodyToken
+		}
 	}
 
 	// Ensure we don't leak internal data
@@ -599,8 +791,11 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 	if shouldForward(c, resp, err) {
 		return forward(ctx, c, req)
 	}
-	atomic.AddUint64(c.counters.requests, 1)
 	return resp, err
+}
+
+func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
+	return c.router.LoginPath(ctx, req.Path)
 }
 
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
@@ -628,6 +823,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	auth, te, ctErr := c.checkToken(ctx, req, false)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
+	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
 	// We run this logic first because we want to decrement the use count even
@@ -737,8 +938,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
+	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+		return nil, nil, multierror.Append(retErr, err)
+	}
+
 	leaseGenerated := false
-	quotaResp, quotaErr := c.applyLeaseCountQuota(&quotas.Request{
+	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
 		NamespacePath: ns.Path,
@@ -927,7 +1132,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
 		if err != nil {
 			// Best-effort clean up on error, so we log the cleanup error as a
 			// warning but still return as internal error.
@@ -943,6 +1148,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// We build the "policies" list to be returned by starting with
 			// token policies, and add identity policies right after this
 			// conditional
+			tok, _ := c.DecodeSSCToken(req.InboundSSCToken)
+			if resp.Auth.ClientToken == tok {
+				resp.Auth.ClientToken = req.InboundSSCToken
+			}
 			resp.Auth.Policies = policyutil.SanitizePolicies(resp.Auth.TokenPolicies, policyutil.DoNotAddDefaultPolicy)
 		} else {
 			resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
@@ -950,12 +1159,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
 			case logical.TokenTypeService:
-				if err := c.expiration.RegisterAuth(ctx, &logical.TokenEntry{
+				registeredTokenEntry := &logical.TokenEntry{
 					TTL:         auth.TTL,
 					Policies:    auth.TokenPolicies,
 					Path:        resp.Auth.CreationPath,
 					NamespaceID: ns.ID,
-				}, resp.Auth); err != nil {
+				}
+				if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth); err != nil {
 					// Best-effort clean up on error, so we log the cleanup error as
 					// a warning but still return as internal error.
 					if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
@@ -964,6 +1174,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
 					retErr = multierror.Append(retErr, ErrInternalError)
 					return nil, auth, retErr
+				}
+				if registeredTokenEntry.ExternalID != "" {
+					resp.Auth.ClientToken = registeredTokenEntry.ExternalID
 				}
 				leaseGenerated = true
 			}
@@ -1019,6 +1232,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+	}
+
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
@@ -1122,20 +1342,26 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return nil, nil, ErrInternalError
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		c.logger.Error("failed to get namespace from context", "error", err)
+		retErr = multierror.Append(retErr, ErrInternalError)
+		return
+	}
 	// If the response generated an authentication, then generate the token
 	if resp != nil && resp.Auth != nil {
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			c.logger.Error("failed to get namespace from context", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
+		leaseGenerated := false
+
+		// by placing this after the authorization check, we don't leak
+		// information about locked namespaces to unauthenticated clients.
+		if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+			retErr = multierror.Append(retErr, err)
 			return
 		}
 
-		leaseGenerated := false
-
 		// The request successfully authenticated itself. Run the quota checks
 		// before creating lease.
-		quotaResp, quotaErr := c.applyLeaseCountQuota(&quotas.Request{
+		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
 			NamespacePath: ns.Path,
@@ -1172,24 +1398,32 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		if auth.Alias != nil &&
 			mEntry != nil &&
-			!mEntry.Local &&
 			c.identityStore != nil {
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType
 			auth.Alias.MountAccessor = req.MountAccessor
+			auth.Alias.Local = mEntry.Local
 
 			if auth.Alias.Name == "" {
 				return nil, nil, fmt.Errorf("missing name in alias")
 			}
 
 			var err error
-
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
 			entity, err = c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
 			if err != nil {
-				entity, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+				switch auth.Alias.Local {
+				case true:
+					entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, entity)
+					if err != nil && strings.Contains(err.Error(), errCreateEntityUnimplemented) {
+						resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
+						goto CREATE_TOKEN
+					}
+				default:
+					entity, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+				}
 			}
 			if err != nil {
 				return nil, nil, err
@@ -1210,6 +1444,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			auth.GroupAliases = validAliases
 		}
 
+	CREATE_TOKEN:
 		// Determine the source of the login
 		source := c.router.MatchingMount(ctx, req.Path)
 		source = strings.TrimPrefix(source, credentialRoutePrefix)
@@ -1232,7 +1467,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			resp.AddWarning(warning)
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
@@ -1302,8 +1537,27 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		)
 	}
 
+	// if we were already going to return some error from this login, do that.
+	// if not, we will then check if the API is locked for the requesting
+	// namespace, to avoid leaking locked namespaces to unauthenticated clients.
+	if resp != nil && resp.Data != nil {
+		if _, ok := resp.Data["error"]; ok {
+			return resp, auth, routeErr
+		}
+	}
+	if routeErr != nil {
+		return resp, auth, routeErr
+	}
+
+	// this check handles the bad login credential case
+	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+		return nil, nil, multierror.Append(retErr, err)
+	}
+
 	return resp, auth, routeErr
 }
+
+func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
@@ -1364,7 +1618,176 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
 			return ErrInternalError
 		}
+		if te.ExternalID != "" {
+			auth.ClientToken = te.ExternalID
+		}
 	}
 
 	return nil
+}
+
+// PopulateTokenEntry looks up req.ClientToken in the token store and uses
+// it to set other fields in req.  Does nothing if ClientToken is empty
+// or a JWT token, or for service tokens that don't exist in the token store.
+// Should be called with read stateLock held.
+func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) error {
+	if req.ClientToken == "" {
+		return nil
+	}
+
+	// Also attach the accessor if we have it. This doesn't fail if it
+	// doesn't exist because the request may be to an unauthenticated
+	// endpoint/login endpoint where a bad current token doesn't matter, or
+	// a token from a Vault version pre-accessors. We ignore errors for
+	// JWTs.
+	token := req.ClientToken
+	var err error
+	req.InboundSSCToken = token
+	if IsSSCToken(token) {
+		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		if err != nil {
+			return err
+		}
+	}
+	req.ClientToken = token
+	te, err := c.LookupToken(ctx, token)
+	if err != nil {
+		// If we have two dots but the second char is a dot it's a vault
+		// token of the form s.SOMETHING.nsid, not a JWT
+		if !IsJWT(token) {
+			return fmt.Errorf("error performing token check: %w", err)
+		}
+	}
+	if err == nil && te != nil {
+		req.ClientTokenAccessor = te.Accessor
+		req.ClientTokenRemainingUses = te.NumUses
+		req.SetTokenEntry(te)
+	}
+	return nil
+}
+
+func (c *Core) CheckSSCToken(ctx context.Context, token string, unauth bool, isPerfStandby bool) (string, error) {
+	if unauth && token != "" {
+		// This token shouldn't really be here, but alas it was sent along with the request
+		// Since we're already knee deep in the token checking code pre-existing token checking
+		// code, we have to deal with this token whether we like it or not. So, we'll just try
+		// to get the inner token, and if that fails, return the token as-is. We intentionally
+		// will skip any token checks, because this is an unauthenticated paths and the token
+		// is just a nuisance rather than a means of auth.
+
+		// We cannot return whatever we like here, because if we do then CheckToken, which looks up
+		// the corresponding lease, will not find the token entry and lease. There are unauth'ed
+		// endpoints that use the token entry (such as sys/ui/mounts/internal) to do custom token
+		// checks, which would then fail. Therefore, we must try to get whatever thing is tied to
+		// token entries, but we must explicitly not do any SSC Token checks.
+		tok, err := c.DecodeSSCToken(token)
+		if err != nil || tok == "" {
+			return token, nil
+		}
+		return tok, nil
+	}
+	return c.checkSSCTokenInternal(ctx, token, isPerfStandby)
+}
+
+// DecodeSSCToken returns the random part of an SSCToken without
+// performing any signature or WAL checks.
+func (c *Core) DecodeSSCToken(token string) (string, error) {
+	// Skip batch and old style service tokens. These can have the prefix "b.",
+	// "s." (for old tokens) or "hvb."
+	if !IsSSCToken(token) {
+		return token, nil
+	}
+	tok, err := c.DecodeSSCTokenInternal(token)
+	if err != nil {
+		return "", err
+	}
+	return tok.Random, nil
+}
+
+// DecodeSSCTokenInternal is a helper used to get the inner part of a SSC token without
+// checking the token signature or the WAL index.
+func (c *Core) DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
+	signedToken := &tokens.SignedToken{}
+
+	// Skip batch and old style service tokens. These can have the prefix "b.",
+	// "s." (for old tokens) or "hvb."
+	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+		return nil, fmt.Errorf("not service token")
+	}
+
+	// Consider the suffix of the token only when unmarshalling
+	suffixToken := token[4:]
+
+	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
+	if err != nil {
+		return nil, fmt.Errorf("can't decode token")
+	}
+
+	err = proto.Unmarshal(tokenBytes, signedToken)
+	if err != nil {
+		return nil, err
+	}
+	plainToken := &tokens.Token{}
+	err2 := proto.Unmarshal([]byte(signedToken.Token), plainToken)
+	if err2 != nil {
+		return nil, err2
+	}
+	return plainToken, nil
+}
+
+func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfStandby bool) (string, error) {
+	signedToken := &tokens.SignedToken{}
+
+	// Skip batch and old style service tokens. These can have the prefix "b.",
+	// "s." (for old tokens) or "hvb."
+	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+		return token, nil
+	}
+
+	// Check token length to guess if this is an server side consistent token or not.
+	// Note that even when the DisableSSCTokens flag is set, index
+	// bearing tokens that have already been given out may still be used.
+	if !IsSSCToken(token) {
+		return token, nil
+	}
+
+	// Consider the suffix of the token only when unmarshalling
+	suffixToken := token[4:]
+
+	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
+	if err != nil {
+		c.logger.Warn("cannot decode token", "error", err)
+		return token, nil
+	}
+
+	err = proto.Unmarshal(tokenBytes, signedToken)
+	if err != nil {
+		return "", fmt.Errorf("error occurred when unmarshalling ssc token: %w", err)
+	}
+	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
+	if !hmac.Equal(hm, signedToken.Hmac) {
+		return "", fmt.Errorf("token mac for %+v is incorrect: err %w", signedToken, err)
+	}
+	plainToken := &tokens.Token{}
+	err = proto.Unmarshal([]byte(signedToken.Token), plainToken)
+	if err != nil {
+		return "", err
+	}
+	ep := int(plainToken.IndexEpoch)
+	if ep < c.tokenStore.GetSSCTokensGenerationCounter() {
+		return plainToken.Random, nil
+	}
+
+	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
+	if c.HasWALState(requiredWalState, isPerfStandby) {
+		return plainToken.Random, nil
+	}
+	// Make sure to forward the request instead of checking the token if the flag
+	// is set and we're on a perf standby
+	if c.ForwardToActive() == ForwardSSCTokenToActive && isPerfStandby {
+		return "", logical.ErrPerfStandbyPleaseForward
+	}
+	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
+	// status code.
+	return "", logical.ErrMissingRequiredState
 }

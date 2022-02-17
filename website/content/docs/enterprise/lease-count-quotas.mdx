@@ -13,6 +13,13 @@ number of leases in the cluster hits the configured limit, `max_leases`, additio
 lease creations will be forbidden for all clients until a lease has been revoked
 or has expired.
 
+It is important to note that lease count quotas do not apply to the root tokens.
+If the number of leases in the cluster hits the configured limit, `max_leases`,
+an operator could still create a root token and access the cluster to try to recover.
+
+Additionally, batch token creation is blocked when the lease count quota is
+exceeded, but batch tokens do not count towards the quota.
+
 All the nodes in the Vault cluster will share the lease quota rules, meaning that
 the lease counters will be shared, regardless of which node in the Vault cluster
 receives lease generation requests. Lease quotas can be imposed across Vault's API,

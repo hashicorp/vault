@@ -13,9 +13,9 @@ import (
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"golang.org/x/net/http2"
@@ -129,7 +129,9 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	SetupSecureTLS(consulConf, conf, logger, false)
+	if err := SetupSecureTLS(context.Background(), consulConf, conf, logger, false); err != nil {
+		return nil, fmt.Errorf("client setup failed: %w", err)
+	}
 
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)
@@ -151,7 +153,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	return c, nil
 }
 
-func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
+func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -189,13 +191,16 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 			certPath, okCert := conf["tls_cert_file"]
 			keyPath, okKey := conf["tls_key_file"]
 			if okCert && okKey {
-				err := diagnose.TLSFileChecks(certPath, keyPath)
+				warnings, err := diagnose.TLSFileChecks(certPath, keyPath)
+				for _, warning := range warnings {
+					diagnose.Warn(ctx, warning)
+				}
 				if err != nil {
 					return err
 				}
-			} else {
-				return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+				return nil
 			}
+			return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
 		}
 
 		// Use the parsed Address instead of the raw conf['address']
@@ -209,6 +214,10 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 			return err
 		}
 		logger.Debug("configured TLS")
+	} else {
+		if isDiagnose {
+			diagnose.Skipped(ctx, "HTTPS is not used, Skipping TLS verification.")
+		}
 	}
 	return nil
 }

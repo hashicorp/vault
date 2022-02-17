@@ -1,5 +1,10 @@
 module.exports = [
   {
+    source: '/home',
+    destination: '/',
+    permanent: true,
+  },
+  {
     source: '/trial',
     destination: 'https://www.hashicorp.com/products/vault/trial',
     permanent: true,
@@ -77,6 +82,11 @@ module.exports = [
   {
     source: '/docs/enterprise/auto-unseal',
     destination: '/docs/concepts/seal.html',
+    permanent: true,
+  },
+  {
+    source: '/docs/enterprise/license/faqs',
+    destination: '/docs/enterprise/license/faq',
     permanent: true,
   },
   {
@@ -203,6 +213,11 @@ module.exports = [
   {
     source: '/docs/http/sys-unseal',
     destination: '/api-docs/system/unseal',
+    permanent: true,
+  },
+  {
+    source: '/docs/http/sys-version-history',
+    destination: '/api-docs/system/version-history',
     permanent: true,
   },
   {
@@ -426,6 +441,11 @@ module.exports = [
     permanent: true,
   },
   // Guides and Intro redirects to Learn
+  {
+    source: '/guides',
+    destination: 'https://learn.hashicorp.com/vault',
+    permanent: true,
+  },
   {
     source: '/guides/getting-started',
     destination: 'https://learn.hashicorp.com/vault',

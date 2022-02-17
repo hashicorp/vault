@@ -58,7 +58,10 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 	}
 
 	expectedNumLeases := 50
-	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount, err := core.InjectIrrevocableLeases(namespace.RootContext(nil), expectedNumLeases)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	resp, err = client.Logical().ReadWithData("sys/leases/count", params)
 	if err != nil {
@@ -162,7 +165,10 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 
 	// test with a low enough number to not give an error without limit set to none
 	expectedNumLeases := 50
-	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount, err := core.InjectIrrevocableLeases(namespace.RootContext(nil), expectedNumLeases)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	resp, err = client.Logical().ReadWithData("sys/leases", params)
 	if err != nil {
@@ -225,7 +231,10 @@ func TestExpiration_irrevocableLeaseListAPI_includeAll(t *testing.T) {
 
 	// test with a low enough number to not give an error with the default limit
 	expectedNumLeases := vault.MaxIrrevocableLeasesToReturn + 50
-	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount, err := core.InjectIrrevocableLeases(namespace.RootContext(nil), expectedNumLeases)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	params := make(map[string][]string)
 	params["type"] = []string{"irrevocable"}

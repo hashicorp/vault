@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/openldap: Fix bug where Vault can rotate static role passwords early during start up under certain conditions. [#28](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/28)
+```

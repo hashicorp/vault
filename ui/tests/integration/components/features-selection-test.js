@@ -19,18 +19,18 @@ const permissionsService = Service.extend({
   },
 });
 
-module('Integration | Component | features-selection', function(hooks) {
+module('Integration | Component | features-selection', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.register('service:permissions', permissionsService);
   });
 
-  test('it disables and enables wizard items according to user permissions', async function(assert) {
+  test('it disables and enables wizard items according to user permissions', async function (assert) {
     const enabled = { Secrets: true, Authentication: true, Policies: false, Tools: false };
     await render(hbs`<Wizard::FeaturesSelection/>`);
 
-    component.wizardItems.forEach(i => {
+    component.wizardItems.forEach((i) => {
       assert.equal(
         i.hasDisabledTooltip,
         !enabled[i.text],
@@ -39,12 +39,12 @@ module('Integration | Component | features-selection', function(hooks) {
     });
   });
 
-  test('it disables the start button if no wizard items are checked', async function(assert) {
+  test('it disables the start button if no wizard items are checked', async function (assert) {
     await render(hbs`<Wizard::FeaturesSelection/>`);
     assert.equal(component.hasDisabledStartButton, true);
   });
 
-  test('it enables the start button when user has permission and wizard items are checked', async function(assert) {
+  test('it enables the start button when user has permission and wizard items are checked', async function (assert) {
     await render(hbs`<Wizard::FeaturesSelection/>`);
     await component.selectSecrets();
 

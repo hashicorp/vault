@@ -39,13 +39,13 @@ export default Component.extend({
 
   isRunning: or('executeCommand.isRunning', 'refreshRoute.isRunning'),
 
-  executeCommand: task(function*(command, shouldThrow = false) {
+  executeCommand: task(function* (command, shouldThrow = false) {
     this.set('inputValue', '');
     let service = this.console;
     let serviceArgs;
 
     if (
-      executeUICommand(command, args => this.logAndOutput(args), {
+      executeUICommand(command, (args) => this.logAndOutput(args), {
         api: () => this.routeToExplore.perform(command),
         clearall: () => service.clearLog(true),
         clear: () => service.clearLog(),
@@ -71,7 +71,7 @@ export default Component.extend({
     let [method, flagArray, path, dataArray] = serviceArgs;
 
     if (dataArray || flagArray) {
-      var { data, flags } = extractDataAndFlags(dataArray, flagArray);
+      var { data, flags } = extractDataAndFlags(method, dataArray, flagArray);
     }
 
     let inputError = logErrorFromInput(path, method, flags, dataArray);
@@ -90,45 +90,51 @@ export default Component.extend({
     }
   }),
 
-  refreshRoute: task(function*() {
+  refreshRoute: task(function* () {
     let owner = getOwner(this);
-    let routeName = this.router.currentRouteName;
-    let route = owner.lookup(`route:${routeName}`);
+    let currentRoute = owner.lookup(`router:main`).get('currentRouteName');
 
     try {
       this.store.clearAllDatasets();
-      yield route.refresh();
+      yield this.router.transitionTo(currentRoute);
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {
       this.logAndOutput(null, { type: 'error', content: 'The was a problem refreshing the current screen.' });
     }
   }),
 
-  routeToExplore: task(function*(command) {
+  routeToExplore: task(function* (command) {
     let filter = command.replace('api', '').trim();
+    let content =
+      'Welcome to the Vault API explorer! \nYou can search for endpoints, see what parameters they accept, and even execute requests with your current token.';
+    if (filter) {
+      content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
+    }
     try {
       yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
         queryParams: { filter },
       });
-      let content =
-        'Welcome to the Vault API explorer! \nYou can search for endpoints, see what parameters they accept, and even execute requests with your current token.';
-      if (filter) {
-        content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
-      }
       this.logAndOutput(null, {
         type: 'success',
         content,
       });
     } catch (error) {
-      this.logAndOutput(null, {
-        type: 'error',
-        content: 'There was a problem navigating to the api explorer.',
-      });
+      if (error.message === 'TransitionAborted') {
+        this.logAndOutput(null, {
+          type: 'success',
+          content,
+        });
+      } else {
+        this.logAndOutput(null, {
+          type: 'error',
+          content: 'There was a problem navigating to the api explorer.',
+        });
+      }
     }
   }),
 
   shiftCommandIndex(keyCode) {
-    this.console.shiftCommandIndex(keyCode, val => {
+    this.console.shiftCommandIndex(keyCode, (val) => {
       this.set('inputValue', val);
     });
   },

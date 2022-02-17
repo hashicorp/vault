@@ -2,7 +2,7 @@ package command
 
 import (
 	"context"
-	"errors"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
@@ -40,7 +40,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agent/winsvc"
-	"github.com/hashicorp/vault/internalshared/gatedwriter"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -49,6 +50,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -336,11 +338,16 @@ func (c *AgentCommand) Run(args []string) int {
 	// TemplateServer that periodically listen for ctx.Done() to fire and shut
 	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	var namespace string
+	var templateNamespace string
 	if config.AutoAuth != nil {
+		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+			client.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
@@ -367,19 +374,9 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 		}
 
-		// Check if a default namespace has been set
-		mountPath := config.AutoAuth.Method.MountPath
-		if cns := config.AutoAuth.Method.Namespace; cns != "" {
-			namespace = cns
-			// Only set this value if the env var is empty, otherwise we end up with a nested namespace
-			if ens := os.Getenv(api.EnvVaultNamespace); ens == "" {
-				mountPath = path.Join(cns, mountPath)
-			}
-		}
-
 		authConfig := &auth.AuthConfig{
 			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
-			MountPath: mountPath,
+			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
 		switch config.AutoAuth.Method.Type {
@@ -470,7 +467,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var leaseCache *cache.LeaseCache
 	var previousToken string
 	// Parse agent listener configurations
-	if config.Cache != nil && len(config.Listeners) != 0 {
+	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -561,7 +558,7 @@ func (c *AgentCommand) Run(args []string) int {
 					AAD:     aad,
 				})
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
+					c.UI.Error(fmt.Sprintf("Error opening persistent cache with wrapper: %v", err))
 					return 1
 				}
 
@@ -666,11 +663,25 @@ func (c *AgentCommand) Run(args []string) int {
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 
 		var listeners []net.Listener
+
+		// If there are templates, add an in-process listener
+		if len(config.Templates) > 0 {
+			config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
+		}
 		for i, lnConfig := range config.Listeners {
-			ln, tlsConf, err := cache.StartListener(lnConfig)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
-				return 1
+			var ln net.Listener
+			var tlsConf *tls.Config
+
+			if lnConfig.Type == listenerutil.BufConnType {
+				inProcListener := bufconn.Listen(1024 * 1024)
+				config.Cache.InProcDialer = listenerutil.NewBufConnWrapper(inProcListener)
+				ln = inProcListener
+			} else {
+				ln, tlsConf, err = cache.StartListener(lnConfig)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+					return 1
+				}
 			}
 
 			listeners = append(listeners, ln)
@@ -776,7 +787,7 @@ func (c *AgentCommand) Run(args []string) int {
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
 			AgentConfig:   config,
-			Namespace:     namespace,
+			Namespace:     templateNamespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
 
@@ -880,7 +891,7 @@ func verifyRequestHeader(handler http.Handler) http.Handler {
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
 			logical.RespondError(w,
 				http.StatusPreconditionFailed,
-				errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName)))
+				fmt.Errorf("missing '%s' header", consts.RequestHeaderName))
 			return
 		}
 
@@ -927,7 +938,7 @@ func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 	case flagEnvSet:
 		// Use value from env var
 		*fVar.Target = flagEnvValue != ""
-	case configVal == true:
+	case configVal:
 		// Use value from config
 		*fVar.Target = configVal
 	default:

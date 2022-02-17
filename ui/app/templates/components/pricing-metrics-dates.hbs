@@ -5,11 +5,11 @@
       <div class="control">
         <Input
           @type="string"
-          @value={{start}}
-          @name="start"
-          class={{concat "input" (unless startDate " has-error")}}
-          @autocomplete="off"
-          @spellcheck="false"
+          @value={{this.start}}
+          name="start"
+          class={{concat "input" (unless this.startDate " has-error")}}
+          autocomplete="off"
+          spellcheck="false"
           data-test-start-input="true"
         />
       </div>
@@ -19,36 +19,28 @@
       <div class="control">
         <Input
           @type="string"
-          @value={{end}}
-          @name="end"
-          class={{concat "input" (unless endDate " has-error")}}
-          @autocomplete="off"
-          @spellcheck="false"
+          @value={{this.end}}
+          name="end"
+          class={{concat "input" (unless this.endDate " has-error")}}
+          autocomplete="off"
+          spellcheck="false"
           data-test-end-input="true"
         />
       </div>
     </div>
-    <button disabled={{error}} type="submit" class="button">Query</button>
+    <button disabled={{this.error}} type="submit" class="button">Query</button>
   </div>
 </form>
 
-{{#if error}}
-  <FormError>{{error}}</FormError>
+{{#if this.error}}
+  <FormError>{{this.error}}</FormError>
 {{/if}}
 <div class="box is-fullwidth is-shadowless">
-  {{#if (and resultStart resultEnd)}}
+  {{#if (and this.resultStart this.resultEnd)}}
     <h2 class="title is-4" data-test-pricing-result-dates>
-      {{date-format resultStart "MMM dd, yyyy"}} through {{date-format resultEnd "MMM dd, yyyy"}}
+      {{date-format this.resultStart "MMM dd, yyyy" dateOnly=true}}
+      through
+      {{date-format this.resultEnd "MMM dd, yyyy" dateOnly=true}}
     </h2>
-  {{/if}}
-  {{#if showResultsWarning}}
-  <div class="access-information" data-test-results-date-warning>
-    <Icon @glyph="info-circle-fill" class="has-text-info"/>
-    <p>This data may not reflect your search exactly. This is because Vault will only show data for contiguous blocks of time during which tracking was on.
-      <LearnLink @path="/tutorials/vault/usage-metrics">
-        Learn more here
-      </LearnLink>
-    </p>
-  </div>
   {{/if}}
 </div>

@@ -75,6 +75,15 @@ const (
 	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
+	// EnvVaultLicense is an env var used in Vault Enterprise to provide a license blob
+	EnvVaultLicense = "VAULT_LICENSE"
+	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
+	// path to a license file on disk
+	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
+
+	// DisableSSCTokens is an env var used to disable index bearing
+	// token functionality
+	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -111,6 +120,8 @@ const (
 	flagNameAllowedResponseHeaders = "allowed-response-headers"
 	// flagNameTokenType is the flag name used to force a specific token type
 	flagNameTokenType = "token-type"
+	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
+	flagNameAllowedManagedKeys = "allowed-managed-keys"
 )
 
 var (
@@ -167,6 +178,8 @@ var (
 		"consul":     csr.NewServiceRegistration,
 		"kubernetes": ksr.NewServiceRegistration,
 	}
+
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
 )
 
 // Commands is the mapping of all the available commands.
@@ -296,16 +309,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"license": func() (cli.Command, error) {
-			return &LicenseCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"license get": func() (cli.Command, error) {
-			return &LicenseGetCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"list": func() (cli.Command, error) {
 			return &ListCommand{
 				BaseCommand: getBaseCommand(),
@@ -339,6 +342,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"namespace delete": func() (cli.Command, error) {
 			return &NamespaceDeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace lock": func() (cli.Command, error) {
+			return &NamespaceAPILockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace unlock": func() (cli.Command, error) {
+			return &NamespaceAPIUnlockCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -451,6 +464,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator members": func() (cli.Command, error) {
+			return &OperatorMembersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -639,6 +657,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"version-history": func() (cli.Command, error) {
+			return &VersionHistoryCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"write": func() (cli.Command, error) {
 			return &WriteCommand{
 				BaseCommand: getBaseCommand(),
@@ -704,6 +727,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"kv metadata patch": func() (cli.Command, error) {
+			return &KVMetadataPatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"kv metadata get": func() (cli.Command, error) {
 			return &KVMetadataGetCommand{
 				BaseCommand: getBaseCommand(),
@@ -730,6 +758,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			}, nil
 		}
 	}
+
+	initCommandsEnt(ui, serverCmdUi, runOpts)
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

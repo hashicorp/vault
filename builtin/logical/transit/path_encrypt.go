@@ -5,7 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
+
+	"github.com/hashicorp/vault/helper/constants"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -217,7 +220,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 
 func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -263,6 +266,9 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
+	userErrorInBatch := false
+	internalErrorInBatch := false
+
 	// Before processing the batch request items, get the policy. If the
 	// policy is supposed to be upserted, then determine if 'derived' is to
 	// be set or not, based on the presence of 'context' field in all the
@@ -274,6 +280,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
+			userErrorInBatch = true
 			batchResponseItems[i].Error = err.Error()
 			continue
 		}
@@ -282,6 +289,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -291,6 +299,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -336,7 +345,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	p, upserted, err = b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	p, upserted, err = b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -350,26 +359,32 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
+	warnAboutNonceUsage := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
 		}
 
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+			warnAboutNonceUsage = true
+		}
+
 		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
 		if err != nil {
 			switch err.(type) {
-			case errutil.UserError:
-				batchResponseItems[i].Error = err.Error()
-				continue
+			case errutil.InternalError:
+				internalErrorInBatch = true
 			default:
-				p.Unlock()
-				return nil, err
+				userErrorInBatch = true
 			}
+			batchResponseItems[i].Error = err.Error()
+			continue
 		}
 
 		if ciphertext == "" {
-			p.Unlock()
-			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
+			userErrorInBatch = true
+			batchResponseItems[i].Error = fmt.Sprintf("empty ciphertext returned for input item %d", i)
+			continue
 		}
 
 		keyVersion := item.KeyVersion
@@ -389,6 +404,11 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	} else {
 		if batchResponseItems[0].Error != "" {
 			p.Unlock()
+
+			if internalErrorInBatch {
+				return nil, errutil.InternalError{Err: batchResponseItems[0].Error}
+			}
+
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 
@@ -398,12 +418,56 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
+	if constants.IsFIPS() && warnAboutNonceUsage {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
+	}
+
 	if req.Operation == logical.CreateOperation && !upserted {
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
 
 	p.Unlock()
+
+	// Depending on the errors in the batch, different status codes should be returned. User errors
+	// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
+	// that user errors are non-retryable without making changes to the request, and should be surfaced
+	// to the user first.
+	switch {
+	case userErrorInBatch:
+		return logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
+	case internalErrorInBatch:
+		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
+	}
+
 	return resp, nil
+}
+
+// shouldWarnAboutNonceUsage attempts to determine if we will use a provided nonce or not. Ideally this
+// would be information returned through p.Encrypt but that would require an SDK api change and this is
+// transit specific
+func shouldWarnAboutNonceUsage(p *keysutil.Policy, userSuppliedNonce []byte) bool {
+	if len(userSuppliedNonce) == 0 {
+		return false
+	}
+
+	var supportedKeyType bool
+	switch p.Type {
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		supportedKeyType = true
+	default:
+		supportedKeyType = false
+	}
+
+	if supportedKeyType && p.ConvergentEncryption && p.ConvergentVersion == 1 {
+		// We only use the user supplied nonce for v1 convergent encryption keys
+		return true
+	}
+
+	if supportedKeyType && !p.ConvergentEncryption {
+		return true
+	}
+
+	return false
 }
 
 const pathEncryptHelpSyn = `Encrypt a plaintext value or a batch of plaintext

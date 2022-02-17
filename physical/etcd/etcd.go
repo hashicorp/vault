@@ -11,7 +11,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
-	"go.etcd.io/etcd/client"
+	"go.etcd.io/etcd/client/v2"
 )
 
 var (

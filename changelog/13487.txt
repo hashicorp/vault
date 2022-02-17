@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/framework: Generate proper OpenAPI specs for path patterns that use an alternation as the root.
+```

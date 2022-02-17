@@ -1,0 +1,7 @@
+```release-note:bug
+agent: fix timestamp format in log messages from the templating engine
+```
+
+```release-note:bug
+agent/template: fix command shell quoting issue
+```

@@ -476,7 +476,7 @@ func TestCore_RemountConcurrent(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test1", "foo", true)
+		err := c2.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test1", "foo", true)
 		if err != nil {
 			t.Logf("err: %v", err)
 		}
@@ -485,7 +485,7 @@ func TestCore_RemountConcurrent(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test2", "foo", true)
+		err := c2.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test2", "foo", true)
 		if err != nil {
 			t.Logf("err: %v", err)
 		}
@@ -504,7 +504,7 @@ func TestCore_RemountConcurrent(t *testing.T) {
 
 func TestCore_Remount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "secret", "foo", true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -612,7 +612,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Remount, this should cleanup
-	if err := c.remount(namespace.RootContext(nil), "test/", "new/", true); err != nil {
+	if err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test/", "new/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -641,7 +641,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "sys", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "sys", "foo", true)
 	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
 	}
@@ -696,8 +696,8 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 func testCore_MountTable_UpgradeToTyped_Common(
 	t *testing.T,
 	c *Core,
-	testType string) {
-
+	testType string,
+) {
 	var path string
 	var mt *MountTable
 	switch testType {
@@ -783,6 +783,9 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	if err != nil {
 		t.Fatal(err)
 	}
+	if entry == nil {
+		t.Fatal("nil value")
+	}
 
 	decompressedBytes, uncompressed, err := compressutil.Decompress(entry.Value)
 	if err != nil {
@@ -837,6 +840,9 @@ func verifyDefaultTable(t *testing.T, table *MountTable, expected int) {
 		case "sys/":
 			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
+			}
+			if !entry.SealWrap {
+				t.Fatalf("expected SealWrap to be enabled: %v", entry)
 			}
 		case "identity/":
 			if entry.Type != "identity" {

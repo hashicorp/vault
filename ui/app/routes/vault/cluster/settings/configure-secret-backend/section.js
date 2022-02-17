@@ -15,7 +15,7 @@ export default Route.extend({
         backend: backendModel.id,
         section: sectionName,
       })
-      .then(model => {
+      .then((model) => {
         model.set('backendType', backendModel.get('type'));
         model.set('section', sectionName);
         return model;

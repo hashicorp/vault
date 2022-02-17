@@ -43,6 +43,9 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 	if err != nil {
 		t.Fatalf("Could not retrieve headers entry from config: %s", err)
 	}
+	if out == nil {
+		t.Fatal("nil value")
+	}
 
 	headers := make(map[string]*auditedHeaderSettings)
 	err = out.DecodeJSON(&headers)
@@ -78,6 +81,9 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 	if err != nil {
 		t.Fatalf("Could not retrieve headers entry from config: %s", err)
 	}
+	if out == nil {
+		t.Fatal("nil value")
+	}
 
 	headers = make(map[string]*auditedHeaderSettings)
 	err = out.DecodeJSON(&headers)
@@ -109,6 +115,9 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 	if err != nil {
 		t.Fatalf("Could not retrieve headers entry from config: %s", err)
 	}
+	if out == nil {
+		t.Fatal("nil value")
+	}
 
 	headers := make(map[string]*auditedHeaderSettings)
 	err = out.DecodeJSON(&headers)
@@ -139,6 +148,9 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 	out, err = conf.view.Get(context.Background(), auditedHeadersEntry)
 	if err != nil {
 		t.Fatalf("Could not retrieve headers entry from config: %s", err)
+	}
+	if out == nil {
+		t.Fatal("nil value")
 	}
 
 	headers = make(map[string]*auditedHeaderSettings)

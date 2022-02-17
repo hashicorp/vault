@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -339,10 +339,12 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 
 	removePathCheckers(c, entry, viewPath)
 
-	if c.quotaManager != nil {
-		if err := c.quotaManager.HandleBackendDisabling(ctx, ns.Path, path); err != nil {
-			c.logger.Error("failed to update quotas after disabling auth", "path", path, "error", err)
-			return err
+	if !c.IsPerfSecondary() {
+		if c.quotaManager != nil {
+			if err := c.quotaManager.HandleBackendDisabling(ctx, ns.Path, path); err != nil {
+				c.logger.Error("failed to update quotas after disabling auth", "path", path, "error", err)
+				return err
+			}
 		}
 	}
 
@@ -422,10 +424,15 @@ func (c *Core) taintCredEntry(ctx context.Context, path string, updateStorage bo
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Taint the entry from the auth table
 	// We do this on the original since setting the taint operates
 	// on the entries which a shallow clone shares anyways
-	entry, err := c.auth.setTaint(ctx, strings.TrimPrefix(path, credentialRoutePrefix), true, mountStateUnmounting)
+	entry, err := c.auth.setTaint(ns.ID, strings.TrimPrefix(path, credentialRoutePrefix), true, mountStateUnmounting)
 	if err != nil {
 		return err
 	}
@@ -815,7 +822,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	// Set up conf to pass in plugin_name
-	conf := make(map[string]string, len(entry.Options)+1)
+	conf := make(map[string]string)
 	for k, v := range entry.Options {
 		conf[k] = v
 	}

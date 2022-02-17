@@ -87,6 +87,7 @@ const SECRET_BACKENDS = {
     displayName: 'Transformation',
     navigateTree: false,
     listItemPartial: 'secret-list/transform-list-item',
+    firstStep: 'create a transformation and a role',
     tabs: [
       {
         name: 'transformations',
@@ -136,6 +137,7 @@ const SECRET_BACKENDS = {
     navigateTree: false,
     editComponent: 'transit-edit',
     listItemPartial: 'secret-list/item',
+    firstStep: 'create an encryption key',
   },
 };
 

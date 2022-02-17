@@ -7,8 +7,8 @@ import (
 	"time"
 
 	proxyproto "github.com/armon/go-proxyproto"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 // ProxyProtoConfig contains configuration for the PROXY protocol

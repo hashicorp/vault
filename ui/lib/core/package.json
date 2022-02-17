@@ -18,12 +18,14 @@
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
-    "ember-power-select-with-create": "*",
+    "ember-power-select": "*",
     "ember-radio-button": "*",
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
     "ember-wormhole": "^0.5.5",
-    "escape-string-regexp": "*"
+    "escape-string-regexp": "*",
+    "@hashicorp/ember-flight-icons": "*",
+    "@hashicorp/flight-icons": "*"
   }
 }

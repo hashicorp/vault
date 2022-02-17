@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -26,6 +26,7 @@ type SQLConnectionProducer struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
+	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -55,16 +56,32 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
 
+	// Do not allow the username or password template pattern to be used as
+	// part of the user-supplied username or password
+	if strings.Contains(c.Username, "{{username}}") ||
+		strings.Contains(c.Username, "{{password}}") ||
+		strings.Contains(c.Password, "{{username}}") ||
+		strings.Contains(c.Password, "{{password}}") {
+
+		return nil, fmt.Errorf("username and/or password cannot contain the template variables")
+	}
+
 	// Don't escape special characters for MySQL password
+	// Also don't escape special characters for the username and password if
+	// the disable_escaping parameter is set to true
+	username := c.Username
 	password := c.Password
-	if c.Type != "mysql" {
+	if !c.DisableEscaping {
+		username = url.PathEscape(c.Username)
+	}
+	if (c.Type != "mysql") && !c.DisableEscaping {
 		password = url.PathEscape(c.Password)
 	}
 
 	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
 	// then maybe we won't be able to use it to do URL substitution any more.
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
-		"username": url.PathEscape(c.Username),
+		"username": username,
 		"password": password,
 	})
 
