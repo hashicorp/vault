@@ -57,10 +57,12 @@ export default class History extends Component {
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => ({
-    name: namespace.label,
-    id: namespace.label,
-  }));
+  @tracked namespaceArray = this.getActivityResponse.byNamespace
+    ? this.getActivityResponse.byNamespace.map((namespace) => ({
+        name: namespace.label,
+        id: namespace.label,
+      }))
+    : [];
 
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
@@ -266,10 +268,10 @@ export default class History extends Component {
       return this.getActivityResponse;
     }
     if (!auth) {
-      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+      return this.getActivityResponse?.byNamespace?.find((ns) => ns.label === namespace);
     }
-    return this.getActivityResponse.byNamespace
-      .find((ns) => ns.label === namespace)
+    return this.getActivityResponse?.byNamespace
+      ?.find((ns) => ns.label === namespace)
       .mounts?.find((mount) => mount.label === auth);
   }
 

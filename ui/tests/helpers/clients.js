@@ -11,6 +11,7 @@ import { formatRFC3339 } from 'date-fns';
  * -- HISTORY ONLY --
  * No permissions for license
  * Version (hist only)
+ * License start date this month
  */
 
 export const SELECTORS = {
@@ -20,6 +21,7 @@ export const SELECTORS = {
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
+  rangeDropdown: '[data-test-popup-menu-trigger]',
 };
 
 export function sendResponse(data, httpStatus = 200) {
@@ -131,6 +133,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
 }
 
 export function generateLicenseResponse(startDate, endDate) {
+  console.log({ startDate });
   return {
     request_id: 'my-license-request-id',
     data: {

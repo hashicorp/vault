@@ -1,9 +1,9 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click } from '@ember/test-helpers';
+import { visit, currentURL, click, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
-import { addMonths, format, startOfMonth, subMonths } from 'date-fns';
+import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -48,8 +48,10 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
 
     assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
-    // TODO: still allows query by previous dates
-    // TODO: 0's on stat text?
+    assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
+    assert.dom(SELECTORS.filterBar).exists('Shows filter bar to search previous dates');
+    assert.dom(SELECTORS.usageStats).doesNotExist('No usage stats');
+    // TODO: has no end filter date
   });
 
   test('shows warning when config off, no data, queries unavailable', async function (assert) {
@@ -75,15 +77,14 @@ module('Acceptance | clients history tab', function (hooks) {
     // TODO: Hide billing start month?
   });
 
-  test('shows empty state when config on and warning when no queries', async function (assert) {
+  test('shows empty state when config on and no queries', async function (assert) {
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const license = generateLicenseResponse(licenseStart, licenseEnd);
     const config = generateConfigResponse({ queries_available: false });
-    const activity = generateActivityResponse(0, licenseStart, licenseEnd);
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(activity));
+      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
       this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
       this.get('/v1/sys/health', this.passthrough);
@@ -97,14 +98,16 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
 
     assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly history');
+    assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
   });
 
-  test('visiting history tab with no data and config on', async function (assert) {
+  test('visiting history tab config on and data with mounts', async function (assert) {
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
-    const config = generateConfigResponse();
-    const activity = generateActivityResponse(0, licenseStart, licenseEnd);
+    const lastMonth = addMonths(new Date(), -1);
     const license = generateLicenseResponse(licenseStart, licenseEnd);
+    const config = generateConfigResponse();
+    const activity = generateActivityResponse(5, licenseStart, lastMonth);
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(license));
       this.get('/v1/sys/internal/counters/activity', () => sendResponse(activity));
@@ -120,17 +123,34 @@ module('Acceptance | clients history tab', function (hooks) {
     assert
       .dom(SELECTORS.dateDisplay)
       .hasText(format(licenseStart, 'MMMM yyyy'), 'billing start month is correctly parsed from license');
-    assert.dom(SELECTORS.attributionBlock).doesNotExist('Attribution block is not shown when no data');
+    assert
+      .dom(SELECTORS.rangeDropdown)
+      .hasText(
+        `${format(licenseStart, 'MMMM yyyy')} - ${format(lastMonth, 'MMMM yyyy')}`,
+        'Date range shows dates correctly parsed activity response'
+      );
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    // TODO: Filters correct
-    // TODO: don't show namespace filter if none exist
+    const { clients, entity_clients, non_entity_clients } = activity.data.total;
+    assert
+      .dom('[data-test-stat-text="total-clients"] .stat-value')
+      .hasText(clients.toString(), 'total clients stat is correct');
+    assert
+      .dom('[data-test-stat-text="entity-clients"] .stat-value')
+      .hasText(entity_clients.toString(), 'entity clients stat is correct');
+    assert
+      .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
+      .hasText(non_entity_clients.toString(), 'non-entity clients stat is correct');
+    assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
+    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
+    assert.dom('[data-test-top-attribution]').hasText('Top namespace');
   });
 
   test('filters correctly on history with full data', async function (assert) {
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
+    const lastMonth = addMonths(new Date(), -1);
     const config = generateConfigResponse();
-    const activity = generateActivityResponse(5, licenseStart, licenseEnd);
+    const activity = generateActivityResponse(5, licenseStart, lastMonth);
     const license = generateLicenseResponse(licenseStart, licenseEnd);
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(license));
@@ -147,31 +167,22 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    const { clients, entity_clients, non_entity_clients } = activity.data.total;
-    assert
-      .dom('[data-test-stat-text="total-clients"] .stat-value')
-      .hasText(clients.toString(), 'total clients stat is correct');
-    assert
-      .dom('[data-test-stat-text="entity-clients"] .stat-value')
-      .hasText(entity_clients.toString(), 'entity clients stat is correct');
-    assert
-      .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
-      .hasText(non_entity_clients.toString(), 'non-entity clients stat is correct');
-    assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
-    assert.dom('[data-test-top-attribution]').hasText('Top namespace');
+    const { clients } = activity.data.total;
     // Filter by namespace
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
+    await settled();
     assert.ok(true, 'Filter by first namespace');
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
+    // await this.pauseTest();
     assert.dom('[data-test-horizontal-bar-chart]').exists('Still shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').hasText('Top auth method');
     // Filter by auth method
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
+    await settled();
     assert.ok(true, 'Filter by first auth method');
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('3');
@@ -184,5 +195,79 @@ module('Acceptance | clients history tab', function (hooks) {
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-value')
       .hasText(clients.toString(), 'total clients stat is back to unfiltered value');
+  });
+  test('shows warning if upgrade happened within license period', async function (assert) {
+    const licenseStart = startOfMonth(subMonths(new Date(), 6));
+    const licenseEnd = addMonths(new Date(), 6);
+    const lastMonth = addMonths(new Date(), -1);
+    const config = generateConfigResponse();
+    const activity = generateActivityResponse(5, licenseStart, lastMonth);
+    const license = generateLicenseResponse(licenseStart, licenseEnd);
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => sendResponse(license));
+      this.get('/v1/sys/internal/counters/activity', () => sendResponse(activity));
+      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+      this.get('/v1/sys/version-history', () =>
+        sendResponse({
+          keys: ['1.9.0'],
+          key_info: {
+            '1.9.0': {
+              previous_version: '1.8.3',
+              timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
+            },
+          },
+        })
+      );
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
+    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom('[data-test-flash-message] .message-actions').containsText(`You upgraded to Vault 1.9.0`);
+  });
+  test('Shows empty if license start date is current month', async function (assert) {
+    const licenseStart = new Date();
+    const licenseEnd = addMonths(new Date(), 12);
+    const config = generateConfigResponse();
+    // const activity = generateActivityResponse();
+    const license = generateLicenseResponse(licenseStart, licenseEnd);
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => sendResponse(license));
+      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
+      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+      this.get('/v1/sys/version-history', () =>
+        sendResponse({
+          keys: [],
+        })
+      );
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
+    assert.dom(SELECTORS.emptyStateTitle).hasText('No data received', 'Shows no data empty state');
+    assert.dom(SELECTORS.filterBar).exists('Allows filtering by a different date');
+  });
+  test('shows correct interface if no permissions on license', async function (assert) {
+    const config = generateConfigResponse();
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => sendResponse(null, 403));
+      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
+    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.emptyStateTitle).hasText('No start date found');
+    assert.dom('[data-test-start-date-editor]').exists('Shows empty start date editor');
   });
 });
