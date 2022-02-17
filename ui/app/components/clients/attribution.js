@@ -39,8 +39,8 @@ export default class Attribution extends Component {
   }
 
   get isSingleNamespace() {
-    if (!this.args.selectedNamespace) {
-      return null;
+    if (!this.args.totalClientsData) {
+      return 'no data';
     }
     // if a namespace is selected, then we're viewing top 10 auth methods (mounts)
     return !!this.args.selectedNamespace;
@@ -82,12 +82,12 @@ export default class Attribution extends Component {
           ${dateText === 'date range' ? ' over time.' : '.'}`,
           totalCopy: `The total clients in the namespace for this ${dateText}. This number is useful for identifying overall usage volume.`,
         };
-      default:
+      case 'no data':
         return {
           description: 'There is a problem gathering data',
-          newCopy: 'There is a problem gathering data',
-          totalCopy: 'There is a problem gathering data',
         };
+      default:
+        return '';
     }
   }
 

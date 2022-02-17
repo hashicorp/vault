@@ -105,10 +105,13 @@
 }
 
 .chart-empty-state {
-  justify-self: center;
-  height: 80%;
-  width: 80%;
+  height: 100%;
+  width: 100%;
   grid-row-end: span 3;
+  grid-column-end: span 3;
+  > div {
+    box-shadow: none !important;
+  }
 }
 
 .chart-subTitle {

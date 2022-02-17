@@ -104,7 +104,7 @@ export default class HorizontalBarChart extends Component {
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', (chartData) => `${xScale(chartData[1] - chartData[0])}%`)
+      .attr('width', (chartData) => `${xScale(Math.abs(chartData[1] - chartData[0]))}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', (chartData) => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))

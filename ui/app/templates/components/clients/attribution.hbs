@@ -2,11 +2,16 @@
   <div class="chart-header has-header-link has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">Attribution</h2>
-      <p class="chart-description">{{this.chartText.description}}</p>
+      <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
       {{#if @totalClientsData}}
-        <button type="button" class="button is-secondary" {{on "click" (fn (mut this.showCSVDownloadModal) true)}}>
+        <button
+          data-test-attribution-export-button
+          type="button"
+          class="button is-secondary"
+          {{on "click" (fn (mut this.showCSVDownloadModal) true)}}
+        >
           Export attribution data
         </button>
       {{/if}}
@@ -20,51 +25,35 @@
         @totalUsageCounts={{@totalUsageCounts}}
       />
     </div>
-  {{else}}
-    <div class="chart-empty-state">
-      <EmptyState @title="No data found" @icon="alert-circle" />
+    <div class="chart-subTitle">
+      <p class="chart-subtext" data-test-attribution-subtext>{{this.chartText.totalCopy}}</p>
     </div>
-  {{/if}}
-  <div class="chart-subTitle">
-    <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
-  </div>
 
-  <div class="data-details-top">
-    <h3 class="data-details" data-test-top-attribution>Top {{this.attributionBreakdown}}</h3>
-    <p class="data-details">
-      {{#if this.barChartTotalClients}}
-        {{this.topClientCounts.label}}
-      {{else}}
-        <span class="has-text-danger is-size-8">
-          <Icon @name="x-square-fill" />Error getting data
-        </span>
-      {{/if}}
-    </p>
-  </div>
+    <div class="data-details-top" data-test-attribution-top>
+      <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
+      <p class="data-details">{{this.topClientCounts.label}}</p>
+    </div>
 
-  <div class="data-details-bottom">
-    <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
-    <p class="data-details">
-      {{#if this.barChartTotalClients}}
-        {{format-number this.topClientCounts.clients}}
-      {{else}}
-        <span class="has-text-danger is-size-8">
-          <Icon @name="x-square-fill" />Error getting data
-        </span>
-      {{/if}}
-    </p>
-  </div>
+    <div class="data-details-bottom" data-test-attribution-bottom>
+      <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
+      <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
+    </div>
 
-  <div class="timestamp">
-    Updated
-    {{date-format @timestamp "MMM dd yyyy, h:mm:ss aaa"}}
-  </div>
-  {{#if this.barChartTotalClients}}
     <div class="legend-center">
       <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
       <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
     </div>
+  {{else}}
+    <div class="chart-empty-state">
+      <EmptyState @icon="skip" @title="No data found" @bottomBorder={{true}} />
+    </div>
   {{/if}}
+  <div class="timestamp" data-test-attribution-timestamp>
+    {{#if @timestamp}}
+      Updated
+      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+    {{/if}}
+  </div>
 </div>
 
 {{! MODAL FOR CSV DOWNLOAD }}
