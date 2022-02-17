@@ -8,10 +8,13 @@ export default class HistoryRoute extends Route {
     try {
       // on init ONLY make network request if we have a start time from the license
       // otherwise user needs to manually input
-      // TODO CMB what to return here?
       return start_time ? await this.store.queryRecord('clients/activity', { start_time }) : {};
     } catch (e) {
-      return e;
+      // returns 400 when license start date is in the current month
+      if (e.httpStatus === 400) {
+        return { isLicenseDateError: true };
+      }
+      throw e;
     }
   }
 

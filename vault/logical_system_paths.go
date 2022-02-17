@@ -1308,27 +1308,50 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) remountPath() *framework.Path {
-	return &framework.Path{
-		Pattern: "remount",
+func (b *SystemBackend) remountPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "remount",
 
-		Fields: map[string]*framework.FieldSchema{
-			"from": {
-				Type:        framework.TypeString,
-				Description: "The previous mount point.",
+			Fields: map[string]*framework.FieldSchema{
+				"from": {
+					Type:        framework.TypeString,
+					Description: "The previous mount point.",
+				},
+				"to": {
+					Type:        framework.TypeString,
+					Description: "The new mount point.",
+				},
 			},
-			"to": {
-				Type:        framework.TypeString,
-				Description: "The new mount point.",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRemount,
+					Summary:  "Initiate a mount migration",
+				},
 			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 		},
+		{
+			Pattern: "remount/status/(?P<migration_id>.+?)$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.handleRemount,
+			Fields: map[string]*framework.FieldSchema{
+				"migration_id": {
+					Type:        framework.TypeString,
+					Description: "The ID of the migration operation",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleRemountStatusCheck,
+					Summary:  "Check status of a mount migration",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount-status"][1]),
 		},
-
-		HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
-		HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 	}
 }
 

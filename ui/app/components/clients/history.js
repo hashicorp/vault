@@ -38,10 +38,15 @@ export default class History extends Component {
   years = Array.from({ length: 5 }, (item, i) => {
     return new Date().getFullYear() - i;
   });
+  currentDate = new Date();
+  currentYear = this.currentDate.getFullYear(); // integer of year
+  currentMonth = this.currentDate.getMonth(); // index of month
 
   @tracked isEditStartMonthOpen = false;
   @tracked startMonth = null;
   @tracked startYear = null;
+  @tracked allowedMonthMax = 12;
+  @tracked disabledYear = null;
 
   // FOR HISTORY COMPONENT //
 
@@ -57,14 +62,19 @@ export default class History extends Component {
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => {
-    return { name: namespace['label'], id: namespace['label'] };
-  });
+  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => ({
+    name: namespace.label,
+    id: namespace.label,
+  }));
 
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
+  @tracked licenseStartIsCurrentMonth = this.args.model.activity?.isLicenseDateError || false;
+
+  @tracked selectedAuthMethod = null;
+  @tracked authMethodOptions = [];
 
   get versionText() {
     return this.version.isEnterprise
@@ -92,7 +102,7 @@ export default class History extends Component {
   }
 
   get hasAttributionData() {
-    return this.totalUsageCounts.clients !== 0 && this.totalClientsData.length !== 0;
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
   }
 
   get startTimeDisplay() {
@@ -113,6 +123,20 @@ export default class History extends Component {
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    }
+    return this.getActivityResponse.byNamespace
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
+  }
+
   get isDateRange() {
     return !isSameMonth(
       new Date(this.getActivityResponse.startTime),
@@ -122,16 +146,13 @@ export default class History extends Component {
 
   // top level TOTAL client counts for given date range
   get totalUsageCounts() {
-    return this.selectedNamespace
-      ? this.filterByNamespace(this.selectedNamespace)
-      : this.getActivityResponse.total;
+    return this.selectedNamespace ? this.filteredActivity : this.getActivityResponse.total;
   }
 
   // total client data for horizontal bar chart in attribution component
   get totalClientsData() {
     if (this.selectedNamespace) {
-      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
-      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
+      return this.filteredActivity?.mounts || null;
     } else {
       return this.getActivityResponse?.byNamespace;
     }
@@ -157,6 +178,7 @@ export default class History extends Component {
 
   @action
   async handleClientActivityQuery(month, year, dateType) {
+    this.isEditStartMonthOpen = false;
     if (dateType === 'cancel') {
       return;
     }
@@ -195,6 +217,7 @@ export default class History extends Component {
         this.storage().setItem(INPUTTED_START_DATE, this.startTimeFromResponse);
       }
       this.queriedActivityResponse = response;
+      this.licenseStartIsCurrentMonth = response.isLicenseDateError;
       // compare if the response startTime comes after the requested startTime. If true throw a warning.
       // only display if they selected a startTime
       if (
@@ -209,7 +232,6 @@ export default class History extends Component {
         this.responseRangeDiffMessage = null;
       }
     } catch (e) {
-      // TODO CMB surface API errors when user selects start date after end date
       return e;
     } finally {
       this.isLoadingQuery = false;
@@ -225,22 +247,38 @@ export default class History extends Component {
   selectNamespace([value]) {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
+    if (!value) {
+      // on clear, also make sure auth method is cleared
+      this.selectedAuthMethod = null;
+    } else {
+      // Side effect: set auth namespaces
+      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+        id: mount.label,
+        name: mount.label,
+      }));
+      this.authMethodOptions = mounts;
+    }
+  }
+
+  @action
+  setAuthMethod([authMount]) {
+    this.selectedAuthMethod = authMount;
   }
 
   // FOR START DATE MODAL
   @action
-  selectStartMonth(month) {
+  selectStartMonth(month, event) {
     this.startMonth = month;
+    // disables months if in the future
+    this.disabledYear = this.months.indexOf(month) >= this.currentMonth ? this.currentYear : null;
+    event.close();
   }
 
   @action
-  selectStartYear(year) {
+  selectStartYear(year, event) {
     this.startYear = year;
-  }
-
-  // HELPERS //
-  filterByNamespace(namespace) {
-    return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    this.allowedMonthMax = year === this.currentYear ? this.currentMonth : 12;
+    event.close();
   }
 
   storage() {
