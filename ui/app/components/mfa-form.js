@@ -17,12 +17,14 @@ import { numberToWord } from 'vault/helpers/number-to-word';
  * @param {function} onSuccess - fired when passcode passes validation
  */
 
+export const VALIDATION_ERROR =
+  'The passcode failed to validate. If you entered the correct passcode, contact your administrator.';
+
 export default class MfaForm extends Component {
   @service auth;
 
-  @tracked passcode;
   @tracked countdown;
-  @tracked errors;
+  @tracked error;
 
   get constraints() {
     return this.args.authData.mfa_requirement.mfa_constraints;
@@ -57,21 +59,26 @@ export default class MfaForm extends Component {
 
   @task *validate() {
     try {
+      this.error = null;
       const response = yield this.auth.totpValidate({
         clusterId: this.args.clusterId,
         ...this.args.authData,
       });
       this.args.onSuccess(response);
     } catch (error) {
-      this.errors = error.errors;
-      // TODO: update if specific error can be parsed for incorrect passcode
-      // this.newCodeDelay.perform();
+      const codeUsed = (error.errors || []).find((e) => e.includes('code already used;'));
+      if (codeUsed) {
+        // parse validity period from error string to initialize countdown
+        const seconds = parseInt(codeUsed.split('in ')[1].split(' seconds')[0]);
+        this.newCodeDelay.perform(seconds);
+      } else {
+        this.error = VALIDATION_ERROR;
+      }
     }
   }
 
-  @task *newCodeDelay() {
-    this.passcode = null;
-    this.countdown = 30;
+  @task *newCodeDelay(timePeriod) {
+    this.countdown = timePeriod;
     while (this.countdown) {
       yield timeout(1000);
       this.countdown--;

@@ -43,6 +43,8 @@ export default function (server) {
       [mfa_constraints, methods] = generator([m('totp')], [m('okta')]); // 2 constraints 1 passcode 1 non-passcode
     } else if (user === 'mfa-i') {
       [mfa_constraints, methods] = generator([m('okta'), m('totp')], [m('totp')]); // 2 constraints 1 passcode/1 non-passcode 1 non-passcode
+    } else if (user === 'mfa-j') {
+      [mfa_constraints, methods] = generator([m('pingid')]); // use to test push failures
     }
     const numbers = (length) =>
       Math.random()
@@ -129,7 +131,10 @@ export default function (server) {
         const passcode = mfa_payload[constraintId][0];
         if (method.uses_passcode) {
           if (passcode !== 'test') {
-            const error = !passcode ? 'TOTP passcode not provided' : 'Incorrect TOTP passcode provided';
+            const error =
+              passcode === 'used'
+                ? 'code already used; new code is available in 30 seconds'
+                : 'failed to validate';
             return new Response(403, {}, { errors: [error] });
           }
         } else if (passcode) {

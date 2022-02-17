@@ -80,5 +80,9 @@ export default Controller.extend({
     onMfaSuccess(authResponse) {
       this.authSuccess(authResponse);
     },
+    onMfaErrorDismiss() {
+      this.set('mfaAuthData', null);
+      this.auth.set('mfaErrors', null);
+    },
   },
 });
