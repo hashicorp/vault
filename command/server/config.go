@@ -83,8 +83,9 @@ type Config struct {
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
-	License     string `hcl:"-"`
-	LicensePath string `hcl:"license_path"`
+	License          string `hcl:"-"`
+	LicensePath      string `hcl:"license_path"`
+	DisableSSCTokens bool   `hcl:"-"`
 }
 
 const (

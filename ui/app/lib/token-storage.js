@@ -7,7 +7,7 @@ export default function (type) {
   }
   let storage;
   try {
-    window.localStorage.getItem('test');
+    localStorageWrapper.getItem('test');
     storage = localStorageWrapper;
   } catch (e) {
     storage = memoryStorage;

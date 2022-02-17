@@ -79,15 +79,20 @@ updated attributes.
   which to create this Consul credential. This is part of the request URL.
 
 - `token_type` `(string: "client")` - Specifies the type of token to create when
-  using this role. Valid values are `"client"` or `"management"`.
+  using this role. Valid values are `"client"` or `"management"`. If a `"management"`
+  token, the `policy`, `policies`, and `consul_roles` parameters are not required.
+  Defaults to `"client`".
 
-- `policy` `(string: <policy or policies>)` – Specifies the base64 encoded ACL policy. The
-  ACL format can be found in the [Consul ACL
-  documentation](https://www.consul.io/docs/internals/acl). This is
-  required unless the `token_type` is `management`.
+- `policy` `(string: <policy>)` – Specifies the base64-encoded ACL policy. This is
+  required unless the `token_type` is `"management"`. [Deprecated as of Consul 1.4 and 
+  removed as of Consul 1.11.](https://www.consul.io/api/acl/legacy)
 
-- `policies` `(list: <policy or policies>)` – The list of policies to assign to the generated
-  token. This is only available in Consul 1.4 and greater.
+- `policies` `(list: <policy or policies>)` – The list of policies to assign to the
+  generated token. Either `policies` or `consul_roles` are required for Consul 1.5 and
+  above, or just `policies` if using Consul 1.4.
+
+- `consul_roles` `(list: <role or roles>)` – The list of Consul roles to assign to the
+  generated token. Either `policies` or `consul_roles` are required for Consul 1.5 and above.
 
 - `local` `(bool: false)` - Indicates that the token should not be replicated
   globally and instead be local to the current datacenter. Only available in Consul
@@ -111,11 +116,19 @@ To create management tokens:
 }
 ```
 
-To create a client token with a custom policy:
+To create a client token with defined policies:
 
 ```json
 {
-  "policy": "abd2...=="
+  "policies": "global-management,policy-2"
+}
+```
+
+To create a client token with defined roles:
+
+```json
+{
+  "consul_roles": "role-a,role-b"
 }
 ```
 
@@ -135,25 +148,29 @@ $ curl \
   as a string duration with a time suffix like `"30s"` or `"1h"`. If not
   provided, the default Vault lease is used.
 
-- `policies` `(string: <required>)` – Comma separated list of policies to be applied
-  to the tokens.
+- `policy` `(string: <policy>)` – Specifies the base64-encoded ACL policy. The
+  ACL format can be found in the [Consul ACL
+  documentation](https://www.consul.io/docs/security/acl/acl-legacy). This is
+  required unless the `token_type` is `"management"`.
 
 ### Sample payload
 
+To create a client token with a custom base64-encoded policy:
+
 ```json
 {
-  "policies": "global-management"
+  "policy": "a2V5ICIi...=="
 }
 ```
 
 ### Sample request
 
-```sh
-curl \
-→     --request POST \
-→     --header "X-Vault-Token: ..."\
-→     --data @payload.json \
-→     http://127.0.0.1:8200/v1/consul/roles/example-role
+```shell-session
+$ curl \
+    --request POST \
+    --header "X-Vault-Token: ..." \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ## Read Role

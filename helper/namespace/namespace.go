@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 type contextValues struct{}
@@ -105,6 +107,12 @@ func SplitIDFromString(input string) (string, string) {
 	case strings.HasPrefix(input, "s."):
 		prefix = "s."
 		input = input[2:]
+	case strings.HasPrefix(input, consts.BatchTokenPrefix):
+		prefix = consts.BatchTokenPrefix
+		input = input[4:]
+	case strings.HasPrefix(input, consts.ServiceTokenPrefix):
+		prefix = consts.ServiceTokenPrefix
+		input = input[4:]
 
 	case slashIdx > 0:
 		// Leases will never have a b./s. to start
