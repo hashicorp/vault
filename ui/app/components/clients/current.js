@@ -29,6 +29,9 @@ export default class Current extends Component {
   }
 
   get hasAttributionData() {
+    if (this.selectedNamespace) {
+      return this.authMethodOptions.length > 0;
+    }
     return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
   }
 
