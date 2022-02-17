@@ -81,6 +81,10 @@ const (
 	// path to a license file on disk
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 
+	// DisableSSCTokens is an env var used to disable index bearing
+	// token functionality
+	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
+
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
 	flagNameAddress = "address"
