@@ -294,44 +294,44 @@ func TestTransit_ConfigSettings(t *testing.T) {
 
 func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 	tests := map[string]struct {
-		initialAutoRotatePeriod interface{}
-		newAutoRotatePeriod     interface{}
-		shouldError             bool
-		expectedValue           time.Duration
+		initialAutoRotateInterval interface{}
+		newAutoRotateInterval     interface{}
+		shouldError               bool
+		expectedValue             time.Duration
 	}{
 		"default (no value)": {
-			initialAutoRotatePeriod: "5h",
-			shouldError:             false,
-			expectedValue:           5 * time.Hour,
+			initialAutoRotateInterval: "5h",
+			shouldError:               false,
+			expectedValue:             5 * time.Hour,
 		},
 		"0 (int)": {
-			initialAutoRotatePeriod: "5h",
-			newAutoRotatePeriod:     0,
-			shouldError:             false,
-			expectedValue:           0,
+			initialAutoRotateInterval: "5h",
+			newAutoRotateInterval:     0,
+			shouldError:               false,
+			expectedValue:             0,
 		},
 		"0 (string)": {
-			initialAutoRotatePeriod: "5h",
-			newAutoRotatePeriod:     0,
-			shouldError:             false,
-			expectedValue:           0,
+			initialAutoRotateInterval: "5h",
+			newAutoRotateInterval:     0,
+			shouldError:               false,
+			expectedValue:             0,
 		},
 		"5 seconds": {
-			newAutoRotatePeriod: "5s",
-			shouldError:         true,
+			newAutoRotateInterval: "5s",
+			shouldError:           true,
 		},
 		"5 hours": {
-			newAutoRotatePeriod: "5h",
-			shouldError:         false,
-			expectedValue:       5 * time.Hour,
+			newAutoRotateInterval: "5h",
+			shouldError:           false,
+			expectedValue:         5 * time.Hour,
 		},
 		"negative value": {
-			newAutoRotatePeriod: "-1800s",
-			shouldError:         true,
+			newAutoRotateInterval: "-1800s",
+			shouldError:           true,
 		},
 		"invalid string": {
-			newAutoRotatePeriod: "this shouldn't work",
-			shouldError:         true,
+			newAutoRotateInterval: "this shouldn't work",
+			shouldError:           true,
 		},
 	}
 
@@ -364,11 +364,11 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 			keyName := hex.EncodeToString(keyNameBytes)
 
 			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
-				"auto_rotate_period": test.initialAutoRotatePeriod,
+				"auto_rotate_interval": test.initialAutoRotateInterval,
 			})
 
 			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s/config", keyName), map[string]interface{}{
-				"auto_rotate_period": test.newAutoRotatePeriod,
+				"auto_rotate_interval": test.newAutoRotateInterval,
 			})
 			switch {
 			case test.shouldError && err == nil:
@@ -385,7 +385,7 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 				if resp == nil {
 					t.Fatal("expected non-nil response")
 				}
-				gotRaw, ok := resp.Data["auto_rotate_period"].(json.Number)
+				gotRaw, ok := resp.Data["auto_rotate_interval"].(json.Number)
 				if !ok {
 					t.Fatal("returned value is of unexpected type")
 				}
@@ -395,7 +395,7 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 				}
 				want := int64(test.expectedValue.Seconds())
 				if got != want {
-					t.Fatalf("incorrect auto_rotate_period returned, got: %d, want: %d", got, want)
+					t.Fatalf("incorrect auto_rotate_interval returned, got: %d, want: %d", got, want)
 				}
 			}
 		})

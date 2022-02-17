@@ -95,39 +95,39 @@ func TestTransit_Issue_2958(t *testing.T) {
 
 func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 	tests := map[string]struct {
-		autoRotatePeriod interface{}
-		shouldError      bool
-		expectedValue    time.Duration
+		autoRotateInterval interface{}
+		shouldError        bool
+		expectedValue      time.Duration
 	}{
 		"default (no value)": {
 			shouldError: false,
 		},
 		"0 (int)": {
-			autoRotatePeriod: 0,
-			shouldError:      false,
-			expectedValue:    0,
+			autoRotateInterval: 0,
+			shouldError:        false,
+			expectedValue:      0,
 		},
 		"0 (string)": {
-			autoRotatePeriod: "0",
-			shouldError:      false,
-			expectedValue:    0,
+			autoRotateInterval: "0",
+			shouldError:        false,
+			expectedValue:      0,
 		},
 		"5 seconds": {
-			autoRotatePeriod: "5s",
-			shouldError:      true,
+			autoRotateInterval: "5s",
+			shouldError:        true,
 		},
 		"5 hours": {
-			autoRotatePeriod: "5h",
-			shouldError:      false,
-			expectedValue:    5 * time.Hour,
+			autoRotateInterval: "5h",
+			shouldError:        false,
+			expectedValue:      5 * time.Hour,
 		},
 		"negative value": {
-			autoRotatePeriod: "-1800s",
-			shouldError:      true,
+			autoRotateInterval: "-1800s",
+			shouldError:        true,
 		},
 		"invalid string": {
-			autoRotatePeriod: "this shouldn't work",
-			shouldError:      true,
+			autoRotateInterval: "this shouldn't work",
+			shouldError:        true,
 		},
 	}
 
@@ -160,7 +160,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 			keyName := hex.EncodeToString(keyNameBytes)
 
 			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
-				"auto_rotate_period": test.autoRotatePeriod,
+				"auto_rotate_interval": test.autoRotateInterval,
 			})
 			switch {
 			case test.shouldError && err == nil:
@@ -177,7 +177,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 				if resp == nil {
 					t.Fatal("expected non-nil response")
 				}
-				gotRaw, ok := resp.Data["auto_rotate_period"].(json.Number)
+				gotRaw, ok := resp.Data["auto_rotate_interval"].(json.Number)
 				if !ok {
 					t.Fatal("returned value is of unexpected type")
 				}
@@ -187,7 +187,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 				}
 				want := int64(test.expectedValue.Seconds())
 				if got != want {
-					t.Fatalf("incorrect auto_rotate_period returned, got: %d, want: %d", got, want)
+					t.Fatalf("incorrect auto_rotate_interval returned, got: %d, want: %d", got, want)
 				}
 			}
 		})

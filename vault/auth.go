@@ -424,15 +424,10 @@ func (c *Core) taintCredEntry(ctx context.Context, path string, updateStorage bo
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return err
-	}
-
 	// Taint the entry from the auth table
 	// We do this on the original since setting the taint operates
 	// on the entries which a shallow clone shares anyways
-	entry, err := c.auth.setTaint(ns.ID, strings.TrimPrefix(path, credentialRoutePrefix), true, mountStateUnmounting)
+	entry, err := c.auth.setTaint(ctx, strings.TrimPrefix(path, credentialRoutePrefix), true, mountStateUnmounting)
 	if err != nil {
 		return err
 	}
