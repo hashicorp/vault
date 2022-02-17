@@ -11,6 +11,11 @@
       onchange={{action this.onChange value="target.value"}}
       data-test-select={{this.name}}
     >
+      {{#if this.noDefault}}
+        <option value="">
+          Select one
+        </option>
+      {{/if}}
       {{#each this.options as |op|}}
         <option
           value={{or (get op this.valueAttribute) op}}
