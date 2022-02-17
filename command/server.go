@@ -644,6 +644,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
+
 	// Server configuration output
 	padding := 24
 
@@ -1377,6 +1383,12 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1799,6 +1811,12 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
+
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
 
 	// Server configuration output
 	padding := 24
