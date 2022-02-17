@@ -4,9 +4,9 @@
     Vault will only show data for contiguous blocks of time during which tracking was on. Documentation is available
     <DocLink @path="/docs/concepts/client-count">here</DocLink>.
   </p>
-  <h1 class="title is-6 has-bottom-margin-xs">
-    Billing start month
-  </h1>
+  <h2 class="title is-6 has-bottom-margin-xs">
+    {{this.versionText.label}}
+  </h2>
   <div data-test-start-date-editor class="is-flex-align-baseline">
     {{#if this.startTimeDisplay}}
       <p class="is-size-6">{{this.startTimeDisplay}}</p>
@@ -14,14 +14,22 @@
         Edit
       </button>
     {{else}}
-      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} />
+      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="Save" />
     {{/if}}
   </div>
   <p class="is-8 has-text-grey has-bottom-margin-xl">
-    This date comes from your license, and defines when client counting starts. Without this starting point, the data shown
-    is not reliable.
+    {{this.versionText.description}}
   </p>
-  {{#if (eq @model.config.queriesAvailable false)}}
+  {{#if this.licenseStartIsCurrentMonth}}
+    <EmptyState
+      @title="No data for this billing period"
+      @subTitle="Your billing period has just begun, so there is no data yet. Data will be available here on the first of next month."
+      @message="To view data from a previous billing period, you can enter your previous billing start date."
+      @bottomBorder={{true}}
+    >
+      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="View" />
+    </EmptyState>
+  {{else if (eq @model.config.queriesAvailable false)}}
     {{#if (eq @model.config.enabled "On")}}
       <EmptyState
         @title={{concat "No monthly history " (if this.noActivityDate "from ") this.noActivityDate}}
@@ -75,6 +83,19 @@
                 @onChange={{this.selectNamespace}}
                 @placeholder={{"Filter by namespace"}}
                 @displayInherit={{true}}
+                class="is-marginless"
+              />
+            {{/if}}
+            {{#if this.selectedNamespace}}
+              <SearchSelect
+                @id="auth-method-search-select"
+                @options={{this.authMethodOptions}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{this.setAuthMethod}}
+                @placeholder={{"Filter by auth method"}}
+                @displayInherit={{true}}
               />
             {{/if}}
           </ToolbarFilters>
@@ -126,18 +147,10 @@
           <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
       {{/if}}
+    {{else if (or (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+      <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
-      {{#if this.version.isEnterprise}}
-        <EmptyState
-          @title="No billing start date found"
-          @message="In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate."
-        />
-      {{else}}
-        <EmptyState
-          @title="No start date found"
-          @message="In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month."
-        />
-      {{/if}}
+      <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
     {{/if}}
   {{/if}}
 
@@ -150,10 +163,9 @@
   >
     <section class="modal-card-body">
       <p class="has-bottom-margin-s">
-        This date comes from your license, and defines when client counting starts. Without this starting point, the data
-        shown is not reliable.
+        {{this.versionText.description}}
       </p>
-      <p class="has-bottom-margin-s"><strong>Billing contract start month</strong></p>
+      <p class="has-bottom-margin-s"><strong>{{this.versionText.label}}</strong></p>
       <div class="modal-radio-button">
         <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
           <D.Trigger
@@ -164,14 +176,15 @@
             {{or this.startMonth "Month"}}
             <Chevron @direction="down" @isButton={{true}} />
           </D.Trigger>
-          <D.Content class="popup-menu-content is-wide">
+          <D.Content @defaultClass="popup-menu-content is-wide">
             <nav class="box menu scroll">
               <ul class="menu-list">
-                {{#each this.months as |month|}}
+                {{#each this.months as |month index|}}
                   <button
                     type="button"
-                    class="link"
-                    {{on "click" (queue (fn this.selectStartMonth month) (action D.actions.close))}}
+                    class="button link"
+                    disabled={{if (lt index this.allowedMonthMax) false true}}
+                    {{on "click" (fn this.selectStartMonth month D.actions)}}
                   >
                     {{month}}
                   </button>
@@ -189,14 +202,15 @@
             {{or this.startYear "Year"}}
             <Chevron @direction="down" @isButton={{true}} />
           </D.Trigger>
-          <D.Content class="popup-menu-content is-wide">
+          <D.Content @defaultClass="popup-menu-content is-wide">
             <nav class="box menu">
               <ul class="menu-list">
                 {{#each this.years as |year|}}
                   <button
                     type="button"
-                    class="link"
-                    {{on "click" (queue (fn this.selectStartYear year) (action D.actions.close))}}
+                    class="button link"
+                    disabled={{if (eq year this.disabledYear) true false}}
+                    {{on "click" (fn this.selectStartYear year D.actions)}}
                   >
                     {{year}}
                   </button>
@@ -211,22 +225,12 @@
       <button
         type="button"
         class="button is-primary"
-        onclick={{queue
-          (action (mut this.isEditStartMonthOpen) false)
-          (action "handleClientActivityQuery" this.startMonth this.startYear "startTime")
-        }}
-        disabled={{if (and this.startMonth this.startYear) false true}}
+        disabled={{or (if (and this.startMonth this.startYear) false true)}}
+        {{on "click" (fn this.handleClientActivityQuery this.startMonth this.startYear "startTime")}}
       >
         Save
       </button>
-      <button
-        type="button"
-        class="button is-secondary"
-        {{on
-          "click"
-          (queue (action (mut this.isEditStartMonthOpen) false) (fn this.handleClientActivityQuery 0 0 "cancel"))
-        }}
-      >
+      <button type="button" class="button is-secondary" {{on "click" (fn this.handleClientActivityQuery 0 0 "cancel")}}>
         Cancel
       </button>
     </footer>
