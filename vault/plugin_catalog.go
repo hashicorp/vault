@@ -432,19 +432,14 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		pluginType, multiplexingSupport, err := c.getPluginTypeFromUnknown(ctx, logger, plugin)
+		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unkonwn type.
+		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
-			continue
-		}
-		if pluginType == consts.PluginTypeUnknown {
-			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
-			continue
-		}
+			if errors.Is(err, ErrPluginBadType) {
+				retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
+				continue
+			}
 
-		// Upgrade the storage
-		err = c.setInternal(ctx, pluginName, pluginType, multiplexingSupport, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
-		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
 			continue
 		}
@@ -454,7 +449,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 			logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
 		}
 
-		logger.Info("upgraded plugin type", "plugin", pluginName, "type", pluginType.String())
+		logger.Info("upgraded plugin type", "plugin", pluginName, "type", runner.Type.String())
 	}
 
 	return retErr
@@ -531,51 +526,60 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// During plugin registration, we can't know if a plugin is multiplexed or
-	// not until we run it. So we set it to false here. Once started, we ask
-	// the plugin if it is multiplexed and set this value accordingly.
-	multiplexingSupport := false
-	return c.setInternal(ctx, name, pluginType, multiplexingSupport, command, args, env, sha256)
+	_, err := c.setInternal(ctx, name, pluginType, command, args, env, sha256)
+	return err
 }
 
-func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, multiplexingSupport bool, command string, args []string, env []string, sha256 []byte) error {
+func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, command string, args []string, env []string, sha256 []byte) (*pluginutil.PluginRunner, error) {
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
 	commandFull := filepath.Join(c.directory, command)
 	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %w", err)
+		return nil, fmt.Errorf("error while validating the command path: %w", err)
 	}
 	symAbs, err := filepath.Abs(filepath.Dir(sym))
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %w", err)
+		return nil, fmt.Errorf("error while validating the command path: %w", err)
 	}
 
 	if symAbs != c.directory {
-		return errors.New("cannot execute files outside of configured plugin directory")
+		return nil, errors.New("cannot execute files outside of configured plugin directory")
+	}
+
+	var multiplexingSupport bool
+
+	// entryTmp should only be used for the below type check, it uses the
+	// full command instead of the relative command.
+	//
+	// At this point we don't know if the plugin can be multiplexed or not,
+	// so we pass in false and let the checks tell us that
+	entryTmp := &pluginutil.PluginRunner{
+		Name:                name,
+		Command:             commandFull,
+		Args:                args,
+		Env:                 env,
+		Sha256:              sha256,
+		Builtin:             false,
+		MultiplexingSupport: false,
 	}
 
 	// If the plugin type is unknown, we want to attempt to determine the type
-	if pluginType == consts.PluginTypeUnknown {
-		// entryTmp should only be used for the below type check, it uses the
-		// full command instead of the relative command.
-		entryTmp := &pluginutil.PluginRunner{
-			Name:                name,
-			Command:             commandFull,
-			Args:                args,
-			Env:                 env,
-			Sha256:              sha256,
-			Builtin:             false,
-			MultiplexingSupport: multiplexingSupport,
-		}
-
+	switch pluginType {
+	case consts.PluginTypeUnknown:
 		pluginType, multiplexingSupport, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if pluginType == consts.PluginTypeUnknown {
-			return ErrPluginBadType
+			return nil, ErrPluginBadType
 		}
+	case consts.PluginTypeDatabase:
+		muxSupport, err := c.isDatabasePlugin(ctx, entryTmp)
+		if err != nil {
+			return nil, err
+		}
+		multiplexingSupport = muxSupport
 	}
 
 	entry := &pluginutil.PluginRunner{
@@ -591,7 +595,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 
 	buf, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Errorf("failed to encode plugin entry: %w", err)
+		return nil, fmt.Errorf("failed to encode plugin entry: %w", err)
 	}
 
 	logicalEntry := logical.StorageEntry{
@@ -599,9 +603,9 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
-		return fmt.Errorf("failed to persist plugin entry: %w", err)
+		return nil, fmt.Errorf("failed to persist plugin entry: %w", err)
 	}
-	return nil
+	return entry, nil
 }
 
 // Delete is used to remove an external plugin from the catalog. Builtin plugins
