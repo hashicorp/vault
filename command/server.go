@@ -644,6 +644,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
+
 	// Server configuration output
 	padding := 24
 
@@ -1157,6 +1163,15 @@ func (c *ServerCommand) Run(args []string) int {
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
+	if disableSSC := os.Getenv(DisableSSCTokens); disableSSC != "" {
+		var err error
+		config.DisableSSCTokens, err = strconv.ParseBool(disableSSC)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
+				"setting to default value false"))
+		}
+	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
@@ -1376,6 +1391,12 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
+
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
 
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
@@ -1799,6 +1820,12 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
+
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
 
 	// Server configuration output
 	padding := 24
@@ -2484,6 +2511,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
+		DisableSSCTokens:               config.DisableSSCTokens,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

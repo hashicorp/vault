@@ -78,6 +78,11 @@ const (
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
+
+	// ForwardSSCTokenToActive is the value that must be set in the
+	// forwardToActive to trigger forwarding if a perf standby encounters
+	// an SSC Token that it does not have the WAL state for.
+	ForwardSSCTokenToActive = "new_token"
 )
 
 var (
@@ -309,6 +314,10 @@ type Core struct {
 	// mountsLock is used to ensure that the mounts table does not
 	// change underneath a calling function
 	mountsLock sync.RWMutex
+
+	// mountMigrationTracker tracks past and ongoing remount operations
+	// against their migration ids
+	mountMigrationTracker *sync.Map
 
 	// auth is loaded after unseal since it is a protected
 	// configuration
@@ -585,6 +594,9 @@ type Core struct {
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
 
+	// disableSSCTokens is used to disable server side consistent token creation/usage
+	disableSSCTokens bool
+
 	// versionTimestamps is a map of vault versions to timestamps when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
@@ -711,6 +723,9 @@ type CoreConfig struct {
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
+
+	// DisableSSCTokens is used to disable the use of server side consistent tokens
+	DisableSSCTokens bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -853,6 +868,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableAutopilot:               conf.DisableAutopilot,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:          &sync.Map{},
+		disableSSCTokens:               conf.DisableSSCTokens,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -1107,6 +1124,11 @@ func (c *Core) HostnameHeaderEnabled() bool {
 // to HTTP responses.
 func (c *Core) RaftNodeIDHeaderEnabled() bool {
 	return c.enableResponseHeaderRaftNodeID
+}
+
+// DisableSSCTokens determines whether to use server side consistent tokens or not.
+func (c *Core) DisableSSCTokens() bool {
+	return c.disableSSCTokens
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -2075,7 +2097,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
+
 	c.setupCachedMFAResponseAuth()
+
+	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
+		return err
+	}
+
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
 			return err

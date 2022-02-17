@@ -21,6 +21,6 @@ Flight icon documentation at https://flight-hashicorp.vercel.app/
 **See**
 
 - [Uses of Icon](https://github.com/hashicorp/vault/search?l=Handlebars&q=Icon+OR+icon)
-- [Icon Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/icon.js)
+- [Icon Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/icon.js)
 
 ---

@@ -894,7 +894,6 @@ github.com/hashicorp/go-uuid v1.0.2 h1:cfejS+Tpcp13yd5nYHWDI6qVCny6wyX2Mt5SGur2I
 github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-version v1.0.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/go-version v1.2.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
-github.com/hashicorp/go-version v1.3.0 h1:McDWVJIU/y+u1BRV06dPaLfLCaT7fUTJLp5r04x7iNw=
 github.com/hashicorp/go-version v1.3.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/go-version v1.4.0 h1:aAQzgqIrRKRa7w75CKpbBxYsmUoPjzVm1W59ca1L0J4=
 github.com/hashicorp/go-version v1.4.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
@@ -971,8 +970,8 @@ github.com/hashicorp/vault-plugin-secrets-ad v0.11.1 h1:/wQvrAucbd9TucOQndKsJKm1
 github.com/hashicorp/vault-plugin-secrets-ad v0.11.1/go.mod h1:WwwDLyCMncZnOOtN2GHw6O4pIWauHhJx2DjRFbGYvV4=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.10.2 h1:BzLD62yc5dU++yH66azcyBduXmhtpvV/4EQ7ReO7bTU=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.10.2/go.mod h1:F4KWrlCQZbhP2dFXCkRvbHX2J6CTydlaY0cH+OrLHCE=
-github.com/hashicorp/vault-plugin-secrets-azure v0.11.3 h1:vYuHdqm9gpBRa6iTc7rauCND8LHyt5VJu0gvvTcz0Kk=
-github.com/hashicorp/vault-plugin-secrets-azure v0.11.3/go.mod h1:Xw8CQPkyZSJRK9BXKBruf6kOO8rLyXEf40o19ClK9kY=
+github.com/hashicorp/vault-plugin-secrets-azure v0.11.4 h1:iaCAGvPwcWQiGVUhdOtW/nWBAfXmX0keacmer9V+4C4=
+github.com/hashicorp/vault-plugin-secrets-azure v0.11.4/go.mod h1:Xw8CQPkyZSJRK9BXKBruf6kOO8rLyXEf40o19ClK9kY=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.11.2 h1:IsNnBsat7/AsiVKSrlAHlINjEDXjYamIgE2igpbt1jM=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.11.2/go.mod h1:ndpmRkIPHW5UYqv2nn2AJNVZsucJ8lY2bp5i5Ngvhuc=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0 h1:0Vi5WEIpZctk/ZoRClodV9WCnM/lCzw9XekMhRZdo8k=
@@ -1155,6 +1154,8 @@ github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKju
 github.com/miekg/dns v1.1.41 h1:WMszZWJG0XmzbK9FEmzH2TVcqYzFesusSIB41b8KHxY=
 github.com/miekg/dns v1.1.41/go.mod h1:p6aan82bvRIyn+zDIv9xYNUpwa73JcSh9BKwknJysuI=
 github.com/miekg/pkcs11 v1.0.3/go.mod h1:XsNlhZGX73bx86s2hdc/FuaLm2CPZJemRLMA+WTFxgs=
+github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a h1:eU8j/ClY2Ty3qdHnn0TyW3ivFoPC/0F1gQZz8yTxbbE=
+github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a/go.mod h1:v8eSC2SMp9/7FTKUncp7fH9IwPfw+ysMObcEz5FWheQ=
 github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible/go.mod h1:8AuVvqP/mXw1px98n46wfvcGfQ4ci2FwoAjKYxuo3Z4=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
 github.com/mitchellh/cli v1.1.0/go.mod h1:xcISNoH86gajksDmfB23e/pu+B+GeFRMYmoHXxx3xhI=
