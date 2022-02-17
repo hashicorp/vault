@@ -133,3 +133,20 @@ func SplitIDFromString(input string) (string, string) {
 
 	return prefix + input[:idx], input[idx+1:]
 }
+
+// MountPathDetails contains the details of a mount's location,
+// consisting of the namespace of the mount and the path of the
+// mount within the namespace
+type MountPathDetails struct {
+	Namespace *Namespace
+	MountPath string
+}
+
+func (mpd *MountPathDetails) GetRelativePath(currNs *Namespace) string {
+	subNsPath := strings.TrimPrefix(mpd.Namespace.Path, currNs.Path)
+	return subNsPath + mpd.MountPath
+}
+
+func (mpd *MountPathDetails) GetFullPath() string {
+	return mpd.Namespace.Path + mpd.MountPath
+}

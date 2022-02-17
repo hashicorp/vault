@@ -191,17 +191,31 @@ func createDeleteHelper(t *testing.T, b logical.Backend, config *logical.Backend
 	}
 	resp, err := b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad case %v: err: %v, resp:%v", index, err, resp)
+		t.Fatalf("bad case %v: err: %v, resp: %v", index, err, resp)
 	}
 	if !strings.Contains(resp.Data["public_key"].(string), caReq.Data["key_type"].(string)) {
 		t.Fatalf("bad case %v: expected public key of type %v but was %v", index, caReq.Data["key_type"], resp.Data["public_key"])
+	}
+
+	issueOptions := map[string]interface{}{
+		"public_key": testCAPublicKeyEd25519,
+	}
+	issueReq := &logical.Request{
+		Path:      "sign/ca-issuance",
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Data:      issueOptions,
+	}
+	resp, err = b.HandleRequest(context.Background(), issueReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad case %v: err: %v, resp: %v", index, err, resp)
 	}
 
 	// Delete the configured keys
 	caReq.Operation = logical.DeleteOperation
 	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad case %v: err: %v, resp:%v", index, err, resp)
+		t.Fatalf("bad case %v: err: %v, resp: %v", index, err, resp)
 	}
 }
 
@@ -233,6 +247,24 @@ func TestSSH_ConfigCAKeyTypes(t *testing.T) {
 		{"ec", 0},
 		{"ssh-ed25519", 0},
 		{"ed25519", 0},
+	}
+
+	// Create a role for ssh signing.
+	roleOptions := map[string]interface{}{
+		"allow_user_certificates": true,
+		"allowed_users":           "*",
+		"key_type":                "ca",
+		"ttl":                     "30s",
+	}
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/ca-issuance",
+		Data:      roleOptions,
+		Storage:   config.StorageView,
+	}
+	_, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil {
+		t.Fatalf("Cannot create role to issue against: %s", err)
 	}
 
 	for index, scenario := range cases {

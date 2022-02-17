@@ -18,7 +18,6 @@ const authService = Service.extend({
   async authenticate() {
     return fetch('http://localhost:2000');
   },
-  handleError() {},
   setLastFetch() {},
 });
 
@@ -26,7 +25,6 @@ const workingAuthService = Service.extend({
   authenticate() {
     return resolve({});
   },
-  handleError() {},
   setLastFetch() {},
 });
 
