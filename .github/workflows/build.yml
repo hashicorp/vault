@@ -6,6 +6,7 @@ on:
     branches:    
       # Push events on main branch
       - main
+      - set-ci-go-version
 
 env:
   PKG_NAME: "vault"
@@ -23,6 +24,20 @@ jobs:
         run: |
           make version
           echo "::set-output name=product-version::$(make version)"
+
+  get-go-version:
+    runs-on: [self-hosted, linux]
+    outputs:
+      go-version: ${{ steps.get-go-version.outputs.go-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Determine Go version
+        id: get-go-version
+        # We use .go-version as our source of truth for current Go
+        # version, because "goenv" can react to it automatically.
+        run: |
+          echo "Building with Go $(cat .go-version)"
+          echo "::set-output name=go-version::$(cat .go-version)"
 
   generate-metadata-file:
     needs: get-product-version
@@ -45,13 +60,15 @@ jobs:
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
 
   build-other:
-    needs: get-product-version
+    needs: 
+      - get-product-version
+      - get-go-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [ freebsd, windows, netbsd, openbsd, solaris ]
         goarch: [ "386", "amd64", "arm" ]
-        go: [ "1.17.5" ]
+        go: [ "${{ needs.get-go-version.outputs.go-version }}" ]
         exclude:
           - goos: solaris
             goarch: 386
@@ -97,13 +114,15 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   build-linux:
-    needs: get-product-version
+    needs: 
+      - get-product-version
+      - get-go-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux]
         goarch: ["arm", "arm64", "386", "amd64"]
-        go: ["1.17.5"]
+        go: [ "${{ needs.get-go-version.outputs.go-version }}" ]
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
@@ -174,13 +193,15 @@ jobs:
           path: out/${{ env.DEB_PACKAGE }}
 
   build-darwin:
-    needs: get-product-version
+    needs: 
+      - get-product-version
+      - get-go-version
     runs-on: macos-latest
     strategy:
       matrix:
         goos: [ darwin ]
         goarch: [ "amd64", "arm64" ]
-        go: [ "1.17.5" ]
+        go: [ "${{ needs.get-go-version.outputs.go-version }}" ]
       fail-fast: true
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
