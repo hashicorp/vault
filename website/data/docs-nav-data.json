@@ -1495,6 +1495,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.10.x",
+        "path": "upgrading/upgrade-to-1.10.x"
+      },
+      {
         "title": "Upgrade to 1.9.x",
         "path": "upgrading/upgrade-to-1.9.x"
       },
