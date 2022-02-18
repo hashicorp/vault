@@ -305,11 +305,11 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 // type and if it supports multiplexing. It will first attempt to run as a
 // database plugin then a backend plugin. Both of these will be run in metadata
 // mode.
-func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, bool, error) {
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
-	multiplexingSupport, err := c.isDatabasePlugin(ctx, plugin)
+	err := c.isDatabasePlugin(ctx, plugin)
 	if err == nil {
-		return consts.PluginTypeDatabase, multiplexingSupport, nil
+		return consts.PluginTypeDatabase, nil
 	}
 	merr = multierror.Append(merr, err)
 
@@ -318,7 +318,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	if err == nil {
 		err := client.Setup(ctx, &logical.BackendConfig{})
 		if err != nil {
-			return consts.PluginTypeUnknown, false, err
+			return consts.PluginTypeUnknown, err
 		}
 
 		backendType := client.Type()
@@ -326,9 +326,9 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 
 		switch backendType {
 		case logical.TypeCredential:
-			return consts.PluginTypeCredential, false, nil
+			return consts.PluginTypeCredential, nil
 		case logical.TypeLogical:
-			return consts.PluginTypeSecrets, false, nil
+			return consts.PluginTypeSecrets, nil
 		}
 	} else {
 		merr = multierror.Append(merr, err)
@@ -345,12 +345,12 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 			"error", merr.Error())
 	}
 
-	return consts.PluginTypeUnknown, false, nil
+	return consts.PluginTypeUnknown, nil
 }
 
 // isDatabasePlugin returns true if the plugin supports multiplexing. An error
 // is returned if the plugin is not a database plugin.
-func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (bool, error) {
+func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	config := pluginutil.PluginClientConfig{
 		Name:            pluginRunner.Name,
@@ -366,20 +366,13 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
-		// At this point the pluginRunner does not know if multiplexing is
-		// supported or not. So we need to ask the plugin client itself.
-		multiplexingSupport, err := pluginutil.MultiplexingSupported(ctx, v5Client.clientConn)
-		if err != nil {
-			return false, err
-		}
-
 		// Close the client and cleanup the plugin process
 		err = c.cleanupExternalPlugin(pluginRunner.Name, v5Client.id)
 		if err != nil {
 			c.logger.Error("error closing plugin client", "error", err)
 		}
 
-		return multiplexingSupport, nil
+		return nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
@@ -392,11 +385,11 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 			c.logger.Error("error closing plugin client", "error", err)
 		}
 
-		return false, nil
+		return nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
 
-	return false, merr.ErrorOrNil()
+	return merr.ErrorOrNil()
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to
@@ -570,7 +563,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 			Builtin: false,
 		}
 
-		pluginType, _, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
+		pluginType, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
 		if err != nil {
 			return nil, err
 		}
