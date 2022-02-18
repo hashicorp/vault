@@ -13,8 +13,7 @@ project "vault" {
       "release/1.6.x",
       "release/1.7.x",
       "release/1.8.x",
-      "release/1.9.x",
-      "set-go-version"
+      "release/1.9.x"
     ]
   }
 }

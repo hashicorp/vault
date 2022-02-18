@@ -26,7 +26,7 @@ jobs:
           echo "::set-output name=product-version::$(make version)"
 
   get-go-version:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     outputs:
       go-version: ${{ steps.get-go-version.outputs.go-version }}
     steps:
