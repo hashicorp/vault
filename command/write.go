@@ -166,12 +166,12 @@ WRITE:
 				mfaMethodID := StringPrompt(fmt.Sprintf("From MFARequirement %q, please select one of the following methodIDs %q:\n", name, methodIDs))
 				if mfaMethodID == "" {
 					c.UI.Warn("Invalid method ID detected, please validate the login by sending a request to mfa/validate")
-					goto SKIP
+					goto OUTPUT
 				}
 				passcode, err := PasswordPrompt(fmt.Sprintf("Please insert the passcode for methodID %q: ", mfaMethodID))
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Failed to read the passcode with error %q. please validate the login by sending a request to mfa/validate.", err.Error()))
-					goto SKIP
+					goto OUTPUT
 				}
 				// passcode could be an empty string
 				mfaPayload[mfaMethodID] = []string{passcode}
@@ -179,7 +179,7 @@ WRITE:
 
 			if len(mfaPayload) == 0 {
 				c.UI.Error("did not get any input, please validate the login by sending a request to mfa/validate")
-				goto SKIP
+				goto OUTPUT
 			}
 
 			// updating data and path
@@ -192,7 +192,7 @@ WRITE:
 		}
 	}
 
-SKIP:
+OUTPUT:
 	// Handle single field output
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
