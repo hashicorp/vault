@@ -97,7 +97,8 @@ type ActivityLog struct {
 	// Acquire "l" before fragmentLock if both must be held.
 	l sync.RWMutex
 
-	// fragmentLock protects enable, activeClients, fragment, standbyFragmentsReceived
+	// fragmentLock protects enable, partialMonthClientTracker, fragment,
+	// standbyFragmentsReceived.
 	fragmentLock sync.RWMutex
 
 	// enabled indicates if the activity log is enabled for this cluster.
@@ -621,9 +622,9 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	return nil
 }
 
-// loadCurrentClientSegment loads the most recent segment (for "this month") into memory
-// (to append new entries), and to the activeClients to avoid duplication
-// call with fragmentLock and l held
+// loadCurrentClientSegment loads the most recent segment (for "this month")
+// into memory (to append new entries), and to the partialMonthClientTracker to
+// avoid duplication call with fragmentLock and l held.
 func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime time.Time, sequenceNum uint64) error {
 	path := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
 	data, err := a.view.Get(ctx, path)
@@ -1485,8 +1486,8 @@ type ResponseMonthlyNamespace struct {
 }
 
 type ResponseMount struct {
-	Path   string          `json:"path"`
-	Counts *ResponseCounts `json:"counts"`
+	MountPath string          `json:"mount_path"`
+	Counts    *ResponseCounts `json:"counts"`
 }
 
 // ActivityLogInjectResponse injects a precomputed query into storage for testing.
@@ -1549,7 +1550,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
 			for _, mountRecord := range nsRecord.Mounts {
 				mountResponse = append(mountResponse, &ResponseMount{
-					Path: mountRecord.Path,
+					MountPath: mountRecord.MountPath,
 					Counts: &ResponseCounts{
 						EntityClients:    int(mountRecord.Counts.EntityClients),
 						NonEntityClients: int(mountRecord.Counts.NonEntityClients),
@@ -1617,7 +1618,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 					}
 
 					mountResponse = append(mountResponse, &ResponseMount{
-						Path: mountRecord.Path,
+						MountPath: mountRecord.MountPath,
 						Counts: &ResponseCounts{
 							EntityClients:    int(mountRecord.Counts.EntityClients),
 							NonEntityClients: int(mountRecord.Counts.NonEntityClients),
@@ -2125,7 +2126,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 						continue
 					}
 					mountRecord = append(mountRecord, &activity.MountRecord{
-						Path: valResp.MountPath,
+						MountPath: valResp.MountPath,
 						Counts: &activity.CountsRecord{
 							EntityClients:    len(mountData.Counts.Entities),
 							NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
@@ -2177,7 +2178,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 					continue
 				}
 				mountRecord = append(mountRecord, &activity.MountRecord{
-					Path: valResp.MountPath,
+					MountPath: valResp.MountPath,
 					Counts: &activity.CountsRecord{
 						EntityClients:    len(mountData.Counts.Entities),
 						NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
@@ -2360,7 +2361,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
 			for mountPath, mountRecord := range nsRecord.Mounts {
 				mountResponse = append(mountResponse, &ResponseMount{
-					Path: mountPath,
+					MountPath: mountPath,
 					Counts: &ResponseCounts{
 						EntityClients:    len(mountRecord.Counts.Entities),
 						NonEntityClients: len(mountRecord.Counts.NonEntities),
@@ -2425,7 +2426,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 					}
 
 					mountResponse = append(mountResponse, &ResponseMount{
-						Path: mountPath,
+						MountPath: mountPath,
 						Counts: &ResponseCounts{
 							EntityClients:    len(mountRecord.Counts.Entities),
 							NonEntityClients: len(mountRecord.Counts.NonEntities),
