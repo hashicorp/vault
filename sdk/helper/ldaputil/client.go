@@ -75,10 +75,8 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			continue
 		}
 		if err == nil {
-			if retErr != nil {
-				if c.Logger.IsDebug() {
-					c.Logger.Debug("errors connecting to some hosts", "error", retErr.Error())
-				}
+			if retErr != nil && c.Logger != nil {
+				c.Logger.Error("errors connecting to some hosts", "error", retErr.Error())
 			}
 			retErr = nil
 			break
