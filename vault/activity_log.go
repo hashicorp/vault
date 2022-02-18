@@ -1478,10 +1478,10 @@ type ResponseNewClients struct {
 }
 
 type ResponseMonthlyNamespace struct {
-	NamespaceID string           `json:"namespace_id"`
-	Path        string           `json:"path"`
-	Counts      *ResponseCounts  `json:"counts"`
-	Mounts      []*ResponseMount `json:"mounts"`
+	NamespaceID   string           `json:"namespace_id"`
+	NamespacePath string           `json:"namespace_path"`
+	Counts        *ResponseCounts  `json:"counts"`
+	Mounts        []*ResponseMount `json:"mounts"`
 }
 
 type ResponseMount struct {
@@ -1633,8 +1633,8 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 					displayPath = ns.Path
 				}
 				nsResponse = append(nsResponse, &ResponseMonthlyNamespace{
-					NamespaceID: nsRecord.NamespaceID,
-					Path:        displayPath,
+					NamespaceID:   nsRecord.NamespaceID,
+					NamespacePath: displayPath,
 					Counts: &ResponseCounts{
 						EntityClients:    int(nsRecord.Counts.EntityClients),
 						NonEntityClients: int(nsRecord.Counts.NonEntityClients),
@@ -2441,8 +2441,8 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 					displayPath = ns.Path
 				}
 				nsResponse = append(nsResponse, &ResponseMonthlyNamespace{
-					NamespaceID: nsID,
-					Path:        displayPath,
+					NamespaceID:   nsID,
+					NamespacePath: displayPath,
 					Counts: &ResponseCounts{
 						EntityClients:    len(nsRecord.Counts.Entities),
 						NonEntityClients: len(nsRecord.Counts.NonEntities),
