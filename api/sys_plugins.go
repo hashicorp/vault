@@ -34,11 +34,11 @@ type ListPluginsResponse struct {
 func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ListPluginsContext(ctx, i)
+	return c.ListPluginsWithContext(ctx, i)
 }
 
-// ListPluginsContext the same as ListPlugins but with a custom context.
-func (c *Sys) ListPluginsContext(ctx context.Context, i *ListPluginsInput) (*ListPluginsResponse, error) {
+// ListPluginsWithContext the same as ListPlugins but with a custom context.
+func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (*ListPluginsResponse, error) {
 	path := ""
 	method := ""
 	if i.Type == consts.PluginTypeUnknown {
@@ -151,11 +151,11 @@ type GetPluginResponse struct {
 func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.GetPluginContext(ctx, i)
+	return c.GetPluginWithContext(ctx, i)
 }
 
-// GetPluginContext the same as GetPlugin but with a custom context.
-func (c *Sys) GetPluginContext(ctx context.Context, i *GetPluginInput) (*GetPluginResponse, error) {
+// GetPluginWithContext the same as GetPlugin but with a custom context.
+func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*GetPluginResponse, error) {
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
 
@@ -197,11 +197,11 @@ type RegisterPluginInput struct {
 func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RegisterPluginContext(ctx, i)
+	return c.RegisterPluginWithContext(ctx, i)
 }
 
-// RegisterPluginContext the same as RegisterPlugin but with a custom context.
-func (c *Sys) RegisterPluginContext(ctx context.Context, i *RegisterPluginInput) error {
+// RegisterPluginWithContext the same as RegisterPlugin but with a custom context.
+func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodPut, path)
 
@@ -230,11 +230,11 @@ type DeregisterPluginInput struct {
 func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.DeregisterPluginContext(ctx, i)
+	return c.DeregisterPluginWithContext(ctx, i)
 }
 
-// DeregisterPluginContext the same as DeregisterPlugin but with a custom context.
-func (c *Sys) DeregisterPluginContext(ctx context.Context, i *DeregisterPluginInput) error {
+// DeregisterPluginWithContext the same as DeregisterPlugin but with a custom context.
+func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPluginInput) error {
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
 
@@ -262,11 +262,11 @@ type ReloadPluginInput struct {
 func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ReloadPluginContext(ctx, i)
+	return c.ReloadPluginWithContext(ctx, i)
 }
 
-// ReloadPluginContext the same as ReloadPlugin but with a custom context.
-func (c *Sys) ReloadPluginContext(ctx context.Context, i *ReloadPluginInput) (string, error) {
+// ReloadPluginWithContext the same as ReloadPlugin but with a custom context.
+func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput) (string, error) {
 	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
@@ -315,11 +315,11 @@ type ReloadPluginStatusInput struct {
 func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ReloadPluginStatusContext(ctx, reloadStatusInput)
+	return c.ReloadPluginStatusWithContext(ctx, reloadStatusInput)
 }
 
-// ReloadPluginStatusContext the same as ReloadPluginStatus but with a custom context.
-func (c *Sys) ReloadPluginStatusContext(ctx context.Context, reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
+// ReloadPluginStatusWithContext the same as ReloadPluginStatus but with a custom context.
+func (c *Sys) ReloadPluginStatusWithContext(ctx context.Context, reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
 	path := "/v1/sys/plugins/reload/backend/status"
 	req := c.c.NewRequest(http.MethodGet, path)
 	req.Params.Add("reload_id", reloadStatusInput.ReloadID)

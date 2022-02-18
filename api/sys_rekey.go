@@ -10,10 +10,10 @@ import (
 func (c *Sys) RekeyStatus() (*RekeyStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyStatusContext(ctx)
+	return c.RekeyStatusWithContext(ctx)
 }
 
-func (c *Sys) RekeyStatusContext(ctx context.Context) (*RekeyStatusResponse, error) {
+func (c *Sys) RekeyStatusWithContext(ctx context.Context) (*RekeyStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -30,10 +30,10 @@ func (c *Sys) RekeyStatusContext(ctx context.Context) (*RekeyStatusResponse, err
 func (c *Sys) RekeyRecoveryKeyStatus() (*RekeyStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRecoveryKeyStatusContext(ctx)
+	return c.RekeyRecoveryKeyStatusWithContext(ctx)
 }
 
-func (c *Sys) RekeyRecoveryKeyStatusContext(ctx context.Context) (*RekeyStatusResponse, error) {
+func (c *Sys) RekeyRecoveryKeyStatusWithContext(ctx context.Context) (*RekeyStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -50,10 +50,10 @@ func (c *Sys) RekeyRecoveryKeyStatusContext(ctx context.Context) (*RekeyStatusRe
 func (c *Sys) RekeyVerificationStatus() (*RekeyVerificationStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyVerificationStatusContext(ctx)
+	return c.RekeyVerificationStatusWithContext(ctx)
 }
 
-func (c *Sys) RekeyVerificationStatusContext(ctx context.Context) (*RekeyVerificationStatusResponse, error) {
+func (c *Sys) RekeyVerificationStatusWithContext(ctx context.Context) (*RekeyVerificationStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -70,10 +70,10 @@ func (c *Sys) RekeyVerificationStatusContext(ctx context.Context) (*RekeyVerific
 func (c *Sys) RekeyRecoveryKeyVerificationStatus() (*RekeyVerificationStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRecoveryKeyVerificationStatusContext(ctx)
+	return c.RekeyRecoveryKeyVerificationStatusWithContext(ctx)
 }
 
-func (c *Sys) RekeyRecoveryKeyVerificationStatusContext(ctx context.Context) (*RekeyVerificationStatusResponse, error) {
+func (c *Sys) RekeyRecoveryKeyVerificationStatusWithContext(ctx context.Context) (*RekeyVerificationStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -90,10 +90,10 @@ func (c *Sys) RekeyRecoveryKeyVerificationStatusContext(ctx context.Context) (*R
 func (c *Sys) RekeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyInitContext(ctx, config)
+	return c.RekeyInitWithContext(ctx, config)
 }
 
-func (c *Sys) RekeyInitContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
+func (c *Sys) RekeyInitWithContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/rekey/init")
 	if err := r.SetJSONBody(config); err != nil {
 		return nil, err
@@ -113,10 +113,10 @@ func (c *Sys) RekeyInitContext(ctx context.Context, config *RekeyInitRequest) (*
 func (c *Sys) RekeyRecoveryKeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRecoveryKeyInitContext(ctx, config)
+	return c.RekeyRecoveryKeyInitWithContext(ctx, config)
 }
 
-func (c *Sys) RekeyRecoveryKeyInitContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
+func (c *Sys) RekeyRecoveryKeyInitWithContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/rekey-recovery-key/init")
 	if err := r.SetJSONBody(config); err != nil {
 		return nil, err
@@ -136,10 +136,10 @@ func (c *Sys) RekeyRecoveryKeyInitContext(ctx context.Context, config *RekeyInit
 func (c *Sys) RekeyCancel() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyCancelContext(ctx)
+	return c.RekeyCancelWithContext(ctx)
 }
 
-func (c *Sys) RekeyCancelContext(ctx context.Context) error {
+func (c *Sys) RekeyCancelWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -152,10 +152,10 @@ func (c *Sys) RekeyCancelContext(ctx context.Context) error {
 func (c *Sys) RekeyRecoveryKeyCancel() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRecoveryKeyCancelContext(ctx)
+	return c.RekeyRecoveryKeyCancelWithContext(ctx)
 }
 
-func (c *Sys) RekeyRecoveryKeyCancelContext(ctx context.Context) error {
+func (c *Sys) RekeyRecoveryKeyCancelWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -168,10 +168,10 @@ func (c *Sys) RekeyRecoveryKeyCancelContext(ctx context.Context) error {
 func (c *Sys) RekeyVerificationCancel() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyVerificationCancelContext(ctx)
+	return c.RekeyVerificationCancelWithContext(ctx)
 }
 
-func (c *Sys) RekeyVerificationCancelContext(ctx context.Context) error {
+func (c *Sys) RekeyVerificationCancelWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -184,10 +184,10 @@ func (c *Sys) RekeyVerificationCancelContext(ctx context.Context) error {
 func (c *Sys) RekeyRecoveryKeyVerificationCancel() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRecoveryKeyVerificationCancelContext(ctx)
+	return c.RekeyRecoveryKeyVerificationCancelWithContext(ctx)
 }
 
-func (c *Sys) RekeyRecoveryKeyVerificationCancelContext(ctx context.Context) error {
+func (c *Sys) RekeyRecoveryKeyVerificationCancelWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -200,10 +200,10 @@ func (c *Sys) RekeyRecoveryKeyVerificationCancelContext(ctx context.Context) err
 func (c *Sys) RekeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyUpdateContext(ctx, shard, nonce)
+	return c.RekeyUpdateWithContext(ctx, shard, nonce)
 }
 
-func (c *Sys) RekeyUpdateContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
+func (c *Sys) RekeyUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
@@ -228,10 +228,10 @@ func (c *Sys) RekeyUpdateContext(ctx context.Context, shard, nonce string) (*Rek
 func (c *Sys) RekeyRecoveryKeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRecoveryKeyUpdateContext(ctx, shard, nonce)
+	return c.RekeyRecoveryKeyUpdateWithContext(ctx, shard, nonce)
 }
 
-func (c *Sys) RekeyRecoveryKeyUpdateContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
+func (c *Sys) RekeyRecoveryKeyUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
@@ -256,10 +256,10 @@ func (c *Sys) RekeyRecoveryKeyUpdateContext(ctx context.Context, shard, nonce st
 func (c *Sys) RekeyRetrieveBackup() (*RekeyRetrieveResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRetrieveBackupContext(ctx)
+	return c.RekeyRetrieveBackupWithContext(ctx)
 }
 
-func (c *Sys) RekeyRetrieveBackupContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
+func (c *Sys) RekeyRetrieveBackupWithContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -288,10 +288,10 @@ func (c *Sys) RekeyRetrieveBackupContext(ctx context.Context) (*RekeyRetrieveRes
 func (c *Sys) RekeyRetrieveRecoveryBackup() (*RekeyRetrieveResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRetrieveRecoveryBackupContext(ctx)
+	return c.RekeyRetrieveRecoveryBackupWithContext(ctx)
 }
 
-func (c *Sys) RekeyRetrieveRecoveryBackupContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
+func (c *Sys) RekeyRetrieveRecoveryBackupWithContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/recovery-key-backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -320,10 +320,10 @@ func (c *Sys) RekeyRetrieveRecoveryBackupContext(ctx context.Context) (*RekeyRet
 func (c *Sys) RekeyDeleteBackup() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyDeleteBackupContext(ctx)
+	return c.RekeyDeleteBackupWithContext(ctx)
 }
 
-func (c *Sys) RekeyDeleteBackupContext(ctx context.Context) error {
+func (c *Sys) RekeyDeleteBackupWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -337,10 +337,10 @@ func (c *Sys) RekeyDeleteBackupContext(ctx context.Context) error {
 func (c *Sys) RekeyDeleteRecoveryBackup() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyDeleteRecoveryBackupContext(ctx)
+	return c.RekeyDeleteRecoveryBackupWithContext(ctx)
 }
 
-func (c *Sys) RekeyDeleteRecoveryBackupContext(ctx context.Context) error {
+func (c *Sys) RekeyDeleteRecoveryBackupWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-key-backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -354,10 +354,10 @@ func (c *Sys) RekeyDeleteRecoveryBackupContext(ctx context.Context) error {
 func (c *Sys) RekeyVerificationUpdate(shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyVerificationUpdateContext(ctx, shard, nonce)
+	return c.RekeyVerificationUpdateWithContext(ctx, shard, nonce)
 }
 
-func (c *Sys) RekeyVerificationUpdateContext(ctx context.Context, shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
+func (c *Sys) RekeyVerificationUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
@@ -382,10 +382,10 @@ func (c *Sys) RekeyVerificationUpdateContext(ctx context.Context, shard, nonce s
 func (c *Sys) RekeyRecoveryKeyVerificationUpdate(shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RekeyRecoveryKeyVerificationUpdateContext(ctx, shard, nonce)
+	return c.RekeyRecoveryKeyVerificationUpdateWithContext(ctx, shard, nonce)
 }
 
-func (c *Sys) RekeyRecoveryKeyVerificationUpdateContext(ctx context.Context, shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
+func (c *Sys) RekeyRecoveryKeyVerificationUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,

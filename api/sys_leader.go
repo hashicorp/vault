@@ -8,10 +8,10 @@ import (
 func (c *Sys) Leader() (*LeaderResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.LeaderContext(ctx)
+	return c.LeaderWithContext(ctx)
 }
 
-func (c *Sys) LeaderContext(ctx context.Context) (*LeaderResponse, error) {
+func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/leader")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

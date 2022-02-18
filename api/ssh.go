@@ -28,11 +28,11 @@ func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.CredentialContext(ctx, role, data)
+	return c.CredentialWithContext(ctx, role, data)
 }
 
-// CredentialContext the same as Credential but with a custom context.
-func (c *SSH) CredentialContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
+// CredentialWithContext the same as Credential but with a custom context.
+func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/creds/%s", c.MountPoint, role))
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
@@ -52,11 +52,11 @@ func (c *SSH) CredentialContext(ctx context.Context, role string, data map[strin
 func (c *SSH) SignKey(role string, data map[string]interface{}) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.SignKeyContext(ctx, role, data)
+	return c.SignKeyWithContext(ctx, role, data)
 }
 
-// SignKeyContext the same as SignKey but with a custom context.
-func (c *SSH) SignKeyContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
+// SignKeyWithContext the same as SignKey but with a custom context.
+func (c *SSH) SignKeyWithContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/sign/%s", c.MountPoint, role))
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err

@@ -208,11 +208,11 @@ func (c *Client) SSHHelperWithMountPoint(mountPoint string) *SSHHelper {
 func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.VerifyContext(ctx, otp)
+	return c.VerifyWithContext(ctx, otp)
 }
 
-// VerifyContext the same as Verify but with a custom context.
-func (c *SSHHelper) VerifyContext(ctx context.Context, otp string) (*SSHVerifyResponse, error) {
+// VerifyWithContext the same as Verify but with a custom context.
+func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVerifyResponse, error) {
 	data := map[string]interface{}{
 		"otp": otp,
 	}

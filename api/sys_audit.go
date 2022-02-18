@@ -11,10 +11,10 @@ import (
 func (c *Sys) AuditHash(path string, input string) (string, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.AuditHashContext(ctx, path, input)
+	return c.AuditHashWithContext(ctx, path, input)
 }
 
-func (c *Sys) AuditHashContext(ctx context.Context, path string, input string) (string, error) {
+func (c *Sys) AuditHashWithContext(ctx context.Context, path string, input string) (string, error) {
 	body := map[string]interface{}{
 		"input": input,
 	}
@@ -53,10 +53,10 @@ func (c *Sys) AuditHashContext(ctx context.Context, path string, input string) (
 func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ListAuditContext(ctx)
+	return c.ListAuditWithContext(ctx)
 }
 
-func (c *Sys) ListAuditContext(ctx context.Context) (map[string]*Audit, error) {
+func (c *Sys) ListAuditWithContext(ctx context.Context) (map[string]*Audit, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/audit")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -95,10 +95,10 @@ func (c *Sys) EnableAudit(
 func (c *Sys) EnableAuditWithOptions(path string, options *EnableAuditOptions) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.EnableAuditWithOptionsContext(ctx, path, options)
+	return c.EnableAuditWithOptionsWithContext(ctx, path, options)
 }
 
-func (c *Sys) EnableAuditWithOptionsContext(ctx context.Context, path string, options *EnableAuditOptions) error {
+func (c *Sys) EnableAuditWithOptionsWithContext(ctx context.Context, path string, options *EnableAuditOptions) error {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/audit/%s", path))
 	if err := r.SetJSONBody(options); err != nil {
 		return err
@@ -116,10 +116,10 @@ func (c *Sys) EnableAuditWithOptionsContext(ctx context.Context, path string, op
 func (c *Sys) DisableAudit(path string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.DisableAuditContext(ctx, path)
+	return c.DisableAuditWithContext(ctx, path)
 }
 
-func (c *Sys) DisableAuditContext(ctx context.Context, path string) error {
+func (c *Sys) DisableAuditWithContext(ctx context.Context, path string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/audit/%s", path))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

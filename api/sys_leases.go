@@ -8,10 +8,10 @@ import (
 func (c *Sys) Renew(id string, increment int) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RenewContext(ctx, id, increment)
+	return c.RenewWithContext(ctx, id, increment)
 }
 
-func (c *Sys) RenewContext(ctx context.Context, id string, increment int) (*Secret, error) {
+func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/renew")
 
 	body := map[string]interface{}{
@@ -34,10 +34,10 @@ func (c *Sys) RenewContext(ctx context.Context, id string, increment int) (*Secr
 func (c *Sys) Lookup(id string) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.LookupContext(ctx, id)
+	return c.LookupWithContext(ctx, id)
 }
 
-func (c *Sys) LookupContext(ctx context.Context, id string) (*Secret, error) {
+func (c *Sys) LookupWithContext(ctx context.Context, id string) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/lookup")
 
 	body := map[string]interface{}{
@@ -59,10 +59,10 @@ func (c *Sys) LookupContext(ctx context.Context, id string) (*Secret, error) {
 func (c *Sys) Revoke(id string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RevokeContext(ctx, id)
+	return c.RevokeWithContext(ctx, id)
 }
 
-func (c *Sys) RevokeContext(ctx context.Context, id string) error {
+func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke")
 	body := map[string]interface{}{
 		"lease_id": id,
@@ -81,10 +81,10 @@ func (c *Sys) RevokeContext(ctx context.Context, id string) error {
 func (c *Sys) RevokePrefix(id string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RevokePrefixContext(ctx, id)
+	return c.RevokePrefixWithContext(ctx, id)
 }
 
-func (c *Sys) RevokePrefixContext(ctx context.Context, id string) error {
+func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-prefix/"+id)
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -97,10 +97,10 @@ func (c *Sys) RevokePrefixContext(ctx context.Context, id string) error {
 func (c *Sys) RevokeForce(id string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RevokeForceContext(ctx, id)
+	return c.RevokeForceWithContext(ctx, id)
 }
 
-func (c *Sys) RevokeForceContext(ctx context.Context, id string) error {
+func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-force/"+id)
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -113,10 +113,10 @@ func (c *Sys) RevokeForceContext(ctx context.Context, id string) error {
 func (c *Sys) RevokeWithOptions(opts *RevokeOptions) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.RevokeWithOptionsContext(ctx, opts)
+	return c.RevokeWithOptionsWithContext(ctx, opts)
 }
 
-func (c *Sys) RevokeWithOptionsContext(ctx context.Context, opts *RevokeOptions) error {
+func (c *Sys) RevokeWithOptionsWithContext(ctx context.Context, opts *RevokeOptions) error {
 	if opts == nil {
 		return errors.New("nil options provided")
 	}

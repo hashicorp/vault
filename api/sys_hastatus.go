@@ -8,10 +8,10 @@ import (
 func (c *Sys) HAStatus() (*HAStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.HAStatusContext(ctx)
+	return c.HAStatusWithContext(ctx)
 }
 
-func (c *Sys) HAStatusContext(ctx context.Context) (*HAStatusResponse, error) {
+func (c *Sys) HAStatusWithContext(ctx context.Context) (*HAStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/ha-status")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

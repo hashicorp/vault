@@ -11,10 +11,10 @@ import (
 func (c *Sys) ListPolicies() ([]string, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ListPoliciesContext(ctx)
+	return c.ListPoliciesWithContext(ctx)
 }
 
-func (c *Sys) ListPoliciesContext(ctx context.Context) ([]string, error) {
+func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
 	r := c.c.NewRequest("LIST", "/v1/sys/policies/acl")
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
@@ -47,10 +47,10 @@ func (c *Sys) ListPoliciesContext(ctx context.Context) ([]string, error) {
 func (c *Sys) GetPolicy(name string) (string, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.GetPolicyContext(ctx, name)
+	return c.GetPolicyWithContext(ctx, name)
 }
 
-func (c *Sys) GetPolicyContext(ctx context.Context, name string) (string, error) {
+func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, error) {
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -82,10 +82,10 @@ func (c *Sys) GetPolicyContext(ctx context.Context, name string) (string, error)
 func (c *Sys) PutPolicy(name, rules string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.PutPolicyContext(ctx, name, rules)
+	return c.PutPolicyWithContext(ctx, name, rules)
 }
 
-func (c *Sys) PutPolicyContext(ctx context.Context, name, rules string) error {
+func (c *Sys) PutPolicyWithContext(ctx context.Context, name, rules string) error {
 	body := map[string]string{
 		"policy": rules,
 	}
@@ -107,10 +107,10 @@ func (c *Sys) PutPolicyContext(ctx context.Context, name, rules string) error {
 func (c *Sys) DeletePolicy(name string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.DeletePolicyContext(ctx, name)
+	return c.DeletePolicyWithContext(ctx, name)
 }
 
-func (c *Sys) DeletePolicyContext(ctx context.Context, name string) error {
+func (c *Sys) DeletePolicyWithContext(ctx context.Context, name string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

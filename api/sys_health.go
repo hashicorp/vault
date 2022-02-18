@@ -5,10 +5,10 @@ import "context"
 func (c *Sys) Health() (*HealthResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.HealthContext(ctx)
+	return c.HealthWithContext(ctx)
 }
 
-func (c *Sys) HealthContext(ctx context.Context) (*HealthResponse, error) {
+func (c *Sys) HealthWithContext(ctx context.Context) (*HealthResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/health")
 	// If the code is 400 or above it will automatically turn into an error,
 	// but the sys/health API defaults to returning 5xx when not sealed or

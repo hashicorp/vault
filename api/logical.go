@@ -53,17 +53,17 @@ func (c *Logical) Read(path string) (*Secret, error) {
 	return c.ReadWithData(path, nil)
 }
 
-func (c *Logical) ReadContext(ctx context.Context, path string) (*Secret, error) {
-	return c.ReadWithDataContext(ctx, path, nil)
+func (c *Logical) ReadWithContext(ctx context.Context, path string) (*Secret, error) {
+	return c.ReadWithDataWithContext(ctx, path, nil)
 }
 
 func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ReadWithDataContext(ctx, path, data)
+	return c.ReadWithDataWithContext(ctx, path, data)
 }
 
-func (c *Logical) ReadWithDataContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
 	r := c.c.NewRequest("GET", "/v1/"+path)
 
 	var values url.Values
@@ -108,10 +108,10 @@ func (c *Logical) ReadWithDataContext(ctx context.Context, path string, data map
 func (c *Logical) List(path string) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ListContext(ctx, path)
+	return c.ListWithContext(ctx, path)
 }
 
-func (c *Logical) ListContext(ctx context.Context, path string) (*Secret, error) {
+func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, error) {
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
@@ -146,10 +146,10 @@ func (c *Logical) ListContext(ctx context.Context, path string) (*Secret, error)
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.WriteContext(ctx, path, data)
+	return c.WriteWithContext(ctx, path, data)
 }
 
-func (c *Logical) WriteContext(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
+func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
@@ -171,10 +171,10 @@ func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[stri
 }
 
 func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
-	return c.WriteBytesContext(context.Background(), path, data)
+	return c.WriteBytesWithContext(context.Background(), path, data)
 }
 
-func (c *Logical) WriteBytesContext(ctx context.Context, path string, data []byte) (*Secret, error) {
+func (c *Logical) WriteBytesWithContext(ctx context.Context, path string, data []byte) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	r.BodyBytes = data
 
@@ -209,20 +209,20 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 func (c *Logical) Delete(path string) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.DeleteContext(ctx, path)
+	return c.DeleteWithContext(ctx, path)
 }
 
-func (c *Logical) DeleteContext(ctx context.Context, path string) (*Secret, error) {
-	return c.DeleteWithDataContext(ctx, path, nil)
+func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, error) {
+	return c.DeleteWithDataWithContext(ctx, path, nil)
 }
 
 func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.DeleteWithDataContext(ctx, path, data)
+	return c.DeleteWithDataWithContext(ctx, path, data)
 }
 
-func (c *Logical) DeleteWithDataContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
 	r := c.c.NewRequest("DELETE", "/v1/"+path)
 
 	var values url.Values
@@ -266,10 +266,10 @@ func (c *Logical) DeleteWithDataContext(ctx context.Context, path string, data m
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.UnwrapContext(ctx, wrappingToken)
+	return c.UnwrapWithContext(ctx, wrappingToken)
 }
 
-func (c *Logical) UnwrapContext(ctx context.Context, wrappingToken string) (*Secret, error) {
+func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
 	wt := strings.TrimSpace(wrappingToken)
 	if wrappingToken != "" {

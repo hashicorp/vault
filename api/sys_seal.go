@@ -5,21 +5,21 @@ import "context"
 func (c *Sys) SealStatus() (*SealStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.SealStatusContext(ctx)
+	return c.SealStatusWithContext(ctx)
 }
 
-func (c *Sys) SealStatusContext(ctx context.Context) (*SealStatusResponse, error) {
+func (c *Sys) SealStatusWithContext(ctx context.Context) (*SealStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/seal-status")
-	return sealStatusRequestContext(ctx, c, r)
+	return sealStatusRequestWithContext(ctx, c, r)
 }
 
 func (c *Sys) Seal() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.SealContext(ctx)
+	return c.SealWithContext(ctx)
 }
 
-func (c *Sys) SealContext(ctx context.Context) error {
+func (c *Sys) SealWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/seal")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -32,10 +32,10 @@ func (c *Sys) SealContext(ctx context.Context) error {
 func (c *Sys) ResetUnsealProcess() (*SealStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.ResetUnsealProcessContext(ctx)
+	return c.ResetUnsealProcessWithContext(ctx)
 }
 
-func (c *Sys) ResetUnsealProcessContext(ctx context.Context) (*SealStatusResponse, error) {
+func (c *Sys) ResetUnsealProcessWithContext(ctx context.Context) (*SealStatusResponse, error) {
 	body := map[string]interface{}{"reset": true}
 
 	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
@@ -43,16 +43,16 @@ func (c *Sys) ResetUnsealProcessContext(ctx context.Context) (*SealStatusRespons
 		return nil, err
 	}
 
-	return sealStatusRequestContext(ctx, c, r)
+	return sealStatusRequestWithContext(ctx, c, r)
 }
 
 func (c *Sys) Unseal(shard string) (*SealStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.UnsealContext(ctx, shard)
+	return c.UnsealWithContext(ctx, shard)
 }
 
-func (c *Sys) UnsealContext(ctx context.Context, shard string) (*SealStatusResponse, error) {
+func (c *Sys) UnsealWithContext(ctx context.Context, shard string) (*SealStatusResponse, error) {
 	body := map[string]interface{}{"key": shard}
 
 	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
@@ -60,25 +60,25 @@ func (c *Sys) UnsealContext(ctx context.Context, shard string) (*SealStatusRespo
 		return nil, err
 	}
 
-	return sealStatusRequestContext(ctx, c, r)
+	return sealStatusRequestWithContext(ctx, c, r)
 }
 
 func (c *Sys) UnsealWithOptions(opts *UnsealOpts) (*SealStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	return c.UnsealWithOptionsContext(ctx, opts)
+	return c.UnsealWithOptionsWithContext(ctx, opts)
 }
 
-func (c *Sys) UnsealWithOptionsContext(ctx context.Context, opts *UnsealOpts) (*SealStatusResponse, error) {
+func (c *Sys) UnsealWithOptionsWithContext(ctx context.Context, opts *UnsealOpts) (*SealStatusResponse, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
-	return sealStatusRequestContext(ctx, c, r)
+	return sealStatusRequestWithContext(ctx, c, r)
 }
 
-func sealStatusRequestContext(ctx context.Context, c *Sys, r *Request) (*SealStatusResponse, error) {
+func sealStatusRequestWithContext(ctx context.Context, c *Sys, r *Request) (*SealStatusResponse, error) {
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
