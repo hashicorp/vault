@@ -14,8 +14,9 @@ import (
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/hashicorp/vault/sdk/helper/hclutil"
 )
 
 const (
@@ -206,6 +207,13 @@ func (c *Client) SSHHelperWithMountPoint(mountPoint string) *SSHHelper {
 // an echo response message is returned. This feature is used by ssh-helper to verify if
 // its configured correctly.
 func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.VerifyContext(ctx, otp)
+}
+
+// VerifyContext the same as Verify but with a custom context.
+func (c *SSHHelper) VerifyContext(ctx context.Context, otp string) (*SSHVerifyResponse, error) {
 	data := map[string]interface{}{
 		"otp": otp,
 	}
@@ -215,8 +223,6 @@ func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err

@@ -3,6 +3,12 @@ package api
 import "context"
 
 func (c *Sys) Health() (*HealthResponse, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.HealthContext(ctx)
+}
+
+func (c *Sys) HealthContext(ctx context.Context) (*HealthResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/health")
 	// If the code is 400 or above it will automatically turn into an error,
 	// but the sys/health API defaults to returning 5xx when not sealed or
@@ -13,8 +19,6 @@ func (c *Sys) Health() (*HealthResponse, error) {
 	r.Params.Add("drsecondarycode", "299")
 	r.Params.Add("performancestandbycode", "299")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err

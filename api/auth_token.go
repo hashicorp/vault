@@ -15,13 +15,17 @@ func (a *Auth) Token() *TokenAuth {
 }
 
 func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.CreateContext(ctx, opts)
+}
+
+func (c *TokenAuth) CreateContext(ctx context.Context, opts *TokenCreateRequest) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/create")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -32,13 +36,17 @@ func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 }
 
 func (c *TokenAuth) CreateOrphan(opts *TokenCreateRequest) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.CreateOrphanContext(ctx, opts)
+}
+
+func (c *TokenAuth) CreateOrphanContext(ctx context.Context, opts *TokenCreateRequest) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/create-orphan")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -49,13 +57,17 @@ func (c *TokenAuth) CreateOrphan(opts *TokenCreateRequest) (*Secret, error) {
 }
 
 func (c *TokenAuth) CreateWithRole(opts *TokenCreateRequest, roleName string) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.CreateWithRoleContext(ctx, opts, roleName)
+}
+
+func (c *TokenAuth) CreateWithRoleContext(ctx context.Context, opts *TokenCreateRequest, roleName string) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/create/"+roleName)
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -66,6 +78,12 @@ func (c *TokenAuth) CreateWithRole(opts *TokenCreateRequest, roleName string) (*
 }
 
 func (c *TokenAuth) Lookup(token string) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.LookupContext(ctx, token)
+}
+
+func (c *TokenAuth) LookupContext(ctx context.Context, token string) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/lookup")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
@@ -73,8 +91,6 @@ func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -85,6 +101,12 @@ func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 }
 
 func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.LookupAccessorContext(ctx, accessor)
+}
+
+func (c *TokenAuth) LookupAccessorContext(ctx context.Context, accessor string) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"accessor": accessor,
@@ -92,8 +114,6 @@ func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -104,10 +124,14 @@ func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
 }
 
 func (c *TokenAuth) LookupSelf() (*Secret, error) {
-	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.LookupSelfContext(ctx)
+}
+
+func (c *TokenAuth) LookupSelfContext(ctx context.Context) (*Secret, error) {
+	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -118,6 +142,12 @@ func (c *TokenAuth) LookupSelf() (*Secret, error) {
 }
 
 func (c *TokenAuth) RenewAccessor(accessor string, increment int) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RenewAccessorContext(ctx, accessor, increment)
+}
+
+func (c *TokenAuth) RenewAccessorContext(ctx context.Context, accessor string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/renew-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"accessor":  accessor,
@@ -126,8 +156,6 @@ func (c *TokenAuth) RenewAccessor(accessor string, increment int) (*Secret, erro
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -138,6 +166,12 @@ func (c *TokenAuth) RenewAccessor(accessor string, increment int) (*Secret, erro
 }
 
 func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RenewContext(ctx, token, increment)
+}
+
+func (c *TokenAuth) RenewContext(ctx context.Context, token string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token":     token,
@@ -146,8 +180,6 @@ func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -158,6 +190,12 @@ func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
 }
 
 func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RenewSelfContext(ctx, increment)
+}
+
+func (c *TokenAuth) RenewSelfContext(ctx context.Context, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
 
 	body := map[string]interface{}{"increment": increment}
@@ -165,8 +203,6 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -179,6 +215,13 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 // RenewTokenAsSelf behaves like renew-self, but authenticates using a provided
 // token instead of the token attached to the client.
 func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RenewTokenAsSelfContext(ctx, token, increment)
+}
+
+// RenewTokenAsSelfContext the same as RenewTokenAsSelf, but with a custom context.
+func (c *TokenAuth) RenewTokenAsSelfContext(ctx context.Context, token string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
 	r.ClientToken = token
 
@@ -187,8 +230,6 @@ func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, erro
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -201,6 +242,13 @@ func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, erro
 // RevokeAccessor revokes a token associated with the given accessor
 // along with all the child tokens.
 func (c *TokenAuth) RevokeAccessor(accessor string) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RevokeAccessorContext(ctx, accessor)
+}
+
+// RevokeAccessorContext the same as RevokeAccessor but with a custom context.
+func (c *TokenAuth) RevokeAccessorContext(ctx context.Context, accessor string) error {
 	r := c.c.NewRequest("POST", "/v1/auth/token/revoke-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"accessor": accessor,
@@ -208,8 +256,6 @@ func (c *TokenAuth) RevokeAccessor(accessor string) error {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
@@ -222,6 +268,13 @@ func (c *TokenAuth) RevokeAccessor(accessor string) error {
 // RevokeOrphan revokes a token without revoking the tree underneath it (so
 // child tokens are orphaned rather than revoked)
 func (c *TokenAuth) RevokeOrphan(token string) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RevokeOrphanContext(ctx, token)
+}
+
+// RevokeOrphanContext the same as RevokeOrphan but with a custom context.
+func (c *TokenAuth) RevokeOrphanContext(ctx context.Context, token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-orphan")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
@@ -229,8 +282,6 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
@@ -244,10 +295,15 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 // for backwards compatibility but is ignored; only the client's set token has
 // an effect.
 func (c *TokenAuth) RevokeSelf(token string) error {
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.RevokeSelfContext(ctx, token)
+}
+
+// RevokeSelfContext the same as RevokeSelf but with a custom context.
+func (c *TokenAuth) RevokeSelfContext(ctx context.Context, token string) error {
+	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
@@ -261,6 +317,13 @@ func (c *TokenAuth) RevokeSelf(token string) error {
 // the entire tree underneath -- all of its child tokens, their child tokens,
 // etc.
 func (c *TokenAuth) RevokeTree(token string) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RevokeTreeContext(ctx, token)
+}
+
+// RevokeTreeContext the same as RevokeTree but with a custom context.
+func (c *TokenAuth) RevokeTreeContext(ctx context.Context, token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
@@ -268,8 +331,6 @@ func (c *TokenAuth) RevokeTree(token string) error {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err

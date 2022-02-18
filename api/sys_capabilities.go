@@ -12,7 +12,17 @@ func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
 	return c.Capabilities(c.c.Token(), path)
 }
 
+func (c *Sys) CapabilitiesSelfContext(ctx context.Context, path string) ([]string, error) {
+	return c.CapabilitiesContext(ctx, c.c.Token(), path)
+}
+
 func (c *Sys) Capabilities(token, path string) ([]string, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.CapabilitiesContext(ctx, token, path)
+}
+
+func (c *Sys) CapabilitiesContext(ctx context.Context, token, path string) ([]string, error) {
 	body := map[string]string{
 		"token": token,
 		"path":  path,
@@ -28,8 +38,6 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
