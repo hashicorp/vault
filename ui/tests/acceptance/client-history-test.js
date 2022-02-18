@@ -42,6 +42,7 @@ module('Acceptance | clients history tab', function (hooks) {
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/feature-flags', this.passthrough);
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
@@ -273,7 +274,8 @@ module('Acceptance | clients history tab', function (hooks) {
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No billing start date found');
+    // Message changes depending on ent or OSS
+    assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
     assert.dom('[data-test-popup-menu-trigger="month"]').exists('Dropdown exists to select month');
     assert.dom('[data-test-popup-menu-trigger="year"]').exists('Dropdown exists to select year');
   });

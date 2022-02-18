@@ -145,7 +145,7 @@ module('Acceptance | clients current', function (hooks) {
       .hasText(non_entity_clients.toString());
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
-    assert.dom('[data-test-top-attribution]').hasText('Top namespace');
+    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
     // Filter by namespace
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
@@ -163,6 +163,6 @@ module('Acceptance | clients current', function (hooks) {
     assert
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText(non_entity_clients.toString());
-    assert.dom('[data-test-top-attribution]').hasText('Top namespace');
+    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
   });
 });
