@@ -33,6 +33,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       <Clients::LineChart @dataset={{dataset}} @xKey="foo" @yKey="bar" />
       </div>
     `);
+
     assert.dom('[data-test-line-chart]').exists('Chart is rendered');
     assert.dom('.hover-circle').exists({ count: 4 }, 'Renders dot for each data point');
   });

@@ -68,7 +68,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         'The total clients in the namespace for this date range. This number is useful for identifying overall usage volume.'
       );
     assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('second');
-    assert.dom('[data-test-attribution-bottom]').includesText('namespace').includesText('10');
+    assert.dom('[data-test-top-counts]').includesText('namespace').includesText('10');
   });
 
   test('it renders correct text for a single month', async function (assert) {
