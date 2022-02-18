@@ -43,8 +43,15 @@ func TestKV_Subkeys_NotFound(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
-	apiResp, err := c.RawRequestWithContext(context.Background(), req)
+	apiRespRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
+		return c.RawRequestWithContext(context.Background(), req)
+	})
+
+	apiResp, ok := apiRespRaw.(*api.Response)
+	if !ok {
+		t.Fatalf("response not an api.Response, actual: %#v", apiRespRaw)
+	}
 
 	if err == nil || apiResp == nil {
 		t.Fatalf("expected subkeys request to fail, err :%v, resp: %#v", err, apiResp)
@@ -93,19 +100,31 @@ func TestKV_Subkeys_Deleted(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", kvData)
+	resp, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Write("kv/data/foo", kvData)
+	})
 	if err != nil {
 		t.Fatalf("write failed, err :%v, resp: %#v", err, resp)
 	}
 
-	resp, err = c.Logical().Delete("kv/data/foo")
+	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Delete("kv/data/foo")
+	})
 	if err != nil {
-		t.Fatalf("delete failed, err :%v, resp: %#v", err, resp)
+		t.Fatalf("delete failed, err :%v, resp: %#v", err, secretRaw)
 	}
 
-	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
-	apiResp, err := c.RawRequestWithContext(context.Background(), req)
-	if resp != nil {
+	apiRespRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
+		return c.RawRequestWithContext(context.Background(), req)
+	})
+
+	apiResp, ok := apiRespRaw.(*api.Response)
+	if !ok {
+		t.Fatalf("response not a api.Response, actual: %#v", apiRespRaw)
+	}
+
+	if apiResp != nil {
 		defer apiResp.Body.Close()
 	}
 
@@ -180,22 +199,39 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", kvData)
+	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Write("kv/data/foo", kvData)
+	})
 	if err != nil {
-		t.Fatalf("write failed, err :%v, resp: %#v", err, resp)
+		t.Fatalf("write failed, err :%v, resp: %#v", err, secretRaw)
 	}
 
 	destroyVersions := map[string]interface{}{
 		"versions": []int{1},
 	}
 
-	resp, err = c.Logical().Write("kv/destroy/foo", destroyVersions)
+	secretRaw, err = kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Write("kv/destroy/foo", destroyVersions)
+	})
 	if err != nil {
-		t.Fatalf("destroy failed, err :%v, resp: %#v", err, resp)
+		t.Fatalf("destroy failed, err :%v, resp: %#v", err, secretRaw)
 	}
 
-	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
-	apiResp, err := c.RawRequestWithContext(context.Background(), req)
+	secret, ok := secretRaw.(*api.Secret)
+	if !ok {
+		t.Fatalf("response not an api.Secret, actual: %#v", secretRaw)
+	}
+
+	apiRespRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
+		return c.RawRequestWithContext(context.Background(), req)
+	})
+
+	apiResp, ok := apiRespRaw.(*api.Response)
+	if !ok {
+		t.Fatalf("response not a api.Response, actual: %#v", apiRespRaw)
+	}
+
 	if apiResp != nil {
 		defer apiResp.Body.Close()
 	}
@@ -208,7 +244,7 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 		t.Fatalf("expected subkeys request to fail with %d status code, resp: %#v", http.StatusNotFound, apiResp)
 	}
 
-	secret, err := api.ParseSecret(apiResp.Body)
+	secret, err = api.ParseSecret(apiResp.Body)
 	if err != nil {
 		t.Fatalf("failed to parse resp body, err: %v", err)
 	}
@@ -276,9 +312,11 @@ func TestKV_Subkeys_CurrentVersion(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", kvData)
+	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Write("kv/data/foo", kvData)
+	})
 	if err != nil {
-		t.Fatalf("write failed, err :%v, resp: %#v", err, resp)
+		t.Fatalf("write failed, err :%v, resp: %#v", err, secretRaw)
 	}
 
 	kvData = map[string]interface{}{
@@ -287,14 +325,24 @@ func TestKV_Subkeys_CurrentVersion(t *testing.T) {
 		},
 	}
 
-	resp, err = c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
+	secretRaw, err = kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
+	})
 	if err != nil {
-		t.Fatalf("patch failed, err :%v, resp: %#v", err, resp)
+		t.Fatalf("patch failed, err :%v, resp: %#v", err, secretRaw)
 	}
 
-	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
-	apiResp, err := c.RawRequestWithContext(context.Background(), req)
-	if resp != nil {
+	apiRespRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
+		return c.RawRequestWithContext(context.Background(), req)
+	})
+
+	apiResp, ok := apiRespRaw.(*api.Response)
+	if !ok {
+		t.Fatalf("response not a api.Response, actual: %#v", apiRespRaw)
+	}
+
+	if apiResp != nil {
 		defer apiResp.Body.Close()
 	}
 
