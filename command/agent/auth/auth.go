@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -156,6 +157,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 		default:
@@ -174,6 +176,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("could not look up token", "err", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 
@@ -190,6 +193,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 		}
@@ -199,6 +203,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 			wrapClient.SetWrappingLookupFunc(func(string, string) string {
@@ -220,6 +225,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 		}
@@ -229,17 +235,20 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if secret.WrapInfo == nil {
 				ah.logger.Error("authentication returned nil wrap info", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 			if secret.WrapInfo.Token == "" {
 				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 			wrappedResp, err := jsonutil.EncodeJSON(secret.WrapInfo)
 			if err != nil {
 				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
@@ -265,11 +274,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if secret == nil || secret.Auth == nil {
 				ah.logger.Error("authentication returned nil auth info", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 			if secret.Auth.ClientToken == "" {
 				ah.logger.Error("authentication returned empty client token", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
+				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
@@ -292,11 +303,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		if err != nil {
 			ah.logger.Error("error creating lifetime watcher, backing off and retrying", "error", err, "backoff", backoff)
 			backoffOrQuit(ctx, backoff)
+			metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 			continue
 		}
 
 		// Start the renewal process
 		ah.logger.Info("starting renewal process")
+		metrics.IncrCounter([]string{"agent", "auth", "success"}, 1)
 		go watcher.Renew()
 
 	LifetimeWatcherLoop:
@@ -310,11 +323,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			case err := <-watcher.DoneCh():
 				ah.logger.Info("lifetime watcher done channel triggered")
 				if err != nil {
+					metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 					ah.logger.Error("error renewing token", "error", err)
 				}
 				break LifetimeWatcherLoop
 
 			case <-watcher.RenewCh():
+				metrics.IncrCounter([]string{"agent", "auth", "success"}, 1)
 				ah.logger.Info("renewed auth token")
 
 			case <-credCh:
