@@ -1647,25 +1647,31 @@ func TestOIDC_Path_OIDC_Client_Type(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter tests that a client cannot
-// be created without a key parameter
-func TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderClient_DefaultKey tests that a
+// client uses the default key if none provided at creation time.
+func TestOIDC_Path_OIDC_ProviderClient_DefaultKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	storage := &logical.InmemStorage{}
+	require.NoError(t, c.identityStore.storeOIDCDefaultResources(ctx))
 
-	// Create a test client "test-client1" without a key param -- should fail
+	// Create a test client "test-client" without a key param
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/client/test-client1",
+		Path:      "oidc/client/test-client",
 		Operation: logical.CreateOperation,
-		Storage:   storage,
+		Storage:   c.identityStore.view,
 	})
-	expectError(t, resp, err)
-	// validate error message
-	expectedStrings := map[string]interface{}{
-		"the key parameter is required": true,
-	}
-	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" to validate it uses the default key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   c.identityStore.view,
+	})
+	expectSuccess(t, resp, err)
+
+	// Assert that the client uses the default key
+	require.Equal(t, defaultKeyName, resp.Data["key"].(string))
 }
 
 // TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry tests that a client cannot be
@@ -3394,7 +3400,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"client_secret_basic"},
+		AuthMethods:           []string{"client_secret_basic", "none"},
 		RequestURIParameter:   false,
 	}
 	discoveryResp := &providerDiscovery{}
@@ -3448,7 +3454,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"client_secret_basic"},
+		AuthMethods:           []string{"client_secret_basic", "none"},
 		RequestURIParameter:   false,
 	}
 	discoveryResp = &providerDiscovery{}

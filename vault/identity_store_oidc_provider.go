@@ -1408,7 +1408,11 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 		ResponseTypes:         []string{"code"},
 		Subjects:              []string{"public"},
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"client_secret_basic", "none"},
+		AuthMethods: []string{
+			// PKCE is required for auth method "none"
+			"none",
+			"client_secret_basic",
+		},
 	}
 
 	data, err := json.Marshal(disc)
