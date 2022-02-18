@@ -75,8 +75,10 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			continue
 		}
 		if err == nil {
-			if retErr != nil && c.Logger != nil {
-				c.Logger.Error("errors connecting to some hosts", "error", retErr.Error())
+			if retErr != nil {
+				if c.Logger != nil && c.Logger.IsDebug() {
+					c.Logger.Debug("errors connecting to some hosts", "error", retErr.Error())
+				}
 			}
 			retErr = nil
 			break
@@ -114,7 +116,7 @@ func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, userna
 		return nil, err
 	}
 
-	if c.Logger.IsDebug() {
+	if c.Logger != nil && c.Logger.IsDebug() {
 		c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", renderedFilter)
 	}
 	ldapRequest := &ldap.SearchRequest{
@@ -184,7 +186,7 @@ func (c *Client) RenderUserSearchFilter(cfg *ConfigEntry, username string) (stri
 
 	// If userfilter was defined, resolve it as a Go template and use the query to
 	// find the login user
-	if c.Logger.IsDebug() {
+	if c.Logger != nil && c.Logger.IsDebug() {
 		c.Logger.Debug("compiling search filter", "search_filter", cfg.UserFilter)
 	}
 
@@ -269,7 +271,7 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username s
 	if cfg.UPNDomain != "" {
 		// Find the distinguished name for the user if userPrincipalName used for login
 		filter := fmt.Sprintf("(userPrincipalName=%s@%s)", EscapeLDAPValue(username), cfg.UPNDomain)
-		if c.Logger.IsDebug() {
+		if c.Logger != nil && c.Logger.IsDebug() {
 			c.Logger.Debug("searching upn", "userdn", cfg.UserDN, "filter", filter)
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
@@ -293,18 +295,22 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username s
 
 func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string, username string) ([]*ldap.Entry, error) {
 	if cfg.GroupFilter == "" {
-		c.Logger.Warn("groupfilter is empty, will not query server")
+		if c.Logger != nil {
+			c.Logger.Warn("groupfilter is empty, will not query server")
+		}
 		return make([]*ldap.Entry, 0), nil
 	}
 
 	if cfg.GroupDN == "" {
-		c.Logger.Warn("groupdn is empty, will not query server")
+		if c.Logger != nil {
+			c.Logger.Warn("groupdn is empty, will not query server")
+		}
 		return make([]*ldap.Entry, 0), nil
 	}
 
 	// If groupfilter was defined, resolve it as a Go template and use the query for
 	// returning the user's groups
-	if c.Logger.IsDebug() {
+	if c.Logger != nil && c.Logger.IsDebug() {
 		c.Logger.Debug("compiling group filter", "group_filter", cfg.GroupFilter)
 	}
 
@@ -329,7 +335,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
 	}
 
-	if c.Logger.IsDebug() {
+	if c.Logger != nil && c.Logger.IsDebug() {
 		c.Logger.Debug("searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
 	}
 
@@ -395,7 +401,9 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
 	}
 	if len(result.Entries) == 0 {
-		c.Logger.Warn("unable to read object for group attributes", "userdn", userDN, "groupattr", cfg.GroupAttr)
+		if c.Logger != nil {
+			c.Logger.Warn("unable to read object for group attributes", "userdn", userDN, "groupattr", cfg.GroupAttr)
+		}
 		return make([]*ldap.Entry, 0), nil
 	}
 
@@ -406,7 +414,9 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 	for _, sidBytes := range groupAttrValues {
 		sidString, err := sidBytesToString(sidBytes)
 		if err != nil {
-			c.Logger.Warn("unable to read sid", "err", err)
+			if c.Logger != nil {
+				c.Logger.Warn("unable to read sid", "err", err)
+			}
 			continue
 		}
 
@@ -420,11 +430,15 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 			SizeLimit: 1,
 		})
 		if err != nil {
-			c.Logger.Warn("unable to read the group sid", "sid", sidString)
+			if c.Logger != nil {
+				c.Logger.Warn("unable to read the group sid", "sid", sidString)
+			}
 			continue
 		}
 		if len(groupResult.Entries) == 0 {
-			c.Logger.Warn("unable to find the group", "sid", sidString)
+			if c.Logger != nil {
+				c.Logger.Warn("unable to find the group", "sid", sidString)
+			}
 			continue
 		}
 
