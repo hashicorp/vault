@@ -133,7 +133,6 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
 }
 
 export function generateLicenseResponse(startDate, endDate) {
-  console.log({ startDate });
   return {
     request_id: 'my-license-request-id',
     data: {
