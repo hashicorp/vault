@@ -875,6 +875,63 @@ func TestSystemBackend_remount(t *testing.T) {
 	})
 }
 
+func TestSystemBackend_remount_destinationInUse(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo/",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "secret"
+	req.Data["to"] = "foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "foo/foo2"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	me2 := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo2/foo3/",
+		Type:  "generic",
+	}
+	err = c.mount(namespace.RootContext(nil), me2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req.Data["to"] = "foo2/"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo2/foo3/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
 func TestSystemBackend_remount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
