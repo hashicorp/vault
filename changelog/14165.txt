@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/ldaputil: Fixed bug where nil logger would cause a panic
+```
