@@ -82,7 +82,7 @@ jobs:
           yarn install --ignore-optional
           npm rebuild node-sass
           yarn --verbose run build
-  #         ls -la
+          ls -la
 
   #     - uses: actions/cache@v2
   #       id: ui-cache
