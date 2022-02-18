@@ -29,7 +29,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -1352,7 +1351,14 @@ func MergeReplicationStates(old []string, new string) []string {
 	return strutil.RemoveDuplicates(ret, false)
 }
 
-func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
+// WALState is copied from github.com/hashicorp/vault/sdk/logical
+type WALState struct {
+	ClusterID       string
+	LocalIndex      uint64
+	ReplicatedIndex uint64
+}
+
+func ParseReplicationState(raw string, hmacKey []byte) (*WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		return nil, err
@@ -1390,7 +1396,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 		return nil, fmt.Errorf("invalid replicated index in state header: %w", err)
 	}
 
-	return &logical.WALState{
+	return &WALState{
 		ClusterID:       pieces[1],
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,
