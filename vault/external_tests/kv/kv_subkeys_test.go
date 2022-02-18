@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+// TestKV_Subkeys_NotFound issues a read to the subkeys endpoint for a path
+// that does not exist. A 400 status should be returned.
 func TestKV_Subkeys_NotFound(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -53,6 +55,10 @@ func TestKV_Subkeys_NotFound(t *testing.T) {
 	}
 }
 
+// TestKV_Subkeys_Deleted writes a single version of a secret to the KVv2
+// secret engine. The secret is subsequently deleted. A read to the subkeys
+// endpoint should return a 400 status with a nil "subkeys" value and the
+// "deletion_time" key in the "metadata" key should be not be empty.
 func TestKV_Subkeys_Deleted(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -89,12 +95,12 @@ func TestKV_Subkeys_Deleted(t *testing.T) {
 
 	resp, err := c.Logical().Write("kv/data/foo", kvData)
 	if err != nil {
-		t.Fatalf("write failed, err :%v, resp: %#v\n", err, resp)
+		t.Fatalf("write failed, err :%v, resp: %#v", err, resp)
 	}
 
 	resp, err = c.Logical().Delete("kv/data/foo")
 	if err != nil {
-		t.Fatalf("delete failed, err :%v, resp: %#v\n", err, resp)
+		t.Fatalf("delete failed, err :%v, resp: %#v", err, resp)
 	}
 
 	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
@@ -116,7 +122,12 @@ func TestKV_Subkeys_Deleted(t *testing.T) {
 		t.Fatalf("failed to parse resp body, err: %v", err)
 	}
 
-	if subkeys, ok := secret.Data["subkeys"]; !ok || subkeys != nil {
+	subkeys, ok := secret.Data["subkeys"]
+	if !ok {
+		t.Fatalf("key \"subkeys\" not found in response")
+	}
+
+	if subkeys != nil {
 		t.Fatalf("expected nil subkeys, actual: %#v", subkeys)
 	}
 
@@ -131,6 +142,10 @@ func TestKV_Subkeys_Deleted(t *testing.T) {
 	}
 }
 
+// TestKV_Subkeys_Destroyed writes a single version of a secret to the KVv2
+// secret engine. The secret is subsequently destroyed. A read to the subkeys
+// endpoint should return a 400 status with a nil "subkeys" value and the
+// "destroyed" key in the "metadata" key should be set to true.
 func TestKV_Subkeys_Destroyed(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -167,7 +182,7 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 
 	resp, err := c.Logical().Write("kv/data/foo", kvData)
 	if err != nil {
-		t.Fatalf("write failed, err :%v, resp: %#v\n", err, resp)
+		t.Fatalf("write failed, err :%v, resp: %#v", err, resp)
 	}
 
 	destroyVersions := map[string]interface{}{
@@ -176,12 +191,12 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 
 	resp, err = c.Logical().Write("kv/destroy/foo", destroyVersions)
 	if err != nil {
-		t.Fatalf("destroy failed, err :%v, resp: %#v\n", err, resp)
+		t.Fatalf("destroy failed, err :%v, resp: %#v", err, resp)
 	}
 
 	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
 	apiResp, err := c.RawRequestWithContext(context.Background(), req)
-	if resp != nil {
+	if apiResp != nil {
 		defer apiResp.Body.Close()
 	}
 
@@ -198,7 +213,12 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 		t.Fatalf("failed to parse resp body, err: %v", err)
 	}
 
-	if subkeys, ok := secret.Data["subkeys"]; !ok || subkeys != nil {
+	subkeys, ok := secret.Data["subkeys"]
+	if !ok {
+		t.Fatalf("key \"subkeys\" not found in response")
+	}
+
+	if subkeys != nil {
 		t.Fatalf("expected nil subkeys, actual: %#v", subkeys)
 	}
 
@@ -213,6 +233,9 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 	}
 }
 
+// TestKV_Subkeys_CurrentVersion writes multiples versions of a secret to the
+// KVv2 secret engine. It ensures that the subkeys endpoint returns a 200 status
+// and current version of the secret.
 func TestKV_Subkeys_CurrentVersion(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -255,7 +278,18 @@ func TestKV_Subkeys_CurrentVersion(t *testing.T) {
 
 	resp, err := c.Logical().Write("kv/data/foo", kvData)
 	if err != nil {
-		t.Fatalf("write failed, err :%v, resp: %#v\n", err, resp)
+		t.Fatalf("write failed, err :%v, resp: %#v", err, resp)
+	}
+
+	kvData = map[string]interface{}{
+		"data": map[string]interface{}{
+			"baz": "does-not-matter",
+		},
+	}
+
+	resp, err = c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
+	if err != nil {
+		t.Fatalf("patch failed, err :%v, resp: %#v", err, resp)
 	}
 
 	req := c.NewRequest("GET", "/v1/kv/subkeys/foo")
@@ -285,6 +319,7 @@ func TestKV_Subkeys_CurrentVersion(t *testing.T) {
 			},
 			"b": nil,
 		},
+		"baz": nil,
 	}
 
 	if diff := deep.Equal(secret.Data["subkeys"], expectedSubkeys); len(diff) > 0 {
