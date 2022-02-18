@@ -113,14 +113,19 @@ type AutopilotServer struct {
 // RaftJoin adds the node from which this call is invoked from to the raft
 // cluster represented by the leader address in the parameter.
 func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RaftJoinContext(ctx, opts)
+}
+
+// RaftJoinContext the same as RaftJoin but with a custom context.
+func (c *Sys) RaftJoinContext(ctx context.Context, opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/join")
 
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -135,6 +140,13 @@ func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 // RaftSnapshot invokes the API that takes the snapshot of the raft cluster and
 // writes it to the supplied io.Writer.
 func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RaftSnapshotContext(ctx, snapWriter)
+}
+
+// RaftSnapshotContext the same as RaftSnapshot but with a custom context.
+func (c *Sys) RaftSnapshotContext(ctx context.Context, snapWriter io.Writer) error {
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
 
@@ -142,6 +154,8 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	if err != nil {
 		return err
 	}
+
+	req = req.WithContext(ctx)
 
 	req.URL.User = r.URL.User
 	req.URL.Scheme = r.URL.Scheme
@@ -274,6 +288,13 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 // RaftSnapshotRestore reads the snapshot from the io.Reader and installs that
 // snapshot, returning the cluster to the state defined by it.
 func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.RaftSnapshotRestoreContext(ctx, snapReader, force)
+}
+
+// RaftSnapshotRestoreContext the same as RaftSnapshotRestore but with a custom context.
+func (c *Sys) RaftSnapshotRestoreContext(ctx context.Context, snapReader io.Reader, force bool) error {
 	path := "/v1/sys/storage/raft/snapshot"
 	if force {
 		path = "/v1/sys/storage/raft/snapshot-force"
@@ -282,8 +303,6 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 
 	r.Body = snapReader
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
@@ -295,10 +314,15 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 
 // RaftAutopilotState returns the state of the raft cluster as seen by autopilot.
 func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.RaftAutopilotStateContext(ctx)
+}
+
+// RaftAutopilotStateContext the same as RaftAutopilotState but with a custom context.
+func (c *Sys) RaftAutopilotStateContext(ctx context.Context) (*AutopilotState, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -329,10 +353,15 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 
 // RaftAutopilotConfiguration fetches the autopilot config.
 func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.RaftAutopilotConfigurationContext(ctx)
+}
+
+// RaftAutopilotConfigurationContext the same as RaftAutopilotConfiguration but with a custom context.
+func (c *Sys) RaftAutopilotConfigurationContext(ctx context.Context) (*AutopilotConfig, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -371,14 +400,19 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 
 // PutRaftAutopilotConfiguration allows modifying the raft autopilot configuration
 func (c *Sys) PutRaftAutopilotConfiguration(opts *AutopilotConfig) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.PutRaftAutopilotConfigurationContext(ctx, opts)
+}
+
+// PutRaftAutopilotConfigurationContext the same as PutRaftAutopilotConfiguration but with a custom context.
+func (c *Sys) PutRaftAutopilotConfigurationContext(ctx context.Context, opts *AutopilotConfig) error {
 	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/autopilot/configuration")
 
 	if err := r.SetJSONBody(opts); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return err

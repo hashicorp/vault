@@ -3,10 +3,14 @@ package api
 import "context"
 
 func (c *Sys) InitStatus() (bool, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/init")
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
+	return c.InitStatusContext(ctx)
+}
+
+func (c *Sys) InitStatusContext(ctx context.Context) (bool, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/init")
+
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return false, err
@@ -19,13 +23,17 @@ func (c *Sys) InitStatus() (bool, error) {
 }
 
 func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	return c.InitContext(ctx, opts)
+}
+
+func (c *Sys) InitContext(ctx context.Context, opts *InitRequest) (*InitResponse, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/init")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
