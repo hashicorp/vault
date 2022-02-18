@@ -560,6 +560,14 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	certificateBytes := out[:len(out)-4]
 
 	algo := b.Role.AlgorithmSigner
+
+	// Handle the new default algorithm selection process correctly.
+	if algo == DefaultAlgorithmSigner && sshAlgorithmSigner.PublicKey().Type() == ssh.KeyAlgoRSA {
+		algo = ssh.SigAlgoRSASHA2256
+	} else if algo == DefaultAlgorithmSigner {
+		algo = ""
+	}
+
 	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate signed SSH key: sign error: %w", err)
