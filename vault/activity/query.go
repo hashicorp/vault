@@ -46,8 +46,8 @@ type MonthlyNamespaceRecord struct {
 }
 
 type MountRecord struct {
-	Path   string        `json:"path"`
-	Counts *CountsRecord `json:"counts"`
+	MountPath string        `json:"mount_path"`
+	Counts    *CountsRecord `json:"counts"`
 }
 
 type PrecomputedQuery struct {

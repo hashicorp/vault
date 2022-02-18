@@ -53,7 +53,8 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 	return c.activityLog.partialMonthClientTracker
 }
 
-// Return the in-memory activeClients from an activity log
+// GetActiveClients returns the in-memory partialMonthClientTracker from an
+// activity log.
 func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
 	out := make(map[string]*activity.EntityRecord)
 
@@ -151,7 +152,7 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
 	}
 	if a.partialMonthClientTracker == nil {
-		t.Errorf("expected non-nil activeClients")
+		t.Errorf("expected non-nil partialMonthClientTracker")
 	}
 	if len(a.currentSegment.currentClients.Clients) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentClients)
