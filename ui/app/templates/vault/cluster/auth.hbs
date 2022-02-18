@@ -1,6 +1,20 @@
 <SplashPage @hasAltContent={{this.auth.mfaErrors}} as |Page|>
   <Page.altContent>
-    <MfaError @onClose={{fn (mut this.mfaAuthData) null}} />
+    <div class="has-top-margin-xxl" data-test-mfa-error>
+      <EmptyState
+        @title="Unauthorized"
+        @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+        @icon="alert-circle"
+        @bottomBorder={{true}}
+        @subTitle={{join ". " this.auth.mfaErrors}}
+        class="is-box-shadowless"
+      >
+        <button type="button" class="button is-ghost is-transparent" {{on "click" (action "onMfaErrorDismiss")}}>
+          <Icon @name="chevron-left" />
+          Go back
+        </button>
+      </EmptyState>
+    </div>
   </Page.altContent>
   <Page.header>
     {{#if this.oidcProvider}}

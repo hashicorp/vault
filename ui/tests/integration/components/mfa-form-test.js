@@ -1,10 +1,11 @@
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fillIn, click, waitUntil } from '@ember/test-helpers';
 import { run, later } from '@ember/runloop';
+import { VALIDATION_ERROR } from 'vault/components/mfa-form';
 
 module('Integration | Component | mfa-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,6 +18,14 @@ module('Integration | Component | mfa-form', function (hooks) {
       data: { username: 'foo', password: 'bar' },
     };
     this.authService = this.owner.lookup('service:auth');
+    // setup basic totp mfa_requirement
+    // override in tests that require different scenarios
+    this.totpConstraint = this.server.create('mfa-method', { type: 'totp' });
+    const { mfa_requirement } = this.authService._parseMfaResponse({
+      mfa_request_id: 'test-mfa-id',
+      mfa_constraints: { test_mfa: { any: [this.totpConstraint] } },
+    });
+    this.mfaAuthData.mfa_requirement = mfa_requirement;
   });
 
   test('it should render correct descriptions', async function (assert) {
@@ -115,22 +124,11 @@ module('Integration | Component | mfa-form', function (hooks) {
   });
 
   test('it should validate mfa requirement', async function (assert) {
-    const totpConstraint = this.server.create('mfa-method', { type: 'totp' });
-    const { mfa_requirement } = this.authService._parseMfaResponse({
-      mfa_request_id: 'test-mfa-id',
-      mfa_constraints: {
-        test_mfa: {
-          any: [totpConstraint],
-        },
-      },
-    });
-    this.mfaAuthData.mfa_requirement = mfa_requirement;
-
     this.server.post('/sys/mfa/validate', (schema, req) => {
       const json = JSON.parse(req.requestBody);
       const payload = {
         mfa_request_id: 'test-mfa-id',
-        mfa_payload: { [totpConstraint.id]: ['test-code'] },
+        mfa_payload: { [this.totpConstraint.id]: ['test-code'] },
       };
       assert.deepEqual(json, payload, 'Correct mfa payload passed to validate endpoint');
       return {};
@@ -164,11 +162,10 @@ module('Integration | Component | mfa-form', function (hooks) {
     await click('[data-test-mfa-validate]');
   });
 
-  // commented out in component until specific error code can be parsed from the api response
-  skip('it should show countdown on passcode validation failure', async function (assert) {
+  test('it should show countdown on passcode already used error', async function (assert) {
     this.owner.lookup('service:auth').reopen({
       totpValidate() {
-        throw new Error('Incorrect passcode');
+        throw { errors: ['code already used; new code is available in 45 seconds'] };
       },
     });
     await render(hbs`
@@ -181,10 +178,32 @@ module('Integration | Component | mfa-form', function (hooks) {
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     later(() => run.cancelTimers(), 50);
     await click('[data-test-mfa-validate]');
+    assert
+      .dom('[data-test-mfa-countdown]')
+      .hasText('45', 'countdown renders with correct initial value from error response');
     assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
     assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
-    assert.dom('[data-test-mfa-passcode]').hasNoValue('Input value is cleared on error');
     assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
-    assert.dom('[data-test-mfa-countdown]').exists('30 second countdown renders');
+  });
+
+  test('it should show error message for passcode invalid error', async function (assert) {
+    this.owner.lookup('service:auth').reopen({
+      totpValidate() {
+        throw { errors: ['failed to validate'] };
+      },
+    });
+    await render(hbs`
+      <MfaForm
+        @clusterId={{this.clusterId}}
+        @authData={{this.mfaAuthData}}
+      />
+    `);
+
+    await fillIn('[data-test-mfa-passcode]', 'test-code');
+    later(() => run.cancelTimers(), 50);
+    await click('[data-test-mfa-validate]');
+    assert
+      .dom('[data-test-error]')
+      .includesText(VALIDATION_ERROR, 'Generic error message renders for passcode validation error');
   });
 });

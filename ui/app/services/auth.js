@@ -15,10 +15,9 @@ import { task, timeout } from 'ember-concurrency';
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const TOTP_NOT_CONFIGURED = 'TOTP mfa required but not configured';
 const BACKENDS = supportedAuthBackends();
 
-export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX, TOTP_NOT_CONFIGURED };
+export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
   permissions: service(),
@@ -362,21 +361,10 @@ export default Service.extend({
   async authenticate(/*{clusterId, backend, data}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
-    let resp;
 
-    try {
-      resp = await adapter.authenticate(options);
-    } catch (e) {
-      // TODO: check for totp not configured mfa error before throwing
-      const errors = this.handleError(e);
-      // stubbing error - verify once API is finalized
-      if (errors.includes(TOTP_NOT_CONFIGURED)) {
-        this.set('mfaErrors', errors);
-      }
-      throw e;
-    }
-
+    let resp = await adapter.authenticate(options);
     const { mfa_requirement, requiresAction } = this._parseMfaResponse(resp.auth?.mfa_requirement);
+
     if (mfa_requirement) {
       if (requiresAction) {
         return { mfa_requirement };

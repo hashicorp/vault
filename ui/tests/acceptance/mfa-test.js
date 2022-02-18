@@ -132,4 +132,21 @@ module('Acceptance | mfa', function (hooks) {
     await click('[data-test-mfa-validate]');
     didLogin(assert);
   });
+
+  test('it should render unauthorized message for push failure', async function (assert) {
+    await login('mfa-j');
+    assert.dom('[data-test-auth-form]').doesNotExist('Auth form hidden when mfa fails');
+    assert.dom('[data-test-empty-state-title]').hasText('Unauthorized', 'Error title renders');
+    assert
+      .dom('[data-test-empty-state-subText]')
+      .hasText('PingId MFA validation failed', 'Error message from server renders');
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator.',
+        'Error description renders'
+      );
+    await click('[data-test-mfa-error] button');
+    assert.dom('[data-test-auth-form]').exists('Auth form renders after mfa error dismissal');
+  });
 });
