@@ -17,4 +17,4 @@ The new default value of `algorithm_signer` for SSH CA roles has been changed
 to `rsa-sha2-256` from `ssh-rsa`. Existing roles will be migrated to
 explicitly specify the `algorithm_signer=ssh-rsa` for RSA keys if they used
 the implicit (empty) default, but newly created roles will use the new default
-value (preferring `rsa-sha2-256`.
+value (preferring a literal `default` which presently uses `rsa-sha2-256`).
