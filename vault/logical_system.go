@@ -25,11 +25,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -68,18 +68,19 @@ func systemBackendMemDBSchema() *memdb.DBSchema {
 	return systemSchema
 }
 
+type PolicyMFABackend struct {
+	*MFABackend
+}
+
 func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
 	b := &SystemBackend{
-		Core:      core,
-		db:        db,
-		logger:    logger,
-		mfaLogger: core.baseLogger.Named("mfa"),
-		mfaLock:   &sync.RWMutex{},
+		Core:       core,
+		db:         db,
+		logger:     logger,
+		mfaBackend: NewPolicyMFABackend(core, logger),
 	}
-
-	core.AddLogger(b.mfaLogger)
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
@@ -147,6 +148,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"rekey-recovery-key/init",
 				"rekey-recovery-key/update",
 				"rekey-recovery-key/verify",
+				"mfa/validate",
 			},
 
 			LocalStorage: []string{
@@ -178,13 +180,14 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.remountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.inFlightRequestPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -223,11 +226,10 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core      *Core
-	db        *memdb.MemDB
-	mfaLock   *sync.RWMutex
-	mfaLogger log.Logger
-	logger    log.Logger
+	Core       *Core
+	db         *memdb.MemDB
+	logger     log.Logger
+	mfaBackend *PolicyMFABackend
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -1199,11 +1201,53 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 			logical.ErrInvalidRequest
 	}
 
-	if err = validateMountPath(toPath); err != nil {
-		return handleError(fmt.Errorf("'to' %v", err))
+	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
+	toPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, toPath)
+
+	if err = validateMountPath(toPathDetails.MountPath); err != nil {
+		return handleError(fmt.Errorf("invalid destination mount: %v", err))
 	}
 
-	entry := b.Core.router.MatchingMountEntry(ctx, fromPath)
+	// Check that target is a valid auth mount, if source is an auth mount
+	if strings.HasPrefix(fromPathDetails.MountPath, credentialRoutePrefix) {
+		if !strings.HasPrefix(toPathDetails.MountPath, credentialRoutePrefix) {
+			return handleError(fmt.Errorf("cannot remount auth mount to non-auth mount %q", toPathDetails.MountPath))
+		}
+		// Prevent target and source auth mounts from being in a protected path
+		for _, auth := range protectedAuths {
+			if strings.HasPrefix(fromPathDetails.MountPath, auth) {
+				return handleError(fmt.Errorf("cannot remount %q", fromPathDetails.MountPath))
+			}
+		}
+
+		for _, auth := range protectedAuths {
+			if strings.HasPrefix(toPathDetails.MountPath, auth) {
+				return handleError(fmt.Errorf("cannot remount to destination %q", toPathDetails.MountPath))
+			}
+		}
+	} else {
+		// Prevent target and source non-auth mounts from being in a protected path
+		for _, p := range protectedMounts {
+			if strings.HasPrefix(fromPathDetails.MountPath, p) {
+				return handleError(fmt.Errorf("cannot remount %q", fromPathDetails.MountPath))
+			}
+
+			if strings.HasPrefix(toPathDetails.MountPath, p) {
+				return handleError(fmt.Errorf("cannot remount to destination %+v", toPathDetails.MountPath))
+			}
+		}
+	}
+
+	entry := b.Core.router.MatchingMountEntry(ctx, sanitizePath(fromPath))
+
+	if entry == nil {
+		return handleError(fmt.Errorf("no matching mount at %q", sanitizePath(fromPath)))
+	}
+
+	if match := b.Core.router.MountConflict(ctx, sanitizePath(toPath)); match != "" {
+		return handleError(fmt.Errorf("path already in use at %q", match))
+	}
+
 	// If we are a performance secondary cluster we should forward the request
 	// to the primary. We fail early here since the view in use isn't marked as
 	// readonly
@@ -1211,31 +1255,82 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return nil, logical.ErrReadOnly
 	}
 
+	migrationID, err := b.Core.createMigrationStatus(fromPathDetails, toPathDetails)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating migration status %+v", err)
+	}
+	// Start up a goroutine to handle the remount operations, and return early to the caller
+	go func(migrationID string) {
+		b.Core.stateLock.RLock()
+		defer b.Core.stateLock.RUnlock()
+
+		logger := b.Core.Logger().Named("mounts.migration").With("migration_id", migrationID, "namespace", ns.Path, "to_path", toPath, "from_path", fromPath)
+
+		err := b.moveMount(ns, logger, migrationID, entry, fromPathDetails, toPathDetails)
+		if err != nil {
+			logger.Error("remount failed", "error", err)
+			if err := b.Core.setMigrationStatus(migrationID, MigrationFailureStatus); err != nil {
+				logger.Error("Setting migration status failed", "error", err, "target_status", MigrationFailureStatus)
+			}
+		}
+	}(migrationID)
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"migration_id": migrationID,
+		},
+	}
+	resp.AddWarning("Mount move has been queued. Progress will be reported in Vault's server log, tagged with the returned migration_id")
+	return resp, nil
+}
+
+// moveMount carries out a remount operation on the secrets engine or auth method, updating the migration status as required
+// It is expected to be called asynchronously outside of a request context, hence it creates a context derived from the active one
+// and intermittently checks to see if it is still open.
+func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, migrationID string, entry *MountEntry, fromPathDetails, toPathDetails namespace.MountPathDetails) error {
+	logger.Info("Starting to update the mount table and revoke leases")
+	revokeCtx := namespace.ContextWithNamespace(b.Core.activeContext, ns)
+
+	var err error
 	// Attempt remount
-	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.perfStandby); err != nil {
-		b.Backend.Logger().Error("remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
-		return handleError(err)
+	switch entry.Table {
+	case credentialTableType:
+		err = b.Core.remountCredential(revokeCtx, fromPathDetails, toPathDetails, !b.Core.perfStandby)
+	case mountTableType:
+		err = b.Core.remountSecretsEngine(revokeCtx, fromPathDetails, toPathDetails, !b.Core.perfStandby)
+	default:
+		return fmt.Errorf("cannot remount mount of table %q", entry.Table)
 	}
 
-	// Get the view path if available
-	var viewPath string
-	if entry != nil {
-		viewPath = entry.ViewPath()
+	if err != nil {
+		return err
 	}
 
+	if err := revokeCtx.Err(); err != nil {
+		return err
+	}
+
+	logger.Info("Removing the source mount from filtered paths on secondaries")
 	// Remove from filtered mounts and restart evaluation process
-	if err := b.Core.removePathFromFilteredPaths(ctx, ns.Path+fromPath, viewPath); err != nil {
-		b.Backend.Logger().Error("filtered path removal failed", fromPath, "error", err)
-		return handleError(err)
+	if err := b.Core.removePathFromFilteredPaths(revokeCtx, fromPathDetails.GetFullPath(), entry.ViewPath()); err != nil {
+		return err
 	}
 
-	// Update quotas with the new path
-	if err := b.Core.quotaManager.HandleRemount(ctx, ns.Path, sanitizePath(fromPath), sanitizePath(toPath)); err != nil {
-		b.Core.logger.Error("failed to update quotas after remount", "ns_path", ns.Path, "from_path", fromPath, "to_path", toPath, "error", err)
-		return handleError(err)
+	if err := revokeCtx.Err(); err != nil {
+		return err
 	}
 
-	return nil, nil
+	logger.Info("Updating quotas associated with the source mount")
+	// Update quotas with the new path and namespace
+	if err := b.Core.quotaManager.HandleRemount(revokeCtx, fromPathDetails, toPathDetails); err != nil {
+		return err
+	}
+
+	if err := b.Core.setMigrationStatus(migrationID, MigrationSuccessStatus); err != nil {
+		return err
+	}
+	logger.Info("Completed mount move operations")
+	return nil
 }
 
 // handleAuthTuneRead is used to get config settings on a auth path
@@ -1247,6 +1342,34 @@ func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Req
 			logical.ErrInvalidRequest
 	}
 	return b.handleTuneReadCommon(ctx, "auth/"+path)
+}
+
+func (b *SystemBackend) handleRemountStatusCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
+
+	migrationID := data.Get("migration_id").(string)
+	if migrationID == "" {
+		return logical.ErrorResponse(
+				"migrationID must be specified"),
+			logical.ErrInvalidRequest
+	}
+
+	migrationInfo := b.Core.readMigrationStatus(migrationID)
+	if migrationInfo == nil {
+		// If the migration info is not found and this is a perf secondary
+		// forward the request to the primary cluster
+		if repState.HasState(consts.ReplicationPerformanceSecondary) {
+			return nil, logical.ErrReadOnly
+		}
+		return nil, nil
+	}
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"migration_id":   migrationID,
+			"migration_info": migrationInfo,
+		},
+	}
+	return resp, nil
 }
 
 // handleMountTuneRead is used to get config settings on a backend
@@ -4245,6 +4368,41 @@ type HAStatusNode struct {
 	LastEcho       *time.Time `json:"last_echo"`
 }
 
+func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	versions := make([]VaultVersion, 0)
+	respKeys := make([]string, 0)
+
+	for versionString, ts := range b.Core.versionTimestamps {
+		versions = append(versions, VaultVersion{
+			Version:            versionString,
+			TimestampInstalled: ts,
+		})
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].TimestampInstalled.Before(versions[j].TimestampInstalled)
+	})
+
+	respKeyInfo := map[string]interface{}{}
+
+	for i, v := range versions {
+		respKeys = append(respKeys, v.Version)
+
+		entry := map[string]interface{}{
+			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"previous_version":    nil,
+		}
+
+		if i > 0 {
+			entry["previous_version"] = versions[i-1].Version
+		}
+
+		respKeyInfo[v.Version] = entry
+	}
+
+	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4263,7 +4421,7 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
-		return fmt.Errorf("invalid listing visilibity type")
+		return fmt.Errorf("invalid listing visibility type")
 	}
 
 	return nil
@@ -4484,12 +4642,21 @@ in the plugin catalog.`,
 	},
 
 	"remount": {
-		"Move the mount point of an already-mounted backend.",
+		"Move the mount point of an already-mounted backend, within or across namespaces",
 		`
 This path responds to the following HTTP methods.
 
     POST /sys/remount
         Changes the mount point of an already-mounted backend.
+		`,
+	},
+
+	"remount-status": {
+		"Check the status of a mount move operation",
+		`
+This path responds to the following HTTP methods.
+    GET /sys/remount/status/:migration_id
+		Check the status of a mount move operation for the given migration_id
 		`,
 	},
 
@@ -5035,5 +5202,14 @@ This path responds to the following HTTP methods.
 	"list-leases": {
 		"List leases associated with this Vault cluster",
 		"Requires sudo capability. List leases associated with this Vault cluster",
+	},
+	"version-history": {
+		"List historical version changes sorted by installation time in ascending order.",
+		`
+This path responds to the following HTTP methods.
+
+    LIST /
+        Returns a list historical version changes sorted by installation time in ascending order.
+		`,
 	},
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -683,6 +684,175 @@ func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_remount_auth(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, _ := testCoreSystemBackend(t)
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass1/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/userpass1"
+	req.Data["to"] = "auth/userpass2"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	RetryUntil(t, 5*time.Second, func() error {
+		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
+		}
+		return nil
+	})
+}
+
+func TestSystemBackend_remount_auth_invalid(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/unknown"
+	req.Data["to"] = "auth/foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "no matching mount at \"auth/unknown/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "foo"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount auth mount to non-auth mount \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
+func TestSystemBackend_remount_auth_protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/token"
+	req.Data["to"] = "auth/foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount \"auth/token/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["from"] = "auth/foo"
+	req.Data["to"] = "auth/token"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount to destination \"auth/token/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
+func TestSystemBackend_remount_auth_destinationInUse(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, _ := testCoreSystemBackend(t)
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass1/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userpassMe2 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass2/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/userpass1"
+	req.Data["to"] = "auth/userpass2"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass2/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "auth/userpass2/mypass"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass2/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	userpassMe3 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass3/mypass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Data["to"] = "auth/userpass3/"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass3/mypass/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
 func TestSystemBackend_remount(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -691,12 +861,18 @@ func TestSystemBackend_remount(t *testing.T) {
 	req.Data["to"] = "foo"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
+	RetryUntil(t, 5*time.Second, func() error {
+		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
+		}
+		return nil
+	})
 }
 
 func TestSystemBackend_remount_invalid(t *testing.T) {
@@ -710,8 +886,8 @@ func TestSystemBackend_remount_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `no matching mount at "unknown/"` {
-		t.Fatalf("bad: %v", resp)
+	if !strings.Contains(resp.Data["error"].(string), "no matching mount at \"unknown/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
 	}
 }
 
@@ -725,8 +901,8 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `cannot remount "sys/"` {
-		t.Fatalf("bad: %v", resp)
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount \"sys/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
 	}
 }
 
@@ -741,7 +917,7 @@ func TestSystemBackend_remount_clean(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path 'foo//bar' does not match cleaned path 'foo/bar'` {
+	if resp.Data["error"] != `invalid destination mount: path 'foo//bar/' does not match cleaned path 'foo/bar/'` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -757,7 +933,7 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain non-printable characters` {
+	if resp.Data["error"] != `invalid destination mount: path cannot contain non-printable characters` {
 		t.Fatalf("bad: %v", resp)
 	}
 }

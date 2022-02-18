@@ -16,9 +16,9 @@ This program is intended to be largely a self-service process with links and gui
 
 Vault is an Identity-based security solution that leverages trusted sources of identity to keep secrets and application data secured with one centralized, audited workflow for tightly controlling access to secrets across applications, systems, and infrastructure while encrypting data both in flight and at rest. For a full description of the current features please refer to the Vault [website](/). 
 
-Vault has a secure [plugin](/docs/internals/plugins) architecture. Vault’s plugins are completely separate, standalone applications that Vault executes and communicates with over RPC. This means the plugin process does not share the same memory space as Vault and therefore can only access the interfaces and arguments given to it. 
+Vault has a secure [plugin](/docs/internals/plugins) architecture. Vault’s plugins are completely separate, standalone applications that Vault executes and communicates with over RPC. This means the plugin process does not share the same memory space as Vault and therefore can only access the interfaces and arguments given to it.
 
-Vault plugins can be built-in and bundled with the Vault binary, or be external that has to be manually mounted. Built-in plugins are developed only by HashiCorp, while external plugins can be developed by HashiCorp, technology partners, or the community. There is a curated collection of all plugins, both built-in and external, located on the [Plugin Portal](/docs/plugin-portal).
+Vault plugins can be built-in and bundled with the Vault binary, or be external that has to be manually mounted. Built-in plugins are developed by HashiCorp, while external plugins can be developed by HashiCorp, technology partners, or the community. There is a curated collection of all plugins, both built-in and external, located on the [Plugin Portal](/docs/plugin-portal).
 
 The diagram below depicts the key Vault integration categories and types.
 
@@ -30,20 +30,23 @@ Main Vault categories for partners to integrate with include:
 
 **Runtime Integrations**: These types of integrations include integrations developed by partners that work with existing customer deployments of Vault and the partner’s solution.
 
-HSM (Hardware Security Module) are specific types of runtime integrations and provide an added level of security and compliance. The HSM communicates with Vault using the PKCS#11 protocol thereby resulting in the integration to primarily involve verification of the operation of the functionality. You can find more information about Vault HSM here [here](/docs/enterprise/hsm).
+HSM (Hardware Security Module) are specific types of runtime integrations and provide an added level of security and compliance. The HSM communicates with Vault using the PKCS#11 protocol, thereby resulting in the integration to primarily involve verification of the operation of the functionality. You can find more information about Vault's HSM support [here](/docs/enterprise/hsm).
 
--> **Note:** Integrations related Vault’s [storage](/docs/concepts/storage) backend, [auto auth](/docs/agent/autoauth) and [auto unseal](/docs/concepts/seal#auto-unseal) functionality are not encouraged.  Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) for any questions related to this.
+-> **Note:** Integrations related Vault’s [storage](/docs/concepts/storage) backend, [auto auth](/docs/agent/autoauth), and [auto unseal](/docs/concepts/seal#auto-unseal) functionality are not encouraged.  Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) for any questions related to this.
 
 **Audit/Monitoring & Compliance**: Audit/Monitoring and Compliance are components in Vault that keep a detailed log of all requests and responses to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors. Vault supports multiple audit devices to support your business use case. You can find more information about Vault Audit Devices [here](/docs/audit/).
 
-**Secrets Engines**: Secrets engines are plugin components which store, generate, or encrypt data. Secrets engines are provided with some set of data that perform actions on that data, and then return a result. Some secrets engines store and read data, like encrypted in-memory data structure, and secrets engines connect to other services. Examples of secrets engines include Identity modules of Cloud providers like AWS, Azure IAM models, Cloud (LDAP), database or key management. You can find more information about Vault Secrets Engines [here](/docs/secrets/).
+**Secrets Engines**: Secrets engines are plugin components which store, generate, or encrypt data. Secrets engines are provided with some set of data that perform actions on that data, and then return a result. Some secrets engines store and read data, like encrypted in-memory data structure, and secrets engines connect to other services. Examples of secrets engines include identity modules of Cloud providers like AWS, Azure IAM models, Cloud (LDAP), database or key management. You can find more information about Vault secrets engines [here](/docs/secrets/).
 
 ### HCP Vault
-HCP Vault is a managed version of Vault which is operated by HashiCorp to allow customers to quickly get up and running. HCP Vault uses the same binary as self-managed Vault, and offers a consistent user experience. You can use the same Vault clients to communicate with HCP Vault as you use to communicate with Vault.
- 
-Most runtime integrations can be verified with HCP Vault.  Upon completion of the validation a partner will receive a HCP Vault Verified Badge which will be displayed on their partner page and can also be used on their own website to help provide better visibility and differentiation to customers. 
+HCP Vault is a managed version of Vault which is operated by HashiCorp to allow customers to quickly get up and running. HCP Vault uses the same binary as self-managed Vault, and offers a consistent user experience. You can use the same Vault clients to communicate with HCP Vault as you use to communicate with Vault. Most runtime integrations can be verified with HCP Vault.
 
-<img src="/img/HCPV_badge.png" style={{display:'block', margin:'auto', width:'200px', height:'200px'}}/>
+Sign up for HCP Vault [here](https://portal.cloud.hashicorp.com/) and check out [this](https://learn.hashicorp.com/collections/vault/cloud) learn guide for quickly getting started.    
+
+### Vault Integration Badges
+There are two types of badges that partners could receive: Vault Enterprise Verified and HCP Vault Verified badges. Partners will be issued the Vault Enterprise badge for integrations that work with Vault Enterprise features such as namespaces, HSM support, or key management.  Partners will be issued the HCP Vault badge once their integration has been verified to work with HCP Vault. The badge(s) would be displayed on their partner page (example: [MongoDB](https://www.hashicorp.com/partners/tech/mongodb#vault) and can also be used on their own website to help provide better visibility and differentiation to customers. The process for verification of these integrations is detailed below.
+
+<span style={{display:'block', textAlign:'center'}}><img src="/img/VaultEnterprise_badge.png" style={{width:'200px', height:'200px'}}/><img src="/img/HCPV_badge.png" style={{width:'200px', height:'200px'}}/></span>
 
 ## Development Process
 
@@ -134,7 +137,7 @@ At this stage, it is expected that the integration is fully complete, the necess
 
 For Auth or Secret Engine plugins specifically, once the plugin has been validated by HashiCorp, it is recommended the plugin be hosted on Github so it can more easily be downloaded and installed within Vault. We also encourage partners to list their plugin on the [Vault Plugin Portal](/docs/plugin-portal). This is in addition to the listing of the plugin on the technology partners’ dedicated HashiCorp partner page. To have the plugin listed on the portal page, please do a pull request via the “edit in GitHub” link on the bottom of the page and add the plugin in the partner section.
 
-For HCP Vault validations, the partner will be issued an HCP Verified badge and will have this displayed on their partner page.
+For HCP Vault validations, the partner will be issued an HCP Vault Verified badge and will have this displayed on their partner page.
 
 ### 6. Support
 

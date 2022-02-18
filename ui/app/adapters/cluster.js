@@ -126,6 +126,19 @@ export default ApplicationAdapter.extend({
     return this.ajax(url, verb, options);
   },
 
+  mfaValidate({ mfa_request_id, mfa_constraints }) {
+    const options = {
+      data: {
+        mfa_request_id,
+        mfa_payload: mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
+          obj[selectedMethod.id] = passcode ? [passcode] : [];
+          return obj;
+        }, {}),
+      },
+    };
+    return this.ajax('/v1/sys/mfa/validate', 'POST', options);
+  },
+
   urlFor(endpoint) {
     if (!ENDPOINTS.includes(endpoint)) {
       throw new Error(

@@ -6,7 +6,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 // these arrays define the order in which the fields will be displayed
 // see
-// https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
+// https://github.com/hashicorp/vault/blob/main/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
 const OTP_FIELDS = [
   'name',
   'keyType',
