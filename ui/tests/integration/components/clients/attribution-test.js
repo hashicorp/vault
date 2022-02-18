@@ -55,6 +55,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     `);
 
     assert.dom('[data-test-component="empty-state"]').doesNotExist();
+    assert.dom('[data-test-horizontal-bar-chart]').exists('chart displays');
     assert.dom('[data-test-attribution-export-button]').exists();
     assert
       .dom('[data-test-attribution-description]')
@@ -109,6 +110,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     `);
 
     assert.dom('[data-test-component="empty-state"]').doesNotExist();
+    assert.dom('[data-test-horizontal-bar-chart]').exists('chart displays');
     assert.dom('[data-test-attribution-export-button]').exists();
     assert
       .dom('[data-test-attribution-description]')
