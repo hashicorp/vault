@@ -15,13 +15,277 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
+
+func TestActivityLog_PrecomputeMonthNamespaceMountBreakdowns(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		Physical: storage.Underlying(),
+	}
+
+	cluster := NewTestCluster(t, coreConfig, nil)
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0].Core
+	TestWaitActive(t, core)
+
+	a := core.activityLog
+	ctx := namespace.RootContext(nil)
+	var err error
+
+	namespaces := make([]*namespace.Namespace, 0, 6)
+	mounts := make(map[string][]*MountEntry)
+	ns := namespace.RootNamespace
+	namespaces = append(namespaces, ns)
+
+	for i := 1; i < 3; i++ {
+		_, err = core.HandleRequest(namespace.RootContext(ctx), &logical.Request{
+			ClientToken: cluster.RootToken,
+			Operation:   logical.CreateOperation,
+			Path:        fmt.Sprintf("sys/namespaces/ns%d", i),
+			Storage:     storage,
+		})
+		require.NoError(t, err)
+		ns = core.namespaceByPath(fmt.Sprintf("ns%d/", i))
+		namespaces = append(namespaces, ns)
+	}
+
+	for i := 0; i < 3; i++ {
+		me1 := &MountEntry{
+			Table: credentialTableType,
+			Path:  "up1/",
+			Type:  "userpass",
+		}
+		err = core.enableCredential(namespace.ContextWithNamespace(ctx, namespaces[i]), me1)
+		require.NoError(t, err)
+
+		me2 := &MountEntry{
+			Table: credentialTableType,
+			Path:  "up2/",
+			Type:  "userpass",
+		}
+		err = core.enableCredential(namespace.ContextWithNamespace(ctx, namespaces[i]), me2)
+		require.NoError(t, err)
+		mounts[namespaces[i].ID] = []*MountEntry{me1, me2}
+	}
+
+	// Create 40 records that represent client activity
+	clientRecords := make([]*activity.EntityRecord, 0, 40)
+	clientNamespaces := []string{namespaces[0].ID, namespaces[1].ID, namespaces[2].ID, namespaces[0].ID}
+
+	for i := 0; i < 40; i++ {
+		nsID := clientNamespaces[i/10]
+		accessor := mounts[nsID][i%2].Accessor
+		clientRecords = append(clientRecords, &activity.EntityRecord{
+			ClientID:      fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
+			NamespaceID:   nsID,
+			Timestamp:     time.Now().Unix(),
+			NonEntity:     i%2 == 0,
+			MountAccessor: accessor,
+		})
+	}
+
+	// Billing period is from Jan to June
+	january := timeutil.StartOfMonth(time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC))
+	february := timeutil.StartOfMonth(time.Date(2021, 2, 1, 0, 0, 0, 0, time.UTC))
+	march := timeutil.StartOfMonth(time.Date(2021, 3, 1, 0, 0, 0, 0, time.UTC))
+	april := timeutil.StartOfMonth(time.Date(2021, 4, 1, 0, 0, 0, 0, time.UTC))
+	may := timeutil.StartOfMonth(time.Date(2021, 5, 1, 0, 0, 0, 0, time.UTC))
+	june := timeutil.StartOfMonth(time.Date(2021, 6, 1, 0, 0, 0, 0, time.UTC))
+
+	mayClients := make([]*activity.EntityRecord, 0, 25)
+	for i := 0; i < 20; i++ {
+		mayClients = append(mayClients, clientRecords[i])
+	}
+	for i := 0; i < 5; i++ {
+		mayClients = append(mayClients, clientRecords[35+i])
+	}
+
+	segments := []struct {
+		StartTime int64
+		Segment   uint64
+		Clients   []*activity.EntityRecord
+	}{
+		{
+			// Jan 5 clients. All new.
+			january.Unix(),
+			0,
+			clientRecords[:5],
+		},
+		{
+			// Feb 10 clients. 5 overlapping with Jan. 5 new.
+			february.Unix(),
+			0,
+			clientRecords[:10],
+		},
+		{
+			// March 15 clients. 5 overlapping with Jan. 5 overlapping with Feb. 5 new.
+			march.Unix(),
+			0,
+			clientRecords[:15],
+		},
+		{
+			// April 20 clients. All new.
+			april.Unix(),
+			0,
+			clientRecords[15:35],
+		},
+		{
+			// May 25 clients. 5 overlapping with each of the previous months. 5 new.
+			may.Unix(),
+			0,
+			mayClients,
+		},
+	}
+
+	intents := []*ActivityIntentLog{
+		{
+			PreviousMonth: january.Unix(),
+			NextMonth:     february.Unix(),
+		},
+		{
+			PreviousMonth: february.Unix(),
+			NextMonth:     march.Unix(),
+		},
+		{
+			PreviousMonth: march.Unix(),
+			NextMonth:     april.Unix(),
+		},
+		{
+			PreviousMonth: april.Unix(),
+			NextMonth:     may.Unix(),
+		},
+		{
+			PreviousMonth: may.Unix(),
+			NextMonth:     june.Unix(),
+		},
+	}
+
+	// Write intent log for each month, rollover to the next month and trigger
+	// precompute for previous month.
+	for i, intent := range intents {
+		eal := &activity.EntityActivityLog{
+			Clients: segments[i].Clients,
+		}
+		data, err := proto.Marshal(eal)
+		require.NoError(t, err)
+
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segments[i].StartTime, segments[i].Segment)
+
+		WriteToStorage(t, core, path, data)
+
+		data, err = json.Marshal(intent)
+		require.NoError(t, err)
+		WriteToStorage(t, core, "sys/counters/activity/endofmonth", data)
+
+		a.SetStartTimestamp(intent.NextMonth)
+
+		err = a.precomputedQueryWorker(ctx)
+		require.NoError(t, err)
+
+		expectMissingSegment(t, core, "sys/counters/activity/endofmonth")
+	}
+
+	actual, err := a.handleQuery(ctx, january, june)
+	require.NoError(t, err)
+
+	// by_namespace breakdown
+	require.Len(t, actual["by_namespace"].([]*ResponseNamespace), 3)
+	require.Equal(t, 20, actual["by_namespace"].([]*ResponseNamespace)[0].Counts.Clients)
+
+	// mount breakdown within by_namespace
+	require.Equal(t, 10, actual["by_namespace"].([]*ResponseNamespace)[0].Mounts[0].Counts.Clients)
+	require.Equal(t, 10, actual["by_namespace"].([]*ResponseNamespace)[0].Mounts[1].Counts.Clients)
+
+	// second namespace
+	require.Equal(t, 10, actual["by_namespace"].([]*ResponseNamespace)[1].Counts.Clients)
+	require.Equal(t, 5, actual["by_namespace"].([]*ResponseNamespace)[1].Mounts[0].Counts.Clients)
+	require.Equal(t, 5, actual["by_namespace"].([]*ResponseNamespace)[1].Mounts[1].Counts.Clients)
+
+	// third namespace
+	require.Equal(t, 10, actual["by_namespace"].([]*ResponseNamespace)[2].Counts.Clients)
+	require.Equal(t, 5, actual["by_namespace"].([]*ResponseNamespace)[2].Mounts[0].Counts.Clients)
+	require.Equal(t, 5, actual["by_namespace"].([]*ResponseNamespace)[2].Mounts[1].Counts.Clients)
+
+	// May: 25 total, 5 new
+	require.Equal(t, 25, actual["months"].([]*ResponseMonth)[0].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[0].NewClients.Counts.Clients)
+
+	// May: namespace breakdown
+	require.Equal(t, 15, actual["months"].([]*ResponseMonth)[0].Namespaces[0].Counts.Clients)
+	require.Equal(t, 10, actual["months"].([]*ResponseMonth)[0].Namespaces[1].Counts.Clients)
+
+	// May: mount breakdown
+	require.Equal(t, 8, actual["months"].([]*ResponseMonth)[0].Namespaces[0].Mounts[0].Counts.Clients)
+	require.Equal(t, 7, actual["months"].([]*ResponseMonth)[0].Namespaces[0].Mounts[1].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[0].Namespaces[1].Mounts[0].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[0].Namespaces[1].Mounts[1].Counts.Clients)
+
+	// April: 20 total, 20 new
+	require.Equal(t, 20, actual["months"].([]*ResponseMonth)[1].Counts.Clients)
+	require.Equal(t, 20, actual["months"].([]*ResponseMonth)[1].NewClients.Counts.Clients)
+
+	// April: namespace breakdown
+	require.Equal(t, 10, actual["months"].([]*ResponseMonth)[1].Namespaces[0].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[1].Namespaces[1].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[1].Namespaces[2].Counts.Clients)
+
+	// April: mount breakdown
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[1].Namespaces[0].Mounts[0].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[1].Namespaces[0].Mounts[1].Counts.Clients)
+	require.Equal(t, 3, actual["months"].([]*ResponseMonth)[1].Namespaces[1].Mounts[0].Counts.Clients)
+	require.Equal(t, 2, actual["months"].([]*ResponseMonth)[1].Namespaces[1].Mounts[1].Counts.Clients)
+	require.Equal(t, 3, actual["months"].([]*ResponseMonth)[1].Namespaces[2].Mounts[0].Counts.Clients)
+	require.Equal(t, 2, actual["months"].([]*ResponseMonth)[1].Namespaces[2].Mounts[1].Counts.Clients)
+
+	// March: 15 total, 5 new
+	require.Equal(t, 15, actual["months"].([]*ResponseMonth)[2].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[2].NewClients.Counts.Clients)
+
+	// March: namespace breakdown
+	require.Equal(t, 10, actual["months"].([]*ResponseMonth)[2].Namespaces[0].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[2].Namespaces[1].Counts.Clients)
+
+	// March: mount breakdown
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[2].Namespaces[0].Mounts[0].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[2].Namespaces[0].Mounts[1].Counts.Clients)
+	require.Equal(t, 3, actual["months"].([]*ResponseMonth)[2].Namespaces[1].Mounts[0].Counts.Clients)
+	require.Equal(t, 2, actual["months"].([]*ResponseMonth)[2].Namespaces[1].Mounts[1].Counts.Clients)
+
+	// February: 10 total, 5 new
+	require.Equal(t, 10, actual["months"].([]*ResponseMonth)[3].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[3].NewClients.Counts.Clients)
+
+	// February: namespace breakdown
+	require.Equal(t, 10, actual["months"].([]*ResponseMonth)[3].Namespaces[0].Counts.Clients)
+
+	// February: mount breakdown
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[3].Namespaces[0].Mounts[0].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[3].Namespaces[0].Mounts[1].Counts.Clients)
+
+	// January: 5 total, 5 new
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[4].Counts.Clients)
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[4].NewClients.Counts.Clients)
+
+	// January, namespace breakdown
+	require.Equal(t, 5, actual["months"].([]*ResponseMonth)[4].Namespaces[0].Counts.Clients)
+
+	// January: mount breakdown
+	require.Equal(t, 3, actual["months"].([]*ResponseMonth)[4].Namespaces[0].Mounts[0].Counts.Clients)
+	require.Equal(t, 2, actual["months"].([]*ResponseMonth)[4].Namespaces[0].Mounts[1].Counts.Clients)
+}
 
 func TestActivityLog_Creation(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
@@ -121,7 +385,7 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	id, isTWE := te.CreateClientID()
-	a.HandleTokenUsage(te, id, isTWE)
+	a.HandleTokenUsage(context.Background(), te, id, isTWE)
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -138,7 +402,7 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	id, isTWE = teNew.CreateClientID()
-	a.HandleTokenUsage(teNew, id, isTWE)
+	a.HandleTokenUsage(context.Background(), teNew, id, isTWE)
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -227,6 +491,15 @@ func readSegmentFromStorage(t *testing.T, c *Core, path string) *logical.Storage
 	}
 	if logSegment == nil {
 		t.Fatalf("expected non-nil log segment at %q", path)
+	}
+
+	value, notCompressed, err := compressutil.Decompress(logSegment.Value)
+	// If the data wasn't compressed, fallback to old behavior
+	if !notCompressed {
+		logSegment.Value = value
+	}
+	if err != nil {
+		return logSegment
 	}
 
 	return logSegment
@@ -366,12 +639,12 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	idNonEntity, isTWE := tokenEntryOne.CreateClientID()
 
 	for i := 0; i < 3; i++ {
-		a.HandleTokenUsage(&tokenEntryOne, idNonEntity, isTWE)
+		a.HandleTokenUsage(ctx, &tokenEntryOne, idNonEntity, isTWE)
 	}
 
 	idEntity, isTWE := entityEntry.CreateClientID()
 	for i := 0; i < 2; i++ {
-		a.HandleTokenUsage(&entityEntry, idEntity, isTWE)
+		a.HandleTokenUsage(ctx, &entityEntry, idEntity, isTWE)
 	}
 	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
@@ -398,12 +671,13 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	nonEntityTokenFlag := false
 	entityTokenFlag := false
 	for _, client := range out.Clients {
-		if client.NonEntity {
+		if client.NonEntity == true {
 			nonEntityTokenFlag = true
 			if client.ClientID != idNonEntity {
 				t.Fatalf("expected a client ID of %s, but saved instead %s", idNonEntity, client.ClientID)
 			}
-		} else {
+		}
+		if client.NonEntity == false {
 			entityTokenFlag = true
 			if client.ClientID != idEntity {
 				t.Fatalf("expected a client ID of %s, but saved instead %s", idEntity, client.ClientID)
@@ -584,8 +858,8 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	}
 	ts := time.Now().Unix()
 
-	// First 7000 should fit in one segment
-	for i := 0; i < 7000; i++ {
+	// First 4000 should fit in one segment
+	for i := 0; i < 4000; i++ {
 		a.AddEntityToFragment(genID(i), "root", ts)
 	}
 
@@ -609,12 +883,12 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	if len(entityLog0.Clients) != 7000 {
-		t.Fatalf("unexpected entity length. Expected %d, got %d", 7000, len(entityLog0.Clients))
+	if len(entityLog0.Clients) != 4000 {
+		t.Fatalf("unexpected entity length. Expected %d, got %d", 4000, len(entityLog0.Clients))
 	}
 
-	// 7000 more local entities
-	for i := 7000; i < 14000; i++ {
+	// 4000 more local entities
+	for i := 4000; i < 8000; i++ {
 		a.AddEntityToFragment(genID(i), "root", ts)
 	}
 
@@ -629,7 +903,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 		Clients:         make([]*activity.EntityRecord, 0, 100),
 		NonEntityTokens: tokens1,
 	}
-	for i := 7000; i < 7100; i++ {
+	for i := 4000; i < 4100; i++ {
 		fragment1.Clients = append(fragment1.Clients, &activity.EntityRecord{
 			ClientID:    genID(i),
 			NamespaceID: "root",
@@ -648,7 +922,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 		Clients:         make([]*activity.EntityRecord, 0, 100),
 		NonEntityTokens: tokens2,
 	}
-	for i := 14000; i < 14100; i++ {
+	for i := 8000; i < 8100; i++ {
 		fragment2.Clients = append(fragment2.Clients, &activity.EntityRecord{
 			ClientID:    genID(i),
 			NamespaceID: "root",
@@ -679,8 +953,8 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	if len(entityLog0.Clients) != activitySegmentEntityCapacity {
-		t.Fatalf("unexpected entity length. Expected %d, got %d", activitySegmentEntityCapacity,
+	if len(entityLog0.Clients) != activitySegmentClientCapacity {
+		t.Fatalf("unexpected client length. Expected %d, got %d", activitySegmentClientCapacity,
 			len(entityLog0.Clients))
 	}
 
@@ -690,7 +964,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	expectedCount := 14100 - activitySegmentEntityCapacity
+	expectedCount := 8100 - activitySegmentClientCapacity
 	if len(entityLog1.Clients) != expectedCount {
 		t.Fatalf("unexpected entity length. Expected %d, got %d", expectedCount,
 			len(entityLog1.Clients))
@@ -703,7 +977,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	for _, e := range entityLog1.Clients {
 		entityPresent[e.ClientID] = struct{}{}
 	}
-	for i := 0; i < 14100; i++ {
+	for i := 0; i < 8100; i++ {
 		expectedID := genID(i)
 		if _, present := entityPresent[expectedID]; !present {
 			t.Fatalf("entity ID %v = %v not present", i, expectedID)
@@ -1093,7 +1367,7 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 		clientSequenceNumber: 0,
 	}
 
-	a.clientTracker.activeClients = make(map[string]struct{})
+	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 }
 
 func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
@@ -1285,7 +1559,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 		if tc.refresh {
 			a.l.Lock()
 			a.fragmentLock.Lock()
-			a.clientTracker.activeClients = make(map[string]struct{})
+			a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 			a.currentSegment.startTimestamp = tc.time
 			a.fragmentLock.Unlock()
 			a.l.Unlock()
@@ -1459,7 +1733,6 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 			} else {
 				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
 			}
-
 		}
 	}
 
@@ -1805,7 +2078,7 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 func checkAPIWarnings(t *testing.T, originalEnabled, newEnabled bool, resp *logical.Response) {
 	t.Helper()
 
-	expectWarning := originalEnabled && !newEnabled
+	expectWarning := originalEnabled == true && newEnabled == false
 
 	switch {
 	case !expectWarning && resp != nil:
@@ -3333,12 +3606,14 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	ctx := namespace.RootContext(nil)
 	now := time.Now().UTC()
-	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
-	entities = entities[1:]
-	entityCounts := make(map[string]uint64)
+	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
 
-	for _, entity := range entities {
-		entityCounts[entity.NamespaceID] += 1
+	// clients[0] belongs to previous month
+	clients = clients[1:]
+
+	clientCounts := make(map[string]uint64)
+	for _, client := range clients {
+		clientCounts[client.NamespaceID] += 1
 	}
 
 	a.SetEnable(true)
@@ -3348,15 +3623,6 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		t.Fatalf("error loading clients: %v", err)
 	}
 	wg.Wait()
-
-	// entities[0] is from a previous month
-	partialMonthEntityCount := len(entities)
-	var partialMonthTokenCount int
-	for _, countByNS := range tokenCounts {
-		partialMonthTokenCount += int(countByNS)
-	}
-
-	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
 
 	results, err := a.partialMonthClientCount(ctx)
 	if err != nil {
@@ -3371,48 +3637,35 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		t.Fatalf("malformed results. got %v", results)
 	}
 
-	clientCountResponse := make([]*ClientCountInNamespace, 0)
+	clientCountResponse := make([]*ResponseNamespace, 0)
 	err = mapstructure.Decode(byNamespace, &clientCountResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, clientCount := range clientCountResponse {
-
-		if int(entityCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(entityCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
 		}
-		if int(tokenCounts[clientCount.NamespaceID]) != clientCount.Counts.NonEntityTokens {
-			t.Errorf("bad token count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(tokenCounts[clientCount.NamespaceID]), clientCount.Counts.NonEntityTokens)
-		}
-
-		totalCount := int(entityCounts[clientCount.NamespaceID] + tokenCounts[clientCount.NamespaceID])
+		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
 			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
 		}
-
 	}
 
-	entityCount, ok := results["distinct_entities"]
+	distinctEntities, ok := results["distinct_entities"]
 	if !ok {
 		t.Fatalf("malformed results. got %v", results)
 	}
-	if entityCount != partialMonthEntityCount {
-		t.Errorf("bad entity count. expected %d, got %d", partialMonthEntityCount, entityCount)
+	if distinctEntities != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
 	}
 
-	tokenCount, ok := results["non_entity_tokens"]
-	if !ok {
-		t.Fatalf("malformed results. got %v", results)
-	}
-	if tokenCount != partialMonthTokenCount {
-		t.Errorf("bad token count. expected %d, got %d", partialMonthTokenCount, tokenCount)
-	}
 	clientCount, ok := results["clients"]
 	if !ok {
 		t.Fatalf("malformed results. got %v", results)
 	}
-	if clientCount != expectedClientCount {
-		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
+	if clientCount != len(clients) {
+		t.Errorf("bad client count. expected %d, got %d", len(clients), clientCount)
 	}
 }
