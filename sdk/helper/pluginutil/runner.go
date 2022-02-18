@@ -43,15 +43,14 @@ const MultiplexingCtxKey string = "multiplex_id"
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
-	Name                string                      `json:"name" structs:"name"`
-	Type                consts.PluginType           `json:"type" structs:"type"`
-	Command             string                      `json:"command" structs:"command"`
-	Args                []string                    `json:"args" structs:"args"`
-	Env                 []string                    `json:"env" structs:"env"`
-	Sha256              []byte                      `json:"sha256" structs:"sha256"`
-	Builtin             bool                        `json:"builtin" structs:"builtin"`
-	BuiltinFactory      func() (interface{}, error) `json:"-" structs:"-"`
-	MultiplexingSupport bool                        `json:"multiplexing_support" structs:"multiplexing_support"`
+	Name           string                      `json:"name" structs:"name"`
+	Type           consts.PluginType           `json:"type" structs:"type"`
+	Command        string                      `json:"command" structs:"command"`
+	Args           []string                    `json:"args" structs:"args"`
+	Env            []string                    `json:"env" structs:"env"`
+	Sha256         []byte                      `json:"sha256" structs:"sha256"`
+	Builtin        bool                        `json:"builtin" structs:"builtin"`
+	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

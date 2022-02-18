@@ -234,7 +234,9 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		},
 	}
 
-	if !pluginRunner.MultiplexingSupport || len(extPlugin.connections) == 0 {
+	// Multiplexing support will always be false initially, but will be
+	// adjusted once we query from the plugin whether it can multiplex or not
+	if !extPlugin.multiplexingSupport || len(extPlugin.connections) == 0 {
 		c.logger.Debug("spawning a new plugin process", "plugin_name", pluginRunner.Name, "id", id)
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.PluginSets(config.PluginSets),
@@ -274,7 +276,12 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
 
-	if pluginRunner.MultiplexingSupport {
+	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn)
+	if err != nil {
+		return nil, err
+	}
+
+	if muxed {
 		// Wrap rpcClient with our implementation so that we can inject the
 		// ID into the context
 		pc.clientConn = &pluginClientConn{
@@ -289,7 +296,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	extPlugin.connections[id] = pc
 	extPlugin.name = pluginRunner.Name
-	extPlugin.multiplexingSupport = pluginRunner.MultiplexingSupport
+	extPlugin.multiplexingSupport = muxed
 
 	return extPlugin.connections[id], nil
 }
@@ -298,11 +305,11 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 // type and if it supports multiplexing. It will first attempt to run as a
 // database plugin then a backend plugin. Both of these will be run in metadata
 // mode.
-func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, bool, error) {
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
-	multiplexingSupport, err := c.isDatabasePlugin(ctx, plugin)
+	err := c.isDatabasePlugin(ctx, plugin)
 	if err == nil {
-		return consts.PluginTypeDatabase, multiplexingSupport, nil
+		return consts.PluginTypeDatabase, nil
 	}
 	merr = multierror.Append(merr, err)
 
@@ -311,7 +318,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	if err == nil {
 		err := client.Setup(ctx, &logical.BackendConfig{})
 		if err != nil {
-			return consts.PluginTypeUnknown, false, err
+			return consts.PluginTypeUnknown, err
 		}
 
 		backendType := client.Type()
@@ -319,9 +326,9 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 
 		switch backendType {
 		case logical.TypeCredential:
-			return consts.PluginTypeCredential, false, nil
+			return consts.PluginTypeCredential, nil
 		case logical.TypeLogical:
-			return consts.PluginTypeSecrets, false, nil
+			return consts.PluginTypeSecrets, nil
 		}
 	} else {
 		merr = multierror.Append(merr, err)
@@ -338,12 +345,12 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 			"error", merr.Error())
 	}
 
-	return consts.PluginTypeUnknown, false, nil
+	return consts.PluginTypeUnknown, nil
 }
 
 // isDatabasePlugin returns true if the plugin supports multiplexing. An error
 // is returned if the plugin is not a database plugin.
-func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (bool, error) {
+func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	config := pluginutil.PluginClientConfig{
 		Name:            pluginRunner.Name,
@@ -354,26 +361,22 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
 	}
+
 	// Attempt to run as database V5 or V6 multiplexed plugin
+	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
-		// At this point the pluginRunner does not know if multiplexing is
-		// supported or not. So we need to ask the plugin client itself.
-		multiplexingSupport, err := pluginutil.MultiplexingSupported(ctx, v5Client.clientConn)
-		if err != nil {
-			return false, err
-		}
-
 		// Close the client and cleanup the plugin process
 		err = c.cleanupExternalPlugin(pluginRunner.Name, v5Client.id)
 		if err != nil {
 			c.logger.Error("error closing plugin client", "error", err)
 		}
 
-		return multiplexingSupport, nil
+		return nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
+	c.logger.Debug("attempting to load database plugin as v4", "name", pluginRunner.Name)
 	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
@@ -382,11 +385,11 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 			c.logger.Error("error closing plugin client", "error", err)
 		}
 
-		return false, nil
+		return nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
 
-	return false, merr.ErrorOrNil()
+	return merr.ErrorOrNil()
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to
@@ -432,19 +435,14 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		pluginType, multiplexingSupport, err := c.getPluginTypeFromUnknown(ctx, logger, plugin)
+		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unkonwn type.
+		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
-			continue
-		}
-		if pluginType == consts.PluginTypeUnknown {
-			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
-			continue
-		}
+			if errors.Is(err, ErrPluginBadType) {
+				retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
+				continue
+			}
 
-		// Upgrade the storage
-		err = c.setInternal(ctx, pluginName, pluginType, multiplexingSupport, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
-		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
 			continue
 		}
@@ -454,7 +452,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 			logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
 		}
 
-		logger.Info("upgraded plugin type", "plugin", pluginName, "type", pluginType.String())
+		logger.Info("upgraded plugin type", "plugin", pluginName, "type", runner.Type.String())
 	}
 
 	return retErr
@@ -531,28 +529,25 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// During plugin registration, we can't know if a plugin is multiplexed or
-	// not until we run it. So we set it to false here. Once started, we ask
-	// the plugin if it is multiplexed and set this value accordingly.
-	multiplexingSupport := false
-	return c.setInternal(ctx, name, pluginType, multiplexingSupport, command, args, env, sha256)
+	_, err := c.setInternal(ctx, name, pluginType, command, args, env, sha256)
+	return err
 }
 
-func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, multiplexingSupport bool, command string, args []string, env []string, sha256 []byte) error {
+func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, command string, args []string, env []string, sha256 []byte) (*pluginutil.PluginRunner, error) {
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
 	commandFull := filepath.Join(c.directory, command)
 	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %w", err)
+		return nil, fmt.Errorf("error while validating the command path: %w", err)
 	}
 	symAbs, err := filepath.Abs(filepath.Dir(sym))
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %w", err)
+		return nil, fmt.Errorf("error while validating the command path: %w", err)
 	}
 
 	if symAbs != c.directory {
-		return errors.New("cannot execute files outside of configured plugin directory")
+		return nil, errors.New("cannot execute files outside of configured plugin directory")
 	}
 
 	// If the plugin type is unknown, we want to attempt to determine the type
@@ -560,38 +555,36 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		// entryTmp should only be used for the below type check, it uses the
 		// full command instead of the relative command.
 		entryTmp := &pluginutil.PluginRunner{
-			Name:                name,
-			Command:             commandFull,
-			Args:                args,
-			Env:                 env,
-			Sha256:              sha256,
-			Builtin:             false,
-			MultiplexingSupport: multiplexingSupport,
+			Name:    name,
+			Command: commandFull,
+			Args:    args,
+			Env:     env,
+			Sha256:  sha256,
+			Builtin: false,
 		}
 
-		pluginType, multiplexingSupport, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
+		pluginType, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if pluginType == consts.PluginTypeUnknown {
-			return ErrPluginBadType
+			return nil, ErrPluginBadType
 		}
 	}
 
 	entry := &pluginutil.PluginRunner{
-		Name:                name,
-		Type:                pluginType,
-		Command:             command,
-		Args:                args,
-		Env:                 env,
-		Sha256:              sha256,
-		Builtin:             false,
-		MultiplexingSupport: multiplexingSupport,
+		Name:    name,
+		Type:    pluginType,
+		Command: command,
+		Args:    args,
+		Env:     env,
+		Sha256:  sha256,
+		Builtin: false,
 	}
 
 	buf, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Errorf("failed to encode plugin entry: %w", err)
+		return nil, fmt.Errorf("failed to encode plugin entry: %w", err)
 	}
 
 	logicalEntry := logical.StorageEntry{
@@ -599,9 +592,9 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
-		return fmt.Errorf("failed to persist plugin entry: %w", err)
+		return nil, fmt.Errorf("failed to persist plugin entry: %w", err)
 	}
-	return nil
+	return entry, nil
 }
 
 // Delete is used to remove an external plugin from the catalog. Builtin plugins

@@ -1724,6 +1724,9 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Value: expectedCert,
 	}
 	err = storage.Put(context.Background(), entry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// get der cert
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{

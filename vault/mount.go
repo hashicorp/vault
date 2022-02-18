@@ -903,11 +903,11 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	// Verify exact match of the route
 	srcMatch := c.router.MatchingMountEntry(ctx, srcRelativePath)
 	if srcMatch == nil {
-		return fmt.Errorf("no matching mount at %+v", src)
+		return fmt.Errorf("no matching mount at %q", src.Namespace.Path+src.MountPath)
 	}
 
-	if match := c.router.MatchingMount(ctx, dstRelativePath); match != "" {
-		return fmt.Errorf("existing mount at %q", match)
+	if match := c.router.MountConflict(ctx, dstRelativePath); match != "" {
+		return fmt.Errorf("path in use at %q", match)
 	}
 
 	// Mark the entry as tainted
@@ -937,9 +937,9 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	}
 
 	c.mountsLock.Lock()
-	if match := c.router.MatchingMount(ctx, dstRelativePath); match != "" {
+	if match := c.router.MountConflict(ctx, dstRelativePath); match != "" {
 		c.mountsLock.Unlock()
-		return fmt.Errorf("existing mount at %q", match)
+		return fmt.Errorf("path in use at %q", match)
 	}
 
 	srcMatch.Tainted = false
@@ -957,8 +957,7 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 			return err
 		}
 
-		c.logger.Error("failed to update mounts table", "error", err)
-		return logical.CodedError(500, "failed to update mounts table")
+		return fmt.Errorf("failed to update mount table with error %+v", err)
 	}
 
 	// Remount the backend
@@ -973,7 +972,6 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 		return err
 	}
 
-	c.logger.Info("successful remount", "old_path", src, "new_path", dst)
 	return nil
 }
 

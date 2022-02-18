@@ -13,7 +13,7 @@ import { tracked } from '@glimmer/tracking';
  * <CalendarWidget
  * @param {array} arrayOfMonths - An array of all the months that the calendar widget iterates through.
  * @param {string} endTimeDisplay - The formatted display value of the endTime. Ex: January 2022.
- * @param {string} endTimeFromResponse - The value returned on the counters/activity endpoint, which shows the true endTime not the selected one, which can be different.
+ * @param {array} endTimeFromResponse - The value returned on the counters/activity endpoint, which shows the true endTime not the selected one, which can be different. Ex: ['2022', 0]
  * @param {function} handleClientActivityQuery - a function passed from parent. This component sends the month and year to the parent via this method which then calculates the new data.
  * @param {function} handleCurrentBillingPeriod - a function passed from parent. This component makes the parent aware that the user selected Current billing period and it handles resetting the data.
  * @param {string} startTimeDisplay - The formatted display value of the endTime. Ex: January 2022. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.

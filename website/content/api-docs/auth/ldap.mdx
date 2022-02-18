@@ -90,6 +90,8 @@ This endpoint configures the LDAP auth method.
 
 @include 'tokenfields.mdx'
 
+@include 'ldap-auth-userfilter-warning.mdx'
+
 ### Sample Request
 
 ```shell-session
