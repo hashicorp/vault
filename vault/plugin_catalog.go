@@ -234,7 +234,9 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		},
 	}
 
-	if !pluginRunner.MultiplexingSupport || len(extPlugin.connections) == 0 {
+	// Multiplexing support will always be false initially, but will be
+	// adjusted once we query from the plugin whether it can multiplex or not
+	if !extPlugin.multiplexingSupport || len(extPlugin.connections) == 0 {
 		c.logger.Debug("spawning a new plugin process", "plugin_name", pluginRunner.Name, "id", id)
 		client, err := pluginRunner.RunConfig(ctx,
 			pluginutil.PluginSets(config.PluginSets),
@@ -274,7 +276,12 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
 
-	if pluginRunner.MultiplexingSupport {
+	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn)
+	if err != nil {
+		return nil, err
+	}
+
+	if muxed {
 		// Wrap rpcClient with our implementation so that we can inject the
 		// ID into the context
 		pc.clientConn = &pluginClientConn{
@@ -289,7 +296,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	extPlugin.connections[id] = pc
 	extPlugin.name = pluginRunner.Name
-	extPlugin.multiplexingSupport = pluginRunner.MultiplexingSupport
+	extPlugin.multiplexingSupport = muxed
 
 	return extPlugin.connections[id], nil
 }
@@ -550,50 +557,36 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return nil, errors.New("cannot execute files outside of configured plugin directory")
 	}
 
-	var multiplexingSupport bool
-
-	// entryTmp should only be used for the below type check, it uses the
-	// full command instead of the relative command.
-	//
-	// At this point we don't know if the plugin can be multiplexed or not,
-	// so we pass in false and let the checks tell us that
-	entryTmp := &pluginutil.PluginRunner{
-		Name:                name,
-		Command:             commandFull,
-		Args:                args,
-		Env:                 env,
-		Sha256:              sha256,
-		Builtin:             false,
-		MultiplexingSupport: false,
-	}
-
 	// If the plugin type is unknown, we want to attempt to determine the type
-	switch pluginType {
-	case consts.PluginTypeUnknown:
-		pluginType, multiplexingSupport, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
+	if pluginType == consts.PluginTypeUnknown {
+		// entryTmp should only be used for the below type check, it uses the
+		// full command instead of the relative command.
+		entryTmp := &pluginutil.PluginRunner{
+			Name:    name,
+			Command: commandFull,
+			Args:    args,
+			Env:     env,
+			Sha256:  sha256,
+			Builtin: false,
+		}
+
+		pluginType, _, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
 		if err != nil {
 			return nil, err
 		}
 		if pluginType == consts.PluginTypeUnknown {
 			return nil, ErrPluginBadType
 		}
-	case consts.PluginTypeDatabase:
-		muxSupport, err := c.isDatabasePlugin(ctx, entryTmp)
-		if err != nil {
-			return nil, err
-		}
-		multiplexingSupport = muxSupport
 	}
 
 	entry := &pluginutil.PluginRunner{
-		Name:                name,
-		Type:                pluginType,
-		Command:             command,
-		Args:                args,
-		Env:                 env,
-		Sha256:              sha256,
-		Builtin:             false,
-		MultiplexingSupport: multiplexingSupport,
+		Name:    name,
+		Type:    pluginType,
+		Command: command,
+		Args:    args,
+		Env:     env,
+		Sha256:  sha256,
+		Builtin: false,
 	}
 
 	buf, err := json.Marshal(entry)
