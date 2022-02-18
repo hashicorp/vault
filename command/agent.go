@@ -1021,7 +1021,7 @@ func getServiceAccountJWT(tokenFile string) (string, error) {
 
 func (c *AgentCommand) handleMetrics() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
+		if r.Method != http.MethodGet {
 			logical.RespondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
