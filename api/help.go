@@ -5,14 +5,14 @@ import (
 	"fmt"
 )
 
-// Help reads the help information for the given path.
+// Help wraps HelpWithContext using context.Background.
 func (c *Client) Help(path string) (*Help, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.HelpWithContext(ctx, path)
 }
 
-// HelpWithContext the same as Help but with a custom context.
+// HelpWithContext reads the help information for the given path.
 func (c *Client) HelpWithContext(ctx context.Context, path string) (*Help, error) {
 	r := c.NewRequest("GET", fmt.Sprintf("/v1/%s", path))
 	r.Params.Add("help", "1")

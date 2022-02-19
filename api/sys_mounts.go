@@ -78,15 +78,15 @@ func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
 	return err
 }
 
-// Remount kicks off a remount operation, polls the status endpoint using
-// the migration ID till either success or failure state is observed
+// Remount wraps RemountWithContext using context.Background.
 func (c *Sys) Remount(from, to string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RemountWithContext(ctx, from, to)
 }
 
-// RemountWithContext the same as Remount but with a custom context.
+// RemountWithContext kicks off a remount operation, polls the status endpoint using
+// // the migration ID till either success or failure state is observed
 func (c *Sys) RemountWithContext(ctx context.Context, from, to string) error {
 	remountResp, err := c.StartRemountWithContext(ctx, from, to)
 	if err != nil {
@@ -108,14 +108,14 @@ func (c *Sys) RemountWithContext(ctx context.Context, from, to string) error {
 	}
 }
 
-// StartRemount kicks off a mount migration and returns a response with the migration ID
+// StartRemount wraps StartRemountWithContext using context.Background.
 func (c *Sys) StartRemount(from, to string) (*MountMigrationOutput, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.StartRemountWithContext(ctx, from, to)
 }
 
-// StartRemountWithContext the same as StartRemount but with a custom context.
+// StartRemountWithContext kicks off a mount migration and returns a response with the migration ID
 func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*MountMigrationOutput, error) {
 	body := map[string]interface{}{
 		"from": from,
@@ -149,14 +149,14 @@ func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*Mo
 	return &result, err
 }
 
-// RemountStatus checks the status of a mount migration operation with the provided ID
+// RemountStatus wraps RemountStatusWithContext using context.Background.
 func (c *Sys) RemountStatus(migrationID string) (*MountMigrationStatusOutput, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RemountStatusWithContext(ctx, migrationID)
 }
 
-// RemountStatusWithContext the same as RemountStatus but with a custom context.
+// RemountStatusWithContext checks the status of a mount migration operation with the provided ID
 func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) (*MountMigrationStatusOutput, error) {
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
 

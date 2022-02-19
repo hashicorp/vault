@@ -29,15 +29,15 @@ type ListPluginsResponse struct {
 	Names []string `json:"names"`
 }
 
-// ListPlugins lists all plugins in the catalog and returns their names as a
-// list of strings.
+// ListPlugins wraps ListPluginsWithContext using context.Background.
 func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.ListPluginsWithContext(ctx, i)
 }
 
-// ListPluginsWithContext the same as ListPlugins but with a custom context.
+// ListPluginsWithContext lists all plugins in the catalog and returns their names as a
+// // list of strings.
 func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (*ListPluginsResponse, error) {
 	path := ""
 	method := ""
@@ -147,14 +147,14 @@ type GetPluginResponse struct {
 	SHA256  string   `json:"sha256"`
 }
 
-// GetPlugin retrieves information about the plugin.
+// GetPlugin wraps GetPluginWithContext using context.Background.
 func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.GetPluginWithContext(ctx, i)
 }
 
-// GetPluginWithContext the same as GetPlugin but with a custom context.
+// GetPluginWithContext retrieves information about the plugin.
 func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*GetPluginResponse, error) {
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
@@ -193,14 +193,14 @@ type RegisterPluginInput struct {
 	SHA256 string `json:"sha256,omitempty"`
 }
 
-// RegisterPlugin registers the plugin with the given information.
+// RegisterPlugin wraps RegisterPluginWithContext using context.Background.
 func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RegisterPluginWithContext(ctx, i)
 }
 
-// RegisterPluginWithContext the same as RegisterPlugin but with a custom context.
+// RegisterPluginWithContext registers the plugin with the given information.
 func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodPut, path)
@@ -225,15 +225,15 @@ type DeregisterPluginInput struct {
 	Type consts.PluginType `json:"type"`
 }
 
-// DeregisterPlugin removes the plugin with the given name from the plugin
-// catalog.
+// DeregisterPlugin wraps DeregisterPluginWithContext using context.Background.
 func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.DeregisterPluginWithContext(ctx, i)
 }
 
-// DeregisterPluginWithContext the same as DeregisterPlugin but with a custom context.
+// DeregisterPluginWithContext removes the plugin with the given name from the plugin
+// // catalog.
 func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPluginInput) error {
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
@@ -257,15 +257,15 @@ type ReloadPluginInput struct {
 	Scope string `json:"scope"`
 }
 
-// ReloadPlugin reloads mounted plugin backends, possibly returning
-// reloadId for a cluster scoped reload
+// ReloadPlugin wraps ReloadPluginWithContext using context.Background.
 func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.ReloadPluginWithContext(ctx, i)
 }
 
-// ReloadPluginWithContext the same as ReloadPlugin but with a custom context.
+// ReloadPluginWithContext reloads mounted plugin backends, possibly returning
+// // reloadId for a cluster scoped reload
 func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput) (string, error) {
 	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
@@ -311,14 +311,14 @@ type ReloadPluginStatusInput struct {
 	ReloadID string `json:"reload_id"`
 }
 
-// ReloadPluginStatus retrieves the status of a reload operation
+// ReloadPluginStatus wraps ReloadPluginStatusWithContext using context.Background.
 func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.ReloadPluginStatusWithContext(ctx, reloadStatusInput)
 }
 
-// ReloadPluginStatusWithContext the same as ReloadPluginStatus but with a custom context.
+// ReloadPluginStatusWithContext retrieves the status of a reload operation
 func (c *Sys) ReloadPluginStatusWithContext(ctx context.Context, reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
 	path := "/v1/sys/plugins/reload/backend/status"
 	req := c.c.NewRequest(http.MethodGet, path)

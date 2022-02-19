@@ -212,15 +212,15 @@ func (c *TokenAuth) RenewSelfWithContext(ctx context.Context, increment int) (*S
 	return ParseSecret(resp.Body)
 }
 
-// RenewTokenAsSelf behaves like renew-self, but authenticates using a provided
-// token instead of the token attached to the client.
+// RenewTokenAsSelf wraps RenewTokenAsSelfWithContext using context.Background.
 func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RenewTokenAsSelfWithContext(ctx, token, increment)
 }
 
-// RenewTokenAsSelfWithContext the same as RenewTokenAsSelf, but with a custom context.
+// RenewTokenAsSelfWithContext behaves like renew-self, but authenticates using a provided
+// // token instead of the token attached to the client.
 func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
 	r.ClientToken = token
@@ -239,15 +239,15 @@ func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token strin
 	return ParseSecret(resp.Body)
 }
 
-// RevokeAccessor revokes a token associated with the given accessor
-// along with all the child tokens.
+// RevokeAccessor wraps RevokeAccessorWithContext using context.Background.
 func (c *TokenAuth) RevokeAccessor(accessor string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RevokeAccessorWithContext(ctx, accessor)
 }
 
-// RevokeAccessorWithContext the same as RevokeAccessor but with a custom context.
+// RevokeAccessorWithContext revokes a token associated with the given accessor
+// // along with all the child tokens.
 func (c *TokenAuth) RevokeAccessorWithContext(ctx context.Context, accessor string) error {
 	r := c.c.NewRequest("POST", "/v1/auth/token/revoke-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
@@ -265,15 +265,15 @@ func (c *TokenAuth) RevokeAccessorWithContext(ctx context.Context, accessor stri
 	return nil
 }
 
-// RevokeOrphan revokes a token without revoking the tree underneath it (so
-// child tokens are orphaned rather than revoked)
+// RevokeOrphan wraps RevokeOrphanWithContext using context.Background.
 func (c *TokenAuth) RevokeOrphan(token string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RevokeOrphanWithContext(ctx, token)
 }
 
-// RevokeOrphanWithContext the same as RevokeOrphan but with a custom context.
+// RevokeOrphanWithContext revokes a token without revoking the tree underneath it (so
+// // child tokens are orphaned rather than revoked)
 func (c *TokenAuth) RevokeOrphanWithContext(ctx context.Context, token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-orphan")
 	if err := r.SetJSONBody(map[string]interface{}{
@@ -291,16 +291,16 @@ func (c *TokenAuth) RevokeOrphanWithContext(ctx context.Context, token string) e
 	return nil
 }
 
-// RevokeSelf revokes the token making the call. The `token` parameter is kept
-// for backwards compatibility but is ignored; only the client's set token has
-// an effect.
+// RevokeSelf wraps RevokeSelfWithContext using context.Background.
 func (c *TokenAuth) RevokeSelf(token string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RevokeSelfWithContext(ctx, token)
 }
 
-// RevokeSelfWithContext the same as RevokeSelf but with a custom context.
+// RevokeSelfWithContext revokes the token making the call. The `token` parameter is kept
+// // for backwards compatibility but is ignored; only the client's set token has
+// // an effect.
 func (c *TokenAuth) RevokeSelfWithContext(ctx context.Context, token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
 
@@ -313,16 +313,16 @@ func (c *TokenAuth) RevokeSelfWithContext(ctx context.Context, token string) err
 	return nil
 }
 
-// RevokeTree is the "normal" revoke operation that revokes the given token and
-// the entire tree underneath -- all of its child tokens, their child tokens,
-// etc.
+// RevokeTree wraps RevokeTreeWithContext using context.Background.
 func (c *TokenAuth) RevokeTree(token string) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	return c.RevokeTreeWithContext(ctx, token)
 }
 
-// RevokeTreeWithContext the same as RevokeTree but with a custom context.
+// RevokeTreeWithContext is the "normal" revoke operation that revokes the given token and
+// // the entire tree underneath -- all of its child tokens, their child tokens,
+// // etc.
 func (c *TokenAuth) RevokeTreeWithContext(ctx context.Context, token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke")
 	if err := r.SetJSONBody(map[string]interface{}{
