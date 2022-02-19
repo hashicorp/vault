@@ -1171,11 +1171,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 	var resp logical.Response
 	name := d.Get("name").(string)
 
-	if name == defaultProviderName {
-		return logical.ErrorResponse("modification of OIDC provider %q not allowed",
-			defaultProviderName), nil
-	}
-
 	i.oidcLock.Lock()
 	defer i.oidcLock.Unlock()
 

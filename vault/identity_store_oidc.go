@@ -449,11 +449,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	name := d.Get("name").(string)
 
-	if name == defaultKeyName {
-		return logical.ErrorResponse("modification of key %q not allowed",
-			defaultKeyName), nil
-	}
-
 	i.oidcLock.Lock()
 	defer i.oidcLock.Unlock()
 
