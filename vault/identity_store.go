@@ -143,6 +143,10 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 		return nil
 	}
 
+	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
+		return err
+	}
+
 	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
 		DisableLowerCasedNames: i.disableLowerCasedNames,
 	})

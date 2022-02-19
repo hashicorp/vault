@@ -1652,7 +1652,7 @@ func TestOIDC_Path_OIDC_Client_Type(t *testing.T) {
 func TestOIDC_Path_OIDC_ProviderClient_DefaultKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	require.NoError(t, c.identityStore.storeOIDCDefaultResources(ctx))
+	require.NoError(t, c.identityStore.storeOIDCDefaultResources(ctx, c.identityStore.view))
 
 	// Create a test client "test-client" without a key param
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{

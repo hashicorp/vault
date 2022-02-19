@@ -2376,10 +2376,10 @@ func allowAllAssignment() assignment {
 	}
 }
 
-func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
+func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logical.Storage) error {
 	// Store the default provider
 	storageKey := providerPath + defaultProviderName
-	entry, err := i.view.Get(ctx, storageKey)
+	entry, err := view.Get(ctx, storageKey)
 	if err != nil {
 		return err
 	}
@@ -2388,7 +2388,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := i.view.Put(ctx, entry); err != nil {
+		if err := view.Put(ctx, entry); err != nil {
 			return err
 		}
 		i.Logger().Debug("wrote OIDC default provider")
@@ -2396,7 +2396,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 
 	// Store the default key
 	storageKey = namedKeyConfigPath + defaultKeyName
-	entry, err = i.view.Get(ctx, storageKey)
+	entry, err = view.Get(ctx, storageKey)
 	if err != nil {
 		return err
 	}
@@ -2404,11 +2404,11 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 		defaultKey := defaultOIDCKey()
 
 		// Generate initial key material for current and next keys
-		err = defaultKey.generateAndSetKey(ctx, i.Logger(), i.view)
+		err = defaultKey.generateAndSetKey(ctx, i.Logger(), view)
 		if err != nil {
 			return err
 		}
-		err = defaultKey.generateAndSetNextKey(ctx, i.Logger(), i.view)
+		err = defaultKey.generateAndSetNextKey(ctx, i.Logger(), view)
 		if err != nil {
 			return err
 		}
@@ -2418,7 +2418,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := i.view.Put(ctx, entry); err != nil {
+		if err := view.Put(ctx, entry); err != nil {
 			return err
 		}
 		i.Logger().Debug("wrote OIDC default key")
@@ -2426,7 +2426,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 
 	// Store the allow all assignment
 	storageKey = assignmentPath + allowAllAssignmentName
-	entry, err = i.view.Get(ctx, storageKey)
+	entry, err = view.Get(ctx, storageKey)
 	if err != nil {
 		return err
 	}
@@ -2435,7 +2435,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := i.view.Put(ctx, entry); err != nil {
+		if err := view.Put(ctx, entry); err != nil {
 			return err
 		}
 		i.Logger().Debug("wrote OIDC allow_all assignment")
