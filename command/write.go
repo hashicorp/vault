@@ -183,7 +183,7 @@ func (c *WriteCommand) validateMFA(reqID, mfaMethodID string, usePasscode bool) 
 	var passcode string
 	var err error
 	if usePasscode {
-		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %s:", mfaMethodID))
+		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q:", mfaMethodID))
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to mfa/validate", err.Error()))
 			return 2
