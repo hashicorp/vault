@@ -2391,6 +2391,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 		if err := i.view.Put(ctx, entry); err != nil {
 			return err
 		}
+		i.Logger().Debug("wrote OIDC default provider")
 	}
 
 	// Store the default key
@@ -2420,6 +2421,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 		if err := i.view.Put(ctx, entry); err != nil {
 			return err
 		}
+		i.Logger().Debug("wrote OIDC default key")
 	}
 
 	// Store the allow all assignment
@@ -2436,6 +2438,7 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context) error {
 		if err := i.view.Put(ctx, entry); err != nil {
 			return err
 		}
+		i.Logger().Debug("wrote OIDC allow_all assignment")
 	}
 
 	return nil

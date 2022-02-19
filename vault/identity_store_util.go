@@ -50,8 +50,10 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		if err := c.identityStore.loadCachedEntitiesOfLocalAliases(ctx); err != nil {
 			return err
 		}
-		if err := c.identityStore.storeOIDCDefaultResources(ctx); err != nil {
-			return err
+		if !c.perfStandby && c.isPrimary() {
+			if err := c.identityStore.storeOIDCDefaultResources(ctx); err != nil {
+				return err
+			}
 		}
 
 		return nil
