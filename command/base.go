@@ -55,6 +55,7 @@ type BaseCommand struct {
 	flagFormat           string
 	flagField            string
 	flagOutputCurlString bool
+	flagNonInteractive   bool
 
 	flagMFA []string
 
@@ -391,6 +392,13 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage: "Key-value pair provided as key=value to provide http header added to any request done by the CLI." +
 					"Trying to add headers starting with 'X-Vault-' is forbidden and will make the command fail " +
 					"This can be specified multiple times.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "non-interactive",
+				Target:  &c.flagNonInteractive,
+				Default: false,
+				Usage:   "It controls a command to be executed in an interactive or non-interactive fashion with a user.",
 			})
 
 		}

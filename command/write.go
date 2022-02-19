@@ -1,15 +1,12 @@
 package command
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"strings"
-	"syscall"
 
-	"golang.org/x/term"
-
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -134,7 +131,6 @@ func (c *WriteCommand) Run(args []string) int {
 		return 2
 	}
 
-WRITE:
 	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
@@ -152,47 +148,19 @@ WRITE:
 	}
 
 	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if len(secret.Auth.MFARequirement.MFAConstraints) == 1 && !c.flagNonInteractive {
+			// Currently, if there is only one MFA method configured, the login
+			// request is validated interactively
+			methodID, usePasscode := c.getMethodIDUsePasscode(secret.Auth.MFARequirement.MFAConstraints)
+			if methodID != "" {
+				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodID, usePasscode)
+			}
+		}
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to mfa/validate endpoint.") + "\n")
-		ok := YesNoPrompt("Would you like to interactively validate MFA methods?", true)
-		if ok {
-			mfaPayload := make(map[string][]string, 0)
-			for name, mfaConstraintAny := range secret.Auth.MFARequirement.MFAConstraints {
-				methodIDs := make([]string, 0)
-				for _, m := range mfaConstraintAny.Any {
-					methodIDs = append(methodIDs, m.ID)
-				}
-				mfaMethodID := StringPrompt(fmt.Sprintf("From MFARequirement %q, please select one of the following methodIDs %q:\n", name, methodIDs))
-				if mfaMethodID == "" {
-					c.UI.Warn("Invalid method ID detected, please validate the login by sending a request to mfa/validate")
-					goto OUTPUT
-				}
-				passcode, err := PasswordPrompt(fmt.Sprintf("Please insert the passcode for methodID %q: ", mfaMethodID))
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Failed to read the passcode with error %q. please validate the login by sending a request to mfa/validate.", err.Error()))
-					goto OUTPUT
-				}
-				// passcode could be an empty string
-				mfaPayload[mfaMethodID] = []string{passcode}
-			}
-
-			if len(mfaPayload) == 0 {
-				c.UI.Error("did not get any input, please validate the login by sending a request to mfa/validate")
-				goto OUTPUT
-			}
-
-			// updating data and path
-			data = map[string]interface{}{
-				"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-				"mfa_payload":    mfaPayload,
-			}
-			path = "sys/mfa/validate"
-			goto WRITE
-		}
 	}
 
-OUTPUT:
 	// Handle single field output
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
@@ -201,51 +169,66 @@ OUTPUT:
 	return OutputSecret(c.UI, secret)
 }
 
-func StringPrompt(label string) string {
-	var s string
-	r := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Fprint(os.Stderr, label+" ")
-		s, _ = r.ReadString('\n')
-		if s != "" {
-			break
+func (c *WriteCommand) getMethodIDUsePasscode(mfaConstraintAny map[string]*logical.MFAConstraintAny) (string, bool) {
+	for _, mfaConstraint := range mfaConstraintAny {
+		if len(mfaConstraint.Any) != 1 {
+			return "", false
 		}
+		return mfaConstraint.Any[0].ID, mfaConstraint.Any[0].UsesPasscode
 	}
-	return strings.TrimSpace(s)
+	return "", false
 }
 
-func YesNoPrompt(label string, def bool) bool {
-	choices := "Y/n"
-	if !def {
-		choices = "y/N"
+func (c *WriteCommand) validateMFA(reqID, mfaMethodID string, usePasscode bool) int {
+	var passcode string
+	var err error
+	if usePasscode {
+		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %s:", mfaMethodID))
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to mfa/validate", err.Error()))
+			return 2
+		}
+	} else {
+		// TODO: not sure about printing this message; an error might occur before or during the validate request
+		c.UI.Warn("Please acknowledge the push notification in your authenticator app")
 	}
 
-	r := bufio.NewReader(os.Stdin)
-	var s string
-
-	for {
-		fmt.Fprintf(os.Stderr, "%s (%s) ", label, choices)
-		s, _ = r.ReadString('\n')
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return def
-		}
-		s = strings.ToLower(s)
-		if s == "y" || s == "yes" {
-			return true
-		}
-		if s == "n" || s == "no" {
-			return false
-		}
+	// passcode could be an empty string
+	mfaPayload := map[string][]string{
+		mfaMethodID: {passcode},
 	}
-}
 
-func PasswordPrompt(label string) (string, error) {
-	fmt.Fprint(os.Stderr, label+" ")
-	b, err := term.ReadPassword(int(syscall.Stdin))
+	client, err := c.Client()
 	if err != nil {
-		return "", fmt.Errorf("failed to read the password")
+		c.UI.Error(err.Error())
+		return 2
 	}
-	fmt.Println()
-	return string(b), nil
+
+	path := "sys/mfa/validate"
+
+	secret, err := client.Logical().Write(path, map[string]interface{}{
+		"mfa_request_id": reqID,
+		"mfa_payload":    mfaPayload,
+	})
+	if err != nil {
+		c.UI.Error(err.Error())
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
+		return 2
+	}
+	if secret == nil {
+		// Don't output anything unless using the "table" format
+		if Format(c.UI) == "table" {
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+		}
+		return 0
+	}
+
+	// Handle single field output
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	return OutputSecret(c.UI, secret)
 }
