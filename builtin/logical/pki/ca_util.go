@@ -60,6 +60,7 @@ func (b *backend) getGenerationParams(
 		Province:             data.Get("province").([]string),
 		StreetAddress:        data.Get("street_address").([]string),
 		PostalCode:           data.Get("postal_code").([]string),
+		NotBeforeDuration:    time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
 	var err error

@@ -325,3 +325,15 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 
 	return fields
 }
+
+func addNotBeforeField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["not_before_duration"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Description: "Not-Before backdating in seconds",
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Not-before duration",
+		},
+	}
+
+	return fields
+}

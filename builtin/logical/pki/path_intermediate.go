@@ -25,6 +25,7 @@ func pathGenerateIntermediate(b *backend) *framework.Path {
 
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
+	ret.Fields = addNotBeforeField(ret.Fields)
 	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
 		Type: framework.TypeBool,
 		Description: `Whether to add a Basic Constraints

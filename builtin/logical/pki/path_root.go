@@ -40,6 +40,7 @@ func pathGenerateRoot(b *backend) *framework.Path {
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
+	ret.Fields = addNotBeforeField(ret.Fields)
 
 	return ret
 }
@@ -73,6 +74,7 @@ func pathSignIntermediate(b *backend) *framework.Path {
 
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAIssueFields(ret.Fields)
+	ret.Fields = addNotBeforeField(ret.Fields)
 
 	ret.Fields["csr"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
@@ -288,6 +290,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		AllowedURISANs:        []string{"*"},
 		AllowExpirationPastCA: true,
 		NotAfter:              data.Get("not_after").(string),
+		NotBeforeDuration:     time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
