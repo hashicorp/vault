@@ -177,6 +177,34 @@ $ curl \
 }
 ```
 
+## Test Sign with a managed key
+
+This endpoint allows an operator to validate that a managed key configuration works
+by signing and verifying some randomly generated data. No values can be provided to sign,
+nor are signed or verified data returned to the caller. If the call returns a successful HTTP
+status code, the configuration can be considered valid.
+
+~> **Note**: if key generation is allowed this call will generate a key within the KMS if missing.
+
+| Method | Path                                      |
+|:-------|:------------------------------------------|
+| `POST` | `/sys/managed-keys/:type/:name/test/sign` |
+
+### Parameters
+- `name` `(string: <required>)` - The lowercase name identifying the key.
+
+- `type` `(string: <required>)` – The backend type for the managed key.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request POST \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1/test/sign
+```
+
+
 ## Delete managed key
 
 This endpoint deletes the managed key at the given path provided it is not
