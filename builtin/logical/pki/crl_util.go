@@ -230,7 +230,7 @@ WRITE:
 
 	b.crlCounterLock.Lock()
 	defer b.crlCounterLock.Unlock()
-	crlSerial := b.crlCounter
+	crlSerial := b.nextCrlNumber
 	revocationList := &x509.RevocationList{
 		RevokedCertificates: revokedCerts,
 		Number:              big.NewInt(crlSerial),
@@ -241,7 +241,7 @@ WRITE:
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
 	}
-	b.crlCounter += 1
+	b.nextCrlNumber += 1
 
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "crl",
