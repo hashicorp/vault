@@ -97,6 +97,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	}
 
 	b.crlLifetime = time.Hour * 72
+	b.crlCounter = 0
 	b.tidyCASGuard = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
@@ -109,6 +110,8 @@ type backend struct {
 
 	storage           logical.Storage
 	crlLifetime       time.Duration
+	crlCounter        int64
+	crlCounterLock    sync.RWMutex
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
 

@@ -7,6 +7,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -227,10 +228,20 @@ WRITE:
 		return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
 	}
 
-	crlBytes, err := signingBundle.Certificate.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
+	b.crlCounterLock.Lock()
+	defer b.crlCounterLock.Unlock()
+	crlSerial := b.crlCounter
+	revocationList := &x509.RevocationList{
+		RevokedCertificates: revokedCerts,
+		Number:              big.NewInt(crlSerial),
+		ThisUpdate:          time.Now(),
+		NextUpdate:          time.Now().Add(crlLifetime),
+	}
+	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationList, signingBundle.Certificate, signingBundle.PrivateKey)
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
 	}
+	b.crlCounter += 1
 
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "crl",
