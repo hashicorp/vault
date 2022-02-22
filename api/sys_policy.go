@@ -15,6 +15,9 @@ func (c *Sys) ListPolicies() ([]string, error) {
 }
 
 func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("LIST", "/v1/sys/policies/acl")
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
@@ -51,6 +54,9 @@ func (c *Sys) GetPolicy(name string) (string, error) {
 }
 
 func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -86,6 +92,9 @@ func (c *Sys) PutPolicy(name, rules string) error {
 }
 
 func (c *Sys) PutPolicyWithContext(ctx context.Context, name, rules string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]string{
 		"policy": rules,
 	}
@@ -111,6 +120,9 @@ func (c *Sys) DeletePolicy(name string) error {
 }
 
 func (c *Sys) DeletePolicyWithContext(ctx context.Context, name string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

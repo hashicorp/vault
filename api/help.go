@@ -14,6 +14,9 @@ func (c *Client) Help(path string) (*Help, error) {
 
 // HelpWithContext reads the help information for the given path.
 func (c *Client) HelpWithContext(ctx context.Context, path string) (*Help, error) {
+	ctx, cancelFunc := c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.NewRequest("GET", fmt.Sprintf("/v1/%s", path))
 	r.Params.Add("help", "1")
 

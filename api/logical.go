@@ -64,6 +64,9 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 }
 
 func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/"+path)
 
 	var values url.Values
@@ -112,6 +115,9 @@ func (c *Logical) List(path string) (*Secret, error) {
 }
 
 func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
@@ -182,6 +188,9 @@ func (c *Logical) WriteBytesWithContext(ctx context.Context, path string, data [
 }
 
 func (c *Logical) write(ctx context.Context, path string, request *Request) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	resp, err := c.c.RawRequestWithContext(ctx, request)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -223,6 +232,9 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 }
 
 func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/"+path)
 
 	var values url.Values
@@ -270,6 +282,9 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 }
 
 func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	var data map[string]interface{}
 	wt := strings.TrimSpace(wrappingToken)
 	if wrappingToken != "" {

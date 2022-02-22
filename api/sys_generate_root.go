@@ -33,6 +33,9 @@ func (c *Sys) GenerateRecoveryOperationTokenStatusWithContext(ctx context.Contex
 }
 
 func (c *Sys) generateRootStatusCommonWithContext(ctx context.Context, path string) (*GenerateRootStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", path)
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -77,6 +80,9 @@ func (c *Sys) GenerateRecoveryOperationTokenInitWithContext(ctx context.Context,
 }
 
 func (c *Sys) generateRootInitCommonWithContext(ctx context.Context, path, otp, pgpKey string) (*GenerateRootStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"otp":     otp,
 		"pgp_key": pgpKey,
@@ -129,6 +135,9 @@ func (c *Sys) GenerateRecoveryOperationTokenCancelWithContext(ctx context.Contex
 }
 
 func (c *Sys) generateRootCancelCommonWithContext(ctx context.Context, path string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", path)
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -169,6 +178,9 @@ func (c *Sys) GenerateRecoveryOperationTokenUpdateWithContext(ctx context.Contex
 }
 
 func (c *Sys) generateRootUpdateCommonWithContext(ctx context.Context, path, shard, nonce string) (*GenerateRootStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,

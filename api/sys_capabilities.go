@@ -13,6 +13,9 @@ func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
 }
 
 func (c *Sys) CapabilitiesSelfWithContext(ctx context.Context, path string) ([]string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	return c.CapabilitiesWithContext(ctx, c.c.Token(), path)
 }
 
@@ -23,6 +26,9 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 }
 
 func (c *Sys) CapabilitiesWithContext(ctx context.Context, token, path string) ([]string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]string{
 		"token": token,
 		"path":  path,

@@ -118,8 +118,11 @@ func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 }
 
 // RaftJoinWithContext adds the node from which this call is invoked from to the raft
-// // cluster represented by the leader address in the parameter.
+// cluster represented by the leader address in the parameter.
 func (c *Sys) RaftJoinWithContext(ctx context.Context, opts *RaftJoinRequest) (*RaftJoinResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/join")
 
 	if err := r.SetJSONBody(opts); err != nil {
@@ -145,8 +148,11 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 }
 
 // RaftSnapshotWithContext invokes the API that takes the snapshot of the raft cluster and
-// // writes it to the supplied io.Writer.
+// writes it to the supplied io.Writer.
 func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
 
@@ -293,8 +299,11 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 }
 
 // RaftSnapshotRestoreWithContext reads the snapshot from the io.Reader and installs that
-// // snapshot, returning the cluster to the state defined by it.
+// snapshot, returning the cluster to the state defined by it.
 func (c *Sys) RaftSnapshotRestoreWithContext(ctx context.Context, snapReader io.Reader, force bool) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	path := "/v1/sys/storage/raft/snapshot"
 	if force {
 		path = "/v1/sys/storage/raft/snapshot-force"
@@ -321,6 +330,9 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 
 // RaftAutopilotStateWithContext returns the state of the raft cluster as seen by autopilot.
 func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotState, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -360,6 +372,9 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 
 // RaftAutopilotConfigurationWithContext fetches the autopilot config.
 func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*AutopilotConfig, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -407,6 +422,9 @@ func (c *Sys) PutRaftAutopilotConfiguration(opts *AutopilotConfig) error {
 
 // PutRaftAutopilotConfigurationWithContext allows modifying the raft autopilot configuration
 func (c *Sys) PutRaftAutopilotConfigurationWithContext(ctx context.Context, opts *AutopilotConfig) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/autopilot/configuration")
 
 	if err := r.SetJSONBody(opts); err != nil {

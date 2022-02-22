@@ -14,6 +14,9 @@ func (c *Sys) RekeyStatus() (*RekeyStatusResponse, error) {
 }
 
 func (c *Sys) RekeyStatusWithContext(ctx context.Context) (*RekeyStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -34,6 +37,9 @@ func (c *Sys) RekeyRecoveryKeyStatus() (*RekeyStatusResponse, error) {
 }
 
 func (c *Sys) RekeyRecoveryKeyStatusWithContext(ctx context.Context) (*RekeyStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -54,6 +60,9 @@ func (c *Sys) RekeyVerificationStatus() (*RekeyVerificationStatusResponse, error
 }
 
 func (c *Sys) RekeyVerificationStatusWithContext(ctx context.Context) (*RekeyVerificationStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -74,6 +83,9 @@ func (c *Sys) RekeyRecoveryKeyVerificationStatus() (*RekeyVerificationStatusResp
 }
 
 func (c *Sys) RekeyRecoveryKeyVerificationStatusWithContext(ctx context.Context) (*RekeyVerificationStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -94,6 +106,9 @@ func (c *Sys) RekeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) 
 }
 
 func (c *Sys) RekeyInitWithContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/rekey/init")
 	if err := r.SetJSONBody(config); err != nil {
 		return nil, err
@@ -117,6 +132,9 @@ func (c *Sys) RekeyRecoveryKeyInit(config *RekeyInitRequest) (*RekeyStatusRespon
 }
 
 func (c *Sys) RekeyRecoveryKeyInitWithContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/rekey-recovery-key/init")
 	if err := r.SetJSONBody(config); err != nil {
 		return nil, err
@@ -140,6 +158,9 @@ func (c *Sys) RekeyCancel() error {
 }
 
 func (c *Sys) RekeyCancelWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -156,6 +177,9 @@ func (c *Sys) RekeyRecoveryKeyCancel() error {
 }
 
 func (c *Sys) RekeyRecoveryKeyCancelWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -172,6 +196,9 @@ func (c *Sys) RekeyVerificationCancel() error {
 }
 
 func (c *Sys) RekeyVerificationCancelWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -188,6 +215,9 @@ func (c *Sys) RekeyRecoveryKeyVerificationCancel() error {
 }
 
 func (c *Sys) RekeyRecoveryKeyVerificationCancelWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/verify")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -204,6 +234,9 @@ func (c *Sys) RekeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
 }
 
 func (c *Sys) RekeyUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
@@ -232,6 +265,9 @@ func (c *Sys) RekeyRecoveryKeyUpdate(shard, nonce string) (*RekeyUpdateResponse,
 }
 
 func (c *Sys) RekeyRecoveryKeyUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
@@ -260,6 +296,9 @@ func (c *Sys) RekeyRetrieveBackup() (*RekeyRetrieveResponse, error) {
 }
 
 func (c *Sys) RekeyRetrieveBackupWithContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -292,6 +331,9 @@ func (c *Sys) RekeyRetrieveRecoveryBackup() (*RekeyRetrieveResponse, error) {
 }
 
 func (c *Sys) RekeyRetrieveRecoveryBackupWithContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/recovery-key-backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -324,6 +366,9 @@ func (c *Sys) RekeyDeleteBackup() error {
 }
 
 func (c *Sys) RekeyDeleteBackupWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -341,6 +386,9 @@ func (c *Sys) RekeyDeleteRecoveryBackup() error {
 }
 
 func (c *Sys) RekeyDeleteRecoveryBackupWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-key-backup")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -358,6 +406,9 @@ func (c *Sys) RekeyVerificationUpdate(shard, nonce string) (*RekeyVerificationUp
 }
 
 func (c *Sys) RekeyVerificationUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
@@ -386,6 +437,9 @@ func (c *Sys) RekeyRecoveryKeyVerificationUpdate(shard, nonce string) (*RekeyVer
 }
 
 func (c *Sys) RekeyRecoveryKeyVerificationUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,

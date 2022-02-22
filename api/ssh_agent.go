@@ -213,6 +213,9 @@ func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
 
 // VerifyWithContext the same as Verify but with a custom context.
 func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVerifyResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	data := map[string]interface{}{
 		"otp": otp,
 	}

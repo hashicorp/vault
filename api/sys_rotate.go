@@ -14,6 +14,9 @@ func (c *Sys) Rotate() error {
 }
 
 func (c *Sys) RotateWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", "/v1/sys/rotate")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -30,6 +33,9 @@ func (c *Sys) KeyStatus() (*KeyStatus, error) {
 }
 
 func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/key-status")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

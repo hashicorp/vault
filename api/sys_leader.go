@@ -12,6 +12,9 @@ func (c *Sys) Leader() (*LeaderResponse, error) {
 }
 
 func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/leader")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

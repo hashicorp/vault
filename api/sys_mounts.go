@@ -16,6 +16,9 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 }
 
 func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/mounts")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -48,6 +51,9 @@ func (c *Sys) Mount(path string, mountInfo *MountInput) error {
 }
 
 func (c *Sys) MountWithContext(ctx context.Context, path string, mountInfo *MountInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
 	if err := r.SetJSONBody(mountInfo); err != nil {
 		return err
@@ -69,6 +75,9 @@ func (c *Sys) Unmount(path string) error {
 }
 
 func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -86,7 +95,7 @@ func (c *Sys) Remount(from, to string) error {
 }
 
 // RemountWithContext kicks off a remount operation, polls the status endpoint using
-// // the migration ID till either success or failure state is observed
+// the migration ID till either success or failure state is observed
 func (c *Sys) RemountWithContext(ctx context.Context, from, to string) error {
 	remountResp, err := c.StartRemountWithContext(ctx, from, to)
 	if err != nil {
@@ -117,6 +126,9 @@ func (c *Sys) StartRemount(from, to string) (*MountMigrationOutput, error) {
 
 // StartRemountWithContext kicks off a mount migration and returns a response with the migration ID
 func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*MountMigrationOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"from": from,
 		"to":   to,
@@ -158,6 +170,9 @@ func (c *Sys) RemountStatus(migrationID string) (*MountMigrationStatusOutput, er
 
 // RemountStatusWithContext checks the status of a mount migration operation with the provided ID
 func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) (*MountMigrationStatusOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -189,6 +204,9 @@ func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 }
 
 func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {
 		return err
@@ -208,6 +226,9 @@ func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
 }
 
 func (c *Sys) MountConfigWithContext(ctx context.Context, path string) (*MountConfigOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

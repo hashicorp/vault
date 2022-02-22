@@ -15,6 +15,9 @@ func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
 }
 
 func (c *Sys) ListAuthWithContext(ctx context.Context) (map[string]*AuthMount, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/auth")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -55,6 +58,9 @@ func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) err
 }
 
 func (c *Sys) EnableAuthWithOptionsWithContext(ctx context.Context, path string, options *EnableAuthOptions) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s", path))
 	if err := r.SetJSONBody(options); err != nil {
 		return err
@@ -76,6 +82,9 @@ func (c *Sys) DisableAuth(path string) error {
 }
 
 func (c *Sys) DisableAuthWithContext(ctx context.Context, path string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

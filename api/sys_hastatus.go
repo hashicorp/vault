@@ -12,6 +12,9 @@ func (c *Sys) HAStatus() (*HAStatusResponse, error) {
 }
 
 func (c *Sys) HAStatusWithContext(ctx context.Context) (*HAStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/ha-status")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

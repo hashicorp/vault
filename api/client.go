@@ -1108,7 +1108,6 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
-	timeout := c.config.Timeout
 	outputCurlString := c.config.OutputCurlString
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
@@ -1157,13 +1156,6 @@ START:
 		return nil, LastOutputStringError
 	}
 
-	if timeout != 0 {
-		// Note: we purposefully do not call cancel manually. The reason is
-		// when canceled, the request.Body will EOF when reading due to the way
-		// it streams data in. Cancel will still be run when the timeout is
-		// hit, so this doesn't really harm anything.
-		ctx, _ = context.WithTimeout(ctx, timeout)
-	}
 	req.Request = req.Request.WithContext(ctx)
 
 	if backoff == nil {
@@ -1276,6 +1268,14 @@ func (c *Client) WithResponseCallbacks(callbacks ...ResponseCallback) *Client {
 	c2.modifyLock = sync.RWMutex{}
 	c2.responseCallbacks = callbacks
 	return &c2
+}
+
+// withConfiguredTimeout wraps the context with a timeout from the client configuration.
+func (c *Client) withConfiguredTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if c.config.Timeout > 0 {
+		return context.WithTimeout(ctx, c.config.Timeout)
+	}
+	return ctx, func() {}
 }
 
 // RecordState returns a response callback that will record the state returned

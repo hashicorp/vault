@@ -9,6 +9,9 @@ func (c *Sys) InitStatus() (bool, error) {
 }
 
 func (c *Sys) InitStatusWithContext(ctx context.Context) (bool, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/init")
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)
@@ -29,6 +32,9 @@ func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
 }
 
 func (c *Sys) InitWithContext(ctx context.Context, opts *InitRequest) (*InitResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/init")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err

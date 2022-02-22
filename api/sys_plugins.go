@@ -37,8 +37,11 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 }
 
 // ListPluginsWithContext lists all plugins in the catalog and returns their names as a
-// // list of strings.
+// list of strings.
 func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (*ListPluginsResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	path := ""
 	method := ""
 	if i.Type == consts.PluginTypeUnknown {
@@ -156,6 +159,9 @@ func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
 
 // GetPluginWithContext retrieves information about the plugin.
 func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*GetPluginResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
 
@@ -202,6 +208,9 @@ func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 
 // RegisterPluginWithContext registers the plugin with the given information.
 func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodPut, path)
 
@@ -233,8 +242,11 @@ func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 }
 
 // DeregisterPluginWithContext removes the plugin with the given name from the plugin
-// // catalog.
+// catalog.
 func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPluginInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
 
@@ -265,8 +277,11 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 }
 
 // ReloadPluginWithContext reloads mounted plugin backends, possibly returning
-// // reloadId for a cluster scoped reload
+// reloadId for a cluster scoped reload
 func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput) (string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
@@ -320,6 +335,9 @@ func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*R
 
 // ReloadPluginStatusWithContext retrieves the status of a reload operation
 func (c *Sys) ReloadPluginStatusWithContext(ctx context.Context, reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	path := "/v1/sys/plugins/reload/backend/status"
 	req := c.c.NewRequest(http.MethodGet, path)
 	req.Params.Add("reload_id", reloadStatusInput.ReloadID)
