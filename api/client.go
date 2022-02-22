@@ -1047,7 +1047,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	// We expect an addr which looks for example like _vault._tcp.example.com
 	// DNS does randomization of the records if there are multiple
 	if addr.Port() == "" && c.config.SRVLookup {
-		_, addrs, err := net.LookupSRV("", "", addr.Hostname())
+		_, addrs, err := net.LookupSRV("", "", addr.String())
 		if err == nil && len(addrs) > 0 {
 			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 			addr.Path = ""        // url.Parse seems to set this to the hostname if there is no scheme
