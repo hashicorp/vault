@@ -398,7 +398,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:    "non-interactive",
 				Target:  &c.flagNonInteractive,
 				Default: false,
-				Usage:   "It controls a command to be executed in an interactive or non-interactive fashion with a user.",
+				Usage:   "When set true, prevents asking the user for input via the terminal.",
 			})
 
 		}

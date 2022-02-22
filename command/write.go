@@ -16,6 +16,13 @@ var (
 	_ cli.CommandAutocomplete = (*WriteCommand)(nil)
 )
 
+// MFAMethodInfo contains the information about an MFA method
+type MFAMethodInfo struct {
+	methodID    string
+	methodType  string
+	usePasscode bool
+}
+
 // WriteCommand is a Command that puts data into the Vault.
 type WriteCommand struct {
 	*BaseCommand
@@ -151,14 +158,14 @@ func (c *WriteCommand) Run(args []string) int {
 		if len(secret.Auth.MFARequirement.MFAConstraints) == 1 && !c.flagNonInteractive {
 			// Currently, if there is only one MFA method configured, the login
 			// request is validated interactively
-			methodID, usePasscode := c.getMethodIDUsePasscode(secret.Auth.MFARequirement.MFAConstraints)
-			if methodID != "" {
-				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodID, usePasscode)
+			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
+			if methodInfo.methodID != "" {
+				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
 			}
 		}
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
-			"request to mfa/validate endpoint.") + "\n")
+			"request to sys/mfa/validate endpoint.") + "\n")
 	}
 
 	// Handle single field output
@@ -169,33 +176,40 @@ func (c *WriteCommand) Run(args []string) int {
 	return OutputSecret(c.UI, secret)
 }
 
-func (c *WriteCommand) getMethodIDUsePasscode(mfaConstraintAny map[string]*logical.MFAConstraintAny) (string, bool) {
+// getMFAMethodInfo returns MFA method information only if one MFA method is
+// configured.
+func (c *WriteCommand) getMFAMethodInfo(mfaConstraintAny map[string]*logical.MFAConstraintAny) MFAMethodInfo {
 	for _, mfaConstraint := range mfaConstraintAny {
 		if len(mfaConstraint.Any) != 1 {
-			return "", false
+			return MFAMethodInfo{}
 		}
-		return mfaConstraint.Any[0].ID, mfaConstraint.Any[0].UsesPasscode
+
+		return MFAMethodInfo{
+			methodType:  mfaConstraint.Any[0].Type,
+			methodID:    mfaConstraint.Any[0].ID,
+			usePasscode: mfaConstraint.Any[0].UsesPasscode,
+		}
 	}
-	return "", false
+
+	return MFAMethodInfo{}
 }
 
-func (c *WriteCommand) validateMFA(reqID, mfaMethodID string, usePasscode bool) int {
+func (c *WriteCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 	var passcode string
 	var err error
-	if usePasscode {
-		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q:", mfaMethodID))
+	if methodInfo.usePasscode {
+		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType))
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to mfa/validate", err.Error()))
+			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to sys/mfa/validate", err.Error()))
 			return 2
 		}
 	} else {
-		// TODO: not sure about printing this message; an error might occur before or during the validate request
 		c.UI.Warn("Please acknowledge the push notification in your authenticator app")
 	}
 
 	// passcode could be an empty string
 	mfaPayload := map[string][]string{
-		mfaMethodID: {passcode},
+		methodInfo.methodID: {passcode},
 	}
 
 	client, err := c.Client()
