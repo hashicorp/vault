@@ -687,7 +687,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"cluster_addr":                        "top_level_cluster_addr",
 		"cluster_cipher_suites":               "",
 		"cluster_name":                        "testcluster",
-		"default_lease_ttl":                   10 * time.Hour,
+		"default_lease_ttl":                   (365 * 24 * time.Hour) / time.Second,
 		"default_max_request_duration":        0 * time.Second,
 		"disable_cache":                       true,
 		"disable_clustering":                  false,
@@ -718,7 +718,7 @@ func testConfig_Sanitized(t *testing.T) {
 		},
 		"log_format":       "",
 		"log_level":        "",
-		"max_lease_ttl":    10 * time.Hour,
+		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
 		"seals": []interface{}{
