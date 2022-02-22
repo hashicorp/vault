@@ -488,7 +488,8 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 
 	// The plugin type (e.g. "kv", "cubbyhole") is only assigned at the time
 	// the plugin is enabled (mounted). If specified in the request, the type
-	// will be used as part of the request names in the OAS document
+	// will be used as part of the request/response body names in the OAS
+	// document
 	var requestResponsePrefix string
 	if v, ok := req.Data["requestResponsePrefix"]; ok {
 		requestResponsePrefix = v.(string)
