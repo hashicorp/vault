@@ -10,6 +10,21 @@ module('Acceptance | mfa', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  hooks.before(function () {
+    ENV['ember-cli-mirage'].handler = 'mfa';
+    setupMirage(hooks);
+  });
+  hooks.beforeEach(function () {
+    this.select = async (select = 0, option = 1) => {
+      const selector = `[data-test-mfa-select="${select}"]`;
+      const value = this.element.querySelector(`${selector} option:nth-child(${option + 1})`).value;
+      await fillIn(`${selector} select`, value);
+    };
+  });
+  hooks.after(function () {
+    ENV['ember-cli-mirage'].handler = null;
+  });
+
   hooks.beforeEach(function () {
     this.select = async (select = 0, option = 1) => {
       const selector = `[data-test-mfa-select="${select}"]`;
