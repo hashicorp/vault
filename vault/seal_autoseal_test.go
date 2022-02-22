@@ -177,7 +177,11 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 
 	metrics.NewGlobal(metricsConf, inmemSink)
 
-	core, _, _ := TestCoreUnsealed(t)
+	pBackend := newTestBackend(t)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
+		Physical:   pBackend,
+	})
 	testSeal, setErr := seal.NewToggleableTestSeal(nil)
 
 	var encKeys []string
@@ -191,9 +195,6 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 
 	autoSeal := NewAutoSeal(testSeal)
 	autoSeal.SetCore(core)
-	pBackend := newTestBackend(t)
-	core.physical = pBackend
-	core.metricSink = metricsutil.NewClusterMetricSink("", inmemSink)
 
 	sealHealthTestIntervalNominal = 10 * time.Millisecond
 	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
