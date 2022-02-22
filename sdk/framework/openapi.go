@@ -213,9 +213,9 @@ var (
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, doc *OASDocument) error {
+func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -224,7 +224,7 @@ func documentPaths(backend *Backend, doc *OASDocument) error {
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -233,7 +233,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 		unauthPaths = specialPaths.Unauthenticated
 	}
 
-	// Convert optional parameters into distinct patterns to be process independently.
+	// Convert optional parameters into distinct patterns to be processed independently.
 	paths := expandPattern(p.Pattern)
 
 	for _, path := range paths {
@@ -367,13 +367,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					// requestBodyName := fmt.Sprintf("%s%sRequest", strings.Title(path), backendName)
-					// doc.Components.Schemas[requestBodyName] = s
+					requestName := constructRequestName(requestResponsePrefix, path)
+					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
-								Schema: s,
-								// Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestBodyName)},
+								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestName)},
 							},
 						},
 					}
@@ -469,6 +468,26 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 	}
 
 	return nil
+}
+
+func constructRequestName(requestResponsePrefix string, path string) string {
+	var b strings.Builder
+
+	b.WriteString(strings.Title(requestResponsePrefix))
+
+	// split the path by / _ - seprarators
+	for _, token := range strings.FieldsFunc(path, func(r rune) bool {
+		return r == '/' || r == '_' || r == '-'
+	}) {
+		// exclude request fields
+		if !strings.ContainsAny(token, "{}") {
+			b.WriteString(strings.Title(token))
+		}
+	}
+
+	b.WriteString("Request")
+
+	return b.String()
 }
 
 func specialPathMatch(path string, specialPaths []string) bool {

@@ -3905,12 +3905,10 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount, entry := range resp.Data[group].(map[string]interface{}) {
+
 			var pluginType string
-
-			mi := entry.(map[string]interface{})
-
-			if mi != nil && mi["type"] != nil {
-				pluginType = mi["type"].(string)
+			if t, ok := entry.(map[string]interface{})["type"]; ok {
+				pluginType = t.(string)
 			}
 
 			backend := b.Core.router.MatchingBackend(ctx, mountPrefix+mount)
@@ -3922,6 +3920,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)

@@ -198,7 +198,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	// If the path is empty and it is a help operation, handle that.
 	if req.Path == "" && req.Operation == logical.HelpOperation {
-		return b.handleRootHelp()
+		return b.handleRootHelp(req)
 	}
 
 	// Find the matching route
@@ -457,7 +457,7 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
-func (b *Backend) handleRootHelp() (*logical.Response, error) {
+func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error) {
 	// Build a mapping of the paths and get the paths alphabetized to
 	// make the output prettier.
 	pathsMap := make(map[string]*Path)
@@ -486,9 +486,17 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 		return nil, err
 	}
 
+	// The plugin type (e.g. "kv", "cubbyhole") is only assigned at the time
+	// the plugin is enabled (mounted). If specified in the request, the type
+	// will be used as part of the request names in the OAS document
+	var requestResponsePrefix string
+	if v, ok := req.Data["requestResponsePrefix"]; ok {
+		requestResponsePrefix = v.(string)
+	}
+
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
-	if err := documentPaths(b, doc); err != nil {
+	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 
