@@ -69,18 +69,20 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, d
 	defer b.revokeStorageLock.RUnlock()
 
 	crlErr := buildCRL(ctx, b, req, false)
-	switch crlErr.(type) {
-	case errutil.UserError:
-		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
-	case errutil.InternalError:
-		return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
-	default:
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"success": true,
-			},
-		}, nil
+	if crlErr != nil {
+		switch crlErr.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+		default:
+			return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
+		}
 	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"success": true,
+		},
+	}, nil
 }
 
 const pathRevokeHelpSyn = `
