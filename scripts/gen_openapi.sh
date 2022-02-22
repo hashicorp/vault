@@ -17,11 +17,9 @@ then
     exit 1
 fi
 
-../bin/vault server -dev -dev-root-token-id=root &
+vault server -dev -dev-root-token-id=root &
 sleep 2
 VAULT_PID=$!
-
-vault login "root"
 
 echo "Mounting all builtin backends..."
 
@@ -71,29 +69,8 @@ vault secrets enable terraform
 vault secrets enable totp
 vault secrets enable transit
 
-
-
-
-# echo "Writing database/config/my-postgresql-database"
-
-# vault write database/config/my-postgresql-database \
-#     plugin_name=postgresql-database-plugin \
-#     allowed_roles="dev-readonly" \
-#     connection_url="postgresql://{{username}}:{{password}}@localhost:5432/" \
-#     username="vault_db_user" \
-#     password="vault_db_password"
-
-# echo "write database/roles/my-role"
-
-# vault write database/roles/my-role \
-#     db_name=my-postgresql-database \
-#     creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
-#         GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
-#     default_ttl="1h" \
-#     max_ttl="24h"
-
 # Enable enterprise features
-if [ -n "$VAULT_LICENSE" ]
+if [[ ! -z "$VAULT_LICENSE" ]]
 then
   vault write sys/license text="$VAULT_LICENSE"
   vault secrets enable kmip
@@ -101,7 +78,7 @@ then
 fi
 
 # Output OpenAPI, optionally formatted
-if [ "$1" = "-p" ]; then
+if [ "$1" == "-p" ]; then
   curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
 else
   curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
@@ -110,5 +87,4 @@ fi
 kill $VAULT_PID
 sleep 1
 
-echo
-echo "openapi.json generated."
+echo "\nopenapi.json generated."
