@@ -140,7 +140,6 @@ func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs [
 		mfaLogger:   logger.Named("mfa"),
 		namespacer:  core,
 		methodTable: prefix,
-		usedCodes:   cache.New(0, 30*time.Second),
 	}
 }
 

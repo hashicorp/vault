@@ -215,7 +215,10 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 				t.Log("panic closing core during cleanup", "panic", r)
 			}
 		}()
-		c.Shutdown()
+		err := c.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
 	})
 
 	return c
@@ -391,7 +394,10 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	testCoreAddSecretMount(t, core, token)
 
 	t.Cleanup(func() {
-		core.Shutdown()
+		err := core.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
 	})
 	return core, keys, token
 }
@@ -452,7 +458,10 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 				t.Log("panic closing core during cleanup", "panic", r)
 			}
 		}()
-		core.Shutdown()
+		err := core.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
 	})
 
 	return core, keys, token

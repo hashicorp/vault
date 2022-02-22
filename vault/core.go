@@ -1149,6 +1149,15 @@ func (c *Core) Shutdown() error {
 	return err
 }
 
+func (c *Core) ShutdownWait() error {
+	donech := c.ShutdownDone()
+	err := c.Shutdown()
+	if donech != nil {
+		<-donech
+	}
+	return err
+}
+
 // ShutdownDone returns a channel that will be closed after Shutdown completes
 func (c *Core) ShutdownDone() <-chan struct{} {
 	return c.shutdownDoneCh
@@ -2233,6 +2242,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		}
 	}
 
+	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2243,6 +2253,9 @@ func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
 
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
+	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 	c.activeTime = time.Time{}
@@ -2305,6 +2318,7 @@ func (c *Core) preSeal() error {
 		seal.StopHealthCheck()
 	}
 
+	c.loginMFABackend.usedCodes = nil
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
