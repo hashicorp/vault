@@ -470,6 +470,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	return nil
 }
 
+// constructRequestName joins the given prefix with the path elements into a
+// CamelCaseRequest string.
+//
+// For example, prefix="kv" & path=/config/lease/{name} => KvConfigLeaseRequest
 func constructRequestName(requestResponsePrefix string, path string) string {
 	var b strings.Builder
 
