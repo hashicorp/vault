@@ -96,7 +96,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.11.3
 	github.com/hashicorp/vault-plugin-auth-jwt v0.11.4
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.5
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.6
 	github.com/hashicorp/vault-plugin-auth-oci v0.9.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.5.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.9.1
@@ -258,7 +258,7 @@ require (
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.0.0-20170517235910-f1bb20e5a188 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
