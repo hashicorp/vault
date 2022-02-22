@@ -676,12 +676,12 @@ func TestTransit_BatchEncryptionCase13(t *testing.T) {
 // Test that the fast path function decodeBatchRequestItems behave like mapstructure.Decode() to decode []BatchRequestItem.
 func TestTransit_decodeBatchRequestItems(t *testing.T) {
 	tests := []struct {
-		name            string
-		src             interface{}
-		requirePlaintext bool
+		name              string
+		src               interface{}
+		requirePlaintext  bool
 		requireCiphertext bool
-		dest            []BatchRequestItem
-		wantErrContains string
+		dest              []BatchRequestItem
+		wantErrContains   string
 	}{
 		// basic edge cases of nil values
 		{name: "nil-nil", src: nil, dest: nil},
@@ -802,38 +802,38 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 		},
 		// required fields
 		{
-			name: "required_plaintext_present",
-			src:  []interface{}{map[string]interface{}{"plaintext": ""}},
+			name:             "required_plaintext_present",
+			src:              []interface{}{map[string]interface{}{"plaintext": ""}},
 			requirePlaintext: true,
-			dest: []BatchRequestItem{},
+			dest:             []BatchRequestItem{},
 		},
 		{
-			name: "required_plaintext_missing",
-			src:  []interface{}{map[string]interface{}{}},
+			name:             "required_plaintext_missing",
+			src:              []interface{}{map[string]interface{}{}},
 			requirePlaintext: true,
-			dest: []BatchRequestItem{},
-			wantErrContains: "missing plaintext",
+			dest:             []BatchRequestItem{},
+			wantErrContains:  "missing plaintext",
 		},
 		{
-			name: "required_ciphertext_present",
-			src:  []interface{}{map[string]interface{}{"ciphertext": "dGhlIHF1aWNrIGJyb3duIGZveA=="}},
+			name:              "required_ciphertext_present",
+			src:               []interface{}{map[string]interface{}{"ciphertext": "dGhlIHF1aWNrIGJyb3duIGZveA=="}},
 			requireCiphertext: true,
-			dest: []BatchRequestItem{},
+			dest:              []BatchRequestItem{},
 		},
 		{
-			name: "required_ciphertext_missing",
-			src:  []interface{}{map[string]interface{}{}},
+			name:              "required_ciphertext_missing",
+			src:               []interface{}{map[string]interface{}{}},
 			requireCiphertext: true,
-			dest: []BatchRequestItem{},
-			wantErrContains: "missing ciphertext",
+			dest:              []BatchRequestItem{},
+			wantErrContains:   "missing ciphertext",
 		},
 		{
-			name: "required_plaintext_and_ciphertext_missing",
-			src:  []interface{}{map[string]interface{}{}},
-			requirePlaintext: true,
+			name:              "required_plaintext_and_ciphertext_missing",
+			src:               []interface{}{map[string]interface{}{}},
+			requirePlaintext:  true,
 			requireCiphertext: true,
-			dest: []BatchRequestItem{},
-			wantErrContains: "missing ciphertext",
+			dest:              []BatchRequestItem{},
+			wantErrContains:   "missing ciphertext",
 		},
 	}
 	for _, tt := range tests {
