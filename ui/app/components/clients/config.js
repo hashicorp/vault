@@ -34,11 +34,6 @@ export default class ConfigComponent extends Component {
         helperText: 'The number of months of activity logs to maintain for client tracking.',
         valueKey: 'retentionMonths',
       },
-      {
-        label: 'Default display',
-        helperText: 'The number of months we’ll display in the Vault usage dashboard by default.',
-        valueKey: 'defaultReportMonths',
-      },
     ];
   }
 
@@ -57,7 +52,7 @@ export default class ConfigComponent extends Component {
       this.error = err.message;
       return;
     }
-    this.router.transitionTo('vault.cluster.clients.index');
+    this.router.transitionTo('vault.cluster.clients.config');
   }).drop())
   save;
 

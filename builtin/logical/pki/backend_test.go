@@ -1724,6 +1724,9 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		Value: expectedCert,
 	}
 	err = storage.Put(context.Background(), entry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// get der cert
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -2308,6 +2311,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 	_, err = client.Logical().Write("root/sign-verbatim/test", map[string]interface{}{
 		"common_name": "myint.com",
+		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
 		"ttl":         "60h",
 	})
@@ -2317,6 +2321,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
 		"common_name": "myint.com",
+		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
 		"ttl":         "60h",
 	})

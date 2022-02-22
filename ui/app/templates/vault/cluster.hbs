@@ -76,9 +76,8 @@
             {{! template-lint-configure no-curly-component-invocation "warn" }}
             {{! template-lint-configure no-link-to-positional-params "warn" }}
             {{#link-to
-              "vault.cluster.clients"
-              (query-params tab="history")
-              current-when="vault.cluster.clients"
+              "vault.cluster.clients.history"
+              current-when="vault.cluster.clients.history"
               data-test-navbar-item="metrics"
             }}
               Client count

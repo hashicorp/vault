@@ -90,39 +90,6 @@ func (i *IdentityStore) sanitizeName(name string) string {
 	return strings.ToLower(name)
 }
 
-func (i *IdentityStore) loadOIDCClients(ctx context.Context) error {
-	i.logger.Debug("identity loading OIDC clients")
-
-	clients, err := i.view.List(ctx, clientPath)
-	if err != nil {
-		return err
-	}
-
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-	for _, name := range clients {
-		entry, err := i.view.Get(ctx, clientPath+name)
-		if err != nil {
-			return err
-		}
-		if entry == nil {
-			continue
-		}
-
-		var client client
-		if err := entry.DecodeJSON(&client); err != nil {
-			return err
-		}
-
-		if err := i.memDBUpsertClientInTxn(txn, &client); err != nil {
-			return err
-		}
-	}
-	txn.Commit()
-
-	return nil
-}
-
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
 	existing, err := i.groupPacker.View().List(ctx, groupBucketsPrefix)

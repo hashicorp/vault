@@ -131,8 +131,9 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		KeyType:              "any",
 		UseCSRCommonName:     true,
 		UseCSRSANs:           true,
-		AllowedURISANs:       []string{"*"},
+		AllowedOtherSANs:     []string{"*"},
 		AllowedSerialNumbers: []string{"*"},
+		AllowedURISANs:       []string{"*"},
 		GenerateLease:        new(bool),
 		KeyUsage:             data.Get("key_usage").([]string),
 		ExtKeyUsage:          data.Get("ext_key_usage").([]string),
@@ -172,13 +173,15 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 
 	var caErr error
 	signingBundle, caErr := fetchCAInfo(ctx, b, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	input := &inputBundle{

@@ -7,12 +7,44 @@ export default class Current extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  @tracked namespaceArray = this.args.model.monthly?.byNamespace.map((namespace) => {
+  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
+  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
+
+  @tracked selectedNamespace = null;
+  @tracked namespaceArray = this.byNamespaceCurrent.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
-  @tracked selectedNamespace = null;
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id; // return 1.9.0 or earliest upgrade post 1.9.0
-  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled; // returns RFC3339 timestamp
+
+  @tracked selectedAuthMethod = null;
+  @tracked authMethodOptions = [];
+
+  // Response client count data by namespace for current/partial month
+  get byNamespaceCurrent() {
+    return this.args.model.monthly?.byNamespace || [];
+  }
+
+  get isGatheringData() {
+    // return true if tracking IS enabled but no data collected yet
+    return this.args.model.config?.enabled === 'On' && this.byNamespaceCurrent.length === 0;
+  }
+
+  get hasAttributionData() {
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
+  }
+
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
+    }
+    return this.byNamespaceCurrent
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
+  }
 
   get countsIncludeOlderData() {
     let firstUpgrade = this.args.model.versionHistory[0];
@@ -24,27 +56,15 @@ export default class Current extends Component {
     return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
   }
 
-  get licenseStartDate() {
-    return this.args.licenseStartDate || null;
-  }
-
-  // API client count data by namespace for current/partial month
-  get byNamespaceCurrent() {
-    return this.args.model.monthly?.byNamespace || null;
-  }
-
   // top level TOTAL client counts for current/partial month
   get totalUsageCounts() {
-    return this.selectedNamespace
-      ? this.filterByNamespace(this.selectedNamespace)
-      : this.args.model.monthly?.total;
+    return this.selectedNamespace ? this.filteredActivity : this.args.model.monthly?.total;
   }
 
   // total client data for horizontal bar chart in attribution component
   get totalClientsData() {
     if (this.selectedNamespace) {
-      let filteredNamespace = this.filterByNamespace(this.selectedNamespace);
-      return filteredNamespace.mounts ? this.filterByNamespace(this.selectedNamespace).mounts : null;
+      return this.filteredActivity?.mounts || null;
     } else {
       return this.byNamespaceCurrent;
     }
@@ -54,15 +74,26 @@ export default class Current extends Component {
     return this.args.model.monthly?.responseTimestamp;
   }
 
-  // HELPERS
-  filterByNamespace(namespace) {
-    return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
-  }
-
   // ACTIONS
   @action
   selectNamespace([value]) {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
+    if (!value) {
+      // on clear, also make sure auth method is cleared
+      this.selectedAuthMethod = null;
+    } else {
+      // Side effect: set auth namespaces
+      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+        id: mount.label,
+        name: mount.label,
+      }));
+      this.authMethodOptions = mounts;
+    }
+  }
+
+  @action
+  setAuthMethod([authMount]) {
+    this.selectedAuthMethod = authMount;
   }
 }

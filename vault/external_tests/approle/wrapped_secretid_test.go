@@ -64,6 +64,7 @@ func TestApproleSecretId_Wrapped(t *testing.T) {
 	})
 
 	unwrappedSecretid, err := client.Logical().Unwrap(wrappingToken)
+	require.NoError(t, err)
 	unwrappedAccessor := unwrappedSecretid.Data["secret_id_accessor"].(string)
 
 	if wrappedAccessor != unwrappedAccessor {

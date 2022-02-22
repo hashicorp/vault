@@ -8,6 +8,7 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"google.golang.org/grpc"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
@@ -21,6 +22,7 @@ type Looker interface {
 // configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
+	NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error)
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
@@ -30,6 +32,13 @@ type LookRunnerUtil interface {
 	Looker
 	RunnerUtil
 }
+
+type PluginClient interface {
+	Conn() grpc.ClientConnInterface
+	plugin.ClientProtocol
+}
+
+const MultiplexingCtxKey string = "multiplex_id"
 
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.

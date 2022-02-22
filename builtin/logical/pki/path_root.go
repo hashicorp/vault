@@ -137,7 +137,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 	if entry != nil {
 		resp := &logical.Response{}
-		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. If you really want to destroy the original root certificate, please issue a delete against %sroot.", req.MountPoint))
+		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. "+
+			"If you really want to destroy the original root certificate, please issue a delete against %s root.", req.MountPoint))
 		return resp, nil
 	}
 
@@ -162,8 +163,6 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
-			return nil, err
 		default:
 			return nil, err
 		}
@@ -283,8 +282,9 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		AllowIPSANs:           true,
 		EnforceHostnames:      false,
 		KeyType:               "any",
-		AllowedURISANs:        []string{"*"},
+		AllowedOtherSANs:      []string{"*"},
 		AllowedSerialNumbers:  []string{"*"},
+		AllowedURISANs:        []string{"*"},
 		AllowExpirationPastCA: true,
 		NotAfter:              data.Get("not_after").(string),
 	}
@@ -295,13 +295,15 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 
 	var caErr error
 	signingBundle, caErr := fetchCAInfo(ctx, b, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
@@ -322,8 +324,9 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
-			return nil, err
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error signing cert: %s", err)}
 		}
 	}
 
@@ -421,13 +424,14 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 
 	var caErr error
 	signingBundle, caErr := fetchCAInfo(ctx, b, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	signingCB, err := signingBundle.ToCertBundle()

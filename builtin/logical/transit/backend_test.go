@@ -608,7 +608,7 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Derived != derived {
@@ -1607,7 +1607,7 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 					Operation: logical.UpdateOperation,
 					Path:      "keys/test2",
 					Data: map[string]interface{}{
-						"auto_rotate_interval": 24 * time.Hour,
+						"auto_rotate_period": 24 * time.Hour,
 					},
 				}
 				resp, err = b.HandleRequest(context.Background(), req)
@@ -1651,7 +1651,7 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
 				}
 
-				// Update auto rotate interval on one key to be one nanosecond
+				// Update auto rotate period on one key to be one nanosecond
 				p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 					Storage: storage,
 					Name:    "test2",
@@ -1662,7 +1662,7 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 				if p == nil {
 					t.Fatal("expected non-nil policy")
 				}
-				p.AutoRotateInterval = time.Nanosecond
+				p.AutoRotatePeriod = time.Nanosecond
 				err = p.Persist(context.Background(), storage)
 				if err != nil {
 					t.Fatal(err)

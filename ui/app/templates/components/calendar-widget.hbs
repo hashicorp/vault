@@ -9,12 +9,13 @@
     {{@endTimeDisplay}}
     <Chevron @direction="down" @isButton={{true}} />
   </D.Trigger>
-  <D.Content class="popup-menu-content calendar-content">
+  <D.Content @defaultClass={{concat "popup-menu-content calendar-content" (if this.showCalendar " calendar-open")}}>
     <nav class="box menu">
       <div class="calendar-title is-subtitle-gray">DATE OPTIONS</div>
       <ul class="menu-list">
         <li class="action">
           <button
+            data-test-current-billing-period
             class="link link-plain has-text-weight-semibold is-ghost"
             type="button"
             {{on "click" (fn this.selectCurrentBillingPeriod D)}}
@@ -24,6 +25,7 @@
         </li>
         <li class="action">
           <button
+            data-test-show-calendar
             class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
             type="button"
             {{on "click" this.toggleShowCalendar}}
@@ -37,24 +39,55 @@
       </ul>
     </nav>
     {{#if this.showCalendar}}
-      <div class="calendar-widget-container">
+      <div class="calendar-widget-container" data-test-calendar-widget-container>
         <div class="select-year">
-          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
-            <Chevron @direction="left" @size="s" class="has-text-grey" />
-          </button>
-          <p>{{this.displayYear}}</p>
           <button
+            data-test-previous-year
+            id="previous-year"
             type="button"
-            class="button is-transparent padding-right"
+            class="button is-transparent"
+            disabled={{this.disablePastYear}}
+            {{on "click" this.subYear}}
+          >
+            <Chevron
+              @direction="left"
+              @size="s"
+              class="has-text-grey"
+              {{on "mouseover" this.addTooltip}}
+              {{on "mouseleave" this.removeTooltip}}
+            />
+          </button>
+          <p data-test-display-year>{{this.displayYear}}</p>
+          <button
+            data-test-future-year
+            type="button"
+            class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
             disabled={{this.disableFutureYear}}
             {{on "click" this.addYear}}
           >
             <Chevron @direction="right" @size="s" class="has-text-grey" />
           </button>
+          {{#if this.tooltipTarget}}
+            {{! Component must be in curly bracket notation }}
+            {{! template-lint-disable no-curly-component-invocation }}
+            {{#modal-dialog
+              tagName="div"
+              tetherTarget=this.tooltipTarget
+              targetAttachment="top right"
+              attachment="top middle"
+              offset="150px 0"
+            }}
+              <div class={{"calendar-tooltip"}}>
+                <p>{{this.tooltipText}}</p>
+              </div>
+              <div class="chart-tooltip-arrow"></div>
+            {{/modal-dialog}}
+          {{/if}}
         </div>
         <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
           {{#each @arrayOfMonths as |month index|}}
             <button
+              data-test-calendar-month={{month}}
               type="button"
               {{on "click" (fn this.selectEndMonth index this.displayYear D)}}
               class="is-month-list"
