@@ -378,7 +378,7 @@ func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte,
 	return testCoreUnsealed(t, core)
 }
 
-func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
+func testCoreUnsealedNoCleanup(t testing.T, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
@@ -392,7 +392,12 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	}
 
 	testCoreAddSecretMount(t, core, token)
+	return core, keys, token
+}
 
+func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
+	t.Helper()
+	core, keys, token := testCoreUnsealedNoCleanup(t, core)
 	t.Cleanup(func() {
 		err := core.ShutdownWait()
 		if err != nil {
