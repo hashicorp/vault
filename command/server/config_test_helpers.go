@@ -781,6 +781,9 @@ listener "tcp" {
     profiling {
       unauthenticated_pprof_access = true
     }
+	agent_api {
+	  enable_quit = true
+	}
 }`))
 
 	config := Config{
@@ -817,6 +820,9 @@ listener "tcp" {
 					},
 					Profiling: configutil.ListenerProfiling{
 						UnauthenticatedPProfAccess: true,
+					},
+					AgentAPI: &configutil.AgentAPI{
+						EnableQuit: true,
 					},
 				},
 			},

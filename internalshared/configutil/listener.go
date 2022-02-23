@@ -88,6 +88,8 @@ type Listener struct {
 	SocketUser  string `hcl:"socket_user"`
 	SocketGroup string `hcl:"socket_group"`
 
+	AgentAPI *AgentAPI `hcl:"agent_api"`
+
 	Telemetry ListenerTelemetry `hcl:"telemetry"`
 	Profiling ListenerProfiling `hcl:"profiling"`
 
@@ -99,6 +101,11 @@ type Listener struct {
 	CorsAllowedOrigins    []string    `hcl:"cors_allowed_origins"`
 	CorsAllowedHeaders    []string    `hcl:"-"`
 	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers,alias:cors_allowed_headers"`
+}
+
+type AgentAPI struct {
+	EnableQuit bool `hcl:"enable_quit"`
+	// EnableQuitRaw interface{} `hcl:"enable_quit"`
 }
 
 func (l *Listener) GoString() string {

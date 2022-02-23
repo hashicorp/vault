@@ -2027,9 +2027,13 @@ func TestAgent_Quit(t *testing.T) {
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	err := os.Unsetenv(api.EnvVaultAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	listenAddr := "127.0.0.1:18123"
+	listenAddr2 := "127.0.0.1:18124"
 	config := fmt.Sprintf(`
 vault {
   address = "%s"
@@ -2041,8 +2045,16 @@ listener "tcp" {
 	tls_disable = true
 }
 
+listener "tcp" {
+	address = "%s"
+	tls_disable = true
+	agent_api {
+		enable_quit = true
+	}
+}
+
 cache {}
-`, serverClient.Address(), listenAddr)
+`, serverClient.Address(), listenAddr, listenAddr2)
 
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
@@ -2075,16 +2087,30 @@ cache {}
 		t.Fatal(err)
 	}
 
+	// First try on listener 1 where the API should be disabled.
+	resp, err := client.RawRequest(client.NewRequest("POST", "/agent/v1/quit"))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if resp != nil && resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 but got: %d", resp.StatusCode)
+	}
+
+	// Now try on listener 2 where the quit API should be enabled.
+	err = client.SetAddress("http://" + listenAddr2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	_, err = client.RawRequest(client.NewRequest("POST", "/agent/v1/quit"))
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	time.Sleep(time.Second)
 
 	select {
 	case <-cmd.ShutdownCh:
-	default:
-		t.Fatalf("agent did not quit")
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
 	}
 
 	wg.Wait()
