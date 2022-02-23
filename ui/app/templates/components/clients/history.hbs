@@ -59,8 +59,7 @@
         to enable tracking again.
       </AlertBanner>
     {{/if}}
-    {{! check for startTimeFromLicense or startTimeFromResponse otherwise emptyState}}
-    {{#if (or @model.startTimeFromLicense this.startTimeFromResponse)}}
+    {{#if (or this.totalUsageCounts this.hasAttributionData)}}
       <div class="is-subtitle-gray has-bottom-margin-m">
         FILTERS
         <Toolbar data-test-clients-filter-bar>

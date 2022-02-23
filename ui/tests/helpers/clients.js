@@ -33,6 +33,8 @@ export function sendResponse(data, httpStatus = 200) {
     ];
   }
   if (httpStatus === 204) {
+    // /activity endpoint returns 204 when no data, while
+    // /activity/monthly returns 200 with zero values on data
     return [httpStatus, { 'Content-Type': 'application/json' }];
   }
   return [httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data)];
@@ -70,7 +72,7 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
     if (!skipMounts) {
       Array.from(Array(mountCount)).forEach((v, index) => {
         mounts.push({
-          path: `auth/authid${index}`,
+          mount_path: `auth/authid${index}`,
           counts: {
             clients: 5,
             entity_clients: 3,

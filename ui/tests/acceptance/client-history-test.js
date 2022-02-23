@@ -33,7 +33,6 @@ module('Acceptance | clients history tab', function (hooks) {
     const licenseEnd = addMonths(new Date(), 6);
     const license = generateLicenseResponse(licenseStart, licenseEnd);
     const config = generateConfigResponse({ enabled: 'default-disable' });
-    // const activity = generateActivityResponse(0, licenseStart, licenseEnd);
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(license));
       this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
@@ -50,9 +49,8 @@ module('Acceptance | clients history tab', function (hooks) {
 
     assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
-    assert.dom(SELECTORS.filterBar).exists('Shows filter bar to search previous dates');
+    assert.dom(SELECTORS.filterBar).doesNotExist('Shows filter bar to search previous dates');
     assert.dom(SELECTORS.usageStats).doesNotExist('No usage stats');
-    // TODO: has no end filter date
   });
 
   test('shows warning when config off, no data, queries unavailable', async function (assert) {
@@ -60,7 +58,6 @@ module('Acceptance | clients history tab', function (hooks) {
     const licenseEnd = addMonths(new Date(), 6);
     const license = generateLicenseResponse(licenseStart, licenseEnd);
     const config = generateConfigResponse({ enabled: 'default-disable', queries_available: false });
-    // const activity = generateActivityResponse(0, licenseStart, licenseEnd);
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(license));
       this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
@@ -75,7 +72,6 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('Data tracking is disabled');
     assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is hidden when no data available');
-    // TODO: Hide billing start month?
   });
 
   test('shows empty state when config on and no queries', async function (assert) {
