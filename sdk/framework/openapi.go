@@ -479,7 +479,7 @@ func constructRequestName(requestResponsePrefix string, path string) string {
 
 	b.WriteString(strings.Title(requestResponsePrefix))
 
-	// split the path by / _ - seprarators
+	// split the path by / _ - separators
 	for _, token := range strings.FieldsFunc(path, func(r rune) bool {
 		return r == '/' || r == '_' || r == '-'
 	}) {
