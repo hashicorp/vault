@@ -87,7 +87,7 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	case a.resource == "":
 		return nil, errors.New("'resource' value is empty")
 	case a.objectID != "" && a.clientID != "":
-		return nil, errors.New("only one of 'object_id' or 'client_id' can be set")
+		return nil, errors.New("only one of 'object_id' or 'client_id' may be provided")
 	}
 
 	return a, nil

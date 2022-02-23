@@ -20,10 +20,8 @@ on the value of the `resource` parameter.
 
 - `object_id` `(string: optional)` - The object ID of the user-assigned managed identity to use
   when acquiring an [access token](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http).
-  This parameter is interchangeable with `client_id`. Only one of `object_id` and `client_id` can
-  be set.
+  This parameter is interchangeable with `client_id`. Only one of `object_id` or `client_id` may be provided.
 
 - `client_id` `(string: optional)` - The client ID of the user-assigned managed identity to use
   when acquiring an [access token](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http).
-  This parameter is interchangeable with `object_id`. Only one of `object_id` and `client_id` can
-  be set.
+  This parameter is interchangeable with `object_id`. Only one of `object_id` or `client_id` may be provided.
