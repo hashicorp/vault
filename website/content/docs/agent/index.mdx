@@ -109,6 +109,22 @@ Vault Agent allows client-side caching of responses containing newly created tok
 and responses containing leased secrets generated off of these newly created tokens.
 Please see the [Caching docs][caching] for information.
 
+## API
+
+### Quit
+
+This endpoints triggers shutdown of the agent. By default, it is disabled, and can
+be enabled per listener using the [`agent_api`][agent-api] stanza. It is recommended
+to only enable this on trusted interfaces, as it does not require any authorization to use.
+
+| Method | Path             |
+| :----- | :--------------- |
+| `POST` | `/agent/v1/quit` |
+
+### Cache
+
+See the [caching](/docs/agent/caching#api) page for details on the cache API.
+
 ## Configuration
 
 These are the currently-available general configuration option:
@@ -214,13 +230,19 @@ to address in the future.
 
 Agent supports one or more [listener][listener_main] stanzas. In addition to
 the standard listener configuration, an Agent's listener configuration also
-supports an additional optional entry:
+supports the following:
 
 - `require_request_header` `(bool: false)` - Require that all incoming HTTP
   requests on this listener must have an `X-Vault-Request: true` header entry.
   Using this option offers an additional layer of protection from Server Side
   Request Forgery attacks. Requests on the listener that do not have the proper
   `X-Vault-Request` header will fail, with a HTTP response status code of `412: Precondition Failed`.
+
+- `agent_api` <code>([agent_api][agent-api]: <optional\>)</code> - Manages optional Agent API endpoints.
+
+#### agent_api Stanza
+
+- `enable_quit` `(bool: false)` - If set to `true`, the agent will enable the [quit](/docs/agent#quit) API.
 
 ### telemetry Stanza
 
@@ -334,6 +356,7 @@ template {
 [persistent-cache]: /docs/agent/caching/persistent-caches
 [template]: /docs/agent/template
 [template-config]: /docs/agent/template-config
+[agent-api]: /docs/agent/#agent-api-stanza
 [listener]: /docs/agent#listener-stanza
 [listener_main]: /docs/configuration/listener/tcp
 [winsvc]: /docs/agent/winsvc

@@ -115,7 +115,6 @@ type Listener struct {
 
 type AgentAPI struct {
 	EnableQuit bool `hcl:"enable_quit"`
-	// EnableQuitRaw interface{} `hcl:"enable_quit"`
 }
 
 func (l *Listener) GoString() string {
