@@ -15,7 +15,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.17.5
+GO_VERSION_MIN=1.17.7
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -194,6 +194,8 @@ proto: bootstrap
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/*.proto
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/v5/proto/*.proto
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/plugin/pb/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/tokens/token.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/helper/pluginutil/*.proto
 
 	# No additional sed expressions should be added to this list. Going forward
 	# we should just use the variable names choosen by protobuf. These are left

@@ -22,21 +22,6 @@ func pathToken(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-
-			"policies": {
-				Type:        framework.TypeCommaStringSlice,
-				Description: `List of policies to attach to the token.`,
-			},
-
-			"consul_namespace": {
-				Type:        framework.TypeString,
-				Description: "Namespace to create the token in.",
-			},
-
-			"partition": {
-				Type:        framework.TypeString,
-				Description: "Admin partition to create the token in.",
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -105,16 +90,23 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Create an ACLToken for Consul 1.4 and above
 	policyLinks := []*api.ACLTokenPolicyLink{}
-
 	for _, policyName := range roleConfigData.Policies {
 		policyLinks = append(policyLinks, &api.ACLTokenPolicyLink{
 			Name: policyName,
 		})
 	}
 
+	roleLinks := []*api.ACLTokenRoleLink{}
+	for _, roleName := range roleConfigData.ConsulRoles {
+		roleLinks = append(roleLinks, &api.ACLTokenRoleLink{
+			Name: roleName,
+		})
+	}
+
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
 		Policies:    policyLinks,
+		Roles:       roleLinks,
 		Local:       roleConfigData.Local,
 		Namespace:   roleConfigData.ConsulNamespace,
 		Partition:   roleConfigData.Partition,

@@ -28,6 +28,6 @@ Select components are used to render a dropdown.
 **See**
 
 - [Uses of Select](https://github.com/hashicorp/vault/search?l=Handlebars&q=Select+OR+select)
-- [Select Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/select.js)
+- [Select Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/select.js)
 
 ---

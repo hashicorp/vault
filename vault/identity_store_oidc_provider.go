@@ -35,6 +35,9 @@ const (
 	clientSecretPrefix       = "hvo_secret_"
 	codeChallengeMethodPlain = "plain"
 	codeChallengeMethodS256  = "S256"
+	defaultProviderName      = "default"
+	defaultKeyName           = "default"
+	allowAllAssignmentName   = "allow_all"
 
 	// Storage path constants
 	oidcProviderPrefix = "oidc_provider/"
@@ -266,8 +269,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				},
 				"key": {
 					Type:        framework.TypeString,
-					Description: "A reference to a named key resource. Cannot be modified after creation.",
-					Required:    true,
+					Description: "A reference to a named key resource. Cannot be modified after creation. Defaults to the 'default' key.",
+					Default:     "default",
 				},
 				"id_token_ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -654,6 +657,11 @@ func (i *IdentityStore) providersReferencingTargetScopeName(ctx context.Context,
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
+	if name == allowAllAssignmentName {
+		return logical.ErrorResponse("modification of assignment %q not allowed",
+			allowAllAssignmentName), nil
+	}
+
 	i.oidcLock.Lock()
 	defer i.oidcLock.Unlock()
 
@@ -748,6 +756,11 @@ func (i *IdentityStore) getOIDCAssignment(ctx context.Context, s logical.Storage
 // pathOIDCDeleteAssignment is used to delete an assignment
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+
+	if name == allowAllAssignmentName {
+		return logical.ErrorResponse("deletion of assignment %q not allowed",
+			allowAllAssignmentName), nil
+	}
 
 	i.oidcLock.Lock()
 	defer i.oidcLock.Unlock()
@@ -1003,10 +1016,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.Key = key
 	} else if req.Operation == logical.CreateOperation {
 		client.Key = d.Get("key").(string)
-	}
-
-	if client.Key == "" {
-		return logical.ErrorResponse("the key parameter is required"), nil
 	}
 
 	// enforce key existence on client creation
@@ -1348,6 +1357,12 @@ func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, 
 // pathOIDCDeleteProvider is used to delete a provider
 func (i *IdentityStore) pathOIDCDeleteProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+
+	if name == defaultProviderName {
+		return logical.ErrorResponse("deletion of OIDC provider %q not allowed",
+			defaultProviderName), nil
+	}
+
 	return nil, req.Storage.Delete(ctx, providerPath+name)
 }
 
@@ -1388,7 +1403,11 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 		ResponseTypes:         []string{"code"},
 		Subjects:              []string{"public"},
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"client_secret_basic"},
+		AuthMethods: []string{
+			// PKCE is required for auth method "none"
+			"none",
+			"client_secret_basic",
+		},
 	}
 
 	data, err := json.Marshal(disc)
@@ -2294,6 +2313,10 @@ func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Stora
 		return false, nil
 	}
 
+	if strutil.StrListContains(assignments, allowAllAssignmentName) {
+		return true, nil
+	}
+
 	// Get the group IDs that the entity is a member of
 	groups, inheritedGroups, err := i.groupsByEntityID(entity.GetID())
 	if err != nil {
@@ -2327,6 +2350,131 @@ func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Stora
 	}
 
 	return false, nil
+}
+
+func defaultOIDCProvider() provider {
+	return provider{
+		AllowedClientIDs: []string{"*"},
+		ScopesSupported:  []string{},
+	}
+}
+
+func defaultOIDCKey() namedKey {
+	return namedKey{
+		Algorithm:        "RS256",
+		VerificationTTL:  24 * time.Hour,
+		RotationPeriod:   24 * time.Hour,
+		NextRotation:     time.Now().Add(24 * time.Hour),
+		AllowedClientIDs: []string{"*"},
+	}
+}
+
+func allowAllAssignment() assignment {
+	return assignment{
+		EntityIDs: []string{"*"},
+		GroupIDs:  []string{"*"},
+	}
+}
+
+func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logical.Storage) error {
+	// Store the default provider
+	storageKey := providerPath + defaultProviderName
+	entry, err := view.Get(ctx, storageKey)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		entry, err := logical.StorageEntryJSON(storageKey, defaultOIDCProvider())
+		if err != nil {
+			return err
+		}
+		if err := view.Put(ctx, entry); err != nil {
+			return err
+		}
+		i.Logger().Debug("wrote OIDC default provider")
+	}
+
+	// Store the default key
+	storageKey = namedKeyConfigPath + defaultKeyName
+	entry, err = view.Get(ctx, storageKey)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		defaultKey := defaultOIDCKey()
+
+		// Generate initial key material for current and next keys
+		err = defaultKey.generateAndSetKey(ctx, i.Logger(), view)
+		if err != nil {
+			return err
+		}
+		err = defaultKey.generateAndSetNextKey(ctx, i.Logger(), view)
+		if err != nil {
+			return err
+		}
+
+		// Store the entry
+		entry, err := logical.StorageEntryJSON(storageKey, defaultKey)
+		if err != nil {
+			return err
+		}
+		if err := view.Put(ctx, entry); err != nil {
+			return err
+		}
+		i.Logger().Debug("wrote OIDC default key")
+	}
+
+	// Store the allow all assignment
+	storageKey = assignmentPath + allowAllAssignmentName
+	entry, err = view.Get(ctx, storageKey)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		entry, err := logical.StorageEntryJSON(storageKey, allowAllAssignment())
+		if err != nil {
+			return err
+		}
+		if err := view.Put(ctx, entry); err != nil {
+			return err
+		}
+		i.Logger().Debug("wrote OIDC allow_all assignment")
+	}
+
+	return nil
+}
+
+func (i *IdentityStore) loadOIDCClients(ctx context.Context) error {
+	i.logger.Debug("identity loading OIDC clients")
+
+	clients, err := i.view.List(ctx, clientPath)
+	if err != nil {
+		return err
+	}
+
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+	for _, name := range clients {
+		entry, err := i.view.Get(ctx, clientPath+name)
+		if err != nil {
+			return err
+		}
+		if entry == nil {
+			continue
+		}
+
+		var client client
+		if err := entry.DecodeJSON(&client); err != nil {
+			return err
+		}
+
+		if err := i.memDBUpsertClientInTxn(txn, &client); err != nil {
+			return err
+		}
+	}
+	txn.Commit()
+
+	return nil
 }
 
 // clientByID returns the client with the given ID.

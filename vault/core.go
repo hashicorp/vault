@@ -74,6 +74,15 @@ const (
 	coreKeyringCanaryPath = "core/canary-keyring"
 
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
+
+	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
+	// MfaAuthResponse when the value is not specified in the server config
+	defaultMFAAuthResponseTTL = 300 * time.Second
+
+	// ForwardSSCTokenToActive is the value that must be set in the
+	// forwardToActive to trigger forwarding if a perf standby encounters
+	// an SSC Token that it does not have the WAL state for.
+	ForwardSSCTokenToActive = "new_token"
 )
 
 var (
@@ -306,6 +315,10 @@ type Core struct {
 	// change underneath a calling function
 	mountsLock sync.RWMutex
 
+	// mountMigrationTracker tracks past and ongoing remount operations
+	// against their migration ids
+	mountMigrationTracker *sync.Map
+
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
@@ -331,7 +344,8 @@ type Core struct {
 	auditedHeaders *AuditedHeadersConfig
 
 	// systemBackend is the backend which is used to manage internal operations
-	systemBackend *SystemBackend
+	systemBackend   *SystemBackend
+	loginMFABackend *LoginMFABackend
 
 	// cubbyholeBackend is the backend which manages the per-token storage
 	cubbyholeBackend *CubbyholeBackend
@@ -367,6 +381,10 @@ type Core struct {
 
 	// inFlightReqMap is used to store info about in-flight requests
 	inFlightReqData *InFlightRequests
+
+	// mfaResponseAuthQueue is used to cache the auth response per request ID
+	mfaResponseAuthQueue     *LoginMFAPriorityQueue
+	mfaResponseAuthQueueLock sync.Mutex
 
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
@@ -576,6 +594,9 @@ type Core struct {
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
 
+	// disableSSCTokens is used to disable server side consistent token creation/usage
+	disableSSCTokens bool
+
 	// versionTimestamps is a map of vault versions to timestamps when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
@@ -702,6 +723,9 @@ type CoreConfig struct {
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
+
+	// DisableSSCTokens is used to disable the use of server side consistent tokens
+	DisableSSCTokens bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -844,6 +868,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableAutopilot:               conf.DisableAutopilot,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:          &sync.Map{},
+		disableSSCTokens:               conf.DisableSSCTokens,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -977,6 +1003,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.ha = conf.HAPhysical
 	}
 
+	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
@@ -1098,6 +1126,11 @@ func (c *Core) RaftNodeIDHeaderEnabled() bool {
 	return c.enableResponseHeaderRaftNodeID
 }
 
+// DisableSSCTokens determines whether to use server side consistent tokens or not.
+func (c *Core) DisableSSCTokens() bool {
+	return c.disableSSCTokens
+}
+
 // Shutdown is invoked when the Vault instance is about to be terminated. It
 // should not be accessible as part of an API call as it will cause an availability
 // problem. It is only used to gracefully quit in the case of HA so that failover
@@ -1113,6 +1146,15 @@ func (c *Core) Shutdown() error {
 		c.shutdownDoneCh = nil
 	}
 
+	return err
+}
+
+func (c *Core) ShutdownWait() error {
+	donech := c.ShutdownDone()
+	err := c.Shutdown()
+	if donech != nil {
+		<-donech
+	}
 	return err
 }
 
@@ -2064,6 +2106,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
+
+	c.setupCachedMFAResponseAuth()
+
+	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
+		return err
+	}
+
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
 			return err
@@ -2193,6 +2242,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		}
 	}
 
+	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2203,6 +2253,9 @@ func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
 
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
+	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 	c.activeTime = time.Time{}
@@ -2234,6 +2287,11 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clear any cached auth response
+	c.mfaResponseAuthQueueLock.Lock()
+	c.mfaResponseAuthQueue = nil
+	c.mfaResponseAuthQueueLock.Unlock()
+
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
@@ -2260,6 +2318,7 @@ func (c *Core) preSeal() error {
 		seal.StopHealthCheck()
 	}
 
+	c.loginMFABackend.usedCodes = nil
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
@@ -2971,6 +3030,57 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+type MFACachedAuthResponse struct {
+	CachedAuth            *logical.Auth
+	RequestPath           string
+	RequestNSID           string
+	RequestNSPath         string
+	RequestConnRemoteAddr string
+	TimeOfStorage         time.Time
+	RequestID             string
+}
+
+func (c *Core) setupCachedMFAResponseAuth() {
+	c.mfaResponseAuthQueueLock.Lock()
+	c.mfaResponseAuthQueue = NewLoginMFAPriorityQueue()
+	mfaQueue := c.mfaResponseAuthQueue
+	c.mfaResponseAuthQueueLock.Unlock()
+
+	ctx := c.activeContext
+
+	go func() {
+		ticker := time.Tick(5 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker:
+				err := mfaQueue.RemoveExpiredMfaAuthResponse(defaultMFAAuthResponseTTL, time.Now())
+				if err != nil {
+					c.Logger().Error("failed to remove stale MFA auth response", "error", err)
+				}
+			}
+		}
+	}()
+	return
+}
+
+// PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
+// it returns the cached auth response or an error
+func (c *Core) PopMFAResponseAuthByID(reqID string) (*MFACachedAuthResponse, error) {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.PopByKey(reqID)
+}
+
+// SaveMFAResponseAuth pushes an MFACachedAuthResponse to the mfaResponseAuthQueue.
+// it returns an error in case of failure
+func (c *Core) SaveMFAResponseAuth(respAuth *MFACachedAuthResponse) error {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.Push(respAuth)
 }
 
 type InFlightRequests struct {

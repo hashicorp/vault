@@ -8,5 +8,10 @@ package vault
 const managedKeyRegistrySubPath = "managed-key-registry/"
 
 func (c *Core) setupManagedKeyRegistry() error {
+	// Nothing to do, the registry is only used by enterprise features
 	return nil
+}
+
+func (c *Core) ReloadManagedKeyRegistryConfig() {
+	// Nothing to do, the registry is only used by enterprise features
 }

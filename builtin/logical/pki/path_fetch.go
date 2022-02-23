@@ -192,13 +192,15 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 	if serial == "ca_chain" {
 		caInfo, err := fetchCAInfo(ctx, b, req)
-		switch err.(type) {
-		case errutil.UserError:
-			response = logical.ErrorResponse(err.Error())
-			goto reply
-		case errutil.InternalError:
-			retErr = err
-			goto reply
+		if err != nil {
+			switch err.(type) {
+			case errutil.UserError:
+				response = logical.ErrorResponse(err.Error())
+				goto reply
+			default:
+				retErr = err
+				goto reply
+			}
 		}
 
 		caChain := caInfo.GetCAChain()
@@ -232,7 +234,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		case errutil.UserError:
 			response = logical.ErrorResponse(funcErr.Error())
 			goto reply
-		case errutil.InternalError:
+		default:
 			retErr = funcErr
 			goto reply
 		}
@@ -260,7 +262,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		case errutil.UserError:
 			response = logical.ErrorResponse(funcErr.Error())
 			goto reply
-		case errutil.InternalError:
+		default:
 			retErr = funcErr
 			goto reply
 		}
