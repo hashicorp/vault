@@ -19,7 +19,7 @@ import Component from '@glimmer/component';
 // example of usage: FIELDS[roleType][db]
 const ROLE_FIELDS = {
   static: ['username', 'rotation_period'],
-  dynamic: ['ttl', 'max_ttl'],
+  dynamic: ['default_ttl', 'max_ttl'],
 };
 
 const STATEMENT_FIELDS = {
