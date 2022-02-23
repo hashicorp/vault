@@ -19,12 +19,12 @@ import Component from '@glimmer/component';
 // example of usage: FIELDS[roleType][db]
 const ROLE_FIELDS = {
   static: {
-    default: ['ttl', 'max_ttl', 'username', 'rotation_period'],
+    default: ['default_ttl', 'max_ttl', 'username', 'rotation_period'],
     'mongodb-database-plugin': ['username', 'rotation_period'],
   },
   dynamic: {
-    default: ['ttl', 'max_ttl', 'username', 'rotation_period'],
-    'mongodb-database-plugin': ['ttl', 'max_ttl'],
+    default: ['default_ttl', 'max_ttl', 'username', 'rotation_period'],
+    'mongodb-database-plugin': ['default_ttl', 'max_ttl'],
   },
 };
 
