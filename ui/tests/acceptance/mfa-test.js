@@ -17,6 +17,9 @@ module('Acceptance | mfa', function (hooks) {
       await fillIn(`${selector} select`, value);
     };
   });
+  hooks.after(function () {
+    ENV['ember-cli-mirage'].handler = null;
+  });
 
   const login = async (user) => {
     // MfaHandler(server);
