@@ -19,7 +19,7 @@ func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutpu
 
 	r := c.c.NewRequest("GET", "/v1/sys/mounts")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *Sys) MountWithContext(ctx context.Context, path string, mountInfo *Moun
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
 
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -129,7 +129,7 @@ func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*Mo
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -215,7 +215,7 @@ func (c *Sys) MountConfigWithContext(ctx context.Context, path string) (*MountCo
 
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

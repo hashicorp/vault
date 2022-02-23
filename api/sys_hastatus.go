@@ -15,7 +15,7 @@ func (c *Sys) HAStatusWithContext(ctx context.Context) (*HAStatusResponse, error
 
 	r := c.c.NewRequest("GET", "/v1/sys/ha-status")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

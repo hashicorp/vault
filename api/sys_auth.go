@@ -18,7 +18,7 @@ func (c *Sys) ListAuthWithContext(ctx context.Context) (map[string]*AuthMount, e
 
 	r := c.c.NewRequest("GET", "/v1/sys/auth")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (c *Sys) EnableAuthWithOptionsWithContext(ctx context.Context, path string,
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (c *Sys) DisableAuthWithContext(ctx context.Context, path string) error {
 
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}

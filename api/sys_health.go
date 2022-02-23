@@ -17,7 +17,7 @@ func (c *Sys) HealthWithContext(ctx context.Context) (*HealthResponse, error) {
 	r.Params.Add("drsecondarycode", "299")
 	r.Params.Add("performancestandbycode", "299")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

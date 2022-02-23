@@ -127,7 +127,7 @@ func (c *Sys) RaftJoinWithContext(ctx context.Context, opts *RaftJoinRequest) (*
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func (c *Sys) RaftSnapshotRestoreWithContext(ctx context.Context, snapReader io.
 
 	r.Body = snapReader
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotStat
 
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -367,7 +367,7 @@ func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*Autop
 
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -419,7 +419,7 @@ func (c *Sys) PutRaftAutopilotConfigurationWithContext(ctx context.Context, opts
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}

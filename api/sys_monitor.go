@@ -17,7 +17,7 @@ func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error)
 		r.Params.Add("log_level", logLevel)
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

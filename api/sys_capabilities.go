@@ -42,7 +42,7 @@ func (c *Sys) CapabilitiesWithContext(ctx context.Context, token, path string) (
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

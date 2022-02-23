@@ -1097,6 +1097,12 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
+	ctx, cancelFunc := c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+	return c.rawRequestWithContext(ctx, r)
+}
+
+func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	c.modifyLock.RLock()
 	token := c.token
 

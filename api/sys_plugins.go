@@ -58,7 +58,7 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 		req.Params.Set("list", "true")
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err != nil && resp == nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 	// switch it to a LIST.
 	if resp.StatusCode == 405 {
 		req.Params.Set("list", "true")
-		resp, err := c.c.RawRequestWithContext(ctx, req)
+		resp, err := c.c.rawRequestWithContext(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*Get
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
 
-	resp, err := c.c.RawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -242,7 +242,7 @@ func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPlug
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
 
-	resp, err := c.c.RawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -279,7 +279,7 @@ func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput)
 		return "", err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err != nil {
 		return "", err
 	}
@@ -330,7 +330,7 @@ func (c *Sys) ReloadPluginStatusWithContext(ctx context.Context, reloadStatusInp
 	req := c.c.NewRequest(http.MethodGet, path)
 	req.Params.Add("reload_id", reloadStatusInput.ReloadID)
 
-	resp, err := c.c.RawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err != nil {
 		return nil, err
 	}

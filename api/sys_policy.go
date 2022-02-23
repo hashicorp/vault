@@ -22,7 +22,7 @@ func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
 	r.Method = "GET"
 	r.Params.Set("list", "true")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, er
 
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -98,7 +98,7 @@ func (c *Sys) PutPolicyWithContext(ctx context.Context, name, rules string) erro
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (c *Sys) DeletePolicyWithContext(ctx context.Context, name string) error {
 
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}

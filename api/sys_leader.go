@@ -15,7 +15,7 @@ func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {
 
 	r := c.c.NewRequest("GET", "/v1/sys/leader")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

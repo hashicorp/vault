@@ -17,7 +17,7 @@ func (c *Sys) RekeyStatusWithContext(ctx context.Context) (*RekeyStatusResponse,
 
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/init")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (c *Sys) RekeyRecoveryKeyStatusWithContext(ctx context.Context) (*RekeyStat
 
 	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/init")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (c *Sys) RekeyVerificationStatusWithContext(ctx context.Context) (*RekeyVer
 
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/verify")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationStatusWithContext(ctx context.Context)
 
 	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/verify")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (c *Sys) RekeyInitWithContext(ctx context.Context, config *RekeyInitRequest
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (c *Sys) RekeyRecoveryKeyInitWithContext(ctx context.Context, config *Rekey
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (c *Sys) RekeyCancelWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/init")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -166,7 +166,7 @@ func (c *Sys) RekeyRecoveryKeyCancelWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/init")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -183,7 +183,7 @@ func (c *Sys) RekeyVerificationCancelWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/verify")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -200,7 +200,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationCancelWithContext(ctx context.Context)
 
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/verify")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -225,7 +225,7 @@ func (c *Sys) RekeyUpdateWithContext(ctx context.Context, shard, nonce string) (
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (c *Sys) RekeyRecoveryKeyUpdateWithContext(ctx context.Context, shard, nonc
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ func (c *Sys) RekeyRetrieveBackupWithContext(ctx context.Context) (*RekeyRetriev
 
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/backup")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func (c *Sys) RekeyRetrieveRecoveryBackupWithContext(ctx context.Context) (*Reke
 
 	r := c.c.NewRequest("GET", "/v1/sys/rekey/recovery-key-backup")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func (c *Sys) RekeyDeleteBackupWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/backup")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -359,7 +359,7 @@ func (c *Sys) RekeyDeleteRecoveryBackupWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-key-backup")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -385,7 +385,7 @@ func (c *Sys) RekeyVerificationUpdateWithContext(ctx context.Context, shard, non
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +414,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationUpdateWithContext(ctx context.Context,
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

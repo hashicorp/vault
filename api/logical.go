@@ -81,7 +81,7 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 		r.Params = values
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -120,7 +120,7 @@ func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, er
 	r.Method = "GET"
 	r.Params.Set("list", "true")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -185,7 +185,7 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	resp, err := c.c.RawRequestWithContext(ctx, request)
+	resp, err := c.c.rawRequestWithContext(ctx, request)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -241,7 +241,7 @@ func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, da
 		r.Params = values
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -290,7 +290,7 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}

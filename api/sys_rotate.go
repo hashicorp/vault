@@ -17,7 +17,7 @@ func (c *Sys) RotateWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("POST", "/v1/sys/rotate")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -34,7 +34,7 @@ func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {
 
 	r := c.c.NewRequest("GET", "/v1/sys/key-status")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

@@ -223,7 +223,7 @@ func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVeri
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@ func (c *Sys) StepDownWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("PUT", "/v1/sys/step-down")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

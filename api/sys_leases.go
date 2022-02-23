@@ -23,7 +23,7 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (c *Sys) LookupWithContext(ctx context.Context, id string) (*Secret, error)
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -91,7 +91,7 @@ func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
 
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-prefix/"+id)
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -108,7 +108,7 @@ func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
 
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-force/"+id)
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -147,7 +147,7 @@ func (c *Sys) RevokeWithOptionsWithContext(ctx context.Context, opts *RevokeOpti
 		}
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}

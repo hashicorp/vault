@@ -39,7 +39,7 @@ func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[s
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (c *SSH) SignKeyWithContext(ctx context.Context, role string, data map[stri
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

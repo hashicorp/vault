@@ -12,7 +12,7 @@ func (c *Sys) InitStatusWithContext(ctx context.Context) (bool, error) {
 
 	r := c.c.NewRequest("GET", "/v1/sys/init")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return false, err
 	}
@@ -36,7 +36,7 @@ func (c *Sys) InitWithContext(ctx context.Context, opts *InitRequest) (*InitResp
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

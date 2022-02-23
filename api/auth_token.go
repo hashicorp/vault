@@ -27,7 +27,7 @@ func (c *TokenAuth) CreateWithContext(ctx context.Context, opts *TokenCreateRequ
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (c *TokenAuth) CreateOrphanWithContext(ctx context.Context, opts *TokenCrea
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (c *TokenAuth) CreateWithRoleWithContext(ctx context.Context, opts *TokenCr
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (c *TokenAuth) LookupWithContext(ctx context.Context, token string) (*Secre
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (c *TokenAuth) LookupAccessorWithContext(ctx context.Context, accessor stri
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (c *TokenAuth) LookupSelfWithContext(ctx context.Context) (*Secret, error) 
 
 	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (c *TokenAuth) RenewAccessorWithContext(ctx context.Context, accessor strin
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (c *TokenAuth) RenewWithContext(ctx context.Context, token string, incremen
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (c *TokenAuth) RenewSelfWithContext(ctx context.Context, increment int) (*S
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token strin
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func (c *TokenAuth) RevokeAccessorWithContext(ctx context.Context, accessor stri
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (c *TokenAuth) RevokeOrphanWithContext(ctx context.Context, token string) e
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -317,7 +317,7 @@ func (c *TokenAuth) RevokeSelfWithContext(ctx context.Context, token string) err
 
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -345,7 +345,7 @@ func (c *TokenAuth) RevokeTreeWithContext(ctx context.Context, token string) err
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}

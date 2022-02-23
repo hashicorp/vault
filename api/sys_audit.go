@@ -25,7 +25,7 @@ func (c *Sys) AuditHashWithContext(ctx context.Context, path string, input strin
 		return "", err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return "", err
 	}
@@ -61,7 +61,7 @@ func (c *Sys) ListAuditWithContext(ctx context.Context) (map[string]*Audit, erro
 
 	r := c.c.NewRequest("GET", "/v1/sys/audit")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (c *Sys) EnableAuditWithOptionsWithContext(ctx context.Context, path string
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (c *Sys) DisableAuditWithContext(ctx context.Context, path string) error {
 
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/audit/%s", path))
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 
 	if err == nil {
 		defer resp.Body.Close()

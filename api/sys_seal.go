@@ -24,7 +24,7 @@ func (c *Sys) SealWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("PUT", "/v1/sys/seal")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -87,7 +87,7 @@ func sealStatusRequestWithContext(ctx context.Context, c *Sys, r *Request) (*Sea
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

@@ -18,7 +18,7 @@ func (c *Client) HelpWithContext(ctx context.Context, path string) (*Help, error
 	r := c.NewRequest("GET", fmt.Sprintf("/v1/%s", path))
 	r.Params.Add("help", "1")
 
-	resp, err := c.RawRequestWithContext(ctx, r)
+	resp, err := c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

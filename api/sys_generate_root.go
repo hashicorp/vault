@@ -32,7 +32,7 @@ func (c *Sys) generateRootStatusCommonWithContext(ctx context.Context, path stri
 
 	r := c.c.NewRequest("GET", path)
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (c *Sys) generateRootInitCommonWithContext(ctx context.Context, path, otp, 
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (c *Sys) generateRootCancelCommonWithContext(ctx context.Context, path stri
 
 	r := c.c.NewRequest("DELETE", path)
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -167,7 +167,7 @@ func (c *Sys) generateRootUpdateCommonWithContext(ctx context.Context, path, sha
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

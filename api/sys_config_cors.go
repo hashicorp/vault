@@ -17,7 +17,7 @@ func (c *Sys) CORSStatusWithContext(ctx context.Context) (*CORSResponse, error) 
 
 	r := c.c.NewRequest("GET", "/v1/sys/config/cors")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (c *Sys) ConfigureCORSWithContext(ctx context.Context, req *CORSRequest) er
 		return err
 	}
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -70,7 +70,7 @@ func (c *Sys) DisableCORSWithContext(ctx context.Context) error {
 
 	r := c.c.NewRequest("DELETE", "/v1/sys/config/cors")
 
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
