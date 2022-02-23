@@ -17,3 +17,13 @@ on the value of the `resource` parameter.
 - `role` `(string: required)` - The role to authenticate against on Vault
 
 - `resource` `(string: required)` - The resource name to use when getting instance information
+
+- `object_id` `(string: optional)` - The object ID of the user-assigned managed identity to use
+  when acquiring an [access token](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http).
+  This parameter is interchangeable with `client_id`. Only one of `object_id` and `client_id` can
+  be set.
+
+- `client_id` `(string: optional)` - The client ID of the user-assigned managed identity to use
+  when acquiring an [access token](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http).
+  This parameter is interchangeable with `object_id`. Only one of `object_id` and `client_id` can
+  be set.
