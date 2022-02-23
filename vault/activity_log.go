@@ -1552,8 +1552,10 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 				mountResponse = append(mountResponse, &ResponseMount{
 					MountPath: mountRecord.MountPath,
 					Counts: &ResponseCounts{
+						DistinctEntities: int(mountRecord.Counts.EntityClients),
 						EntityClients:    int(mountRecord.Counts.EntityClients),
 						NonEntityClients: int(mountRecord.Counts.NonEntityClients),
+						NonEntityTokens:  int(mountRecord.Counts.NonEntityClients),
 						Clients:          int(mountRecord.Counts.EntityClients + mountRecord.Counts.NonEntityClients),
 					},
 				})
@@ -2119,14 +2121,16 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 				// Process mount specific data within a namespace within a given month
 				mountRecord := make([]*activity.MountRecord, 0, len(nsMap[nsID].Mounts))
 				for mountAccessor, mountData := range nsMap[nsID].Mounts {
+					var displayPath string
 					valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
 					if valResp == nil {
-						// Add the mount to the response only if the mount is
-						// still valid.
-						continue
+						displayPath = fmt.Sprintf("deleted mount; accessor %q", mountAccessor)
+					} else {
+						displayPath = valResp.MountPath
 					}
+
 					mountRecord = append(mountRecord, &activity.MountRecord{
-						MountPath: valResp.MountPath,
+						MountPath: displayPath,
 						Counts: &activity.CountsRecord{
 							EntityClients:    len(mountData.Counts.Entities),
 							NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
