@@ -364,7 +364,8 @@ func TestCore_Shutdown(t *testing.T) {
 
 // verify the channel returned by ShutdownDone is closed after Finalize
 func TestCore_ShutdownDone(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c := TestCoreWithSealAndUINoCleanup(t, &CoreConfig{})
+	testCoreUnsealed(t, c)
 	doneCh := c.ShutdownDone()
 	go func() {
 		time.Sleep(100 * time.Millisecond)

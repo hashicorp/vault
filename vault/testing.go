@@ -161,6 +161,23 @@ func TestCoreUI(t testing.T, enableUI bool) *Core {
 }
 
 func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
+	c := TestCoreWithSealAndUINoCleanup(t, opts)
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		err := c.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
+	})
+	return c
+}
+
+func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
@@ -208,18 +225,6 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
-	t.Cleanup(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("panic closing core during cleanup", "panic", r)
-			}
-		}()
-		err := c.ShutdownWait()
-		if err != nil {
-			t.Logf("shutdown returned error: %v", err)
-		}
-	})
 
 	return c
 }
