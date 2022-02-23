@@ -6,7 +6,7 @@ import hbs from 'htmlbars-inline-precompile';
 
 const STANDARD_FIELDS = [
   'name',
-  'ttl',
+  'default_ttl',
   'max_ttl',
   'username',
   'rotation_period',
@@ -15,9 +15,9 @@ const STANDARD_FIELDS = [
   'rotation_statements',
 ];
 const MONGODB_STATIC_FIELDS = ['username', 'rotation_period'];
-const MONGODB_DYNAMIC_FIELDS = ['creation_statement', 'revocation_statement', 'ttl', 'max_ttl'];
+const MONGODB_DYNAMIC_FIELDS = ['creation_statement', 'revocation_statement', 'default_ttl', 'max_ttl'];
 const ALL_ATTRS = [
-  { name: 'ttl', type: 'string', options: {} },
+  { name: 'default_ttl', type: 'string', options: {} },
   { name: 'max_ttl', type: 'string', options: {} },
   { name: 'username', type: 'string', options: {} },
   { name: 'rotation_period', type: 'string', options: {} },
