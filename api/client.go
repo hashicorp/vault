@@ -20,15 +20,16 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
-	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"golang.org/x/net/http2"
+	"golang.org/x/time/rate"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"golang.org/x/net/http2"
-	"golang.org/x/time/rate"
 )
 
 const (
@@ -49,6 +50,9 @@ const (
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
 	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
+	HeaderIndex           = "X-Vault-Index"
+	HeaderForward         = "X-Vault-Forward"
+	HeaderInconsistent    = "X-Vault-Inconsistent"
 )
 
 // Deprecated values
@@ -130,11 +134,30 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
+	// track of the name of the TLS certs and keys when OutputCurlString is set.
+	// Cloning a client will also not clone those values.
+	curlCACert, curlCAPath        string
+	curlClientCert, curlClientKey string
+
 	// SRVLookup enables the client to lookup the host through DNS SRV lookup
 	SRVLookup bool
 
-	// CloneHeaders ensures that the source client's headers are copied to its clone.
+	// CloneHeaders ensures that the source client's headers are copied to
+	// its clone.
 	CloneHeaders bool
+
+	// CloneToken from parent.
+	CloneToken bool
+
+	// ReadYourWrites ensures isolated read-after-write semantics by
+	// providing discovered cluster replication states in each request.
+	// The shared state is automatically propagated to all Client clones.
+	//
+	// Note: Careful consideration should be made prior to enabling this setting
+	// since there will be a performance penalty paid upon each request.
+	// This feature requires Enterprise server-side.
+	ReadYourWrites bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -168,7 +191,7 @@ type TLSConfig struct {
 // The default Address is https://127.0.0.1:8200, but this can be overridden by
 // setting the `VAULT_ADDR` environment variable.
 //
-// If an error is encountered, this will return nil.
+// If an error is encountered, the Error field on the returned *Config will be populated with the specific error.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:      "https://127.0.0.1:8200",
@@ -210,9 +233,9 @@ func DefaultConfig() *Config {
 	return config
 }
 
-// ConfigureTLS takes a set of TLS configurations and applies those to the
-// HTTP client.
-func (c *Config) ConfigureTLS(t *TLSConfig) error {
+// configureTLS is a lock free version of ConfigureTLS that can be used in
+// ReadEnvironment where the lock is already hold
+func (c *Config) configureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
@@ -229,11 +252,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 			return err
 		}
 		foundClientCert = true
+		c.curlClientCert = t.ClientCert
+		c.curlClientKey = t.ClientKey
 	case t.ClientCert != "" || t.ClientKey != "":
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || t.CAPath != "" {
+		c.curlCACert = t.CACert
+		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
 			CAFile: t.CACert,
 			CAPath: t.CAPath,
@@ -261,6 +288,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	}
 
 	return nil
+}
+
+// ConfigureTLS takes a set of TLS configurations and applies those to the
+// HTTP client.
+func (c *Config) ConfigureTLS(t *TLSConfig) error {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	return c.configureTLS(t)
 }
 
 // ReadEnvironment reads configuration information from the environment. If
@@ -367,7 +403,7 @@ func (c *Config) ReadEnvironment() error {
 	c.SRVLookup = envSRVLookup
 	c.Limiter = limit
 
-	if err := c.ConfigureTLS(t); err != nil {
+	if err := c.configureTLS(t); err != nil {
 		return err
 	}
 
@@ -415,16 +451,17 @@ func parseRateLimit(val string) (rate float64, burst int, err error) {
 
 // Client is the client to the Vault API. Create a client with NewClient.
 type Client struct {
-	modifyLock         sync.RWMutex
-	addr               *url.URL
-	config             *Config
-	token              string
-	headers            http.Header
-	wrappingLookupFunc WrappingLookupFunc
-	mfaCreds           []string
-	policyOverride     bool
-	requestCallbacks   []RequestCallback
-	responseCallbacks  []ResponseCallback
+	modifyLock            sync.RWMutex
+	addr                  *url.URL
+	config                *Config
+	token                 string
+	headers               http.Header
+	wrappingLookupFunc    WrappingLookupFunc
+	mfaCreds              []string
+	policyOverride        bool
+	requestCallbacks      []RequestCallback
+	responseCallbacks     []ResponseCallback
+	replicationStateStore *replicationStateStore
 }
 
 // NewClient returns a new client for the given configuration.
@@ -498,6 +535,10 @@ func NewClient(c *Config) (*Client, error) {
 		headers: make(http.Header),
 	}
 
+	if c.ReadYourWrites {
+		client.replicationStateStore = &replicationStateStore{}
+	}
+
 	// Add the VaultRequest SSRF protection header
 	client.headers[consts.RequestHeaderName] = []string{"true"}
 
@@ -530,6 +571,8 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
+	newConfig.CloneToken = c.config.CloneToken
+	newConfig.ReadYourWrites = c.config.ReadYourWrites
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -757,6 +800,12 @@ func (c *Client) setNamespace(namespace string) {
 	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
+func (c *Client) ClearNamespace() {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.headers.Del(consts.NamespaceHeaderName)
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
@@ -855,15 +904,76 @@ func (c *Client) CloneHeaders() bool {
 	return c.config.CloneHeaders
 }
 
+// SetCloneToken from parent
+func (c *Client) SetCloneToken(cloneToken bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.CloneToken = cloneToken
+}
+
+// CloneToken gets the configured CloneToken value.
+func (c *Client) CloneToken() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.CloneToken
+}
+
+// SetReadYourWrites to prevent reading stale cluster replication state.
+func (c *Client) SetReadYourWrites(preventStaleReads bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	if preventStaleReads {
+		if c.replicationStateStore == nil {
+			c.replicationStateStore = &replicationStateStore{}
+		}
+	} else {
+		c.replicationStateStore = nil
+	}
+
+	c.config.ReadYourWrites = preventStaleReads
+}
+
+// ReadYourWrites gets the configured value of ReadYourWrites
+func (c *Client) ReadYourWrites() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.ReadYourWrites
+}
+
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
-// clone.
+// clone. The headers are cloned based on the CloneHeaders property of the
+// source config
 //
 // Also, only the client's config is currently copied; this means items not in
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
+	return c.clone(c.config.CloneHeaders)
+}
+
+// CloneWithHeaders creates a new client similar to Clone, with the difference
+// being that the  headers are always cloned
+func (c *Client) CloneWithHeaders() (*Client, error) {
+	return c.clone(true)
+}
+
+// clone creates a new client, with the headers being cloned based on the
+// passed in cloneheaders boolean
+func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
 
@@ -886,15 +996,23 @@ func (c *Client) Clone() (*Client, error) {
 		AgentAddress:     config.AgentAddress,
 		SRVLookup:        config.SRVLookup,
 		CloneHeaders:     config.CloneHeaders,
+		CloneToken:       config.CloneToken,
+		ReadYourWrites:   config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	if config.CloneHeaders {
+	if cloneHeaders {
 		client.SetHeaders(c.Headers().Clone())
 	}
+
+	if config.CloneToken {
+		client.SetToken(c.token)
+	}
+
+	client.replicationStateStore = c.replicationStateStore
 
 	return client, nil
 }
@@ -1001,6 +1119,10 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 		cb(r)
 	}
 
+	if c.config.ReadYourWrites {
+		c.replicationStateStore.requireState(r)
+	}
+
 	if limiter != nil {
 		limiter.Wait(ctx)
 	}
@@ -1027,6 +1149,10 @@ START:
 		LastOutputStringError = &OutputStringError{
 			Request:       req,
 			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
+			ClientCert:    c.config.curlClientCert,
+			ClientKey:     c.config.curlClientKey,
+			ClientCACert:  c.config.curlCACert,
+			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
 	}
@@ -1111,6 +1237,10 @@ START:
 		for _, cb := range c.responseCallbacks {
 			cb(result)
 		}
+
+		if c.config.ReadYourWrites {
+			c.replicationStateStore.recordState(result)
+		}
 	}
 	if err := result.Error(); err != nil {
 		return result, err
@@ -1152,7 +1282,7 @@ func (c *Client) WithResponseCallbacks(callbacks ...ResponseCallback) *Client {
 // by Vault in a response header.
 func RecordState(state *string) ResponseCallback {
 	return func(resp *Response) {
-		*state = resp.Header.Get("X-Vault-Index")
+		*state = resp.Header.Get(HeaderIndex)
 	}
 }
 
@@ -1162,7 +1292,7 @@ func RecordState(state *string) ResponseCallback {
 func RequireState(states ...string) RequestCallback {
 	return func(req *Request) {
 		for _, s := range states {
-			req.Headers.Add("X-Vault-Index", s)
+			req.Headers.Add(HeaderIndex, s)
 		}
 	}
 }
@@ -1273,7 +1403,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 // conjunction with RequireState.
 func ForwardInconsistent() RequestCallback {
 	return func(req *Request) {
-		req.Headers.Set("X-Vault-Inconsistent", "forward-active-node")
+		req.Headers.Set(HeaderInconsistent, "forward-active-node")
 	}
 }
 
@@ -1282,7 +1412,7 @@ func ForwardInconsistent() RequestCallback {
 // This feature must be enabled in Vault's configuration.
 func ForwardAlways() RequestCallback {
 	return func(req *Request) {
-		req.Headers.Set("X-Vault-Forward", "active-node")
+		req.Headers.Set(HeaderForward, "active-node")
 	}
 }
 
@@ -1299,4 +1429,40 @@ func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bo
 		return true, nil
 	}
 	return false, nil
+}
+
+// replicationStateStore is used to track cluster replication states
+// in order to ensure proper read-after-write semantics for a Client.
+type replicationStateStore struct {
+	m     sync.RWMutex
+	store []string
+}
+
+// recordState updates the store's replication states with the merger of all
+// states.
+func (w *replicationStateStore) recordState(resp *Response) {
+	w.m.Lock()
+	defer w.m.Unlock()
+	newState := resp.Header.Get(HeaderIndex)
+	if newState != "" {
+		w.store = MergeReplicationStates(w.store, newState)
+	}
+}
+
+// requireState updates the Request with the store's current replication states.
+func (w *replicationStateStore) requireState(req *Request) {
+	w.m.RLock()
+	defer w.m.RUnlock()
+	for _, s := range w.store {
+		req.Headers.Add(HeaderIndex, s)
+	}
+}
+
+// states currently stored.
+func (w *replicationStateStore) states() []string {
+	w.m.RLock()
+	defer w.m.RUnlock()
+	c := make([]string, len(w.store))
+	copy(c, w.store)
+	return c
 }

@@ -184,7 +184,7 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 		return nil, err
 	}
 
-	// Cache the result
+	// Cache the result, even if nil
 	c.lru.Add(key, ent)
 
 	return ent, nil

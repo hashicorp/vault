@@ -1,23 +1,33 @@
 <div class="console-ui-input" data-test-component="console/command-input">
-  {{#if isRunning}}
+  {{#if this.isRunning}}
     <div class="control console-spinner is-loading"></div>
   {{else}}
     <Chevron />
   {{/if}}
-  <input onkeyup={{action 'handleKeyUp'}} value={{value}} autocomplete="off" spellcheck="false" />
-  <ToolTip @horizontalPosition="auto-right" @verticalPosition={{if isFullscreen "above" "below"}} as |d|>
-    <d.trigger @tagName="button" @type="button" @class={{concat "button is-compact" (if isFullscreen " active")}} @click={{action "fullscreen"}} @data-test-tool-tip-trigger={{true}}>
-    <Icon @size="l" @glyph={{if isFullscreen "expand-less" "expand-more"}} aria-label={{if isFullscreen "Minimize" "Maximize"}} />
-    </d.trigger>
-    <d.content @class="tool-tip">
+  <input onkeyup={{action "handleKeyUp"}} value={{this.value}} autocomplete="off" spellcheck="false" />
+  <ToolTip @horizontalPosition="auto-right" @verticalPosition={{if this.isFullscreen "above" "below"}} as |d|>
+    <d.Trigger>
+      <button
+        type="button"
+        class={{concat "button is-compact" (if this.isFullscreen " active")}}
+        {{on "click" (action "fullscreen")}}
+        data-test-tool-tip-trigger
+      >
+        <Icon
+          @name={{if this.isFullscreen "minimize" "maximize"}}
+          aria-label={{if this.isFullscreen "Minimize" "Maximize"}}
+        />
+      </button>
+    </d.Trigger>
+    <d.Content @defaultClass="tool-tip">
       <div class="box">
-        {{#if isFullscreen}}
-        Minimize
+        {{#if this.isFullscreen}}
+          Minimize
         {{else}}
-        Maximize
+          Maximize
         {{/if}}
       </div>
-    </d.content>
+    </d.Content>
   </ToolTip>
 </div>
 <NamespaceReminder @class="console-reminder" @mode="execute" @noun="command" />

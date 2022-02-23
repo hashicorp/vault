@@ -12,10 +12,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ed25519"
 	"reflect"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
@@ -109,9 +110,10 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
 			},
-			"allow_different_signature_algorithm": &framework.FieldSchema{
+			"require_matching_certificate_algorithms": {
 				Type:        framework.TypeBool,
-				Description: `If true, allow the public key type of the signer to differ from the self issued certificate.`,
+				Default:     false,
+				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
 			},
 		},
 
@@ -135,7 +137,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 	if entry != nil {
 		resp := &logical.Response{}
-		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. If you really want to destroy the original root certificate, please issue a delete against %sroot.", req.MountPoint))
+		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. "+
+			"If you really want to destroy the original root certificate, please issue a delete against %s root.", req.MountPoint))
 		return resp, nil
 	}
 
@@ -160,7 +163,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
+		default:
 			return nil, err
 		}
 	}
@@ -279,9 +282,11 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		AllowIPSANs:           true,
 		EnforceHostnames:      false,
 		KeyType:               "any",
-		AllowedURISANs:        []string{"*"},
+		AllowedOtherSANs:      []string{"*"},
 		AllowedSerialNumbers:  []string{"*"},
+		AllowedURISANs:        []string{"*"},
 		AllowExpirationPastCA: true,
+		NotAfter:              data.Get("not_after").(string),
 	}
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
@@ -289,14 +294,16 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
@@ -317,8 +324,9 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
-			return nil, err
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error signing cert: %s", err)}
 		}
 	}
 
@@ -415,14 +423,15 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	signingCB, err := signingBundle.ToCertBundle()
@@ -451,9 +460,12 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	if signingPubType != certPubType {
-		b, ok := data.GetOk("allow_different_signature_algorithm")
-		if ok && b.(bool) {
+		b, ok := data.GetOk("require_matching_certificate_algorithms")
+		if !ok || !b.(bool) {
 			cert.SignatureAlgorithm = signingAlgorithm
+		} else {
+			return nil, fmt.Errorf("signing certificate's public key algorithm (%s) does not match submitted certificate's (%s), and require_matching_certificate_algorithms is true",
+				signingPubType.String(), certPubType.String())
 		}
 	}
 

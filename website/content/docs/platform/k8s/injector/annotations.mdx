@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `hashicorp/vault:1.8.3`.
+  not needed. Defaults to `hashicorp/vault:1.9.2`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -102,7 +102,8 @@ them, optional commands to run, etc.
   auto-auth methods such as approle that require paths to secrets be present.
 
 - `vault.hashicorp.com/agent-inject-token` - configures Vault Agent to share the Vault
-  token with other containers in the pod. This is helpful when other containers
+  token with other containers in the pod, in a file named `token` in the root of the
+  secrets volume (i.e. `/vault/secrets/token`). This is helpful when other containers
   communicate directly with Vault but require auto-authentication provided by Vault
   Agent. This should be set to a `true` or `false` value. Defaults to `false`.
 
@@ -137,7 +138,8 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-pre-populate-only` - configures whether an init container
   is the only injected container. If true, no sidecar container will be injected
-  at runtime of the pod.
+  at runtime of the pod. Enabling this option is recommended for workloads of
+  type `CronJob` or `Job` to ensure a clean pod termination.
 
 - `vault.hashicorp.com/preserve-secret-case` - configures Vault Agent to preserve
   the secret name case when creating the secret files. This should be set to a `true`

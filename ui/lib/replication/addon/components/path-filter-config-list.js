@@ -23,7 +23,7 @@ export default Component.extend({
     }
   },
 
-  fetchMountsForNamespace: task(function*(ns) {
+  fetchMountsForNamespace: task(function* (ns) {
     let adapter = this.store.adapterFor('application');
     let secret = [];
     let auth = [];
@@ -31,7 +31,7 @@ export default Component.extend({
       ? yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns })
       : yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
 
-    ['secret', 'auth'].forEach(key => {
+    ['secret', 'auth'].forEach((key) => {
       for (let [id, info] of Object.entries(mounts.data[key])) {
         let longId;
         if (key === 'auth') {
@@ -61,7 +61,7 @@ export default Component.extend({
     let paths = this.config.paths;
     return list
       .map(({ groupName, options }) => {
-        let trimmedOptions = options.filter(op => {
+        let trimmedOptions = options.filter((op) => {
           if (term) {
             return op.searchText.includes(term) && !paths.includes(op.id);
           }
@@ -72,9 +72,9 @@ export default Component.extend({
       .compact();
   },
 
-  setAutoCompleteOptions: task(function*(term) {
+  setAutoCompleteOptions: task(function* (term) {
     let { namespaces, lastOptions } = this;
-    let namespaceToFetch = namespaces.find(ns => ns === term);
+    let namespaceToFetch = namespaces.find((ns) => ns === term);
     let secretList = [];
     let authList = [];
     let options = [];
@@ -89,7 +89,7 @@ export default Component.extend({
     }
     var currentSecrets = lastOptions && lastOptions.findBy('groupName', 'Secret Engines');
     var currentAuths = lastOptions && lastOptions.findBy('groupName', 'Auth Methods');
-    let formattedNamespaces = namespaces.map(val => {
+    let formattedNamespaces = namespaces.map((val) => {
       return {
         id: val,
         name: val,
@@ -113,7 +113,7 @@ export default Component.extend({
   }),
 
   // singleton mounts are not eligible for per-mount-filtering
-  singletonMountTypes: computed(function() {
+  singletonMountTypes: computed(function () {
     return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity', 'ns_token'];
   }),
 

@@ -1,0 +1,3 @@
+```release-note:improvement
+core/pki: Support Y10K value in notAfter field to be compliant with IEEE 802.1AR-2018 standard
+```

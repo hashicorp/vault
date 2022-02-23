@@ -48,7 +48,7 @@ export default ApplicationAdapter.extend({
       data: {
         list: true,
       },
-    }).then(resp => {
+    }).then((resp) => {
       if (prefix) {
         resp.prefix = prefix;
       }

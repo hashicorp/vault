@@ -555,7 +555,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	// defer goleak.VerifyNone(t)
 	t.Parallel()
 
-	seal, errptr := vaultseal.NewToggleableTestSeal(nil)
+	seal, setErr := vaultseal.NewToggleableTestSeal(nil)
 	cluster := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
 		Seal:     vault.NewAutoSeal(seal),
@@ -587,7 +587,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 		wg.Done()
 	}()
 
-	*errptr = errors.New("seal failure")
+	setErr(errors.New("seal failure"))
 	// Take a snapshot
 	err := leaderClient.Sys().RaftSnapshot(w)
 	w.Close()

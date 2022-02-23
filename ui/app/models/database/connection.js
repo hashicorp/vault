@@ -3,145 +3,7 @@ import { computed } from '@ember/object';
 import { alias, or } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const AVAILABLE_PLUGIN_TYPES = [
-  {
-    value: 'mongodb-database-plugin',
-    displayName: 'MongoDB',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'connection_url' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'write_concern', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mssql-database-plugin',
-    displayName: 'MSSQL',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'connection_url' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-database-plugin',
-    displayName: 'MySQL/MariaDB',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-aurora-database-plugin',
-    displayName: 'MySQL (Aurora)',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-rds-database-plugin',
-    displayName: 'MySQL (RDS)',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'mysql-legacy-database-plugin',
-    displayName: 'MySQL (Legacy)',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'max_open_connections', group: 'pluginConfig' },
-      { attr: 'max_idle_connections', group: 'pluginConfig' },
-      { attr: 'max_connection_lifetime', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-      { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
-    ],
-  },
-  {
-    value: 'elasticsearch-database-plugin',
-    displayName: 'Elasticsearch',
-    fields: [
-      { attr: 'plugin_name' },
-      { attr: 'name' },
-      { attr: 'verify_connection' },
-      { attr: 'password_policy' },
-      { attr: 'url', group: 'pluginConfig' },
-      { attr: 'username', group: 'pluginConfig', show: false },
-      { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'ca_cert', group: 'pluginConfig' },
-      { attr: 'ca_path', group: 'pluginConfig' },
-      { attr: 'client_cert', group: 'pluginConfig' },
-      { attr: 'client_key', group: 'pluginConfig' },
-      { attr: 'tls_server_name', group: 'pluginConfig' },
-      { attr: 'insecure', group: 'pluginConfig' },
-      { attr: 'username_template', group: 'pluginConfig' },
-    ],
-  },
-];
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
 
 /**
  * fieldsToGroups helper fn
@@ -149,14 +11,14 @@ const AVAILABLE_PLUGIN_TYPES = [
  * @param {*} key item by which to group the fields. If item has no group it will be under "default"
  * @returns array of objects where the key is default or the name of the option group, and the value is an array of attr names
  */
-const fieldsToGroups = function(arr, key = 'subgroup') {
+const fieldsToGroups = function (arr, key = 'subgroup') {
   const fieldGroups = [];
-  const byGroup = arr.reduce(function(rv, x) {
+  const byGroup = arr.reduce(function (rv, x) {
     (rv[x[key]] = rv[x[key]] || []).push(x);
     return rv;
   }, {});
-  Object.keys(byGroup).forEach(key => {
-    const attrsArray = byGroup[key].map(obj => obj.attr);
+  Object.keys(byGroup).forEach((key) => {
+    const attrsArray = byGroup[key].map((obj) => obj.attr);
     const group = key === 'undefined' ? 'default' : key;
     fieldGroups.push({ [group]: attrsArray });
   });
@@ -257,8 +119,8 @@ export default Model.extend({
     defaultValue: '0s',
   }),
   insecure: attr('boolean', {
-    defaultValue: false,
     label: 'Disable SSL verification',
+    defaultValue: false,
   }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
@@ -282,47 +144,47 @@ export default Model.extend({
     defaultShown: 'Default',
   }),
 
-  isAvailablePlugin: computed('plugin_name', function() {
-    return !!AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name);
+  isAvailablePlugin: computed('plugin_name', function () {
+    return !!AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
   }),
 
-  showAttrs: computed('plugin_name', function() {
-    const fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-      .fields.filter(f => f.show !== false)
-      .map(f => f.attr);
+  showAttrs: computed('plugin_name', function () {
+    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+      .fields.filter((f) => f.show !== false)
+      .map((f) => f.attr);
     fields.push('allowed_roles');
     return expandAttributeMeta(this, fields);
   }),
 
-  fieldAttrs: computed('plugin_name', function() {
+  fieldAttrs: computed('plugin_name', function () {
     // for both create and edit fields
     let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
     if (this.plugin_name) {
-      fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-        .fields.filter(f => !f.group)
-        .map(field => field.attr);
+      fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+        .fields.filter((f) => !f.group)
+        .map((field) => field.attr);
     }
     return expandAttributeMeta(this, fields);
   }),
 
-  pluginFieldGroups: computed('plugin_name', function() {
+  pluginFieldGroups: computed('plugin_name', function () {
     if (!this.plugin_name) {
       return null;
     }
-    let pluginFields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name).fields.filter(
-      f => f.group === 'pluginConfig'
+    let pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
+      (f) => f.group === 'pluginConfig'
     );
     let groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
 
-  statementFields: computed('plugin_name', function() {
+  statementFields: computed('plugin_name', function () {
     if (!this.plugin_name) {
       return expandAttributeMeta(this, ['root_rotation_statements']);
     }
-    let fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-      .fields.filter(f => f.group === 'statements')
-      .map(field => field.attr);
+    let fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+      .fields.filter((f) => f.group === 'statements')
+      .map((field) => field.attr);
     return expandAttributeMeta(this, fields);
   }),
 

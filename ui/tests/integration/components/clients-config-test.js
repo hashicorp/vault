@@ -15,7 +15,7 @@ const routerService = Service.extend({
   },
 });
 
-module('Integration | Component | client count config', function(hooks) {
+module('Integration | Component | client count config', function (hooks) {
   setupRenderingTest(hooks);
 
   const createAttr = (name, type, options) => {
@@ -26,7 +26,7 @@ module('Integration | Component | client count config', function(hooks) {
     };
   };
 
-  const generateModel = overrides => {
+  const generateModel = (overrides) => {
     return {
       enabled: 'On',
       retentionMonths: 24,
@@ -34,7 +34,6 @@ module('Integration | Component | client count config', function(hooks) {
       configAttrs: [
         createAttr('enabled', 'string', { editType: 'boolean' }),
         createAttr('retentionMonths', 'number'),
-        createAttr('defaultReportMonths', 'number'),
       ],
       changedAttributes: () => ({}),
       save: () => {},
@@ -42,19 +41,19 @@ module('Integration | Component | client count config', function(hooks) {
     };
   };
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
     let model = generateModel();
     this.model = model;
   });
 
-  test('it shows the table with the correct rows by default', async function(assert) {
+  test('it shows the table with the correct rows by default', async function (assert) {
     await render(hbs`<Clients::Config @model={{model}} />`);
 
     assert.dom('[data-test-pricing-metrics-config-table]').exists('Pricing metrics config table exists');
     const rows = document.querySelectorAll('.info-table-row');
-    assert.equal(rows.length, 3, 'renders 3 infotable rows');
+    assert.equal(rows.length, 2, 'renders 2 infotable rows');
     assert.ok(
       find('[data-test-row-value="Usage data collection"]').textContent.includes('On'),
       'Enabled value matches model'
@@ -63,13 +62,9 @@ module('Integration | Component | client count config', function(hooks) {
       find('[data-test-row-value="Retention period"]').textContent.includes('24'),
       'Retention period value matches model'
     );
-    assert.ok(
-      find('[data-test-row-value="Default display"]').textContent.includes('12'),
-      'Default display value matches model'
-    );
   });
 
-  test('TODO: it shows the config edit form when mode = edit', async function(assert) {
+  test('TODO: it shows the config edit form when mode = edit', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Config @model={{model}} @mode="edit" />
@@ -77,10 +72,10 @@ module('Integration | Component | client count config', function(hooks) {
 
     assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
     const fields = document.querySelectorAll('[data-test-field]');
-    assert.equal(fields.length, 3, 'renders 3 fields');
+    assert.equal(fields.length, 2, 'renders 2 fields');
   });
 
-  test('it shows a modal with correct messaging when disabling', async function(assert) {
+  test('it shows a modal with correct messaging when disabling', async function (assert) {
     // Simulates the model when enabled value has been changed from On to Off
     const simModel = generateModel({
       enabled: 'Off',
@@ -102,7 +97,7 @@ module('Integration | Component | client count config', function(hooks) {
     assert.dom('.modal.is-active').doesNotExist('Modal goes away');
   });
 
-  test('it shows a modal with correct messaging when enabling', async function(assert) {
+  test('it shows a modal with correct messaging when enabling', async function (assert) {
     // Simulates the model when enabled value has been changed from On to Off
     const simModel = generateModel({
       changedAttributes: () => ({ enabled: ['Off', 'On'] }),
@@ -123,10 +118,10 @@ module('Integration | Component | client count config', function(hooks) {
     assert.dom('.modal.is-active').doesNotExist('Modal goes away');
   });
 
-  test('it does not show a modal on save if enable left unchanged', async function(assert) {
+  test('it does not show a modal on save if enable left unchanged', async function (assert) {
     // Simulates the model when something other than enabled changed
     const simModel = generateModel({
-      changedAttributes: () => ({ defaultReportMonths: [24, '48'] }),
+      changedAttributes: () => ({ retentionMonths: [24, '48'] }),
     });
     this.set('model', simModel);
     await render(hbs`

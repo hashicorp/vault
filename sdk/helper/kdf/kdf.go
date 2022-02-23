@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"math"
 )
 
 // PRF is a pseudo-random function that takes a key or seed,
@@ -35,6 +36,10 @@ func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32
 	rounds := bits / prfLen
 	if bits%prfLen != 0 {
 		rounds++
+	}
+
+	if len(context) > math.MaxInt-8 {
+		return nil, fmt.Errorf("too much context specified; would overflow: %d bytes", len(context))
 	}
 
 	// Allocate and setup the input

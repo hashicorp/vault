@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { getRoleFields } from '../../utils/database-role-fields';
+import { getRoleFields } from '../../utils/database-helpers';
 
 export default Model.extend({
   idPrefix: 'role/',
@@ -95,7 +95,7 @@ export default Model.extend({
     return expandAttributeMeta(this, fields);
   },
 
-  roleSettingAttrs: computed(function() {
+  roleSettingAttrs: computed(function () {
     // logic for which get displayed is on DatabaseRoleSettingForm
     let allRoleSettingFields = [
       'ttl',

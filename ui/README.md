@@ -111,9 +111,8 @@ To run the tests locally in a browser other than IE11, swap out `launch_in_ci: [
 
 ### Linting
 
-- `yarn lint:hbs`
-- `yarn lint:js`
-- `yarn lint:js -- --fix`
+* `yarn lint`
+* `yarn lint:fix`
 
 ### Building Vault UI into a Vault Binary
 

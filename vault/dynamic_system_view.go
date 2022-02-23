@@ -65,7 +65,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	// Resolve the token policy
 	te, err := e.core.tokenStore.Lookup(ctx, token)
 	if err != nil {
-		e.core.logger.Error("failed to lookup token", "error", err)
+		e.core.logger.Error("failed to lookup sudo token", "error", err)
 		return false
 	}
 
@@ -213,6 +213,22 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	}
 
 	return resp.WrapInfo, nil
+}
+
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
+
+	c, err := d.core.pluginCatalog.NewPluginClient(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It

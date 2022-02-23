@@ -9,6 +9,7 @@
  *   @title="Do Dangerous Thing?"
  *   @isActive={{isModalActive}}
  *   @onClose={{action (mut isModalActive) false}}
+ *   @onConfirmMsg="deleting this thing to delete."
  * />
  * ```
  * @param {function} onConfirm - onConfirm is the action that happens when user clicks onConfirm after filling in the confirmation block

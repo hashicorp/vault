@@ -11,7 +11,7 @@ import filesize from 'filesize';
  *   <FileToArrayBuffer @onChange={{action (mut file)}} />
  * ```
  * @param onChange=null {Function} - The function to call when the file read is complete. This function
- * recieves the file as a JS ArrayBuffer
+ * receives the file as a JS ArrayBuffer
  * @param [label=null {String}] - Text to use as the label for the file input
  * @param [fileHelpText=null {String} - Text to use as help under the file input
  *
@@ -29,7 +29,11 @@ export default Component.extend({
 
   readFile(file) {
     const reader = new FileReader();
-    reader.onload = () => this.send('onChange', reader.result, file);
+    // raft-snapshot-restore test was failing on CI trying to send action on destroyed object
+    // ensure that the component has not been torn down prior to sending onChange action
+    if (!this.isDestroyed && !this.isDestroying) {
+      reader.onload = () => this.send('onChange', reader.result, file);
+    }
     reader.readAsArrayBuffer(file);
   },
 

@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/require"
 )
 
 func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCommand) {
@@ -2000,6 +2001,88 @@ vault {
 	}
 }
 
+func TestAgent_Metrics(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+
+	// Start a vault server
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+		},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Create a config file
+	config := `
+cache {}
+
+listener "tcp" {
+    address = "127.0.0.1:8101"
+    tls_disable = true
+}
+`
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.client = serverClient
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
+	conf := api.DefaultConfig()
+	conf.Address = "http://127.0.0.1:8101"
+	agentClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req := agentClient.NewRequest("GET", "/agent/v1/metrics")
+	body := request(t, agentClient, req, 200)
+	keys := []string{}
+	for k := range body {
+		keys = append(keys, k)
+	}
+	require.ElementsMatch(t, keys, []string{
+		"Counters",
+		"Samples",
+		"Timestamp",
+		"Gauges",
+		"Points",
+	})
+}
+
 func TestAgent_Quit(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
@@ -2075,7 +2158,6 @@ cache {}
 	case <-time.After(5 * time.Second):
 		t.Errorf("timeout")
 	}
-
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)

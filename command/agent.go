@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -9,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -40,14 +40,19 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agent/winsvc"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -64,6 +69,9 @@ type AgentCommand struct {
 	logWriter io.Writer
 	logGate   *gatedwriter.Writer
 	logger    log.Logger
+
+	// Telemetry object
+	metricsHelper *metricsutil.MetricsHelper
 
 	cleanupGuard sync.Once
 
@@ -337,10 +345,29 @@ func (c *AgentCommand) Run(args []string) int {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
+	// telemetry configuration
+	inmemMetrics, _, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
+		Config:      config.Telemetry,
+		Ui:          c.UI,
+		ServiceName: "vault",
+		DisplayName: "Vault",
+		UserAgent:   useragent.String(),
+		ClusterName: config.ClusterName,
+	})
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
+		return 1
+	}
+	c.metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
+
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	var namespace string
+	var templateNamespace string
 	if config.AutoAuth != nil {
+		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+			client.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
@@ -367,19 +394,9 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 		}
 
-		// Check if a default namespace has been set
-		mountPath := config.AutoAuth.Method.MountPath
-		if cns := config.AutoAuth.Method.Namespace; cns != "" {
-			namespace = cns
-			// Only set this value if the env var is empty, otherwise we end up with a nested namespace
-			if ens := os.Getenv(api.EnvVaultNamespace); ens == "" {
-				mountPath = path.Join(cns, mountPath)
-			}
-		}
-
 		authConfig := &auth.AuthConfig{
 			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
-			MountPath: mountPath,
+			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
 		switch config.AutoAuth.Method.Type {
@@ -470,7 +487,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var leaseCache *cache.LeaseCache
 	var previousToken string
 	// Parse agent listener configurations
-	if config.Cache != nil && len(config.Listeners) != 0 {
+	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -561,7 +578,7 @@ func (c *AgentCommand) Run(args []string) int {
 					AAD:     aad,
 				})
 				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
+					c.UI.Error(fmt.Sprintf("Error opening persistent cache with wrapper: %v", err))
 					return 1
 				}
 
@@ -666,11 +683,25 @@ func (c *AgentCommand) Run(args []string) int {
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 
 		var listeners []net.Listener
+
+		// If there are templates, add an in-process listener
+		if len(config.Templates) > 0 {
+			config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
+		}
 		for i, lnConfig := range config.Listeners {
-			ln, tlsConf, err := cache.StartListener(lnConfig)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
-				return 1
+			var ln net.Listener
+			var tlsConf *tls.Config
+
+			if lnConfig.Type == listenerutil.BufConnType {
+				inProcListener := bufconn.Listen(1024 * 1024)
+				config.Cache.InProcDialer = listenerutil.NewBufConnWrapper(inProcListener)
+				ln = inProcListener
+			} else {
+				ln, tlsConf, err = cache.StartListener(lnConfig)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+					return 1
+				}
 			}
 
 			listeners = append(listeners, ln)
@@ -688,6 +719,7 @@ func (c *AgentCommand) Run(args []string) int {
 			if lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit {
 				mux.Handle(consts.AgentPathQuit, c.handleQuit())
 			}
+			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
 			mux.Handle("/", muxHandler)
 
 			scheme := "https://"
@@ -779,7 +811,7 @@ func (c *AgentCommand) Run(args []string) int {
 			LogLevel:      level,
 			LogWriter:     c.logWriter,
 			AgentConfig:   config,
-			Namespace:     namespace,
+			Namespace:     templateNamespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
 
@@ -981,6 +1013,42 @@ func getServiceAccountJWT(tokenFile string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(token)), nil
+}
+
+func (c *AgentCommand) handleMetrics() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			logical.RespondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			logical.RespondError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		format := r.Form.Get("format")
+		if format == "" {
+			format = metricsutil.FormatFromRequest(&logical.Request{
+				Headers: r.Header,
+			})
+		}
+
+		resp := c.metricsHelper.ResponseForFormat(format)
+
+		status := resp.Data[logical.HTTPStatusCode].(int)
+		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
+		switch v := resp.Data[logical.HTTPRawBody].(type) {
+		case string:
+			w.WriteHeader((status))
+			w.Write([]byte(v))
+		case []byte:
+			w.WriteHeader(status)
+			w.Write(v)
+		default:
+			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))
+		}
+	})
 }
 
 func (c *AgentCommand) handleQuit() http.Handler {

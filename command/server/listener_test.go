@@ -66,3 +66,13 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 		t.Fatalf("bad: %v", buf.String())
 	}
 }
+
+func TestProfilingUnauthenticatedInFlightAccess(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/unauth_in_flight_access.hcl")
+	if err != nil {
+		t.Fatalf("Error encountered when loading config %+v", err)
+	}
+	if !config.Listeners[0].InFlightRequestLogging.UnauthenticatedInFlightAccess {
+		t.Fatalf("failed to read UnauthenticatedInFlightAccess")
+	}
+}

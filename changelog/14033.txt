@@ -1,0 +1,3 @@
+```release-note:feature
+**Database plugin multiplexing**: manage multiple database connections with a single plugin process
+```

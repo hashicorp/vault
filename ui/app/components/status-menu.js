@@ -10,11 +10,10 @@ export default Component.extend({
   media: service(),
   type: 'cluster',
   itemTag: null,
-  glyphName: computed('type', function() {
-    const glyphs = {
-      cluster: 'status-indicator',
-      user: 'user-square-outline',
-    };
-    return glyphs[this.type];
+  glyphName: computed('type', function () {
+    return {
+      cluster: 'circle-dot',
+      user: 'user',
+    }[this.type];
   }),
 });

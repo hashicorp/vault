@@ -52,7 +52,7 @@ export default ApplicationAdapter.extend({
     const { id, backend } = query;
     const queryAjax = this.ajax(this.urlForTransformations(backend, id), 'GET', this.optionsForQuery(id));
 
-    return allSettled([queryAjax]).then(results => {
+    return allSettled([queryAjax]).then((results) => {
       // query result 404d, so throw the adapterError
       if (!results[0].value) {
         throw results[0].reason;
@@ -64,7 +64,7 @@ export default ApplicationAdapter.extend({
         data: {},
       };
 
-      results.forEach(result => {
+      results.forEach((result) => {
         if (result.value) {
           let d = result.value.data;
           if (d.templates) {

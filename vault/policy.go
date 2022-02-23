@@ -26,6 +26,7 @@ const (
 	ListCapability   = "list"
 	SudoCapability   = "sudo"
 	RootCapability   = "root"
+	PatchCapability  = "patch"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -42,6 +43,7 @@ const (
 	DeleteCapabilityInt
 	ListCapabilityInt
 	SudoCapabilityInt
+	PatchCapabilityInt
 )
 
 // Error constants for testing
@@ -83,6 +85,7 @@ var cap2Int = map[string]uint32{
 	DeleteCapability: DeleteCapabilityInt,
 	ListCapability:   ListCapabilityInt,
 	SudoCapability:   SudoCapabilityInt,
+	PatchCapability:  PatchCapabilityInt,
 }
 
 type egpPath struct {
@@ -390,7 +393,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
