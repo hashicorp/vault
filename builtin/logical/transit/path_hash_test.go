@@ -29,7 +29,7 @@ func TestTransit_Hash(t *testing.T) {
 		}
 		if errExpected {
 			if !resp.IsError() {
-				t.Fatalf("bad: got error response: %#v", *resp)
+				t.Fatalf("bad: did not get error response: %#v", *resp)
 			}
 			return
 		}
@@ -86,6 +86,10 @@ func TestTransit_Hash(t *testing.T) {
 	doRequest(req, false, "98rFrYMEIqVAizamCmBiBoe+GAdlo+KJW8O9vYV8nggkbIMGTU42EvDLkn8+rSCEE6uYYkv3sGF68PA/YggJdg==")
 
 	// Test bad input/format/algorithm
+	req.Data["input"] = nil
+	doRequest(req, true, "")
+
+	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
 	req.Data["format"] = "base92"
 	doRequest(req, true, "")
 

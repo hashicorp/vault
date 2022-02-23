@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/chrismalek/oktasdk-go/okta"
-	"github.com/dgrijalva/jwt-go"
 	duoapi "github.com/duosecurity/duo_api_golang"
 	"github.com/duosecurity/duo_api_golang/authapi"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
