@@ -16,7 +16,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       flattenedNs.mounts = ns.mounts
         ? ns.mounts.map((mount) => {
             let flattenedMount = {};
-            flattenedMount.label = mount['path'];
+            flattenedMount.label = mount['mount_path'];
             Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
             return flattenedMount;
           })
@@ -88,12 +88,14 @@ payload.data.by_namespace = [
     },
     mounts: [
       {
-        path: 'auth/method/uMGBU',
-        counts: {
-          clients: 35,
-          entity_clients: 20,
-          non_entity_clients: 15,
-        },
+        mount_path: 'auth/method/uMGBU',
+        "counts":{
+          "distinct_entities":0,
+          "entity_clients":0,
+          "non_entity_tokens":0,
+          "non_entity_clients":10,
+          "clients":10
+        }
       },
     ],
   },
