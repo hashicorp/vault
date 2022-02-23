@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
@@ -228,15 +227,6 @@ func readSegmentFromStorage(t *testing.T, c *Core, path string) *logical.Storage
 	}
 	if logSegment == nil {
 		t.Fatalf("expected non-nil log segment at %q", path)
-	}
-
-	value, notCompressed, err := compressutil.Decompress(logSegment.Value)
-	// If the data wasn't compressed, fallback to old behavior
-	if !notCompressed {
-		logSegment.Value = value
-	}
-	if err != nil {
-		return logSegment
 	}
 
 	return logSegment
