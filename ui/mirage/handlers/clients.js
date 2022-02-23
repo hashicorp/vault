@@ -871,7 +871,7 @@ export default function (server) {
             },
             mounts: [
               {
-                path: 'auth/method/uMGBU',
+                mount_path: 'auth/method/uMGBU',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -879,7 +879,7 @@ export default function (server) {
                 },
               },
               {
-                path: 'auth/method/woiej',
+                mount_path: 'auth/method/woiej',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -898,7 +898,7 @@ export default function (server) {
             },
             mounts: [
               {
-                path: 'auth/method/ABCD1',
+                mount_path: 'auth/method/ABCD1',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -906,7 +906,7 @@ export default function (server) {
                 },
               },
               {
-                path: 'auth/method/ABCD2',
+                mount_path: 'auth/method/ABCD2',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -925,7 +925,7 @@ export default function (server) {
             },
             mounts: [
               {
-                path: 'auth/method/XYZZ2',
+                mount_path: 'auth/method/XYZZ2',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -933,7 +933,7 @@ export default function (server) {
                 },
               },
               {
-                path: 'auth/method/XYZZ1',
+                mount_path: 'auth/method/XYZZ1',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
