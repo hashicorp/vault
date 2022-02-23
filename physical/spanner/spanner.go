@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/useragent"
+
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"

@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 type ctxKeyForwardedRequestMountAccessor struct{}
@@ -353,6 +353,10 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 	return &logical.PluginEnvironment{
 		VaultVersion: version.GetVersion().Version,
 	}, nil
+}
+
+func (d dynamicSystemView) VaultVersion(_ context.Context) (string, error) {
+	return version.GetVersion().Version, nil
 }
 
 func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {

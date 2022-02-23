@@ -301,8 +301,12 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
+		env, err := b.System().PluginEnv(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		doc := NewOASDocument(env.VaultVersion)
 		// Build OpenAPI response for this path
-		doc := NewOASDocument()
 		if err := documentPath(p, b.SpecialPaths(), b.BackendType, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}

@@ -12,10 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/useragent"
+
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
 
 	"cloud.google.com/go/storage"
