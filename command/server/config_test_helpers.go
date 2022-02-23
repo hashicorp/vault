@@ -780,25 +780,25 @@ func testConfig_Sanitized(t *testing.T) {
 func testParseListeners(t *testing.T) {
 	obj, _ := hcl.Parse(strings.TrimSpace(`
 listener "tcp" {
-	address = "127.0.0.1:443"
-	cluster_address = "127.0.0.1:8201"
-	tls_disable = false
-	tls_cert_file = "./certs/server.crt"
-	tls_key_file = "./certs/server.key"
-	tls_client_ca_file = "./certs/rootca.crt"
-	tls_min_version = "tls12"
-	tls_max_version = "tls13"
-	tls_require_and_verify_client_cert = true
-	tls_disable_client_certs = true
-    telemetry {
-      unauthenticated_metrics_access = true
-    }
-    profiling {
-      unauthenticated_pprof_access = true
-    }
-	agent_api {
-	  enable_quit = true
-	}
+  address = "127.0.0.1:443"
+  cluster_address = "127.0.0.1:8201"
+  tls_disable = false
+  tls_cert_file = "./certs/server.crt"
+  tls_key_file = "./certs/server.key"
+  tls_client_ca_file = "./certs/rootca.crt"
+  tls_min_version = "tls12"
+  tls_max_version = "tls13"
+  tls_require_and_verify_client_cert = true
+  tls_disable_client_certs = true
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
+  profiling {
+    unauthenticated_pprof_access = true
+  }
+  agent_api {
+    enable_quit = true
+  }
 }`))
 
 	config := Config{
