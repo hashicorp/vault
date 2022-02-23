@@ -70,9 +70,7 @@ func (f *PluginAPIClientMeta) GetTLSConfig() *TLSConfig {
 
 // VaultPluginTLSProvider wraps VaultPluginTLSProviderContext using context.Background.
 func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return VaultPluginTLSProviderContext(ctx, apiTLSConfig)
+	return VaultPluginTLSProviderContext(context.Background(), apiTLSConfig)
 }
 
 // VaultPluginTLSProviderContext is run inside a plugin and retrieves the response

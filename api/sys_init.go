@@ -3,9 +3,7 @@ package api
 import "context"
 
 func (c *Sys) InitStatus() (bool, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.InitStatusWithContext(ctx)
+	return c.InitStatusWithContext(context.Background())
 }
 
 func (c *Sys) InitStatusWithContext(ctx context.Context) (bool, error) {
@@ -26,9 +24,7 @@ func (c *Sys) InitStatusWithContext(ctx context.Context) (bool, error) {
 }
 
 func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.InitWithContext(ctx, opts)
+	return c.InitWithContext(context.Background(), opts)
 }
 
 func (c *Sys) InitWithContext(ctx context.Context, opts *InitRequest) (*InitResponse, error) {

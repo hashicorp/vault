@@ -3,9 +3,7 @@ package api
 import "context"
 
 func (c *Sys) Health() (*HealthResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.HealthWithContext(ctx)
+	return c.HealthWithContext(context.Background())
 }
 
 func (c *Sys) HealthWithContext(ctx context.Context) (*HealthResponse, error) {

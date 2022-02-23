@@ -26,9 +26,7 @@ func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 
 // Credential wraps CredentialWithContext using context.Background.
 func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.CredentialWithContext(ctx, role, data)
+	return c.CredentialWithContext(context.Background(), role, data)
 }
 
 // CredentialWithContext invokes the SSH backend API to create a credential to establish an SSH session.
@@ -52,9 +50,7 @@ func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[s
 
 // SignKey wraps SignKeyWithContext using context.Background.
 func (c *SSH) SignKey(role string, data map[string]interface{}) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.SignKeyWithContext(ctx, role, data)
+	return c.SignKeyWithContext(context.Background(), role, data)
 }
 
 // SignKeyWithContext signs the given public key and returns a signed public key to pass

@@ -31,9 +31,7 @@ type ListPluginsResponse struct {
 
 // ListPlugins wraps ListPluginsWithContext using context.Background.
 func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ListPluginsWithContext(ctx, i)
+	return c.ListPluginsWithContext(context.Background(), i)
 }
 
 // ListPluginsWithContext lists all plugins in the catalog and returns their names as a
@@ -152,9 +150,7 @@ type GetPluginResponse struct {
 
 // GetPlugin wraps GetPluginWithContext using context.Background.
 func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GetPluginWithContext(ctx, i)
+	return c.GetPluginWithContext(context.Background(), i)
 }
 
 // GetPluginWithContext retrieves information about the plugin.
@@ -201,9 +197,7 @@ type RegisterPluginInput struct {
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
 func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RegisterPluginWithContext(ctx, i)
+	return c.RegisterPluginWithContext(context.Background(), i)
 }
 
 // RegisterPluginWithContext registers the plugin with the given information.
@@ -236,9 +230,7 @@ type DeregisterPluginInput struct {
 
 // DeregisterPlugin wraps DeregisterPluginWithContext using context.Background.
 func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.DeregisterPluginWithContext(ctx, i)
+	return c.DeregisterPluginWithContext(context.Background(), i)
 }
 
 // DeregisterPluginWithContext removes the plugin with the given name from the plugin
@@ -271,9 +263,7 @@ type ReloadPluginInput struct {
 
 // ReloadPlugin wraps ReloadPluginWithContext using context.Background.
 func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ReloadPluginWithContext(ctx, i)
+	return c.ReloadPluginWithContext(context.Background(), i)
 }
 
 // ReloadPluginWithContext reloads mounted plugin backends, possibly returning
@@ -328,9 +318,7 @@ type ReloadPluginStatusInput struct {
 
 // ReloadPluginStatus wraps ReloadPluginStatusWithContext using context.Background.
 func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ReloadPluginStatusWithContext(ctx, reloadStatusInput)
+	return c.ReloadPluginStatusWithContext(context.Background(), reloadStatusInput)
 }
 
 // ReloadPluginStatusWithContext retrieves the status of a reload operation

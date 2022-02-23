@@ -58,9 +58,7 @@ func (c *Logical) ReadWithContext(ctx context.Context, path string) (*Secret, er
 }
 
 func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ReadWithDataWithContext(ctx, path, data)
+	return c.ReadWithDataWithContext(context.Background(), path, data)
 }
 
 func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
@@ -109,9 +107,7 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 }
 
 func (c *Logical) List(path string) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ListWithContext(ctx, path)
+	return c.ListWithContext(context.Background(), path)
 }
 
 func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, error) {
@@ -150,9 +146,7 @@ func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, er
 }
 
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.WriteWithContext(ctx, path, data)
+	return c.WriteWithContext(context.Background(), path, data)
 }
 
 func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
@@ -216,9 +210,7 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.DeleteWithContext(ctx, path)
+	return c.DeleteWithContext(context.Background(), path)
 }
 
 func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, error) {
@@ -226,9 +218,7 @@ func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, 
 }
 
 func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.DeleteWithDataWithContext(ctx, path, data)
+	return c.DeleteWithDataWithContext(context.Background(), path, data)
 }
 
 func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
@@ -276,9 +266,7 @@ func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, da
 }
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.UnwrapWithContext(ctx, wrappingToken)
+	return c.UnwrapWithContext(context.Background(), wrappingToken)
 }
 
 func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (*Secret, error) {

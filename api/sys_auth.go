@@ -9,9 +9,7 @@ import (
 )
 
 func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ListAuthWithContext(ctx)
+	return c.ListAuthWithContext(context.Background())
 }
 
 func (c *Sys) ListAuthWithContext(ctx context.Context) (map[string]*AuthMount, error) {
@@ -52,9 +50,7 @@ func (c *Sys) EnableAuth(path, authType, desc string) error {
 }
 
 func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.EnableAuthWithOptionsWithContext(ctx, path, options)
+	return c.EnableAuthWithOptionsWithContext(context.Background(), path, options)
 }
 
 func (c *Sys) EnableAuthWithOptionsWithContext(ctx context.Context, path string, options *EnableAuthOptions) error {
@@ -76,9 +72,7 @@ func (c *Sys) EnableAuthWithOptionsWithContext(ctx context.Context, path string,
 }
 
 func (c *Sys) DisableAuth(path string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.DisableAuthWithContext(ctx, path)
+	return c.DisableAuthWithContext(context.Background(), path)
 }
 
 func (c *Sys) DisableAuthWithContext(ctx context.Context, path string) error {

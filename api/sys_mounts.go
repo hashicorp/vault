@@ -10,9 +10,7 @@ import (
 )
 
 func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ListMountsWithContext(ctx)
+	return c.ListMountsWithContext(context.Background())
 }
 
 func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutput, error) {
@@ -45,9 +43,7 @@ func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutpu
 }
 
 func (c *Sys) Mount(path string, mountInfo *MountInput) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.MountWithContext(ctx, path, mountInfo)
+	return c.MountWithContext(context.Background(), path, mountInfo)
 }
 
 func (c *Sys) MountWithContext(ctx context.Context, path string, mountInfo *MountInput) error {
@@ -69,9 +65,7 @@ func (c *Sys) MountWithContext(ctx context.Context, path string, mountInfo *Moun
 }
 
 func (c *Sys) Unmount(path string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.UnmountWithContext(ctx, path)
+	return c.UnmountWithContext(context.Background(), path)
 }
 
 func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
@@ -89,9 +83,7 @@ func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
 
 // Remount wraps RemountWithContext using context.Background.
 func (c *Sys) Remount(from, to string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RemountWithContext(ctx, from, to)
+	return c.RemountWithContext(context.Background(), from, to)
 }
 
 // RemountWithContext kicks off a remount operation, polls the status endpoint using
@@ -119,9 +111,7 @@ func (c *Sys) RemountWithContext(ctx context.Context, from, to string) error {
 
 // StartRemount wraps StartRemountWithContext using context.Background.
 func (c *Sys) StartRemount(from, to string) (*MountMigrationOutput, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.StartRemountWithContext(ctx, from, to)
+	return c.StartRemountWithContext(context.Background(), from, to)
 }
 
 // StartRemountWithContext kicks off a mount migration and returns a response with the migration ID
@@ -163,9 +153,7 @@ func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*Mo
 
 // RemountStatus wraps RemountStatusWithContext using context.Background.
 func (c *Sys) RemountStatus(migrationID string) (*MountMigrationStatusOutput, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RemountStatusWithContext(ctx, migrationID)
+	return c.RemountStatusWithContext(context.Background(), migrationID)
 }
 
 // RemountStatusWithContext checks the status of a mount migration operation with the provided ID
@@ -198,9 +186,7 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 }
 
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.TuneMountWithContext(ctx, path, config)
+	return c.TuneMountWithContext(context.Background(), path, config)
 }
 
 func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
@@ -220,9 +206,7 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 }
 
 func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.MountConfigWithContext(ctx, path)
+	return c.MountConfigWithContext(context.Background(), path)
 }
 
 func (c *Sys) MountConfigWithContext(ctx context.Context, path string) (*MountConfigOutput, error) {

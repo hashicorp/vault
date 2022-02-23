@@ -20,9 +20,7 @@ func (c *Sys) CapabilitiesSelfWithContext(ctx context.Context, path string) ([]s
 }
 
 func (c *Sys) Capabilities(token, path string) ([]string, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.CapabilitiesWithContext(ctx, token, path)
+	return c.CapabilitiesWithContext(context.Background(), token, path)
 }
 
 func (c *Sys) CapabilitiesWithContext(ctx context.Context, token, path string) ([]string, error) {

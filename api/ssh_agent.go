@@ -206,9 +206,7 @@ func (c *Client) SSHHelperWithMountPoint(mountPoint string) *SSHHelper {
 // an echo response message is returned. This feature is used by ssh-helper to verify if
 // its configured correctly.
 func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.VerifyWithContext(ctx, otp)
+	return c.VerifyWithContext(context.Background(), otp)
 }
 
 // VerifyWithContext the same as Verify but with a custom context.

@@ -8,9 +8,7 @@ import (
 )
 
 func (c *Sys) Rotate() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RotateWithContext(ctx)
+	return c.RotateWithContext(context.Background())
 }
 
 func (c *Sys) RotateWithContext(ctx context.Context) error {
@@ -27,9 +25,7 @@ func (c *Sys) RotateWithContext(ctx context.Context) error {
 }
 
 func (c *Sys) KeyStatus() (*KeyStatus, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.KeyStatusWithContext(ctx)
+	return c.KeyStatusWithContext(context.Background())
 }
 
 func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {

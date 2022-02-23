@@ -3,21 +3,15 @@ package api
 import "context"
 
 func (c *Sys) GenerateRootStatus() (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRootStatusWithContext(ctx)
+	return c.GenerateRootStatusWithContext(context.Background())
 }
 
 func (c *Sys) GenerateDROperationTokenStatus() (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateDROperationTokenStatusWithContext(ctx)
+	return c.GenerateDROperationTokenStatusWithContext(context.Background())
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenStatus() (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRecoveryOperationTokenStatusWithContext(ctx)
+	return c.GenerateRecoveryOperationTokenStatusWithContext(context.Background())
 }
 
 func (c *Sys) GenerateRootStatusWithContext(ctx context.Context) (*GenerateRootStatusResponse, error) {
@@ -50,21 +44,15 @@ func (c *Sys) generateRootStatusCommonWithContext(ctx context.Context, path stri
 }
 
 func (c *Sys) GenerateRootInit(otp, pgpKey string) (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRootInitWithContext(ctx, otp, pgpKey)
+	return c.GenerateRootInitWithContext(context.Background(), otp, pgpKey)
 }
 
 func (c *Sys) GenerateDROperationTokenInit(otp, pgpKey string) (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateDROperationTokenInitWithContext(ctx, otp, pgpKey)
+	return c.GenerateDROperationTokenInitWithContext(context.Background(), otp, pgpKey)
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenInit(otp, pgpKey string) (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRecoveryOperationTokenInitWithContext(ctx, otp, pgpKey)
+	return c.GenerateRecoveryOperationTokenInitWithContext(context.Background(), otp, pgpKey)
 }
 
 func (c *Sys) GenerateRootInitWithContext(ctx context.Context, otp, pgpKey string) (*GenerateRootStatusResponse, error) {
@@ -105,21 +93,15 @@ func (c *Sys) generateRootInitCommonWithContext(ctx context.Context, path, otp, 
 }
 
 func (c *Sys) GenerateRootCancel() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRootCancelWithContext(ctx)
+	return c.GenerateRootCancelWithContext(context.Background())
 }
 
 func (c *Sys) GenerateDROperationTokenCancel() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateDROperationTokenCancelWithContext(ctx)
+	return c.GenerateDROperationTokenCancelWithContext(context.Background())
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenCancel() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRecoveryOperationTokenCancelWithContext(ctx)
+	return c.GenerateRecoveryOperationTokenCancelWithContext(context.Background())
 }
 
 func (c *Sys) GenerateRootCancelWithContext(ctx context.Context) error {
@@ -148,21 +130,15 @@ func (c *Sys) generateRootCancelCommonWithContext(ctx context.Context, path stri
 }
 
 func (c *Sys) GenerateRootUpdate(shard, nonce string) (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRootUpdateWithContext(ctx, shard, nonce)
+	return c.GenerateRootUpdateWithContext(context.Background(), shard, nonce)
 }
 
 func (c *Sys) GenerateDROperationTokenUpdate(shard, nonce string) (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateDROperationTokenUpdateWithContext(ctx, shard, nonce)
+	return c.GenerateDROperationTokenUpdateWithContext(context.Background(), shard, nonce)
 }
 
 func (c *Sys) GenerateRecoveryOperationTokenUpdate(shard, nonce string) (*GenerateRootStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GenerateRecoveryOperationTokenUpdateWithContext(ctx, shard, nonce)
+	return c.GenerateRecoveryOperationTokenUpdateWithContext(context.Background(), shard, nonce)
 }
 
 func (c *Sys) GenerateRootUpdateWithContext(ctx context.Context, shard, nonce string) (*GenerateRootStatusResponse, error) {

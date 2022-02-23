@@ -9,9 +9,7 @@ import (
 )
 
 func (c *Sys) ListPolicies() ([]string, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ListPoliciesWithContext(ctx)
+	return c.ListPoliciesWithContext(context.Background())
 }
 
 func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
@@ -48,9 +46,7 @@ func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
 }
 
 func (c *Sys) GetPolicy(name string) (string, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.GetPolicyWithContext(ctx, name)
+	return c.GetPolicyWithContext(context.Background(), name)
 }
 
 func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, error) {
@@ -86,9 +82,7 @@ func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, er
 }
 
 func (c *Sys) PutPolicy(name, rules string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.PutPolicyWithContext(ctx, name, rules)
+	return c.PutPolicyWithContext(context.Background(), name, rules)
 }
 
 func (c *Sys) PutPolicyWithContext(ctx context.Context, name, rules string) error {
@@ -114,9 +108,7 @@ func (c *Sys) PutPolicyWithContext(ctx context.Context, name, rules string) erro
 }
 
 func (c *Sys) DeletePolicy(name string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.DeletePolicyWithContext(ctx, name)
+	return c.DeletePolicyWithContext(context.Background(), name)
 }
 
 func (c *Sys) DeletePolicyWithContext(ctx context.Context, name string) error {

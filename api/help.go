@@ -7,9 +7,7 @@ import (
 
 // Help wraps HelpWithContext using context.Background.
 func (c *Client) Help(path string) (*Help, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.HelpWithContext(ctx, path)
+	return c.HelpWithContext(context.Background(), path)
 }
 
 // HelpWithContext reads the help information for the given path.

@@ -6,9 +6,7 @@ import (
 )
 
 func (c *Sys) Renew(id string, increment int) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RenewWithContext(ctx, id, increment)
+	return c.RenewWithContext(context.Background(), id, increment)
 }
 
 func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*Secret, error) {
@@ -35,9 +33,7 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 }
 
 func (c *Sys) Lookup(id string) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.LookupWithContext(ctx, id)
+	return c.LookupWithContext(context.Background(), id)
 }
 
 func (c *Sys) LookupWithContext(ctx context.Context, id string) (*Secret, error) {
@@ -63,9 +59,7 @@ func (c *Sys) LookupWithContext(ctx context.Context, id string) (*Secret, error)
 }
 
 func (c *Sys) Revoke(id string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RevokeWithContext(ctx, id)
+	return c.RevokeWithContext(context.Background(), id)
 }
 
 func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
@@ -88,9 +82,7 @@ func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
 }
 
 func (c *Sys) RevokePrefix(id string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RevokePrefixWithContext(ctx, id)
+	return c.RevokePrefixWithContext(context.Background(), id)
 }
 
 func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
@@ -107,9 +99,7 @@ func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
 }
 
 func (c *Sys) RevokeForce(id string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RevokeForceWithContext(ctx, id)
+	return c.RevokeForceWithContext(context.Background(), id)
 }
 
 func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
@@ -126,9 +116,7 @@ func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
 }
 
 func (c *Sys) RevokeWithOptions(opts *RevokeOptions) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.RevokeWithOptionsWithContext(ctx, opts)
+	return c.RevokeWithOptionsWithContext(context.Background(), opts)
 }
 
 func (c *Sys) RevokeWithOptionsWithContext(ctx context.Context, opts *RevokeOptions) error {

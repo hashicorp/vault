@@ -8,9 +8,7 @@ import (
 )
 
 func (c *Sys) CORSStatus() (*CORSResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.CORSStatusWithContext(ctx)
+	return c.CORSStatusWithContext(context.Background())
 }
 
 func (c *Sys) CORSStatusWithContext(ctx context.Context) (*CORSResponse, error) {
@@ -43,9 +41,7 @@ func (c *Sys) CORSStatusWithContext(ctx context.Context) (*CORSResponse, error) 
 }
 
 func (c *Sys) ConfigureCORS(req *CORSRequest) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ConfigureCORSWithContext(ctx, req)
+	return c.ConfigureCORSWithContext(context.Background(), req)
 }
 
 func (c *Sys) ConfigureCORSWithContext(ctx context.Context, req *CORSRequest) error {
@@ -65,9 +61,7 @@ func (c *Sys) ConfigureCORSWithContext(ctx context.Context, req *CORSRequest) er
 }
 
 func (c *Sys) DisableCORS() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.DisableCORSWithContext(ctx)
+	return c.DisableCORSWithContext(context.Background())
 }
 
 func (c *Sys) DisableCORSWithContext(ctx context.Context) error {

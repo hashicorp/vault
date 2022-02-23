@@ -3,9 +3,7 @@ package api
 import "context"
 
 func (c *Sys) SealStatus() (*SealStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.SealStatusWithContext(ctx)
+	return c.SealStatusWithContext(context.Background())
 }
 
 func (c *Sys) SealStatusWithContext(ctx context.Context) (*SealStatusResponse, error) {
@@ -17,9 +15,7 @@ func (c *Sys) SealStatusWithContext(ctx context.Context) (*SealStatusResponse, e
 }
 
 func (c *Sys) Seal() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.SealWithContext(ctx)
+	return c.SealWithContext(context.Background())
 }
 
 func (c *Sys) SealWithContext(ctx context.Context) error {
@@ -36,9 +32,7 @@ func (c *Sys) SealWithContext(ctx context.Context) error {
 }
 
 func (c *Sys) ResetUnsealProcess() (*SealStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ResetUnsealProcessWithContext(ctx)
+	return c.ResetUnsealProcessWithContext(context.Background())
 }
 
 func (c *Sys) ResetUnsealProcessWithContext(ctx context.Context) (*SealStatusResponse, error) {
@@ -56,9 +50,7 @@ func (c *Sys) ResetUnsealProcessWithContext(ctx context.Context) (*SealStatusRes
 }
 
 func (c *Sys) Unseal(shard string) (*SealStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.UnsealWithContext(ctx, shard)
+	return c.UnsealWithContext(context.Background(), shard)
 }
 
 func (c *Sys) UnsealWithContext(ctx context.Context, shard string) (*SealStatusResponse, error) {
@@ -76,9 +68,7 @@ func (c *Sys) UnsealWithContext(ctx context.Context, shard string) (*SealStatusR
 }
 
 func (c *Sys) UnsealWithOptions(opts *UnsealOpts) (*SealStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.UnsealWithOptionsWithContext(ctx, opts)
+	return c.UnsealWithOptionsWithContext(context.Background(), opts)
 }
 
 func (c *Sys) UnsealWithOptionsWithContext(ctx context.Context, opts *UnsealOpts) (*SealStatusResponse, error) {

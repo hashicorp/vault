@@ -6,9 +6,7 @@ import (
 )
 
 func (c *Sys) Leader() (*LeaderResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.LeaderWithContext(ctx)
+	return c.LeaderWithContext(context.Background())
 }
 
 func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {

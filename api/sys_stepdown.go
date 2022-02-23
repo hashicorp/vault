@@ -3,9 +3,7 @@ package api
 import "context"
 
 func (c *Sys) StepDown() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.StepDownWithContext(ctx)
+	return c.StepDownWithContext(context.Background())
 }
 
 func (c *Sys) StepDownWithContext(ctx context.Context) error {

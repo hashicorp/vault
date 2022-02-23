@@ -6,9 +6,7 @@ import (
 )
 
 func (c *Sys) HAStatus() (*HAStatusResponse, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.HAStatusWithContext(ctx)
+	return c.HAStatusWithContext(context.Background())
 }
 
 func (c *Sys) HAStatusWithContext(ctx context.Context) (*HAStatusResponse, error) {

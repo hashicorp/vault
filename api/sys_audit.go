@@ -9,9 +9,7 @@ import (
 )
 
 func (c *Sys) AuditHash(path string, input string) (string, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.AuditHashWithContext(ctx, path, input)
+	return c.AuditHashWithContext(context.Background(), path, input)
 }
 
 func (c *Sys) AuditHashWithContext(ctx context.Context, path string, input string) (string, error) {
@@ -54,9 +52,7 @@ func (c *Sys) AuditHashWithContext(ctx context.Context, path string, input strin
 }
 
 func (c *Sys) ListAudit() (map[string]*Audit, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.ListAuditWithContext(ctx)
+	return c.ListAuditWithContext(context.Background())
 }
 
 func (c *Sys) ListAuditWithContext(ctx context.Context) (map[string]*Audit, error) {
@@ -99,9 +95,7 @@ func (c *Sys) EnableAudit(
 }
 
 func (c *Sys) EnableAuditWithOptions(path string, options *EnableAuditOptions) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.EnableAuditWithOptionsWithContext(ctx, path, options)
+	return c.EnableAuditWithOptionsWithContext(context.Background(), path, options)
 }
 
 func (c *Sys) EnableAuditWithOptionsWithContext(ctx context.Context, path string, options *EnableAuditOptions) error {
@@ -123,9 +117,7 @@ func (c *Sys) EnableAuditWithOptionsWithContext(ctx context.Context, path string
 }
 
 func (c *Sys) DisableAudit(path string) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	return c.DisableAuditWithContext(ctx, path)
+	return c.DisableAuditWithContext(context.Background(), path)
 }
 
 func (c *Sys) DisableAuditWithContext(ctx context.Context, path string) error {
