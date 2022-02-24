@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -155,7 +156,7 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
-		if len(secret.Auth.MFARequirement.MFAConstraints) == 1 && !c.flagNonInteractive {
+		if c.isInteractiveEnabled(len(secret.Auth.MFARequirement.MFAConstraints)) {
 			// Currently, if there is only one MFA method configured, the login
 			// request is validated interactively
 			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
@@ -174,6 +175,18 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.UI, secret)
+}
+
+func (c *WriteCommand) isInteractiveEnabled(mfaConstraintLen int) bool {
+	if mfaConstraintLen != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
+		return false
+	}
+
+	if !c.flagNonInteractive {
+		return true
+	}
+
+	return false
 }
 
 // getMFAMethodInfo returns MFA method information only if one MFA method is
@@ -204,7 +217,8 @@ func (c *WriteCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 			return 2
 		}
 	} else {
-		c.UI.Warn("Please acknowledge the push notification in your authenticator app")
+		c.UI.Warn("Asking Vault to perform MFA validation with upstream service. " +
+			"You should receive a push notification in your authenticator app shortly")
 	}
 
 	// passcode could be an empty string
