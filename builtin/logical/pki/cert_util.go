@@ -328,10 +328,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if data.role.AllowBareDomains &&
-					(strings.EqualFold(sanitizedName, currDomain) ||
-						(isEmail && strings.EqualFold(emailDomain, currDomain)) ||
-							// Handle the use case of AllowedDomain being an email address
-							(isEmail && strings.EqualFold(name, currDomain))) {
+					(strings.EqualFold(name, currDomain) ||
+						(isEmail && strings.EqualFold(emailDomain, currDomain))) {
 					valid = true
 					break
 				}
@@ -346,7 +344,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 				if data.role.AllowGlobDomains &&
 					strings.Contains(currDomain, "*") &&
-					glob.Glob(currDomain, sanitizedName) {
+					glob.Glob(currDomain, name) {
 					valid = true
 					break
 				}
