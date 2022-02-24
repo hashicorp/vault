@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -510,21 +511,31 @@ cache {
 }
 
 listener "tcp" {
-    address = "127.0.0.1:8101"
+    address = "%s"
     tls_disable = true
 }
 listener "tcp" {
-    address = "127.0.0.1:8102"
+    address = "%s"
     tls_disable = true
     require_request_header = false
 }
 listener "tcp" {
-    address = "127.0.0.1:8103"
+    address = "%s"
     tls_disable = true
     require_request_header = true
 }
 `
-	config = fmt.Sprintf(config, roleIDPath, secretIDPath)
+	listenAddr1 := generateListenerAddress(t)
+	listenAddr2 := generateListenerAddress(t)
+	listenAddr3 := generateListenerAddress(t)
+	config = fmt.Sprintf(
+		config,
+		roleIDPath,
+		secretIDPath,
+		listenAddr1,
+		listenAddr2,
+		listenAddr3,
+	)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -563,19 +574,19 @@ listener "tcp" {
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
-	agentClient := newApiClient("http://127.0.0.1:8101", false)
+	agentClient := newApiClient("http://"+listenAddr1, false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'false', with the header missing from the request.
-	agentClient = newApiClient("http://127.0.0.1:8102", false)
+	agentClient = newApiClient("http://"+listenAddr2, false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the header missing from the request.
-	agentClient = newApiClient("http://127.0.0.1:8103", false)
+	agentClient = newApiClient("http://"+listenAddr3, false)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	resp, err := agentClient.RawRequest(req)
 	if err == nil {
@@ -587,7 +598,7 @@ listener "tcp" {
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with an invalid header present in the request.
-	agentClient = newApiClient("http://127.0.0.1:8103", false)
+	agentClient = newApiClient("http://"+listenAddr3, false)
 	h := agentClient.Headers()
 	h[consts.RequestHeaderName] = []string{"bogus"}
 	agentClient.SetHeaders(h)
@@ -602,7 +613,7 @@ listener "tcp" {
 
 	// Test against a listener configuration that sets 'require_request_header'
 	// to 'true', with the proper header present in the request.
-	agentClient = newApiClient("http://127.0.0.1:8103", true)
+	agentClient = newApiClient("http://"+listenAddr3, true)
 	req = agentClient.NewRequest("GET", "/v1/sys/health")
 	request(t, agentClient, req, 200)
 }
@@ -613,16 +624,17 @@ listener "tcp" {
 func TestAgent_RequireAutoAuthWithForce(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	// Create a config file
-	config := `
+	config := fmt.Sprintf(`
 cache {
     use_auto_auth_token = "force"
 }
 
 listener "tcp" {
-    address = "127.0.0.1:8101"
+    address = "%s"
     tls_disable = true
 }
-`
+`, generateListenerAddress(t))
+
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -1623,7 +1635,7 @@ func TestAgent_Cache_Retry(t *testing.T) {
 cache {
 }
 `
-			listenAddr := "127.0.0.1:18123"
+			listenAddr := generateListenerAddress(t)
 			listenConfig := fmt.Sprintf(`
 listener "tcp" {
   address = "%s"
@@ -1861,7 +1873,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			listenAddr := "127.0.0.1:18123"
+			listenAddr := generateListenerAddress(t)
 			listenConfig := fmt.Sprintf(`
 listener "tcp" {
   address = "%s"
@@ -2021,14 +2033,15 @@ func TestAgent_Metrics(t *testing.T) {
 	serverClient := cluster.Cores[0].Client
 
 	// Create a config file
-	config := `
+	listenAddr := generateListenerAddress(t)
+	config := fmt.Sprintf(`
 cache {}
 
 listener "tcp" {
-    address = "127.0.0.1:8101"
+    address = "%s"
     tls_disable = true
 }
-`
+`, listenAddr)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -2062,7 +2075,7 @@ listener "tcp" {
 	}()
 
 	conf := api.DefaultConfig()
-	conf.Address = "http://127.0.0.1:8101"
+	conf.Address = "http://" + listenAddr
 	agentClient, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -2115,8 +2128,8 @@ func TestAgent_Quit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	listenAddr := "127.0.0.1:18123"
-	listenAddr2 := "127.0.0.1:18124"
+	listenAddr := generateListenerAddress(t)
+	listenAddr2 := generateListenerAddress(t)
 	config := fmt.Sprintf(`
 vault {
   address = "%s"
@@ -2170,7 +2183,7 @@ cache {}
 	}
 
 	// First try on listener 1 where the API should be disabled.
-	resp, err := client.RawRequest(client.NewRequest("POST", "/agent/v1/quit"))
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPost, "/agent/v1/quit"))
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -2184,7 +2197,7 @@ cache {}
 		t.Fatal(err)
 	}
 
-	_, err = client.RawRequest(client.NewRequest("POST", "/agent/v1/quit"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodPost, "/agent/v1/quit"))
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -2196,4 +2209,19 @@ cache {}
 	}
 
 	wg.Wait()
+}
+
+// Get a randomly assigned port and then free it again before returning it.
+// There is still a race when trying to use it, but should work better
+// than a static port.
+func generateListenerAddress(t *testing.T) string {
+	t.Helper()
+
+	ln1, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listenAddr := ln1.Addr().String()
+	ln1.Close()
+	return listenAddr
 }

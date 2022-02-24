@@ -113,6 +113,7 @@ type Listener struct {
 	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers"`
 }
 
+// AgentAPI allows users to select which parts of the Agent API they want enabled.
 type AgentAPI struct {
 	EnableQuit bool `hcl:"enable_quit"`
 }
