@@ -32,6 +32,7 @@ module('Acceptance | clients current', function (hooks) {
     this.server = new Pretender(function () {
       this.get('/v1/sys/internal/counters/activity/monthly', () => sendResponse(monthly));
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+      this.get('/v1/sys/version-history', () => sendResponse({}));
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.post('/v1/sys/capabilities-self', this.passthrough);
@@ -48,6 +49,7 @@ module('Acceptance | clients current', function (hooks) {
     this.server = new Pretender(function () {
       this.get('/v1/sys/internal/counters/activity/monthly', () => sendResponse(monthly));
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.post('/v1/sys/capabilities-self', this.passthrough);
@@ -65,6 +67,7 @@ module('Acceptance | clients current', function (hooks) {
     this.server = new Pretender(function () {
       this.get('/v1/sys/internal/counters/activity/monthly', () => sendResponse(monthly));
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.post('/v1/sys/capabilities-self', this.passthrough);
@@ -127,6 +130,7 @@ module('Acceptance | clients current', function (hooks) {
     this.server = new Pretender(function () {
       this.get('/v1/sys/internal/counters/activity/monthly', () => sendResponse(monthly));
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.post('/v1/sys/capabilities-self', this.passthrough);
