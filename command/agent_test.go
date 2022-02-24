@@ -2188,7 +2188,7 @@ cache {}
 		t.Fatalf("expected error")
 	}
 	if resp != nil && resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404 but got: %d", resp.StatusCode)
+		t.Fatalf("expected %d but got: %d", http.StatusNotFound, resp.StatusCode)
 	}
 
 	// Now try on listener 2 where the quit API should be enabled.
