@@ -9,8 +9,6 @@
 .stacked-charts {
   display: grid;
   width: 100%;
-  // grid-template-columns: 1fr;
-  // grid-template-rows: 1fr;
 }
 
 .single-chart-grid {
@@ -63,8 +61,8 @@
   grid-row-start: 2;
   grid-row-end: span 3;
   justify-self: center;
-  height: 341px;
-  max-width: 730px;
+  height: 300px;
+  max-width: 700px;
 
   svg.chart {
     width: 100%;
@@ -107,8 +105,13 @@
 }
 
 .chart-empty-state {
-  grid-column-start: 1;
-  grid-column-end: -1;
+  height: 100%;
+  width: 100%;
+  grid-row-end: span 3;
+  grid-column-end: span 3;
+  > div {
+    box-shadow: none !important;
+  }
 }
 
 .chart-subTitle {

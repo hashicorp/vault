@@ -21,8 +21,6 @@ import { tracked } from '@glimmer/tracking';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 
-// TODO CMB: delete original bar chart component
-
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 95 }; // makes space for y-axis legend
 const TRANSLATE = { down: 14, left: 99 };
@@ -104,7 +102,7 @@ export default class HorizontalBarChart extends Component {
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', (chartData) => `${xScale(chartData[1] - chartData[0])}%`)
+      .attr('width', (chartData) => `${xScale(Math.abs(chartData[1] - chartData[0]))}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', (chartData) => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
