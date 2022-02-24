@@ -165,13 +165,13 @@
   text-transform: lowercase;
 }
 .has-bottom-margin-xs {
-  margin-bottom: $spacing-xs;
+  margin-bottom: $spacing-xs !important;
 }
 .has-bottom-margin-s {
   margin-bottom: $spacing-s;
 }
 .has-bottom-margin-m {
-  margin-bottom: $spacing-m;
+  margin-bottom: $spacing-m !important;
 }
 .has-bottom-margin-l {
   margin-bottom: $spacing-l;
