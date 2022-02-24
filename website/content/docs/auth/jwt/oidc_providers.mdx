@@ -410,7 +410,7 @@ log in.
    # OR equivalent to:
    curl \
       --fail \
-      --request PUT \
+      --request POST \
       --header "X-Vault-Request: true" \
       --data '{"jwt":"<JWT-TOKEN-HERE>","role":"my-role"}' \
       "${VAULT_ADDR}/v1/auth/jwt/login"

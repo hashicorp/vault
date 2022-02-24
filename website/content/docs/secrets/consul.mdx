@@ -32,7 +32,7 @@ management tool.
     ```shell-session
     $ curl \
         --header "X-Consul-Token: my-management-token" \
-        --request PUT \
+        --request POST \
         --data '{"Name": "sample", "Type": "management"}' \
         https://consul.rocks/v1/acl/create
     ```
