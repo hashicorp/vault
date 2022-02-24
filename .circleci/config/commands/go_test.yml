@@ -8,7 +8,7 @@ parameters:
     default: "/tmp/testlogs"
   go_image:
     type: string
-    default: "docker.mirror.hashicorp.services/cimg/go:1.16.12"
+    default: "docker.mirror.hashicorp.services/cimg/go:1.16.14"
   use_docker:
     type: boolean
     default: false
