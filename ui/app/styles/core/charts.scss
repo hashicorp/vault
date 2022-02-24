@@ -1,7 +1,7 @@
 .chart-wrapper {
   border: $light-border;
   border-radius: $radius-large;
-  padding: $spacing-l $spacing-l $spacing-s $spacing-l;
+  padding: $spacing-s $spacing-l;
   margin-bottom: $spacing-m;
 }
 
@@ -165,6 +165,7 @@ h2.chart-title {
   font-weight: $font-weight-bold;
   font-size: $size-5;
   line-height: $spacing-l;
+  margin-bottom: $spacing-xs;
 }
 
 p.chart-description {
@@ -176,14 +177,14 @@ p.chart-description {
 
 p.chart-subtext {
   color: $ui-gray-500;
-  font-size: $size-9;
-  line-height: $body-size;
+  font-size: $size-8;
+  line-height: 16px;
   margin-top: $spacing-xs;
 }
 
 h3.data-details {
   font-weight: $font-weight-bold;
-  font-size: $size-9;
+  font-size: $size-8;
   line-height: $body-size;
   margin-bottom: $spacing-xs;
 }

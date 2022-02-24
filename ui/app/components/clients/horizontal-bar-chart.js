@@ -23,7 +23,7 @@ import { tracked } from '@glimmer/tracking';
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 95 }; // makes space for y-axis legend
-const TRANSLATE = { down: 13 };
+const TRANSLATE = { down: 14, left: 99 };
 const CHAR_LIMIT = 15; // character count limit for y-axis labels to trigger truncating
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
@@ -211,7 +211,7 @@ export default class HorizontalBarChart extends Component {
     // add client count total values to the right
     chartSvg
       .append('g')
-      .attr('transform', `translate(${CHART_MARGIN.left}, ${TRANSLATE.down})`)
+      .attr('transform', `translate(${TRANSLATE.left}, ${TRANSLATE.down})`)
       .selectAll('text')
       .data(dataset)
       .enter()
