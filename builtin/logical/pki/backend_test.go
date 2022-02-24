@@ -679,11 +679,14 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTL:    12 * time.Hour,
-		KeyType:   "rsa",
-		KeyBits:   2048,
-		RequireCN: true,
+		MaxTTL:                    12 * time.Hour,
+		KeyType:                   "rsa",
+		KeyBits:                   2048,
+		RequireCN:                 true,
+		AllowWildcardCertificates: new(bool),
 	}
+	*roleVals.AllowWildcardCertificates = true
+
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
 
@@ -3299,13 +3302,14 @@ func (o MultiBool) ToValues() []bool {
 }
 
 type IssuanceRegression struct {
-	AllowedDomains   []string
-	AllowBareDomains MultiBool
-	AllowGlobDomains MultiBool
-	AllowSubdomains  MultiBool
-	AllowLocalhost   MultiBool
-	CommonName       string
-	Issued           bool
+	AllowedDomains            []string
+	AllowBareDomains          MultiBool
+	AllowGlobDomains          MultiBool
+	AllowSubdomains           MultiBool
+	AllowLocalhost            MultiBool
+	AllowWildcardCertificates MultiBool
+	CommonName                string
+	Issued                    bool
 }
 
 func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, test IssuanceRegression) int {
@@ -3314,36 +3318,38 @@ func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, t
 		for _, AllowGlobDomains := range test.AllowGlobDomains.ToValues() {
 			for _, AllowSubdomains := range test.AllowSubdomains.ToValues() {
 				for _, AllowLocalhost := range test.AllowLocalhost.ToValues() {
+					for _, AllowWildcardCertificates := range test.AllowWildcardCertificates.ToValues() {
+						role := fmt.Sprintf("issuance-regression-%d-bare-%v-glob-%v-subdomains-%v-localhost-%v-wildcard-%v", index, AllowBareDomains, AllowGlobDomains, AllowSubdomains, AllowLocalhost, AllowWildcardCertificates)
+						resp, err := client.Logical().Write("pki/roles/"+role, map[string]interface{}{
+							"allowed_domains":             test.AllowedDomains,
+							"allow_bare_domains":          AllowBareDomains,
+							"allow_glob_domains":          AllowGlobDomains,
+							"allow_subdomains":            AllowSubdomains,
+							"allow_localhost":             AllowLocalhost,
+							"allow_wildcard_certificates": AllowWildcardCertificates,
+							// TODO: test across this vector as well. Currently certain wildcard
+							// matching is broken with it enabled (such as x*x.foo).
+							"enforce_hostnames": false,
+							"key_type":          "ec",
+							"key_bits":          256,
+						})
+						if err != nil {
+							t.Fatal(err)
+						}
 
-					role := fmt.Sprintf("issuance-regression-%d-bare-%v-glob-%v-subdomains-%v-localhost-%v", index, AllowBareDomains, AllowGlobDomains, AllowSubdomains, AllowLocalhost)
-					resp, err := client.Logical().Write("pki/roles/"+role, map[string]interface{}{
-						"allowed_domains":    test.AllowedDomains,
-						"allow_bare_domains": AllowBareDomains,
-						"allow_glob_domains": AllowGlobDomains,
-						"allow_subdomains":   AllowSubdomains,
-						"allow_localhost":    AllowLocalhost,
-						// TODO: test across this vector as well. Currently certain wildcard
-						// matching is broken with it enabled (such as x*x.foo).
-						"enforce_hostnames": false,
-						"key_type":          "ec",
-						"key_bits":          256,
-					})
-					if err != nil {
-						t.Fatal(err)
+						resp, err = client.Logical().Write("pki/issue/"+role, map[string]interface{}{
+							"common_name": test.CommonName,
+						})
+
+						haveErr := err != nil || resp == nil
+						expectErr := !test.Issued
+
+						if haveErr != expectErr {
+							t.Fatalf("issuance regression test [%d] failed: haveErr: %v, expectErr: %v, err: %v, resp: %v, test case: %v, role: %v", index, haveErr, expectErr, err, resp, test, role)
+						}
+
+						tested += 1
 					}
-
-					resp, err = client.Logical().Write("pki/issue/"+role, map[string]interface{}{
-						"common_name": test.CommonName,
-					})
-
-					haveErr := err != nil || resp == nil
-					expectErr := !test.Issued
-
-					if haveErr != expectErr {
-						t.Fatalf("issuance regression test [%d] failed: haveErr: %v, expectErr: %v, err: %v, resp: %v, test case: %v, role: %v", index, haveErr, expectErr, err, resp, test, role)
-					}
-
-					tested += 1
 				}
 			}
 		}
@@ -3355,144 +3361,155 @@ func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, t
 func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 	// Regression testing of role's issuance policy.
 	testCases := []IssuanceRegression{
-		// allowed, bare, glob, subdomains, localhost, cn, issued
+		// allowed, bare, glob, subdomains, localhost, wildcards, cn, issued
 
+		// === Globs not allowed but used === //
 		// Allowed contains globs, but globbing not allowed, resulting in all
 		// issuances failing. Note that tests against issuing a wildcard with
 		// a bare domain will be covered later.
-		/*  0 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, "baz.fud.bar.foo", false},
-		/*  1 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, "*.fud.bar.foo", false},
-		/*  2 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, "fud.bar.foo", false},
-		/*  3 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, "*.bar.foo", false},
-		/*  4 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, "bar.foo", false},
-		/*  5 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, "*.foo", false},
-		/*  6 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, "foo", false},
-		/*  7 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, "baz.fud.bar.foo", false},
-		/*  8 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, "*.fud.bar.foo", false},
-		/*  9 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, "fud.bar.foo", false},
-		/* 10 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, "*.bar.foo", false},
-		/* 11 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, "bar.foo", false},
-		/* 12 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, "foo", false},
+		/*  0 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, MAny, "baz.fud.bar.foo", false},
+		/*  1 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, MAny, "*.fud.bar.foo", false},
+		/*  2 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, MAny, "fud.bar.foo", false},
+		/*  3 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, MAny, "*.bar.foo", false},
+		/*  4 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, MAny, "bar.foo", false},
+		/*  5 */ {[]string{"*.*.foo"}, MAny, MFalse, MAny, MAny, MAny, "*.foo", false},
+		/*  6 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, MAny, "foo", false},
+		/*  7 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, MAny, "baz.fud.bar.foo", false},
+		/*  8 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, MAny, "*.fud.bar.foo", false},
+		/*  9 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, MAny, "fud.bar.foo", false},
+		/* 10 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, MAny, "*.bar.foo", false},
+		/* 11 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, MAny, "bar.foo", false},
+		/* 12 */ {[]string{"*.foo"}, MAny, MFalse, MAny, MAny, MAny, "foo", false},
 
+		// === Localhost sanity === //
 		// Localhost forbidden, not matching allowed domains -> not issued
-		/* 13 */ {[]string{"*.*.foo"}, MAny, MAny, MAny, MFalse, "localhost", false},
+		/* 13 */ {[]string{"*.*.foo"}, MAny, MAny, MAny, MFalse, MAny, "localhost", false},
 		// Localhost allowed, not matching allowed domains -> issued
-		/* 14 */ {[]string{"*.*.foo"}, MAny, MAny, MAny, MTrue, "localhost", true},
+		/* 14 */ {[]string{"*.*.foo"}, MAny, MAny, MAny, MTrue, MAny, "localhost", true},
 		// Localhost allowed via allowed domains (and bare allowed), not by AllowLocalhost -> issued
-		/* 15 */ {[]string{"localhost"}, MTrue, MAny, MAny, MFalse, "localhost", true},
+		/* 15 */ {[]string{"localhost"}, MTrue, MAny, MAny, MFalse, MAny, "localhost", true},
 		// Localhost allowed via allowed domains (and bare not allowed), not by AllowLocalhost -> not issued
-		/* 16 */ {[]string{"localhost"}, MFalse, MAny, MAny, MFalse, "localhost", false},
-		// Localhost allowed via allowed domains, and by AllowLocalhost -> issued
-		/* 17 */ {[]string{"localhost"}, MAny, MAny, MAny, MTrue, "localhost", true},
+		/* 16 */ {[]string{"localhost"}, MFalse, MAny, MAny, MFalse, MAny, "localhost", false},
+		// Localhost allowed via allowed domains (but bare not allowed), and by AllowLocalhost -> issued
+		/* 17 */ {[]string{"localhost"}, MFalse, MAny, MAny, MTrue, MAny, "localhost", true},
 
+		// === Bare wildcard issuance == //
 		// allowed_domains contains one or more wildcards and bare domains allowed,
 		// resulting in the cert being issued.
-		/* 18 */ {[]string{"*.foo"}, MTrue, MAny, MAny, MAny, "*.foo", true},
-		/* 19 */ {[]string{"*.*.foo"}, MTrue, MAny, MAny, MAny, "*.*.foo", true},
+		/* 18 */ {[]string{"*.foo"}, MTrue, MAny, MAny, MAny, MTrue, "*.foo", true},
+		/* 19 */ {[]string{"*.*.foo"}, MTrue, MAny, MAny, MAny, MAny, "*.*.foo", false}, // Does not conform to RFC 6125
 
 		// === Double Leading Glob Testing === //
-
 		// Allowed contains globs, but glob allowed so certain matches work.
 		// The value of bare and localhost does not impact these results.
-		/* 20 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "baz.fud.bar.foo", true}, // glob domains allow infinite subdomains
-		/* 21 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "*.fud.bar.foo", true}, // ???? does glob domain allow wildcard of subdomains?
-		/* 22 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "fud.bar.foo", true},
-		/* 23 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "*.bar.foo", true}, // Regression fix: Vault#13530
-		/* 24 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "bar.foo", false},
-		/* 25 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "*.foo", false},
-		/* 26 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, "foo", false},
+		/* 20 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "baz.fud.bar.foo", true}, // glob domains allow infinite subdomains
+		/* 21 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, MTrue, "*.fud.bar.foo", true}, // glob domain allows wildcard of subdomains
+		/* 22 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "fud.bar.foo", true},
+		/* 23 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, MTrue, "*.bar.foo", true}, // Regression fix: Vault#13530
+		/* 24 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "bar.foo", false},
+		/* 25 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "*.foo", false},
+		/* 26 */ {[]string{"*.*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "foo", false},
 
 		// Allowed contains globs, but glob and subdomain both work, so we expect
 		// wildcard issuance to work as well. The value of bare and localhost does
 		// not impact these results.
-		/* 27 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, "baz.fud.bar.foo", true},
-		/* 28 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, "*.fud.bar.foo", true},
-		/* 29 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, "fud.bar.foo", true},
-		/* 30 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, "*.bar.foo", true}, // Regression fix: Vault#13530
-		/* 31 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, "bar.foo", false},
-		/* 32 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, "*.foo", false},
-		/* 33 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, "foo", false},
+		/* 27 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "baz.fud.bar.foo", true},
+		/* 28 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, MTrue, "*.fud.bar.foo", true},
+		/* 29 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "fud.bar.foo", true},
+		/* 30 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, MTrue, "*.bar.foo", true}, // Regression fix: Vault#13530
+		/* 31 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "bar.foo", false},
+		/* 32 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "*.foo", false},
+		/* 33 */ {[]string{"*.*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "foo", false},
 
 		// === Single Leading Glob Testing === //
-
 		// Allowed contains globs, but glob allowed so certain matches work.
 		// The value of bare and localhost does not impact these results.
-		/* 34 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "baz.fud.bar.foo", true}, // glob domains allow infinite subdomains
-		/* 35 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "*.fud.bar.foo", true}, // ???? does glob domain allow wildcard of subdomains?
-		/* 36 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "fud.bar.foo", true}, // glob domains allow infinite subdomains
-		/* 37 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "*.bar.foo", true}, // ???? does glob domain allow wildcards of subdomains?
-		/* 38 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "bar.foo", true},
-		/* 39 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, "foo", false},
+		/* 34 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "baz.fud.bar.foo", true}, // glob domains allow infinite subdomains
+		/* 35 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MTrue, "*.fud.bar.foo", true}, // glob domain allows wildcard of subdomains
+		/* 36 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "fud.bar.foo", true}, // glob domains allow infinite subdomains
+		/* 37 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MTrue, "*.bar.foo", true}, // glob domain allows wildcards of subdomains
+		/* 38 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "bar.foo", true},
+		/* 39 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MAny, "foo", false},
 
 		// Allowed contains globs, but glob and subdomain both work, so we expect
 		// wildcard issuance to work as well. The value of bare and localhost does
 		// not impact these results.
-		/* 40 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, "baz.fud.bar.foo", true},
-		/* 41 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, "*.fud.bar.foo", true},
-		/* 42 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, "fud.bar.foo", true},
-		/* 43 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, "*.bar.foo", true},
-		/* 44 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, "bar.foo", true},
-		/* 45 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, "foo", false},
+		/* 40 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "baz.fud.bar.foo", true},
+		/* 41 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, MTrue, "*.fud.bar.foo", true},
+		/* 42 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "fud.bar.foo", true},
+		/* 43 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, MTrue, "*.bar.foo", true},
+		/* 44 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "bar.foo", true},
+		/* 45 */ {[]string{"*.foo"}, MAny, MTrue, MTrue, MAny, MAny, "foo", false},
 
 		// === Only base domain name === //
-
 		// Allowed contains only domain components, but subdomains not allowed. This
 		// results in most issuances failing unless we allow bare domains, in which
 		// case only the final issuance for "foo" will succeed.
-		/* 46 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, "baz.fud.bar.foo", false},
-		/* 47 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, "*.fud.bar.foo", false},
-		/* 48 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, "fud.bar.foo", false},
-		/* 49 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, "*.bar.foo", false},
-		/* 50 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, "bar.foo", false},
-		/* 51 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, "*.foo", false},
-		/* 52 */ {[]string{"foo"}, MFalse, MAny, MFalse, MAny, "foo", false},
-		/* 53 */ {[]string{"foo"}, MTrue, MAny, MFalse, MAny, "foo", true},
+		/* 46 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, MAny, "baz.fud.bar.foo", false},
+		/* 47 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, MAny, "*.fud.bar.foo", false},
+		/* 48 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, MAny, "fud.bar.foo", false},
+		/* 49 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, MAny, "*.bar.foo", false},
+		/* 50 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, MAny, "bar.foo", false},
+		/* 51 */ {[]string{"foo"}, MAny, MAny, MFalse, MAny, MAny, "*.foo", false},
+		/* 52 */ {[]string{"foo"}, MFalse, MAny, MFalse, MAny, MAny, "foo", false},
+		/* 53 */ {[]string{"foo"}, MTrue, MAny, MFalse, MAny, MAny, "foo", true},
 
 		// Allowed contains only domain components, and subdomains are now allowed.
 		// This results in most issuances succeeding, with the exception of the
 		// base foo, which is still governed by base's value.
-		/* 54 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "baz.fud.bar.foo", true},
-		/* 55 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "*.fud.bar.foo", true},
-		/* 56 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "fud.bar.foo", true},
-		/* 57 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "*.bar.foo", true},
-		/* 58 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "bar.foo", true},
-		/* 59 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "*.foo", true},
-		/* 60 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "x*x.foo", true}, // internal wildcards should be allowed per RFC 6125/6.4.3
-		/* 61 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "*x.foo", true}, // prefix wildcards should be allowed per RFC 6125/6.4.3
-		/* 62 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, "x*.foo", true}, // suffix wildcards should be allowed per RFC 6125/6.4.3
-		/* 63 */ {[]string{"foo"}, MFalse, MAny, MTrue, MAny, "foo", false},
-		/* 64 */ {[]string{"foo"}, MTrue, MAny, MTrue, MAny, "foo", true},
+		/* 54 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MAny, "baz.fud.bar.foo", true},
+		/* 55 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MTrue, "*.fud.bar.foo", true},
+		/* 56 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MAny, "fud.bar.foo", true},
+		/* 57 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MTrue, "*.bar.foo", true},
+		/* 58 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MAny, "bar.foo", true},
+		/* 59 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MTrue, "*.foo", true},
+		/* 60 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MTrue, "x*x.foo", true}, // internal wildcards should be allowed per RFC 6125/6.4.3
+		/* 61 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MTrue, "*x.foo", true}, // prefix wildcards should be allowed per RFC 6125/6.4.3
+		/* 62 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MTrue, "x*.foo", true}, // suffix wildcards should be allowed per RFC 6125/6.4.3
+		/* 63 */ {[]string{"foo"}, MFalse, MAny, MTrue, MAny, MAny, "foo", false},
+		/* 64 */ {[]string{"foo"}, MTrue, MAny, MTrue, MAny, MAny, "foo", true},
 
 		// === Internal Glob Matching === //
 		// Basic glob matching requirements
-		/* 65 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "xerox.foo", true},
-		/* 66 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "xylophone.files.pyrex.foo", true}, // globs can match across subdomains
-		/* 67 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "xercex.bar.foo", false}, // x.foo isn't matched
-		/* 68 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "bar.foo", false}, // x*x isn't matched.
-		/* 69 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "*.foo", false}, // unrelated wildcard
-		/* 70 */ {[]string{"x*x.foo"}, MAny, MTrue, MFalse, MAny, "*.x*x.foo", false}, // ???? double wildcard doesn't match glob without subdomains enabled
-		/* 71 */ {[]string{"x*x.foo"}, MAny, MTrue, MTrue, MAny, "*.x*x.foo", true}, // ???? as above, but with subdomains enabled
-		/* 72 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, "*.xyx.foo", false}, // ???? single wildcard matching glob fails (even with subdomains=true)
+		/* 65 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, MAny, "xerox.foo", true},
+		/* 66 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, MAny, "xylophone.files.pyrex.foo", true}, // globs can match across subdomains
+		/* 67 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, MAny, "xercex.bar.foo", false}, // x.foo isn't matched
+		/* 68 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, MAny, "bar.foo", false}, // x*x isn't matched.
+		/* 69 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, MAny, "*.foo", false}, // unrelated wildcard
+		/* 70 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, MAny, "*.x*x.foo", false}, // Does not conform to RFC 6125
+		/* 71 */ {[]string{"x*x.foo"}, MAny, MTrue, MAny, MAny, MAny, "*.xyx.foo", false}, // Globs and Subdomains do not layer per docs.
 
 		// Various requirements around x*x.foo wildcard matching.
-		/* 73 */ {[]string{"x*x.foo"}, MFalse, MFalse, MAny, MAny, "x*x.foo", false}, // base disabled, shouldn't match wildcard
-		/* 74 */ {[]string{"x*x.foo"}, MFalse, MTrue, MAny, MAny, "x*x.foo", true}, // base disallowed, but globbing allowed and should match
-		/* 75 */ {[]string{"x*x.foo"}, MTrue, MAny, MAny, MAny, "x*x.foo", true}, // base allowed, should match wildcard
+		/* 72 */ {[]string{"x*x.foo"}, MFalse, MFalse, MAny, MAny, MAny, "x*x.foo", false}, // base disabled, shouldn't match wildcard
+		/* 73 */ {[]string{"x*x.foo"}, MFalse, MTrue, MAny, MAny, MTrue, "x*x.foo", true}, // base disallowed, but globbing allowed and should match
+		/* 74 */ {[]string{"x*x.foo"}, MTrue, MAny, MAny, MAny, MTrue, "x*x.foo", true}, // base allowed, should match wildcard
 
 		// Basic glob matching requirements with internal dots.
-		/* 76 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xerox.foo", false}, // missing dots
-		/* 77 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "x.ero.x.foo", true},
-		/* 78 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xylophone.files.pyrex.foo", false}, // missing dots
-		/* 79 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "x.ylophone.files.pyre.x.foo", true}, // globs can match across subdomains
-		/* 80 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "xercex.bar.foo", false}, // x.foo isn't matched
-		/* 81 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "bar.foo", false}, // x.*.x isn't matched.
-		/* 82 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "*.foo", false}, // unrelated wildcard
-		/* 83 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MFalse, MAny, "*.x.*.x.foo", false}, // ???? double wildcard doesn't match glob without subdomains enabled
-		/* 84 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MTrue, MAny, "*.x.*.x.foo", true}, // ???? as above, but with subdomains enabled
-		/* 85 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, "*.x.y.x.foo", false}, // ???? single wildcard with internal glob match fails (even with subdomains=true)
+		/* 75 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "xerox.foo", false}, // missing dots
+		/* 76 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "x.ero.x.foo", true},
+		/* 77 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "xylophone.files.pyrex.foo", false}, // missing dots
+		/* 78 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "x.ylophone.files.pyre.x.foo", true}, // globs can match across subdomains
+		/* 79 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "xercex.bar.foo", false}, // x.foo isn't matched
+		/* 80 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "bar.foo", false}, // x.*.x isn't matched.
+		/* 81 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "*.foo", false}, // unrelated wildcard
+		/* 82 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "*.x.*.x.foo", false}, // Does not conform to RFC 6125
+		/* 83 */ {[]string{"x.*.x.foo"}, MAny, MTrue, MAny, MAny, MAny, "*.x.y.x.foo", false}, // Globs and Subdomains do not layer per docs.
+
+		// === Wildcard restriction testing === //
+		/* 84 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MFalse, "*.fud.bar.foo", false}, // glob domain allows wildcard of subdomains
+		/* 85 */ {[]string{"*.foo"}, MAny, MTrue, MFalse, MAny, MFalse, "*.bar.foo", false}, // glob domain allows wildcards of subdomains
+		/* 86 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MFalse, "*.fud.bar.foo", false},
+		/* 87 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MFalse, "*.bar.foo", false},
+		/* 88 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MFalse, "*.foo", false},
+		/* 89 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MFalse, "x*x.foo", false},
+		/* 90 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MFalse, "*x.foo", false},
+		/* 91 */ {[]string{"foo"}, MAny, MAny, MTrue, MAny, MFalse, "x*.foo", false},
+		/* 92 */ {[]string{"x*x.foo"}, MTrue, MAny, MAny, MAny, MFalse, "x*x.foo", false},
+		/* 93 */ {[]string{"*.foo"}, MFalse, MFalse, MAny, MAny, MAny, "*.foo", false}, // Bare and globs forbidden despite (potentially) allowing wildcards.
+		/* 94 */ {[]string{"x.*.x.foo"}, MAny, MAny, MAny, MAny, MAny, "x.*.x.foo", false}, // Does not conform to RFC 6125
 	}
 
-	if len(testCases) != 86 {
+	if len(testCases) != 95 {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 
