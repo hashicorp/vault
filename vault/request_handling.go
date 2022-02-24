@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -34,7 +35,8 @@ import (
 )
 
 const (
-	replTimeout = 1 * time.Second
+	replTimeout                           = 1 * time.Second
+	EnvVaultDisableLocalAuthMountEntities = "VAULT_DISABLE_LOCAL_AUTH_MOUNT_ENTITIES"
 )
 
 var (
@@ -1401,6 +1403,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if auth.Alias != nil &&
 			mEntry != nil &&
 			c.identityStore != nil {
+
+			if mEntry.Local && os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+				goto CREATE_TOKEN
+			}
+
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType
