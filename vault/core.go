@@ -2107,7 +2107,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
-
 	c.setupCachedMFAResponseAuth()
 
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
