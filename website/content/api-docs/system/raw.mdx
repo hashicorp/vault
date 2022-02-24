@@ -51,7 +51,7 @@ mount system.
 
 | Method | Path             |
 | :----- | :--------------- |
-| `PUT`  | `/sys/raw/:path` |
+| `POST`  | `/sys/raw/:path` |
 
 ### Parameters
 
@@ -73,7 +73,7 @@ mount system.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/raw/secret/foo
 ```
