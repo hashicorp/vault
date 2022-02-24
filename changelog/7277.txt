@@ -1,0 +1,3 @@
+```release-note:feature
+auth/token: Add `allowed_policies_glob` and `disallowed_policies_glob` fields to token roles to allow glob matching of policies
+```

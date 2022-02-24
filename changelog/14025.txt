@@ -1,0 +1,3 @@
+```release-note:feature
+auth: Add support for single and two phase MFA to login endpoints.
+```

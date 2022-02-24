@@ -44,8 +44,11 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 			SecretIDHMAC: "samplesecretidhmac",
 		},
 	)
-	err = storage.Put(context.Background(), entry1)
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := storage.Put(context.Background(), entry1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -55,8 +58,10 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 			SecretIDHMAC: "samplesecretidhmac2",
 		},
 	)
-	err = storage.Put(context.Background(), entry2)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(context.Background(), entry2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,8 +143,11 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 				SecretIDHMAC: "samplesecretidhmac",
 			},
 		)
-		err = storage.Put(context.Background(), entry)
 		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := storage.Put(context.Background(), entry); err != nil {
 			t.Fatal(err)
 		}
 

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -60,7 +60,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 
 	if c.ConnectTimeoutRaw == nil {
-		c.ConnectTimeoutRaw = "0s"
+		c.ConnectTimeoutRaw = "5s"
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
@@ -189,6 +189,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	}
 
 	clusterConfig.Timeout = c.connectTimeout
+	clusterConfig.ConnectTimeout = c.connectTimeout
 	clusterConfig.SocketKeepalive = c.socketKeepAlive
 	clusterConfig.SslOpts = c.sslOpts
 

@@ -7,6 +7,8 @@ const AUTH = 'vault.cluster.auth';
 const CLUSTER = 'vault.cluster';
 const CLUSTER_INDEX = 'vault.cluster.index';
 const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
+const OIDC_PROVIDER = 'vault.cluster.oidc-provider';
+const NS_OIDC_PROVIDER = 'vault.cluster.oidc-provider-ns';
 const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
 const DR_REPLICATION_SECONDARY_DETAILS = 'vault.cluster.replication-dr-promote.details';
 const EXCLUDED_REDIRECT_URLS = ['/vault/logout'];
@@ -20,7 +22,6 @@ export default Mixin.create({
 
   transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
-
     if (
       targetRoute &&
       targetRoute !== this.routeName &&
@@ -81,6 +82,12 @@ export default Mixin.create({
       return DR_REPLICATION_SECONDARY;
     }
     if (!isAuthed) {
+      if ((transition && transition.targetName === OIDC_PROVIDER) || this.routeName === OIDC_PROVIDER) {
+        return OIDC_PROVIDER;
+      }
+      if ((transition && transition.targetName === NS_OIDC_PROVIDER) || this.routeName === NS_OIDC_PROVIDER) {
+        return NS_OIDC_PROVIDER;
+      }
       if ((transition && transition.targetName === OIDC_CALLBACK) || this.routeName === OIDC_CALLBACK) {
         return OIDC_CALLBACK;
       }

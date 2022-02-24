@@ -18,6 +18,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
@@ -26,7 +27,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
@@ -39,6 +39,8 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 
 // EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
+
+var getMmapFlags = func(string) int { return 0 }
 
 // Verify RaftBackend satisfies the correct interfaces
 var (
@@ -364,13 +366,11 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		freelistType, noFreelistSync := freelistOptions()
+		dbPath := filepath.Join(path, "raft.db")
+		opts := boltOptions(dbPath)
 		raftOptions := raftboltdb.Options{
-			Path: filepath.Join(path, "raft.db"),
-			BoltOptions: &bolt.Options{
-				FreelistType:   freelistType,
-				NoFreelistSync: noFreelistSync,
-			},
+			Path:        dbPath,
+			BoltOptions: opts,
 		}
 		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
@@ -509,12 +509,12 @@ func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsuti
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime.Milliseconds()), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime.Milliseconds()), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime.Milliseconds()), labels)
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -978,6 +978,10 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	if b.disableAutopilot {
 		if b.raft == nil {
 			return errors.New("raft storage is not initialized")
@@ -1034,6 +1038,10 @@ func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, err
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1068,6 +1076,10 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 
 // AddPeer adds a new server to the raft cluster
 func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1096,6 +1108,10 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 
 // Peers returns all the servers present in the raft cluster
 func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1131,7 +1147,7 @@ func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal
 
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
-// can validate the snapshot was taken using the same master keys or not.
+// can validate the snapshot was taken using the same root keys or not.
 func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -1154,7 +1170,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
 // extracts the data and writes the snapshot to a temporary file. The seal
 // access is used to decrypt the SHASUM file in the archive to ensure this
-// snapshot has the same master key as the running instance. If the provided
+// snapshot has the same root key as the running instance. If the provided
 // access is nil then it will skip that validation.
 func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
@@ -1180,6 +1196,10 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 // RestoreSnapshot applies the provided snapshot metadata and snapshot data to
 // raft.
 func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.SnapshotMeta, snap io.Reader) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1214,6 +1234,11 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 // Delete inserts an entry in the log to delete the given path
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: []*LogOperation{
 			{
@@ -1238,8 +1263,16 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 		return nil, errors.New("raft: fsm not configured")
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	entry, err := b.fsm.Get(ctx, path)
 	if entry != nil {
@@ -1258,6 +1291,14 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 // or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
+	if len(entry.Key) > bolt.MaxKeySize {
+		return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: []*LogOperation{
 			{
@@ -1284,8 +1325,16 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 		return nil, errors.New("raft: fsm not configured")
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	return b.fsm.List(ctx, prefix)
 }
@@ -1294,6 +1343,11 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 // applies it.
 func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "transaction"}, time.Now())
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: make([]*LogOperation, len(txns)),
 	}
@@ -1301,6 +1355,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
+			if len(txn.Entry.Key) > bolt.MaxKeySize {
+				return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+			}
 			op.OpType = putOp
 			op.Key = txn.Entry.Key
 			op.Value = txn.Entry.Value
@@ -1329,6 +1386,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
 		return errors.New("raft storage is not initialized")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	commandBytes, err := proto.Marshal(command)
@@ -1590,20 +1650,40 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	return s.access.Decrypt(ctx, &eblob, nil)
 }
 
-// freelistOptions returns the freelist type and nofreelistsync values to use
-// when opening boltdb files, based on our preferred defaults, and the possible
-// presence of overriding environment variables.
-func freelistOptions() (bolt.FreelistType, bool) {
-	freelistType := bolt.FreelistMapType
-	noFreelistSync := true
+// boltOptions returns a bolt.Options struct, suitable for passing to
+// bolt.Open(), pre-configured with all of our preferred defaults.
+func boltOptions(path string) *bolt.Options {
+	o := &bolt.Options{
+		Timeout:        1 * time.Second,
+		FreelistType:   bolt.FreelistMapType,
+		NoFreelistSync: true,
+		MmapFlags:      getMmapFlags(path),
+	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
-		freelistType = bolt.FreelistArrayType
+		o.FreelistType = bolt.FreelistArrayType
 	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
-		noFreelistSync = false
+		o.NoFreelistSync = false
 	}
 
-	return freelistType, noFreelistSync
+	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
+	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
+	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
+	// so if users are wanting to turn this off, they can also set it to 0. Setting it
+	// to a negative value is the same as not setting it at all.
+	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
+		o.InitialMmapSize = initialMmapSize
+	} else {
+		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
+
+		// If there's an error here, it means they passed something that's not convertible to
+		// a number. Rather than fail startup, just ignore it.
+		if err == nil && imms > 0 {
+			o.InitialMmapSize = imms
+		}
+	}
+
+	return o
 }

@@ -2,7 +2,9 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // invalidKey is used to test Unseal
@@ -50,6 +53,23 @@ func TestSealConfig_Invalid(t *testing.T) {
 	err := s.Validate()
 	if err == nil {
 		t.Fatalf("expected err")
+	}
+}
+
+// TestCore_HasVaultVersion checks that versionTimestamps are correct and initialized
+// after a core has been unsealed.
+func TestCore_HasVaultVersion(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	if c.versionTimestamps == nil {
+		t.Fatalf("Version timestamps for core were not initialized for a new core")
+	}
+	upgradeTime, ok := c.versionTimestamps[version.Version]
+	if !ok {
+		t.Fatalf("%s upgrade time not found", version.Version)
+	}
+	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
+		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +
+			fmt.Sprintf("time is: %+v, upgrade time is %+v", time.Now(), upgradeTime))
 	}
 }
 
@@ -126,6 +146,103 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 
 	if !c.Sealed() {
 		t.Fatalf("should be sealed")
+	}
+}
+
+// TestCore_UseSSCTokenToggleOn will check that the root SSC
+// token can be used even when disableSSCTokens is toggled on
+func TestCore_UseSSCTokenToggleOn(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	c.disableSSCTokens = true
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	resp, err = c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
+// TestCore_UseNonSSCTokenToggleOff will check that the root
+// non-SSC token can be used even when disableSSCTokens is toggled
+// off.
+func TestCore_UseNonSSCTokenToggleOff(t *testing.T) {
+	coreConfig := &CoreConfig{
+		DisableSSCTokens: true,
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	if len(root) > TokenLength+OldTokenPrefixLength || !strings.HasPrefix(root, "s.") {
+		t.Fatalf("token is not an old token type: %s, %d", root, len(root))
+	}
+	c.disableSSCTokens = false
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	resp, err = c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
 	}
 }
 
@@ -247,11 +364,15 @@ func TestCore_Shutdown(t *testing.T) {
 
 // verify the channel returned by ShutdownDone is closed after Finalize
 func TestCore_ShutdownDone(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c := TestCoreWithSealAndUINoCleanup(t, &CoreConfig{})
+	testCoreUnsealed(t, c)
 	doneCh := c.ShutdownDone()
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		c.Shutdown()
+		err := c.Shutdown()
+		if err != nil {
+			t.Fatal(err)
+		}
 	}()
 
 	select {
@@ -453,10 +574,10 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 		},
 	}
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || !errwrap.Contains(err, logical.ErrInvalidRequest.Error()) {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "missing client token" {
+	if resp.Data["error"] != logical.ErrPermissionDenied.Error() {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -726,12 +847,15 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 
 	// Check the policy and metadata
-	te, err := c.tokenStore.Lookup(namespace.RootContext(nil), clientToken)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	innerToken, _ := c.DecodeSSCToken(clientToken)
+	te, err := c.tokenStore.Lookup(namespace.RootContext(nil), innerToken)
+	if err != nil || te == nil {
+		t.Fatalf("tok: %s, err: %v", clientToken, err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
 	expect := &logical.TokenEntry{
-		ID:       clientToken,
+		ID:       expectedID,
 		Accessor: te.Accessor,
 		Parent:   "",
 		Policies: []string{"bar", "default", "foo"},
@@ -811,7 +935,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 		t.Fatalf("bad: %#v", noop)
 	}
 	if !reflect.DeepEqual(noop.RespAuth[1], auth) {
-		t.Fatalf("bad: %#v", auth)
+		t.Fatalf("bad: %#v, vs %#v", auth, noop.RespAuth)
 	}
 	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], req) {
 		t.Fatalf("Bad: %#v", noop.RespReq[1])
@@ -1037,10 +1161,14 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
+	expectedRootID, _ := c.DecodeSSCToken(root)
+
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
+		ID:           expectedID,
 		Accessor:     te.Accessor,
-		Parent:       root,
+		Parent:       expectedRootID,
 		Policies:     []string{"default", "foo"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
@@ -1085,10 +1213,14 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
+	expectedRootID, _ := c.DecodeSSCToken(root)
+
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
+		ID:           expectedID,
 		Accessor:     te.Accessor,
-		Parent:       root,
+		Parent:       expectedRootID,
 		Policies:     []string{"foo"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
@@ -2042,8 +2174,9 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	}
 
 	// Verify the token exists
-	if resp.Data["id"] != newClient {
-		t.Fatalf("bad: %#v", resp.Data)
+	if newClient != resp.Data["id"].(string) {
+		t.Fatalf("bad: return IDs: expected %v, got %v",
+			resp.Data["id"], newClient)
 	}
 }
 

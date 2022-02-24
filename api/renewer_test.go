@@ -149,6 +149,17 @@ func TestLifetimeWatcher(t *testing.T) {
 			nil,
 			false,
 		},
+		{
+			15 * time.Second,
+			"negative_lease_duration",
+			-15,
+			15,
+			func(_ string, _ int) (*Secret, error) {
+				return renewedSecret, nil
+			},
+			nil,
+			true,
+		},
 	}
 
 	for _, tc := range cases {

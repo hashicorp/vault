@@ -5,10 +5,10 @@ import page from 'vault/tests/pages/settings/configure-secret-backends/pki/secti
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | settings/configure/secrets/pki/cert', function(hooks) {
+module('Acceptance | settings/configure/secrets/pki/cert', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
@@ -69,28 +69,32 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     return path;
   };
 
-  test('cert config: generate', async function(assert) {
+  test('cert config: generate', async function (assert) {
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
     await page.form.generateCA();
     await settled();
-    assert.ok(page.form.rows.length > 0, 'shows all of the rows');
-    // TODO come back and figure out why not working after upgrade.  I see it, it's a timing issue.
-    // assert.ok(page.form.certificateIsPresent, 'the certificate is included');
+
+    assert.ok(page.form.commonNameIsPresent, 'the common name displays');
+    assert.ok(page.form.issueDateIsPresent, 'the issue date displays');
+    assert.ok(page.form.expiryDateIsPresent, 'the expiration date displays');
+    assert
+      .dom('[data-test-value-div="Certificate"] [data-test-masked-input]')
+      .exists('certificate is present');
 
     await page.form.back();
-    await settled();
     await page.form.generateCA();
     await settled();
+
     assert.ok(
       page.flash.latestMessage.includes('You tried to generate a new root CA'),
       'shows warning message'
     );
   });
 
-  test('cert config: upload', async function(assert) {
+  test('cert config: upload', async function (assert) {
     await mountAndNav(assert);
     await settled();
     assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
@@ -103,7 +107,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     );
   });
 
-  test('cert config: sign intermediate and set signed intermediate', async function(assert) {
+  test('cert config: sign intermediate and set signed intermediate', async function (assert) {
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();

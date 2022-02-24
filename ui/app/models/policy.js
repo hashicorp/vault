@@ -6,7 +6,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 export default Model.extend({
   name: attr('string'),
   policy: attr('string'),
-  policyType: computed('constructor.modelName', function() {
+  policyType: computed('constructor.modelName', function () {
     return this.constructor.modelName.split('/')[1];
   }),
 
@@ -14,7 +14,7 @@ export default Model.extend({
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
-  format: computed('policy', function() {
+  format: computed('policy', function () {
     let policy = this.policy;
     let isJSON;
     try {

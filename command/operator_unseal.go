@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -34,9 +34,9 @@ func (c *OperatorUnsealCommand) Help() string {
 	helpText := `
 Usage: vault operator unseal [options] [KEY]
 
-  Provide a portion of the master key to unseal a Vault server. Vault starts
+  Provide a portion of the root key to unseal a Vault server. Vault starts
   in a sealed state. It cannot perform operations until it is unsealed. This
-  command accepts a portion of the master key (an "unseal key").
+  command accepts a portion of the root key (an "unseal key").
 
   The unseal key can be supplied as an argument to the command, but this is
   not recommended as the unseal key will be available in your history:

@@ -17,7 +17,7 @@ export default function NotFound() {
 
   return (
     <main id="p-404">
-      <h1>Page Not Found</h1>
+      <h1 className="g-type-display-1">Page Not Found</h1>
       <p>
         We&lsquo;re sorry but we can&lsquo;t find the page you&lsquo;re looking
         for.

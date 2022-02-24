@@ -3,10 +3,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | raft-storage-overview', function(hooks) {
+module('Integration | Component | raft-storage-overview', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     let model = [
       { address: '127.0.0.1:8200', voter: true },
       { address: '127.0.0.1:8200', voter: true, leader: true },

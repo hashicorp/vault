@@ -5,6 +5,7 @@ import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import config from '../config/environment';
+import fetch from 'fetch';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
@@ -40,7 +41,7 @@ export default RESTAdapter.extend({
       headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
     }
     let namespace = typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
-    if (namespace && !NAMESPACE_ROOT_URLS.some(str => url.includes(str))) {
+    if (namespace && !NAMESPACE_ROOT_URLS.some((str) => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }
     options.headers = assign(options.headers || {}, headers);
@@ -48,7 +49,7 @@ export default RESTAdapter.extend({
 
   _preRequest(url, options) {
     this.addHeaders(url, options);
-    const isPolling = POLLING_URLS.some(str => url.includes(str));
+    const isPolling = POLLING_URLS.some((str) => url.includes(str));
     if (!isPolling) {
       this.auth.setLastFetch(Date.now());
     }
@@ -85,7 +86,7 @@ export default RESTAdapter.extend({
       const [resp] = args;
       if (resp && resp.warnings) {
         let flash = this.flashMessages;
-        resp.warnings.forEach(message => {
+        resp.warnings.forEach((message) => {
           flash.info(message);
         });
       }
@@ -101,7 +102,7 @@ export default RESTAdapter.extend({
       headers: opts.headers || {},
       body: opts.body,
       signal: opts.signal,
-    }).then(response => {
+    }).then((response) => {
       if (response.status >= 200 && response.status < 300) {
         return RSVP.resolve(response);
       } else {

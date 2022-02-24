@@ -40,8 +40,9 @@ export default class AuthInfoComponent extends Component {
   renewToken() {
     this.fakeRenew = true;
     run.later(() => {
-      this.fakeRenew = false;
-      this.auth.renew();
+      this.auth.renew().then(() => {
+        this.fakeRenew = this.auth.isRenewing;
+      });
     }, 200);
   }
 

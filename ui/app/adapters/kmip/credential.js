@@ -8,7 +8,7 @@ export default BaseAdapter.extend({
       role: snapshot.record.role,
     });
     url = `${url}/generate`;
-    return this.ajax(url, 'POST', { data: snapshot.serialize() }).then(model => {
+    return this.ajax(url, 'POST', { data: snapshot.serialize() }).then((model) => {
       model.data.id = model.data.serial_number;
       return model;
     });

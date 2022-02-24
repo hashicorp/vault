@@ -39,6 +39,8 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			EntityID:         input.Auth.EntityID,
 			TokenType:        input.Auth.TokenType.String(),
 			Orphan:           input.Auth.Orphan,
+			MFARequirement:   input.Auth.MFARequirement,
+			NumUses:          input.Auth.NumUses,
 		}
 	}
 
@@ -108,6 +110,8 @@ type HTTPAuth struct {
 	EntityID         string            `json:"entity_id"`
 	TokenType        string            `json:"token_type"`
 	Orphan           bool              `json:"orphan"`
+	MFARequirement   *MFARequirement   `json:"mfa_requirement"`
+	NumUses          int               `json:"num_uses"`
 }
 
 type HTTPWrapInfo struct {
@@ -134,8 +138,8 @@ func (h HTTPSysInjector) MarshalJSON() ([]byte, error) {
 	}
 	// Marshaling a response will always be a JSON object, meaning it will
 	// always start with '{', so we hijack this to prepend necessary values
-	// Make a guess at the capacity, and write the object opener
-	buf := bytes.NewBuffer(make([]byte, 0, len(j)*2))
+
+	var buf bytes.Buffer
 	buf.WriteRune('{')
 	for k, v := range h.Response.Data {
 		// Marshal each key/value individually

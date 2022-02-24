@@ -5,12 +5,7 @@ const {
 } = RouteRecognizer;
 
 export function encodePath(path) {
-  return path
-    ? path
-        .split('/')
-        .map(encodePathSegment)
-        .join('/')
-    : path;
+  return path ? path.split('/').map(encodePathSegment).join('/') : path;
 }
 
 export { normalizePath, encodePathSegment };

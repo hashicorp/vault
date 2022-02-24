@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	aero "github.com/aerospike/aerospike-client-go"
+	aero "github.com/aerospike/aerospike-client-go/v5"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -162,7 +162,7 @@ func (a *AerospikeBackend) Get(_ context.Context, key string) (*physical.Entry, 
 
 	record, err := a.client.Get(nil, aeroKey)
 	if err != nil {
-		if err.Error() == keyNotFoundError {
+		if strings.Contains(err.Error(), keyNotFoundError) {
 			return nil, nil
 		}
 		return nil, err

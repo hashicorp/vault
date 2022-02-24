@@ -2,10 +2,10 @@ import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Adapter | transit key', function(hooks) {
+module('Unit | Adapter | transit key', function (hooks) {
   setupTest(hooks);
 
-  test('transit api urls', function(assert) {
+  test('transit api urls', function (assert) {
     let url, method, options;
     let adapter = this.owner.factoryFor('adapter:transit-key').create({
       ajax: (...args) => {

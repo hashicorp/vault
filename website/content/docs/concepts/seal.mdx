@@ -118,26 +118,18 @@ to `vault operator rekey`.
 
 ## Seal Migration
 
-The seal can be migrated from Shamir Seal to Auto Unseal, Auto Unseal to Shamir Seal,
-and Auto Unseal to another Auto Unseal.
+The Seal migration process cannot be performed without downtime, and due to the technical underpinnings of the seal implementations, the process requires that you briefly take the whole cluster down. While experiencing some downtime may be unavoidable, we believe that switching seals is a rare event and that the inconvenience of the downtime is an acceptable trade-off.
 
 ~> **NOTE**: A backup should be taken before starting seal migration in case
 something goes wrong.
-
-~> **NOTE**: Seal migration process cannot be performed without downtime. Due to
-the technical underpinnings of the seal implementations, it is at this point not
-possible to perform seal migration without briefly bringing the whole cluster
-down. We understand that it can be hard for many deployments to face downtime,
-but we believe that switching seals is a rare event and hence we hope for the
-downtime to be considered as an acceptable trade-off.
 
 ~> **NOTE**: Seal migration operation will require both old and new seals to be
 available during the migration. For example, migration from Auto Unseal to Shamir
 seal will require that the service backing the Auto Unseal is accessible during
 the migration.
 
-~> **NOTE**: Seal migration from Auto Unseal to Auto Unseal of the same type
-(e.g. AWSKMS to AWSKMS with a different key) is supported since Vault 1.6.0.
+~> **NOTE**: Seal migration from Auto Unseal to Auto Unseal of the same type (e.g. AWSKMS to AWSKMS with a different key) is supported since Vault 1.6.0.
+Seal migration from One Auto Unseal type (AWS KMS) to different Auto Unseal type (HSM, Azure KMS, etc.) is also supported on older versions as well.
 
 ### Migration post Vault 1.5.1
 
@@ -217,8 +209,9 @@ be migrated to be used as unseal keys.
 
 #### Migration From Auto Unseal to Auto Unseal
 
-~> **NOTE**: Migration between same Auto Unseal types is not currently
-supported. We plan to support this officially in a future release.
+~> **NOTE**: Migration between same Auto Unseal types is supported in Vault
+1.6.0 and higher. For these pre-1.5.1 steps, it is only possible to migrate from
+one type of Auto Unseal to a different type (ie Transit -> AWSKMS).
 
 To migrate from Auto Unseal to a different Auto Unseal configuration, take your
 server cluster offline and update the existing [seal

@@ -19,9 +19,9 @@ more information about setting up the database secrets engine.
 
 ## Capabilities
 
-| Plugin Name               | Root Credential Rotation | Dynamic Roles | Static Roles |
-| ------------------------- | ------------------------ | ------------- | ------------ |
-| `mongodb-database-plugin` | Yes                      | Yes           | Yes          |
+| Plugin Name               | Root Credential Rotation | Dynamic Roles | Static Roles | Username Customization |
+| ------------------------- | ------------------------ | ------------- | ------------ | ---------------------- |
+| `mongodb-database-plugin` | Yes                      | Yes           | Yes          | Yes (1.7+)             |
 
 ## Setup
 

@@ -23,7 +23,7 @@ The following are the various parts of the Vault threat model:
 
 - Eavesdropping on any Vault communication. Client communication with Vault
   should be secure from eavesdropping as well as communication from Vault to
-  its storage backend.
+  its storage backend or between Vault cluster nodes.
 
 - Tampering with data at rest or in transit. Any tampering should be detectable
   and cause Vault to abort processing of the transaction.
@@ -60,6 +60,16 @@ The following are not parts of the Vault threat model:
   to inspect the memory state of a running Vault instance then the confidentiality
   of data may be compromised.
 
+- Protecting against flaws in external systems or services used by Vault.
+  Some authentication methods or secrets engines delegate sensitive operations to
+  systems external to Vault. If an attacker can compromise credentials or otherwise
+  exploit a vulnerability in these external systems, then the confidentiality or
+  integrity of data may be compromised.
+
+- Protecting against malicious plugins or code execution on the underlying host.
+  If an attacker can gain code execution or write privileges to the underlying host,
+  then the confidentiality or the integrity of data may be compromised.
+
 # External Threat Overview
 
 Given the architecture of Vault, there are 3 distinct systems we are concerned
@@ -74,6 +84,13 @@ identity of the server and to establish a secure communication channel. Servers
 require that a client provides a client token for every request which is used
 to identify the client. A client that does not provide their token is only
 permitted to make login requests.
+
+All server-to-server traffic between Vault instances within a cluster (i.e,
+high availability, enterprise replication or integrated storage) uses
+mutually-authenticated TLS to ensure the confidentiality and integrity of data
+in transit. Nodes are authenticated prior to joining the cluster, by an
+[unseal challenge](/docs/concepts/integrated-storage#vault-networking-recap) or
+a [one-time-use activation token](/docs/enterprise/replication#security-model).
 
 The storage backends used by Vault are also untrusted by design. Vault uses a
 security barrier for all requests made to the backend. The security barrier
@@ -109,7 +126,7 @@ This client token is then returned to the client.
 
 On each request a client provides this token. Vault then uses it to check that
 the token is valid and has not been revoked or expired, and generates an ACL
-based on the associated policies. Vault uses a strict default deny 
+based on the associated policies. Vault uses a strict default deny
 enforcement strategy. This means unless an associated policy allows for a given action,
 it will be denied. Each policy specifies a level of access granted to a path in
 Vault. When the policies are merged (if multiple policies are associated with a
@@ -118,7 +135,7 @@ client), the highest access level permitted is used. For example, if the
 "ops" policy permits read access to the "ops/" path, then the user gets the
 union of those. Policy is matched using the most specific defined policy, which
 may be an exact match or the longest-prefix match glob pattern. See
-[Policy Syntax](../concepts/policies.mdx#policy-syntax) for more details.
+[Policy Syntax](/docs/concepts/policies#policy-syntax) for more details.
 
 Certain operations are only permitted by "root" users, which is a distinguished
 policy built into Vault. This is similar to the concept of a root user on a
@@ -128,8 +145,8 @@ notion of "sudo" privilege. As part of a policy, users may be granted "sudo"
 privileges to certain paths, so that they can still perform security sensitive
 operations without being granted global root access to Vault.
 
-Lastly, Vault supports using a [Two-man
-rule](https://en.wikipedia.org/wiki/Two-man_rule) for unsealing using [Shamir's
+Lastly, Vault supports using a [Two-person
+rule](https://en.wikipedia.org/wiki/Two-person_rule) for unsealing using [Shamir's
 Secret Sharing
 technique](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing). When Vault
 is started, it starts in a _sealed_ state. This means that the encryption key

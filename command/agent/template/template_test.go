@@ -15,8 +15,12 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 // TestNewServer is a simple test to make sure NewServer returns a Server and
@@ -77,44 +81,7 @@ func newAgentConfig(listeners []*configutil.Listener, enableCache, enablePersise
 	return agentConfig
 }
 
-func TestCacheConfigUnix(t *testing.T) {
-	listeners := []*configutil.Listener{
-		{
-			Type:        "unix",
-			Address:     "foobar",
-			TLSDisable:  true,
-			SocketMode:  "configmode",
-			SocketUser:  "configuser",
-			SocketGroup: "configgroup",
-		},
-		{
-			Type:       "tcp",
-			Address:    "127.0.0.1:8300",
-			TLSDisable: true,
-		},
-		{
-			Type:        "tcp",
-			Address:     "127.0.0.1:8400",
-			TLSKeyFile:  "/path/to/cakey.pem",
-			TLSCertFile: "/path/to/cacert.pem",
-		},
-	}
-
-	agentConfig := newAgentConfig(listeners, true, true)
-	serverConfig := ServerConfig{AgentConfig: agentConfig}
-
-	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-
-	expected := "unix://foobar"
-	if *ctConfig.Vault.Address != expected {
-		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
-	}
-}
-
-func TestCacheConfigHTTP(t *testing.T) {
+func TestCacheConfig(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{
 			Type:       "tcp",
@@ -137,132 +104,69 @@ func TestCacheConfigHTTP(t *testing.T) {
 		},
 	}
 
-	agentConfig := newAgentConfig(listeners, true, true)
-	serverConfig := ServerConfig{AgentConfig: agentConfig}
-
-	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-
-	expected := "http://127.0.0.1:8300"
-	if *ctConfig.Vault.Address != expected {
-		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
-	}
-}
-
-func TestCacheConfigHTTPS(t *testing.T) {
-	listeners := []*configutil.Listener{
-		{
-			Type:        "tcp",
-			Address:     "127.0.0.1:8300",
-			TLSKeyFile:  "/path/to/cakey.pem",
-			TLSCertFile: "/path/to/cacert.pem",
+	cases := map[string]struct {
+		cacheEnabled           bool
+		persistentCacheEnabled bool
+		setDialer              bool
+		expectedErr            string
+		expectCustomDialer     bool
+	}{
+		"persistent_cache": {
+			cacheEnabled:           true,
+			persistentCacheEnabled: true,
+			setDialer:              true,
+			expectedErr:            "",
+			expectCustomDialer:     true,
 		},
-		{
-			Type:        "unix",
-			Address:     "foobar",
-			TLSDisable:  true,
-			SocketMode:  "configmode",
-			SocketUser:  "configuser",
-			SocketGroup: "configgroup",
+		"memory_cache": {
+			cacheEnabled:           true,
+			persistentCacheEnabled: false,
+			setDialer:              true,
+			expectedErr:            "",
+			expectCustomDialer:     true,
 		},
-		{
-			Type:       "tcp",
-			Address:    "127.0.0.1:8400",
-			TLSDisable: true,
+		"no_cache": {
+			cacheEnabled:           false,
+			persistentCacheEnabled: false,
+			setDialer:              false,
+			expectedErr:            "",
+			expectCustomDialer:     false,
 		},
-	}
-
-	agentConfig := newAgentConfig(listeners, true, true)
-	serverConfig := ServerConfig{AgentConfig: agentConfig}
-
-	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-
-	expected := "https://127.0.0.1:8300"
-	if *ctConfig.Vault.Address != expected {
-		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
-	}
-
-	if *ctConfig.Vault.SSL.Verify {
-		t.Fatalf("expected %t, got %t", true, *ctConfig.Vault.SSL.Verify)
-	}
-}
-
-func TestCacheConfigNoCache(t *testing.T) {
-	listeners := []*configutil.Listener{
-		{
-			Type:        "tcp",
-			Address:     "127.0.0.1:8300",
-			TLSKeyFile:  "/path/to/cakey.pem",
-			TLSCertFile: "/path/to/cacert.pem",
-		},
-		{
-			Type:        "unix",
-			Address:     "foobar",
-			TLSDisable:  true,
-			SocketMode:  "configmode",
-			SocketUser:  "configuser",
-			SocketGroup: "configgroup",
-		},
-		{
-			Type:       "tcp",
-			Address:    "127.0.0.1:8400",
-			TLSDisable: true,
+		"cache_no_dialer": {
+			cacheEnabled:           true,
+			persistentCacheEnabled: false,
+			setDialer:              false,
+			expectedErr:            "missing in-process dialer configuration",
+			expectCustomDialer:     false,
 		},
 	}
 
-	agentConfig := newAgentConfig(listeners, false, false)
-	serverConfig := ServerConfig{AgentConfig: agentConfig}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			agentConfig := newAgentConfig(listeners, tc.cacheEnabled, tc.persistentCacheEnabled)
+			if tc.setDialer && tc.cacheEnabled {
+				bListener := bufconn.Listen(1024 * 1024)
+				defer bListener.Close()
+				agentConfig.Cache.InProcDialer = listenerutil.NewBufConnWrapper(bListener)
+			}
+			serverConfig := ServerConfig{AgentConfig: agentConfig}
 
-	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+			ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
+			if len(tc.expectedErr) > 0 {
+				require.Error(t, err, tc.expectedErr)
+				return
+			}
 
-	expected := "http://127.0.0.1:1111"
-	if *ctConfig.Vault.Address != expected {
-		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
-	}
-}
+			require.NoError(t, err)
+			require.NotNil(t, ctConfig)
+			assert.Equal(t, tc.expectCustomDialer, ctConfig.Vault.Transport.CustomDialer != nil)
 
-func TestCacheConfigNoPersistentCache(t *testing.T) {
-	listeners := []*configutil.Listener{
-		{
-			Type:        "tcp",
-			Address:     "127.0.0.1:8300",
-			TLSKeyFile:  "/path/to/cakey.pem",
-			TLSCertFile: "/path/to/cacert.pem",
-		},
-		{
-			Type:        "unix",
-			Address:     "foobar",
-			TLSDisable:  true,
-			SocketMode:  "configmode",
-			SocketUser:  "configuser",
-			SocketGroup: "configgroup",
-		},
-		{
-			Type:       "tcp",
-			Address:    "127.0.0.1:8400",
-			TLSDisable: true,
-		},
-	}
-
-	agentConfig := newAgentConfig(listeners, true, false)
-	serverConfig := ServerConfig{AgentConfig: agentConfig}
-
-	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-
-	expected := "http://127.0.0.1:1111"
-	if *ctConfig.Vault.Address != expected {
-		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
+			if tc.expectCustomDialer {
+				assert.Equal(t, "http://127.0.0.1:8200", *ctConfig.Vault.Address)
+			} else {
+				assert.Equal(t, "http://127.0.0.1:1111", *ctConfig.Vault.Address)
+			}
+		})
 	}
 }
 
@@ -270,6 +174,9 @@ func TestCacheConfigNoListener(t *testing.T) {
 	listeners := []*configutil.Listener{}
 
 	agentConfig := newAgentConfig(listeners, true, true)
+	bListener := bufconn.Listen(1024 * 1024)
+	defer bListener.Close()
+	agentConfig.Cache.InProcDialer = listenerutil.NewBufConnWrapper(bListener)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
@@ -277,43 +184,8 @@ func TestCacheConfigNoListener(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	expected := "http://127.0.0.1:1111"
-	if *ctConfig.Vault.Address != expected {
-		t.Fatalf("expected %s, got %s", expected, *ctConfig.Vault.Address)
-	}
-}
-
-func TestCacheConfigRejectMTLS(t *testing.T) {
-	listeners := []*configutil.Listener{
-		{
-			Type:                          "tcp",
-			Address:                       "127.0.0.1:8300",
-			TLSKeyFile:                    "/path/to/cakey.pem",
-			TLSCertFile:                   "/path/to/cacert.pem",
-			TLSRequireAndVerifyClientCert: true,
-		},
-		{
-			Type:        "unix",
-			Address:     "foobar",
-			TLSDisable:  true,
-			SocketMode:  "configmode",
-			SocketUser:  "configuser",
-			SocketGroup: "configgroup",
-		},
-		{
-			Type:       "tcp",
-			Address:    "127.0.0.1:8400",
-			TLSDisable: true,
-		},
-	}
-
-	agentConfig := newAgentConfig(listeners, true, true)
-	serverConfig := ServerConfig{AgentConfig: agentConfig}
-
-	_, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
-	if err == nil {
-		t.Fatal("expected error, got none")
-	}
+	assert.Equal(t, "http://127.0.0.1:8200", *ctConfig.Vault.Address)
+	assert.NotNil(t, ctConfig.Vault.Transport.CustomDialer)
 }
 
 func TestServerRun(t *testing.T) {
