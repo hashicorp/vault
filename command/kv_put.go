@@ -161,5 +161,15 @@ func (c *KVPutCommand) Run(args []string) int {
 		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	return OutputSecret(c.UI, secret)
+	if Format(c.UI) != "table" {
+		return OutputSecret(c.UI, secret)
+	}
+
+	outputSecretPath(c.UI, path)
+
+	metadata := secret.Data
+	c.UI.Info(getHeaderForMap("Metadata", metadata))
+	OutputData(c.UI, metadata)
+
+	return 0
 }

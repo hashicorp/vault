@@ -158,6 +158,8 @@ func (c *KVGetCommand) Run(args []string) int {
 		tf.printWarnings(c.UI, secret)
 	}
 
+	outputSecretPath(c.UI, path)
+
 	if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {
 		c.UI.Info(getHeaderForMap("Metadata", metadata.(map[string]interface{})))
 		OutputData(c.UI, metadata)
