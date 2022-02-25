@@ -17,7 +17,7 @@ management tool.
 
 1.  Enable the Consul secrets engine:
 
-    ```text
+    ```shell-session
     $ vault secrets enable consul
     Success! Enabled the consul secrets engine at: consul/
     ```
@@ -25,9 +25,11 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-2.  In Consul versions below 1.4, acquire a [management token][consul-mgmt-token] from Consul, using the
-    `acl_master_token` from your Consul configuration file or another management
-    token:
+1.  Bootstrap the Consul ACL system if not already done. To begin configuring the secrets engine, we must give Vault
+    the necessary credentials to manage Consul.
+
+    In Consul versions below 1.4, acquire a [management token][consul-mgmt-token] from Consul using the
+    `acl_master_token` from your Consul configuration file, or another management token:
 
     ```shell-session
     $ curl \
@@ -37,7 +39,7 @@ management tool.
         https://consul.rocks/v1/acl/create
     ```
 
-    Vault must have a management type token so that it can create and revoke ACL
+    Vault must have a "management" type token so that it can create and revoke ACL
     tokens. The response will return a new token:
 
     ```json
@@ -48,8 +50,8 @@ management tool.
 
     For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
 
-    ```text
-    $ CONSUL_HTTP_TOKEN=d54fe46a-1f57-a589-3583-6b78e334b03b consul acl token create -policy-name=global-management
+    ```shell-session
+    $ CONSUL_HTTP_TOKEN="<management-token>" consul acl token create -policy-name="global-management"
     AccessorID:   865dc5e9-e585-3180-7b49-4ddc0fc45135
     SecretID:     ef35f0f1-885b-0cab-573c-7c91b65a7a7e
     Description:
@@ -59,44 +61,68 @@ management tool.
         00000000-0000-0000-0000-000000000001 - global-management
     ```
 
-3.  Configure Vault to connect and authenticate to Consul:
+1.  Configure Vault to connect and authenticate to Consul:
 
-    ```text
+    ```shell-session
     $ vault write consul/config/access \
-        address=127.0.0.1:8500 \
-        token=7652ba4c-0f6e-8e75-5724-5e083d72cfe4
+        address="127.0.0.1:8500" \
+        token="7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
     Success! Data written to: consul/config/access
     ```
 
-4.  Configure a role that maps a name in Vault to a Consul ACL policy. Depending on your Consul version,
+1.  Configure a role that maps a name in Vault to a Consul ACL policy. Depending on your Consul version,
     you will either provide a policy document and a token_type, or a set of policies.
     When users generate credentials, they are generated against this role.
-    
-    For Consul versions below 1.4, the policy must be base64-encoded. The policy language is [documented by Consul](https://www.consul.io/docs/security/acl/acl-legacy).
+
+    For Consul versions below 1.4, the policy must be base64-encoded. The policy language is
+    [documented by Consul](https://www.consul.io/docs/security/acl/acl-legacy).
+
     Write a policy and proceed to link it to the role:
 
-    ```text
-    $ vault write consul/roles/my-role policy=$(base64 <<< 'key "" { policy = "read" }')
+    ```shell-session
+    $ vault write consul/roles/my-role policy="$(base64 <<< 'key "" { policy = "read" }')"
     Success! Data written to: consul/roles/my-role
     ```
 
-    For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html), and proceed to link it to the role:
+    For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html),
+    and proceed to link it to the role:
 
-    ```text
-    $ vault write consul/roles/my-role policies=readonly
+    ```shell-session
+    $ vault write consul/roles/my-role policies="readonly"
     Success! Data written to: consul/roles/my-role
     ```
 
-    For Consul versions 1.5 and above, [generate a role in Consul](https://www.consul.io/api/acl/roles), and proceed to link it to the role:
+    For Consul versions 1.5 and above, [generate a role in Consul](https://www.consul.io/api/acl/roles), and
+    proceed to link it to the role:
 
-    ```text
-    $ vault write consul/roles/my-role consul_roles=api-server
+    ```shell-session
+    $ vault write consul/roles/my-role consul_roles="api-server"
     Success! Data written to: consul/roles/my-role
     ```
 
-    -> **Token lease duration:** If you do not specify a value for `ttl` (or `lease` for Consul versions below 1.4) the tokens created using Vault's
-    Consul secrets engine are created with a Time To Live (TTL) of 30 days. You can change the lease duration by passing `-ttl=<duration>` to the
-    command above with "duration" being a string with a time suffix like "30s" or "1h".
+    -> **Token lease duration:** If you do not specify a value for `ttl` (or `lease` for Consul versions below 1.4) the
+    tokens created using Vault's Consul secrets engine are created with a Time To Live (TTL) of 30 days. You can change
+    the lease duration by passing `-ttl=<duration>` to the command above with "duration" being a string with a time
+    suffix like "30s" or "1h".
+
+1.  For Enterprise users, you may further limit a role's access by adding the optional parameters `consul_namespace` and/or
+    `partition`. Please refer to Consul's [namespace documentation](https://www.consul.io/docs/enterprise/namespaces) and
+    [admin partition documentation](https://www.consul.io/docs/enterprise/admin-partitions) for further information about
+    these features.
+
+    For Consul versions 1.7 and above, link a Consul namespace to the role:
+
+    ```shell-session
+    $ vault write consul/roles/my-role consul_roles="namespace-management" consul_namespace="ns1"
+    Success! Data written to: consul/roles/my-role
+    ```
+
+    For Consul version 1.11 and above, link an admin partition to a role:
+
+    ```shell-session
+    $ vault write consul/roles/my-role consul_roles="admin-management" partition="admin1"
+    Success! Data written to: consul/roles/my-role
+    ```
 
 ## Usage
 
@@ -108,28 +134,22 @@ of the role:
 
 ```shell-session
 $ vault read consul/creds/my-role
-Key                Value
----                -----
-lease_id           consul/creds/my-role/b2469121-f55f-53c5-89af-a3ba52b1d6d8
-lease_duration     768h
-lease_renewable    true
-token              642783bf-1540-526f-d4de-fe1ac1aed6f0
+Key                 Value
+---                 -----
+lease_id            consul/creds/my-role/b2469121-f55f-53c5-89af-a3ba52b1d6d8
+lease_duration      768h
+lease_renewable     true
+accessor            c81b9cf7-2c4f-afc7-1449-4e442b831f65
+consul_namespace    ns1
+local               false
+partition           admin1
+token               642783bf-1540-526f-d4de-fe1ac1aed6f0
 ```
 
-When using Consul 1.4, the response will include the accessor for the token
-
-```shell-session
-$ vault read consul/creds/my-role
-Key                Value
----                -----
-lease_id           consul/creds/my-role/7miMPnYaBCaVWDS9clNE0Nv3
-lease_duration     768h
-lease_renewable    true
-accessor           6d5a0348-dffe-e87b-4266-2bec03800abb
-token              bc7a42c0-9c59-23b4-8a09-7173c474dc42
-```
-
-!> **Expired token rotation:** Once a token's TTL expires, then Consul operations will no longer be allowed with it. This requires you to have an external process to rotate tokens. At this time, the recommended approach for operators is to rotate the tokens manually by creating a new token using the `vault read consul/creds/my-role` command. Once the token is synchronized with Consul, apply the token to the agents using the Consul API or CLI.
+!> **Expired token rotation:** Once a token's TTL expires, then Consul operations will no longer be allowed with it.
+This requires you to have an external process to rotate tokens. At this time, the recommended approach for operators
+is to rotate the tokens manually by creating a new token using the `vault read consul/creds/my-role` command. Once
+the token is synchronized with Consul, apply the token to the agents using the Consul API or CLI.
 
 ## Learn
 
