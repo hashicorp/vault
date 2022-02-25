@@ -182,9 +182,10 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 			time.Sleep(2 * time.Millisecond)
 		}
-	}
 
-	wg.Wait()
+		// Limit the number of active go-routines to 5
+		wg.Wait()
+	}
 
 	for _, cr := range results {
 		numAllow := cr.atomicNumAllow.Load()
