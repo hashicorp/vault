@@ -254,6 +254,7 @@ export default class History extends Component {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
     if (!value) {
+      this.authMethodOptions = [];
       // on clear, also make sure auth method is cleared
       this.selectedAuthMethod = null;
     } else {
