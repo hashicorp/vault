@@ -117,7 +117,7 @@ export default class DatabaseRoleEdit extends Component {
       .then(() => {
         this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);
       })
-      .catch(e => {
+      .catch((e) => {
         this.flashMessages.danger(e.errors);
       });
   }
