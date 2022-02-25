@@ -3,7 +3,6 @@ package vault
 import (
 	"bytes"
 	"context"
-	"errors"
 	"reflect"
 	"strings"
 	"testing"
