@@ -12,21 +12,19 @@ import (
 func main() {
 	fset := token.NewFileSet()
 
-	file, err := parser.ParseFile(fset, "../../vault/helper/builtinplugins/registry.go", nil, parser.ParseComments)
+	file, err := parser.ParseFile(fset, "../helper/builtinplugins/registry.go", nil, parser.ParseComments)
 	if err != nil {
 		panic(err)
 	}
 
 	cmap := ast.NewCommentMap(fset, file, file.Comments)
 
-	//var v *visitor
 	v := Visitor{cmap, make([]Backend, 0), make([]Backend, 0), make([]Backend, 0)}
-	//v := &tmp
-	//v.commentMap = cmap
-	ast.Walk(&v, file)
-	output, _ := json.MarshalIndent(v, "", " ")
-	_ = ioutil.WriteFile("plugins.json", output, 0644) // Write out to a file
 
+	ast.Walk(&v, file)
+
+	output, _ := json.MarshalIndent(v, "", " ")
+	_ = ioutil.WriteFile("plugins.json", output, 0644)
 }
 
 type Backend struct {
@@ -53,11 +51,8 @@ func (v *Visitor) Visit(n ast.Node) ast.Visitor {
 		return nil
 	}
 
-	keyValueExpr, ok := n.(*ast.KeyValueExpr)
-	if ok {
-		ident, ok := keyValueExpr.Key.(*ast.Ident)
-
-		if ok {
+	if keyValueExpr, ok := n.(*ast.KeyValueExpr); ok {
+		if ident, ok := keyValueExpr.Key.(*ast.Ident); ok {
 			val, _ := keyValueExpr.Value.(*ast.CompositeLit)
 
 			expressions := val.Elts
