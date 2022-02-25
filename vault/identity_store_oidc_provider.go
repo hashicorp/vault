@@ -2,14 +2,11 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"net/http"
 	"net/url"
 	"sort"
@@ -1513,7 +1510,8 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	if redirectURI == "" {
 		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
 	}
-	if !strutil.StrListContains(client.RedirectURIs, redirectURI) {
+
+	if !validRedirect(redirectURI, client.RedirectURIs) {
 		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
@@ -2158,39 +2156,6 @@ func (i *IdentityStore) populateScopeTemplates(ctx context.Context, s logical.St
 	return populatedTemplates, false, nil
 }
 
-// computeHashClaim computes the hash value to be used for the at_hash
-// and c_hash claims. For details on how this value is computed and the
-// class of attacks it's used to prevent, see the spec at
-// - https://openid.net/specs/openid-connect-core-1_0.html#CodeIDToken
-// - https://openid.net/specs/openid-connect-core-1_0.html#HybridIDToken
-// - https://openid.net/specs/openid-connect-core-1_0.html#TokenSubstitution
-func computeHashClaim(alg string, input string) (string, error) {
-	signatureAlgToHash := map[jose.SignatureAlgorithm]func() hash.Hash{
-		jose.RS256: sha256.New,
-		jose.RS384: sha512.New384,
-		jose.RS512: sha512.New,
-		jose.ES256: sha256.New,
-		jose.ES384: sha512.New384,
-		jose.ES512: sha512.New,
-
-		// We use the Ed25519 curve key for EdDSA, which uses
-		// SHA-512 for its digest algorithm. See details at
-		// https://bitbucket.org/openid/connect/issues/1125.
-		jose.EdDSA: sha512.New,
-	}
-
-	newHash, ok := signatureAlgToHash[jose.SignatureAlgorithm(alg)]
-	if !ok {
-		return "", fmt.Errorf("unsupported signature algorithm: %q", alg)
-	}
-	h := newHash()
-
-	// Writing to the hash will never return an error
-	_, _ = h.Write([]byte(input))
-	sum := h.Sum(nil)
-	return base64.RawURLEncoding.EncodeToString(sum[:len(sum)/2]), nil
-}
-
 // entityHasAssignment returns true if the entity is enabled and a member of any
 // of the assignments' groups or entities. Otherwise, returns false or an error.
 func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Storage, entity *identity.Entity, assignments []string) (bool, error) {
@@ -2199,12 +2164,12 @@ func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Stora
 	}
 
 	// Get the group IDs that the entity is a member of
-	entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
+	groups, inheritedGroups, err := i.groupsByEntityID(entity.GetID())
 	if err != nil {
 		return false, err
 	}
 	entityGroupIDs := make(map[string]bool)
-	for _, group := range entityGroups {
+	for _, group := range append(groups, inheritedGroups...) {
 		entityGroupIDs[group.GetID()] = true
 	}
 

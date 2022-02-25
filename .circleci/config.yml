@@ -145,7 +145,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.5
+    - GO_VERSION: 1.17.7
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
@@ -164,7 +164,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -172,7 +172,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -297,7 +297,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -361,7 +361,7 @@ jobs:
     - GO_TAGS: ''
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -369,7 +369,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -490,7 +490,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -571,7 +571,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -579,7 +579,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -700,7 +700,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -839,11 +839,11 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.5
+    - GO_VERSION: 1.17.7
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -851,7 +851,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -976,7 +976,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -1066,19 +1066,9 @@ workflows:
         requires:
         - pre-flight-checks
     - test-go-race:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-race-remote-docker:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - website-docker-image:

@@ -72,7 +72,7 @@ enabled while creating or updating a role.
 - `secret_id_ttl` `(string: "")` - Duration in either an integer number of
   seconds (`3600`) or an integer time unit (`60m`) after which any SecretID
   expires.
-- `enable_local_secret_ids` `(bool: false)` - If set, the secret IDs generated
+- `local_secret_ids` `(bool: false)` - If set, the secret IDs generated
   using this role will be cluster local. This can only be set during role
   creation and once set, it can't be reset later.
 

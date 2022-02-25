@@ -7,6 +7,23 @@
     "title": "Use Cases",
     "path": "use-cases"
   },
+  {
+    "title": "Get Started",
+    "routes": [
+      {
+        "title": "CLI Quick Start",
+        "href": "https://learn.hashicorp.com/collections/vault/getting-started"
+      },
+      {
+        "title": "HCP Quick Start",
+        "href": "https://learn.hashicorp.com/collections/vault/cloud"
+      },
+      {
+        "title": "Developer Quick Start",
+        "path": "get-started/developer-qs"
+      }
+    ]
+  },
 
   {
     "divider": true
@@ -15,6 +32,7 @@
     "title": "Browser Support",
     "path": "browser-support"
   },
+
   {
     "title": "Installing Vault",
     "path": "install"
@@ -84,6 +102,10 @@
         "path": "concepts/seal"
       },
       {
+        "title": "Namespace API Lock",
+        "path": "concepts/namespace-api-lock"
+      },
+      {
         "title": "Lease, Renew, and Revoke",
         "path": "concepts/lease"
       },
@@ -141,7 +163,7 @@
         ]
       },
       {
-        "title": "PGP, GPG, and Keybase",
+        "title": "PGP, GnuPG, and Keybase",
         "path": "concepts/pgp-gpg-keybase"
       },
       {
@@ -154,7 +176,16 @@
       },
       {
         "title": "Client Count",
-        "path": "concepts/client-count"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/client-count"
+          },
+          {
+            "title": "FAQ",
+            "path": "concepts/client-count/faq"
+          }
+        ]
       },
       {
         "title": "Transform",
@@ -257,8 +288,7 @@
           },
           {
             "title": "Alicloud OSS",
-            "path": "configuration/storage/alicloudoss",
-            "hidden": true
+            "path": "configuration/storage/alicloudoss"
           },
           {
             "title": "Azure",
@@ -430,11 +460,6 @@
         "path": "commands/delete"
       },
       {
-        "title": "<code>help</code>",
-        "path": "commands/help",
-        "hidden": true
-      },
-      {
         "title": "<code>kv</code>",
         "routes": [
           {
@@ -492,8 +517,7 @@
           },
           {
             "title": "<code>lookup</code>",
-            "path": "commands/lease/lookup",
-            "hidden": true
+            "path": "commands/lease/lookup"
           },
           {
             "title": "<code>renew</code>",
@@ -890,11 +914,6 @@
         "path": "secrets/azure"
       },
       {
-        "title": "Cassandra",
-        "path": "secrets/cassandra",
-        "hidden": true
-      },
-      {
         "title": "Consul",
         "path": "secrets/consul"
       },
@@ -989,6 +1008,10 @@
           {
             "title": "AWS KMS",
             "path": "secrets/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secrets/key-management/gcpkms"
           }
         ]
       },
@@ -1019,6 +1042,10 @@
           {
             "title": "Overview",
             "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
           },
           {
             "title": "OIDC Identity Provider",
@@ -1084,8 +1111,7 @@
           },
           {
             "title": "FF3-1 Tweak Usage",
-            "path": "secrets/transform/ff3-tweak-details",
-            "hidden": true
+            "path": "secrets/transform/ff3-tweak-details"
           },
           {
             "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
@@ -1233,6 +1259,10 @@
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
+  },
+  {
+    "title": "Troubleshoot",
+    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
   },
   {
     "divider": true
@@ -1414,16 +1444,28 @@
             "path": "platform/servicenow/troubleshooting"
           }
         ]
+      },
+      {
+        "title": "Microsoft SQL Server EKM provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/mssql"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/mssql/installation"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/mssql/troubleshooting"
+          }
+        ]
       }
     ]
   },
   {
     "divider": true
-  },
-  {
-    "title": "Versus Other Software",
-    "path": "vs",
-    "hidden": true
   },
   {
     "title": "Upgrade Guides",
@@ -1438,8 +1480,7 @@
       },
       {
         "title": "Upgrade to 1.9.x",
-        "path": "upgrading/upgrade-to-1.9.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.9.x"
       },
       {
         "title": "Upgrade to 1.8.x",
@@ -1666,27 +1707,46 @@
         "path": "release-notes"
       },
       {
-        "title": "1.5.0",
-        "path": "release-notes/1.5.0"
+        "title": "1.9.0",
+        "path": "release-notes/1.9.0"
       },
       {
-        "title": "1.6.0",
-        "path": "release-notes/1.6.0"
+        "title": "1.8.0",
+        "path": "release-notes/1.8.0"
       },
       {
         "title": "1.7.0",
         "path": "release-notes/1.7.0"
       },
       {
-        "title": "1.8.0",
-        "path": "release-notes/1.8.0"
+        "title": "1.6.0",
+        "path": "release-notes/1.6.0"
+      },
+      {
+        "title": "1.5.0",
+        "path": "release-notes/1.5.0"
       }
     ]
   },
   {
     "divider": true
   },
-
+  {
+    "title": "Deprecation Notices",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "deprecation"
+      },
+      {
+        "title": "FAQ",
+        "path": "deprecation/faq"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
   {
     "title": "Glossary",
     "path": "glossary"
@@ -1814,6 +1874,10 @@
             "path": "enterprise/sentinel/properties"
           }
         ]
+      },
+      {
+        "title": "HCP Vault",
+        "href": "https://cloud.hashicorp.com/docs/vault"
       }
     ]
   }
