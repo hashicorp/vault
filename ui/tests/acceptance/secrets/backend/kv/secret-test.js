@@ -582,6 +582,8 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     let userToken2 = consoleComponent.lastLogOutput;
     await settled();
     await listPage.visitRoot({ backend: enginePath });
+    // confirm they see an empty state and not the get-credentials card
+    await assert.dom('[data-test-empty-state-title]').hasText('No secrets in this backend');
     await settled();
     await listPage.create();
     await settled();
