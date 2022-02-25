@@ -35,10 +35,8 @@ require (
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
-	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.0
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/docker v20.10.10+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
@@ -52,6 +50,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.8
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
+	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github v17.0.0+incompatible
@@ -120,7 +119,7 @@ require (
 	github.com/hashicorp/vault/api v1.3.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.3.1-0.20220112143259-b48602fdb885
+	github.com/hashicorp/vault/sdk v0.3.1-0.20220222222524-cfa3741426a1
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -154,7 +153,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/posener/complete v1.2.3
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/common v0.26.0
 	github.com/rboyer/safeio v0.2.1
 	github.com/ryanuber/columnize v2.1.0+incompatible
@@ -241,6 +240,7 @@ require (
 	github.com/containerd/continuity v0.2.1 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
 	github.com/coreos/go-oidc/v3 v3.0.0 // indirect
+	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/couchbase/gocb/v2 v2.3.3 // indirect
 	github.com/couchbase/gocbcore/v10 v10.0.4 // indirect
@@ -263,7 +263,6 @@ require (
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.0.0-20170517235910-f1bb20e5a188 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect

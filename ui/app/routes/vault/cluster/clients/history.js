@@ -1,21 +1,17 @@
 import Route from '@ember/routing/route';
+import { isSameMonth } from 'date-fns';
 import RSVP from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 export default class HistoryRoute extends Route {
   async getActivity(start_time) {
-    try {
-      // on init ONLY make network request if we have a start time from the license
-      // otherwise user needs to manually input
-      return start_time ? await this.store.queryRecord('clients/activity', { start_time }) : {};
-    } catch (e) {
-      // returns 400 when license start date is in the current month
-      if (e.httpStatus === 400) {
-        return { isLicenseDateError: true };
-      }
-      throw e;
+    if (isSameMonth(new Date(start_time), new Date())) {
+      // triggers empty state to manually enter date if license begins in current month
+      return { isLicenseDateError: true };
     }
+    // on init ONLY make network request if we have a start_time
+    return start_time ? await this.store.queryRecord('clients/activity', { start_time }) : {};
   }
 
   async getLicenseStartTime() {

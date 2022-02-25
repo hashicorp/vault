@@ -47,7 +47,7 @@ export default class VerticalBarChart extends Component {
 
     // DEFINE DATA BAR SCALES
     let yScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.total))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.clients))]) // TODO will need to recalculate when you get the data
       .range([0, 100])
       .nice();
 
@@ -76,7 +76,7 @@ export default class VerticalBarChart extends Component {
 
     // MAKE AXES //
     let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.total))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.clients))]) // TODO will need to recalculate when you get the data
       .range([`${SVG_DIMENSIONS.height}`, 0])
       .nice();
 
@@ -116,7 +116,7 @@ export default class VerticalBarChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
       let hoveredMonth = data.month;
-      this.tooltipTotal = `${data.total} ${data.new_clients ? 'total' : 'new'} clients`;
+      this.tooltipTotal = `${data.clients} ${data.new_clients ? 'total' : 'new'} clients`;
       this.uniqueEntities = `${data.entity_clients} unique entities`;
       this.nonEntityTokens = `${data.non_entity_clients} non-entity tokens`;
       // let node = chartSvg

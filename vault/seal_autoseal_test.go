@@ -189,7 +189,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	autoSeal.SetCore(core)
 	core.seal = autoSeal
 	autoSeal.StartHealthCheck()
-	setErr(errors.New("disconnected"))
+	defer autoSeal.StopHealthCheck()
 
 	time.Sleep(50 * time.Millisecond)
 

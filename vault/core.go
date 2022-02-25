@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -1149,6 +1150,15 @@ func (c *Core) Shutdown() error {
 	return err
 }
 
+func (c *Core) ShutdownWait() error {
+	donech := c.ShutdownDone()
+	err := c.Shutdown()
+	if donech != nil {
+		<-donech
+	}
+	return err
+}
+
 // ShutdownDone returns a channel that will be closed after Shutdown completes
 func (c *Core) ShutdownDone() <-chan struct{} {
 	return c.shutdownDoneCh
@@ -2097,7 +2107,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
-
 	c.setupCachedMFAResponseAuth()
 
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
@@ -2233,6 +2242,10 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		}
 	}
 
+	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
+	}
+	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2243,6 +2256,9 @@ func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
 
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
+	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 	c.activeTime = time.Time{}
@@ -2305,6 +2321,7 @@ func (c *Core) preSeal() error {
 		seal.StopHealthCheck()
 	}
 
+	c.loginMFABackend.usedCodes = nil
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")

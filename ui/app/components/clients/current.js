@@ -29,7 +29,11 @@ export default class Current extends Component {
   }
 
   get hasAttributionData() {
-    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
+    if (this.selectedAuthMethod) return false;
+    if (this.selectedNamespace) {
+      return this.authMethodOptions.length > 0;
+    }
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData;
   }
 
   get filteredActivity() {

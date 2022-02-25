@@ -1,0 +1,3 @@
+```release-note:bug
+ ui: Fix incorrect validity message on transit secrets engine
+```

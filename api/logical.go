@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -145,9 +144,7 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PATCH", "/v1/"+path)
-	r.Headers = http.Header{
-		"Content-Type": []string{"application/merge-patch+json"},
-	}
+	r.Headers.Set("Content-Type", "application/merge-patch+json")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
