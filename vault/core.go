@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -2106,7 +2107,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
-
 	c.setupCachedMFAResponseAuth()
 
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
@@ -2242,6 +2242,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		}
 	}
 
+	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
+	}
 	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
 	c.logger.Info("post-unseal setup complete")
 	return nil
