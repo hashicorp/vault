@@ -656,8 +656,6 @@ github.com/gogo/protobuf v1.3.1/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXP
 github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
 github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
 github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d/go.mod h1:nnjvkQ9ptGaCkuDUx6wNykzzlUixGxvkme+H/lnzb+A=
-github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
-github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/golang-jwt/jwt/v4 v4.0.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
 github.com/golang-jwt/jwt/v4 v4.2.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
 github.com/golang-jwt/jwt/v4 v4.3.0 h1:kHL1vqdqWNfATmA0FNMdmZNMyZI1U6O31X4rlIPoBog=
@@ -968,8 +966,8 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.11.4 h1:rL/hvd7uGB8CGpw1FKxxUD/dBJ
 github.com/hashicorp/vault-plugin-auth-jwt v0.11.4/go.mod h1:jzjDdssus8sw8G6NOP7kNFMEeIvrjXvPHUR3pEn5+r0=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0 h1:oORxeqOraVVLQrb+z3fj5JayPmH/JBxJWGywZ8ZRJt0=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0/go.mod h1:eqjae8tMBpAWgJNk1NjV/vtJYXQRZnYudUkBFowz3bY=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.6 h1:81UACK6IWTN8QO43tMgBaWvnxTadb9Y81saOtmCOST4=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.6/go.mod h1:4qmKjrWYXENNO+PWFLehpEcr0PzRHdvwodC25yOR/4U=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.7 h1:sw94h2VlVMjY8V9u6VZY19Ek3u4faNVRJ6blfq387xs=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.7/go.mod h1:qxuzlUsJnUNksxDaGfZjmzqPc21nrMNnZhMpL7PIG4E=
 github.com/hashicorp/vault-plugin-auth-oci v0.9.0 h1:5wuHuPsW/MM5x0yvbr5ZwFLviNdF7q2t+z9saL7zjcI=
 github.com/hashicorp/vault-plugin-auth-oci v0.9.0/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
 github.com/hashicorp/vault-plugin-database-couchbase v0.5.1 h1:WsXcOHHVwphwsrNGxpxRHcFzVgApN17ZNiE5RVD+q78=
