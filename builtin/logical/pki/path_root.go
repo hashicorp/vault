@@ -29,8 +29,13 @@ func pathGenerateRoot(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/generate/" + framework.GenericNameRegex("exported"),
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCAGenerateRoot,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAGenerateRoot,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathGenerateRootHelpSyn,
@@ -47,9 +52,13 @@ func pathGenerateRoot(b *backend) *framework.Path {
 func pathDeleteRoot(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root",
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.DeleteOperation: b.pathCADeleteRoot,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathCADeleteRoot,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathDeleteRootHelpSyn,
@@ -62,9 +71,10 @@ func pathDeleteRoot(b *backend) *framework.Path {
 func pathSignIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/sign-intermediate",
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCASignIntermediate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCASignIntermediate,
+			},
 		},
 
 		HelpSynopsis:    pathSignIntermediateHelpSyn,
@@ -100,9 +110,10 @@ the non-repudiation flag.`,
 func pathSignSelfIssued(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/sign-self-issued",
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCASignSelfIssued,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCASignSelfIssued,
+			},
 		},
 
 		Fields: map[string]*framework.FieldSchema{
