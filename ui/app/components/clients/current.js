@@ -29,7 +29,11 @@ export default class Current extends Component {
   }
 
   get hasAttributionData() {
-    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
+    if (this.selectedAuthMethod) return false;
+    if (this.selectedNamespace) {
+      return this.authMethodOptions.length > 0;
+    }
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData;
   }
 
   get filteredActivity() {
@@ -80,6 +84,7 @@ export default class Current extends Component {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
     if (!value) {
+      this.authMethodOptions = [];
       // on clear, also make sure auth method is cleared
       this.selectedAuthMethod = null;
     } else {

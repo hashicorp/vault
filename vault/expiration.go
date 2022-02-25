@@ -742,16 +742,17 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	}()
 
 	// Ensure all keys on the chan are processed
+LOOP:
 	for i := 0; i < leaseCount; i++ {
 		select {
-		case err := <-errs:
+		case err = <-errs:
 			// Close all go routines
 			close(quit)
-			return err
+			break LOOP
 
 		case <-m.quitCh:
 			close(quit)
-			return nil
+			break LOOP
 
 		case <-result:
 		}
@@ -759,6 +760,9 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 	// Let all go routines finish
 	wg.Wait()
+	if err != nil {
+		return err
+	}
 
 	m.restoreModeLock.Lock()
 	atomic.StoreInt32(m.restoreMode, 0)
@@ -1714,7 +1718,11 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 
 func (m *ExpirationManager) uniquePoliciesGc() {
 	for {
-		<-m.emptyUniquePolicies.C
+		select {
+		case <-m.quitCh:
+			return
+		case <-m.emptyUniquePolicies.C:
+		}
 
 		// If the maximum lease is a month, and we blow away the unique
 		// policy cache every week, the pessimal case is 4x larger space

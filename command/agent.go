@@ -715,7 +715,10 @@ func (c *AgentCommand) Run(args []string) int {
 
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
+			quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
+
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
 			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
 			mux.Handle("/", muxHandler)
 
@@ -1045,5 +1048,24 @@ func (c *AgentCommand) handleMetrics() http.Handler {
 		default:
 			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))
 		}
+	})
+}
+
+func (c *AgentCommand) handleQuit(enabled bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !enabled {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodPost:
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		c.logger.Debug("received quit request")
+		close(c.ShutdownCh)
 	})
 }

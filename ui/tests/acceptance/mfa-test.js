@@ -4,12 +4,13 @@ import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 
-ENV['ember-cli-mirage'].handler = 'mfa';
-
 module('Acceptance | mfa', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  hooks.before(function () {
+    ENV['ember-cli-mirage'].handler = 'mfa';
+  });
   hooks.beforeEach(function () {
     this.select = async (select = 0, option = 1) => {
       const selector = `[data-test-mfa-select="${select}"]`;
@@ -17,9 +18,11 @@ module('Acceptance | mfa', function (hooks) {
       await fillIn(`${selector} select`, value);
     };
   });
+  hooks.after(function () {
+    ENV['ember-cli-mirage'].handler = null;
+  });
 
   const login = async (user) => {
-    // MfaHandler(server);
     await visit('/vault/auth');
     await fillIn('[data-test-select="auth-method"]', 'userpass');
     await fillIn('[data-test-username]', user);
