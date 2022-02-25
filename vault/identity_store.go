@@ -142,7 +142,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 func mfaPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
+			Pattern: "mfa/method/totp" + logical.GenericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
@@ -271,7 +271,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 		},
 		{
-			Pattern: "mfa/method/okta" + genericOptionalUUIDRegex("method_id"),
+			Pattern: "mfa/method/okta" + logical.GenericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
@@ -331,7 +331,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 		},
 		{
-			Pattern: "mfa/method/duo" + genericOptionalUUIDRegex("method_id"),
+			Pattern: "mfa/method/duo" + logical.GenericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
@@ -391,7 +391,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 		},
 		{
-			Pattern: "mfa/method/pingid" + genericOptionalUUIDRegex("method_id"),
+			Pattern: "mfa/method/pingid" + logical.GenericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,

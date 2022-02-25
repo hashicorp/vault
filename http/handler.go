@@ -108,6 +108,7 @@ var (
 	}
 
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
+	mfaMethodIDRegex       = regexp.MustCompile(logical.GenericOptionalUUIDRegex("method_id"))
 )
 
 func init() {
@@ -1130,7 +1131,12 @@ func parseMFAHeader(req *logical.Request) error {
 			return fmt.Errorf("invalid data in header %q; missing method name or ID", MFAHeaderName)
 		}
 
-		if shardSplits[1] == "" {
+		// In cases where login MFA is used, and the MFA method does not use
+		// passcodes, we should not return an error. In addition, it is
+		// unlikely that a user would configure an ENT MFA method with a name
+		// that matches mfaMethodIDRegex.
+		ok := mfaMethodIDRegex.MatchString(shardSplits[0])
+		if !ok && shardSplits[1] == "" {
 			return fmt.Errorf("invalid data in header %q; missing method value", MFAHeaderName)
 		}
 

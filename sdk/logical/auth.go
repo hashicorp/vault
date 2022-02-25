@@ -108,3 +108,7 @@ type Auth struct {
 func (a *Auth) GoString() string {
 	return fmt.Sprintf("*%#v", *a)
 }
+
+func GenericOptionalUUIDRegex(name string) string {
+	return fmt.Sprintf("(/(?P<%s>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?", name)
+}
