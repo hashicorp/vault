@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -194,20 +195,27 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	asu := strings.Join(autoSealUnavailableDuration, ".") + ";cluster=" + core.clusterName
-	intervals := inmemSink.Data()
-	if len(intervals) == 1 {
-		interval := inmemSink.Data()[0]
+	tries := 10
+	for tries = 10; tries > 0; tries-- {
+		intervals := inmemSink.Data()
+		if len(intervals) == 1 {
+			interval := inmemSink.Data()[0]
 
-		if _, ok := interval.Gauges[asu]; !ok {
-			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
+			if _, ok := interval.Gauges[asu]; ok {
+				if interval.Gauges[asu].Value > 0 {
+					break
+				}
+			}
 		}
-		if interval.Gauges[asu].Value == 0 {
-			t.Fatalf("Expected value metric %s to be non-zero", asu)
-		}
+		time.Sleep(100 * time.Millisecond)
 	}
+	if tries == 0 {
+		t.Fatalf("Expected value metric %s to be non-zero", asu)
+	}
+
 	setErr(nil)
 	time.Sleep(50 * time.Millisecond)
-	intervals = inmemSink.Data()
+	intervals := inmemSink.Data()
 	if len(intervals) == 1 {
 		interval := inmemSink.Data()[0]
 
