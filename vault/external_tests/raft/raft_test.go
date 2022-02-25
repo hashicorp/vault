@@ -489,28 +489,10 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 		}
 	}
 
-	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
-	if err := http2.ConfigureTransport(transport); err != nil {
-		t.Fatal(err)
-	}
-	client := &http.Client{
-		Transport: transport,
-	}
-
 	// Take a snapshot
-	req := leaderClient.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
-	httpReq, err := req.ToHTTP()
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	snap, err := ioutil.ReadAll(resp.Body)
+	buf := new(bytes.Buffer)
+	err := leaderClient.Sys().RaftSnapshot(buf)
+	snap, err := io.ReadAll(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -527,15 +509,8 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
 	// Restore snapshot
-	req = leaderClient.NewRequest("POST", "/v1/sys/storage/raft/snapshot")
-	req.Body = bytes.NewBuffer(snap)
-	httpReq, err = req.ToHTTP()
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err = client.Do(httpReq)
+	err = leaderClient.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
 	if err != nil {
 		t.Fatal(err)
 	}
