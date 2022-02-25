@@ -29,9 +29,9 @@
         >
           Delete role
         </ConfirmAction>
-        <div class="toolbar-separator" />
+        <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if (and @model.canRotateRoleCredentials (eq @model.type 'static'))}}
+      {{#if (and @model.canRotateRoleCredentials (eq @model.type "static"))}}
         <button type="button" class="toolbar-link" {{on "click" (fn this.rotateRoleCred @model.id)}}>
           Rotate credentials
         </button>
