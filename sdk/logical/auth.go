@@ -7,6 +7,8 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
+const LoginMFARegex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+
 // Auth is the resulting authentication information that is part of
 // Response for credential backends.
 type Auth struct {
@@ -110,5 +112,5 @@ func (a *Auth) GoString() string {
 }
 
 func GenericOptionalUUIDRegex(name string) string {
-	return fmt.Sprintf("(/(?P<%s>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?", name)
+	return fmt.Sprintf("(/(?P<%s>%s))?", name, LoginMFARegex)
 }

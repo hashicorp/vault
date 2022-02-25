@@ -108,7 +108,7 @@ var (
 	}
 
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
-	mfaMethodIDRegex       = regexp.MustCompile(logical.GenericOptionalUUIDRegex("method_id"))
+	mfaMethodIDRegex       = regexp.MustCompile(logical.LoginMFARegex)
 )
 
 func init() {
