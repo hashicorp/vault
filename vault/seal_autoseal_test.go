@@ -221,7 +221,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
 		}
 		if interval.Gauges[asu].Value != 0 {
-			t.Fatalf("Expected value metric %s to be non-zero", asu)
+			t.Fatalf("Expected value metric %s to be zero", asu)
 		}
 	}
 }
