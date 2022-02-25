@@ -101,7 +101,9 @@ this path;
 2) Any key usages requested in the CSR will be
 added to the basic set of key usages used for CA
 certs signed by this path; for instance,
-the non-repudiation flag.`,
+the non-repudiation flag;
+3) Extensions requested in the CSR will be copied
+into the issued certificate.`,
 	}
 
 	return ret
