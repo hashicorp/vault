@@ -92,29 +92,29 @@ require (
 	github.com/hashicorp/raft-autopilot v0.1.3
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.3
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.10.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.9.4
-	github.com/hashicorp/vault-plugin-auth-centrify v0.10.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.10.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.11.3
-	github.com/hashicorp/vault-plugin-auth-jwt v0.11.4
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.5.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20220218193136-20f85c165dd8
-	github.com/hashicorp/vault-plugin-auth-oci v0.9.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.5.1
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.9.1
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.5.1
-	github.com/hashicorp/vault-plugin-database-snowflake v0.3.1
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.11.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.10.0
+	github.com/hashicorp/vault-plugin-auth-centrify v0.11.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.11.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.12.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.12.1
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.6.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.12.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.10.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.6.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.10.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.6.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.4.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.11.1
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.10.2
-	github.com/hashicorp/vault-plugin-secrets-azure v0.11.4
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.11.2
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.10.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1
+	github.com/hashicorp/vault-plugin-secrets-azure v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.11.0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.5.1
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.6.1
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.3.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.6.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.4.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
 	github.com/hashicorp/vault/api v1.4.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
