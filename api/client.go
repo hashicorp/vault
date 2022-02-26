@@ -1090,8 +1090,8 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 //
-// Deprecated: method is left for  backwards compatibility.
-// It is expected to be used internally. Use higher level methods instead.
+// Deprecated: This method should not be used directly. Use higher level
+// methods instead.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
 	return c.RawRequestWithContext(context.Background(), r)
 }
@@ -1100,8 +1100,8 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 //
-// Deprecated: method is left for backwards compatibility.
-// It is expected to be used internally. Use higher level methods instead.
+// Deprecated: This method should not be used directly. Use higher level
+// methods instead.
 func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	// Note: we purposefully do not call cancel manually. The reason is
 	// when canceled, the request.Body will EOF when reading due to the way
