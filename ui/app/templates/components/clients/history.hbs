@@ -49,6 +49,8 @@
         {{/if}}
       </EmptyState>
     {{/if}}
+  {{else if (eq this.isError true)}}
+    <Clients::Error @error={{this.errorObject}} />
   {{else}}
     {{#if (eq @model.config.enabled "Off")}}
       <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
