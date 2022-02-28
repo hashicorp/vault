@@ -154,8 +154,12 @@ func kvParseVersionsFlags(versions []string) []string {
 	return versionsOut
 }
 
-func outputSecretPath(ui cli.Ui, path string) {
-	ui.Info(addEqualSigns("Secret Path", len(path)))
+func outputPath(ui cli.Ui, path string, isMetadataPath bool) {
+	header := "Secret Path"
+	if isMetadataPath {
+		header = "Metadata Path"
+	}
+	ui.Info(addEqualSigns(header, len(path)))
 	ui.Info(path)
 	ui.Info("")
 }

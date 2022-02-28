@@ -165,7 +165,7 @@ func (c *KVPutCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	outputSecretPath(c.UI, path)
+	outputPath(c.UI, path, false)
 
 	metadata := secret.Data
 	c.UI.Info(getHeaderForMap("Metadata", metadata))
