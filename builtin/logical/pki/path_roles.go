@@ -583,6 +583,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 
 func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+	var resp *logical.Response
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
@@ -644,6 +645,10 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	// no_store implies generate_lease := false
 	if entry.NoStore {
 		*entry.GenerateLease = false
+		if data.Get("generate_lease").(bool) {
+			resp = &logical.Response{}
+			resp.AddWarning("mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority")
+		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
 	}
@@ -694,7 +699,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func parseKeyUsages(input []string) int {
