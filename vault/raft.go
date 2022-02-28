@@ -963,7 +963,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
 				for _, ip := range clusterIPs {
-					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "["){
+					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
 						// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
 						ip = fmt.Sprintf("[%s]", ip)
 					}
