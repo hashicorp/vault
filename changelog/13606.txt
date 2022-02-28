@@ -1,3 +1,0 @@
-```release-note:improvement
-storage/raft: When using retry_join stanzas, join against all of them in parallel.
-```
