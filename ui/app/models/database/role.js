@@ -130,4 +130,6 @@ export default Model.extend({
   canGetCredentials: alias('staticCredentialPath.canRead'),
   databasePath: lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database'),
   canUpdateDb: alias('databasePath.canUpdate'),
+  rotateRolePath: lazyCapabilities(apiPath`${'backend'}/rotate-role/${'id'}`, 'backend', 'id'),
+  canRotateRoleCredentials: alias('rotateRolePath.canUpdate'),
 });

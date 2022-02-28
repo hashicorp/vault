@@ -14,9 +14,13 @@ import (
 func pathGenerateIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "intermediate/generate/" + framework.GenericNameRegex("exported"),
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathGenerateIntermediate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathGenerateIntermediate,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathGenerateIntermediateHelpSyn,
@@ -49,9 +53,13 @@ previously-generated key from the generation
 endpoint.`,
 			},
 		},
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathSetSignedIntermediate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathSetSignedIntermediate,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathSetSignedIntermediateHelpSyn,

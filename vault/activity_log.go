@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 )
@@ -359,9 +358,9 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 
 // :force: forces a save of tokens/entities even if the in-memory log is empty
 func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool) error {
-	entityPath := fmt.Sprintf("log/entity/%d/%d", a.currentSegment.startTimestamp, a.currentSegment.clientSequenceNumber)
+	entityPath := fmt.Sprintf("%s%d/%d", activityEntityBasePath, a.currentSegment.startTimestamp, a.currentSegment.clientSequenceNumber)
 	// RFC (VLT-120) defines this as 1-indexed, but it should be 0-indexed
-	tokenPath := fmt.Sprintf("log/directtokens/%d/0", a.currentSegment.startTimestamp)
+	tokenPath := fmt.Sprintf("%s%d/0", activityTokenBasePath, a.currentSegment.startTimestamp)
 
 	for _, client := range a.currentSegment.currentClients.Clients {
 		// Explicitly catch and throw clear error message if client ID creation and storage
@@ -377,22 +376,10 @@ func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool
 			return err
 		}
 
-		// Compress the contents of the segment. compressutil uses a prepended
-		// canary to the encoded message. This way the decompression can be made
-		// backwards compatible. This works by checking the presence of
-		// canaries; absence of canaries will fallback to processing
-		// uncompressed data.
-		compressedClients, err := compressutil.Compress(clients, &compressutil.CompressionConfig{
-			Type: compressutil.CompressionTypeLZ4,
-		})
-		if err != nil {
-			return err
-		}
-
 		a.logger.Trace("writing segment", "path", entityPath)
 		err = a.view.Put(ctx, &logical.StorageEntry{
 			Key:   entityPath,
-			Value: compressedClients,
+			Value: clients,
 		})
 		if err != nil {
 			return err
@@ -540,18 +527,8 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 			continue
 		}
 
-		value, notCompressed, err := compressutil.Decompress(raw.Value)
-		if err != nil {
-			return err
-		}
-
-		// Fallback to uncompressed value, if compression was not done.
-		if notCompressed {
-			value = raw.Value
-		}
-
 		out := &activity.EntityActivityLog{}
-		err = proto.Unmarshal(value, out)
+		err = proto.Unmarshal(raw.Value, out)
 		if err != nil {
 			return fmt.Errorf("unable to parse segment %v%v: %w", basePath, path, err)
 		}

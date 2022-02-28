@@ -1,48 +1,58 @@
-<div class="chart-wrapper single-chart-grid">
+<div class="chart-wrapper single-chart-grid" data-test-clients-attribution>
   <div class="chart-header has-header-link has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">Attribution</h2>
-      <p class="chart-description">{{this.chartText.description}}</p>
+      <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
       {{#if @totalClientsData}}
-        <button type="button" class="button is-secondary" {{on "click" (fn (mut this.showCSVDownloadModal) true)}}>
+        <button
+          data-test-attribution-export-button
+          type="button"
+          class="button is-secondary"
+          {{on "click" (fn (mut this.showCSVDownloadModal) true)}}
+        >
           Export attribution data
         </button>
       {{/if}}
     </div>
   </div>
+  {{#if this.barChartTotalClients}}
+    <div class="chart-container-wide">
+      <Clients::HorizontalBarChart
+        @dataset={{this.barChartTotalClients}}
+        @chartLegend={{@chartLegend}}
+        @totalUsageCounts={{@totalUsageCounts}}
+      />
+    </div>
+    <div class="chart-subTitle">
+      <p class="chart-subtext" data-test-attribution-subtext>{{this.chartText.totalCopy}}</p>
+    </div>
 
-  <div class="chart-container-wide">
-    <Clients::HorizontalBarChart
-      @dataset={{this.barChartTotalClients}}
-      @chartLegend={{@chartLegend}}
-      @totalUsageCounts={{@totalUsageCounts}}
-    />
-  </div>
+    <div class="data-details-top" data-test-top-attribution>
+      <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
+      <p class="data-details">{{this.topClientCounts.label}}</p>
+    </div>
 
-  <div class="chart-subTitle">
-    <p class="chart-subtext">{{this.chartText.totalCopy}}</p>
-  </div>
+    <div class="data-details-bottom" data-test-top-counts>
+      <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
+      <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
+    </div>
 
-  <div class="data-details-top">
-    <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
-    <p class="data-details">{{this.topClientCounts.label}}</p>
-  </div>
-
-  <div class="data-details-bottom">
-    <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
-    <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
-  </div>
-
-  <div class="timestamp">
-    Updated
-    {{date-format @timestamp "MMM dd yyyy, h:mm:ss aaa"}}
-  </div>
-
-  <div class="legend-center">
-    <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-    <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+    <div class="legend-center">
+      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+    </div>
+  {{else}}
+    <div class="chart-empty-state">
+      <EmptyState @icon="skip" @title="No data found" @bottomBorder={{true}} />
+    </div>
+  {{/if}}
+  <div class="timestamp" data-test-attribution-timestamp>
+    {{#if @timestamp}}
+      Updated
+      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+    {{/if}}
   </div>
 </div>
 
