@@ -30,6 +30,8 @@ jobs:
           else
             expected_changelog_file=changelog/${{ github.event.pull_request.number }}.txt
           fi
+
+          echo "looking for changelog file ${expected_changelog_file}"
           changelog_files=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" -- ${expected_changelog_file})
 
           # If we do not find a file matching the PR # in changelog/, we fail the check
