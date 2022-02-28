@@ -1,0 +1,109 @@
+---
+layout: docs
+page_title: 1.10
+description: |-
+  This page contains release notes for Vault 1.10.
+---
+
+# Vault 1.10 Release notes
+
+**Software Release Date**:
+
+**Summary**: Vault Release 1.10 offers features and enhancements that improve the user experience while closing the loop on key issues previously encountered by our customers. We are providing a summary of these improvements in these release notes.
+
+We encourage you to upgrade to the latest release to take advantage of the new benefits that we are providing. Additionally, with this latest release, we offer solutions to critical feature gaps that have been identified previously. For further information on product improvements, including a comprehensive list of bug fixes, please refer to the [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md) within the Vault 1.10 release.
+
+Some of these enhancements and changes in this release include:
+
+- The ability to provide a more granular approach to client billing.
+- Experiencing a secure posture that includes MFA for our Vault OSS customers
+- Achieving FIPS 140-3 and 140-2 compliance
+- Support of PKCE on Vault’s OIDC auth method with the unification of OpenLDAP and AD engines.
+- Offering key/pair-based authentication for Snowflake Database users
+- Generating short-lived dynamic service accounts to allow fine-grained access to Kubernetes clusters
+- Enabling of TTL capability for Key Management Secrets Engine keys
+- Improvement of key areas and parity to support the use of Terraform Provider with Vault.
+
+## New Features
+
+This section describes the new features introduced as part of Vault 1.10.
+
+### Multi-Factor Authentication (MFA) is now available for Vault OSS
+
+Vault OSS customers can now configure MFA and implement a security policy for all existing supported authentication methods.
+
+### Caching support for Vault Lambda Extension
+
+TBD
+
+### Advanced I/O Handling for Transform FPE
+
+TBD
+
+### DB2 Dynamic Secrets Support
+
+Vault now supports credential management for IBM DB2.
+
+### Temporal Transit Key Rotation
+
+TBD
+
+### PKI HSM Forwarding
+
+TBD
+
+### AWS KMS Forwarding
+
+TBD
+
+### FIPS 140-2 Inside
+
+TBD
+
+### Dynamic Kubernetes Service Account Secrets
+
+Correct me if I’m wrong but this has been deferred to Vault 1.11 right?
+
+### Server-Side Consistent Tokens
+
+TBD
+
+### Use sessionStorage instead of localStorage for Vault UI
+
+TBD
+
+## Other Features and Enhancements
+
+This section describes other features and enhancements introduced as part of the Vault 1.10 release.
+
+### Client Count Improvements
+
+TBD
+
+### Improvements to Mount move command
+
+We have made improvements to the Mount move command to simplify the complexities of moving data, such as secret engines, authentication methods, etc., from one namespace to another.
+
+### Scaling External Database Plugins
+
+TBD
+
+## UI Enhancements
+
+This section describes UI enhancements introduced as part of Vault 1.10 release.
+
+## Tech Preview Features
+
+This section describes tech preview features introduced as part of Vault 1.10 release.
+
+## Key Management Secrets Engine UI
+
+You can generate, distribute, and manage the lifecycle of keys to various cloud or other SaaS platforms by managing your own encryption keys.
+
+## Breaking Changes
+
+The following section details breaking changes introduced in Vault 1.10.
+
+## Feature Deprecations and EOL
+
+Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [FAQ](https://www.vaultproject.io/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
