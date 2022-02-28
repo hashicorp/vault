@@ -5,8 +5,8 @@ container {
 }
 
 binary {
-	secrets      = true
-	go_modules   = true
+	secrets      = false
+	go_modules   = false
 	osv          = true
 	oss_index    = true
 	nvd          = true

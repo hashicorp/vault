@@ -1,0 +1,7 @@
+```release-note:feature
+**Database plugin multiplexing**: manage multiple database connections with a single plugin process
+```
+
+```release-note:change
+plugin/database: The return value from `POST /database/config/:name` has been updated to "204 No Content"
+```

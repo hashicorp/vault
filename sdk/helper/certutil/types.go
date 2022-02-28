@@ -169,7 +169,7 @@ type PrivateKeyExtractor func(c *CertBundle, parsedBundle *ParsedCertBundle) err
 func (c *CertBundle) ToParsedCertBundleWithExtractor(privateKeyExtractor PrivateKeyExtractor) (*ParsedCertBundle, error) {
 	var err error
 	var pemBlock *pem.Block
-	var result = &ParsedCertBundle{}
+	result := &ParsedCertBundle{}
 
 	err = privateKeyExtractor(c, result)
 	if err != nil {
@@ -682,6 +682,21 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 		if b.CAChain != nil && len(b.CAChain) > 0 {
 			chain = append(chain, b.CAChain...)
 		}
+	}
+
+	return chain
+}
+
+func (b *CAInfoBundle) GetFullChain() []*CertBlock {
+	var chain []*CertBlock
+
+	chain = append(chain, &CertBlock{
+		Certificate: b.Certificate,
+		Bytes:       b.CertificateBytes,
+	})
+
+	if len(b.CAChain) > 0 {
+		chain = append(chain, b.CAChain...)
 	}
 
 	return chain

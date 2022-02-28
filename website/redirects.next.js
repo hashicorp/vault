@@ -216,6 +216,11 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/http/sys-version-history',
+    destination: '/api-docs/system/version-history',
+    permanent: true,
+  },
+  {
     source: '/docs/install/install',
     destination: '/docs/install',
     permanent: true,

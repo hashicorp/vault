@@ -27,6 +27,14 @@ export default class LineChart extends Component {
   @tracked tooltipTotal = '';
   @tracked tooltipNew = '';
 
+  get yKey() {
+    return this.args.yKey || 'clients';
+  }
+
+  get xKey() {
+    return this.args.xKey || 'month';
+  }
+
   @action removeTooltip() {
     this.tooltipTarget = null;
   }
@@ -39,15 +47,17 @@ export default class LineChart extends Component {
 
     // DEFINE AXES SCALES
     let yScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))])
-      .range([0, 100]);
+      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+      .range([0, 100])
+      .nice();
 
     let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))])
-      .range([SVG_DIMENSIONS.height, 0]);
+      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+      .range([SVG_DIMENSIONS.height, 0])
+      .nice();
 
     let xScale = scalePoint() // use scaleTime()?
-      .domain(dataset.map((d) => d.month))
+      .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width])
       .padding(0.2);
 
@@ -67,8 +77,8 @@ export default class LineChart extends Component {
 
     // PATH BETWEEN PLOT POINTS
     let lineGenerator = line()
-      .x((d) => xScale(d.month))
-      .y((d) => yAxisScale(d.clients));
+      .x((d) => xScale(d[this.xKey]))
+      .y((d) => yAxisScale(d[this.yKey]));
 
     chartSvg
       .append('g')
@@ -86,8 +96,8 @@ export default class LineChart extends Component {
       .enter()
       .append('circle')
       .attr('class', 'data-plot')
-      .attr('cy', (d) => `${100 - yScale(d.clients)}%`)
-      .attr('cx', (d) => xScale(d.month))
+      .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
+      .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 3.5)
       .attr('fill', LIGHT_AND_DARK_BLUE[0])
       .attr('stroke', LIGHT_AND_DARK_BLUE[1])
@@ -103,18 +113,19 @@ export default class LineChart extends Component {
       .attr('class', 'hover-circle')
       .style('cursor', 'pointer')
       .style('opacity', '0')
-      .attr('cy', (d) => `${100 - yScale(d.clients)}%`)
-      .attr('cx', (d) => xScale(d.month))
+      .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
+      .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 10);
 
     let hoverCircles = chartSvg.selectAll('.hover-circle');
 
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
-      this.tooltipMonth = data.month;
-      this.tooltipTotal = `${data.clients} total clients`;
-      this.tooltipNew = `${data.new_clients.clients} new clients`;
-      let node = hoverCircles.filter((plot) => plot.month === data.month).node();
+      // TODO: how to genericize this?
+      this.tooltipMonth = data[this.xKey];
+      this.tooltipTotal = `${data[this.yKey]} total clients`;
+      this.tooltipNew = `${data.new_clients?.clients} new clients`;
+      let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
       this.tooltipTarget = node;
     });
   }

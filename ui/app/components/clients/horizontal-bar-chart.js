@@ -6,7 +6,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE } from '../../utils/chart-helpers';
+import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE, formatTooltipNumber } from '../../utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 
 /**
@@ -21,17 +21,16 @@ import { tracked } from '@glimmer/tracking';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 
-// TODO CMB: delete original bar chart component
-
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 95 }; // makes space for y-axis legend
-const TRANSLATE = { down: 13 };
+const TRANSLATE = { down: 14, left: 99 };
 const CHAR_LIMIT = 15; // character count limit for y-axis labels to trigger truncating
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 export default class HorizontalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked tooltipText = '';
+  @tracked isLabel = null;
 
   get labelKey() {
     return this.args.labelKey || 'label';
@@ -103,7 +102,7 @@ export default class HorizontalBarChart extends Component {
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', (chartData) => `${xScale(chartData[1] - chartData[0])}%`)
+      .attr('width', (chartData) => `${xScale(Math.abs(chartData[1] - chartData[0]))}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', (chartData) => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
@@ -150,9 +149,11 @@ export default class HorizontalBarChart extends Component {
       .on('mouseover', (data) => {
         let hoveredElement = actionBars.filter((bar) => bar.label === data.label).node();
         this.tooltipTarget = hoveredElement;
-        this.tooltipText = `${Math.round((data.clients * 100) / this.args.clientTotals.clients)}% 
+        this.isLabel = false;
+        this.tooltipText = `${Math.round((data.clients * 100) / this.args.totalUsageCounts.clients)}% 
         of total client counts:
-        ${data.entity_clients} entity clients, ${data.non_entity_clients} non-entity clients.`;
+        ${formatTooltipNumber(data.entity_clients)} entity clients, 
+        ${formatTooltipNumber(data.non_entity_clients)} non-entity clients.`;
 
         select(hoveredElement).style('opacity', 1);
 
@@ -177,6 +178,7 @@ export default class HorizontalBarChart extends Component {
         if (data.label.length >= CHAR_LIMIT) {
           let hoveredElement = yLegendBars.filter((bar) => bar.label === data.label).node();
           this.tooltipTarget = hoveredElement;
+          this.isLabel = true;
           this.tooltipText = data.label;
         } else {
           this.tooltipTarget = null;
@@ -209,7 +211,7 @@ export default class HorizontalBarChart extends Component {
     // add client count total values to the right
     chartSvg
       .append('g')
-      .attr('transform', `translate(${CHART_MARGIN.left}, ${TRANSLATE.down})`)
+      .attr('transform', `translate(${TRANSLATE.left}, ${TRANSLATE.down})`)
       .selectAll('text')
       .data(dataset)
       .enter()

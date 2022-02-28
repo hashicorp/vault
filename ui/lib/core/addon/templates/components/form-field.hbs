@@ -9,27 +9,13 @@
   )
 }}
   {{#unless (eq this.attr.type "object")}}
-    <label for={{this.attr.name}} class="is-label">
-      {{this.labelString}}
-      {{#if this.attr.options.helpText}}
-        <InfoTooltip>
-          <span data-test-help-text>
-            {{this.attr.options.helpText}}
-          </span>
-        </InfoTooltip>
-      {{/if}}
-    </label>
-    {{#if this.attr.options.subText}}
-      <p class="sub-text">
-        {{this.attr.options.subText}}
-        {{#if this.attr.options.docLink}}
-          <a href={{this.attr.options.docLink}} target="_blank" rel="noopener noreferrer">
-            See our documentation
-          </a>
-          for help.
-        {{/if}}
-      </p>
-    {{/if}}
+    <FormFieldLabel
+      for={{this.attr.name}}
+      @label={{this.labelString}}
+      @helpText={{this.attr.options.helpText}}
+      @subText={{this.attr.options.subText}}
+      @docLink={{this.attr.options.docLink}}
+    />
   {{/unless}}
 {{/unless}}
 {{#if this.attr.options.possibleValues}}
@@ -108,14 +94,12 @@
     @value={{get this.model this.valuePath}}
     @onChange={{action "setAndBroadcast" this.valuePath}}
     @label={{this.labelString}}
-    @warning={{this.attr.options.warning}}
+    @labelClass="title {{if (eq this.mode "create") "is-5" "is-4"}}"
     @helpText={{this.attr.options.helpText}}
     @subText={{this.attr.options.subText}}
-    @small-label={{if (eq this.mode "create") true false}}
-    @formSection={{if (eq this.mode "customMetadata") false true}}
-    @name={{this.valuePath}}
-    @onKeyUp={{this.onKeyUp}}
-    @validationMessages={{this.validationMessages}}
+    @onKeyUp={{action "handleKeyUp" this.valuePath}}
+    @validationError={{get this.validationMessages this.valuePath}}
+    class={{if (not-eq this.mode "customMetadata") "form-section"}}
   />
 {{else if (eq this.attr.options.editType "file")}}
   {{! File Input }}

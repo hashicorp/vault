@@ -2,21 +2,18 @@ $dark-gray: #535f73;
 
 .calendar-content {
   display: flex;
-  width: 500px;
+  width: 234px;
+
+  &.calendar-open {
+    width: 500px;
+  }
 
   > .menu {
     margin-bottom: 0px;
   }
 }
 .calendar-title {
-  color: $ui-gray-300;
-  text-transform: uppercase;
-  font-size: $size-7;
-  font-weight: $font-weight-semibold;
-
-  &.popup-menu-item {
-    padding: $size-10 $size-8;
-  }
+  padding: $size-10 $size-8;
 }
 .calendar-widget-dropdown {
   @extend .button;
@@ -49,8 +46,14 @@ $dark-gray: #535f73;
   justify-content: space-between;
   align-items: first baseline;
 
+  // spacing of < year > icons when the tooltip is added or removed from DOM.
   > .padding-right {
+    // if no tooltip
     padding-right: 26px;
+  }
+  > .negative-margin {
+    // if tooltip
+    margin-right: -50px;
   }
 }
 
@@ -79,11 +82,6 @@ $dark-gray: #535f73;
       color: lighten($dark-gray, 30%);
       pointer-events: none;
     }
-    &.is-selected {
-      background-color: $blue-500;
-      color: white;
-      text-align: center;
-    }
   }
 }
 
@@ -108,6 +106,19 @@ $dark-gray: #535f73;
   display: grid;
   grid-template-columns: 110px 110px;
   grid-template-rows: repeat(2, 1fr);
-  grid-gap: 0.5rem;
+  grid-gap: 0.7rem;
   padding: 7px 28px 28px 28px;
+}
+
+// for modal-dialog tooltips
+.calendar-tooltip {
+  background-color: $ui-gray-700;
+  color: white;
+  font-size: $size-8;
+  padding: $size-9;
+  border-radius: $radius-large;
+  width: 141px;
+}
+.ember-modal-dialog {
+  z-index: 1000;
 }

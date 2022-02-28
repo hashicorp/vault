@@ -47,4 +47,11 @@ export default ApplicationAdapter.extend({
   queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);
   },
+
+  rotateRoleCredentials(backend, id) {
+    return this.ajax(
+      `${this.buildURL()}/${encodeURIComponent(backend)}/rotate-role/${encodeURIComponent(id)}`,
+      'POST'
+    );
+  },
 });

@@ -2,8 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 
@@ -52,7 +54,7 @@ func TestSysMounts(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -107,7 +109,7 @@ func TestSysMounts(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -222,7 +224,7 @@ func TestSysMount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -290,7 +292,7 @@ func TestSysMount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -374,8 +376,24 @@ func TestSysRemount(t *testing.T) {
 		"from": "foo",
 		"to":   "bar",
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
+	// Poll until the remount succeeds
+	var remountResp map[string]interface{}
+	testResponseBody(t, resp, &remountResp)
+	vault.RetryUntil(t, 5*time.Second, func() error {
+		resp = testHttpGet(t, token, addr+"/v1/sys/remount/status/"+remountResp["migration_id"].(string))
+		testResponseStatus(t, resp, 200)
+
+		var remountStatusResp map[string]interface{}
+		testResponseBody(t, resp, &remountStatusResp)
+
+		status := remountStatusResp["data"].(map[string]interface{})["migration_info"].(map[string]interface{})["status"]
+		if status != "success" {
+			return fmt.Errorf("Expected migration status to be successful, got %q", status)
+		}
+		return nil
+	})
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts")
 
 	var actual map[string]interface{}
@@ -424,7 +442,7 @@ func TestSysRemount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -492,7 +510,7 @@ func TestSysRemount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -594,7 +612,7 @@ func TestSysUnmount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -649,7 +667,7 @@ func TestSysUnmount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -850,7 +868,7 @@ func TestSysTuneMount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -918,7 +936,7 @@ func TestSysTuneMount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -1059,7 +1077,7 @@ func TestSysTuneMount(t *testing.T) {
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
-				"seal_wrap": false,
+				"seal_wrap": true,
 				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -1127,7 +1145,7 @@ func TestSysTuneMount(t *testing.T) {
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
-			"seal_wrap": false,
+			"seal_wrap": true,
 			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{

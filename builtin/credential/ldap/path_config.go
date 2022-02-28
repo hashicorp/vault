@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -9,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const userFilterWarning = "userfilter configured does not consider userattr and may result in colliding entity aliases on logins"
 
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
@@ -110,9 +113,38 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 	data := cfg.PasswordlessMap()
 	cfg.PopulateTokenData(data)
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: data,
-	}, nil
+	}
+
+	if warnings := b.checkConfigUserFilter(cfg); len(warnings) > 0 {
+		resp.Warnings = warnings
+	}
+
+	return resp, nil
+}
+
+// checkConfigUserFilter performs a best-effort check the config's userfilter.
+// It will checked whether the templated or literal userattr value is present,
+// and if not return a warning.
+func (b *backend) checkConfigUserFilter(cfg *ldapConfigEntry) []string {
+	if cfg == nil || cfg.UserFilter == "" {
+		return nil
+	}
+
+	var warnings []string
+
+	switch {
+	case strings.Contains(cfg.UserFilter, "{{.UserAttr}}"):
+		// Case where the templated userattr value is provided
+	case strings.Contains(cfg.UserFilter, cfg.UserAttr):
+		// Case where the literal userattr value is provided
+	default:
+		b.Logger().Debug(userFilterWarning, "userfilter", cfg.UserFilter, "userattr", cfg.UserAttr)
+		warnings = append(warnings, userFilterWarning)
+	}
+
+	return warnings
 }
 
 func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -152,6 +184,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
+	}
+
+	if warnings := b.checkConfigUserFilter(cfg); len(warnings) > 0 {
+		return &logical.Response{
+			Warnings: warnings,
+		}, nil
 	}
 
 	return nil, nil

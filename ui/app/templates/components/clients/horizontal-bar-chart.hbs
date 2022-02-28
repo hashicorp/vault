@@ -1,4 +1,5 @@
 <svg
+  data-test-horizontal-bar-chart
   class="chart is-horizontal"
   {{on "mouseleave" this.removeTooltip}}
   {{did-insert this.renderChart @dataset}}
@@ -17,7 +18,7 @@
     attachment="bottom middle"
     offset="35px 0"
   }}
-    <div class="chart-tooltip horizontal-chart">
+    <div class={{concat "chart-tooltip horizontal-chart " (if this.isLabel "is-label-fit-content")}}>
       <p>{{this.tooltipText}}</p>
     </div>
     <div class="chart-tooltip-arrow"></div>
