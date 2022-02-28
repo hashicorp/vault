@@ -25,8 +25,7 @@ jobs:
       - name: Check for changelog entry in diff
         run: |
           # check if there is a diff in the changelog directory
-          if [ ${{ github.event.repository.name }} == "vault" ]; then
-            echo "test passed in reverse"
+          if [ ${{ github.event.repository.name }} == "vault-enterprise" ]; then
             expected_changelog_file=changelog/_${{ github.event.pull_request.number }}.txt
           else
             expected_changelog_file=changelog/${{ github.event.pull_request.number }}.txt
