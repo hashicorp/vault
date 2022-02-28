@@ -218,6 +218,10 @@
               {
                 "title": "TOTP",
                 "path": "secret/identity/mfa/totp"
+              },
+              {
+                "title": "Login Enforcement",
+                "path": "secret/identity/mfa/login-enforcement"
               }
             ]
           }
