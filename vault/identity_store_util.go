@@ -269,6 +269,13 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 		close(broker)
 	}()
 
+	defer func() {
+		// Let all go routines finish
+		wg.Wait()
+
+		i.logger.Info("cached entities of local aliases restored")
+	}()
+
 	// Restore each key by pulling from the result chan
 	for j := 0; j < len(existing); j++ {
 		select {
@@ -304,13 +311,6 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 				}
 			}
 		}
-	}
-
-	// Let all go routines finish
-	wg.Wait()
-
-	if i.logger.IsInfo() {
-		i.logger.Info("cached entities of local aliases restored")
 	}
 
 	return nil
@@ -391,13 +391,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	}()
 
 	// Restore each key by pulling from the result chan
+LOOP:
 	for j := 0; j < len(existing); j++ {
 		select {
-		case err := <-errs:
+		case err = <-errs:
 			// Close all go routines
 			close(quit)
-
-			return err
+			break LOOP
 
 		case bucket := <-result:
 			// If there is no entry, nothing to restore
@@ -474,6 +474,9 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 	// Let all go routines finish
 	wg.Wait()
+	if err != nil {
+		return err
+	}
 
 	// Flatten the map into a list of keys, in order to log them
 	duplicatedAccessorsList := make([]string, len(duplicatedAccessors))

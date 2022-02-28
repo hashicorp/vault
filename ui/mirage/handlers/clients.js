@@ -86,772 +86,118 @@ export default function (server) {
     };
   });
 
-  server.get(
-    '/sys/internal/counters/activity',
-    function () {
-      return {
-        request_id: '26be5ab9-dcac-9237-ec12-269a8ca647d5',
-        data: {
-          by_namespace: [
-            {
-              namespace_id: 'root',
-              namespace_path: '',
-              counts: {
-                distinct_entities: 10,
-                entity_clients: 10,
-                non_entity_tokens: 10,
-                non_entity_clients: 10,
-                clients: 20,
-              },
-              mounts: [
-                {
-                  mount_path: 'auth/up1/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 0,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 10,
-                    clients: 10,
-                  },
-                },
-                {
-                  mount_path: 'auth/up2/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 10,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 0,
-                    clients: 10,
-                  },
-                },
-              ],
+  server.get('/sys/internal/counters/activity', (schema, req) => {
+    const { start_time, end_time } = req.queryParams;
+    return {
+      request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
+      lease_id: '',
+      renewable: false,
+      lease_duration: 0,
+      data: {
+        by_namespace: [
+          {
+            namespace_id: '96OwG',
+            namespace_path: 'test-ns/',
+            counts: {
+              distinct_entities: 18290,
+              entity_clients: 18290,
+              non_entity_tokens: 18738,
+              non_entity_clients: 18738,
+              clients: 37028,
             },
-            {
-              namespace_id: 's07UR',
-              namespace_path: 'ns1/',
-              counts: {
-                distinct_entities: 5,
-                entity_clients: 5,
-                non_entity_tokens: 5,
-                non_entity_clients: 5,
-                clients: 10,
-              },
-              mounts: [
-                {
-                  mount_path: 'auth/up1/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 0,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 5,
-                    clients: 5,
-                  },
-                },
-                {
-                  mount_path: 'auth/up2/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 5,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 0,
-                    clients: 5,
-                  },
-                },
-              ],
-            },
-            {
-              namespace_id: 'oImjk',
-              namespace_path: 'ns2/',
-              counts: {
-                distinct_entities: 5,
-                entity_clients: 5,
-                non_entity_tokens: 5,
-                non_entity_clients: 5,
-                clients: 10,
-              },
-              mounts: [
-                {
-                  mount_path: 'auth/up1/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 0,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 5,
-                    clients: 5,
-                  },
-                },
-                {
-                  mount_path: 'auth/up2/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 5,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 0,
-                    clients: 5,
-                  },
-                },
-              ],
-            },
-          ],
-          end_time: '2022-05-31T23:59:59Z',
-          months: [
-            {
-              timestamp: '2021-05-01T00:00:00Z',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 13,
-                non_entity_tokens: 0,
-                non_entity_clients: 12,
-                clients: 25,
-              },
-              namespaces: [
-                {
-                  namespace_id: 'root',
-                  namespace_path: '',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 8,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 7,
-                    clients: 15,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 8,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 8,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 7,
-                        clients: 7,
-                      },
-                    },
-                  ],
-                },
-                {
-                  namespace_id: 's07UR',
-                  namespace_path: 'ns1/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 5,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 5,
-                    clients: 10,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 5,
-                        clients: 5,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 5,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 5,
-                      },
-                    },
-                  ],
-                },
-              ],
-              new_clients: {
+            mounts: [
+              {
+                mount_path: 'path-1',
                 counts: {
-                  distinct_entities: 0,
-                  entity_clients: 3,
-                  non_entity_tokens: 0,
-                  non_entity_clients: 2,
-                  clients: 5,
+                  distinct_entities: 6403,
+                  entity_clients: 6403,
+                  non_entity_tokens: 6300,
+                  non_entity_clients: 6300,
+                  clients: 12703,
                 },
-                namespaces: [
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 0,
-                      entity_clients: 3,
-                      non_entity_tokens: 0,
-                      non_entity_clients: 2,
-                      clients: 5,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/up2/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 3,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 0,
-                          clients: 3,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/up1/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 0,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 2,
-                          clients: 2,
-                        },
-                      },
-                    ],
-                  },
-                ],
               },
-            },
-            {
-              timestamp: '2021-04-01T00:00:00Z',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 10,
-                non_entity_tokens: 0,
-                non_entity_clients: 10,
-                clients: 20,
-              },
-              namespaces: [
-                {
-                  namespace_id: 'oImjk',
-                  namespace_path: 'ns2/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 5,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 5,
-                    clients: 10,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 5,
-                        clients: 5,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 5,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 5,
-                      },
-                    },
-                  ],
-                },
-                {
-                  namespace_id: 'root',
-                  namespace_path: '',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 2,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 3,
-                    clients: 5,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 3,
-                        clients: 3,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 2,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 2,
-                      },
-                    },
-                  ],
-                },
-                {
-                  namespace_id: 's07UR',
-                  namespace_path: 'ns1/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 3,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 2,
-                    clients: 5,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 3,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 3,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 2,
-                        clients: 2,
-                      },
-                    },
-                  ],
-                },
-              ],
-              new_clients: {
+              {
+                mount_path: 'path-2',
                 counts: {
-                  distinct_entities: 0,
-                  entity_clients: 10,
-                  non_entity_tokens: 0,
-                  non_entity_clients: 10,
-                  clients: 20,
+                  distinct_entities: 5699,
+                  entity_clients: 5699,
+                  non_entity_tokens: 6777,
+                  non_entity_clients: 6777,
+                  clients: 12476,
                 },
-                namespaces: [
-                  {
-                    namespace_id: 'oImjk',
-                    namespace_path: 'ns2/',
-                    counts: {
-                      distinct_entities: 0,
-                      entity_clients: 5,
-                      non_entity_tokens: 0,
-                      non_entity_clients: 5,
-                      clients: 10,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/up1/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 0,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 5,
-                          clients: 5,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/up2/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 5,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 0,
-                          clients: 5,
-                        },
-                      },
-                    ],
-                  },
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 0,
-                      entity_clients: 2,
-                      non_entity_tokens: 0,
-                      non_entity_clients: 3,
-                      clients: 5,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/up1/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 0,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 3,
-                          clients: 3,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/up2/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 2,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 0,
-                          clients: 2,
-                        },
-                      },
-                    ],
-                  },
-                  {
-                    namespace_id: 's07UR',
-                    namespace_path: 'ns1/',
-                    counts: {
-                      distinct_entities: 0,
-                      entity_clients: 3,
-                      non_entity_tokens: 0,
-                      non_entity_clients: 2,
-                      clients: 5,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/up2/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 3,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 0,
-                          clients: 3,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/up1/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 0,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 2,
-                          clients: 2,
-                        },
-                      },
-                    ],
-                  },
-                ],
               },
-            },
-            {
-              timestamp: '2021-03-01T00:00:00Z',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 7,
-                non_entity_tokens: 0,
-                non_entity_clients: 8,
-                clients: 15,
-              },
-              namespaces: [
-                {
-                  namespace_id: 'root',
-                  namespace_path: '',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 5,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 5,
-                    clients: 10,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 5,
-                        clients: 5,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 5,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 5,
-                      },
-                    },
-                  ],
-                },
-                {
-                  namespace_id: 's07UR',
-                  namespace_path: 'ns1/',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 2,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 3,
-                    clients: 5,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 3,
-                        clients: 3,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 2,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 2,
-                      },
-                    },
-                  ],
-                },
-              ],
-              new_clients: {
+              {
+                mount_path: 'path-3',
                 counts: {
-                  distinct_entities: 0,
-                  entity_clients: 2,
-                  non_entity_tokens: 0,
-                  non_entity_clients: 3,
-                  clients: 5,
+                  distinct_entities: 6188,
+                  entity_clients: 6188,
+                  non_entity_tokens: 5661,
+                  non_entity_clients: 5661,
+                  clients: 11849,
                 },
-                namespaces: [
-                  {
-                    namespace_id: 's07UR',
-                    namespace_path: 'ns1/',
-                    counts: {
-                      distinct_entities: 0,
-                      entity_clients: 2,
-                      non_entity_tokens: 0,
-                      non_entity_clients: 3,
-                      clients: 5,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/up1/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 0,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 3,
-                          clients: 3,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/up2/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 2,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 0,
-                          clients: 2,
-                        },
-                      },
-                    ],
-                  },
-                ],
               },
-            },
-            {
-              timestamp: '2021-02-01T00:00:00Z',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 5,
-                non_entity_tokens: 0,
-                non_entity_clients: 5,
-                clients: 10,
-              },
-              namespaces: [
-                {
-                  namespace_id: 'root',
-                  namespace_path: '',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 5,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 5,
-                    clients: 10,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 5,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 5,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 5,
-                        clients: 5,
-                      },
-                    },
-                  ],
-                },
-              ],
-              new_clients: {
-                counts: {
-                  distinct_entities: 0,
-                  entity_clients: 3,
-                  non_entity_tokens: 0,
-                  non_entity_clients: 2,
-                  clients: 5,
-                },
-                namespaces: [
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 0,
-                      entity_clients: 3,
-                      non_entity_tokens: 0,
-                      non_entity_clients: 2,
-                      clients: 5,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/up2/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 3,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 0,
-                          clients: 3,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/up1/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 0,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 2,
-                          clients: 2,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-            },
-            {
-              timestamp: '2021-01-01T00:00:00Z',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 2,
-                non_entity_tokens: 0,
-                non_entity_clients: 3,
-                clients: 5,
-              },
-              namespaces: [
-                {
-                  namespace_id: 'root',
-                  namespace_path: '',
-                  counts: {
-                    distinct_entities: 0,
-                    entity_clients: 2,
-                    non_entity_tokens: 0,
-                    non_entity_clients: 3,
-                    clients: 5,
-                  },
-                  mounts: [
-                    {
-                      mount_path: 'auth/up1/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 0,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 3,
-                        clients: 3,
-                      },
-                    },
-                    {
-                      mount_path: 'auth/up2/',
-                      counts: {
-                        distinct_entities: 0,
-                        entity_clients: 2,
-                        non_entity_tokens: 0,
-                        non_entity_clients: 0,
-                        clients: 2,
-                      },
-                    },
-                  ],
-                },
-              ],
-              new_clients: {
-                counts: {
-                  distinct_entities: 0,
-                  entity_clients: 2,
-                  non_entity_tokens: 0,
-                  non_entity_clients: 3,
-                  clients: 5,
-                },
-                namespaces: [
-                  {
-                    namespace_id: 'root',
-                    namespace_path: '',
-                    counts: {
-                      distinct_entities: 0,
-                      entity_clients: 2,
-                      non_entity_tokens: 0,
-                      non_entity_clients: 3,
-                      clients: 5,
-                    },
-                    mounts: [
-                      {
-                        mount_path: 'auth/up1/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 0,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 3,
-                          clients: 3,
-                        },
-                      },
-                      {
-                        mount_path: 'auth/up2/',
-                        counts: {
-                          distinct_entities: 0,
-                          entity_clients: 2,
-                          non_entity_tokens: 0,
-                          non_entity_clients: 0,
-                          clients: 2,
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-            },
-          ],
-          start_time: '2021-05-01T00:00:00Z',
-          total: {
-            distinct_entities: 20,
-            entity_clients: 20,
-            non_entity_tokens: 20,
-            non_entity_clients: 20,
-            clients: 40,
+            ],
           },
+          {
+            namespace_id: 'root',
+            namespace_path: '',
+            counts: {
+              distinct_entities: 19099,
+              entity_clients: 19099,
+              non_entity_tokens: 17781,
+              non_entity_clients: 17781,
+              clients: 36880,
+            },
+            mounts: [
+              {
+                mount_path: 'path-3',
+                counts: {
+                  distinct_entities: 6863,
+                  entity_clients: 6863,
+                  non_entity_tokens: 6801,
+                  non_entity_clients: 6801,
+                  clients: 13664,
+                },
+              },
+              {
+                mount_path: 'path-2',
+                counts: {
+                  distinct_entities: 6047,
+                  entity_clients: 6047,
+                  non_entity_tokens: 5957,
+                  non_entity_clients: 5957,
+                  clients: 12004,
+                },
+              },
+              {
+                mount_path: 'path-1',
+                counts: {
+                  distinct_entities: 6189,
+                  entity_clients: 6189,
+                  non_entity_tokens: 5023,
+                  non_entity_clients: 5023,
+                  clients: 11212,
+                },
+              },
+            ],
+          },
+        ],
+        end_time: end_time || '2022-01-31T23:59:59Z',
+        months: [],
+        start_time,
+        total: {
+          distinct_entities: 37389,
+          entity_clients: 37389,
+          non_entity_tokens: 36519,
+          non_entity_clients: 36519,
+          clients: 73908,
         },
-      };
-    },
-    { timing: 3000 }
-  );
+      },
+      wrap_info: null,
+      warnings: null,
+      auth: null,
+    };
+  });
 
   server.get('/sys/internal/counters/activity/monthly', function () {
     return {
@@ -871,7 +217,7 @@ export default function (server) {
             },
             mounts: [
               {
-                path: 'auth/method/uMGBU',
+                mount_path: 'auth/method/uMGBU',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -879,7 +225,7 @@ export default function (server) {
                 },
               },
               {
-                path: 'auth/method/woiej',
+                mount_path: 'auth/method/woiej',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -898,7 +244,7 @@ export default function (server) {
             },
             mounts: [
               {
-                path: 'auth/method/ABCD1',
+                mount_path: 'auth/method/ABCD1',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -906,7 +252,7 @@ export default function (server) {
                 },
               },
               {
-                path: 'auth/method/ABCD2',
+                mount_path: 'auth/method/ABCD2',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -925,7 +271,7 @@ export default function (server) {
             },
             mounts: [
               {
-                path: 'auth/method/XYZZ2',
+                mount_path: 'auth/method/XYZZ2',
                 counts: {
                   clients: 35,
                   entity_clients: 20,
@@ -933,7 +279,7 @@ export default function (server) {
                 },
               },
               {
-                path: 'auth/method/XYZZ1',
+                mount_path: 'auth/method/XYZZ1',
                 counts: {
                   clients: 35,
                   entity_clients: 20,

@@ -116,7 +116,7 @@ Finally, using curl, apply the license key to the Vault API:
 ```bash
 curl \
   --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-  --request PUT \
+  --request POST \
   --data @payload.json \
   http://127.0.0.1:8200/v1/sys/license
 

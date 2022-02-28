@@ -9,7 +9,7 @@
   </h2>
   <div data-test-start-date-editor class="is-flex-align-baseline">
     {{#if this.startTimeDisplay}}
-      <p class="is-size-6">{{this.startTimeDisplay}}</p>
+      <p class="is-size-6" data-test-date-display>{{this.startTimeDisplay}}</p>
       <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
         Edit
       </button>
@@ -59,11 +59,10 @@
         to enable tracking again.
       </AlertBanner>
     {{/if}}
-    {{! check for startTimeFromLicense or startTimeFromResponse otherwise emptyState}}
-    {{#if (or @model.startTimeFromLicense this.startTimeFromResponse)}}
+    {{#if (or this.totalUsageCounts this.hasAttributionData)}}
       <div class="is-subtitle-gray has-bottom-margin-m">
         FILTERS
-        <Toolbar>
+        <Toolbar data-test-clients-filter-bar>
           <ToolbarFilters>
             <CalendarWidget
               @arrayOfMonths={{this.arrayOfMonths}}
@@ -86,7 +85,7 @@
                 class="is-marginless"
               />
             {{/if}}
-            {{#if this.selectedNamespace}}
+            {{#if (not (is-empty this.authMethodOptions))}}
               <SearchSelect
                 @id="auth-method-search-select"
                 @options={{this.authMethodOptions}}

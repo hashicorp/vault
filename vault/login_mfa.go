@@ -140,7 +140,6 @@ func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs [
 		mfaLogger:   logger.Named("mfa"),
 		namespacer:  core,
 		methodTable: prefix,
-		usedCodes:   cache.New(0, 30*time.Second),
 	}
 }
 
@@ -622,7 +621,12 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 }
 
 func (i *IdentityStore) handleMFALoginEnforcementList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return nil, nil
+	keys, configInfo, err := i.mfaBackend.mfaLoginEnforcementList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponseWithInfo(keys, configInfo), nil
 }
 
 func (i *IdentityStore) handleMFALoginEnforcementRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1113,6 +1117,51 @@ func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) 
 	}
 
 	return keys, configInfo, nil
+}
+
+func (b *LoginMFABackend) mfaLoginEnforcementList(ctx context.Context) ([]string, map[string]interface{}, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ws := memdb.NewWatchSet()
+	txn := b.db.Txn(false)
+
+	// get all the login enforcements in our namespace
+	iter, err := txn.Get(memDBMFALoginEnforcementsTable, "namespace", ns.ID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch iterator for login enforcement configs in memdb: %w", err)
+	}
+
+	ws.Add(iter.WatchCh())
+
+	var keys []string
+	enforcementInfo := map[string]interface{}{}
+
+	for {
+		// check for timeouts
+		select {
+		case <-ctx.Done():
+			return keys, enforcementInfo, nil
+		default:
+			break
+		}
+
+		raw := iter.Next()
+		if raw == nil {
+			break
+		}
+		config := raw.(*mfa.MFAEnforcementConfig)
+		keys = append(keys, config.Name)
+		configInfoEntry, err := b.mfaLoginEnforcementConfigToMap(config)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to convert enforcement to map: %w", err)
+		}
+		enforcementInfo[config.Name] = configInfoEntry
+	}
+
+	return keys, enforcementInfo, nil
 }
 
 func (b *LoginMFABackend) mfaLoginEnforcementConfigByNameAndNamespace(name, namespaceId string) (map[string]interface{}, error) {
@@ -2054,6 +2103,13 @@ func loginEnforcementTableSchema() *memdb.TableSchema {
 				Unique: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "ID",
+				},
+			},
+			"namespace": {
+				Name:   "namespace",
+				Unique: false,
+				Indexer: &memdb.StringFieldIndex{
+					Field: "NamespaceID",
 				},
 			},
 			"nameAndNamespace": {

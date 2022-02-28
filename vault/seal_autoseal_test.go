@@ -199,6 +199,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
 	setErr(errors.New("disconnected"))
 	autoSeal.StartHealthCheck()
+	defer autoSeal.StopHealthCheck()
 
 	time.Sleep(50 * time.Millisecond)
 

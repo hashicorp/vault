@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: The `agent/v1/quit` endpoint can now be used to stop the Vault Agent remotely
+```

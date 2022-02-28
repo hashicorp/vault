@@ -831,8 +831,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"enable_ui": c.EnableUI,
 
-		"max_lease_ttl":     c.MaxLeaseTTL,
-		"default_lease_ttl": c.DefaultLeaseTTL,
+		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
+		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
 
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 

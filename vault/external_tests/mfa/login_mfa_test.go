@@ -291,6 +291,15 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 		t.Fatal("expected input auth method accessors to equal output auth method accessors")
 	}
 
+	// listing should show it
+	resp, err = client.Logical().List("identity/mfa/login-enforcement")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Data["keys"].([]interface{})[0] != "foo" {
+		t.Fatal("expected foo in the list of enforcement names but it wasn't there")
+	}
+
 	// update it
 	data["identity_group_ids"] = []string{radGroupId, sadGroupId}
 	data["identity_entity_ids"] = []string{bobId, aliceId}
