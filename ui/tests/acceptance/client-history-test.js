@@ -173,7 +173,6 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    // await this.pauseTest();
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
     // Filter by auth method
@@ -274,5 +273,31 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
     assert.dom('[data-test-popup-menu-trigger="month"]').exists('Dropdown exists to select month');
     assert.dom('[data-test-popup-menu-trigger="year"]').exists('Dropdown exists to select year');
+  });
+
+  test('shows error template if permissions denied querying activity response', async function (assert) {
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => sendResponse(null, 403));
+      this.get('/v1/sys/version-history', () => sendResponse(null, 403));
+      this.get('/v1/sys/internal/counters/config', () => sendResponse(null, 403));
+      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 403));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
+    await click('[data-test-popup-menu-trigger="month"]');
+    const dropdownListMonths = this.element.querySelectorAll('[data-test-month-list] button');
+    // TODO CMB change how selected b/c depending on time of year first month or year may be disabled
+    await click(dropdownListMonths[0]);
+    await click('[data-test-popup-menu-trigger="year"]');
+    const dropdownListYears = this.element.querySelectorAll('[data-test-year-list] button');
+    await click(dropdownListYears[0]);
+    await click(SELECTORS.dateDropdownSubmit);
+    assert
+      .dom(SELECTORS.emptyStateTitle)
+      .hasText('You are not authorized', 'Empty state displays not authorized message');
   });
 });
