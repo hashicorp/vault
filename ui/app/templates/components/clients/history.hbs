@@ -145,6 +145,7 @@
         {{/if}}
       {{/if}}
     {{else if (and (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+      {{! Empty state for no billing/license start date }}
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
       <EmptyState
