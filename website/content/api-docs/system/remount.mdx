@@ -15,7 +15,7 @@ The Remount documentation details the endpoints required to trigger and monitor 
 The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. This works for both secret engines
 and auth methods.
 
-It can be used to move the backend across namespaces as well, with the namespaces supplied as prefixes
+The endpoint can be used to move the backend across namespaces as well, with the namespaces supplied as prefixes
 on the path arguments. For this case, the namespaces of both the source and destination mounts need to be 
 either the namespace in which the /remount endpoint is called, or children of it. Say, we have 3 namespaces 
 ns1/, ns1/ns2/ and ns1/ns3. We want to move the mount `secret` from ns1/ns2/secret to ns1/ns3/secret. 
