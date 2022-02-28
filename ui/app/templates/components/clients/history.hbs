@@ -142,14 +142,15 @@
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
-        {{else}}
-          <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
       {{/if}}
-    {{else if (or (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+    {{else if (and (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
-      <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
+      <EmptyState
+        @title={{concat "No data received " (if this.noActivityDate "from ") this.noActivityDate}}
+        @message="No data exists for that query period. Try searching again."
+      />
     {{/if}}
   {{/if}}
 
