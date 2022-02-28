@@ -599,6 +599,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let userToken2 = consoleComponent.lastLogOutput;
     await settled();
     await listPage.visitRoot({ backend: enginePath });
+    // confirm they see an empty state and not the get-credentials card
+    await assert.dom('[data-test-empty-state-title]').hasText('No secrets in this backend');
     await settled();
     await listPage.create();
     await settled();
@@ -611,6 +613,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // test if metadata tab there with no read access message and no ability to edit.
     await click(`[data-test-auth-backend-link=${enginePath}]`);
     await settled();
+    await assert
+      .dom('[data-test-get-credentials]')
+      .exists(
+        'They do not have list access so when logged in under the restricted policy they see the get-credentials-card'
+      );
     // this fails in IE11 on browserstack so going directly to URL
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     await settled();
