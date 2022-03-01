@@ -1,0 +1,147 @@
+---
+layout: docs
+page_title: Multi-Factor Authentication (MFA) for Login - Auth Methods
+description: |-
+  Multi-factor authentication (MFA) is supported for several authentication
+  methods.
+---
+
+Vault has support for Multi-factor Authentication (MFA) for authenticating to
+an auth method, using different authentication types. We use the term `Login MFA` to distinguish
+this feature and the MFA feature used strictly in Vault Enterprise.
+Login MFA is built on top of the Identity system of Vault.
+
+## MFA Types
+
+Login MFA in Vault can be of the following types.
+
+- `Time-based One-time Password (TOTP)` - If configured and enabled on a login path,
+  this would require a TOTP passcode along with Vault token, to be presented
+  while invoking the API login request. The passcode will be validated against the
+  TOTP key present in the identity of the caller in Vault.
+
+- `Okta` - If Okta push is configured and enabled on a login path, then the enrolled
+  device of the user will get a push notification to approve or deny the access
+  to the API. The Okta username will be derived from the caller identity's
+  alias.
+
+- `Duo` - If Duo push is configured and enabled on a login path, then the enrolled
+  device of the user will get a push notification to approve or deny the access
+  to the API. The Duo username will be derived from the caller identity's
+  alias.
+
+- `PingID` - If PingID push is configured and enabled on a login path, then the
+  enrolled device of the user will get a push notification to approve or deny
+  the access to the API. The PingID username will be derived from the caller
+  identity's alias.
+
+# Login MFA
+
+Login MFA can be configured to further secure authenticating to an auth method. To enable login
+MFA, an MFA method needs to be configured. Please see [Login MFA API](/api/secret/identity/mfa) for details
+on how to configure an MFA method. Once an MFA method is configured, using the returned unique MFA method identification,
+an operator can configure an MFA enforcement. Please see [Login MFA Enforcement API](/api/secret/identity/mfa/login-enforcement)
+for details on how to configure an MFA enforcement config. MFA could be enforced for an entity, a group of
+entities, a specific auth method accessor, or an auth method type. A login request that matches
+either of the MFA enforcement restrictions is subject to further MFA validation,
+like a one-time passcode, before being authenticated.
+
+There are two ways to validate a login request that is subject to MFA validation.
+
+ ## Single-phase Login
+ In the Single-phase login, the required MFA information is embedded in a login request using
+ the `X-VAULT-MFA` header. In this case, the MFA validation is done
+ as a part of the login request.
+
+ MFA credentials are retrieved from the `X-Vault-MFA` HTTP header. The format of
+ the header is `mfa_method_id[:key[=value]]`. The item in the `[]` is optional. If there are more than
+ one MFA method that needs to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
+
+ ### Sample Request
+
+ ```shell-session
+ $ curl \
+     --header "X-Vault-Token: ..." \
+     --header "X-Vault-MFA:d16fd3c2-50de-0b9b-eed3-0301dadeca10:695452" \
+     http://127.0.0.1:8200/v1/auth/userpass/login/alice
+ ```
+
+ ## Two-phase Login
+ The more conventional, and prevalent MFA method is a two request mechanism, also referred to as the Two-phase Login MFA.
+ In Two-phase login the `X-Vault-MFA` header is provided in the request. In this case, after sending a regular login request,
+ the user receives an auth response which includes the MFA requirements. MFA requirements contain an MFA request ID
+ which identifies the login request that needs to get validated. In addition, the MFA requirement contains MFA constraints
+ that identifies which method IDs need to be used to validate the login request. MFA constraints
+ form a nested map in MFA Requirement, and represent all MFA enforcements that match a login request.
+ Please see [Login MFA Enforcement API](/api/secret/identity/mfa/login-enforcement)
+ for details on the parameters of an MFA enforcement configuration.
+
+### Sample Two-phase Login Response
+
+```json
+{
+  "request_id": "1044c151-13ea-1cf5-f6ed-000c42efd477",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": null,
+  "warnings": [
+    "A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint."
+  ],
+  "auth": {
+    "client_token": "",
+    "accessor": "",
+    "policies": null,
+    "token_policies": null,
+    "identity_policies": null,
+    "metadata": null,
+    "orphan": false,
+    "entity_id": "",
+    "lease_duration": 0,
+    "renewable": false,
+    "mfa_requirement": {
+      "mfa_request_id": "d0c9eec7-6921-8cc0-be62-202b289ef163",
+      "mfa_constraints": {
+        "enforcementConfigUserpass": {
+          "any": [
+            {
+              "type": "totp",
+              "id": "820997b3-110e-c251-7e8b-ff4aa428a6e1",
+              "uses_passcode": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+ To validate the MFA restricted login request, the user sends a second request to `"/sys/mfa/validate"` [API endpoint](/sys/mfa/validate)
+ including the MFA request ID, and MFA payload. MFA payload contains a map of methodIDs and their associated credentials.
+ If the configured MFA methods (like PingID, Okta, Duo) don't need a passcode, the associated
+ credentials will be a list of an empty string.
+
+### Sample Payload
+
+```json
+{
+  "mfa_request_id": "5879c74a-1418-1948-7be9-97b209d693a7",
+  "mfa_payload": {
+      "d16fd3c2-50de-0b9b-eed3-0301dadeca10": ["910201"]
+  }
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/mfa/validate
+```
+
+
+
