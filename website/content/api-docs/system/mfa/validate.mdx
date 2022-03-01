@@ -79,12 +79,3 @@ login request which contains a client token and its accessor.
   }
 }
 ```
-
-### Sample CLI Request
-A user can use the CLI write command to validate a Login MFA.
-
-```shell-session
-$ vault write sys/mfa/validate -format=json @payload.json
-```
-
-

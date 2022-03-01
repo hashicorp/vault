@@ -5,10 +5,11 @@ description: |-
   Multi-factor authentication (MFA) is supported for several authentication
   methods.
 ---
+# Login MFA
 
 Vault has support for Multi-factor Authentication (MFA) for authenticating to
 an auth method, using different authentication types. We use the term `Login MFA` to distinguish
-this feature and the MFA feature used strictly in Vault Enterprise.
+this feature and the [Vault Enterprise MFA](/docs/enterprise/mfa).
 Login MFA is built on top of the Identity system of Vault.
 
 ## MFA Types
@@ -35,7 +36,7 @@ Login MFA in Vault can be of the following types.
   the access to the API. The PingID username will be derived from the caller
   identity's alias.
 
-# Login MFA
+## Login MFA Procedure
 
 Login MFA can be configured to further secure authenticating to an auth method. To enable login
 MFA, an MFA method needs to be configured. Please see [Login MFA API](/api/secret/identity/mfa) for details
@@ -48,7 +49,7 @@ like a one-time passcode, before being authenticated.
 
 There are two ways to validate a login request that is subject to MFA validation.
 
- ## Single-phase Login
+ ### Single-Phase Login
  In the Single-phase login, the required MFA information is embedded in a login request using
  the `X-VAULT-MFA` header. In this case, the MFA validation is done
  as a part of the login request.
@@ -57,7 +58,7 @@ There are two ways to validate a login request that is subject to MFA validation
  the header is `mfa_method_id[:key[=value]]`. The item in the `[]` is optional. If there are more than
  one MFA method that needs to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
 
- ### Sample Request
+ #### Sample Request
 
  ```shell-session
  $ curl \
@@ -66,17 +67,17 @@ There are two ways to validate a login request that is subject to MFA validation
      http://127.0.0.1:8200/v1/auth/userpass/login/alice
  ```
 
- ## Two-phase Login
+ ### Two-Phase Login
  The more conventional, and prevalent MFA method is a two request mechanism, also referred to as the Two-phase Login MFA.
- In Two-phase login the `X-Vault-MFA` header is provided in the request. In this case, after sending a regular login request,
- the user receives an auth response which includes the MFA requirements. MFA requirements contain an MFA request ID
- which identifies the login request that needs to get validated. In addition, the MFA requirement contains MFA constraints
- that identifies which method IDs need to be used to validate the login request. MFA constraints
+ In Two-phase login the `X-Vault-MFA` header is not provided in the request. In this case, after sending a regular login request,
+ the user receives an auth response in which MFA requirements are included. MFA requirements contain an MFA request ID
+ which identifies the login request that needs to get validated. In addition, MFA requirements contain MFA constraints
+ that identify which method IDs need to be used to validate the login request. MFA constraints
  form a nested map in MFA Requirement, and represent all MFA enforcements that match a login request.
  Please see [Login MFA Enforcement API](/api/secret/identity/mfa/login-enforcement)
  for details on the parameters of an MFA enforcement configuration.
 
-### Sample Two-phase Login Response
+#### Sample Two-Phase Login Response
 
 ```json
 {
@@ -122,7 +123,7 @@ There are two ways to validate a login request that is subject to MFA validation
  If the configured MFA methods (like PingID, Okta, Duo) don't need a passcode, the associated
  credentials will be a list of an empty string.
 
-### Sample Payload
+#### Sample Payload
 
 ```json
 {
@@ -133,7 +134,7 @@ There are two ways to validate a login request that is subject to MFA validation
 }
 ```
 
-### Sample Request
+#### Sample Request
 
 ```shell-session
 $ curl \
@@ -141,6 +142,13 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/mfa/validate
+```
+
+#### Sample CLI Request
+A user can use the CLI write command to validate a Login MFA.
+
+```shell-session
+$ vault write sys/mfa/validate -format=json @payload.json
 ```
 
 
