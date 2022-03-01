@@ -1257,7 +1257,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
-			return result, fmt.Errorf("failed to follow redirect")
+			return result, fmt.Errorf("redirect failed: %s", err)
 		}
 
 		// Ensure a protocol downgrade doesn't happen
@@ -1270,13 +1270,13 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 
 		// Reset the request body if any
 		if err := r.ResetJSONBody(); err != nil {
-			return result, err
+			return result, fmt.Errorf("redirect failed: %s", err)
 		}
 
 		// Retry the request
-		resp, err = c.config.HttpClient.Do(req)
+		resp, err = httpClient.Do(req)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("redirect failed: %s", err)
 		}
 	}
 
