@@ -53,6 +53,14 @@ const (
 	HeaderIndex           = "X-Vault-Index"
 	HeaderForward         = "X-Vault-Forward"
 	HeaderInconsistent    = "X-Vault-Inconsistent"
+	TLSErrorString        = "This error usually means that the server is running with TLS disabled\n" +
+		"but the client is configured to use TLS. Please either enable TLS\n" +
+		"on the server or run the client with -address set to an address\n" +
+		"that uses the http protocol:\n\n" +
+		"    vault <command> -address http://<address>\n\n" +
+		"You can also set the VAULT_ADDR environment variable:\n\n\n" +
+		"    VAULT_ADDR=http://<address> vault <command>\n\n" +
+		"where <address> is replaced by the actual address to the server."
 )
 
 // Deprecated values
@@ -1128,11 +1136,8 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	}
 
 	// Sanity check the token before potentially erroring from the API
-	idx := strings.IndexFunc(token, func(c rune) bool {
-		return !unicode.IsPrint(c)
-	})
-	if idx != -1 {
-		return nil, fmt.Errorf("configured Vault token contains non-printable characters and cannot be used")
+	if err := tokenSanityCheck(token); err != nil {
+		return nil, err
 	}
 
 	redirectCount := 0
@@ -1192,17 +1197,7 @@ START:
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "tls: oversized") {
-			err = errwrap.Wrapf(
-				"{{err}}\n\n"+
-					"This error usually means that the server is running with TLS disabled\n"+
-					"but the client is configured to use TLS. Please either enable TLS\n"+
-					"on the server or run the client with -address set to an address\n"+
-					"that uses the http protocol:\n\n"+
-					"    vault <command> -address http://<address>\n\n"+
-					"You can also set the VAULT_ADDR environment variable:\n\n\n"+
-					"    VAULT_ADDR=http://<address> vault <command>\n\n"+
-					"where <address> is replaced by the actual address to the server.",
-				err)
+			err = fmt.Errorf("%s\n\n%s", err, TLSErrorString)
 		}
 		return result, err
 	}
@@ -1249,12 +1244,30 @@ START:
 	return result, nil
 }
 
-// requestWithContext avoids the use of the go-retryable library found in RawRequestWithContext and is
-// useful when making requests where the req or resp body is likely larger than available memory
-func (c *Client) requestWithContext(ctx context.Context, r *Request) (*Response, error) {
+// httpRequestWithContext avoids the use of the go-retryable library found in RawRequestWithContext and is
+// useful when making calls where a net/http client is desirable. A single redirect (status code 301, 302,
+// or 307) will be followed but all retry and timeout logic is the responsibility of the caller as is
+// closing the Response body.
+func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	req, err := http.NewRequestWithContext(ctx, r.Method, r.URL.RequestURI(), r.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	c.modifyLock.RLock()
+	token := c.token
+
+	c.config.modifyLock.RLock()
+	limiter := c.config.Limiter
+	httpClient := c.config.HttpClient
+	outputCurlString := c.config.OutputCurlString
+	c.config.modifyLock.RUnlock()
+
+	c.modifyLock.RUnlock()
+
+	// OutputCurlString logic relies on the request type to be retryable.Request as
+	if outputCurlString {
+		return nil, fmt.Errorf("output-curl-string is not implemented for this request")
 	}
 
 	req.URL.User = r.URL.User
@@ -1288,11 +1301,28 @@ func (c *Client) requestWithContext(ctx context.Context, r *Request) (*Response,
 		req.Header.Set("X-Vault-Policy-Override", "true")
 	}
 
+	if limiter != nil {
+		limiter.Wait(ctx)
+	}
+
+	// Sanity check the token before potentially erroring from the API
+	if err := tokenSanityCheck(token); err != nil {
+		return nil, err
+	}
+
 	var result *Response
 
-	resp, err := c.config.HttpClient.Do(req)
+	resp, err := httpClient.Do(req)
+
+	if resp != nil {
+		result = &Response{Response: resp}
+	}
+
 	if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), "tls: oversized") {
+			err = fmt.Errorf("%s\n\n%s", err, TLSErrorString)
+		}
+		return result, err
 	}
 
 	// Check for a redirect, only allowing for a single redirect
@@ -1300,25 +1330,29 @@ func (c *Client) requestWithContext(ctx context.Context, r *Request) (*Response,
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
-			return nil, err
+			return result, fmt.Errorf("failed to follow redirect")
 		}
 
 		// Ensure a protocol downgrade doesn't happen
 		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
-			return nil, fmt.Errorf("redirect would cause protocol downgrade")
+			return result, fmt.Errorf("redirect would cause protocol downgrade")
 		}
 
 		// Update the request
 		req.URL = respLoc
 
+		// Reset the request body if any
+		if err := r.ResetJSONBody(); err != nil {
+			return result, err
+		}
+
 		// Retry the request
 		resp, err = c.config.HttpClient.Do(req)
 		if err != nil {
-			return nil, err
+			return result, err
 		}
 	}
 
-	result = &Response{Response: resp}
 	if err := result.Error(); err != nil {
 		return nil, err
 	}
@@ -1542,4 +1576,15 @@ func (w *replicationStateStore) states() []string {
 	c := make([]string, len(w.store))
 	copy(c, w.store)
 	return c
+}
+
+// tokenSanityCheck will check for non-printable characters to prevent a call that will fail at the api
+func tokenSanityCheck(t string) error {
+	idx := strings.IndexFunc(t, func(c rune) bool {
+		return !unicode.IsPrint(c)
+	})
+	if idx != -1 {
+		return fmt.Errorf("configured Vault token contains non-printable characters and cannot be used")
+	}
+	return nil
 }
