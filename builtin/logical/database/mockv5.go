@@ -36,6 +36,18 @@ func RunV5() error {
 	return nil
 }
 
+// Run instantiates a MongoDB object, and runs the RPC server for the plugin
+func RunV6Multiplexed() error {
+	dbType, err := New()
+	if err != nil {
+		return err
+	}
+
+	v5.ServeMultiplex(dbType.(v5.Factory))
+
+	return nil
+}
+
 func (m MockDatabaseV5) Initialize(ctx context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
 	log.Default().Info("Initialize called",
 		"req", req)

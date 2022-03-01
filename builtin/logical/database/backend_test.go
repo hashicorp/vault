@@ -47,8 +47,11 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
 	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
 	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoMultiplexed", []string{}, "")
 	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlas", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlasMultiplexed", []string{}, "")
 
 	return cluster, sys
 }
@@ -66,6 +69,19 @@ func TestBackend_PluginMain_Postgres(t *testing.T) {
 	v5.Serve(dbType.(v5.Database))
 }
 
+func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	dbType, err := postgresql.New()
+	if err != nil {
+		t.Fatalf("Failed to initialize postgres: %s", err)
+	}
+
+	v5.ServeMultiplex(dbType.(v5.Factory))
+}
+
 func TestBackend_PluginMain_Mongo(t *testing.T) {
 	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
@@ -79,6 +95,19 @@ func TestBackend_PluginMain_Mongo(t *testing.T) {
 	v5.Serve(dbType.(v5.Database))
 }
 
+func TestBackend_PluginMain_MongoMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	dbType, err := mongodb.New()
+	if err != nil {
+		t.Fatalf("Failed to initialize mongodb: %s", err)
+	}
+
+	v5.ServeMultiplex(dbType.(v5.Factory))
+}
+
 func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
@@ -90,6 +119,19 @@ func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
 	}
 
 	v5.Serve(dbType.(v5.Database))
+}
+
+func TestBackend_PluginMain_MongoAtlasMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+		return
+	}
+
+	dbType, err := mongodbatlas.New()
+	if err != nil {
+		t.Fatalf("Failed to initialize mongodbatlas: %s", err)
+	}
+
+	v5.ServeMultiplex(dbType.(v5.Factory))
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
