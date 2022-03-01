@@ -253,8 +253,8 @@ module('Acceptance | clients history tab', function (hooks) {
     assert
       .dom(SELECTORS.dateDisplay)
       .hasText(format(licenseStart, 'MMMM yyyy'), 'Shows license date, gives ability to edit');
-    assert.dom('[data-test-popup-menu-trigger="month"]').exists('Dropdown exists to select month');
-    assert.dom('[data-test-popup-menu-trigger="year"]').exists('Dropdown exists to select year');
+    assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');
+    assert.dom(SELECTORS.yearDropdown).exists('Dropdown exists to select year');
   });
 
   test('shows correct interface if no permissions on license', async function (assert) {
