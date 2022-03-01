@@ -134,7 +134,7 @@ func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	
+
 	return c.RaftSnapshotWithContext(ctx, snapWriter)
 }
 
