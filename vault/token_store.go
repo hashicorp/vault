@@ -898,7 +898,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			switch {
 			case strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 'hvs.' prefix")
-			case strings.HasPrefix(entry.ID, "s."):
+			case strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 's.' prefix")
 			case strings.Contains(entry.ID, "."):
 				return fmt.Errorf("custom token ID cannot have a '.' in the value")
@@ -1260,7 +1260,7 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 }
 
 func (ts *TokenStore) stripBatchPrefix(id string) string {
-	if strings.HasPrefix(id, "b.") {
+	if strings.HasPrefix(id, consts.LegacyBatchTokenPrefix) {
 		return id[2:]
 	}
 	if strings.HasPrefix(id, consts.BatchTokenPrefix) {
