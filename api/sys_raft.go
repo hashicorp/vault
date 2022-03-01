@@ -137,11 +137,11 @@ func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	resp, err := c.requestWithContext(ctx, r, nil)
+	resp, err := c.c.httpRequestWithContext(context.Background(), r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 
 	// Make sure that the last file in the archive, SHA256SUMS.sealed, is present
 	// and non-empty.  This is to catch cases where the snapshot failed midstream,
@@ -210,14 +210,11 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 
 	r := c.c.NewRequest(http.MethodPost, path)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	_, err := c.requestWithContext(ctx, r, snapReader)
+	resp, err := c.c.httpRequestWithContext(context.Background(), r)
 	if err != nil {
 		return err
 	}
-
+	defer resp.Body.Close()
 	return nil
 }
 
