@@ -120,4 +120,4 @@ Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for u
 
 ## Known Issues
 
-- There is a known issue with LDAP auth alias names changing in 1.9. This occurs if the LDAP auth method is configured without either `binddn` or `upndomain`. If templated policies were depending on the older style alias names, those policies should be updated to use `alias.metadata.name`, which now stores the username. At this time there are no known workarounds.
+- There is a known issue with LDAP auth alias names changing in 1.9. This occurs if the LDAP auth method is in two different ways: `binddn` is not set and/or `upndomain` is set. If templated policies were depending on the older style alias names, those policies should be updated to use `alias.metadata.name`, which now stores the username. At this time there are no other known workarounds.
