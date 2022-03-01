@@ -136,7 +136,7 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
 
-	resp, err := c.c.requestWithContext(context.Background(), r)
+	resp, err := c.c.httpRequestWithContext(context.Background(), r)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 	r := c.c.NewRequest(http.MethodPost, path)
 	r.Body = snapReader
 
-	resp, err := c.c.requestWithContext(context.Background(), r)
+	resp, err := c.c.httpRequestWithContext(context.Background(), r)
 	if err != nil {
 		return err
 	}
