@@ -448,7 +448,10 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

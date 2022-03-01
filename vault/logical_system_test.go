@@ -1013,7 +1013,10 @@ func TestSystemBackend_leases(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1060,7 +1063,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1109,7 +1115,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Generate multiple leases
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1120,7 +1129,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1160,7 +1172,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/bar")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1208,7 +1223,10 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1245,7 +1263,10 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1374,7 +1395,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1406,7 +1430,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1429,7 +1456,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1519,7 +1549,10 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1568,7 +1601,10 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
