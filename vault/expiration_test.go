@@ -2476,7 +2476,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	core.PopulateTokenEntry(namespace.RootContext(nil), req)
 
 	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -2525,7 +2525,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	core.PopulateTokenEntry(namespace.RootContext(nil), req)
 
 	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
