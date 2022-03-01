@@ -49,7 +49,7 @@
         {{/if}}
       </EmptyState>
     {{/if}}
-  {{else if (eq this.isError true)}}
+  {{else if this.errorObject}}
     <Clients::Error @error={{this.errorObject}} />
   {{else}}
     {{#if (eq @model.config.enabled "Off")}}

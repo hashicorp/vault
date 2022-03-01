@@ -76,7 +76,6 @@ export default class History extends Component {
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
   @tracked licenseStartIsCurrentMonth = this.args.model.activity?.isLicenseDateError || false;
-  @tracked isError = false;
   @tracked errorObject = null;
 
   get versionText() {
@@ -222,7 +221,6 @@ export default class History extends Component {
         this.startTimeFromResponse = response.formattedStartTime;
         this.endTimeFromResponse = response.formattedEndTime;
         this.storage().setItem(INPUTTED_START_DATE, this.startTimeFromResponse);
-        this.isError = false;
       }
       this.queriedActivityResponse = response;
       this.licenseStartIsCurrentMonth = response.isLicenseDateError;
@@ -240,7 +238,6 @@ export default class History extends Component {
         this.responseRangeDiffMessage = null;
       }
     } catch (e) {
-      this.isError = true;
       this.errorObject = e;
       return e;
     } finally {
