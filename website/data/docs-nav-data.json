@@ -1206,6 +1206,10 @@
         "path": "auth/ldap"
       },
       {
+        "title": "Login MFA",
+        "path": "auth/login-mfa"
+      },
+      {
         "title": "Oracle Cloud Infrastructure",
         "path": "auth/oci"
       },
