@@ -130,13 +130,21 @@ func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 	return &result, err
 }
 
-// RaftSnapshot invokes the API that takes the snapshot of the raft cluster and
-// writes it to the supplied io.Writer.
+// RaftSnapshot is a thin wrapper around RaftSnapshotWithContext
 func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	
+	return c.RaftSnapshotWithContext(ctx, snapWriter)
+}
+
+// RaftSnapshotWithContext invokes the API that takes the snapshot of the raft cluster and
+// writes it to the supplied io.Writer.
+func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer) error {
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
 
-	resp, err := c.c.httpRequestWithContext(context.Background(), r)
+	resp, err := c.c.httpRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -199,9 +207,17 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	return nil
 }
 
-// RaftSnapshotRestore reads the snapshot from the io.Reader and installs that
-// snapshot, returning the cluster to the state defined by it.
+// RaftSnapshotRestore is a thin wrapper around RaftSnapshotRestoreWithContext
 func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	return c.RaftSnapshotRestoreWithContext(ctx, snapReader, force)
+}
+
+// RaftSnapshotRestoreWithContext reads the snapshot from the io.Reader and installs that
+// snapshot, returning the cluster to the state defined by it.
+func (c *Sys) RaftSnapshotRestoreWithContext(ctx context.Context, snapReader io.Reader, force bool) error {
 	path := "/v1/sys/storage/raft/snapshot"
 	if force {
 		path = "/v1/sys/storage/raft/snapshot-force"
@@ -210,7 +226,7 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 	r := c.c.NewRequest(http.MethodPost, path)
 	r.Body = snapReader
 
-	resp, err := c.c.httpRequestWithContext(context.Background(), r)
+	resp, err := c.c.httpRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
