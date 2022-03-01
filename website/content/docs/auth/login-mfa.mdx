@@ -68,14 +68,13 @@ There are two ways to validate a login request that is subject to MFA validation
  ```
 
  ### Two-Phase Login
- The more conventional, and prevalent MFA method is a two request mechanism, also referred to as the Two-phase Login MFA.
+ The more conventional, and prevalent MFA method is a two request mechanism, also referred to as Two-phase Login MFA.
  In Two-phase login the `X-Vault-MFA` header is not provided in the request. In this case, after sending a regular login request,
  the user receives an auth response in which MFA requirements are included. MFA requirements contain an MFA request ID
  which identifies the login request that needs to get validated. In addition, MFA requirements contain MFA constraints
- that identify which method IDs need to be used to validate the login request. MFA constraints
- form a nested map in MFA Requirement, and represent all MFA enforcements that match a login request.
- Please see [Login MFA Enforcement API](/api/secret/identity/mfa/login-enforcement)
- for details on the parameters of an MFA enforcement configuration.
+ that identify which MFA types should be used to validate the request, the corresponding method IDs, and
+ a boolean value showing whether the MFA method uses passcodes or not. MFA constraints form a nested map in MFA Requirement,
+ and represent all MFA enforcements that match a login request.
 
 #### Sample Two-Phase Login Response
 
@@ -118,8 +117,13 @@ There are two ways to validate a login request that is subject to MFA validation
 }
 ```
 
- To validate the MFA restricted login request, the user sends a second request to `"/sys/mfa/validate"` [API endpoint](/sys/mfa/validate)
- including the MFA request ID, and MFA payload. MFA payload contains a map of methodIDs and their associated credentials.
+ Note that the `uses_passcode` boolean value is always set to true for TOTP, and always set to false for Okta and PingID.
+ For DUO method, the value can be configured as part of the method configuration.
+ Please see [DUO API](/api/secret/identity/mfa/duo) for details
+ on how to configure the boolean value for DUO.
+
+ To validate the MFA restricted login request, the user sends a second request to the [validate](/sys/mfa/validate)
+ endpoint including the MFA request ID, and MFA payload. MFA payload contains a map of methodIDs and their associated credentials.
  If the configured MFA methods (like PingID, Okta, Duo) don't need a passcode, the associated
  credentials will be a list of an empty string.
 
@@ -145,11 +149,22 @@ $ curl \
 ```
 
 #### Sample CLI Request
-A user can use the CLI write command to validate a Login MFA.
+A user is also able to use the CLI write command to validate the login request.
 
 ```shell-session
 $ vault write sys/mfa/validate -format=json @payload.json
 ```
 
+#### Interactive CLI for Login MFA
+Vault supports an interactive way of authenticating to an auth method using CLI only if the
+login request is subject to a single MFA method validation. In this situation, if the MFA method
+is configured to use passcodes, after sending a regular login request, the user is prompted to
+insert the passcode. Upon successful MFA validation, a client token is returned.
+If the configured MFA methods (like PingID, Okta, Duo) don't need a passcode and have out of band
+mechanisms for verifying the extra factor, the user is notified to check their authenticator application.
+This alleviates a user from sending the second request separately to validate a login request.
+To disable the interactive login experience, a user needs to pass in the `non-interactive` flag to the login request.
 
-
+```shell-session
+$ vault write -non-interactive sys/mfa/validate -format=json @payload.json
+```
