@@ -2,15 +2,15 @@
 layout: docs
 page_title: operator unseal - Command
 description: |-
-  The "operator unseal" allows the user to provide a portion of the master key
+  The "operator unseal" allows the user to provide a portion of the root key
   to unseal a Vault server.
 ---
 
 # operator unseal
 
-The `operator unseal` allows the user to provide a portion of the master key to
+The `operator unseal` allows the user to provide a portion of the root key to
 unseal a Vault server. Vault starts in a sealed state. It cannot perform
-operations until it is unsealed. This command accepts a portion of the master
+operations until it is unsealed. This command accepts a portion of the root
 key (an "unseal key").
 
 The unseal key can be supplied as an argument to the command, but this is

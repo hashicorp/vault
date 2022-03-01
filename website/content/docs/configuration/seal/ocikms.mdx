@@ -100,7 +100,7 @@ admit dynamic-group <dynamic-group-name> of tenancy tenantA to use keys in compa
 
 ```
 
-## `ocikms` Rotate OCI KMS Master Key
+## `ocikms` Rotate OCI KMS Root Key
 
 For the [OCI KMS key rotation feature][oci-kms-rotation], OCI KMS will create a new version of key internally. This process is independent from Vault, and Vault still uses the same `key_id` without any interruption.
 
