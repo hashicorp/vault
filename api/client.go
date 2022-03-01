@@ -963,8 +963,8 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 		limiter.Wait(ctx)
 	}
 
-	// Sanity check the token before potentially erroring from the API
-	if err := tokenSanityCheck(token); err != nil {
+	// check the token before potentially erroring from the API
+	if err := tokenCheck(token); err != nil {
 		return nil, err
 	}
 
@@ -1125,8 +1125,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 		limiter.Wait(ctx)
 	}
 
-	// Sanity check the token before potentially erroring from the API
-	if err := tokenSanityCheck(token); err != nil {
+	// check the token before potentially erroring from the API
+	if err := tokenCheck(token); err != nil {
 		return nil, err
 	}
 
@@ -1262,8 +1262,8 @@ func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bo
 	return false, nil
 }
 
-// tokenSanityCheck will check for non-printable characters to prevent a call that will fail at the api
-func tokenSanityCheck(t string) error {
+// tokenCheck will check for non-printable characters to prevent a call that will fail at the api
+func tokenCheck(t string) error {
 	idx := strings.IndexFunc(t, func(c rune) bool {
 		return !unicode.IsPrint(c)
 	})
