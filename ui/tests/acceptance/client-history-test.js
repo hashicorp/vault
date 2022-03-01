@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, settled } from '@ember/test-helpers';
+import { visit, currentURL, click, settled, waitUntil, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
@@ -168,7 +168,9 @@ module('Acceptance | clients history tab', function (hooks) {
     // Filter by namespace
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    await settled();
+    await waitUntil(() => {
+      return find('[data-test-horizontal-bar-chart]');
+    });
     assert.ok(true, 'Filter by first namespace');
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
@@ -271,11 +273,11 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
     // Message changes depending on ent or OSS
     assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
-    assert.dom('[data-test-popup-menu-trigger="month"]').exists('Dropdown exists to select month');
-    assert.dom('[data-test-popup-menu-trigger="year"]').exists('Dropdown exists to select year');
+    assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');
+    assert.dom(SELECTORS.yearDropdown).exists('Dropdown exists to select year');
   });
 
-  test('shows error template if permissions denied querying activity response', async function (assert) {
+  test('shows error template if permissions denied querying activity response with no data', async function (assert) {
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(null, 403));
       this.get('/v1/sys/version-history', () => sendResponse(null, 403));
@@ -288,13 +290,13 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    await click('[data-test-popup-menu-trigger="month"]');
-    const dropdownListMonths = this.element.querySelectorAll('[data-test-month-list] button');
-    // TODO CMB change how selected b/c depending on time of year first month or year may be disabled
-    await click(dropdownListMonths[0]);
-    await click('[data-test-popup-menu-trigger="year"]');
-    const dropdownListYears = this.element.querySelectorAll('[data-test-year-list] button');
-    await click(dropdownListYears[0]);
+    assert
+      .dom(SELECTORS.emptyStateTitle)
+      .hasText('No billing start date found', 'Empty state shows no billing start date');
+    await click(SELECTORS.monthDropdown);
+    await click(this.element.querySelector('[data-test-month-list] button:not([disabled])'));
+    await click(SELECTORS.yearDropdown);
+    await click(this.element.querySelector('[data-test-year-list] button:not([disabled])'));
     await click(SELECTORS.dateDropdownSubmit);
     assert
       .dom(SELECTORS.emptyStateTitle)

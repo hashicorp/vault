@@ -13,8 +13,8 @@
     <ul>
       {{#if @error.message}}
         <li>{{@error.message}}</li>
+        <hr />
       {{/if}}
-      <hr />
       {{#each @error.errors as |error|}}
         <li>
           {{error}}

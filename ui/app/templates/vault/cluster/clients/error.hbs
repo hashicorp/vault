@@ -16,8 +16,8 @@
       <ul>
         {{#if @model.message}}
           <li>{{@model.message}}</li>
+          <hr />
         {{/if}}
-        <hr />
         {{#each @model.errors as |error|}}
           <li>
             {{error}}
