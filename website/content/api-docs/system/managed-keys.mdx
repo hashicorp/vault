@@ -19,7 +19,7 @@ This endpoint lists all the Managed Keys of a certain type within the namespace.
 
 ### Parameters
 - `type` `(string: <required>)` – The backend type of keys to be listed.
-  Supported options are `pkcs11`.
+  Supported options are `pkcs11` and `awskms`.
 
 ### Sample Request
 
@@ -136,24 +136,42 @@ $ curl \
 
 #### AWS KMS Parameters
 - `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in the
-`AWS_ACCESS_KEY_ID environment variable.
-- `region` `(string: <required>)`: The AWS region where the keys are stored (or will be stored). This
-may also be provided in the `AWS_REGION` environment variable.
+`AWS_ACCESS_KEY_ID` environment variable or as part of the AWS profile from the AWS CLI or instance
+profile.
+
+- `curve` `(string: "P256")`: The curve to use for an ECDSA key. This field is used when
+`key_type` is `ECDSA`. Supported options are `P256`, `P384`, or `P521`. If a value is not specified,
+Vault defaults to `P256`.
+
+- `endpoint` `(string: "")`: Used to specify a custom AWS endpoint. This can also be provided in
+the `AWS_KMS_ENDPOINT` environment variable. If not set, Vault will use the default API endpoint
+for your region.
+
+- `key_bits` `(string: <required>)`: The size in bits for an RSA key. This field is required when
+`key_type` is `RSA`. Supported values are `2048`, `3072`, and `4096`.
+
+- `key_type` `(string: <required>)`: The type of key to use. Supported values are `RSA` and `ECDSA`
+(not case sensitive). If the key type is `RSA`, the `key_bits` field is also required. If the key
+type is `ECDSA`, the `curve` field is required.
+
+- `kms_key_id` `(string: <required>)`: An identifier for the key. If using an existing key, this
+value should be an AWS alias for the key, including the `alias/` prefix. If Vault should generate
+the key, the provided ID will be added as an alias after the key is created. To fully specify the
+alias for the generated key, the provided key ID should be the full alias, including the `alias/`
+prefix. Otherwise, Vault will create the alias as `alias/hashicorp/{kms_key_id}`. The alias must be
+unique with the AWS account.
+
+    e.g., If the value provided is `kms_key_id=example-key-id`, then Vault will create the alias
+    `hashicorp/example-key-id`. If the value is `kms_key_id=alias/example-key-id`, then Vault will
+    create the alias `example-key-id`.
+
+- `region` `(string: "us-east-1")`: The AWS region where the keys are stored (or will be stored). This
+may also be provided in the `AWS_REGION` or `AWS_DEFAULT_REGION` environment variables, from your
+`~/.aws/config` file, or from instance metadata.
+
 - `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in the
-`AWS_SECRET_ACCESS_KEY` environment variable.
-- `signature_algorithm` `(string: <required>)`: The algorithm to be used for signatures. The values
-are defined by AWS KMS here: https://docs.aws.amazon.com/sdk-for-go/api/service/kms/#pkg-constants.
-Supported values for RSA keys are:
-    - `RSASSA_PSS_SHA_256`
-    - `RSASSA_PSS_SHA_384`
-    - `RSASSA_PSS_SHA_512`
-    - `RSASSA_PKCS1_V1_5_SHA_256`
-    - `RSASSA_PKCS1_V1_5_SHA_384`
-    - `RSASSA_PKCS1_V1_5_SHA_512`
-Supported values for ECDSA keys are:
-    - `ECDSA_SHA_256`
-    - `ECDSA_SHA_384`
-    - `ECDSA_SHA_512`
+`AWS_SECRET_ACCESS_KEY` environment variable or as part of the AWS profile from the AWS CLI or instance
+profile.
 
 ## Read managed key
 
@@ -240,14 +258,6 @@ listed within any mount point's `allowed_managed_keys`.
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
 - `type` `(string: <required>)` – The backend type for the managed key.
-
-#### AWS KMS Parameters
-- `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in the
-`AWS_ACCESS_KEY_ID environment variable.`
-- `region` `(string: <required>)`: The AWS region where the keys are stored (or will be stored). This
-may also be provided in the `AWS_REGION` environment variable.
-- `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in the
-`AWS_SECRET_ACCESS_KEY` environment variable.
 
 ### Sample Request
 
