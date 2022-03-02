@@ -14,7 +14,7 @@ leases from the old auth method are revoked, but all configuration associated
 with the engine is preserved. The command can be issued for a move within or across
 namespaces, using namespace prefixes in the arguments.
 
-The command will trigger a remount operation, and use the returned migration ID to poll the 
+The command will trigger a remount operation and uses the returned migration ID to poll the 
 status of the operation until a terminal state of `success` or `failure` is reached.
 
 **Moving an existing auth method will revoke any leases from the old
