@@ -19,11 +19,12 @@ import Component from '@glimmer/component';
 import layout from '../templates/components/toggle';
 import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
 class ToggleComponent extends Component {
-  get checked() {
-    return this.args.checked || false;
-  }
+  // tracked because the Input mutates the property and therefor cannot be a getter
+  @tracked
+  checked = this.args.checked || false;
 
   get disabled() {
     return this.args.disabled || false;
@@ -45,8 +46,8 @@ class ToggleComponent extends Component {
   }
 
   @action
-  handleChange(value) {
-    this.args.onChange(value);
+  handleChange(e) {
+    this.args.onChange(e.target.checked);
   }
 }
 
