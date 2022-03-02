@@ -118,11 +118,11 @@ There are two ways to validate a login request that is subject to MFA validation
 ```
 
  Note that the `uses_passcode` boolean value is always set to true for TOTP, and always set to false for Okta and PingID.
- For DUO method, the value can be configured as part of the method configuration.
- Please see [DUO API](/api/secret/identity/mfa/duo) for details
- on how to configure the boolean value for DUO.
+ For Duo method, the value can be configured as part of the method configuration.
+ Please see [Duo API](/api/secret/identity/mfa/duo) for details
+ on how to configure the boolean value for Duo.
 
- To validate the MFA restricted login request, the user sends a second request to the [validate](/sys/mfa/validate)
+ To validate the MFA restricted login request, the user sends a second request to the [validate](/api/system/mfa/validate)
  endpoint including the MFA request ID, and MFA payload. MFA payload contains a map of methodIDs and their associated credentials.
  If the configured MFA methods (like PingID, Okta, Duo) don't need a passcode, the associated
  credentials will be a list of an empty string.

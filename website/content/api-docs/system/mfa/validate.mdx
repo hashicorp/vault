@@ -19,8 +19,10 @@ This endpoint validates a login request which is subject to MFA validation.
 - `mfa_request_id` `(string: <required>)` – A unique identification of an MFA restricted login request.
  This can be found in the MFA requirement included in the auth response of the login request.
 
-- `mfa_payload` `(map: <required>)` - A map of login MFA methodIDs to passcode credentials.
- In cases where an MFA method is configured not to use passcodes, the passcode remains an empty string.
+- `mfa_payload` `(map<string|[]string>: <required>)` - A map of login MFA methodIDs to passcode credentials.
+MFA methodIDs are UUID strings which are used as keys of the map. The values of the map are
+string slices. In cases where an MFA method is configured not to use passcodes, the passcode remains an empty string.
+
 
 ### Sample Payload
 
