@@ -1,0 +1,3 @@
+```release-note:bug
+auth/login mfa: The mount accessor on the MFA method config cannot be different from the accessor being logged in on.
+```
