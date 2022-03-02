@@ -15,29 +15,39 @@
  * @param {string} [status='normal'] - Status can be normal or success, which makes the switch have a blue background when checked=true
  */
 
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
+// import { computed } from '@ember/object';
 import layout from '../templates/components/toggle';
+import { setComponentTemplate } from '@ember/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  checked: false,
-  disabled: false,
-  name: '',
-  size: 'normal',
-  status: 'normal',
-  safeId: computed('name', function () {
+class ToggleComponent extends Component {
+  @tracked checked = false;
+
+  get disabled() {
+    return this.args.disabled || false;
+  }
+
+  get name() {
+    return this.args.name || '';
+  }
+
+  get safeId() {
     return `toggle-${this.name.replace(/\W/g, '')}`;
-  }),
-  inputClasses: computed('size', 'status', function () {
-    const sizeClass = `is-${this.size}`;
-    const statusClass = `is-${this.status}`;
+  }
+  get inputClasses() {
+    let size = this.args.size || 'normal';
+    let status = this.args.status || 'normal';
+    const sizeClass = `is-${size}`;
+    const statusClass = `is-${status}`;
     return `toggle ${statusClass} ${sizeClass}`;
-  }),
-  actions: {
-    handleChange(value) {
-      this.onChange(value);
-    },
-  },
-});
+  }
+
+  @action
+  handleChange(value) {
+    this.args.onChange(value);
+  }
+}
+
+export default setComponentTemplate(layout, ToggleComponent);

@@ -1,5 +1,5 @@
 /* COPIED FROM BULMA/SWITCH */
-.toggle[type='checkbox'] {
+.toggle.checkbox {
   outline: 0;
   user-select: none;
   position: absolute;
@@ -7,28 +7,28 @@
   opacity: 0;
   left: 0;
 }
-.toggle[type='checkbox'][disabled] {
+.toggle.checkbox[disabled] {
   cursor: not-allowed;
 }
-.toggle[type='checkbox'][disabled] + label {
+.toggle.checkbox[disabled] + label {
   opacity: 0.5;
 }
-.toggle[type='checkbox'][disabled] + label::before {
+.toggle.checkbox[disabled] + label::before {
   opacity: 0.5;
 }
-.toggle[type='checkbox'][disabled] + label::after {
+.toggle.checkbox[disabled] + label::after {
   opacity: 0.5;
 }
-.toggle[type='checkbox'][disabled] + label:hover {
+.toggle.checkbox[disabled] + label:hover {
   cursor: not-allowed;
 }
-.toggle[type='checkbox'] + label {
+.toggle.checkbox + label {
   position: relative;
   display: inline-block;
   padding-left: 3.5rem;
   cursor: pointer;
 }
-.toggle[type='checkbox'] + label::before {
+.toggle.checkbox + label::before {
   position: absolute;
   display: block;
   top: 0;
@@ -40,7 +40,7 @@
   background: $ui-gray-300;
   content: '';
 }
-.toggle[type='checkbox'] + label::after {
+.toggle.checkbox + label::after {
   display: block;
   position: absolute;
   top: 0.25rem;
@@ -53,15 +53,15 @@
   transition: all 0.25s ease-out;
   content: '';
 }
-.toggle[type='checkbox']:checked + label::before {
+.toggle.checkbox:checked + label::before {
   background: $ui-gray-700;
 }
-.toggle[type='checkbox']:checked + label::after {
+.toggle.checkbox:checked + label::after {
   left: 1.625rem;
 }
 
 /* CUSTOM */
-.toggle[type='checkbox'] {
+.toggle.checkbox {
   &.is-small {
     + label {
       font-size: $size-7;
@@ -91,13 +91,13 @@
     height: 2.25rem;
   }
 }
-.toggle[type='checkbox'].is-small + label::after {
+.toggle.checkbox.is-small + label::after {
   will-change: left;
 }
-.toggle[type='checkbox']:focus + label {
+.toggle.checkbox:focus + label {
   box-shadow: 0 0 1px $blue;
 }
-.toggle[type='checkbox'].is-success:checked + label::before {
+.toggle.checkbox.is-success:checked + label::before {
   background: $blue;
 }
 
