@@ -1124,7 +1124,7 @@ START:
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "tls: oversized") {
-			err = fmt.Errorf("%s\n\n%s", err, TLSErrorString)
+			err = errwrap.Wrapf("{{err}}\n\n"+TLSErrorString, err)
 		}
 		return result, err
 	}
