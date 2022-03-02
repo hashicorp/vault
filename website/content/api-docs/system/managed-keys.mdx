@@ -143,9 +143,8 @@ profile.
 `key_type` is `ECDSA`. Supported options are `P256`, `P384`, or `P521`. If a value is not specified,
 Vault defaults to `P256`.
 
-- `endpoint` `(string: "")`: Used to specify a custom AWS endpoint. This can also be provided in
-the `AWS_KMS_ENDPOINT` environment variable. If not set, Vault will use the default API endpoint
-for your region.
+- `endpoint` `(string: "")`: Used to specify a custom AWS endpoint. If not set, Vault will use the
+default API endpoint for your region.
 
 - `key_bits` `(string: <required>)`: The size in bits for an RSA key. This field is required when
 `key_type` is `RSA`. Supported values are `2048`, `3072`, and `4096`.
