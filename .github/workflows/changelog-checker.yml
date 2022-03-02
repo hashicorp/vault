@@ -25,11 +25,18 @@ jobs:
       - name: Check for changelog entry in diff
         run: |
           # check if there is a diff in the changelog directory
-          changelog_files=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" -- changelog/${{ github.event.pull_request.number }}.txt)
+          if [ ${{ github.event.repository.name }} == "vault-enterprise" ]; then
+            expected_changelog_file=changelog/_${{ github.event.pull_request.number }}.txt
+          else
+            expected_changelog_file=changelog/${{ github.event.pull_request.number }}.txt
+          fi
+
+          echo "looking for changelog file ${expected_changelog_file}"
+          changelog_files=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" -- ${expected_changelog_file})
 
           # If we do not find a file matching the PR # in changelog/, we fail the check
           if [ -z "$changelog_files" ]; then
-            echo "Did not find a changelog entry named ${{ github.event.pull_request.number }}.txt"
+            echo "Did not find a changelog entry named ${expected_changelog_file}"
             echo "If your changelog file is correct, skip this check with the 'pr/no-changelog' label"
             echo "Reference - https://github.com/hashicorp/vault/pull/10363 and https://github.com/hashicorp/vault/pull/11894"
             exit 1
