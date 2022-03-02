@@ -74,12 +74,7 @@ func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
 		return
 	}
 
-	dbType, err := postgresql.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize postgres: %s", err)
-	}
-
-	v5.ServeMultiplex(dbType.(v5.Factory))
+	v5.ServeMultiplex(postgresql.New)
 }
 
 func TestBackend_PluginMain_Mongo(t *testing.T) {
@@ -100,12 +95,7 @@ func TestBackend_PluginMain_MongoMultiplexed(t *testing.T) {
 		return
 	}
 
-	dbType, err := mongodb.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodb: %s", err)
-	}
-
-	v5.ServeMultiplex(dbType.(v5.Factory))
+	v5.ServeMultiplex(mongodb.New)
 }
 
 func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
@@ -126,12 +116,7 @@ func TestBackend_PluginMain_MongoAtlasMultiplexed(t *testing.T) {
 		return
 	}
 
-	dbType, err := mongodbatlas.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodbatlas: %s", err)
-	}
-
-	v5.ServeMultiplex(dbType.(v5.Factory))
+	v5.ServeMultiplex(mongodbatlas.New)
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
