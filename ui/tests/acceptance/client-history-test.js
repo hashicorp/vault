@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, settled } from '@ember/test-helpers';
+import { visit, currentURL, click, settled, waitUntil, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
@@ -168,12 +168,13 @@ module('Acceptance | clients history tab', function (hooks) {
     // Filter by namespace
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    await settled();
+    await waitUntil(() => {
+      return find('[data-test-horizontal-bar-chart]');
+    });
     assert.ok(true, 'Filter by first namespace');
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    // await this.pauseTest();
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
     // Filter by auth method
@@ -252,8 +253,8 @@ module('Acceptance | clients history tab', function (hooks) {
     assert
       .dom(SELECTORS.dateDisplay)
       .hasText(format(licenseStart, 'MMMM yyyy'), 'Shows license date, gives ability to edit');
-    assert.dom('[data-test-popup-menu-trigger="month"]').exists('Dropdown exists to select month');
-    assert.dom('[data-test-popup-menu-trigger="year"]').exists('Dropdown exists to select year');
+    assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');
+    assert.dom(SELECTORS.yearDropdown).exists('Dropdown exists to select year');
   });
 
   test('shows correct interface if no permissions on license', async function (assert) {
@@ -272,7 +273,33 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
     // Message changes depending on ent or OSS
     assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
-    assert.dom('[data-test-popup-menu-trigger="month"]').exists('Dropdown exists to select month');
-    assert.dom('[data-test-popup-menu-trigger="year"]').exists('Dropdown exists to select year');
+    assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');
+    assert.dom(SELECTORS.yearDropdown).exists('Dropdown exists to select year');
+  });
+
+  test('shows error template if permissions denied querying activity response with no data', async function (assert) {
+    this.server = new Pretender(function () {
+      this.get('/v1/sys/license/status', () => sendResponse(null, 403));
+      this.get('/v1/sys/version-history', () => sendResponse(null, 403));
+      this.get('/v1/sys/internal/counters/config', () => sendResponse(null, 403));
+      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 403));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/history');
+    assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
+    assert
+      .dom(SELECTORS.emptyStateTitle)
+      .includesText('No start date found', 'Empty state shows no billing start date');
+    await click(SELECTORS.monthDropdown);
+    await click(this.element.querySelector('[data-test-month-list] button:not([disabled])'));
+    await click(SELECTORS.yearDropdown);
+    await click(this.element.querySelector('[data-test-year-list] button:not([disabled])'));
+    await click(SELECTORS.dateDropdownSubmit);
+    assert
+      .dom(SELECTORS.emptyStateTitle)
+      .hasText('You are not authorized', 'Empty state displays not authorized message');
   });
 });
