@@ -719,8 +719,13 @@ func (i *IdentityStore) handleMFALoginEnforcementUpdate(ctx context.Context, req
 	authMethodAccessors, ok := d.GetOk("auth_method_accessors")
 	if ok {
 		for _, accessor := range authMethodAccessors.([]string) {
-			found, err := b.validateAuthEntriesForAccessorOrType(ctx, ns, func(entry *MountEntry) bool {
-				return accessor == entry.Accessor
+			found, err := b.validateAuthEntriesForAccessorOrType(ctx, ns, func(entry *MountEntry) (bool, error) {
+				ok, err := b.Core.validateMountAccessorInMethodIDConfigs(accessor, eConfig.MFAMethodIDs)
+				if err != nil {
+					return false, err
+				}
+
+				return accessor == entry.Accessor && ok, nil
 			})
 			if err != nil {
 				return nil, err
@@ -736,8 +741,8 @@ func (i *IdentityStore) handleMFALoginEnforcementUpdate(ctx context.Context, req
 	authMethodTypes, ok := d.GetOk("auth_method_types")
 	if ok {
 		for _, authType := range authMethodTypes.([]string) {
-			found, err := b.validateAuthEntriesForAccessorOrType(ctx, ns, func(entry *MountEntry) bool {
-				return authType == entry.Type
+			found, err := b.validateAuthEntriesForAccessorOrType(ctx, ns, func(entry *MountEntry) (bool, error) {
+				return authType == entry.Type, nil
 			})
 			if err != nil {
 				return nil, err
@@ -803,7 +808,7 @@ func (i *IdentityStore) handleMFALoginEnforcementDelete(ctx context.Context, req
 	return nil, i.mfaBackend.deleteMFALoginEnforcementConfigByNameAndNamespace(ctx, name, ns.ID)
 }
 
-func (b *LoginMFABackend) validateAuthEntriesForAccessorOrType(ctx context.Context, ns *namespace.Namespace, validFunc func(entry *MountEntry) bool) (bool, error) {
+func (b *LoginMFABackend) validateAuthEntriesForAccessorOrType(ctx context.Context, ns *namespace.Namespace, validFunc func(entry *MountEntry) (bool, error)) (bool, error) {
 	b.Core.authLock.RLock()
 	defer b.Core.authLock.RUnlock()
 
@@ -821,12 +826,39 @@ func (b *LoginMFABackend) validateAuthEntriesForAccessorOrType(ctx context.Conte
 			continue
 		}
 
-		if validFunc(entry) {
+		ok, err := validFunc(entry)
+		if err != nil {
+			return false, err
+		}
+		if ok {
 			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+func (c *Core) validateMountAccessorInMethodIDConfigs(mountAccessor string, MFAMethodIDs []string) (bool, error) {
+	for _, methodID := range MFAMethodIDs {
+		mConfig, err := c.loginMFABackend.MemDBMFAConfigByID(methodID)
+		if err != nil {
+			return false, fmt.Errorf("failed to read MFA configuration")
+		}
+
+		if mConfig == nil {
+			return false, fmt.Errorf("MFA method configuration not present")
+		}
+
+		// For TOTP, MFA configuration does not require mount accessor
+		if mConfig.MountAccessor == "" {
+			continue
+		}
+
+		if mConfig.MountAccessor != mountAccessor {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (c *Core) PersistTOTPKey(ctx context.Context, methodID, entityID, key string) error {

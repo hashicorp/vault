@@ -433,6 +433,73 @@ func TestLoginMFA_UpdateNonExistentConfig(t *testing.T) {
 	}
 }
 
+func TestLoginMFADifferentAccessorInMFAConfigMFAEnforcement(t *testing.T) {
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	// Enable Userpass authentication
+	err := client.Sys().EnableAuthWithOptions("userpass123", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass auth: %v", err)
+	}
+
+	err = client.Sys().EnableAuthWithOptions("userpass456", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass auth: %v", err)
+	}
+
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatalf("failed to list auth mount")
+	}
+	mountAccessor123 := auths["userpass123/"].Accessor
+	mountAccessor456 := auths["userpass456/"].Accessor
+
+	// create an MFA config
+	mfaConfigData := map[string]interface{}{
+		"mount_accessor":  mountAccessor456,
+		"secret_key":      "lol-secret",
+		"integration_key": "integration-key",
+		"api_hostname":    "some-hostname",
+	}
+	resp, err := client.Logical().Write("identity/mfa/method/duo", mfaConfigData)
+
+	if err != nil || (resp == nil) {
+		t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
+	}
+
+	methodID := resp.Data["method_id"].(string)
+	if methodID == "" {
+		t.Fatalf("method ID is empty")
+	}
+
+	// creating MFAEnforcementConfig
+	_, err = client.Logical().Write("identity/mfa/login-enforcement/randomName", map[string]interface{}{
+		"auth_method_accessors": []string{mountAccessor123},
+		"name":                  "randomName",
+		"mfa_method_ids":        []string{methodID},
+	})
+	if err == nil {
+		t.Fatalf("failed to configure MFAEnforcementConfig: %v", err)
+	}
+	if !strings.Contains(err.Error(), "one of the auth method accessors provided is invalid") {
+		t.Fatalf("failed to detect an expected error")
+	}
+}
+
 // This is for converting []interface{} that you know holds all strings into []string
 func stringSliceFromInterfaceSlice(input []interface{}) []string {
 	result := make([]string, 0, len(input))

@@ -218,7 +218,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 			"integration_key": integration_key,
 			"api_hostname":    api_hostname,
 		}
-		resp, err := client.Logical().Write("identity/mfa/method-id/duo", mfaConfigData)
+		resp, err := client.Logical().Write("identity/mfa/method/duo", mfaConfigData)
 
 		if err != nil || (resp == nil) {
 			return fmt.Errorf("bad: resp: %#v\n err: %v", resp, err)
