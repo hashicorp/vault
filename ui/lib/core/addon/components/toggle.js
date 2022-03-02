@@ -18,11 +18,12 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/toggle';
 import { setComponentTemplate } from '@ember/component';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 class ToggleComponent extends Component {
-  @tracked checked = false;
+  get checked() {
+    return this.args.checked || false;
+  }
 
   get disabled() {
     return this.args.disabled || false;
