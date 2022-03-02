@@ -41,6 +41,14 @@ If installing via the helm chart, they can be set using e.g.
 
 The following parameters are supported by the Vault provider:
 
+- `audience` `(string: "")` - Audience to include in the claims of the JWT requested to the Kubernetes
+  API server for the login with Vault. This should match the `audience` field in the [configuration](/api-docs/auth/kubernetes#parameters-1)
+  of the `kubernetes` Vault auth method. If no audience is specified, Kubernetes will populate it according
+  to its defaults (usually, the audience [defaults to the audience of the Kubernetes API server itself](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-review-v1/#TokenReviewSpec)).
+  If you set this field to a custom audience, remember to choose for the configuration of the Vault `kubernetes` auth method
+  something different from using [the client JWT as the reviewer JWT](/docs/auth/kubernetes#use-the-vault-client-s-jwt-as-the-reviewer-jwt),
+  since Kubernetes will not allow the client JWT to authenticate to its API server (since it has a different audience).
+
 - `roleName` `(string: "")` - Name of the role to be used during login with Vault.
 
 - `vaultAddress` `(string: "")` - The address of the Vault server.
