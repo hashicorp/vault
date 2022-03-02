@@ -964,7 +964,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	}
 
 	// check the token before potentially erroring from the API
-	if err := tokenCheck(token); err != nil {
+	if err := validateToken(token); err != nil {
 		return nil, err
 	}
 
@@ -1126,7 +1126,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	}
 
 	// check the token before potentially erroring from the API
-	if err := tokenCheck(token); err != nil {
+	if err := validateToken(token); err != nil {
 		return nil, err
 	}
 
