@@ -1,11 +1,7 @@
 {{#if (eq @model.httpStatus 404)}}
   <NotFound @model={{this.model}} />
 {{else}}
-  <EmptyState
-    @title={{if (eq @model.httpStatus 403) "You are not authorized" "Error"}}
-    @subTitle={{concat "Error " @model.httpStatus}}
-    @icon="skip"
-  >
+  <EmptyState @title={{if (eq @model.httpStatus 403) "You are not authorized" "Error"}} @subTitle={{"Error "}} @icon="skip">
     {{#if (eq @model.httpStatus 403)}}
       <p>
         You must be granted permissions to view this page. Ask your administrator if you think you should have access to the
