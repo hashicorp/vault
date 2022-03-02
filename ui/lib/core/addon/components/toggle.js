@@ -16,7 +16,6 @@
  */
 
 import Component from '@glimmer/component';
-// import { computed } from '@ember/object';
 import layout from '../templates/components/toggle';
 import { setComponentTemplate } from '@ember/component';
 import { tracked } from '@glimmer/tracking';
