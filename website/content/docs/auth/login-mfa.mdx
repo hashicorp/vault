@@ -17,7 +17,7 @@ Login MFA is built on top of the Identity system of Vault.
 Login MFA in Vault can be of the following types.
 
 - `Time-based One-time Password (TOTP)` - If configured and enabled on a login path,
-  this would require a TOTP passcode along with Vault token, to be presented
+  this would require a TOTP passcode along with a Vault token, to be presented
   while invoking the API login request. The passcode will be validated against the
   TOTP key present in the identity of the caller in Vault.
 
@@ -40,7 +40,7 @@ Login MFA in Vault can be of the following types.
 
 Login MFA can be configured to further secure authenticating to an auth method. To enable login
 MFA, an MFA method needs to be configured. Please see [Login MFA API](/api/secret/identity/mfa) for details
-on how to configure an MFA method. Once an MFA method is configured, using the returned unique MFA method identification,
+on how to configure an MFA method. Once an MFA method is configured, using the returned unique MFA method ID,
 an operator can configure an MFA enforcement. Please see [Login MFA Enforcement API](/api/secret/identity/mfa/login-enforcement)
 for details on how to configure an MFA enforcement config. MFA could be enforced for an entity, a group of
 entities, a specific auth method accessor, or an auth method type. A login request that matches
@@ -51,7 +51,7 @@ There are two ways to validate a login request that is subject to MFA validation
 
  ### Single-Phase Login
  In the Single-phase login, the required MFA information is embedded in a login request using
- the `X-VAULT-MFA` header. In this case, the MFA validation is done
+ the `X-Vault-MFA` header. In this case, the MFA validation is done
  as a part of the login request.
 
  MFA credentials are retrieved from the `X-Vault-MFA` HTTP header. The format of
