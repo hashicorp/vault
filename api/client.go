@@ -1320,7 +1320,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 
 	if err != nil {
 		if strings.Contains(err.Error(), "tls: oversized") {
-			err = fmt.Errorf("%s\n\n%s", err, TLSErrorString)
+			err = errwrap.Wrapf("{{err}}\n\n"+TLSErrorString, err)
 		}
 		return result, err
 	}
