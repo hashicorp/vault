@@ -19,7 +19,7 @@ This endpoint lists all the Managed Keys of a certain type within the namespace.
 
 ### Parameters
 - `type` `(string: <required>)` – The backend type of keys to be listed.
-  Supported options are `pkcs11` and `awskms`.
+  Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
 ### Sample Request
 
@@ -65,7 +65,7 @@ $ curl \
   unique throughout all types in the namespace.
 
 - `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
-  Supported options are `pkcs11` and `awskms`.
+  Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
 - `allow_generate_key` `(string: "false")` - If no existing key can be found in the referenced backend, instructs
   Vault to generate a key within the backend.
@@ -132,7 +132,7 @@ $ curl \
   a read-write session to the HSM. This is a boolean expressed as a string (e.g.
   `"true"`). This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
-  
+
 #### AWS KMS Parameters
 - `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in the
 `AWS_ACCESS_KEY_ID` environment variable or as part of the AWS profile from the AWS CLI or instance
@@ -170,6 +170,24 @@ may also be provided in the `AWS_REGION` or `AWS_DEFAULT_REGION` environment var
 - `secret_key` `(string: <required>)`: The AWS secret key ID to use. This may also be provided in the
 `AWS_SECRET_ACCESS_KEY` environment variable or as part of the AWS profile from the AWS CLI or instance
 profile.
+
+#### Azure Key Vault Parameters
+- `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization.
+
+- `client_id` `(string: <required or MSI>)`: The client id for credentials to query the Azure APIs.
+
+- `client_secret` `(string: <required or MSI>)`: The client secret for credentials to query the
+  Azure APIs.
+
+- `environment` `(string: "AZUREPUBLICCLOUD")`: The Azure Cloud environment API endpoints to use.
+
+- `vault_name` `(string: <required>)`: The Key Vault vault to use the encryption keys for
+  encryption and decryption.
+
+- `key_name` `(string: <required>)`: The Key Vault key to use for encryption and decryption.
+
+- `resource` `(string: "vault.azure.net")`: The Azure Key Vault resource's DNS Suffix to connect
+  to. Needs to be changed to connect to Azure's Managed HSM KeyVault instance type.
 
 ## Read managed key
 
