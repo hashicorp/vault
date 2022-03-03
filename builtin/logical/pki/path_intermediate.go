@@ -72,7 +72,7 @@ endpoint.`,
 func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	exported, format, role, errorResp := b.getGenerationParams(data)
+	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
 	}
