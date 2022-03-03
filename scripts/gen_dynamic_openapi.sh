@@ -24,32 +24,32 @@ VAULT_PID=$!
 echo "Mounting all builtin backends..."
 
 # Read auth backends
-flag=false
-re='".*"'
-while read p; do
-    if [[ $p == *"credentialBackends:"* ]] ; then
-        flag=true
-    elif [ $flag = true ] && [[ $p = *"}"* ]]  ; then
+codeLineStarted=false
+regex='".*"'
+while read line; do
+    if [[ $line == *"credentialBackends:"* ]] ; then
+        codeLineStarted=true
+    elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $flag = true ] && [[ $p =~ $re ]]; then
+    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]]; then
         backend=${BASH_REMATCH[0]}
-        var1=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
-        vault auth enable ${var1}
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
+        vault auth enable ${plugin}
     fi
 done <../../vault/helper/builtinplugins/registry.go
 
 # Read secrets backends
-flag=false
-re='".*"'
-while read p; do
-    if [[ $p == *"logicalBackends:"* ]] ; then
-        flag=true
-    elif [ $flag = true ] && [[ $p = *"}"* ]]  ; then
+codeLineStarted=false
+regex='".*"'
+while read line; do
+    if [[ $line == *"logicalBackends:"* ]] ; then
+        codeLineStarted=true
+    elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $flag = true ] && [[ $p =~ $re ]]; then
+    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]]; then
         backend=${BASH_REMATCH[0]}
-        var1=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
-        vault secrets enable ${var1}
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
+        vault secrets enable ${plugin}
     fi
 done <../../vault/helper/builtinplugins/registry.go
 
