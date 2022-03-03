@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/framework"
+
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
@@ -28,9 +30,42 @@ func kmsRequested(input *inputBundle) bool {
 	return exportedStr.(string) == "kms"
 }
 
-func getManagedKeyNameOrUUID(input *inputBundle) (name string, UUID string, err error) {
+type keyId interface {
+	String() string
+}
+
+type (
+	UUIDKey string
+	NameKey string
+)
+
+func (u UUIDKey) String() string {
+	return string(u)
+}
+
+func (n NameKey) String() string {
+	return string(n)
+}
+
+// getManagedKeyId returns a NameKey or a UUIDKey, whichever was specified in the
+// request API data.
+func getManagedKeyId(data *framework.FieldData) (keyId, error) {
+	name, UUID, err := getManagedKeyNameOrUUID(data)
+	if err != nil {
+		return nil, err
+	}
+
+	var keyId keyId = NameKey(name)
+	if len(UUID) > 0 {
+		keyId = UUIDKey(UUID)
+	}
+
+	return keyId, nil
+}
+
+func getManagedKeyNameOrUUID(data *framework.FieldData) (name string, UUID string, err error) {
 	getApiData := func(argName string) (string, error) {
-		arg, ok := input.apiData.GetOk(argName)
+		arg, ok := data.GetOk(argName)
 		if !ok {
 			return "", nil
 		}
