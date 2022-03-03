@@ -134,6 +134,14 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// OutputPolicy causes the actual request to return an error of type
+	// *OutputPolicyError. Type asserting the error message will display
+	// an example of the required policy HCL needed for the operation.
+	//
+	// Note: It is not thread-safe to set this and make concurrent requests
+	// with the same client. Cloning a client will not clone this value.
+	OutputPolicy bool
+
 	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
 	// track of the name of the TLS certs and keys when OutputCurlString is set.
 	// Cloning a client will also not clone those values.
@@ -760,6 +768,24 @@ func (c *Client) SetOutputCurlString(curl bool) {
 	c.config.OutputCurlString = curl
 }
 
+func (c *Client) OutputPolicy() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.OutputPolicy
+}
+
+func (c *Client) SetOutputPolicy(isSet bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.OutputPolicy = isSet
+}
+
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path.
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
@@ -1110,6 +1136,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
@@ -1155,6 +1182,14 @@ START:
 			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
+	}
+
+	if outputPolicy {
+		LastOutputPolicyError = &OutputPolicyError{
+			Request:      req,
+			VaultAddress: c.config.Address,
+		}
+		return nil, LastOutputPolicyError
 	}
 
 	if timeout != 0 {

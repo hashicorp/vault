@@ -150,6 +150,10 @@ func (c *OperatorUsageCommand) noReportAvailable(client *api.Client) bool {
 		// Don't mess up the original query string
 		return false
 	}
+	if c.flagOutputPolicy {
+		// Don't mess up the original query string
+		return false
+	}
 
 	resp, err := client.Logical().Read("sys/internal/counters/config")
 	if err != nil || resp == nil || resp.Data == nil {

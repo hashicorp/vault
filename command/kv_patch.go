@@ -193,8 +193,15 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	// Note that we don't want to see curl output for the read request.
 	curOutputCurl := client.OutputCurlString()
 	client.SetOutputCurlString(false)
+	outputPolicy := client.OutputPolicy()
+	client.SetOutputPolicy(false)
 	secret, err := kvReadRequest(client, path, nil)
 	client.SetOutputCurlString(curOutputCurl)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
+		return nil, 2
+	}
+	client.SetOutputPolicy(outputPolicy)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
 		return nil, 2

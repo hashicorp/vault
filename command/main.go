@@ -25,7 +25,7 @@ type VaultUI struct {
 
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) (retArgs []string, format string, outputCurlString bool) {
+func setupEnv(args []string) (retArgs []string, format string, outputCurlString bool, outputPolicy bool) {
 	var nextArgFormat bool
 
 	for _, arg := range args {
@@ -46,6 +46,11 @@ func setupEnv(args []string) (retArgs []string, format string, outputCurlString 
 
 		if arg == "-output-curl-string" {
 			outputCurlString = true
+			continue
+		}
+
+		if arg == "-output-policy" {
+			outputPolicy = true
 			continue
 		}
 
@@ -73,7 +78,7 @@ func setupEnv(args []string) (retArgs []string, format string, outputCurlString 
 		format = "table"
 	}
 
-	return args, format, outputCurlString
+	return args, format, outputCurlString, outputPolicy
 }
 
 type RunOptions struct {
@@ -97,7 +102,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 
 	var format string
 	var outputCurlString bool
-	args, format, outputCurlString = setupEnv(args)
+	var outputPolicy bool
+	args, format, outputCurlString, outputPolicy = setupEnv(args)
 
 	// Don't use color if disabled
 	useColor := true
@@ -126,7 +132,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	uiErrWriter := runOpts.Stderr
-	if outputCurlString {
+	if outputCurlString || outputPolicy {
 		uiErrWriter = ioutil.Discard
 	}
 
@@ -179,25 +185,9 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 
 	exitCode, err := cli.Run()
 	if outputCurlString {
-		if exitCode == 0 {
-			fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
-			return 1
-		} else {
-			if api.LastOutputStringError == nil {
-				if exitCode == 127 {
-					// Usage, just pass it through
-					return exitCode
-				}
-				fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -output-curl-string to see the generated error\n")
-				return exitCode
-			}
-			if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
-				runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", api.LastOutputStringError.Error())))
-				return 1
-			}
-			runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputStringError.CurlString())))
-			return 0
-		}
+		return generateCurlString(exitCode, runOpts)
+	} else if outputPolicy {
+		return generatePolicy(exitCode, runOpts)
 	} else if err != nil {
 		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
 		return 1
@@ -263,4 +253,48 @@ func printCommand(w io.Writer, name string, cmdFn cli.CommandFactory) {
 		panic(fmt.Sprintf("failed to load %q command: %s", name, err))
 	}
 	fmt.Fprintf(w, "    %s\t%s\n", name, cmd.Synopsis())
+}
+
+func generateCurlString(exitCode int, runOpts *RunOptions) int {
+	if exitCode == 0 {
+		fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
+		return 1
+	} else {
+		if api.LastOutputStringError == nil {
+			if exitCode == 127 {
+				// Usage, just pass it through
+				return exitCode
+			}
+			fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -output-curl-string to see the generated error\n")
+			return exitCode
+		}
+		if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
+			runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", api.LastOutputStringError.Error())))
+			return 1
+		}
+		runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputStringError.CurlString())))
+		return 0
+	}
+}
+
+func generatePolicy(exitCode int, runOpts *RunOptions) int {
+	if exitCode == 0 {
+		fmt.Fprint(runOpts.Stderr, "Could not generate policy")
+		return 1
+	} else {
+		if api.LastOutputPolicyError == nil {
+			if exitCode == 127 {
+				// Usage, just pass it through
+				return exitCode
+			}
+			fmt.Fprint(runOpts.Stderr, "Required policy not clear from API operation; run without -output-policy to see the generated error\n")
+			return exitCode
+		}
+		if api.LastOutputPolicyError.Error() != api.ErrOutputPolicyRequest {
+			runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating policy HCL: %s\n", api.LastOutputPolicyError.Error())))
+			return 1
+		}
+		runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputPolicyError.HCLString())))
+		return 0
+	}
 }

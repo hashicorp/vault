@@ -2,18 +2,20 @@ package api
 
 import (
 	"fmt"
+	"strings"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 )
 
 const (
-	ErrOutputPolicyRequest = "output a policy, please"
+	ErrOutputPolicyRequest = "output policy request"
 )
 
 var LastOutputPolicyError *OutputPolicyError
 
 type OutputPolicyError struct {
 	*retryablehttp.Request
+	VaultAddress    string
 	parsingError    error
 	parsedHCLString string
 }
@@ -29,60 +31,32 @@ func (d *OutputPolicyError) Error() string {
 	return ErrOutputPolicyRequest
 }
 
+// Builds a sample policy document from the request
 func (d *OutputPolicyError) parseRequest() {
-	body, err := d.Request.BodyBytes()
-	if err != nil {
-		d.parsingError = err
-		return
+
+	capabilities := []string{}
+	switch d.Request.Method {
+	case "GET":
+		capabilities = append(capabilities, "read")
+	case "LIST":
+		capabilities = append(capabilities, "list")
+	case "POST", "PUT", "PATCH":
+		capabilities = append(capabilities, "create")
+		capabilities = append(capabilities, "update")
+	case "DELETE":
+		capabilities = append(capabilities, "delete")
 	}
 
-	// Build policy document
-	d.parsedHCLString = "path "
+	// trim the Vault address and v1 from the front of the path
+	url := d.Request.URL.String()
+	apiAddrPrefix := fmt.Sprintf("%sv1/", d.VaultAddress)
+	path := strings.Trim(url, apiAddrPrefix)
 
-	path := d.Request.URL.String()
-
-	if d.Request.Method == "GET" {
-		d.parsedHCLString
-	}
-	// if d.TLSSkipVerify {
-	// 	d.parsedCurlString += "--insecure "
-	// }
-	// if d.Request.Method != "GET" {
-	// 	d.parsedCurlString = fmt.Sprintf("%s-X %s ", d.parsedCurlString, d.Request.Method)
-	// }
-	// if d.ClientCACert != "" {
-	// 	clientCACert := strings.Replace(d.ClientCACert, "'", "'\"'\"'", -1)
-	// 	d.parsedCurlString = fmt.Sprintf("%s--cacert '%s' ", d.parsedCurlString, clientCACert)
-	// }
-	// if d.ClientCAPath != "" {
-	// 	clientCAPath := strings.Replace(d.ClientCAPath, "'", "'\"'\"'", -1)
-	// 	d.parsedCurlString = fmt.Sprintf("%s--capath '%s' ", d.parsedCurlString, clientCAPath)
-	// }
-	// if d.ClientCert != "" {
-	// 	clientCert := strings.Replace(d.ClientCert, "'", "'\"'\"'", -1)
-	// 	d.parsedCurlString = fmt.Sprintf("%s--cert '%s' ", d.parsedCurlString, clientCert)
-	// }
-	// if d.ClientKey != "" {
-	// 	clientKey := strings.Replace(d.ClientKey, "'", "'\"'\"'", -1)
-	// 	d.parsedCurlString = fmt.Sprintf("%s--key '%s' ", d.parsedCurlString, clientKey)
-	// }
-	// for k, v := range d.Request.Header {
-	// 	for _, h := range v {
-	// 		if strings.ToLower(k) == "x-vault-token" {
-	// 			h = `$(vault print token)`
-	// 		}
-	// 		d.parsedCurlString = fmt.Sprintf("%s-H \"%s: %s\" ", d.parsedCurlString, k, h)
-	// 	}
-	// }
-
-	// if len(body) > 0 {
-	// 	// We need to escape single quotes since that's what we're using to
-	// 	// quote the body
-	// 	escapedBody := strings.Replace(string(body), "'", "'\"'\"'", -1)
-	// 	d.parsedCurlString = fmt.Sprintf("%s-d '%s' ", d.parsedCurlString, escapedBody)
-	// }
-
-	d.parsedHCLString = fmt.Sprintf("%s%s", d.parsedHCLString, d.Request.URL.String())
+	capStr := strings.Join(capabilities, `", "`)
+	d.parsedHCLString = fmt.Sprintf(
+		`path "%s" {
+  capabilities = ["%s"]
+}`, path, capStr)
 }
 
 func (d *OutputPolicyError) HCLString() string {
