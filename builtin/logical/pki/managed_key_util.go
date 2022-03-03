@@ -31,3 +31,7 @@ func generateCSRBundle(_ context.Context, _ *backend, input *inputBundle, data *
 func parseCABundle(_ context.Context, _ *backend, _ *logical.Request, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
 	return bundle.ToParsedCertBundle()
 }
+
+func withManagedPKIKey(_ context.Context, _ *backend, _ keyId, _ string, _ logical.ManagedSigningKeyConsumer) error {
+	return errEntOnly
+}
