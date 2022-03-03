@@ -21,21 +21,13 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType this.model.type) as |tab|}}
-        {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
         <LinkTo
           @route="vault.cluster.access.identity.show"
           @models={{array (pluralize this.model.identityType) this.model.id tab}}
-          @tagName="li"
           data-test-tab-subnav={{tab}}
         >
-          <LinkTo
-            @route="vault.cluster.access.identity.show"
-            @models={{array (pluralize this.model.identityType) this.model.id tab}}
-          >
-            {{capitalize (humanize tab)}}
-          </LinkTo>
+          {{capitalize (humanize tab)}}
         </LinkTo>
-        {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
       {{/each}}
     </ul>
   </nav>
