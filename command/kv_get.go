@@ -159,7 +159,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	if v2 {
-		outputPath(c.UI, path, false)
+		outputPath(c.UI, path, "Secret Path")
 	}
 
 	if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {

@@ -142,7 +142,7 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 	// 4 for the column spaces and 5 for the len("value")
 	totalLen := maxKey + 4 + 5
 
-	return addEqualSigns(header, totalLen)
+	return padEqualSigns(header, totalLen)
 }
 
 func kvParseVersionsFlags(versions []string) []string {
@@ -154,18 +154,14 @@ func kvParseVersionsFlags(versions []string) []string {
 	return versionsOut
 }
 
-func outputPath(ui cli.Ui, path string, isMetadataPath bool) {
-	header := "Secret Path"
-	if isMetadataPath {
-		header = "Metadata Path"
-	}
-	ui.Info(addEqualSigns(header, len(path)))
+func outputPath(ui cli.Ui, path string, title string) {
+	ui.Info(padEqualSigns(title, len(path)))
 	ui.Info(path)
 	ui.Info("")
 }
 
 // Pad the table header with equal signs on each side
-func addEqualSigns(header string, totalLen int) string {
+func padEqualSigns(header string, totalLen int) string {
 	equalSigns := totalLen - (len(header) + 2)
 
 	// If we have zero or fewer equal signs bump it back up to two on either
