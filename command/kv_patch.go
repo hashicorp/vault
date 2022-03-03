@@ -185,17 +185,14 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return code
 	}
 
-	if Format(c.UI) != "table" {
-		return OutputSecret(c.UI, secret)
+	if Format(c.UI) == "table" {
+		outputPath(c.UI, path, "Secret Path")
+		metadata := secret.Data
+		c.UI.Info(getHeaderForMap("Metadata", metadata))
+		return OutputData(c.UI, metadata)
 	}
 
-	outputPath(c.UI, path, "Secret Path")
-
-	metadata := secret.Data
-	c.UI.Info(getHeaderForMap("Metadata", metadata))
-	OutputData(c.UI, metadata)
-
-	return 0
+	return OutputSecret(c.UI, secret)
 }
 
 func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData map[string]interface{}) (*api.Secret, int) {
