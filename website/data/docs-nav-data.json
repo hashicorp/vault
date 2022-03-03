@@ -1306,6 +1306,10 @@
             "path": "platform/k8s"
           },
           {
+            "title": "Agent Injector vs. Vault CSI Provider",
+            "path": "platform/k8s/injector-csi"
+          },
+          {
             "title": "Helm Chart",
             "routes": [
               {
