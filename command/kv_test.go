@@ -134,6 +134,12 @@ func TestKVPutCommand(t *testing.T) {
 			v2ExpectedFields,
 			0,
 		},
+		{
+			"v2_secret_path",
+			[]string{"kv/write/foo", "foo=bar"},
+			[]string{"== Secret Path ==", "kv/data/write/foo"},
+			0,
+		},
 	}
 
 	for _, tc := range cases {
@@ -441,6 +447,12 @@ func TestKVGetCommand(t *testing.T) {
 			append(baseV2ExpectedFields, "foo"),
 			0,
 		},
+		{
+			"v2_secret_path",
+			[]string{"kv/read/foo"},
+			[]string{"== Secret Path ==", "kv/data/read/foo"},
+			0,
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
@@ -558,6 +570,12 @@ func TestKVMetadataGetCommand(t *testing.T) {
 			"versions_exist",
 			[]string{"kv/foo"},
 			append(expectedTopLevelFields, expectedVersionFields[:]...),
+			0,
+		},
+		{
+			"path_exists",
+			[]string{"kv/foo"},
+			[]string{"=== Metadata Path ===", "kv/metadata/write/foo"},
 			0,
 		},
 	}
@@ -867,6 +885,13 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 	}
 
 	for _, str := range expectedPatchFields() {
+		if !strings.Contains(combined, str) {
+			t.Errorf("expected %q to contain %q", combined, str)
+		}
+	}
+
+	// Test that full path was output
+	for _, str := range []string{"== Secret Path ==", "kv/data/patch/foo"} {
 		if !strings.Contains(combined, str) {
 			t.Errorf("expected %q to contain %q", combined, str)
 		}
