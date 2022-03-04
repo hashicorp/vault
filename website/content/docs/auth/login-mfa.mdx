@@ -29,7 +29,7 @@ Login MFA in Vault can be of the following types.
 - `Duo` - If Duo push is configured and enabled on a login path, then the enrolled
   device of the user will get a push notification to approve or deny the access
   to the API. The Duo username will be derived from the caller identity's
-  alias.
+  alias. Note that Duo could also be configured to use passcodes for authentication.
 
 - `PingID` - If PingID push is configured and enabled on a login path, then the
   enrolled device of the user will get a push notification to approve or deny
@@ -47,6 +47,10 @@ entities, a specific auth method accessor, or an auth method type. A login reque
 either of the MFA enforcement restrictions is subject to further MFA validation,
 like a one-time passcode, before being authenticated.
 
+Note that both MFA methods like (Okta, Duo, and PingID) and MFA enforcement configuration
+could use mount accessors. However, there is no particular correlation between the two accessors. In other words, the
+mount accessors in an MFA method config don't need to match mount accessors in an MFA enforcement config.
+
 There are two ways to validate a login request that is subject to MFA validation.
 
  ### Single-Phase Login
@@ -55,7 +59,7 @@ There are two ways to validate a login request that is subject to MFA validation
  as a part of the login request.
 
  MFA credentials are retrieved from the `X-Vault-MFA` HTTP header. The format of
- the header is `mfa_method_id[:key[=value]]`. The item in the `[]` is optional. If there are more than
+ the header is `mfa_method_id[:passcode]`. The item in the `[]` is optional. If there are more than
  one MFA method that needs to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
 
  #### Sample Request
@@ -63,9 +67,18 @@ There are two ways to validate a login request that is subject to MFA validation
  ```shell-session
  $ curl \
      --header "X-Vault-Token: ..." \
-     --header "X-Vault-MFA:d16fd3c2-50de-0b9b-eed3-0301dadeca10:695452" \
+     --header "X-Vault-MFA: d16fd3c2-50de-0b9b-eed3-0301dadeca10:695452" \
      http://127.0.0.1:8200/v1/auth/userpass/login/alice
  ```
+
+ If an MFA method does not require passcode, the login request MFA header should only contain the method ID.
+ 
+ ```shell-session
+  $ curl \
+      --header "X-Vault-Token: ..." \
+      --header "X-Vault-MFA: d16fd3c2-50de-0b9b-eed3-0301dadeca10" \
+      http://127.0.0.1:8200/v1/auth/userpass/login/alice
+  ```
 
  ### Two-Phase Login
  The more conventional, and prevalent MFA method is a two request mechanism, also referred to as Two-phase Login MFA.
@@ -74,7 +87,8 @@ There are two ways to validate a login request that is subject to MFA validation
  which identifies the login request that needs to get validated. In addition, MFA requirements contain MFA constraints
  that identify which MFA types should be used to validate the request, the corresponding method IDs, and
  a boolean value showing whether the MFA method uses passcodes or not. MFA constraints form a nested map in MFA Requirement,
- and represent all MFA enforcements that match a login request.
+ and represent all MFA enforcements that match a login request. While the example below is for the userpass login, it should
+ be noted that this can affect the login response on any auth mount protected by MFA validation.
 
 #### Sample Two-Phase Login Response
 
