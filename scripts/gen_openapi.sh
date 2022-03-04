@@ -73,6 +73,7 @@ vault secrets enable transit
 if [[ ! -z "$VAULT_LICENSE" ]]
 then
   vault write sys/license text="$VAULT_LICENSE"
+  vault secrets enable keymgmt
   vault secrets enable kmip
   vault secrets enable transform
 fi
