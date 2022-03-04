@@ -159,13 +159,13 @@ be used to create an alias for the generated key. To fully specify an alias for 
 key, provide the full alias, including the `alias/` prefix. If the provided value doesn't include
 this prefix, Vault will prepend it with `alias/hashicorp` when creating the alias.
 
-  ~> e.g., If the value provided is `kms_key=example-key-name`, then Vault will create the alias
-  `hashicorp/example-key-name`. If the value is `kms_key=alias/example-key-name`, then Vault will
-  use the alias `example-key-name`.
+-> e.g., If the value provided is `kms_key=example-key-name`, then Vault will create the alias
+`hashicorp/example-key-name`. If the value is `kms_key=alias/example-key-name`, then Vault will
+use the alias `example-key-name`.
 
-  ~> **Note**: when creating a key through AWS KMS to be used with managed keys, note that the
-  key usage must be `SIGN_VERIFY`. When using an elliptic curve key, the combination `key_type=ECDSA`
-  and `curve=P256` corresponds to the AWS Key Spec `ECC_NIST_P256`.
+-> **Note**: when creating a key through AWS KMS to be used with managed keys, note that the
+key usage must be `SIGN_VERIFY`. When using an elliptic curve key, the combination `key_type=ECDSA`
+and `curve=P256` corresponds to the AWS Key Spec `ECC_NIST_P256`.
 
 - `region` `(string: "us-east-1")`: The AWS region where the keys are stored (or will be stored). This
 may also be provided in the `AWS_REGION` or `AWS_DEFAULT_REGION` environment variables, from your
