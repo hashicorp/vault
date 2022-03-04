@@ -55,12 +55,25 @@ done <../../vault/helper/builtinplugins/registry.go
 
 
 # Enable enterprise features
-if [[ ! -z "$VAULT_LICENSE" ]]
-then
+entRegFile=../../vault/helper/builtinplugins/registry_util_ent.go
+if [ -f $entRegFile ] && [[ ! -z "$VAULT_LICENSE" ]]; then
   vault write sys/license text="$VAULT_LICENSE"
-  vault secrets enable keymgmt
-  vault secrets enable kmip
-  vault secrets enable transform
+
+  regex='".*"'
+  codeLineStarted=false
+  while read line; do
+        if [[ $line == *"ExternalPluginsEnt"* ]] ; then
+        codeLineStarted=true
+    elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
+        break
+    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
+        backend=${BASH_REMATCH[0]}
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
+        echo $plugin
+        #vault secrets enable ${plugin}
+    fi
+  done <$entRegFile
+  
 fi
 
 # Output OpenAPI, optionally formatted
