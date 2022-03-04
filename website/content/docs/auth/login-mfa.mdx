@@ -47,9 +47,10 @@ entities, a specific auth method accessor, or an auth method type. A login reque
 any of the MFA enforcement restrictions is subject to further MFA validation,
 like a one-time passcode, before being authenticated.
 
-Note that both MFA methods like (Okta, Duo, and PingID) and MFA enforcement configuration
-could use mount accessors. However, there is no particular correlation between the two accessors. In other words, the
-mount accessors in an MFA method config don't need to match mount accessors in an MFA enforcement config.
+Although an MFA method configuration like (Okta, Duo, and PingID) needs a mount accessor and an MFA enforcement configuration
+could use mount accessors, these two accessors do not necessarily need to be the same.
+However, a user trying to login on an MFA enforced mount would need to have an alias on the accessor in the MFA method itself.
+In this case, the entity/alias templating is required to render out the username associated third party account.
 
 There are two ways to validate a login request that is subject to MFA validation.
 
@@ -72,7 +73,7 @@ There are two ways to validate a login request that is subject to MFA validation
  ```
 
  If an MFA method does not require passcode, the login request MFA header should only contain the method ID.
- 
+
  ```shell-session
   $ curl \
       --header "X-Vault-Token: ..." \
