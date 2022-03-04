@@ -159,7 +159,11 @@ be used to create an alias for the generated key. To fully specify an alias for 
 key, provide the full alias, including the `alias/` prefix. If the provided value doesn't include
 this prefix, Vault will prepend it with `alias/hashicorp` when creating the alias.
 
- ~> **Note**: when creating a key through AWS KMS to be used with managed keys, note that the
+ ~>e.g., If the value provided is `kms_key=example-key-name`, then Vault will create the alias
+`hashicorp/example-key-name`. If the value is `kms_key=alias/example-key-name`, then Vault will
+ use the alias `example-key-name`.
+
+ ~>**Note**: when creating a key through AWS KMS to be used with managed keys, note that the
  key usage must be `SIGN_VERIFY`. When using an elliptic curve key, the combination `key_type=ECDSA`
  and `curve=P256` corresponds to the AWS Key Spec `ECC_NIST_P256`.
 
