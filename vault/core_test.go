@@ -402,6 +402,112 @@ func TestCore_Seal_BadToken(t *testing.T) {
 	}
 }
 
+func TestCore_PreOneTen_BatchTokens(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// load up some versions and ensure that 1.9 is the most recent one by timestamp (even though this isn't realistic)
+	upgradeTimePlusEpsilon := time.Now().UTC()
+
+	versionEntries := []struct {
+		version string
+		ts      time.Time
+	}{
+		{"1.10.1", upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{"1.9.2", upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	}
+
+	for _, entry := range versionEntries {
+		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
+		if err != nil {
+			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
+		}
+	}
+
+	err := c.loadVersionTimestamps(c.activeContext)
+	if err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	// double check that we're working with 1.9
+	v, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "1.9.2" {
+		t.Fatalf("expected 1.9.2, found: %s", v)
+	}
+
+	// generate a batch token
+	te := &logical.TokenEntry{
+		NumUses:     1,
+		Policies:    []string{"root"},
+		NamespaceID: namespace.RootNamespaceID,
+		Type:        logical.TokenTypeBatch,
+	}
+	err = c.tokenStore.create(namespace.RootContext(nil), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify it uses the legacy prefix
+	if !strings.HasPrefix(te.ID, consts.LegacyBatchTokenPrefix) {
+		t.Fatalf("expected 1.9 batch token IDs to start with b. but it didn't: %s", te.ID)
+	}
+}
+
+func TestCore_OneTenPlus_BatchTokens(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// load up some versions and ensure that 1.10 is the most recent version
+	upgradeTimePlusEpsilon := time.Now().UTC()
+
+	versionEntries := []struct {
+		version string
+		ts      time.Time
+	}{
+		{"1.9.2", upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{"1.10.1", upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	}
+
+	for _, entry := range versionEntries {
+		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
+		if err != nil {
+			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
+		}
+	}
+
+	err := c.loadVersionTimestamps(c.activeContext)
+	if err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	// double check that we're working with 1.10
+	v, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "1.10.1" {
+		t.Fatalf("expected 1.10.1, found: %s", v)
+	}
+
+	// generate a batch token
+	te := &logical.TokenEntry{
+		NumUses:     1,
+		Policies:    []string{"root"},
+		NamespaceID: namespace.RootNamespaceID,
+		Type:        logical.TokenTypeBatch,
+	}
+	err = c.tokenStore.create(namespace.RootContext(nil), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify it uses the legacy prefix
+	if !strings.HasPrefix(te.ID, consts.BatchTokenPrefix) {
+		t.Fatalf("expected 1.10 batch token IDs to start with hvb. but it didn't: %s", te.ID)
+	}
+}
+
 // GH-3497
 func TestCore_Seal_SingleUse(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)

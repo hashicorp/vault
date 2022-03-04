@@ -1004,6 +1004,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if err != nil {
 			return err
 		}
+
 		if ts.core.DisableSSCTokens() || newestVersion.LessThan(oneTen) {
 			entry.ID = consts.LegacyBatchTokenPrefix + bEntry
 		} else {
