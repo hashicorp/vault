@@ -138,9 +138,8 @@ $ curl \
   the `AWS_ACCESS_KEY_ID` environment variable or as part of the AWS profile from the AWS CLI or
   instance profile.
 
-- `curve` `(string: "P256")`: The curve to use for an ECDSA key. This field is used when
-  `key_type` is `ECDSA`. Supported options are `P256`, `P384`, or `P521`. If a value is not
-  specified, Vault defaults to `P256`.
+- `curve` `(string: "")`: The curve to use for an ECDSA key. This field is used when
+  `key_type` is `ECDSA`. Supported options are `P256`, `P384`, or `P521`.
 
 - `endpoint` `(string: "")`: Used to specify a custom AWS endpoint. If not set, Vault will use
   the default API endpoint for your region.
