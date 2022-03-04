@@ -21,6 +21,12 @@ is, `sys/` routes) change very infrequently, but various secrets engines/auth
 methods/etc. sometimes have minor changes to accommodate new features as
 they're developed.
 
+## KV Engine V2
+
+For KV Engine V2, request path needs to include `/data`. 
+Example:
+`http://127.0.0.1:8200/v1/secret/data/foo`
+
 ## Transport
 
 The API is expected to be accessed over a TLS connection at all times, with a
