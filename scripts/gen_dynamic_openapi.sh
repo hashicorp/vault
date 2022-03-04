@@ -31,7 +31,7 @@ while read line; do
         codeLineStarted=true
     elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]]; then
+    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault auth enable ${plugin}
@@ -46,7 +46,7 @@ while read line; do
         codeLineStarted=true
     elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]]; then
+    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault secrets enable ${plugin}
