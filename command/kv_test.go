@@ -575,7 +575,7 @@ func TestKVMetadataGetCommand(t *testing.T) {
 		{
 			"path_exists",
 			[]string{"kv/foo"},
-			[]string{"=== Metadata Path ===", "kv/metadata/write/foo"},
+			[]string{"== Metadata Path ==", "kv/metadata/foo"},
 			0,
 		},
 	}
