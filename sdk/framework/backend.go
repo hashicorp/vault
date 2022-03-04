@@ -490,10 +490,7 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// the plugin is enabled (mounted). If specified in the request, the type
 	// will be used as part of the request/response body names in the OAS
 	// document
-	var requestResponsePrefix string
-	if v, ok := req.Data["requestResponsePrefix"]; ok {
-		requestResponsePrefix = v.(string)
-	}
+	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
