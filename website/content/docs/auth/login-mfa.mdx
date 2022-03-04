@@ -44,7 +44,7 @@ on how to configure an MFA method. Once an MFA method is configured, using the r
 an operator can configure an MFA enforcement. Please see [Login MFA Enforcement API](/api/secret/identity/mfa/login-enforcement)
 for details on how to configure an MFA enforcement config. MFA could be enforced for an entity, a group of
 entities, a specific auth method accessor, or an auth method type. A login request that matches
-either of the MFA enforcement restrictions is subject to further MFA validation,
+any of the MFA enforcement restrictions is subject to further MFA validation,
 like a one-time passcode, before being authenticated.
 
 Note that both MFA methods like (Okta, Duo, and PingID) and MFA enforcement configuration
@@ -139,7 +139,7 @@ There are two ways to validate a login request that is subject to MFA validation
  To validate the MFA restricted login request, the user sends a second request to the [validate](/api/system/mfa/validate)
  endpoint including the MFA request ID, and MFA payload. MFA payload contains a map of methodIDs and their associated credentials.
  If the configured MFA methods (like PingID, Okta, Duo) don't need a passcode, the associated
- credentials will be a list of an empty string.
+ credentials will be a list with one empty string.
 
 #### Sample Payload
 
