@@ -7,33 +7,33 @@ description: |-
 ---
 # Login MFA
 
-Vault has support for Multi-factor Authentication (MFA) for authenticating to
-an auth method, using different authentication types. We use the term `Login MFA` to distinguish
+Vault supports Multi-factor Authentication (MFA) for authenticating to
+an auth method using different authentication types. We use the term `Login MFA` to distinguish
 this feature and the [Vault Enterprise MFA](/docs/enterprise/mfa).
 Login MFA is built on top of the Identity system of Vault.
 
 ## MFA Types
 
-Login MFA in Vault can be of the following types.
+MFA in Vault includes the following login types:
 
 - `Time-based One-time Password (TOTP)` - If configured and enabled on a login path,
-  this would require a TOTP passcode along with a Vault token, to be presented
+  this would require a TOTP passcode along with a Vault token to be presented
   while invoking the API login request. The passcode will be validated against the
-  TOTP key present in the identity of the caller in Vault.
+  TOTP key present in the caller's identify in Vault.
 
 - `Okta` - If Okta push is configured and enabled on a login path, then the enrolled
-  device of the user will get a push notification to approve or deny the access
+  device of the user will receive a push notification to either approve or deny  access
   to the API. The Okta username will be derived from the caller identity's
   alias.
 
 - `Duo` - If Duo push is configured and enabled on a login path, then the enrolled
-  device of the user will get a push notification to approve or deny the access
+  device of the user will receive a push notification to either approve or deny access
   to the API. The Duo username will be derived from the caller identity's
   alias. Note that Duo could also be configured to use passcodes for authentication.
 
 - `PingID` - If PingID push is configured and enabled on a login path, then the
-  enrolled device of the user will get a push notification to approve or deny
-  the access to the API. The PingID username will be derived from the caller
+  enrolled device of the user will receive a push notification to either approve or deny
+access to the API. The PingID username will be derived from the caller
   identity's alias.
 
 ## Login MFA Procedure
@@ -60,8 +60,7 @@ There are two ways to validate a login request that is subject to MFA validation
  as a part of the login request.
 
  MFA credentials are retrieved from the `X-Vault-MFA` HTTP header. The format of
- the header is `mfa_method_id[:passcode]`. The item in the `[]` is optional. If there are more than
- one MFA method that needs to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
+ the header is `mfa_method_id[:passcode]`. The item in the `[]` is optional. If there are multiple MFA methods that need to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
 
  #### Sample Request
 
