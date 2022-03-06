@@ -51,6 +51,8 @@ const (
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
 	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
 	HeaderIndex           = "X-Vault-Index"
+	HeaderForward         = "X-Vault-Forward"
+	HeaderInconsistent    = "X-Vault-Inconsistent"
 )
 
 // Deprecated values
@@ -132,6 +134,12 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
+	// track of the name of the TLS certs and keys when OutputCurlString is set.
+	// Cloning a client will also not clone those values.
+	curlCACert, curlCAPath        string
+	curlClientCert, curlClientKey string
+
 	// SRVLookup enables the client to lookup the host through DNS SRV lookup
 	SRVLookup bool
 
@@ -183,7 +191,7 @@ type TLSConfig struct {
 // The default Address is https://127.0.0.1:8200, but this can be overridden by
 // setting the `VAULT_ADDR` environment variable.
 //
-// If an error is encountered, this will return nil.
+// If an error is encountered, the Error field on the returned *Config will be populated with the specific error.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:      "https://127.0.0.1:8200",
@@ -225,9 +233,9 @@ func DefaultConfig() *Config {
 	return config
 }
 
-// ConfigureTLS takes a set of TLS configurations and applies those to the
-// HTTP client.
-func (c *Config) ConfigureTLS(t *TLSConfig) error {
+// configureTLS is a lock free version of ConfigureTLS that can be used in
+// ReadEnvironment where the lock is already hold
+func (c *Config) configureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
@@ -244,11 +252,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 			return err
 		}
 		foundClientCert = true
+		c.curlClientCert = t.ClientCert
+		c.curlClientKey = t.ClientKey
 	case t.ClientCert != "" || t.ClientKey != "":
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || t.CAPath != "" {
+		c.curlCACert = t.CACert
+		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
 			CAFile: t.CACert,
 			CAPath: t.CAPath,
@@ -276,6 +288,15 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	}
 
 	return nil
+}
+
+// ConfigureTLS takes a set of TLS configurations and applies those to the
+// HTTP client.
+func (c *Config) ConfigureTLS(t *TLSConfig) error {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	return c.configureTLS(t)
 }
 
 // ReadEnvironment reads configuration information from the environment. If
@@ -382,7 +403,7 @@ func (c *Config) ReadEnvironment() error {
 	c.SRVLookup = envSRVLookup
 	c.Limiter = limit
 
-	if err := c.ConfigureTLS(t); err != nil {
+	if err := c.configureTLS(t); err != nil {
 		return err
 	}
 
@@ -779,6 +800,12 @@ func (c *Client) setNamespace(namespace string) {
 	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
+func (c *Client) ClearNamespace() {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.headers.Del(consts.NamespaceHeaderName)
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
@@ -928,12 +955,25 @@ func (c *Client) ReadYourWrites() bool {
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
-// clone.
+// clone. The headers are cloned based on the CloneHeaders property of the
+// source config
 //
 // Also, only the client's config is currently copied; this means items not in
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
+	return c.clone(c.config.CloneHeaders)
+}
+
+// CloneWithHeaders creates a new client similar to Clone, with the difference
+// being that the  headers are always cloned
+func (c *Client) CloneWithHeaders() (*Client, error) {
+	return c.clone(true)
+}
+
+// clone creates a new client, with the headers being cloned based on the
+// passed in cloneheaders boolean
+func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
 
@@ -964,7 +1004,7 @@ func (c *Client) Clone() (*Client, error) {
 		return nil, err
 	}
 
-	if config.CloneHeaders {
+	if cloneHeaders {
 		client.SetHeaders(c.Headers().Clone())
 	}
 
@@ -1109,6 +1149,10 @@ START:
 		LastOutputStringError = &OutputStringError{
 			Request:       req,
 			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
+			ClientCert:    c.config.curlClientCert,
+			ClientKey:     c.config.curlClientKey,
+			ClientCACert:  c.config.curlCACert,
+			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
 	}
@@ -1359,7 +1403,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 // conjunction with RequireState.
 func ForwardInconsistent() RequestCallback {
 	return func(req *Request) {
-		req.Headers.Set("X-Vault-Inconsistent", "forward-active-node")
+		req.Headers.Set(HeaderInconsistent, "forward-active-node")
 	}
 }
 
@@ -1368,7 +1412,7 @@ func ForwardInconsistent() RequestCallback {
 // This feature must be enabled in Vault's configuration.
 func ForwardAlways() RequestCallback {
 	return func(req *Request) {
-		req.Headers.Set("X-Vault-Forward", "active-node")
+		req.Headers.Set(HeaderForward, "active-node")
 	}
 }
 

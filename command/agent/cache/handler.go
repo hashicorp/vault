@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/armon/go-metrics"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/sink"
@@ -58,7 +59,9 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 				copyHeader(w.Header(), resp.Response.Header)
 				w.WriteHeader(resp.Response.StatusCode)
 				io.Copy(w, resp.Response.Body)
+				metrics.IncrCounter([]string{"agent", "proxy", "client_error"}, 1)
 			} else {
+				metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
 				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			}
 			return
@@ -71,6 +74,15 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		}
 
 		defer resp.Response.Body.Close()
+
+		metrics.IncrCounter([]string{"agent", "proxy", "success"}, 1)
+		if resp.CacheMeta != nil {
+			if resp.CacheMeta.Hit {
+				metrics.IncrCounter([]string{"agent", "cache", "hit"}, 1)
+			} else {
+				metrics.IncrCounter([]string{"agent", "cache", "miss"}, 1)
+			}
+		}
 
 		// Set headers
 		setHeaders(w, resp)

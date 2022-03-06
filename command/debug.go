@@ -900,7 +900,6 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 }
 
 func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
-
 	idxCount := 0
 	intervalTicker := time.Tick(c.flagInterval)
 

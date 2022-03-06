@@ -70,6 +70,13 @@
                 </LinkTo>
               </li>
             {{/if}}
+            {{#if (and @item.canRotateRoleCredentials (eq this.keyTypeValue "static"))}}
+              <li class="action">
+                <button type="button" class="link" {{on "click" (fn this.rotateRoleCred @item.id)}}>
+                  Rotate credentials
+                </button>
+              </li>
+            {{/if}}
             {{#if @item.canRotateRoot}}
               <li class="action">
                 <button type="button" class="link" {{on "click" (fn this.rotateRootCred @item.id)}}>

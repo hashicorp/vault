@@ -220,6 +220,10 @@ type Request struct {
 	// this will be the sha256(sorted policies + namespace) associated with the
 	// client token.
 	ClientID string `json:"client_id" structs:"client_id" mapstructure:"client_id" sentinel:""`
+
+	// InboundSSCToken is the token that arrives on an inbound request, supplied
+	// by the vault user.
+	InboundSSCToken string
 }
 
 // Clone returns a deep copy of the request by using copystructure

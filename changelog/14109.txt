@@ -1,0 +1,3 @@
+```release-note:feature
+Server Side Consistent Tokens: Service tokens now use SSC token format and token prefixes are updated."
+```

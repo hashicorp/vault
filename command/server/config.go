@@ -83,8 +83,9 @@ type Config struct {
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
-	License     string `hcl:"-"`
-	LicensePath string `hcl:"license_path"`
+	License          string `hcl:"-"`
+	LicensePath      string `hcl:"license_path"`
+	DisableSSCTokens bool   `hcl:"-"`
 }
 
 const (
@@ -830,8 +831,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"enable_ui": c.EnableUI,
 
-		"max_lease_ttl":     c.MaxLeaseTTL,
-		"default_lease_ttl": c.DefaultLeaseTTL,
+		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
+		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
 
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 

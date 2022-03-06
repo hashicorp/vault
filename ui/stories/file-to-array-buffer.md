@@ -21,6 +21,6 @@ loaded, this file will be emitted as a JS ArrayBuffer to the passed `onChange` c
 **See**
 
 - [Uses of FileToArrayBuffer](https://github.com/hashicorp/vault/search?l=Handlebars&q=FileToArrayBuffer+OR+file-to-array-buffer)
-- [FileToArrayBuffer Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/file-to-array-buffer.js)
+- [FileToArrayBuffer Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/file-to-array-buffer.js)
 
 ---

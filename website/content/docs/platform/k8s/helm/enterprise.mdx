@@ -31,7 +31,7 @@ In your chart overrides, set the values of [`server.image`](/docs/platform/k8s/h
 server:
   image:
     repository: hashicorp/vault-enterprise
-    tag: 1.9.0_ent
+    tag: 1.9.2-ent
   enterpriseLicense:
     secretName: vault-ent-license
 ```
@@ -81,7 +81,7 @@ kubectl exec vault-0 -- vault license inspect
 kubectl exec vault-0 -- vault write -f sys/config/reload/license
 ```
 
-  Or you may issue an HUP signal directly to Vault:
+Or you may issue an HUP signal directly to Vault:
 
 ```shell
 kubectl exec vault-0 -- pkill -HUP vault
@@ -116,7 +116,7 @@ Finally, using curl, apply the license key to the Vault API:
 ```bash
 curl \
   --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-  --request PUT \
+  --request POST \
   --data @payload.json \
   http://127.0.0.1:8200/v1/sys/license
 

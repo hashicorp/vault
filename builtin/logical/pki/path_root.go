@@ -12,10 +12,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ed25519"
 	"reflect"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
@@ -28,8 +29,13 @@ func pathGenerateRoot(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/generate/" + framework.GenericNameRegex("exported"),
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCAGenerateRoot,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAGenerateRoot,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathGenerateRootHelpSyn,
@@ -46,9 +52,13 @@ func pathGenerateRoot(b *backend) *framework.Path {
 func pathDeleteRoot(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root",
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.DeleteOperation: b.pathCADeleteRoot,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathCADeleteRoot,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathDeleteRootHelpSyn,
@@ -61,9 +71,10 @@ func pathDeleteRoot(b *backend) *framework.Path {
 func pathSignIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/sign-intermediate",
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCASignIntermediate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCASignIntermediate,
+			},
 		},
 
 		HelpSynopsis:    pathSignIntermediateHelpSyn,
@@ -90,7 +101,9 @@ this path;
 2) Any key usages requested in the CSR will be
 added to the basic set of key usages used for CA
 certs signed by this path; for instance,
-the non-repudiation flag.`,
+the non-repudiation flag;
+3) Extensions requested in the CSR will be copied
+into the issued certificate.`,
 	}
 
 	return ret
@@ -99,9 +112,10 @@ the non-repudiation flag.`,
 func pathSignSelfIssued(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/sign-self-issued",
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCASignSelfIssued,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCASignSelfIssued,
+			},
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -109,7 +123,7 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
 			},
-			"require_matching_certificate_algorithms": &framework.FieldSchema{
+			"require_matching_certificate_algorithms": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
@@ -136,11 +150,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 	if entry != nil {
 		resp := &logical.Response{}
-		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. If you really want to destroy the original root certificate, please issue a delete against %sroot.", req.MountPoint))
+		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. "+
+			"If you really want to destroy the original root certificate, please issue a delete against %s root.", req.MountPoint))
 		return resp, nil
 	}
 
-	exported, format, role, errorResp := b.getGenerationParams(data)
+	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -161,7 +176,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
+		default:
 			return nil, err
 		}
 	}
@@ -267,38 +282,43 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	role := &roleEntry{
-		OU:                    data.Get("ou").([]string),
-		Organization:          data.Get("organization").([]string),
-		Country:               data.Get("country").([]string),
-		Locality:              data.Get("locality").([]string),
-		Province:              data.Get("province").([]string),
-		StreetAddress:         data.Get("street_address").([]string),
-		PostalCode:            data.Get("postal_code").([]string),
-		TTL:                   time.Duration(data.Get("ttl").(int)) * time.Second,
-		AllowLocalhost:        true,
-		AllowAnyName:          true,
-		AllowIPSANs:           true,
-		EnforceHostnames:      false,
-		KeyType:               "any",
-		AllowedURISANs:        []string{"*"},
-		AllowedSerialNumbers:  []string{"*"},
-		AllowExpirationPastCA: true,
-		NotAfter:              data.Get("not_after").(string),
+		OU:                        data.Get("ou").([]string),
+		Organization:              data.Get("organization").([]string),
+		Country:                   data.Get("country").([]string),
+		Locality:                  data.Get("locality").([]string),
+		Province:                  data.Get("province").([]string),
+		StreetAddress:             data.Get("street_address").([]string),
+		PostalCode:                data.Get("postal_code").([]string),
+		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		AllowedOtherSANs:          []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		AllowedURISANs:            []string{"*"},
+		AllowExpirationPastCA:     true,
+		NotAfter:                  data.Get("not_after").(string),
 	}
+	*role.AllowWildcardCertificates = true
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
 		role.UseCSRCommonName = true
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
@@ -319,8 +339,9 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
-			return nil, err
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error signing cert: %s", err)}
 		}
 	}
 
@@ -417,14 +438,15 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	signingCB, err := signingBundle.ToCertBundle()

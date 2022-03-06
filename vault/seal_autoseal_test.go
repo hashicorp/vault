@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
 
 	proto "github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -176,32 +177,42 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 
 	metrics.NewGlobal(metricsConf, inmemSink)
 
-	core, _, _ := TestCoreUnsealed(t)
-	testSeal, setErr := seal.NewToggleableTestSeal(nil)
-
-	var encKeys []string
-	changeKey := func(key string) {
-		encKeys = append(encKeys, key)
-		testSeal.Wrapper.(*seal.ToggleableWrapper).Wrapper.(*wrapping.TestWrapper).SetKeyID(key)
-	}
-
-	// Set initial encryption key.
-	changeKey("kaz")
-
-	autoSeal := NewAutoSeal(testSeal)
-	autoSeal.SetCore(core)
 	pBackend := newTestBackend(t)
-	core.physical = pBackend
-	core.metricSink = metricsutil.NewClusterMetricSink("", inmemSink)
-
+	testSealAccess, setErr := seal.NewToggleableTestSeal(nil)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
+		Physical:   pBackend,
+	})
 	sealHealthTestIntervalNominal = 10 * time.Millisecond
 	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
-	setErr(errors.New("disconnected"))
+	autoSeal := NewAutoSeal(testSealAccess)
+	autoSeal.SetCore(core)
+	core.seal = autoSeal
 	autoSeal.StartHealthCheck()
+	defer autoSeal.StopHealthCheck()
+	setErr(errors.New("disconnected"))
 
+	asu := strings.Join(autoSealUnavailableDuration, ".") + ";cluster=" + core.clusterName
+	tries := 10
+	for tries = 10; tries > 0; tries-- {
+		intervals := inmemSink.Data()
+		if len(intervals) == 1 {
+			interval := inmemSink.Data()[0]
+
+			if _, ok := interval.Gauges[asu]; ok {
+				if interval.Gauges[asu].Value > 0 {
+					break
+				}
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if tries == 0 {
+		t.Fatalf("Expected value metric %s to be non-zero", asu)
+	}
+
+	setErr(nil)
 	time.Sleep(50 * time.Millisecond)
-
-	asu := strings.Join(autoSealUnavailableDuration, ".") + ";cluster="
 	intervals := inmemSink.Data()
 	if len(intervals) == 1 {
 		interval := inmemSink.Data()[0]
@@ -209,21 +220,8 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 		if _, ok := interval.Gauges[asu]; !ok {
 			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
 		}
-		if interval.Gauges[asu].Value == 0 {
-			t.Fatalf("Expected value metric %s to be non-zero", asu)
-		}
-	}
-	setErr(nil)
-	time.Sleep(50 * time.Millisecond)
-	intervals = inmemSink.Data()
-	if len(intervals) == 1 {
-		interval := inmemSink.Data()[0]
-
-		if _, ok := interval.Gauges[asu]; !ok {
-			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
-		}
 		if interval.Gauges[asu].Value != 0 {
-			t.Fatalf("Expected value metric %s to be non-zero", asu)
+			t.Fatalf("Expected value metric %s to be zero", asu)
 		}
 	}
 }

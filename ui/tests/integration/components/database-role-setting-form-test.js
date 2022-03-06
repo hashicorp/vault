@@ -11,7 +11,7 @@ const testCases = [
     staticRoleFields: ['name', 'username', 'rotation_period', 'rotation_statements'],
     dynamicRoleFields: [
       'name',
-      'ttl',
+      'default_ttl',
       'max_ttl',
       'creation_statements',
       'revocation_statements',
@@ -22,49 +22,49 @@ const testCases = [
   {
     pluginType: 'elasticsearch-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statement', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statement', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mongodb-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statement', 'revocation_statement', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statement', 'revocation_statement', 'default_ttl', 'max_ttl'],
     statementsHidden: true,
   },
   {
     pluginType: 'mssql-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-aurora-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-rds-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'mysql-legacy-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
   {
     pluginType: 'vault-plugin-database-oracle',
     staticRoleFields: ['username', 'rotation_period'],
-    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'default_ttl', 'max_ttl'],
   },
 ];
 
 // used to calculate checks that fields do NOT show up
 const ALL_ATTRS = [
-  { name: 'ttl', type: 'string', options: {} },
+  { name: 'default_ttl', type: 'string', options: {} },
   { name: 'max_ttl', type: 'string', options: {} },
   { name: 'username', type: 'string', options: {} },
   { name: 'rotation_period', type: 'string', options: {} },

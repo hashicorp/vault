@@ -1,4 +1,4 @@
-import { click, fillIn, currentURL, visit, settled } from '@ember/test-helpers';
+import { click, fillIn, currentURL, currentRouteName, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
@@ -41,6 +41,6 @@ module('Acceptance | unseal', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     assert.dom('[data-test-cluster-status]').doesNotExist('ui does not show sealed warning');
-    assert.ok(currentURL().match(/\/vault\/auth/), 'vault is ready to authenticate');
+    assert.equal(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
   });
 });

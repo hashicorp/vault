@@ -19,7 +19,7 @@
         {{/if}}
         <Chevron @direction="down" @class="has-text-white auto-width is-status-chevron" />
       </D.Trigger>
-      <D.Content class="namespace-picker-content">
+      <D.Content @defaultClass="namespace-picker-content">
         <div class="is-mobile level-left">
           {{#unless this.isUserRootNamespace}}
             <NamespaceLink

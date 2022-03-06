@@ -23,6 +23,7 @@
 @import './core/buttons';
 @import './core/footer';
 @import './core/forms';
+@import './core/charts';
 @import './core/helpers';
 @import './core/hero';
 @import './core/level';
@@ -45,9 +46,10 @@
 @import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/b64-toggle';
-@import './components/bar-chart';
+
 @import './components/box-label';
 @import './components/box-radio';
+@import './components/calendar-widget';
 @import './components/codemirror';
 @import './components/confirm';
 @import './components/console-ui-panel';
@@ -80,7 +82,6 @@
 @import './components/navigate-input';
 @import './components/page-header';
 @import './components/popup-menu';
-@import './components/pricing-metrics-dates';
 @import './components/radio-card';
 @import './components/radial-progress';
 @import './components/raft-join';

@@ -168,7 +168,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 		}
 	}
 
-	opts := boltOptions()
+	opts := boltOptions(dbPath)
 	start := time.Now()
 	boltDB, err := bolt.Open(dbPath, 0o600, opts)
 	if err != nil {
