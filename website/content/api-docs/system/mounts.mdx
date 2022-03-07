@@ -223,7 +223,7 @@ disable the secrets engine once the underlying issue is resolved. Often, this ca
 simple as increasing the timeout (in the event of timeout errors).
 
 For recovery situations where the secret has been manually removed from the
-secrets backing service, one can "force" a secrets engine disable in Vault by
+secrets backing service, one can force a secrets engine disable in Vault by
 performing a [force revoke](https://www.vaultproject.io/api/system/leases#revoke-force)
 on the mount prefix, followed by a secrets disable when that completes. 
 This method may result in dangling credentials if the underlying secrets
