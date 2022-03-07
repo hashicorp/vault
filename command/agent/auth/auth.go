@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -147,6 +149,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		var clientToUse *api.Client
 		var err error
 		var path string
+		var tlsServerName string
+		var clientAddr string
 		var data map[string]interface{}
 		var header http.Header
 
@@ -210,6 +214,20 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			for _, value := range values {
 				clientToUse.AddHeader(key, value)
 			}
+		}
+
+		clientAddr = clientToUse.Address()
+		tlsServerName = clientToUse.CloneConfig().HttpClient.Transport.(*http.Transport).TLSClientConfig.ServerName
+		if tlsServerName != "" && tlsServerName != clientAddr {
+			u, _ := url.Parse(clientAddr)
+			ah.logger.Error("error authenticating", "error",
+				fmt.Sprintf(
+					"TLS Negotiation with %s failed: "+
+						"the remote's server name '%s' does not match "+
+						"the configured tls_server_name '%s'.",
+					clientAddr, u.Hostname(), tlsServerName), "backoff", backoff)
+			backoffOrQuit(ctx, backoff)
+			// continue
 		}
 
 		// This should only happen if there's no preloaded token (regular auto-auth login)
