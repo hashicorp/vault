@@ -1287,9 +1287,12 @@ func (c *Client) WithResponseCallbacks(callbacks ...ResponseCallback) *Client {
 
 // withConfiguredTimeout wraps the context with a timeout from the client configuration.
 func (c *Client) withConfiguredTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
-	if c.config.Timeout > 0 {
-		return context.WithTimeout(ctx, c.config.Timeout)
+	timeout := c.ClientTimeout()
+
+	if timeout > 0 {
+		return context.WithTimeout(ctx, timeout)
 	}
+
 	return ctx, func() {}
 }
 
