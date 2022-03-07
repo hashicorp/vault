@@ -193,10 +193,8 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	}
 	core.pluginCatalog.directory = sym
 
-	externalPlugins := core.pluginCatalog.externalPlugins
-	extPluginLen := len(externalPlugins)
-	if extPluginLen != 0 {
-		t.Fatalf("expected 0 external plugins but got %d", extPluginLen)
+	if len(core.pluginCatalog.externalPlugins) != 0 {
+		t.Fatalf("expected externalPlugins map to be of len 0 but got %d", len(core.pluginCatalog.externalPlugins))
 	}
 
 	// register plugins
@@ -218,10 +216,9 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	externalPlugins = core.pluginCatalog.externalPlugins
-	extPluginLen = len(externalPlugins)
-	if extPluginLen != 3 {
-		t.Fatalf("expected externalPlugins map to be of len 3 but got %d", extPluginLen)
+	externalPlugins := core.pluginCatalog.externalPlugins
+	if len(externalPlugins) != 3 {
+		t.Fatalf("expected externalPlugins map to be of len 3 but got %d", len(externalPlugins))
 	}
 
 	// check connections map
