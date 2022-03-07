@@ -508,6 +508,10 @@
           {
             "title": "<code>/sys/mfa/method/totp</code>",
             "path": "system/mfa/totp"
+          },
+          {
+            "title": "<code>/sys/mfa/validate</code>",
+            "path": "system/mfa/validate"
           }
         ]
       },
