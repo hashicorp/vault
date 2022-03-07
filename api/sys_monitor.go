@@ -9,6 +9,9 @@ import (
 // Monitor returns a channel that outputs strings containing the log messages
 // coming from the server.
 func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/monitor")
 
 	if logLevel == "" {
