@@ -186,7 +186,6 @@ func TestPluginCatalog_List(t *testing.T) {
 
 func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
-	testPlugin := "mux-postgresql-database-plugin"
 
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
@@ -194,41 +193,72 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	}
 	core.pluginCatalog.directory = sym
 
-	TestAddTestPlugin(t, core, testPlugin, consts.PluginTypeDatabase, "TestPluginCatalog_PluginMain_PostgresMultiplexed", []string{}, "")
-
-	config := pluginutil.PluginClientConfig{
-		Name:            testPlugin,
-		PluginType:      consts.PluginTypeDatabase,
-		PluginSets:      v5.PluginSets,
-		HandshakeConfig: v5.HandshakeConfig,
-		Logger:          log.NewNullLogger(),
-		IsMetadataMode:  false,
-		AutoMTLS:        true,
-	}
-
-	resp, err := core.pluginCatalog.NewPluginClient(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Printf("\n\nresp: %#+v\n\n", resp)
-
 	externalPlugins := core.pluginCatalog.externalPlugins
 	extPluginLen := len(externalPlugins)
-	if extPluginLen != 1 {
-		t.Fatalf("expected 1 external plugin but got %d", extPluginLen)
+	if extPluginLen != 0 {
+		t.Fatalf("expected 0 external plugins but got %d", extPluginLen)
 	}
-	if !externalPlugins[testPlugin].multiplexingSupport {
+
+	// register plugins
+	TestAddTestPlugin(t, core, "mux-postgres", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_PostgresMultiplexed", []string{}, "")
+	TestAddTestPlugin(t, core, "single-postgres-1", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
+	TestAddTestPlugin(t, core, "single-postgres-2", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
+
+	// run plugins
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "mux-postgres")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "mux-postgres")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "single-postgres-1")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "single-postgres-2")); err != nil {
+		t.Fatal(err)
+	}
+
+	externalPlugins = core.pluginCatalog.externalPlugins
+	extPluginLen = len(externalPlugins)
+	if extPluginLen != 3 {
+		t.Fatalf("expected externalPlugins map to be of len 3 but got %d", extPluginLen)
+	}
+
+	// check connections map
+	if len(externalPlugins["mux-postgres"].connections) != 2 {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len 2 but got %d", len(externalPlugins["mux-postgres"].connections))
+	}
+	if len(externalPlugins["single-postgres-1"].connections) != 1 {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len 2 but got %d", len(externalPlugins["mux-postgres"].connections))
+	}
+	if len(externalPlugins["single-postgres-2"].connections) != 1 {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len 2 but got %d", len(externalPlugins["mux-postgres"].connections))
+	}
+
+	// check multiplexing support
+	if !externalPlugins["mux-postgres"].multiplexingSupport {
 		t.Fatalf("expected external plugin to be multiplexed")
+	}
+	if externalPlugins["single-postgres-1"].multiplexingSupport {
+		t.Fatalf("expected external plugin to be non-multiplexed")
+	}
+	if externalPlugins["single-postgres-2"].multiplexingSupport {
+		t.Fatalf("expected external plugin to be non-multiplexed")
 	}
 }
 
-// func TestPluginCatalog_PluginMain_Postgres(t *testing.T) {
-// 	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-// 		return
-// 	}
+func TestPluginCatalog_PluginMain_Postgres(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
 
-// 	v5.Serve(postgresql.New)
-// }
+	dbType, err := postgresql.New()
+	if err != nil {
+		t.Fatalf("Failed to initialize postgres: %s", err)
+	}
+
+	v5.Serve(dbType.(v5.Database))
+}
 
 func TestPluginCatalog_PluginMain_PostgresMultiplexed(t *testing.T) {
 	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
@@ -236,4 +266,18 @@ func TestPluginCatalog_PluginMain_PostgresMultiplexed(t *testing.T) {
 	}
 
 	v5.ServeMultiplex(postgresql.New)
+}
+
+func testPluginClientConfig(t *testing.T, pluginName string) pluginutil.PluginClientConfig {
+	t.Helper()
+
+	return pluginutil.PluginClientConfig{
+		Name:            pluginName,
+		PluginType:      consts.PluginTypeDatabase,
+		PluginSets:      v5.PluginSets,
+		HandshakeConfig: v5.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  false,
+		AutoMTLS:        true,
+	}
 }
