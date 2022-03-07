@@ -8,7 +8,6 @@ func (c *Sys) SealStatus() (*SealStatusResponse, error) {
 
 func (c *Sys) SealStatusWithContext(ctx context.Context) (*SealStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/seal-status")
-
 	return sealStatusRequestWithContext(ctx, c, r)
 }
 
