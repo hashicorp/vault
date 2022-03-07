@@ -996,16 +996,22 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if err != nil {
 			return err
 		}
-		newestVersion, err := version.NewVersion(ver)
-		if err != nil {
-			return err
-		}
-		oneTen, err := version.NewVersion("1.10.0")
-		if err != nil {
-			return err
+
+		var newestVersion *version.Version
+		var oneTen *version.Version
+
+		if ver != "" {
+			newestVersion, err = version.NewVersion(ver)
+			if err != nil {
+				return err
+			}
+			oneTen, err = version.NewVersion("1.10.0")
+			if err != nil {
+				return err
+			}
 		}
 
-		if ts.core.DisableSSCTokens() || newestVersion.LessThan(oneTen) {
+		if ts.core.DisableSSCTokens() || (newestVersion != nil && newestVersion.LessThan(oneTen)) {
 			entry.ID = consts.LegacyBatchTokenPrefix + bEntry
 		} else {
 			entry.ID = consts.BatchTokenPrefix + bEntry
