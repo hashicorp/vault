@@ -88,6 +88,7 @@ node completes the request anyway, returning a warning in the response.
 This mitigation option still exists in Vault 1.7, though now there is a
 configuration option to adjust the wait time:
 [best_effort_wal_wait_duration](/docs/configuration/replication).
+
 ## Vault 1.7 Mitigations
 
 There are now a variety of other mitigations available:
@@ -194,9 +195,9 @@ The option `when_inconsistent` controls how stale reads are prevented:
 ## Vault 1.10 Mitigations
 
 In Vault 1.10, the token format has changed. Service tokens employ 
-[server_side_consistency](docs/concepts/server-side-consistency). This means that
-by default, requests made to nodes which cannot support read-after-write consistency
-due to not having the necessary WAL index to check vault tokens locally will yield 
+server side consistency. This means that by default, requests made 
+to nodes which cannot support read-after-write consistency due to 
+not having the necessary WAL index to check vault tokens locally will yield 
 a 412 status code. The vault go api automatically retries when receiving 412s, so 
 unless there is a considerable replication delay, end-users will experience
 read-after-write consistency. 
