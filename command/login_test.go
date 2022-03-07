@@ -87,7 +87,7 @@ func TestLoginCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(storedToken), minTokenLengthExternal+vault.TokenPrefixLength; l != exp {
+		if l, exp := len(storedToken), minTokenLengthExternal+vault.TokenPrefixLength; l < exp {
 			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, storedToken)
 		}
 	})

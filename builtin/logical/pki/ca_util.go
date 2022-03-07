@@ -1,15 +1,20 @@
 package pki
 
 import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) getGenerationParams(
-	data *framework.FieldData,
+func (b *backend) getGenerationParams(ctx context.Context,
+	data *framework.FieldData, mountPoint string,
 ) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
@@ -30,6 +35,8 @@ func (b *backend) getGenerationParams(
 		return
 	}
 
+	keyType := data.Get("key_type").(string)
+	keyBits := data.Get("key_bits").(int)
 	if exportedStr == "kms" {
 		_, okKeyType := data.Raw["key_type"]
 		_, okKeyBits := data.Raw["key_bits"]
@@ -39,12 +46,35 @@ func (b *backend) getGenerationParams(
 				`invalid parameter for the kms path parameter, key_type nor key_bits arguments can be set in this mode`)
 			return
 		}
+
+		keyId, err := getManagedKeyId(data)
+		if err != nil {
+			errorResp = logical.ErrorResponse("unable to determine managed key id")
+			return
+		}
+		// Determine key type and key bits from the managed public key
+		withManagedPKIKey(ctx, b, keyId, mountPoint, func(ctx context.Context, key logical.ManagedSigningKey) error {
+			pubKey, err := key.GetPublicKey(ctx)
+			if err != nil {
+				return err
+			}
+			switch pubKey.(type) {
+			case *rsa.PublicKey:
+				keyType = "rsa"
+				keyBits = pubKey.(*rsa.PublicKey).Size() * 8
+			case *ecdsa.PublicKey:
+				keyType = "ec"
+			case *ed25519.PublicKey:
+				keyType = "ed25519"
+			}
+			return nil
+		})
 	}
 
 	role = &roleEntry{
 		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
-		KeyType:                   data.Get("key_type").(string),
-		KeyBits:                   data.Get("key_bits").(int),
+		KeyType:                   keyType,
+		KeyBits:                   keyBits,
 		SignatureBits:             data.Get("signature_bits").(int),
 		AllowLocalhost:            true,
 		AllowAnyName:              true,

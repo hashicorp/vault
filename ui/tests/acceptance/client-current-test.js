@@ -169,4 +169,20 @@ module('Acceptance | clients current', function (hooks) {
       .hasText(non_entity_clients.toString());
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
   });
+
+  test('shows correct empty state when config off but no read on config', async function (assert) {
+    this.server = new Pretender(function () {
+      // Monthly responds with 204 when config off
+      this.get('/v1/sys/internal/counters/activity/monthly', () => sendResponse(null, 204));
+      this.get('/v1/sys/internal/counters/config', () => sendResponse(null, 403));
+      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
+      this.get('/v1/sys/health', this.passthrough);
+      this.get('/v1/sys/seal-status', this.passthrough);
+      this.post('/v1/sys/capabilities-self', this.passthrough);
+      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    });
+    await visit('/vault/clients/current');
+    assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is not shown');
+    assert.dom(SELECTORS.emptyStateTitle).containsText('No data available', 'Shows no data empty state');
+  });
 });

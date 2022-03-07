@@ -49,6 +49,8 @@
         {{/if}}
       </EmptyState>
     {{/if}}
+  {{else if this.errorObject}}
+    <Clients::Error @error={{this.errorObject}} />
   {{else}}
     {{#if (eq @model.config.enabled "Off")}}
       <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
@@ -142,14 +144,16 @@
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
-        {{else}}
-          <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
       {{/if}}
-    {{else if (or (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+    {{else if (and (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+      {{! Empty state for no billing/license start date }}
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
-      <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
+      <EmptyState
+        @title={{concat "No data received " (if this.noActivityDate "from ") this.noActivityDate}}
+        @message="No data exists for that query period. Try searching again."
+      />
     {{/if}}
   {{/if}}
 

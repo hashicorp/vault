@@ -105,17 +105,14 @@
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
     <LinkTo
       @route="vault.cluster.secrets.backend.edit"
       @model={{this.model.id}}
-      @tagName="button"
       class="button is-primary"
       data-test-edit-confirm-button={{true}}
     >
       Confirm
     </LinkTo>
-    {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
     <button type="button" class="button is-secondary" onclick={{action (mut this.isEditModalActive) false}}>
       Cancel
     </button>

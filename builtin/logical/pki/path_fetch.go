@@ -221,7 +221,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 				Type:  "CERTIFICATE",
 				Bytes: ca.Bytes,
 			}
-			chainStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
+			chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
 		fullChain = []byte(strings.TrimSpace(chainStr))
 
