@@ -199,6 +199,13 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		parsedBundle, err = generateCert(ctx, b, input, signingBundle, false, rand.Reader)
 	}
 	if err != nil {
+		// Issuance would've succeeded for this request, but didn't because
+		// the request included dry_run=true. Return 204 No Content in this
+		// case.
+		if err == errDryRun {
+			return nil, nil
+		}
+
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil

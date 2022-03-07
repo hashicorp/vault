@@ -1193,6 +1193,11 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 	}
 
+	// Add any further validations above this line.
+	if dry_run, ok := data.apiData.GetOk("dry_run"); ok && dry_run.(bool) {
+		return nil, errDryRun
+	}
+
 	creation := &certutil.CreationBundle{
 		Params: &certutil.CreationParameters{
 			Subject:                       subject,

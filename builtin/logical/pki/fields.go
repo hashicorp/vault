@@ -130,6 +130,13 @@ be larger than the role max TTL.`,
                       The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
+	fields["dry_run"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Test issuance without creating a certificate.
+Returns 204 No Content on success.`,
+	}
+
 	return fields
 }
 
