@@ -10,6 +10,9 @@ import (
 	"sort"
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/plugins/database/postgresql"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 
@@ -179,4 +182,58 @@ func TestPluginCatalog_List(t *testing.T) {
 			t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugins[i+1], p)
 		}
 	}
+}
+
+func TestPluginCatalog_NewPluginClient(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	testPlugin := "mux-postgresql-database-plugin"
+
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	core.pluginCatalog.directory = sym
+
+	TestAddTestPlugin(t, core, testPlugin, consts.PluginTypeDatabase, "TestPluginCatalog_PluginMain_PostgresMultiplexed", []string{}, "")
+
+	config := pluginutil.PluginClientConfig{
+		Name:            testPlugin,
+		PluginType:      consts.PluginTypeDatabase,
+		PluginSets:      v5.PluginSets,
+		HandshakeConfig: v5.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  false,
+		AutoMTLS:        true,
+	}
+
+	resp, err := core.pluginCatalog.NewPluginClient(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("\n\nresp: %#+v\n\n", resp)
+
+	externalPlugins := core.pluginCatalog.externalPlugins
+	extPluginLen := len(externalPlugins)
+	if extPluginLen != 1 {
+		t.Fatalf("expected 1 external plugin but got %d", extPluginLen)
+	}
+	if !externalPlugins[testPlugin].multiplexingSupport {
+		t.Fatalf("expected external plugin to be multiplexed")
+	}
+}
+
+// func TestPluginCatalog_PluginMain_Postgres(t *testing.T) {
+// 	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+// 		return
+// 	}
+
+// 	v5.Serve(postgresql.New)
+// }
+
+func TestPluginCatalog_PluginMain_PostgresMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	v5.ServeMultiplex(postgresql.New)
 }
