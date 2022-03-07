@@ -69,8 +69,7 @@ if [ -f $entRegFile ] && [[ ! -z "$VAULT_LICENSE" ]]; then
     elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
-        echo $plugin
-        #vault secrets enable ${plugin}
+        vault secrets enable ${plugin}
     fi
   done <$entRegFile
   
