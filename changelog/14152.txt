@@ -1,3 +1,0 @@
-```release-note:improvement
-api: added methods with context propagation to allow custom context transfer from the calling application.
-```
