@@ -22,6 +22,9 @@ export const SELECTORS = {
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
   rangeDropdown: '[data-test-popup-menu-trigger]',
+  monthDropdown: '[data-test-popup-menu-trigger="month"]',
+  yearDropdown: '[data-test-popup-menu-trigger="year"]',
+  dateDropdownSubmit: '[data-test-date-dropdown-submit]',
 };
 
 export function sendResponse(data, httpStatus = 200) {
