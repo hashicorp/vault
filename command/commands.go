@@ -482,6 +482,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki": func() (cli.Command, error) {
+			return &PKICommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki role-test": func() (cli.Command, error) {
+			return &PKIRoleTestCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
 				BaseCommand: getBaseCommand(),
