@@ -486,10 +486,13 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 		return nil, err
 	}
 
-	// The plugin type (e.g. "kv", "cubbyhole") is only assigned at the time
-	// the plugin is enabled (mounted). If specified in the request, the type
-	// will be used as part of the request/response body names in the OAS
-	// document
+	// Plugins currently don't have a direct knowledge of their own "type"
+	// (e.g. "kv", "cubbyhole"). It defaults to the name of the executable but
+	// can be overridden when the plugin is mounted. Since we need this type to
+	// form the request & response full names, we are passing it as an optional
+	// request parameter to the plugin's root help endpoint. If specified in
+	// the request, the type will be used as part of the request/response body
+	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
 	// Build OpenAPI response for the entire backend
