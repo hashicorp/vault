@@ -159,3 +159,19 @@ integer number of seconds instead of a human-friendly string.
 Unprintable characters are no longer allowed in names in the API (paths and
 path parameters), with an extra restriction on whitespace characters. Allowed
 characters are those that are considered printable by Unicode plus spaces.
+
+### OTP Generation Process
+
+Customers passing in OTPs during the root token generation process must modify
+the OTP generation to be 2 characters longer before upgrading so the OTP can be 
+xor'ed with the encoded root token. This change is due to service tokens in 1.10
+being prefixed with "hvs." as opposed to "s.". 
+
+## Token Format Change
+
+Token prefixes have been updated to be more easily identifiable. Service tokens that
+used to start with s. now start with hvs., batch tokens that used to start with b. 
+now start with hvb., and recovery tokens that used to start with r. now start with 
+hvr.. Furthermore, non-root service tokens will be longer than before. Whereas service
+tokens before were 26 characters, they will now be a minimum of 95 characters. 
+Existing tokens will still work.
