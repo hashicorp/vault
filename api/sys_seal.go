@@ -23,10 +23,12 @@ func (c *Sys) SealWithContext(ctx context.Context) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/seal")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
-		defer resp.Body.Close()
+	if err != nil {
+		return err
 	}
-	return err
+	defer resp.Body.Close()
+
+	return nil
 }
 
 func (c *Sys) ResetUnsealProcess() (*SealStatusResponse, error) {
@@ -65,6 +67,7 @@ func (c *Sys) UnsealWithOptions(opts *UnsealOpts) (*SealStatusResponse, error) {
 
 func (c *Sys) UnsealWithOptionsWithContext(ctx context.Context, opts *UnsealOpts) (*SealStatusResponse, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
+
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
