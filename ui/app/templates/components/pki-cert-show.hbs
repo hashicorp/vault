@@ -31,7 +31,7 @@
         @value={{stringify (get this.model attr.name)}}
       />
     {{else}}
-      {{#if (and attr.options.masked (get this.model attr.name))}}
+      {{#if attr.options.masked}}
         <InfoTableRow
           data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
@@ -45,7 +45,7 @@
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{date-format (get this.model attr.name) "MMM dd, yyyy hh:mm:ss a" isFormatted=true}}
         />
-      {{else if (eq attr.name "revocationTime")}}
+      {{else if (and (get this.model attr.name) (eq attr.name "revocationTime"))}}
         <InfoTableRow
           data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
