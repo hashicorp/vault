@@ -146,9 +146,6 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 // RaftSnapshotWithContext invokes the API that takes the snapshot of the raft cluster and
 // writes it to the supplied io.Writer.
 func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer) error {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
 
@@ -295,9 +292,6 @@ func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
 // RaftSnapshotRestoreWithContext reads the snapshot from the io.Reader and installs that
 // snapshot, returning the cluster to the state defined by it.
 func (c *Sys) RaftSnapshotRestoreWithContext(ctx context.Context, snapReader io.Reader, force bool) error {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
 	path := "/v1/sys/storage/raft/snapshot"
 	if force {
 		path = "/v1/sys/storage/raft/snapshot-force"
