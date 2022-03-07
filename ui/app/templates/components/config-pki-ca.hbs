@@ -16,7 +16,7 @@
       />
     {{/if}}
     {{#each this.model.attrs as |attr|}}
-      {{#if attr.options.masked}}
+      {{#if (and attr.options.masked (get this.model attr.name))}}
         <InfoTableRow
           data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
