@@ -49,7 +49,7 @@ func (c *Client) Logical() *Logical {
 }
 
 func (c *Logical) Read(path string) (*Secret, error) {
-	return c.ReadWithData(path, nil)
+	return c.ReadWithDataWithContext(context.Background(), path, nil)
 }
 
 func (c *Logical) ReadWithContext(ctx context.Context, path string) (*Secret, error) {
