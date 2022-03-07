@@ -1,0 +1,3 @@
+```release-note:improvement
+agent/auth: More verbose error handling for mismatches between Vault address and tls_server_name fields under Vault stanza in config file.
+```
