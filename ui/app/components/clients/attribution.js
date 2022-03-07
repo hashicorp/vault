@@ -39,6 +39,9 @@ export default class Attribution extends Component {
   }
 
   get isSingleNamespace() {
+    if (!this.args.totalClientsData) {
+      return 'no data';
+    }
     // if a namespace is selected, then we're viewing top 10 auth methods (mounts)
     return !!this.args.selectedNamespace;
   }
@@ -61,29 +64,30 @@ export default class Attribution extends Component {
 
   get chartText() {
     let dateText = this.isDateRange ? 'date range' : 'month';
-    if (!this.isSingleNamespace) {
-      return {
-        description:
-          'This data shows the top ten namespaces by client count and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, export this data.',
-        newCopy: `The new clients in the namespace for this ${dateText}.
+    switch (this.isSingleNamespace) {
+      case true:
+        return {
+          description:
+            'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.',
+          newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients
+          ${dateText === 'date range' ? ' over time.' : '.'}`,
+          totalCopy: `The total clients used by the auth method for this ${dateText}. This number is useful for identifying overall usage volume. `,
+        };
+      case false:
+        return {
+          description:
+            'This data shows the top ten namespaces by client count and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, export this data.',
+          newCopy: `The new clients in the namespace for this ${dateText}.
           This aids in understanding which namespaces create and use new clients
           ${dateText === 'date range' ? ' over time.' : '.'}`,
-        totalCopy: `The total clients in the namespace for this ${dateText}. This number is useful for identifying overall usage volume.`,
-      };
-    } else if (this.isSingleNamespace) {
-      return {
-        description:
-          'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.',
-        newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients
-        ${dateText === 'date range' ? ' over time.' : '.'}`,
-        totalCopy: `The total clients used by the auth method for this ${dateText}. This number is useful for identifying overall usage volume. `,
-      };
-    } else {
-      return {
-        description: 'There is a problem gathering data',
-        newCopy: 'There is a problem gathering data',
-        totalCopy: 'There is a problem gathering data',
-      };
+          totalCopy: `The total clients in the namespace for this ${dateText}. This number is useful for identifying overall usage volume.`,
+        };
+      case 'no data':
+        return {
+          description: 'There is a problem gathering data',
+        };
+      default:
+        return '';
     }
   }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -34,7 +35,8 @@ import (
 )
 
 const (
-	replTimeout = 1 * time.Second
+	replTimeout                           = 1 * time.Second
+	EnvVaultDisableLocalAuthMountEntities = "VAULT_DISABLE_LOCAL_AUTH_MOUNT_ENTITIES"
 )
 
 var (
@@ -333,13 +335,13 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		}
 
 		switch {
-		case checkExists == false:
+		case !checkExists:
 			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
 			req.Operation = logical.UpdateOperation
-		case resourceExists == true:
+		case resourceExists:
 			// It exists, so force an update operation
 			req.Operation = logical.UpdateOperation
-		case resourceExists == false:
+		case !resourceExists:
 			// It doesn't exist, force a create operation
 			req.Operation = logical.CreateOperation
 		default:
@@ -408,7 +410,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
 	if !unauth && c.activityLog != nil {
-		c.activityLog.HandleTokenUsage(te, clientID, isTWE)
+		c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
 	}
 	return auth, te, nil
 }
@@ -1401,6 +1403,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if auth.Alias != nil &&
 			mEntry != nil &&
 			c.identityStore != nil {
+
+			if mEntry.Local && os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+				goto CREATE_TOKEN
+			}
+
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType

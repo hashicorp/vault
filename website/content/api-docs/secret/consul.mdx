@@ -73,6 +73,36 @@ updated attributes.
 | :----- | :-------------------- |
 | `POST` | `/consul/roles/:name` |
 
+### Parameters for Consul versions 1.7 and above
+
+- `consul_namespace` `(string: "")` <EnterpriseAlert inline /> - Specifies the Consul namespace the token
+  will be generated within. The namespace must exist, and the policies or roles assigned to the
+  Vault role must also exist inside the given Consul namespace. If not provided, the "default"
+  namespace is used.
+
+### Parameters for Consul versions 1.11 and above
+
+- `partition` `(string: "")` <EnterpriseAlert inline /> - Specifies the Consul admin partition the token
+  will be generated within. The partition must exist, and the policies or roles assigned to the
+  Vault role must also exist inside the given partition. If not provided, the "default"
+  partition is used.
+
+To create a client token within a particular Consul namespace:
+
+```json
+{
+  "consul_namespace": "ns1"
+}
+```
+
+To create a client token within a particular Consul admin partition:
+
+```json
+{
+  "partition": "admin1"
+}
+```
+
 ### Parameters for Consul versions 1.4 and above
 
 - `name` `(string: <required>)` – Specifies the name of an existing role against
@@ -84,7 +114,7 @@ updated attributes.
   Defaults to `"client`".
 
 - `policy` `(string: <policy>)` – Specifies the base64-encoded ACL policy. This is
-  required unless the `token_type` is `"management"`. [Deprecated as of Consul 1.4 and 
+  required unless the `token_type` is `"management"`. [Deprecated as of Consul 1.4 and
   removed as of Consul 1.11.](https://www.consul.io/api/acl/legacy)
 
 - `policies` `(list: <policy or policies>)` – The list of policies to assign to the

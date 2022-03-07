@@ -102,7 +102,8 @@ them, optional commands to run, etc.
   auto-auth methods such as approle that require paths to secrets be present.
 
 - `vault.hashicorp.com/agent-inject-token` - configures Vault Agent to share the Vault
-  token with other containers in the pod. This is helpful when other containers
+  token with other containers in the pod, in a file named `token` in the root of the
+  secrets volume (i.e. `/vault/secrets/token`). This is helpful when other containers
   communicate directly with Vault but require auto-authentication provided by Vault
   Agent. This should be set to a `true` or `false` value. Defaults to `false`.
 

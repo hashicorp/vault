@@ -1208,14 +1208,33 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return handleError(fmt.Errorf("invalid destination mount: %v", err))
 	}
 
-	// Prevent target and source mounts from being in a protected path
-	for _, p := range protectedMounts {
-		if strings.HasPrefix(fromPathDetails.MountPath, p) {
-			return handleError(fmt.Errorf("cannot remount %q", fromPathDetails.MountPath))
+	// Check that target is a valid auth mount, if source is an auth mount
+	if strings.HasPrefix(fromPathDetails.MountPath, credentialRoutePrefix) {
+		if !strings.HasPrefix(toPathDetails.MountPath, credentialRoutePrefix) {
+			return handleError(fmt.Errorf("cannot remount auth mount to non-auth mount %q", toPathDetails.MountPath))
+		}
+		// Prevent target and source auth mounts from being in a protected path
+		for _, auth := range protectedAuths {
+			if strings.HasPrefix(fromPathDetails.MountPath, auth) {
+				return handleError(fmt.Errorf("cannot remount %q", fromPathDetails.MountPath))
+			}
 		}
 
-		if strings.HasPrefix(toPathDetails.MountPath, p) {
-			return handleError(fmt.Errorf("cannot remount to destination %+v", toPathDetails.MountPath))
+		for _, auth := range protectedAuths {
+			if strings.HasPrefix(toPathDetails.MountPath, auth) {
+				return handleError(fmt.Errorf("cannot remount to destination %q", toPathDetails.MountPath))
+			}
+		}
+	} else {
+		// Prevent target and source non-auth mounts from being in a protected path
+		for _, p := range protectedMounts {
+			if strings.HasPrefix(fromPathDetails.MountPath, p) {
+				return handleError(fmt.Errorf("cannot remount %q", fromPathDetails.MountPath))
+			}
+
+			if strings.HasPrefix(toPathDetails.MountPath, p) {
+				return handleError(fmt.Errorf("cannot remount to destination %+v", toPathDetails.MountPath))
+			}
 		}
 	}
 
@@ -1225,9 +1244,10 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return handleError(fmt.Errorf("no matching mount at %q", sanitizePath(fromPath)))
 	}
 
-	if match := b.Core.router.MatchingMount(ctx, toPath); match != "" {
-		return handleError(fmt.Errorf("existing mount at %q", match))
+	if match := b.Core.router.MountConflict(ctx, sanitizePath(toPath)); match != "" {
+		return handleError(fmt.Errorf("path already in use at %q", match))
 	}
+
 	// If we are a performance secondary cluster we should forward the request
 	// to the primary. We fail early here since the view in use isn't marked as
 	// readonly
@@ -1246,12 +1266,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 
 		logger := b.Core.Logger().Named("mounts.migration").With("migration_id", migrationID, "namespace", ns.Path, "to_path", toPath, "from_path", fromPath)
 
-		var err error
-		if !strings.Contains(fromPath, "auth") {
-			err = b.moveSecretsEngine(ns, logger, migrationID, entry.ViewPath(), fromPathDetails, toPathDetails)
-		} else {
-			logger.Error("Remount is unsupported for the source mount", "err", err)
-		}
+		err := b.moveMount(ns, logger, migrationID, entry, fromPathDetails, toPathDetails)
 		if err != nil {
 			logger.Error("remount failed", "error", err)
 			if err := b.Core.setMigrationStatus(migrationID, MigrationFailureStatus); err != nil {
@@ -1269,14 +1284,25 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	return resp, nil
 }
 
-// moveSecretsEngine carries out a remount operation on the secrets engine, updating the migration status as required
+// moveMount carries out a remount operation on the secrets engine or auth method, updating the migration status as required
 // It is expected to be called asynchronously outside of a request context, hence it creates a context derived from the active one
 // and intermittently checks to see if it is still open.
-func (b *SystemBackend) moveSecretsEngine(ns *namespace.Namespace, logger log.Logger, migrationID, viewPath string, fromPathDetails, toPathDetails namespace.MountPathDetails) error {
+func (b *SystemBackend) moveMount(ns *namespace.Namespace, logger log.Logger, migrationID string, entry *MountEntry, fromPathDetails, toPathDetails namespace.MountPathDetails) error {
 	logger.Info("Starting to update the mount table and revoke leases")
 	revokeCtx := namespace.ContextWithNamespace(b.Core.activeContext, ns)
+
+	var err error
 	// Attempt remount
-	if err := b.Core.remountSecretsEngine(revokeCtx, fromPathDetails, toPathDetails, !b.Core.perfStandby); err != nil {
+	switch entry.Table {
+	case credentialTableType:
+		err = b.Core.remountCredential(revokeCtx, fromPathDetails, toPathDetails, !b.Core.perfStandby)
+	case mountTableType:
+		err = b.Core.remountSecretsEngine(revokeCtx, fromPathDetails, toPathDetails, !b.Core.perfStandby)
+	default:
+		return fmt.Errorf("cannot remount mount of table %q", entry.Table)
+	}
+
+	if err != nil {
 		return err
 	}
 
@@ -1286,7 +1312,7 @@ func (b *SystemBackend) moveSecretsEngine(ns *namespace.Namespace, logger log.Lo
 
 	logger.Info("Removing the source mount from filtered paths on secondaries")
 	// Remove from filtered mounts and restart evaluation process
-	if err := b.Core.removePathFromFilteredPaths(revokeCtx, fromPathDetails.GetFullPath(), viewPath); err != nil {
+	if err := b.Core.removePathFromFilteredPaths(revokeCtx, fromPathDetails.GetFullPath(), entry.ViewPath()); err != nil {
 		return err
 	}
 

@@ -8,6 +8,17 @@
   ul {
     border-color: transparent;
     min-height: 3rem;
+
+    > a {
+      &:focus {
+        box-shadow: none;
+      }
+      &.is-active,
+      &.is-active .tab {
+        border-color: $blue;
+        color: $blue;
+      }
+    }
   }
 
   li {

@@ -454,6 +454,10 @@
             "path": "commands/auth/list"
           },
           {
+            "title": "<code>move</code>",
+            "path": "commands/auth/move"
+          },
+          {
             "title": "<code>tune</code>",
             "path": "commands/auth/tune"
           }
@@ -1493,6 +1497,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.10.x",
+        "path": "upgrading/upgrade-to-1.10.x"
       },
       {
         "title": "Upgrade to 1.9.x",

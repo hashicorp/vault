@@ -19,6 +19,7 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -683,6 +684,175 @@ func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_remount_auth(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, _ := testCoreSystemBackend(t)
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass1/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/userpass1"
+	req.Data["to"] = "auth/userpass2"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	RetryUntil(t, 5*time.Second, func() error {
+		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
+		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
+			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
+		}
+		return nil
+	})
+}
+
+func TestSystemBackend_remount_auth_invalid(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/unknown"
+	req.Data["to"] = "auth/foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "no matching mount at \"auth/unknown/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "foo"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount auth mount to non-auth mount \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
+func TestSystemBackend_remount_auth_protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/token"
+	req.Data["to"] = "auth/foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount \"auth/token/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["from"] = "auth/foo"
+	req.Data["to"] = "auth/token"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "cannot remount to destination \"auth/token/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
+func TestSystemBackend_remount_auth_destinationInUse(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, _ := testCoreSystemBackend(t)
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass1/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userpassMe2 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass2/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "auth/userpass1"
+	req.Data["to"] = "auth/userpass2"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass2/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "auth/userpass2/mypass"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass2/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	userpassMe3 := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass3/mypass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Data["to"] = "auth/userpass3/"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"auth/userpass3/mypass/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+}
+
 func TestSystemBackend_remount(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -703,6 +873,63 @@ func TestSystemBackend_remount(t *testing.T) {
 		}
 		return nil
 	})
+}
+
+func TestSystemBackend_remount_destinationInUse(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo/",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "secret"
+	req.Data["to"] = "foo"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	req.Data["to"] = "foo/foo2"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
+
+	me2 := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo2/foo3/",
+		Type:  "generic",
+	}
+	err = c.mount(namespace.RootContext(nil), me2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req.Data["to"] = "foo2/"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Data["error"].(string), "path already in use at \"foo2/foo3/\"") {
+		t.Fatalf("Found unexpected error %q", resp.Data["error"].(string))
+	}
 }
 
 func TestSystemBackend_remount_invalid(t *testing.T) {
@@ -786,7 +1013,10 @@ func TestSystemBackend_leases(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -833,7 +1063,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -882,7 +1115,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Generate multiple leases
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -893,7 +1129,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -933,7 +1172,10 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/bar")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -981,7 +1223,10 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1018,7 +1263,10 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1147,7 +1395,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1179,7 +1430,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1202,7 +1456,10 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1292,7 +1549,10 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1341,7 +1601,10 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

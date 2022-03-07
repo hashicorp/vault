@@ -4,12 +4,13 @@ import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 
-ENV['ember-cli-mirage'].handler = 'mfa';
-
 module('Acceptance | mfa', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  hooks.before(function () {
+    ENV['ember-cli-mirage'].handler = 'mfa';
+  });
   hooks.beforeEach(function () {
     this.select = async (select = 0, option = 1) => {
       const selector = `[data-test-mfa-select="${select}"]`;
@@ -17,9 +18,11 @@ module('Acceptance | mfa', function (hooks) {
       await fillIn(`${selector} select`, value);
     };
   });
+  hooks.after(function () {
+    ENV['ember-cli-mirage'].handler = null;
+  });
 
   const login = async (user) => {
-    // MfaHandler(server);
     await visit('/vault/auth');
     await fillIn('[data-test-select="auth-method"]', 'userpass');
     await fillIn('[data-test-username]', user);
@@ -131,5 +134,22 @@ module('Acceptance | mfa', function (hooks) {
     await fillIn('[data-test-mfa-passcode="1"]', 'test');
     await click('[data-test-mfa-validate]');
     didLogin(assert);
+  });
+
+  test('it should render unauthorized message for push failure', async function (assert) {
+    await login('mfa-j');
+    assert.dom('[data-test-auth-form]').doesNotExist('Auth form hidden when mfa fails');
+    assert.dom('[data-test-empty-state-title]').hasText('Unauthorized', 'Error title renders');
+    assert
+      .dom('[data-test-empty-state-subText]')
+      .hasText('PingId MFA validation failed', 'Error message from server renders');
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator.',
+        'Error description renders'
+      );
+    await click('[data-test-mfa-error] button');
+    assert.dom('[data-test-auth-form]').exists('Auth form renders after mfa error dismissal');
   });
 });

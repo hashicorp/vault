@@ -1,12 +1,14 @@
 package identity
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/totp"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -14,29 +16,45 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-var loginMFACoreConfig = &vault.CoreConfig{
-	CredentialBackends: map[string]logical.Factory{
-		"userpass": userpass.Factory,
-	},
-	LogicalBackends: map[string]logical.Factory{
-		"totp": totp.Factory,
-	},
-}
+func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
+	var noop *vault.NoopAudit
 
-func TestLoginMfaGenerateTOTPRoleTest(t *testing.T) {
-	cluster := vault.NewTestCluster(t, loginMFACoreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"totp": totp.Factory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+				noop = &vault.NoopAudit{
+					Config: config,
+				}
+				return noop, nil
+			},
+		},
+	},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+
 	cluster.Start()
 	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 
+	// Enable the audit backend
+	err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Mount the TOTP backend
 	mountInfo := &api.MountInput{
 		Type: "totp",
 	}
-	err := client.Sys().Mount("totp", mountInfo)
+	err = client.Sys().Mount("totp", mountInfo)
 	if err != nil {
 		t.Fatalf("failed to mount totp backend: %v", err)
 	}
@@ -252,6 +270,24 @@ func TestLoginMfaGenerateTOTPRoleTest(t *testing.T) {
 		})
 		if err != nil {
 			t.Fatalf("MFA failed: %v", err)
+		}
+
+		if secret.Auth == nil || secret.Auth.ClientToken == "" {
+			t.Fatalf("successful mfa validation did not return a client token")
+		}
+
+		if noop.Req == nil {
+			t.Fatalf("no request was logged in audit log")
+		}
+		var found bool
+		for _, req := range noop.Req {
+			if req.Path == "sys/mfa/validate" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("mfa/validate was not logged in audit log")
 		}
 
 		// check for login request expiration

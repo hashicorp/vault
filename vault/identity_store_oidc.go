@@ -683,6 +683,11 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	targetKeyName := d.Get("name").(string)
 
+	if targetKeyName == defaultKeyName {
+		return logical.ErrorResponse("deletion of key %q not allowed",
+			defaultKeyName), nil
+	}
+
 	i.oidcLock.Lock()
 
 	roleNames, err := i.roleNamesReferencingTargetKeyName(ctx, req, targetKeyName)

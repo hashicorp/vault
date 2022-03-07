@@ -62,19 +62,21 @@ export default class History extends Component {
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.getActivityResponse.byNamespace.map((namespace) => ({
-    name: namespace.label,
-    id: namespace.label,
-  }));
+  @tracked namespaceArray = this.getActivityResponse.byNamespace
+    ? this.getActivityResponse.byNamespace.map((namespace) => ({
+        name: namespace.label,
+        id: namespace.label,
+      }))
+    : [];
+  @tracked selectedAuthMethod = null;
+  @tracked authMethodOptions = [];
 
   // TEMPLATE MESSAGING
   @tracked noActivityDate = '';
   @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
   @tracked licenseStartIsCurrentMonth = this.args.model.activity?.isLicenseDateError || false;
-
-  @tracked selectedAuthMethod = null;
-  @tracked authMethodOptions = [];
+  @tracked errorObject = null;
 
   get versionText() {
     return this.version.isEnterprise
@@ -102,7 +104,11 @@ export default class History extends Component {
   }
 
   get hasAttributionData() {
-    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData && !this.selectedAuthMethod;
+    if (this.selectedAuthMethod) return false;
+    if (this.selectedNamespace) {
+      return this.authMethodOptions.length > 0;
+    }
+    return !!this.totalClientsData && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
   }
 
   get startTimeDisplay() {
@@ -207,7 +213,7 @@ export default class History extends Component {
         end_time: this.endTimeRequested,
       });
       if (response.id === 'no-data') {
-        // empty response is the only time we want to update the displayed date with the requested time
+        // empty response (204) is the only time we want to update the displayed date with the requested time
         this.startTimeFromResponse = this.startTimeRequested;
         this.noActivityDate = this.startTimeDisplay;
       } else {
@@ -232,6 +238,7 @@ export default class History extends Component {
         this.responseRangeDiffMessage = null;
       }
     } catch (e) {
+      this.errorObject = e;
       return e;
     } finally {
       this.isLoadingQuery = false;
@@ -248,6 +255,7 @@ export default class History extends Component {
     // value comes in as [namespace0]
     this.selectedNamespace = value;
     if (!value) {
+      this.authMethodOptions = [];
       // on clear, also make sure auth method is cleared
       this.selectedAuthMethod = null;
     } else {
