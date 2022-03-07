@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/logical"
+
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -96,12 +98,13 @@ type egpPath struct {
 // Policy is used to represent the policy specified by an ACL configuration.
 type Policy struct {
 	sentinelPolicy
-	Name      string       `hcl:"name"`
-	Paths     []*PathRules `hcl:"-"`
-	Raw       string
-	Type      PolicyType
-	Templated bool
-	namespace *namespace.Namespace
+	Name       string               `hcl:"name"`
+	Paths      []*PathRules         `hcl:"-"`
+	MountRules []*logical.MountRule `hcl:"-"`
+	Raw        string
+	Type       PolicyType
+	Templated  bool
+	namespace  *namespace.Namespace
 }
 
 // ShallowClone returns a shallow clone of the policy. This should not be used
@@ -111,6 +114,7 @@ func (p *Policy) ShallowClone() *Policy {
 		sentinelPolicy: p.sentinelPolicy,
 		Name:           p.Name,
 		Paths:          p.Paths,
+		MountRules:     p.MountRules,
 		Raw:            p.Raw,
 		Type:           p.Type,
 		Templated:      p.Templated,
@@ -256,6 +260,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	valid := []string{
 		"name",
 		"path",
+		"secret",
 	}
 	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
 		return nil, fmt.Errorf("failed to parse policy: %w", err)
@@ -276,8 +281,72 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 			return nil, fmt.Errorf("failed to parse policy: %w", err)
 		}
 	}
+	if o := list.Filter("secret"); len(o.Items) > 0 {
+		mrs, err := parseSecretStanzas(o)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse policy: %w", err)
+		}
+		p.MountRules = mrs
+	}
 
 	return &p, nil
+}
+
+func parseSecretStanzas(stanza *ast.ObjectList) ([]*logical.MountRule, error) {
+	var mountRules []*logical.MountRule
+	for _, item := range stanza.Items {
+		key := "secret"
+		if len(item.Keys) != 2 {
+			return nil, fmt.Errorf("expected two keys for mount rule")
+		}
+		mountTypeFlavour := item.Keys[0].Token.Value().(string)
+		pieces := strings.SplitN(mountTypeFlavour, ":", 2)
+		mountType := pieces[0]
+		var typeFlavour string
+		if len(pieces) > 1 {
+			typeFlavour = pieces[1]
+		}
+		mountPath := item.Keys[1].Token.Value().(string)
+
+		var list *ast.ObjectList
+		switch n := item.Val.(type) {
+		case *ast.ObjectList:
+			list = n
+		case *ast.ObjectType:
+			list = n.List
+		default:
+			return nil, multierror.Prefix(fmt.Errorf("unexpected type"), fmt.Sprintf("secret %q:", key))
+		}
+
+		mr := logical.MountRule{
+			MountKind:    "secret",
+			MountType:    mountType,
+			TypeFlavour:  typeFlavour,
+			MountPath:    mountPath,
+			Allow:        make(map[string][]string),
+			Capabilities: make([]string, 0),
+		}
+		for _, item := range list.Items {
+			innerKey := item.Keys[0].Token.Value().(string)
+			switch innerKey {
+			case "allow":
+				err := hcl.DecodeObject(&mr.Allow, item.Val)
+				if err != nil {
+					return nil, multierror.Prefix(fmt.Errorf("bad allow on line %d: %v", item.Assign.Line, err), fmt.Sprintf("secret %q:", key))
+				}
+			case "capabilities":
+				err := hcl.DecodeObject(&mr.Capabilities, item.Val)
+				if err != nil {
+					return nil, multierror.Prefix(fmt.Errorf("bad capabilities on line %d: %v", item.Assign.Line, err), fmt.Sprintf("secret %q:", key))
+				}
+
+			default:
+				return nil, multierror.Prefix(fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line), fmt.Sprintf("secret %q:", key))
+			}
+		}
+		mountRules = append(mountRules, &mr)
+	}
+	return mountRules, nil
 }
 
 func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group) error {

@@ -87,6 +87,20 @@ type Backend interface {
 	Type() BackendType
 }
 
+type MountRule struct {
+	MountKind    string   // secret or auth
+	MountType    string   // e.g. kv, approle
+	TypeFlavour  string   // e.g. key, metadata, role
+	MountPath    string   // expression (may have wildcard/glob) matching mounts by path
+	Capabilities []string // regular capabilities plus optional mount-specific ones
+	Allow        map[string][]string
+}
+
+type BackendWithMountPolicies interface {
+	Backend
+	ExpandPolicy(context.Context, string, []*MountRule) (string, error)
+}
+
 // BackendConfig is provided to the factory to initialize the backend
 type BackendConfig struct {
 	// View should not be stored, and should only be used for initialization

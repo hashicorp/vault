@@ -426,6 +426,19 @@ func (b *Backend) init() {
 			p.Pattern = p.Pattern + "$"
 		}
 		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
+		var ops []logical.Operation
+		for op := range p.Operations {
+			ops = append(ops, op)
+		}
+		for op := range p.Callbacks {
+			ops = append(ops, op)
+		}
+		// b.logger.Trace("initpath", "pattern", p.Pattern, "hasec", p.ExistenceCheck != nil, "ops", ops)
+		// Ignore unauth, root paths
+		// Single op which is update: assume pattern == name
+		// Two ops which are create, update, no EC: assume pattern == name
+		// Multi op, regex at end: assume last word of path is thing to CRUD
+		// Multi op, regex in middle: assume last word of path is thing to CRUD, belonging to thing identified by prefix
 	}
 }
 

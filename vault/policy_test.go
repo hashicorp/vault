@@ -494,3 +494,20 @@ path "foo/+*" {
 		t.Errorf("bad error: %s", err)
 	}
 }
+
+func TestPolicy_ParseMountPolicy(t *testing.T) {
+	p, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+secret "kv:key" "mykv" {
+	capabilities = ["read", "write"]
+    allow {
+        key_path = ["*"]
+    }
+}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.MountRules) != 1 {
+		t.Fatal("no mountrules found")
+	}
+}

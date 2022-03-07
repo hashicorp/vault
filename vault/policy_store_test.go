@@ -5,6 +5,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
+
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+
+	"github.com/hashicorp/vault/sdk/logical"
+
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -273,4 +279,96 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 		t.Fatalf("err: %v", err)
 	}
 	testLayeredACL(t, acl, ns)
+}
+
+func TestPolicyStore_MountPolicies(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	policy := `
+secret "kv:key" "mykv" {
+	capabilities = ["read", "create", "list"]
+    allow {
+        key_path = ["proj1/*"]
+    }
+}
+`
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/mykv")
+	req.ClientToken = root
+	req.Data["type"] = "kv"
+	req.Data["options"] = map[string]string{
+		"version": "2",
+	}
+	_, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policy/test")
+	req.ClientToken = root
+	req.Data["policy"] = policy
+	_, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.Data = map[string]interface{}{
+		"policies": []string{"test"},
+	}
+	req.ClientToken = root
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.Auth.ClientToken == "" {
+		t.Fatalf("expected a response from token creation, got: %#v", resp)
+	}
+	token := resp.Auth.ClientToken
+
+	req = logical.TestRequest(t, logical.CreateOperation, "mykv/data/proj1/foo")
+	req.ClientToken = token
+	val := map[string]interface{}{
+		"bar": "baz",
+	}
+	req.Data["data"] = val
+	_, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "mykv/data/proj1/foo")
+	req.ClientToken = token
+	resp, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := resp.Data["data"]
+	if diff := deep.Equal(data, val); len(diff) != 0 {
+		t.Fatal(diff)
+	}
+
+	// TODO this fails without the trailing slash
+	req = logical.TestRequest(t, logical.ListOperation, "mykv/metadata/proj1/")
+	req.ClientToken = token
+	resp, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := resp.Data["keys"]
+	if diff := deep.Equal(keys, []string{"foo"}); len(diff) != 0 {
+		t.Fatal(diff)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "mykv/data/proj1/foo")
+	req.ClientToken = token
+	req.Data["data"] = val
+	resp, err = core.HandleRequest(ctx, req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
 }

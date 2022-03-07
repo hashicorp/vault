@@ -2461,6 +2461,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			}
 			policy.Paths = p.Paths
 			policy.Templated = p.Templated
+			policy.MountRules = p.MountRules
 
 		case PolicyTypeRGP, PolicyTypeEGP:
 

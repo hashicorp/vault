@@ -355,6 +355,11 @@ func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
 }
 
 func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
+	err := ps.ExpandMountPolicies(ctx, p)
+	if err != nil {
+		return err
+	}
+	ps.core.logger.Trace("setPolicyInternal", "paths", fmt.Sprintf("%#v", p.Paths))
 	ps.modifyLock.Lock()
 	defer ps.modifyLock.Unlock()
 
@@ -858,4 +863,50 @@ func (ps *PolicyStore) sanitizeName(name string) string {
 
 func (ps *PolicyStore) cacheKey(ns *namespace.Namespace, name string) string {
 	return path.Join(ns.ID, name)
+}
+
+func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy) error {
+	if len(p.MountRules) == 0 {
+		return nil
+	}
+	ps.core.mountsLock.RLock()
+	defer ps.core.mountsLock.RUnlock()
+
+	for _, mr := range p.MountRules {
+		// TODO globbing
+		// TODO for auth mounts prepend "auth/" to path?
+		path := mr.MountPath
+		if !strings.HasSuffix(path, "/") {
+			path += "/"
+		}
+		entry := ps.core.router.MatchingMountEntry(ctx, path)
+		if entry == nil {
+			continue
+		}
+		if entry.Type != mr.MountType {
+			continue
+		}
+
+		backend := ps.core.router.MatchingBackend(ctx, path)
+		if backend == nil {
+			// this should never happen
+			continue
+		}
+
+		b, ok := backend.(logical.BackendWithMountPolicies)
+		if !ok {
+			continue
+		}
+		pathPolicy, err := b.ExpandPolicy(ctx, mr.MountPath, p.MountRules)
+		if err != nil {
+			return err
+		}
+		ep, err := ParseACLPolicy(p.namespace, pathPolicy)
+		ps.core.logger.Trace("expanded policy", "output", pathPolicy, "parseerr", err)
+		if err != nil {
+			return err
+		}
+		p.Paths = append(p.Paths, ep.Paths...)
+	}
+	return nil
 }
