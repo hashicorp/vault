@@ -50,7 +50,7 @@ const testHelper = require('./test-helper');
       testArgs.push(...filters);
     }
 
-    await testHelper.run('ember', testArgs, false);
+    await testHelper.run('ember', [...testArgs, ...process.argv.slice(2)], false);
   } catch (error) {
     console.log(error);
     process.exit(1);

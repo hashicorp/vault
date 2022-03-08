@@ -139,28 +139,30 @@ update-plugins:
 static-assets-dir:
 	@mkdir -p ./http/web_ui
 
-test-ember:
+install-ui-dependencies:
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
+
+test-ember: install-ui-dependencies
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test:oss
+
+test-ember-enos: install-ui-dependencies
+	@echo "--> Running ember tests with a real backend"
+	@cd ui && yarn run test:enos
 
 check-vault-in-path:
 	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
 		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
 		printf "Using Vault at %s:\n\$$ vault version\n%s\n" "$$VAULT_BIN" "$$(vault version)"
 
-ember-dist:
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+ember-dist: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
-ember-dist-dev:
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+ember-dist-dev: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build:dev
