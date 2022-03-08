@@ -838,6 +838,8 @@ func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*P
 		path := strings.TrimSuffix(pd.Path, "/+")
 		path = strings.TrimSuffix(path, "/*")
 		path = strings.ReplaceAll(path, "/", "-")
+		// TODO is this what we want generally?  works for approle...
+		path = strings.ReplaceAll(path, "-+-", "-")
 		switch {
 		case strutil.EquivalentSlices(pd.Operations, []string{"update"}),
 			strutil.EquivalentSlices(pd.Operations, []string{"create", "update"}) && !pd.HasExistenceCheck:

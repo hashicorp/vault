@@ -41,7 +41,18 @@ func (c *Sys) ListPolicies() ([]string, error) {
 }
 
 func (c *Sys) GetPolicy(name string) (string, error) {
+	return c.getPolicy(name, false)
+}
+
+func (c *Sys) GetCompiledPolicy(name string) (string, error) {
+	return c.getPolicy(name, true)
+}
+
+func (c *Sys) getPolicy(name string, compiled bool) (string, error) {
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
+	if compiled {
+		r.Params.Set("compiled", "true")
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

@@ -116,3 +116,65 @@ func TestApproleSecretId_NotWrapped(t *testing.T) {
 		t.Fatalf("WrappedAccessor unexpectedly set")
 	}
 }
+
+func TestApprole_MountPolicies(t *testing.T) {
+	var err error
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"approle": credAppRole.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	client := cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	err = client.Sys().EnableAuthWithOptions("myapprole", &api.EnableAuthOptions{
+		Type: "approle",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policy := `
+auth "approle" "myapprole" {
+	actions = ["create-role", "update-role", "update-role-secret-id"]
+    allow {
+        role = ["test-role-1"]
+    }
+}
+`
+	err = client.Sys().PutPolicy("mypolicy", policy)
+	require.NoError(t, err)
+
+	compiled, err := client.Sys().GetCompiledPolicy("mypolicy")
+	require.NoError(t, err)
+	t.Log(compiled)
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"mypolicy"},
+	})
+	require.NoError(t, err)
+	client.SetToken(secret.Auth.ClientToken)
+
+	_, err = client.Logical().Write("auth/myapprole/role/test-role-1", map[string]interface{}{
+		"name": "test-role-1",
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Write("/auth/myapprole/role/test-role-1/secret-id", map[string]interface{}{})
+	require.NoError(t, err)
+
+	if resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
+		t.Fatalf("WrappedAccessor unexpectedly set")
+	}
+}

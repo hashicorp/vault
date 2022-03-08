@@ -281,6 +281,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		"name",
 		"path",
 		"secret",
+		"auth",
 	}
 	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
 		return nil, fmt.Errorf("failed to parse policy: %w", err)
@@ -302,7 +303,14 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		}
 	}
 	if o := list.Filter("secret"); len(o.Items) > 0 {
-		mrs, err := parseSecretStanzas(o)
+		mrs, err := parseSecretStanzas("secret", o)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse policy: %w", err)
+		}
+		p.MountRules = mrs
+	}
+	if o := list.Filter("auth"); len(o.Items) > 0 {
+		mrs, err := parseSecretStanzas("auth", o)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse policy: %w", err)
 		}
@@ -312,10 +320,10 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	return &p, nil
 }
 
-func parseSecretStanzas(stanza *ast.ObjectList) ([]*logical.MountRule, error) {
+func parseSecretStanzas(mountKind string, stanza *ast.ObjectList) ([]*logical.MountRule, error) {
 	var mountRules []*logical.MountRule
 	for _, item := range stanza.Items {
-		key := "secret"
+		key := mountKind
 		if len(item.Keys) != 2 {
 			return nil, fmt.Errorf("expected two keys for mount rule")
 		}
@@ -327,6 +335,9 @@ func parseSecretStanzas(stanza *ast.ObjectList) ([]*logical.MountRule, error) {
 			typeFlavour = pieces[1]
 		}
 		mountPath := item.Keys[1].Token.Value().(string)
+		if mountKind == "auth" {
+			mountPath = "auth/" + mountPath
+		}
 
 		var list *ast.ObjectList
 		switch n := item.Val.(type) {
@@ -339,7 +350,7 @@ func parseSecretStanzas(stanza *ast.ObjectList) ([]*logical.MountRule, error) {
 		}
 
 		mr := logical.MountRule{
-			MountKind:   "secret",
+			MountKind:   mountKind,
 			MountType:   mountType,
 			TypeFlavour: typeFlavour,
 			MountPath:   mountPath,
