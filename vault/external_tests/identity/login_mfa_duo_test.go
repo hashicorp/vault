@@ -20,9 +20,9 @@ var identityMFACoreConfigDUO = &vault.CoreConfig{
 }
 
 var (
-	secret_key      = "oIiQkWhGZw3r5gV1cRSUQ9dwiUv4atW4vdTCx2v9"
-	integration_key = "DI6XBJ2S2VEDGW8KZ2BH"
-	api_hostname    = "api-52ae179c.duosecurity.com"
+	secret_key      = "<secret key for DUO>"
+	integration_key = "<integration key>"
+	api_hostname    = "<api hostname>"
 )
 
 func TestInteg_PolicyMFADUO(t *testing.T) {
