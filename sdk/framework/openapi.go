@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -199,7 +201,8 @@ var (
 	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                              // Path suffix patterns that will be stripped during cleaning
 	nonWordRe        = regexp.MustCompile(`[^\w]+`)                               // Match a sequence of non-word characters
 	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                              // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)                // Capture required parameters, e.g. "(?P<name>regex)"
+	pathFieldsGlobRe = regexp.MustCompile(`{(\w+)\*}`)                            // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>([^)]*)\)?`)              // Capture required parameters, e.g. "(?P<name>regex)"
 	wsRe             = regexp.MustCompile(`\s+`)                                  // Match whitespace, to be compressed during cleaning
 )
 
@@ -225,7 +228,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 	}
 
 	// Convert optional parameters into distinct patterns to be process independently.
-	paths := expandPattern(p.Pattern)
+	paths := expandPatternOpenAPI(p.Pattern)
 
 	for _, path := range paths {
 		// Construct a top level PathItem which will be populated as the path is processed.
@@ -470,9 +473,9 @@ func specialPathMatch(path string, specialPaths []string) bool {
 	return false
 }
 
-// expandPattern expands a regex pattern by generating permutations of any optional parameters
+// expandPatternOpenAPI expands a regex pattern by generating permutations of any optional parameters
 // and changing named parameters into their {openapi} equivalents.
-func expandPattern(pattern string) []string {
+func expandPatternOpenAPI(pattern string) []string {
 	var paths []string
 
 	// Determine if the pattern starts with an alternation for multiple roots
@@ -481,7 +484,7 @@ func expandPattern(pattern string) []string {
 	if len(match) == 3 {
 		var expandedRoots []string
 		for _, root := range strings.Split(match[1], "|") {
-			expandedRoots = append(expandedRoots, expandPattern(root+match[2])...)
+			expandedRoots = append(expandedRoots, expandPatternOpenAPI(root+match[2])...)
 		}
 		return expandedRoots
 	}
@@ -540,8 +543,11 @@ func expandPattern(pattern string) []string {
 		result := reqdRe.FindAllStringSubmatch(path, -1)
 		if result != nil {
 			for _, p := range result {
-				par := p[1]
-				path = strings.Replace(path, p[0], fmt.Sprintf("{%s}", par), 1)
+				paramName := p[1]
+				if p[2] == ".*" {
+					paramName += "*"
+				}
+				path = strings.Replace(path, p[0], fmt.Sprintf("{%s}", paramName), 1)
 			}
 		}
 		// Final cleanup
@@ -621,7 +627,7 @@ func cleanString(s string) string {
 }
 
 // splitFields partitions fields into path and body groups
-// The input pattern is expected to have been run through expandPattern,
+// The input pattern is expected to have been run through expandPatternOpenAPI,
 // with paths parameters denotes in {braces}.
 func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields, bodyFields map[string]*FieldSchema) {
 	pathFields = make(map[string]*FieldSchema)
@@ -724,4 +730,126 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 			oasOperation.OperationID = opID
 		}
 	}
+}
+
+type OpPath struct {
+	Operation string
+	Path      string
+}
+
+type BackendSummary struct {
+	PathDescriptions []*PathDescription `json:"path_descriptions"`
+	CapabilityToPath map[string]OpPath  `json:"capability_to_path"`
+}
+
+type PathDescription struct {
+	// Name describes the thing the path is concerned about or does.  For paths
+	// supporting CRUD-style operations, this is just a noun.  For single-purpose
+	// paths that just support POST, this is a verb-noun phrase.
+	Name string `json:"name,omitempty"`
+	// Path give the path, with variable parts replaced with '+'
+	Path              string            `json:"path"`
+	PathParamNames    []string          `json:"path_param_names,omitempty"`
+	Operations        []string          `json:"operations"`
+	HasExistenceCheck bool              `json:"has_existence_check,omitempty"`
+	Capabilities      map[string]string `json:"capabilities"`
+}
+
+// describePaths returns the authed path descriptions used for mount policies.
+func describePaths(backend *Backend) (*BackendSummary, error) {
+	bs := &BackendSummary{
+		CapabilityToPath: map[string]OpPath{},
+	}
+	for _, p := range backend.Paths {
+		descs, err := describePath(backend.Logger(), p, backend.SpecialPaths())
+		if err != nil {
+			return nil, err
+		}
+		bs.PathDescriptions = append(bs.PathDescriptions, descs...)
+		for _, desc := range descs {
+			for capname, op := range desc.Capabilities {
+				bs.CapabilityToPath[capname] = OpPath{Path: desc.Path, Operation: op}
+			}
+		}
+	}
+
+	return bs, nil
+}
+
+// describePath parses a framework.Path into a list of PathDescription.
+func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*PathDescription, error) {
+	// var sudoPaths []string
+	var unauthPaths []string
+
+	if specialPaths != nil {
+		// sudoPaths = specialPaths.Root
+		unauthPaths = specialPaths.Unauthenticated
+	}
+
+	// TODO not sure why dups are being returned
+	paths := strutil.RemoveDuplicates(expandPatternOpenAPI(p.Pattern), false)
+	logger.Trace("describePath", "expanded", paths)
+
+	var pds []*PathDescription
+	for _, path := range paths {
+		// pi.Sudo = specialPathMatch(path, sudoPaths)
+		if specialPathMatch(path, unauthPaths) {
+			// Ignore unauthenticated paths as they're not of interest to policies
+			continue
+		}
+
+		// If the newer style Operations map isn't defined, create one from the legacy fields.
+		operations := p.Operations
+		if operations == nil {
+			operations = make(map[logical.Operation]OperationHandler)
+
+			for opType := range p.Callbacks {
+				operations[opType] = &PathOperation{}
+			}
+		}
+
+		// TODO handle *?
+		pathstr := pathFieldsRe.ReplaceAllString(path, "+")
+		pathstr = pathFieldsGlobRe.ReplaceAllString(pathstr, "*")
+		pd := &PathDescription{
+			HasExistenceCheck: p.ExistenceCheck != nil,
+			Path:              pathstr,
+			Capabilities:      make(map[string]string),
+		}
+		matches := pathFieldsRe.FindAllStringSubmatchIndex(path, -1)
+		for _, pair := range matches {
+			str := path[pair[0]+1 : pair[1]-1]
+			pd.PathParamNames = append(pd.PathParamNames, str)
+		}
+
+		// Process each supported operation by building up an Operation object
+		// with descriptions, properties and examples from the framework.Path data.
+		for opType, opHandler := range operations {
+			props := opHandler.Properties()
+			if props.Unpublished {
+				continue
+			}
+
+			pd.Operations = append(pd.Operations, string(opType))
+		}
+		// Think "help" /.*/ paths
+		if len(pd.Operations) == 0 {
+			continue
+		}
+		path := strings.TrimSuffix(pd.Path, "/+")
+		path = strings.TrimSuffix(path, "/*")
+		path = strings.ReplaceAll(path, "/", "-")
+		switch {
+		case strutil.EquivalentSlices(pd.Operations, []string{"update"}),
+			strutil.EquivalentSlices(pd.Operations, []string{"create", "update"}) && !pd.HasExistenceCheck:
+			pd.Capabilities[path] = "update"
+		default:
+			for _, op := range pd.Operations {
+				pd.Capabilities[fmt.Sprintf("%s-%s", op, path)] = op
+			}
+		}
+		pds = append(pds, pd)
+	}
+
+	return pds, nil
 }

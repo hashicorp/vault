@@ -910,6 +910,15 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 		},
 		{
+			Pattern: "internal/specs/pathdescr",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalPathDescrs,
+					Summary:  "Generate description document of all mounted paths.",
+				},
+			},
+		},
+		{
 			Pattern: "internal/ui/feature-flags",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{

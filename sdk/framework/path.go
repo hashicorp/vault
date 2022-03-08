@@ -307,7 +307,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 
-		return logical.HelpResponse(help, nil, doc), nil
+		return logical.HelpResponse(help, nil, doc, nil), nil
 	}
 }
 

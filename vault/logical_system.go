@@ -4014,6 +4014,75 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalPathDescrs(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Limit output to authorized paths
+	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
+	if err != nil {
+		return nil, err
+	}
+
+	doc := map[string]*framework.BackendSummary{}
+	procMountGroup := func(group, mountPrefix string) error {
+		for mount, detailsRaw := range resp.Data[group].(map[string]interface{}) {
+			backend := b.Core.router.MatchingBackend(ctx, mountPrefix+mount)
+			details := detailsRaw.(map[string]interface{})
+
+			if backend == nil {
+				continue
+			}
+
+			req := &logical.Request{
+				Operation: logical.HelpOperation,
+				Storage:   req.Storage,
+			}
+
+			resp, err := backend.HandleRequest(ctx, req)
+			if err != nil {
+				return err
+			}
+
+			var pathds *framework.BackendSummary
+
+			// Normalize response type, which will be different if received
+			// from an external plugin.
+			switch v := resp.Data["paths"].(type) {
+			case *framework.BackendSummary:
+				pathds = v
+			default:
+				continue
+			}
+
+			mountType := details["type"].(string)
+			// mountOpts := details["options"].(string)
+			// Merge backend paths with existing document
+			doc[mountType] = pathds
+		}
+		return nil
+	}
+
+	if err := procMountGroup("secret", ""); err != nil {
+		return nil, err
+	}
+	if err := procMountGroup("auth", "auth/"); err != nil {
+		return nil, err
+	}
+
+	buf, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	resp = &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)

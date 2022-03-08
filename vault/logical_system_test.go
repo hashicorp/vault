@@ -4521,3 +4521,45 @@ func TestProcessLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestSystemBackend_PathDescrs(t *testing.T) {
+	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, b, root := testCoreSystemBackend(t)
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass1/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+	err = c.enableCredential(namespace.RootContext(nil), userpassMe)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	var oapi map[string]interface{}
+
+	// Ensure no paths are reported if there is no token
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/pathdescr")
+	req.ClientToken = root
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	body := resp.Data["http_raw_body"].([]byte)
+	t.Log(string(body))
+	err = jsonutil.DecodeJSON(body, &oapi)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	t.Log(oapi)
+
+	//exp := map[string]interface{}{}
+	//if diff := deep.Equal(oapi, exp); diff != nil {
+	//	t.Fatal(diff)
+	//}
+}
