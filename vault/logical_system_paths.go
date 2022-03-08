@@ -1598,6 +1598,10 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
 				},
+				"compiled": {
+					Type:        framework.TypeBool,
+					Description: "Get the compiled version of mount policies",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -140,6 +141,25 @@ type PathRules struct {
 	RequiredParametersHCL []string                 `hcl:"required_parameters"`
 	MFAMethodsHCL         []string                 `hcl:"mfa_methods"`
 	ControlGroupHCL       *ControlGroupHCL         `hcl:"control_group"`
+}
+
+func (r PathRules) String() string {
+	// TODO ignores things like allowed/denied params, mfa, ctrlgroups
+	var buf bytes.Buffer
+	path := r.Path
+	if r.IsPrefix {
+		path += "*"
+	}
+	buf.WriteString(fmt.Sprintf(`path "%s" {`+"\n", path))
+	buf.WriteString(`  capabilities = [`)
+	var caps []string
+	for _, c := range r.Capabilities {
+		caps = append(caps, fmt.Sprintf(`"%s"`, c))
+	}
+	buf.WriteString(strings.Join(caps, ", "))
+	buf.WriteString("]\n")
+	buf.WriteString("}\n")
+	return buf.String()
 }
 
 type ControlGroupHCL struct {

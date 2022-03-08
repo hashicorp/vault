@@ -326,12 +326,21 @@ secret "kv" "mykv" {
 		t.Fatal(err)
 	}
 
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/policy/test")
+	req.ClientToken = root
+	req.Data["compiled"] = true
+	resp, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(resp.Data["rules"])
+
 	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
 	req.Data = map[string]interface{}{
 		"policies": []string{"test"},
 	}
 	req.ClientToken = root
-	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}

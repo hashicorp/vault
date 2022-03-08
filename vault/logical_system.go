@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -2384,6 +2385,7 @@ func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.Oper
 func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
+		compiled := data.Get("compiled").(bool)
 
 		policy, err := b.Core.policyStore.GetPolicy(ctx, name, policyType)
 		if err != nil {
@@ -2402,10 +2404,14 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 			respDataPolicyName = "policy"
 		}
 
+		body := policy.Raw
+		if compiled {
+			body = stringPolicyPaths(policy.Paths)
+		}
 		resp := &logical.Response{
 			Data: map[string]interface{}{
 				"name":             policy.Name,
-				respDataPolicyName: policy.Raw,
+				respDataPolicyName: body,
 			},
 		}
 
@@ -2416,6 +2422,15 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 
 		return resp, nil
 	}
+}
+
+func stringPolicyPaths(paths []*PathRules) string {
+	var buf bytes.Buffer
+	for _, path := range paths {
+		buf.WriteString(path.String())
+		buf.WriteString("\n")
+	}
+	return buf.String()
 }
 
 // handlePoliciesSet handles the "/sys/policy/<name>" and "/sys/policies/<type>/<name>" endpoints to set a policy
