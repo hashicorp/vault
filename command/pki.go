@@ -1,8 +1,7 @@
 package command
 
 import (
-	"fmt"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/pkicli"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -36,20 +35,27 @@ Usage: vault pki <subcommand> [options] [args]
 }
 
 func (c *PKICommand) Run(args []string) int {
+	//c.testCreateRoot()
+	//c.testCreateIntermediate()
+	//return 0
 	return cli.RunResultHelp
 }
 
 func (c *PKICommand) testCreateRoot() int {
-	params := pkiCreateRootParameters{
-		path: "pki-root",
-		maxLeaseTTL: "24h",
-	}
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
 	}
-	ops := &pkiOps{client: client}
-	_, err = ops.createRoot(params)
+	ops := pkicli.NewOperations(client)
+
+	vaultAddress := "http://localhost:8200"  // TODO: how to get the address?
+	_, err = ops.CreateRoot("pki-root", map[string]interface{}{
+		"max_lease_ttl": "24h",
+		"common_name": "example.com",
+		"ttl": "87600h",
+		"issuing_certificates": vaultAddress + "/v1/pki/ca",
+		"crl_distribution_points": vaultAddress + "/v1/pki/crl",
+	})
 	if err != nil {
 		c.UI.Error(err.Error())
 	}
@@ -57,105 +63,21 @@ func (c *PKICommand) testCreateRoot() int {
 	return 0
 }
 
-type pkiOperations interface {
-	createRoot(params pkiCreateRootParameters) (*pkiCreateRootResponse, error)
-	createIntermediate(params pkiCreateIntermediateParameters) (*pkiCreateIntermediateResponse, error)
-}
-
-type pkiCreateRootParameters struct {
-	path        string
-	maxLeaseTTL string
-	commonName  string
-	ttl         string
-	// etc.
-}
-
-type pkiCreateRootResponse struct {
-	certificate string
-}
-
-type pkiCreateIntermediateParameters struct {
-	path        string
-	maxLeaseTTL string
-	commonName  string
-	ttl         string
-	// etc.
-}
-
-type pkiCreateIntermediateResponse struct {
-	// TODO
-}
-
-var _ pkiOperations = (*pkiOps)(nil)
-
-type pkiOps struct {
-	client *api.Client
-}
-
-func (p pkiOps) createRoot(params pkiCreateRootParameters) (*pkiCreateRootResponse, error) {
-
-	err := p.secretsEnable(params.path, params.path + " root CA", params.maxLeaseTTL)
+func (c *PKICommand) testCreateIntermediate() int {
+	client, err := c.Client()
 	if err != nil {
-		return nil, err
+		c.UI.Error(err.Error())
 	}
+	ops := pkicli.NewOperations(client)
 
-	s, err := p.rootGenerate(params)
-	cert := s.Data["certificate"]
+	_, err = ops.CreateIntermediate("pki-root", "pki_int", map[string]interface{}{
+		"max_lease_ttl": "24h",
+		"common_name": "example.com Intermediate Authority",
+		"ttl": "43800h",
+	})
 	if err != nil {
-		return nil, err
+		c.UI.Error(err.Error())
 	}
 
-	err = p.configUrls(params)
-	if err != nil {
-		// FIXME(victorr): should not really return nil here
-		return nil, err
-	}
-
-	//fmt.Println(cert)
-	r := &pkiCreateRootResponse{
-		certificate: cert.(string),
-	}
-	return r, nil
-}
-
-func (p pkiOps) createIntermediate(params pkiCreateIntermediateParameters) (*pkiCreateIntermediateResponse, error) {
-	panic("implement me")
-}
-
-func (p pkiOps) secretsEnable(mountPath string, desrcription string, maxLeaseTTL string) error {
-	// https://www.vaultproject.io/api-docs/system/mounts#enable-secrets-engine
-	data := map[string]interface{}{
-		"path": sanitizePath(mountPath),
-		"description": desrcription,
-		"type": "pki",
-	}
-	if maxLeaseTTL != "" {
-		data["config"] = map[string]interface{} {
-			"max_lease_ttl": maxLeaseTTL,
-		}
-	}
-	path := sanitizePath(fmt.Sprintf("sys/mounts/%s", mountPath))
-	_, err := p.client.Logical().Write(path, data)
-
-	return err
-}
-
-// Returns a secret with keys: certificate, expiration (number), issuing_ca, serial_number.
-func (p pkiOps) rootGenerate(params pkiCreateRootParameters) (*api.Secret, error) {
-	// https://www.vaultproject.io/api/secret/pki#generate-root
-
-	data := map[string]interface{}{
-		"common_name": params.commonName,
-		"ttl": params.ttl,
-	}
-	path := sanitizePath(fmt.Sprintf("%s/root/generate/internal", params.path))
-
-	return p.client.Logical().Write(path, data)
-}
-
-func (p pkiOps) configUrls(params pkiCreateRootParameters) error {
-	// https://www.vaultproject.io/api/secret/pki#set-urls
-
-	// TODO
-	return nil
+	return 0
 }
