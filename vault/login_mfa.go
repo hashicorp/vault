@@ -252,16 +252,6 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		return logical.ErrorResponse("request namespace does not match method namespace"), nil
 	}
 
-	accessorRaw, ok := d.GetOk("mount_accessor")
-	if ok {
-		accessor := accessorRaw.(string)
-		validMount := i.mfaBackend.Core.router.ValidateMountByAccessor(accessor)
-		if validMount == nil {
-			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", accessor)), nil
-		}
-		mConfig.MountAccessor = accessor
-	}
-
 	mConfig.Type = methodType
 	usernameRaw, ok := d.GetOk("username_format")
 	if ok {
@@ -276,27 +266,18 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		}
 
 	case mfaMethodTypeOkta:
-		if mConfig.MountAccessor == "" {
-			return logical.ErrorResponse(fmt.Sprintf("mfa type %q requires a %q parameter", methodType, "mount_accessor")), nil
-		}
 		err = parseOktaConfig(mConfig, d)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
 	case mfaMethodTypeDuo:
-		if mConfig.MountAccessor == "" {
-			return logical.ErrorResponse(fmt.Sprintf("mfa type %q requires a %q parameter", methodType, "mount_accessor")), nil
-		}
 		err = parseDuoConfig(mConfig, d)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
 	case mfaMethodTypePingID:
-		if mConfig.MountAccessor == "" {
-			return logical.ErrorResponse(fmt.Sprintf("mfa type %q requires a %q parameter", methodType, "mount_accessor")), nil
-		}
 		err = parsePingIDConfig(mConfig, d)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -1402,20 +1383,19 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		return fmt.Errorf("MFA method configuration not present")
 	}
 
-	var alias *identity.Alias
 	var finalUsername string
 	switch mConfig.Type {
 	case mfaMethodTypeDuo, mfaMethodTypeOkta, mfaMethodTypePingID:
-		for _, entry := range entity.Aliases {
-			if mConfig.MountAccessor == entry.MountAccessor {
-				alias = entry
-				break
+		if mConfig.UsernameFormat == "" {
+			finalUsername = entity.Name
+		} else {
+			username := mConfig.UsernameFormat
+			username = strings.Replace(username, "{{entity.name}}", entity.Name, -1)
+			for k, v := range entity.Metadata {
+				username = strings.Replace(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v, -1)
 			}
+			finalUsername = username
 		}
-		if alias == nil {
-			return fmt.Errorf("could not find alias in entity matching the MFA's mount accessor")
-		}
-		finalUsername = formatUsername(mConfig.UsernameFormat, alias, entity)
 	}
 
 	switch mConfig.Type {
