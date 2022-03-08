@@ -61,10 +61,9 @@ elRplAzrMF4=
     assert.dom(SELECTORS.issueDate).exists('displays issue date');
     assert.dom(SELECTORS.expiryDate).exists('displays expiration date');
     assert.dom(SELECTORS.issuingCa).exists('displays masked issuing CA');
-    assert.dom(SELECTORS.serialNumber).exists('displays serial number');
-    assert.dom(SELECTORS.csr).exists('displays masked CSR');
-    assert.dom(SELECTORS.caChain).exists('displays masked CA chain');
     assert.dom(SELECTORS.privateKey).exists('displays masked private key');
+    assert.dom(SELECTORS.serialNumber).exists('displays serial number');
+    assert.dom(SELECTORS.caChain).doesNotExist('does not display empty masked CA chain');
 
     await generatePage.back();
     await settled();
