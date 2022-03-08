@@ -739,7 +739,7 @@ type OpPath struct {
 
 type BackendSummary struct {
 	PathDescriptions []*PathDescription `json:"path_descriptions"`
-	CapabilityToPath map[string]OpPath  `json:"capability_to_path"`
+	ActionToPath     map[string]OpPath  `json:"action_to_path"`
 }
 
 type PathDescription struct {
@@ -752,13 +752,13 @@ type PathDescription struct {
 	PathParamNames    []string          `json:"path_param_names,omitempty"`
 	Operations        []string          `json:"operations"`
 	HasExistenceCheck bool              `json:"has_existence_check,omitempty"`
-	Capabilities      map[string]string `json:"capabilities"`
+	Actions           map[string]string `json:"actions"`
 }
 
 // describePaths returns the authed path descriptions used for mount policies.
 func describePaths(backend *Backend) (*BackendSummary, error) {
 	bs := &BackendSummary{
-		CapabilityToPath: map[string]OpPath{},
+		ActionToPath: map[string]OpPath{},
 	}
 	for _, p := range backend.Paths {
 		descs, err := describePath(backend.Logger(), p, backend.SpecialPaths())
@@ -767,8 +767,8 @@ func describePaths(backend *Backend) (*BackendSummary, error) {
 		}
 		bs.PathDescriptions = append(bs.PathDescriptions, descs...)
 		for _, desc := range descs {
-			for capname, op := range desc.Capabilities {
-				bs.CapabilityToPath[capname] = OpPath{Path: desc.Path, Operation: op}
+			for action, op := range desc.Actions {
+				bs.ActionToPath[action] = OpPath{Path: desc.Path, Operation: op}
 			}
 		}
 	}
@@ -788,7 +788,6 @@ func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*P
 
 	// TODO not sure why dups are being returned
 	paths := strutil.RemoveDuplicates(expandPatternOpenAPI(p.Pattern), false)
-	logger.Trace("describePath", "expanded", paths)
 
 	var pds []*PathDescription
 	for _, path := range paths {
@@ -814,7 +813,7 @@ func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*P
 		pd := &PathDescription{
 			HasExistenceCheck: p.ExistenceCheck != nil,
 			Path:              pathstr,
-			Capabilities:      make(map[string]string),
+			Actions:           make(map[string]string),
 		}
 		matches := pathFieldsRe.FindAllStringSubmatchIndex(path, -1)
 		for _, pair := range matches {
@@ -842,13 +841,22 @@ func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*P
 		switch {
 		case strutil.EquivalentSlices(pd.Operations, []string{"update"}),
 			strutil.EquivalentSlices(pd.Operations, []string{"create", "update"}) && !pd.HasExistenceCheck:
-			pd.Capabilities[path] = "update"
+			pd.Actions[path] = "update"
 		default:
 			for _, op := range pd.Operations {
-				pd.Capabilities[fmt.Sprintf("%s-%s", op, path)] = op
+				fullop := op
+				if p.Noun != "" {
+					fullop += "-" + p.Noun
+				}
+				if path != ".*" && path != "*" {
+					pd.Actions[fmt.Sprintf("%s-%s", fullop, path)] = op
+				} else {
+					pd.Actions[fullop] = op
+				}
 			}
 		}
 		pds = append(pds, pd)
+		logger.Trace("describePath", "expanded", path, "pd", pd)
 	}
 
 	return pds, nil

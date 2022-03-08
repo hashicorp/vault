@@ -1,12 +1,16 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"path"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
@@ -357,6 +361,7 @@ func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
 func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 	err := ps.ExpandMountPolicies(ctx, p)
 	if err != nil {
+		ps.core.logger.Error("ExpandMountPolicies ", "error", err, "policy", p.MountRules)
 		return err
 	}
 	ps.core.logger.Trace("setPolicyInternal", "paths", fmt.Sprintf("%#v", p.Paths))
@@ -893,14 +898,32 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy) error
 			continue
 		}
 
-		b, ok := backend.(logical.BackendWithMountPolicies)
-		if !ok {
-			continue
+		helpreq := &logical.Request{
+			Operation: logical.HelpOperation,
 		}
-		pathPolicy, err := b.ExpandPolicy(ctx, mr.MountPath, p.MountRules)
+		resp, err := backend.HandleRequest(ctx, helpreq)
 		if err != nil {
 			return err
 		}
+		if resp == nil || resp.Data["paths"] == nil {
+			return fmt.Errorf("unable to discover mount actions for policies: %w", err)
+		}
+		bs, ok := resp.Data["paths"].(*framework.BackendSummary)
+		if !ok {
+			return fmt.Errorf("unable to discover mount actions for policies: no backend summary found in help output")
+		}
+		pathPolicy, err := expandMountPolicy(mr, bs.ActionToPath)
+		if err != nil {
+			return err
+		}
+		//b, ok := backend.(logical.BackendWithMountPolicies)
+		//if !ok {
+		//	continue
+		//}
+		//pathPolicy, err := b.ExpandPolicy(ctx, mr.MountPath, p.MountRules)
+		//if err != nil {
+		//	return err
+		//}
 		ep, err := ParseACLPolicy(p.namespace, pathPolicy)
 		ps.core.logger.Trace("expanded policy", "output", pathPolicy, "parseerr", err)
 		if err != nil {
@@ -909,4 +932,34 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy) error
 		p.Paths = append(p.Paths, ep.Paths...)
 	}
 	return nil
+}
+
+func expandMountPolicy(rule *logical.MountRule, actions map[string]framework.OpPath) (string, error) {
+	capsByPath := make(map[string][]logical.Operation)
+	for _, ruleAction := range rule.Actions {
+		opPath, ok := actions[ruleAction]
+		if !ok {
+			return "", fmt.Errorf("unknown action %q", ruleAction)
+		}
+		capsByPath[opPath.Path] = append(capsByPath[opPath.Path], logical.Operation(opPath.Operation))
+	}
+	var paths []string
+	for path := range capsByPath {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	var buf bytes.Buffer
+	for _, path := range paths {
+		buf.WriteString(fmt.Sprintf(`path "%s/%s" {`+"\n", rule.MountPath, path))
+		buf.WriteString(`  capabilities = [`)
+		for _, c := range capsByPath[path] {
+			buf.WriteString(fmt.Sprintf(`"%s", `, c))
+		}
+		buf.Truncate(buf.Len() - 2)
+		buf.WriteString("]\n")
+		buf.WriteString("}\n\n")
+	}
+
+	return buf.String(), nil
 }

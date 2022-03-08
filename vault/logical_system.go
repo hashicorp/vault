@@ -2477,6 +2477,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 
 		// Update the policy
 		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
+			b.Core.logger.Error("SetPolicy ", "error", err, "policy", policy)
 			return handleError(err)
 		}
 		return resp, nil

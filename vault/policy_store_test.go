@@ -281,18 +281,26 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 	testLayeredACL(t, acl, ns)
 }
 
-func TestPolicyStore_MountPolicies(t *testing.T) {
+func TestPolicyStore_MountPolicies_KVv1(t *testing.T) {
+	testPolicyStore_MountPolicies_KV(t, false)
+}
+
+func TestPolicyStore_MountPolicies_KVv2(t *testing.T) {
+	testPolicyStore_MountPolicies_KV(t, true)
+}
+
+func testPolicyStore_MountPolicies_KV(t *testing.T, kvv2 bool) {
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
-			"kv": kv.VersionedKVFactory,
+			"kv": kv.Factory,
 		},
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	policy := `
-secret "kv:key" "mykv" {
-	capabilities = ["read", "create", "list"]
+secret "kv" "mykv" {
+	actions = ["read-data", "create-data", "list-data"]
     allow {
-        key_path = ["proj1/*"]
+        path = ["proj1/*"]
     }
 }
 `
@@ -300,8 +308,10 @@ secret "kv:key" "mykv" {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/mykv")
 	req.ClientToken = root
 	req.Data["type"] = "kv"
-	req.Data["options"] = map[string]string{
-		"version": "2",
+	if kvv2 {
+		req.Data["options"] = map[string]string{
+			"version": "2",
+		}
 	}
 	_, err := core.HandleRequest(ctx, req)
 	if err != nil {
@@ -353,7 +363,7 @@ secret "kv:key" "mykv" {
 	}
 
 	// TODO this fails without the trailing slash
-	req = logical.TestRequest(t, logical.ListOperation, "mykv/metadata/proj1/")
+	req = logical.TestRequest(t, logical.ListOperation, "mykv/data/proj1/")
 	req.ClientToken = token
 	resp, err = core.HandleRequest(ctx, req)
 	if err != nil {
@@ -364,6 +374,7 @@ secret "kv:key" "mykv" {
 		t.Fatal(diff)
 	}
 
+	// We should have right to Create but not to Update
 	req = logical.TestRequest(t, logical.UpdateOperation, "mykv/data/proj1/foo")
 	req.ClientToken = token
 	req.Data["data"] = val

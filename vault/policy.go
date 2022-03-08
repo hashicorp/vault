@@ -319,12 +319,12 @@ func parseSecretStanzas(stanza *ast.ObjectList) ([]*logical.MountRule, error) {
 		}
 
 		mr := logical.MountRule{
-			MountKind:    "secret",
-			MountType:    mountType,
-			TypeFlavour:  typeFlavour,
-			MountPath:    mountPath,
-			Allow:        make(map[string][]string),
-			Capabilities: make([]string, 0),
+			MountKind:   "secret",
+			MountType:   mountType,
+			TypeFlavour: typeFlavour,
+			MountPath:   mountPath,
+			Allow:       make(map[string][]string),
+			Actions:     make([]string, 0),
 		}
 		for _, item := range list.Items {
 			innerKey := item.Keys[0].Token.Value().(string)
@@ -334,8 +334,8 @@ func parseSecretStanzas(stanza *ast.ObjectList) ([]*logical.MountRule, error) {
 				if err != nil {
 					return nil, multierror.Prefix(fmt.Errorf("bad allow on line %d: %v", item.Assign.Line, err), fmt.Sprintf("secret %q:", key))
 				}
-			case "capabilities":
-				err := hcl.DecodeObject(&mr.Capabilities, item.Val)
+			case "actions":
+				err := hcl.DecodeObject(&mr.Actions, item.Val)
 				if err != nil {
 					return nil, multierror.Prefix(fmt.Errorf("bad capabilities on line %d: %v", item.Assign.Line, err), fmt.Sprintf("secret %q:", key))
 				}
@@ -526,7 +526,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 					}
 
 					// Ensure that configured ControlledCapabilities for factor are a subset of the
-					// Capabilities of the policy.
+					// Actions of the policy.
 					if len(factor.ControlledCapabilities) > 0 {
 						var found bool
 						for _, controlledCapability := range factor.ControlledCapabilities {

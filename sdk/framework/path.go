@@ -116,6 +116,7 @@ type Path struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
+	Noun         string
 }
 
 // OperationHandler defines and describes a specific operation handler.
