@@ -391,4 +391,13 @@ secret "kv" "mykv" {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+
+	// We shouldn't be allowed to Create in proj2
+	req = logical.TestRequest(t, logical.CreateOperation, "mykv/data/proj2/foo")
+	req.ClientToken = token
+	req.Data["data"] = val
+	_, err = core.HandleRequest(ctx, req)
+	if err == nil {
+		t.Fatal("expected err on proj2")
+	}
 }

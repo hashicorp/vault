@@ -149,7 +149,7 @@ func TestApprole_MountPolicies(t *testing.T) {
 auth "approle" "myapprole" {
 	actions = ["create-role", "update-role", "update-role-secret-id"]
     allow {
-        role = ["test-role-1"]
+        role_name = ["test-role-1"]
     }
 }
 `
@@ -177,4 +177,9 @@ auth "approle" "myapprole" {
 	if resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
 		t.Fatalf("WrappedAccessor unexpectedly set")
 	}
+
+	_, err = client.Logical().Write("auth/myapprole/role/test-role-2", map[string]interface{}{
+		"name": "test-role-1",
+	})
+	require.Error(t, err)
 }

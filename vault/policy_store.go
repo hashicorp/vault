@@ -936,12 +936,16 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy) error
 
 func expandMountPolicy(rule *logical.MountRule, actions map[string]framework.OpPath) (string, error) {
 	capsByPath := make(map[string][]logical.Operation)
+	paramsByPath := make(map[string][]string)
+	// Lookup each action specified in the mount rule to get the path+op for each.
 	for _, ruleAction := range rule.Actions {
 		opPath, ok := actions[ruleAction]
 		if !ok {
 			return "", fmt.Errorf("unknown action %q", ruleAction)
 		}
 		capsByPath[opPath.Path] = append(capsByPath[opPath.Path], logical.Operation(opPath.Operation))
+		// TODO they ought to be the same for each, should we verify?
+		paramsByPath[opPath.Path] = opPath.PathParams
 	}
 	var paths []string
 	for path := range capsByPath {
@@ -951,7 +955,39 @@ func expandMountPolicy(rule *logical.MountRule, actions map[string]framework.OpP
 
 	var buf bytes.Buffer
 	for _, path := range paths {
-		buf.WriteString(fmt.Sprintf(`path "%s/%s" {`+"\n", rule.MountPath, path))
+		pieces := strings.Split(path, "/")
+		params := paramsByPath[path]
+		// TODO we can allow alternation by expanding multiple values into multiple path rules
+		for name, values := range rule.Allow {
+			if !strutil.StrListContains(params, name) {
+				return "", fmt.Errorf("unknown allow key %q, options: %v", name, params)
+			}
+
+		PARAMLOOP:
+			for i, paramName := range params {
+				if paramName == name {
+					wcIndex := -1
+					for j, piece := range pieces {
+						if piece == "+" {
+							wcIndex++
+							if wcIndex == i {
+								pieces[j] = values[0]
+								continue PARAMLOOP
+							}
+						}
+					}
+					if paramName == "path" {
+						pieces[len(pieces)-1] = values[0]
+					}
+				}
+			}
+		}
+		//if len(params) > 0 && params[0] == "path" && rule.Allow["path"] == nil {
+		//	pieces[len(pieces)-1] = values[0]
+		//}
+		expath := strings.Join(pieces, "/")
+
+		buf.WriteString(fmt.Sprintf(`path "%s/%s" {`+"\n", rule.MountPath, expath))
 		buf.WriteString(`  capabilities = [`)
 		for _, c := range capsByPath[path] {
 			buf.WriteString(fmt.Sprintf(`"%s", `, c))
