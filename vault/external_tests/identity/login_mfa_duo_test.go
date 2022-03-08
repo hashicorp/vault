@@ -153,7 +153,7 @@ path "secret/foo" {
 }
 
 func TestInteg_LoginMFADUO(t *testing.T) {
-	// t.Skip("This test requires manual intervention and DUO verify on cellphone is needed")
+	t.Skip("This test requires manual intervention and DUO verify on cellphone is needed")
 	cluster := vault.NewTestCluster(t, identityMFACoreConfigDUO, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -192,7 +192,10 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 		return fmt.Errorf("failed to configure userpass backend: %v", err)
 	}
 	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "vaultmfa",
+		"name": "test",
+		"metadata": map[string]string{
+			"mfa_username": "vaultmfa",
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create an entity")
@@ -213,7 +216,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	{
 		// create a config
 		mfaConfigData := map[string]interface{}{
-			"mount_accessor":  mountAccessor,
+			"username_format": "{{entity.metadata.mfa_username}}",
 			"secret_key":      secret_key,
 			"integration_key": integration_key,
 			"api_hostname":    api_hostname,
