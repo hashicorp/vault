@@ -447,12 +447,6 @@ func TestKVGetCommand(t *testing.T) {
 			append(baseV2ExpectedFields, "foo"),
 			0,
 		},
-		{
-			"v2_secret_path",
-			[]string{"kv/read/foo"},
-			[]string{"== Secret Path ==", "kv/data/read/foo"},
-			0,
-		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
@@ -570,12 +564,6 @@ func TestKVMetadataGetCommand(t *testing.T) {
 			"versions_exist",
 			[]string{"kv/foo"},
 			append(expectedTopLevelFields, expectedVersionFields[:]...),
-			0,
-		},
-		{
-			"path_exists",
-			[]string{"kv/foo"},
-			[]string{"== Metadata Path ==", "kv/metadata/foo"},
 			0,
 		},
 	}
