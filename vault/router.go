@@ -347,6 +347,29 @@ func (r *Router) matchingPrefixInternal(ctx context.Context, path string) string
 	return existing
 }
 
+func (r *Router) MountsWithPrefix(ctx context.Context, path string) []*MountEntry {
+	r.l.RLock()
+	mounts := r.mountsWithPrefixInternal(ctx, path)
+	r.l.RUnlock()
+	return mounts
+}
+
+func (r *Router) mountsWithPrefixInternal(ctx context.Context, path string) []*MountEntry {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil
+	}
+	path = ns.Path + path
+
+	var mounts []*MountEntry
+	fn := func(existingPath string, v interface{}) bool {
+		mounts = append(mounts, v.(*routeEntry).mountEntry)
+		return true
+	}
+	r.root.WalkPrefix(path, fn)
+	return mounts
+}
+
 // MountConflict determines if there are potential path conflicts
 func (r *Router) MountConflict(ctx context.Context, path string) string {
 	r.l.RLock()

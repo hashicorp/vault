@@ -146,7 +146,7 @@ func TestApprole_MountPolicies(t *testing.T) {
 	}
 
 	policy := `
-auth "approle" "myapprole" {
+auth "approle" "*" {
 	actions = ["create-role", "update-role", "update-role-secret-id"]
     allow {
         role_name = ["test-role-1"]

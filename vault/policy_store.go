@@ -879,62 +879,73 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy) error
 
 	for _, mr := range p.MountRules {
 		// TODO globbing
-		// TODO for auth mounts prepend "auth/" to path?
 		path := mr.MountPath
-		if !strings.HasSuffix(path, "/") {
-			path += "/"
+		var matched []*MountEntry
+		if strings.HasSuffix(path, "*") {
+			path = strings.TrimSuffix(path, "*")
+			matched = ps.core.router.MountsWithPrefix(ctx, path)
+		} else {
+			if !strings.HasSuffix(path, "/") {
+				path += "/"
+			}
+			entry := ps.core.router.MatchingMountEntry(ctx, path)
+			if entry == nil {
+				continue
+			}
+			matched = append(matched, entry)
 		}
-		entry := ps.core.router.MatchingMountEntry(ctx, path)
-		if entry == nil {
-			continue
+
+		var entries []*MountEntry
+		for _, entry := range matched {
+			if entry.Type == mr.MountType {
+				entries = append(entries, entry)
+			}
 		}
-		if entry.Type != mr.MountType {
+		if len(entries) == 0 {
 			continue
 		}
 
-		backend := ps.core.router.MatchingBackend(ctx, path)
-		if backend == nil {
-			// this should never happen
-			continue
-		}
+		for _, entry := range entries {
+			path := entry.Path
+			if entry.Table == "auth" {
+				path = "auth/" + entry.Path
+			}
+			backend := ps.core.router.MatchingBackend(ctx, path)
+			if backend == nil {
+				// this should never happen
+				continue
+			}
 
-		helpreq := &logical.Request{
-			Operation: logical.HelpOperation,
+			helpreq := &logical.Request{
+				Operation: logical.HelpOperation,
+			}
+			resp, err := backend.HandleRequest(ctx, helpreq)
+			if err != nil {
+				return err
+			}
+			if resp == nil || resp.Data["paths"] == nil {
+				return fmt.Errorf("unable to discover mount actions for policies: %w", err)
+			}
+			bs, ok := resp.Data["paths"].(*framework.BackendSummary)
+			if !ok {
+				return fmt.Errorf("unable to discover mount actions for policies: no backend summary found in help output")
+			}
+			pathPolicy, err := expandMountPolicy(mr, path, bs.ActionToPath)
+			if err != nil {
+				return err
+			}
+			ep, err := ParseACLPolicy(p.namespace, pathPolicy)
+			ps.core.logger.Trace("expanded policy", "output", pathPolicy, "parseerr", err)
+			if err != nil {
+				return err
+			}
+			p.Paths = append(p.Paths, ep.Paths...)
 		}
-		resp, err := backend.HandleRequest(ctx, helpreq)
-		if err != nil {
-			return err
-		}
-		if resp == nil || resp.Data["paths"] == nil {
-			return fmt.Errorf("unable to discover mount actions for policies: %w", err)
-		}
-		bs, ok := resp.Data["paths"].(*framework.BackendSummary)
-		if !ok {
-			return fmt.Errorf("unable to discover mount actions for policies: no backend summary found in help output")
-		}
-		pathPolicy, err := expandMountPolicy(mr, bs.ActionToPath)
-		if err != nil {
-			return err
-		}
-		//b, ok := backend.(logical.BackendWithMountPolicies)
-		//if !ok {
-		//	continue
-		//}
-		//pathPolicy, err := b.ExpandPolicy(ctx, mr.MountPath, p.MountRules)
-		//if err != nil {
-		//	return err
-		//}
-		ep, err := ParseACLPolicy(p.namespace, pathPolicy)
-		ps.core.logger.Trace("expanded policy", "output", pathPolicy, "parseerr", err)
-		if err != nil {
-			return err
-		}
-		p.Paths = append(p.Paths, ep.Paths...)
 	}
 	return nil
 }
 
-func expandMountPolicy(rule *logical.MountRule, actions map[string]framework.OpPath) (string, error) {
+func expandMountPolicy(rule *logical.MountRule, mountPath string, actions map[string]framework.OpPath) (string, error) {
 	capsByPath := make(map[string][]logical.Operation)
 	paramsByPath := make(map[string][]string)
 	// Lookup each action specified in the mount rule to get the path+op for each.
@@ -982,12 +993,9 @@ func expandMountPolicy(rule *logical.MountRule, actions map[string]framework.OpP
 				}
 			}
 		}
-		//if len(params) > 0 && params[0] == "path" && rule.Allow["path"] == nil {
-		//	pieces[len(pieces)-1] = values[0]
-		//}
 		expath := strings.Join(pieces, "/")
 
-		buf.WriteString(fmt.Sprintf(`path "%s/%s" {`+"\n", rule.MountPath, expath))
+		buf.WriteString(fmt.Sprintf(`path "%s%s" {`+"\n", mountPath, expath))
 		buf.WriteString(`  capabilities = [`)
 		for _, c := range capsByPath[path] {
 			buf.WriteString(fmt.Sprintf(`"%s", `, c))
