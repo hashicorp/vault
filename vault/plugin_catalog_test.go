@@ -193,8 +193,8 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	}
 	core.pluginCatalog.directory = sym
 
-	if len(core.pluginCatalog.externalPlugins) != 0 {
-		t.Fatalf("expected externalPlugins map to be of len 0 but got %d", len(core.pluginCatalog.externalPlugins))
+	if extPlugins := len(core.pluginCatalog.externalPlugins); extPlugins != 0 {
+		t.Fatalf("expected externalPlugins map to be of len 0 but got %d", extPlugins)
 	}
 
 	// register plugins
@@ -203,16 +203,16 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	TestAddTestPlugin(t, core, "single-postgres-2", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
 
 	// run plugins
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "mux-postgres")); err != nil {
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("mux-postgres")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "mux-postgres")); err != nil {
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("mux-postgres")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "single-postgres-1")); err != nil {
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("single-postgres-1")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig(t, "single-postgres-2")); err != nil {
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("single-postgres-2")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -222,14 +222,16 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	}
 
 	// check connections map
-	if len(externalPlugins["mux-postgres"].connections) != 2 {
-		t.Fatalf("expected multiplexed external plugin's connections map to be of len 2 but got %d", len(externalPlugins["mux-postgres"].connections))
+	expectedLen := 2
+	if len(externalPlugins["mux-postgres"].connections) != expectedLen {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
 	}
-	if len(externalPlugins["single-postgres-1"].connections) != 1 {
-		t.Fatalf("expected multiplexed external plugin's connections map to be of len 2 but got %d", len(externalPlugins["mux-postgres"].connections))
+	expectedLen = 1
+	if len(externalPlugins["single-postgres-1"].connections) != expectedLen {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
 	}
-	if len(externalPlugins["single-postgres-2"].connections) != 1 {
-		t.Fatalf("expected multiplexed external plugin's connections map to be of len 2 but got %d", len(externalPlugins["mux-postgres"].connections))
+	if len(externalPlugins["single-postgres-2"].connections) != expectedLen {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
 	}
 
 	// check multiplexing support
@@ -265,9 +267,7 @@ func TestPluginCatalog_PluginMain_PostgresMultiplexed(t *testing.T) {
 	v5.ServeMultiplex(postgresql.New)
 }
 
-func testPluginClientConfig(t *testing.T, pluginName string) pluginutil.PluginClientConfig {
-	t.Helper()
-
+func testPluginClientConfig(pluginName string) pluginutil.PluginClientConfig {
 	return pluginutil.PluginClientConfig{
 		Name:            pluginName,
 		PluginType:      consts.PluginTypeDatabase,

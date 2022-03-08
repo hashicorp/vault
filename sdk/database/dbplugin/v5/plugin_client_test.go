@@ -26,7 +26,7 @@ func TestNewPluginClient(t *testing.T) {
 
 	tests := map[string]testCase{
 		"happy path": {
-			config: testPluginClientConfig(t),
+			config: testPluginClientConfig(),
 			pluginClient: &fakePluginClient{
 				connResp:     nil,
 				dispenseResp: gRPCClient{client: fakeClient{}},
@@ -43,7 +43,7 @@ func TestNewPluginClient(t *testing.T) {
 			expectedErr: nil,
 		},
 		"dispense error": {
-			config: testPluginClientConfig(t),
+			config: testPluginClientConfig(),
 			pluginClient: &fakePluginClient{
 				connResp:     nil,
 				dispenseResp: gRPCClient{},
@@ -53,7 +53,7 @@ func TestNewPluginClient(t *testing.T) {
 			expectedErr:  errors.New("dispense error"),
 		},
 		"error unsupported client type": {
-			config: testPluginClientConfig(t),
+			config: testPluginClientConfig(),
 			pluginClient: &fakePluginClient{
 				connResp:     nil,
 				dispenseResp: nil,
@@ -87,7 +87,7 @@ func TestNewPluginClient(t *testing.T) {
 	}
 }
 
-func testPluginClientConfig(t *testing.T) pluginutil.PluginClientConfig {
+func testPluginClientConfig() pluginutil.PluginClientConfig {
 	return pluginutil.PluginClientConfig{
 		Name:            "test-plugin",
 		PluginSets:      PluginSets,
@@ -109,7 +109,7 @@ type fakePluginClient struct {
 }
 
 func (f *fakePluginClient) Conn() grpc.ClientConnInterface {
-	return f.connResp
+	return nil
 }
 
 func (f *fakePluginClient) Dispense(name string) (interface{}, error) {
