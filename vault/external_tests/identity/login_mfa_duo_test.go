@@ -216,7 +216,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	{
 		// create a config
 		mfaConfigData := map[string]interface{}{
-			"username_format": "{{entity.metadata.mfa_username}}",
+			"username_format": "{{identity.entity.metadata.mfa_username}}",
 			"secret_key":      secret_key,
 			"integration_key": integration_key,
 			"api_hostname":    api_hostname,

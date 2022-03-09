@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -1389,12 +1390,24 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		if mConfig.UsernameFormat == "" {
 			finalUsername = entity.Name
 		} else {
-			username := mConfig.UsernameFormat
-			username = strings.Replace(username, "{{entity.name}}", entity.Name, -1)
-			for k, v := range entity.Metadata {
-				username = strings.Replace(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v, -1)
+			var groups []*identity.Group
+			if entity != nil {
+				directGroups, inheritedGroups, err := c.identityStore.groupsByEntityID(entity.ID)
+				if err != nil {
+					return fmt.Errorf("failed to fetch group memberships: %w", err)
+				}
+				groups = append(directGroups, inheritedGroups...)
 			}
-			finalUsername = username
+			_, finalUsername, err = identitytpl.PopulateString(identitytpl.PopulateStringInput{
+				Mode:        identitytpl.ACLTemplating,
+				String:      mConfig.UsernameFormat,
+				Entity:      identity.ToSDKEntity(entity),
+				Groups:      identity.ToSDKGroups(groups),
+				NamespaceID: entity.NamespaceID,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
