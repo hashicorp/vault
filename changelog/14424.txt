@@ -1,0 +1,4 @@
+```release-note:bug
+COMPONENT: summary of chan
+agent: Log level mismatch between ERR and ERROR
+```
