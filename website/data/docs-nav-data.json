@@ -454,6 +454,10 @@
             "path": "commands/auth/list"
           },
           {
+            "title": "<code>move</code>",
+            "path": "commands/auth/move"
+          },
+          {
             "title": "<code>tune</code>",
             "path": "commands/auth/tune"
           }
@@ -1204,6 +1208,10 @@
       {
         "title": "LDAP",
         "path": "auth/ldap"
+      },
+      {
+        "title": "Login MFA",
+        "path": "auth/login-mfa"
       },
       {
         "title": "Oracle Cloud Infrastructure",

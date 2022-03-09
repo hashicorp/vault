@@ -14,9 +14,13 @@ import (
 func pathGenerateIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "intermediate/generate/" + framework.GenericNameRegex("exported"),
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathGenerateIntermediate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathGenerateIntermediate,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathGenerateIntermediateHelpSyn,
@@ -50,9 +54,13 @@ previously-generated key from the generation
 endpoint.`,
 			},
 		},
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathSetSignedIntermediate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathSetSignedIntermediate,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathSetSignedIntermediateHelpSyn,
@@ -65,7 +73,7 @@ endpoint.`,
 func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	exported, format, role, errorResp := b.getGenerationParams(data)
+	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
 	}

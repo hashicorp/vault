@@ -1,5 +1,8 @@
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
 import { settled } from '@ember/test-helpers';
+import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
+
+const { rootToken } = VAULT_KEYS;
 
 export default create({
   visit: visitable('/vault/auth'),
@@ -19,7 +22,7 @@ export default create({
       return;
     }
 
-    await this.tokenInput('root').submit();
+    await this.tokenInput(rootToken).submit();
     return;
   },
 });

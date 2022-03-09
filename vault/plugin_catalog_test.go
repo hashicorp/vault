@@ -10,6 +10,9 @@ import (
 	"sort"
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/plugins/database/postgresql"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 
@@ -178,5 +181,100 @@ func TestPluginCatalog_List(t *testing.T) {
 		if !reflect.DeepEqual(plugins[i+1], p) {
 			t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugins[i+1], p)
 		}
+	}
+}
+
+func TestPluginCatalog_NewPluginClient(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	core.pluginCatalog.directory = sym
+
+	if extPlugins := len(core.pluginCatalog.externalPlugins); extPlugins != 0 {
+		t.Fatalf("expected externalPlugins map to be of len 0 but got %d", extPlugins)
+	}
+
+	// register plugins
+	TestAddTestPlugin(t, core, "mux-postgres", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_PostgresMultiplexed", []string{}, "")
+	TestAddTestPlugin(t, core, "single-postgres-1", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
+	TestAddTestPlugin(t, core, "single-postgres-2", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
+
+	// run plugins
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("mux-postgres")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("mux-postgres")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("single-postgres-1")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("single-postgres-2")); err != nil {
+		t.Fatal(err)
+	}
+
+	externalPlugins := core.pluginCatalog.externalPlugins
+	if len(externalPlugins) != 3 {
+		t.Fatalf("expected externalPlugins map to be of len 3 but got %d", len(externalPlugins))
+	}
+
+	// check connections map
+	expectedLen := 2
+	if len(externalPlugins["mux-postgres"].connections) != expectedLen {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
+	}
+	expectedLen = 1
+	if len(externalPlugins["single-postgres-1"].connections) != expectedLen {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
+	}
+	if len(externalPlugins["single-postgres-2"].connections) != expectedLen {
+		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
+	}
+
+	// check multiplexing support
+	if !externalPlugins["mux-postgres"].multiplexingSupport {
+		t.Fatalf("expected external plugin to be multiplexed")
+	}
+	if externalPlugins["single-postgres-1"].multiplexingSupport {
+		t.Fatalf("expected external plugin to be non-multiplexed")
+	}
+	if externalPlugins["single-postgres-2"].multiplexingSupport {
+		t.Fatalf("expected external plugin to be non-multiplexed")
+	}
+}
+
+func TestPluginCatalog_PluginMain_Postgres(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	dbType, err := postgresql.New()
+	if err != nil {
+		t.Fatalf("Failed to initialize postgres: %s", err)
+	}
+
+	v5.Serve(dbType.(v5.Database))
+}
+
+func TestPluginCatalog_PluginMain_PostgresMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	v5.ServeMultiplex(postgresql.New)
+}
+
+func testPluginClientConfig(pluginName string) pluginutil.PluginClientConfig {
+	return pluginutil.PluginClientConfig{
+		Name:            pluginName,
+		PluginType:      consts.PluginTypeDatabase,
+		PluginSets:      v5.PluginSets,
+		HandshakeConfig: v5.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  false,
+		AutoMTLS:        true,
 	}
 }

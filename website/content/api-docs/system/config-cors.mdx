@@ -55,7 +55,7 @@ cross-origin requests, as well as headers that are allowed on cross-origin reque
 
 | Method | Path               |
 | :----- | :----------------- |
-| `PUT`  | `/sys/config/cors` |
+| `POST` | `/sys/config/cors` |
 
 ### Parameters
 
@@ -77,7 +77,7 @@ cross-origin requests, as well as headers that are allowed on cross-origin reque
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/config/cors
 ```

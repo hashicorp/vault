@@ -215,11 +215,6 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Description: `The unique identifier for this MFA method.`,
 					Required:    true,
 				},
-				"entity_id": {
-					Type:        framework.TypeString,
-					Description: "Entity ID on which the generated secret needs to get stored.",
-					Required:    true,
-				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
@@ -477,6 +472,11 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Callback: i.handleMFALoginEnforcementDelete,
 					Summary:  "Delete a login enforcement",
 				},
+			},
+		},
+		{
+			Pattern: "mfa/login-enforcement/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFALoginEnforcementList,
 					Summary:  "List login enforcements",
@@ -490,6 +490,10 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 	// Only primary should write the status
 	if i.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
 		return nil
+	}
+
+	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
+		return err
 	}
 
 	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{

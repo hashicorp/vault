@@ -18,11 +18,16 @@
       @title="No data received"
       @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
     />
+  {{else if (eq @model.monthly.id "no-data")}}
+    <EmptyState
+      @title="No data available"
+      @message="Tracking may be turned off. Check with your administrator or check back later."
+    />
   {{else}}
     <div class="is-subtitle-gray has-bottom-margin-m">
       FILTERS
       <Toolbar>
-        <ToolbarFilters>
+        <ToolbarFilters data-test-clients-filter-bar>
           <SearchSelect
             @id="namespace-search-select-monthly"
             @options={{this.namespaceArray}}
@@ -34,7 +39,7 @@
             @displayInherit={{true}}
             class="is-marginless"
           />
-          {{#if this.selectedNamespace}}
+          {{#if (not (is-empty this.authMethodOptions))}}
             <SearchSelect
               @id="auth-method-search-select"
               @options={{this.authMethodOptions}}

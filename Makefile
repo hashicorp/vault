@@ -15,7 +15,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.17.5
+GO_VERSION_MIN=1.17.7
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -139,11 +139,17 @@ update-plugins:
 static-assets-dir:
 	@mkdir -p ./http/web_ui
 
-test-ember:
+install-ui-dependencies:
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
+
+test-ember: install-ui-dependencies
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test:oss
+
+test-ember-enos: install-ui-dependencies
+	@echo "--> Running ember tests with a real backend"
+	@cd ui && yarn run test:enos
 
 ember-ci-test: # Deprecated, to be removed soon.
 	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
@@ -158,23 +164,17 @@ check-browserstack-creds:
 	@[ -n "$$BROWSERSTACK_ACCESS_KEY" ] || { echo "BROWSERSTACK_ACCESS_KEY not set"; exit 1; }
 	@[ -n "$$BROWSERSTACK_USERNAME" ] || { echo "BROWSERSTACK_USERNAME not set"; exit 1; }
 
-test-ui-browserstack: check-vault-in-path check-browserstack-creds
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+test-ui-browserstack: check-vault-in-path check-browserstack-creds install-ui-dependencies
 	@echo "--> Running ember tests in Browserstack"
 	@cd ui && yarn run test:browserstack
 
-ember-dist:
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+ember-dist: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
-ember-dist-dev:
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+ember-dist-dev: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build:dev

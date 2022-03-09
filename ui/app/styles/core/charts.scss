@@ -1,7 +1,7 @@
 .chart-wrapper {
   border: $light-border;
   border-radius: $radius-large;
-  padding: $spacing-l $spacing-l $spacing-s $spacing-l;
+  padding: $spacing-s $spacing-l;
   margin-bottom: $spacing-m;
 }
 
@@ -9,8 +9,6 @@
 .stacked-charts {
   display: grid;
   width: 100%;
-  // grid-template-columns: 1fr;
-  // grid-template-rows: 1fr;
 }
 
 .single-chart-grid {
@@ -63,8 +61,8 @@
   grid-row-start: 2;
   grid-row-end: span 3;
   justify-self: center;
-  height: 341px;
-  max-width: 730px;
+  height: 300px;
+  max-width: 700px;
 
   svg.chart {
     width: 100%;
@@ -107,8 +105,13 @@
 }
 
 .chart-empty-state {
-  grid-column-start: 1;
-  grid-column-end: -1;
+  height: 100%;
+  width: 100%;
+  grid-row-end: span 3;
+  grid-column-end: span 3;
+  > div {
+    box-shadow: none !important;
+  }
 }
 
 .chart-subTitle {
@@ -162,6 +165,7 @@ h2.chart-title {
   font-weight: $font-weight-bold;
   font-size: $size-5;
   line-height: $spacing-l;
+  margin-bottom: $spacing-xs;
 }
 
 p.chart-description {
@@ -173,14 +177,14 @@ p.chart-description {
 
 p.chart-subtext {
   color: $ui-gray-500;
-  font-size: $size-9;
-  line-height: $body-size;
+  font-size: $size-8;
+  line-height: 16px;
   margin-top: $spacing-xs;
 }
 
 h3.data-details {
   font-weight: $font-weight-bold;
-  font-size: $size-9;
+  font-size: $size-8;
   line-height: $body-size;
   margin-bottom: $spacing-xs;
 }

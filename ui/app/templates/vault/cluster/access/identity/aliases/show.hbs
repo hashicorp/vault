@@ -21,13 +21,9 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType) as |tab|}}
-        {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
-        <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}} @tagName="li">
-          <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}}>
-            {{capitalize tab}}
-          </LinkTo>
+        <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}}>
+          {{capitalize tab}}
         </LinkTo>
-        {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
       {{/each}}
     </ul>
   </nav>

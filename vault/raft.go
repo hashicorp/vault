@@ -961,17 +961,17 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return err
 		}
 		var wg sync.WaitGroup
-		for i := range leaderInfos {
+		for i := range expandedJoinInfos {
 			wg.Add(1)
 			go func(joinInfo *raft.LeaderJoinInfo) {
 				defer wg.Done()
 				raftInfo, err := c.getRaftChallenge(joinInfo)
 				if err != nil {
-					c.Logger().Trace("failed to get raft challenge", "leader_addr", joinInfo.LeaderAPIAddr, "error", err)
+					c.Logger().Error("failed to get raft challenge", "leader_addr", joinInfo.LeaderAPIAddr, "error", err)
 					return
 				}
 				challengeCh <- raftInfo
-			}(leaderInfos[i])
+			}(expandedJoinInfos[i])
 		}
 		go func() {
 			wg.Wait()

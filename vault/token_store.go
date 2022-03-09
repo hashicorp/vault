@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -898,7 +899,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			switch {
 			case strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 'hvs.' prefix")
-			case strings.HasPrefix(entry.ID, "s."):
+			case strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 's.' prefix")
 			case strings.Contains(entry.ID, "."):
 				return fmt.Errorf("custom token ID cannot have a '.' in the value")
@@ -991,10 +992,29 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 
 		bEntry := base64.RawURLEncoding.EncodeToString(eEntry)
-		if ts.core.DisableSSCTokens() {
-			entry.ID = fmt.Sprintf("b.%s", bEntry)
+		ver, _, err := ts.core.FindNewestVersionTimestamp()
+		if err != nil {
+			return err
+		}
+
+		var newestVersion *version.Version
+		var oneTen *version.Version
+
+		if ver != "" {
+			newestVersion, err = version.NewVersion(ver)
+			if err != nil {
+				return err
+			}
+			oneTen, err = version.NewVersion("1.10.0")
+			if err != nil {
+				return err
+			}
+		}
+
+		if ts.core.DisableSSCTokens() || (newestVersion != nil && newestVersion.LessThan(oneTen)) {
+			entry.ID = consts.LegacyBatchTokenPrefix + bEntry
 		} else {
-			entry.ID = fmt.Sprintf("hvb.%s", bEntry)
+			entry.ID = consts.BatchTokenPrefix + bEntry
 		}
 
 		if tokenNS.ID != namespace.RootNamespaceID {
@@ -1260,7 +1280,7 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 }
 
 func (ts *TokenStore) stripBatchPrefix(id string) string {
-	if strings.HasPrefix(id, "b.") {
+	if strings.HasPrefix(id, consts.LegacyBatchTokenPrefix) {
 		return id[2:]
 	}
 	if strings.HasPrefix(id, consts.BatchTokenPrefix) {

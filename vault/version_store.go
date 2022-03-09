@@ -70,7 +70,7 @@ func (c *Core) storeVersionTimestamp(ctx context.Context, version string, timest
 // FindOldestVersionTimestamp searches for the vault version with the oldest
 // upgrade timestamp from storage. The earliest version this can be is 1.9.0.
 func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
-	if c.versionTimestamps == nil || len(c.versionTimestamps) == 0 {
+	if c.versionTimestamps == nil {
 		return "", time.Time{}, fmt.Errorf("version timestamps are not initialized")
 	}
 
@@ -84,6 +84,24 @@ func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
 		}
 	}
 	return oldestVersion, oldestUpgradeTime, nil
+}
+
+func (c *Core) FindNewestVersionTimestamp() (string, time.Time, error) {
+	if c.versionTimestamps == nil {
+		return "", time.Time{}, fmt.Errorf("version timestamps are not initialized")
+	}
+
+	var newestUpgradeTime time.Time
+	var newestVersion string
+
+	for version, upgradeTime := range c.versionTimestamps {
+		if upgradeTime.After(newestUpgradeTime) {
+			newestVersion = version
+			newestUpgradeTime = upgradeTime
+		}
+	}
+
+	return newestVersion, newestUpgradeTime, nil
 }
 
 // loadVersionTimestamps loads all the vault versions and associated upgrade

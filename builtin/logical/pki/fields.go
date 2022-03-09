@@ -20,9 +20,10 @@ Defaults to false (CN is included).`,
 		Type:    framework.TypeString,
 		Default: "pem",
 		Description: `Format for returned data. Can be "pem", "der",
-or "pem_bundle". If "pem_bundle" any private
+or "pem_bundle". If "pem_bundle", any private
 key and issuing cert will be appended to the
-certificate pem. Defaults to "pem".`,
+certificate pem. If "der", the value will be
+base64 encoded. Defaults to "pem".`,
 		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "pem",
