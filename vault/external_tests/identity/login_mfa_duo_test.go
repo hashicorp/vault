@@ -193,9 +193,6 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	}
 	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
 		"name": "test",
-		"metadata": map[string]string{
-			"mfa_username": "vaultmfa",
-		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create an entity")
@@ -216,10 +213,10 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	{
 		// create a config
 		mfaConfigData := map[string]interface{}{
-			"username_format": "{{identity.entity.metadata.mfa_username}}",
-			"secret_key":      secret_key,
-			"integration_key": integration_key,
-			"api_hostname":    api_hostname,
+			"username_template": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
+			"secret_key":        secret_key,
+			"integration_key":   integration_key,
+			"api_hostname":      api_hostname,
 		}
 		resp, err := client.Logical().Write("identity/mfa/method/duo", mfaConfigData)
 
