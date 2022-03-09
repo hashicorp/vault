@@ -62,34 +62,44 @@ func (c *PKIAddRootCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	if len(args) != 1 {
-		c.UI.Error(fmt.Sprintf("Wrong number of arguments (expected 1, got %d)", len(args)))
+	if len(args) < 1 {
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1+, got %d)", len(args)))
 		return 1
 	}
 
-	mount := sanitizePath(c.flagMountName)
-
-	client, err := c.Client()
+	data, err := parseArgsData(nil, args)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error getting client: %s", err))
+		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
 	}
 
 	var params map[string]interface{}
 
-	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(args[0]), &params); err != nil {
-		c.UI.Error(fmt.Sprintf("Error parsing arguments for root CA: %s", err))
+	if _, ok := data["config"]; ok {
+		if err := jsonutil.DecodeJSONFromReader(strings.NewReader(args[0]), &params); err != nil {
+			c.UI.Error(fmt.Sprintf("Error parsing arguments for root CA: %s", err))
+			return 1
+		}
+	} else {
+		params = data
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error creating client: %s", err))
 		return 1
 	}
 
+	mount := sanitizePath(c.flagMountName)
+
 	ops := pkicli.NewOperations(client)
-	rootResp, err := ops.CreateRoot(mount, params)
+	resp, err := ops.CreateRoot(mount, params)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating root CA: %s", err))
 		return 1
 	}
 
-	fmt.Println(rootResp)
+	fmt.Println(resp)
 
 	return 0
 }

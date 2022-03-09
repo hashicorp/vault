@@ -69,28 +69,20 @@ func (c *PKICreateCACommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	if len(args) < 2 {
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d", len(args)))
+	if len(args) != 2 {
+		c.UI.Error(fmt.Sprintf("Wrong number of arguments (expected 2, got %d)", len(args)))
 		return 1
 	}
 
-	rootMount := sanitizePath(c.flagRootMountName)
-	intMount := sanitizePath(c.flagIntMountName)
-
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error getting client: %s", err))
+		c.UI.Error(fmt.Sprintf("Error creating client: %s", err))
 		return 1
 	}
 
 	data, err := parseArgsData(nil, args)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
-		return 1
-	}
-
-	if data == nil {
-		c.UI.Error("Missing required arguments")
 		return 1
 	}
 
@@ -116,6 +108,9 @@ func (c *PKICreateCACommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error parsing arguments for intermediate CA: %s", err))
 		return 1
 	}
+
+	rootMount := sanitizePath(c.flagRootMountName)
+	intMount := sanitizePath(c.flagIntMountName)
 
 	ops := pkicli.NewOperations(client)
 	rootResp, err := ops.CreateRoot(rootMount, rootArgs)
