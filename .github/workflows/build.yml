@@ -6,12 +6,28 @@ on:
     branches:    
       # Push events on main branch
       - main
+      - ci-go-version
 
 env:
   PKG_NAME: "vault"
   GO_TAGS: "ui"
 
 jobs:
+  get-go-version:
+    name: "Determine Go toolchain version"
+    runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.get-go-version.outputs.go-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Determine Go version
+        id: get-go-version
+        # We use .go-version as our source of truth for current Go
+        # version, because "goenv" can react to it automatically.
+        run: |
+          echo "Building with Go $(cat .go-version)"
+          echo "::set-output name=go-version::$(cat .go-version)"
+
   get-product-version:
     runs-on: ubuntu-latest
     outputs:
@@ -48,13 +64,14 @@ jobs:
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
 
   build-other:
-    needs: get-product-version
+    needs: 
+      - get-go-version
+      - get-product-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [ freebsd, windows, netbsd, openbsd, solaris ]
         goarch: [ "386", "amd64", "arm" ]
-        go: [ "1.17.7" ]
         exclude:
           - goos: solaris
             goarch: 386
@@ -64,14 +81,14 @@ jobs:
             goarch: arm
       fail-fast: true
 
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ needs.get-go-version.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     steps:
       - uses: actions/checkout@v2
       - name: Setup go
         uses: actions/setup-go@v2
         with:
-          go-version: ${{ matrix.go }}
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -100,16 +117,17 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   build-linux:
-    needs: get-product-version
+    needs: 
+      - get-go-version
+      - get-product-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux]
-        goarch: ["arm", "arm64", "386", "amd64"]
-        go: ["1.17.7"]
+        goos: [ linux ]
+        goarch: [ "arm", "arm64", "386", "amd64" ]
       fail-fast: true
 
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ needs.get-go-version.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     steps:
       - uses: actions/checkout@v2
@@ -117,7 +135,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v2
         with:
-          go-version: ${{ matrix.go }}
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -177,22 +195,23 @@ jobs:
           path: out/${{ env.DEB_PACKAGE }}
 
   build-darwin:
-    needs: get-product-version
+    needs: 
+      - get-go-version
+      - get-product-version
     runs-on: macos-latest
     strategy:
       matrix:
         goos: [ darwin ]
         goarch: [ "amd64", "arm64" ]
-        go: [ "1.17.7" ]
       fail-fast: true
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ needs.get-go-version.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
       - uses: actions/checkout@v2
 
       - name: Setup go
         uses: actions/setup-go@v2
         with:
-          go-version: ${{ matrix.go }}
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -229,19 +248,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ["arm", "arm64", "386", "amd64"]
+        arch: [ "arm", "arm64", "386", "amd64" ]
     env:
-      repo: ${{github.event.repository.name}}
-      version: ${{needs.get-product-version.outputs.product-version}}
+      repo: ${{ github.event.repository.name }}
+      version: ${{ needs.get-product-version.outputs.product-version }}
     steps:
       - uses: actions/checkout@v2
       - name: Docker Build (Action)
         uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{env.version}}
+          version: ${{ env.version }}
           target: default
-          arch: ${{matrix.arch}}
+          arch: ${{ matrix.arch }}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
           tags: |
-            docker.io/hashicorp/${{env.repo}}:${{env.version}}
-            public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
+            docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
+            public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
