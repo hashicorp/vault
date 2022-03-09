@@ -341,7 +341,7 @@ func logLevelToStringPtr(level hclog.Level) *string {
 	case hclog.Warn:
 		levelStr = "WARN"
 	case hclog.Error:
-		levelStr = "ERROR"
+		levelStr = "ERR"
 	default:
 		levelStr = "INFO"
 	}
