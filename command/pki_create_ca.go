@@ -142,7 +142,7 @@ func (c *PKICreateCACommand) Run(args []string) int {
 func (c *PKICreateCACommand) parseArgs(args string) (map[string]interface{}, error) {
 	argMap := make(map[string]interface{})
 
-	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(args), argMap); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(args), &argMap); err != nil {
 		return nil, err
 	}
 
