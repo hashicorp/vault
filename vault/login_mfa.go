@@ -1390,14 +1390,12 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		if mConfig.UsernameFormat == "" {
 			finalUsername = entity.Name
 		} else {
-			var groups []*identity.Group
-			if entity != nil {
-				directGroups, inheritedGroups, err := c.identityStore.groupsByEntityID(entity.ID)
-				if err != nil {
-					return fmt.Errorf("failed to fetch group memberships: %w", err)
-				}
-				groups = append(directGroups, inheritedGroups...)
+			directGroups, inheritedGroups, err := c.identityStore.groupsByEntityID(entity.ID)
+			if err != nil {
+				return fmt.Errorf("failed to fetch group memberships: %w", err)
 			}
+			groups := append(directGroups, inheritedGroups...)
+
 			_, finalUsername, err = identitytpl.PopulateString(identitytpl.PopulateStringInput{
 				Mode:        identitytpl.ACLTemplating,
 				String:      mConfig.UsernameFormat,
