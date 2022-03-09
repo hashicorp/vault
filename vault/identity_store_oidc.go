@@ -1790,12 +1790,12 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	// use by some role.
 	for _, keyID := range publicKeyIDs {
 		if !strutil.StrListContains(usedKeys, keyID) {
-			didUpdate = true
 			if err := s.Delete(ctx, publicKeysConfigPath+keyID); err != nil {
 				i.Logger().Error("error deleting OIDC public key", "key_id", keyID, "error", err)
 				nextExpiration = now
 				continue
 			}
+			didUpdate = true
 			i.Logger().Debug("deleted OIDC public key", "key_id", keyID)
 		}
 	}
