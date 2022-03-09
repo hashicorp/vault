@@ -371,7 +371,8 @@ func (ps *PolicyStore) RefreshMountPolicies(ctx context.Context) error {
 			return true
 		}
 		index := key.(string)
-		nsID, name := path.Split(index)
+		pieces := strings.Split(index, "/")
+		nsID, name := pieces[0], pieces[1]
 		ps.core.Logger().Trace("refreshing policy", "nsID", nsID, "name", name)
 		policyNS, err := NamespaceByID(ctx, nsID, ps.core)
 		if err != nil {
@@ -921,8 +922,15 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy, grabl
 		defer ps.core.mountsLock.RUnlock()
 	}
 
+	// Save the paths that don't come from a previous expansion
+	var paths []*PathRules
+	for _, path := range p.Paths {
+		if !path.FromMountPolicy {
+			paths = append(paths, path)
+		}
+	}
+
 	for _, mr := range p.MountRules {
-		// TODO globbing
 		path := mr.MountPath
 		var matched []*MountEntry
 		if strings.HasSuffix(path, "*") {
@@ -954,10 +962,11 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy, grabl
 			if entry.Table == "auth" {
 				path = "auth/" + entry.Path
 			}
+			ps.core.logger.Trace("expanding policy", "path", path, "policy", p.Name)
 			backend := ps.core.router.MatchingBackend(ctx, path)
 			if backend == nil {
 				// this should never happen
-				continue
+				return fmt.Errorf("policy expansion error: nil backend at %s", path)
 			}
 
 			helpreq := &logical.Request{
@@ -983,9 +992,13 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy, grabl
 			if err != nil {
 				return err
 			}
-			p.Paths = append(p.Paths, ep.Paths...)
+			for _, path := range ep.Paths {
+				path.FromMountPolicy = true
+				paths = append(paths, path)
+			}
 		}
 	}
+	p.Paths = paths
 	return nil
 }
 

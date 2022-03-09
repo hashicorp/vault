@@ -364,7 +364,7 @@ func (r *Router) mountsWithPrefixInternal(ctx context.Context, path string) []*M
 	var mounts []*MountEntry
 	fn := func(existingPath string, v interface{}) bool {
 		mounts = append(mounts, v.(*routeEntry).mountEntry)
-		return true
+		return false
 	}
 	r.root.WalkPrefix(path, fn)
 	return mounts

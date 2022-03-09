@@ -15,6 +15,7 @@ var (
 
 type PolicyReadCommand struct {
 	*BaseCommand
+	flagCompiled bool
 }
 
 func (c *PolicyReadCommand) Synopsis() string {
@@ -38,7 +39,16 @@ Usage: vault policy read [options] [NAME]
 }
 
 func (c *PolicyReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:       "compiled",
+		Target:     &c.flagCompiled,
+		Completion: complete.PredictAnything,
+		Usage:      "For mount policies, show the compiled path-based policy",
+	})
+	return set
 }
 
 func (c *PolicyReadCommand) AutocompleteArgs() complete.Predictor {
@@ -74,13 +84,14 @@ func (c *PolicyReadCommand) Run(args []string) int {
 	}
 
 	name := strings.ToLower(strings.TrimSpace(args[0]))
-	rules, err := client.Sys().GetPolicy(name)
+	var rules string
+	if c.flagCompiled {
+		rules, err = client.Sys().GetCompiledPolicy(name)
+	} else {
+		rules, err = client.Sys().GetPolicy(name)
+	}
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading policy named %s: %s", name, err))
-		return 2
-	}
-	if rules == "" {
-		c.UI.Error(fmt.Sprintf("No policy named: %s", name))
 		return 2
 	}
 

@@ -182,4 +182,15 @@ auth "approle" "*" {
 		"name": "test-role-1",
 	})
 	require.Error(t, err)
+
+	client.SetToken(cluster.RootToken)
+	err = client.Sys().EnableAuthWithOptions("myapprole2", &api.EnableAuthOptions{
+		Type: "approle",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiled, err = client.Sys().GetCompiledPolicy("mypolicy")
+	require.NoError(t, err)
+	t.Log(compiled)
 }

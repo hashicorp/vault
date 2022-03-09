@@ -866,7 +866,7 @@ func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*P
 			}
 		}
 		pds = append(pds, pd)
-		logger.Trace("describePath", "expanded", path, "pd", pd)
+		// logger.Trace("describePath", "expanded", path, "pd", pd)
 	}
 
 	return pds, nil

@@ -131,6 +131,7 @@ type PathRules struct {
 	IsPrefix            bool
 	HasSegmentWildcards bool
 	Capabilities        []string
+	FromMountPolicy     bool
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
