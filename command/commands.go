@@ -492,6 +492,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki create-ca": func() (cli.Command, error) {
+			return &PKICreateCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki add-root": func() (cli.Command, error) {
+			return &PKIAddRootCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki add-intermediate": func() (cli.Command, error) {
+			return &PKIAddIntermediateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
 				BaseCommand: getBaseCommand(),
