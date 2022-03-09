@@ -53,12 +53,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       // eslint-disable-next-line no-console
       console.error('Cannot use Cloud Admin Namespace flag with OSS Vault');
     }
-    if (typeof managedRoot === 'string') {
-      let managed = getManagedNamespace(namespace, managedRoot);
-      if (managed !== namespace) {
-        this.transitionTo({ queryParams: { namespace: managed } });
-      }
-    } else if (!namespace && currentTokenName && !Ember.testing) {
+    if (!namespace && currentTokenName && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url
       const storage = getStorage().getItem(currentTokenName);
@@ -66,6 +61,11 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       // only redirect if something other than nothing
       if (namespace) {
         this.transitionTo({ queryParams: { namespace } });
+      }
+    } else if (managedRoot !== null) {
+      let managed = getManagedNamespace(namespace, managedRoot);
+      if (managed !== namespace) {
+        this.transitionTo({ queryParams: { namespace: managed } });
       }
     }
     this.namespaceService.setNamespace(namespace);
