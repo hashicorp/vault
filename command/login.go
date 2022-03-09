@@ -228,6 +228,20 @@ func (c *LoginCommand) Run(args []string) int {
 		return 2
 	}
 
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if c.isInteractiveEnabled(len(secret.Auth.MFARequirement.MFAConstraints)) {
+			// Currently, if there is only one MFA method configured, the login
+			// request is validated interactively
+			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
+			if methodInfo.methodID != "" {
+				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+			}
+		}
+		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
+			"MFA validation. Please make sure to validate the login by sending another "+
+			"request to sys/mfa/validate endpoint.") + "\n")
+	}
+
 	// Unset any previous token wrapping functionality. If the original request
 	// was for a wrapped token, we don't want future requests to be wrapped.
 	client.SetWrappingLookupFunc(func(string, string) string { return "" })
