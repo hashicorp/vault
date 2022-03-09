@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
@@ -1773,11 +1774,13 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 			key.KeyRing = keyRing
 			entry, err := logical.StorageEntryJSON(entry.Key, key)
 			if err != nil {
-				i.Logger().Error("error updating key", "key", key.name, "error", err)
+				i.Logger().Error("error creating storage entry", "key", key.name, "error", err)
+				continue
 			}
 
 			if err := s.Put(ctx, entry); err != nil {
-				i.Logger().Error("error saving key", "key", key.name, "error", err)
+				i.Logger().Error("error writing key", "key", key.name, "error", err)
+				continue
 			}
 			didUpdate = true
 		}
@@ -1791,6 +1794,7 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 			if err := s.Delete(ctx, publicKeysConfigPath+keyID); err != nil {
 				i.Logger().Error("error deleting OIDC public key", "key_id", keyID, "error", err)
 				nextExpiration = now
+				continue
 			}
 			i.Logger().Debug("deleted OIDC public key", "key_id", keyID)
 		}
@@ -1874,6 +1878,12 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
+	// Key rotations write to storage, so only run this on the primary cluster.
+	// The periodic func does not run on perf standbys or DR secondaries.
+	if i.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		return
+	}
+
 	var nextRun time.Time
 	now := time.Now()
 
