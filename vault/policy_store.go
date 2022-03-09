@@ -205,6 +205,7 @@ type PolicyEntry struct {
 
 	Version   int
 	Raw       string
+	Expanded  string
 	Templated bool
 	Type      PolicyType
 }
@@ -358,8 +359,40 @@ func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
 	return ps.setPolicyInternal(ctx, p)
 }
 
+// RefreshMountPolicies should be called after a mount table has changed, to ensure
+// that any mount-based policies get re-evaluated.
+// mountsLock should be held when calling.
+func (ps *PolicyStore) RefreshMountPolicies(ctx context.Context) error {
+	ps.modifyLock.RLock()
+	defer ps.modifyLock.RUnlock()
+
+	ps.policyTypeMap.Range(func(key, value interface{}) bool {
+		if value.(PolicyType) != PolicyTypeACL {
+			return true
+		}
+		index := key.(string)
+		nsID, name := path.Split(index)
+		ps.core.Logger().Trace("refreshing policy", "nsID", nsID, "name", name)
+		policyNS, err := NamespaceByID(ctx, nsID, ps.core)
+		if err != nil {
+			return true
+		}
+		if policyNS == nil {
+			return true
+		}
+		policyCtx := namespace.ContextWithNamespace(ctx, policyNS)
+		_, err = ps.switchedGetPolicy(policyCtx, name, PolicyTypeACL, false)
+		if err != nil {
+			return true
+		}
+
+		return true
+	})
+	return nil
+}
+
 func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
-	err := ps.ExpandMountPolicies(ctx, p)
+	err := ps.ExpandMountPolicies(ctx, p, true)
 	if err != nil {
 		ps.core.logger.Error("ExpandMountPolicies ", "error", err, "policy", p.MountRules)
 		return err
@@ -459,7 +492,7 @@ func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType Po
 	return ps.switchedGetPolicy(ctx, name, policyType, true)
 }
 
-func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, policyType PolicyType, grabLock bool) (*Policy, error) {
+func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, policyType PolicyType, grabLock bool) (retPol *Policy, retErr error) {
 	defer metrics.MeasureSince([]string{"policy", "get_policy"}, time.Now())
 
 	ns, err := namespace.FromContext(ctx)
@@ -500,6 +533,15 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 			return nil, fmt.Errorf("invalid type of policy in type map: %q", policyType)
 		}
 	}
+
+	defer func() {
+		if retPol != nil && retPol.MountRules != nil {
+			err = ps.ExpandMountPolicies(ctx, retPol, false)
+			if err != nil {
+				ps.core.logger.Error("ExpandMountPolicies ", "error", err, "policy", retPol.MountRules)
+			}
+		}
+	}()
 
 	if cache != nil {
 		// Check for cached policy
@@ -870,12 +912,14 @@ func (ps *PolicyStore) cacheKey(ns *namespace.Namespace, name string) string {
 	return path.Join(ns.ID, name)
 }
 
-func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy) error {
+func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy, grablock bool) error {
 	if len(p.MountRules) == 0 {
 		return nil
 	}
-	ps.core.mountsLock.RLock()
-	defer ps.core.mountsLock.RUnlock()
+	if grablock {
+		ps.core.mountsLock.RLock()
+		defer ps.core.mountsLock.RUnlock()
+	}
 
 	for _, mr := range p.MountRules {
 		// TODO globbing
@@ -971,7 +1015,7 @@ func expandMountPolicy(rule *logical.MountRule, mountPath string, actions map[st
 		// TODO we can allow alternation by expanding multiple values into multiple path rules
 		for name, values := range rule.Allow {
 			if !strutil.StrListContains(params, name) {
-				return "", fmt.Errorf("unknown allow key %q, options: %v", name, params)
+				// return "", fmt.Errorf("unknown allow key %q, options: %v", name, params)
 			}
 
 		PARAMLOOP:

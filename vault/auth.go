@@ -220,6 +220,9 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		if err != nil {
 			return err
 		}
+		if err := c.policyStore.RefreshMountPolicies(ctx); err != nil {
+			c.Logger().Error("refresh mount policy failure", "error", err)
+		}
 	}
 
 	if c.logger.IsInfo() {

@@ -138,13 +138,6 @@ func TestApprole_MountPolicies(t *testing.T) {
 	client := cores[0].Client
 	client.SetToken(cluster.RootToken)
 
-	err = client.Sys().EnableAuthWithOptions("myapprole", &api.EnableAuthOptions{
-		Type: "approle",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	policy := `
 auth "approle" "*" {
 	actions = ["create-role", "update-role", "update-role-secret-id"]
@@ -153,12 +146,19 @@ auth "approle" "*" {
     }
 }
 `
-	err = client.Sys().PutPolicy("mypolicy", policy)
-	require.NoError(t, err)
-
 	compiled, err := client.Sys().GetCompiledPolicy("mypolicy")
 	require.NoError(t, err)
 	t.Log(compiled)
+
+	err = client.Sys().PutPolicy("mypolicy", policy)
+	require.NoError(t, err)
+
+	err = client.Sys().EnableAuthWithOptions("myapprole", &api.EnableAuthOptions{
+		Type: "approle",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		Policies: []string{"mypolicy"},

@@ -627,6 +627,9 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		if err != nil {
 			return err
 		}
+		if err := c.policyStore.RefreshMountPolicies(ctx); err != nil {
+			c.Logger().Error("refresh mount policy failure", "error", err)
+		}
 	}
 
 	if c.logger.IsInfo() {
@@ -758,6 +761,9 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 			c.logger.Error("failed to update quotas after disabling mount", "path", path, "error", err)
 			return err
 		}
+	}
+	if err := c.policyStore.RefreshMountPolicies(ctx); err != nil {
+		c.Logger().Error("refresh mount policy failure", "error", err)
 	}
 
 	if c.logger.IsInfo() {

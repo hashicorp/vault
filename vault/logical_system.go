@@ -1060,6 +1060,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		return handleError(err)
 	}
 
+	if err := b.Core.policyStore.RefreshMountPolicies(ctx); err != nil {
+		b.Backend.Logger().Error("refresh mount policy failure", "error", err)
+	}
+
 	return nil, nil
 }
 
@@ -1156,6 +1160,10 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 	if err := b.Core.removePathFromFilteredPaths(ctx, ns.Path+path, viewPath); err != nil {
 		b.Backend.Logger().Error("filtered path removal failed", path, "error", err)
 		return handleError(err)
+	}
+
+	if err := b.Core.policyStore.RefreshMountPolicies(ctx); err != nil {
+		b.Backend.Logger().Error("refresh mount policy failure", "error", err)
 	}
 
 	return nil, nil
@@ -2333,6 +2341,10 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 	if err := b.Core.removePathFromFilteredPaths(ctx, fullPath, viewPath); err != nil {
 		b.Backend.Logger().Error("filtered path removal failed", path, "error", err)
 		return handleError(err)
+	}
+
+	if err := b.Core.policyStore.RefreshMountPolicies(ctx); err != nil {
+		b.Backend.Logger().Error("refresh mount policy failure", "error", err)
 	}
 
 	return nil, nil
