@@ -111,7 +111,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		DisplayName: matched.Entry.DisplayName,
 		Alias: &logical.Alias{
 			Name: clientCerts[0].Subject.CommonName,
-            Metadata:    metadata,
+			Metadata:    metadata,
 		},
 	}
 	matched.Entry.PopulateTokenAuth(auth)
@@ -156,7 +156,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 	}
 	// Get the cert and use its TTL
-	cert, err := b.Cert(ctx, req.Storage, req.Auth.Metadata["cert_name"])
+	cert, err := b.Cert(ctx, req.Storage, req.Auth.Alias.Metadata["cert_name"])
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	// Allow constraining the login request to a single CertEntry
 	var certName string
 	if req.Auth != nil { // It's a renewal, use the saved certName
-		certName = req.Auth.Metadata["cert_name"]
+		certName = req.Auth.Alias.Metadata["cert_name"]
 	} else {
 		certName = d.Get("name").(string)
 	}
