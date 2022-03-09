@@ -109,9 +109,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			"authority_key_id": akid,
 		},
 		DisplayName: matched.Entry.DisplayName,
-		Metadata:    metadata,
 		Alias: &logical.Alias{
 			Name: clientCerts[0].Subject.CommonName,
+            Metadata:    metadata,
 		},
 	}
 	matched.Entry.PopulateTokenAuth(auth)

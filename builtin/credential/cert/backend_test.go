@@ -1575,7 +1575,7 @@ func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, c
 			metadata["authority_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].AuthorityKeyId, ":")
 
 			for key, expected := range metadata {
-				value, ok := resp.Auth.Metadata[key]
+				value, ok := resp.Auth.Alias.Metadata[key]
 				if !ok {
 					t.Fatalf("missing metadata key: %s", key)
 				}
