@@ -47,11 +47,6 @@ entities, a specific auth method accessor, or an auth method type. A login reque
 any MFA enforcement restrictions is subject to further MFA validation,
 such as a one-time passcode, before being authenticated.
 
-Although an MFA method configuration , such as Okta, Duo, and PingID, needs a mount accessor and an MFA enforcement configuration
-could use mount accessors, these two accessors do not necessarily need to be the same.
-However, a user trying to log in on an MFA enforced mount needs to have an alias on the accessor in the MFA method itself.
-In this case, the entity/alias templating must render out the username associated third party account.
-
 There are two ways to validate a login request that is subject to MFA validation.
 
  ### Single-Phase Login
@@ -87,7 +82,7 @@ There are two ways to validate a login request that is subject to MFA validation
  which identifies the login request that needs validation. In addition, MFA requirements contain MFA constraints
  that determine which MFA types should be used to validate the request, the corresponding method IDs, and
  a boolean value showing whether the MFA method uses passcodes or not. MFA constraints form a nested map in MFA Requirement
- and represent all MFA enforcements that match a login request. While the example below is for the userpass login, 
+ and represent all MFA enforcements that match a login request. While the example below is for the userpass login,
  note that this can affect the login response on any auth mount protected by MFA validation.
 
 #### Sample Two-Phase Login Response
