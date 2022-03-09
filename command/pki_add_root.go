@@ -1,6 +1,9 @@
 package command
 
 import (
+	"fmt"
+	"github.com/hashicorp/vault/command/pkicli"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"strings"
@@ -14,12 +17,7 @@ var (
 type PKIAddRootCommand struct {
 	*BaseCommand
 
-	flagMountName           string
-	flagMaxLeaseTTL         string
-	flagCommonName          string
-	flagTTL                 string
-	flagIssuingCertURLs     string
-	flagCRLDistributionURLs string
+	flagMountName string
 }
 
 func (c *PKIAddRootCommand) Synopsis() string {
@@ -44,36 +42,6 @@ func (c *PKIAddRootCommand) Flags() *FlagSets {
 		Usage:  "The name of the mount for the root CA. The name must be unique.",
 	})
 
-	f.StringVar(&StringVar{
-		Name:   "max-ttl",
-		Target: &c.flagMaxLeaseTTL,
-		Usage:  "The max TTL to use for the root CA",
-	})
-
-	f.StringVar(&StringVar{
-		Name:   "common-name",
-		Target: &c.flagCommonName,
-		Usage:  "The common name for the root certificate",
-	})
-
-	f.StringVar(&StringVar{
-		Name:   "ttl",
-		Target: &c.flagTTL,
-		Usage:  "The TTL of the root certificate",
-	})
-
-	f.StringVar(&StringVar{
-		Name:   "issuing-certificates",
-		Target: &c.flagIssuingCertURLs,
-		Usage:  "The URLs for the Issuing Certificate",
-	})
-
-	f.StringVar(&StringVar{
-		Name:   "crl-distribution-points",
-		Target: &c.flagCRLDistributionURLs,
-		Usage:  "The URLs for the CRL Distribution Points",
-	})
-
 	return set
 }
 
@@ -86,5 +54,42 @@ func (c *PKIAddRootCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *PKIAddRootCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	if len(args) != 1 {
+		c.UI.Error(fmt.Sprintf("Wrong number of arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	mount := sanitizePath(c.flagMountName)
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error getting client: %s", err))
+		return 1
+	}
+
+	var params map[string]interface{}
+
+	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(args[0]), &params); err != nil {
+		c.UI.Error(fmt.Sprintf("Error parsing arguments for root CA: %s", err))
+		return 1
+	}
+
+	ops := pkicli.NewOperations(client)
+	rootResp, err := ops.CreateRoot(mount, params)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error creating root CA: %s", err))
+		return 1
+	}
+
+	fmt.Println(rootResp)
+
 	return 0
 }

@@ -107,15 +107,13 @@ func (c *PKICreateCACommand) Run(args []string) int {
 	var rootArgs map[string]interface{}
 	var intArgs map[string]interface{}
 
-	rootArgs, err = c.parseArgs(data["root_args"].(string))
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error getting arguments for root CA: %s", err))
+	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(data["root_args"].(string)), &rootArgs); err != nil {
+		c.UI.Error(fmt.Sprintf("Error parsing arguments for root CA: %s", err))
 		return 1
 	}
 
-	intArgs, err = c.parseArgs(data["intermediate_args"].(string))
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error getting arguments for intermediate CA: %s", err))
+	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(data["intermediate_args"].(string)), &intArgs); err != nil {
+		c.UI.Error(fmt.Sprintf("Error parsing arguments for intermediate CA: %s", err))
 		return 1
 	}
 
@@ -137,14 +135,4 @@ func (c *PKICreateCACommand) Run(args []string) int {
 	fmt.Println(intResp)
 
 	return 0
-}
-
-func (c *PKICreateCACommand) parseArgs(args string) (map[string]interface{}, error) {
-	argMap := make(map[string]interface{})
-
-	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(args), &argMap); err != nil {
-		return nil, err
-	}
-
-	return argMap, nil
 }
