@@ -2,10 +2,11 @@ package command
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/vault/command/pkicli"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
-	"strings"
 )
 
 var (
@@ -67,7 +68,6 @@ func (c *PKIAddIntermediateCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *PKIAddIntermediateCommand) Run(args []string) int {
-
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -81,28 +81,26 @@ func (c *PKIAddIntermediateCommand) Run(args []string) int {
 		return 1
 	}
 
-	rootMountPath := c.flagRootMount
-	if rootMountPath == "" {
-		c.UI.Error(fmt.Sprintf("Either provide the root mount path to sign with vault root or provide an external CA"))
-		return 1
-	}
-
-	rootMountPath = sanitizePath(rootMountPath)
-	mountPath := sanitizePath(args[0])
-	commonName := args[1]
-
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
-	// Check if root-mount is already configured, if not return error
-	_, err = client.Logical().Read(sanitizePath(fmt.Sprintf("sys/mounts/%s", rootMountPath)))
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
+
+	rootMountPath := c.flagRootMount
+	if rootMountPath != "" {
+		// Check if root-mount is already configured, if not return error
+		_, err = client.Logical().Read(sanitizePath(fmt.Sprintf("sys/mounts/%s", rootMountPath)))
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+		// It is assumed that root certificate is generated before making this request to add intermediate
 	}
-	// It is assumed that root certificate is generated before making this request to add intermediate
+
+	rootMountPath = sanitizePath(rootMountPath)
+	mountPath := sanitizePath(args[0])
+	commonName := args[1]
 
 	// Get the remaining parameters
 	data, err := parseArgsData(nil, args[2:])
