@@ -435,6 +435,7 @@ func TestNewServerLogLevels(t *testing.T) {
 			if server == nil {
 				t.Fatal("nil server returned")
 			}
+			defer server.Stop()
 
 			templateTokenCh := make(chan string, 1)
 
@@ -446,6 +447,7 @@ func TestNewServerLogLevels(t *testing.T) {
 			templatesToRender := []*ctconfig.TemplateConfig{templateTest}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
 
 			errCh := make(chan error)
 			go func() {
@@ -463,8 +465,6 @@ func TestNewServerLogLevels(t *testing.T) {
 					t.Fatalf("did not expect error, got: %v", err)
 				}
 			}
-			cancel()
-			server.Stop()
 		})
 	}
 }
