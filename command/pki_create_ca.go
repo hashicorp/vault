@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"github.com/hashicorp/vault/command/pkicli"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"strings"
@@ -16,9 +15,6 @@ var (
 
 type PKICreateCACommand struct {
 	*BaseCommand
-
-	flagRootMountName string
-	flagIntMountName  string
 }
 
 func (c *PKICreateCACommand) Synopsis() string {
@@ -27,29 +23,15 @@ func (c *PKICreateCACommand) Synopsis() string {
 
 func (c *PKICreateCACommand) Help() string {
 	helpText := `
-Usage: vault pki create-ca [ARGS]
+Usage: vault pki initialize-topology [root mount] [root CN] [intermediate mount] [intermediate CN] [K=V]
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
 func (c *PKICreateCACommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
-	f := set.NewFlagSet("Command Options")
-
-	f.StringVar(&StringVar{
-		Name:   "root-mount",
-		Target: &c.flagRootMountName,
-		Usage:  "The name of the mount for the root CA. The name must be unique.",
-	})
-
-	f.StringVar(&StringVar{
-		Name:   "int-mount",
-		Target: &c.flagIntMountName,
-		Usage:  "The name of the mount for the parseIntermediateArgs CA. The name must be unique.",
-	})
-
-	return set
+	return c.flagSet(FlagSetHTTP)
 }
 
 func (c *PKICreateCACommand) AutocompleteArgs() complete.Predictor {
@@ -69,8 +51,19 @@ func (c *PKICreateCACommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	if len(args) != 2 {
-		c.UI.Error(fmt.Sprintf("Wrong number of arguments (expected 2, got %d)", len(args)))
+	if len(args) < 4 {
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 4+, got %d)", len(args)))
+		return 1
+	}
+
+	rootMount := args[0]
+	rootCommonName := args[1]
+	intMount := args[2]
+	intCommonName := args[3]
+
+	data, err := parseArgsData(nil, args[4:])
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
 	}
 
@@ -80,40 +73,10 @@ func (c *PKICreateCACommand) Run(args []string) int {
 		return 1
 	}
 
-	data, err := parseArgsData(nil, args)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
-		return 1
-	}
-
-	if _, ok := data["root_args"]; !ok {
-		c.UI.Error("Missing arguments for root CA")
-		return 1
-	}
-
-	if _, ok := data["intermediate_args"]; !ok {
-		c.UI.Error("Missing arguments for intermediate CA")
-		return 1
-	}
-
-	var rootArgs map[string]interface{}
-	var intArgs map[string]interface{}
-
-	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(data["root_args"].(string)), &rootArgs); err != nil {
-		c.UI.Error(fmt.Sprintf("Error parsing arguments for root CA: %s", err))
-		return 1
-	}
-
-	if err := jsonutil.DecodeJSONFromReader(strings.NewReader(data["intermediate_args"].(string)), &intArgs); err != nil {
-		c.UI.Error(fmt.Sprintf("Error parsing arguments for intermediate CA: %s", err))
-		return 1
-	}
-
-	rootMount := sanitizePath(c.flagRootMountName)
-	intMount := sanitizePath(c.flagIntMountName)
+	data["common_name"] = rootCommonName
 
 	ops := pkicli.NewOperations(client)
-	rootResp, err := ops.CreateRoot(rootMount, rootArgs)
+	rootResp, err := ops.CreateRoot(rootMount, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating root CA: %s", err))
 		return 1
@@ -121,7 +84,8 @@ func (c *PKICreateCACommand) Run(args []string) int {
 
 	fmt.Println(*rootResp)
 
-	intResp, err := ops.CreateIntermediate(rootMount, intMount, intArgs)
+	data["common_name"] = intCommonName
+	intResp, err := ops.CreateIntermediate(rootMount, intMount, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating intermediate CA: %s", err))
 		return 1

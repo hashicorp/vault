@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"github.com/hashicorp/vault/command/pkicli"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"strings"
@@ -16,8 +15,6 @@ var (
 
 type PKIAddRootCommand struct {
 	*BaseCommand
-
-	flagMountName string
 }
 
 func (c *PKIAddRootCommand) Synopsis() string {
@@ -26,23 +23,14 @@ func (c *PKIAddRootCommand) Synopsis() string {
 
 func (c *PKIAddRootCommand) Help() string {
 	helpText := `
-Usage: vault pki add-root [ARGS]
+Usage: vault pki add-root [mount] [K=V]
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
 func (c *PKIAddRootCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
-	f := set.NewFlagSet("Command Options")
-
-	f.StringVar(&StringVar{
-		Name:   "mount",
-		Target: &c.flagMountName,
-		Usage:  "The name of the mount for the root CA. The name must be unique.",
-	})
-
-	return set
+	return c.flagSet(FlagSetHTTP)
 }
 
 func (c *PKIAddRootCommand) AutocompleteArgs() complete.Predictor {
@@ -67,7 +55,7 @@ func (c *PKIAddRootCommand) Run(args []string) int {
 		return 1
 	}
 
-	data, err := parseArgsData(nil, args)
+	data, err := parseArgsData(nil, args[1:])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
@@ -90,10 +78,10 @@ func (c *PKIAddRootCommand) Run(args []string) int {
 		return 1
 	}
 
-	mount := sanitizePath(c.flagMountName)
+	mount := sanitizePath(args[0])
 
 	ops := pkicli.NewOperations(client)
-	resp, err := ops.CreateRoot(mount, params)
+	resp, err := ops.CreateRoot(mount, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating root CA: %s", err))
 		return 1

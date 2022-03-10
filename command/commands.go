@@ -492,7 +492,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"pki create-ca": func() (cli.Command, error) {
+		"pki initialize-topology": func() (cli.Command, error) {
 			return &PKICreateCACommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
