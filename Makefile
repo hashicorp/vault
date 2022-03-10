@@ -179,8 +179,8 @@ ember-dist-dev: install-ui-dependencies
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build:dev
 
-static-dist: ember-dist 
-static-dist-dev: ember-dist-dev 
+static-dist: ember-dist
+static-dist-dev: ember-dist-dev
 
 proto: bootstrap
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/*.proto
