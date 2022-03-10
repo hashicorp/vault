@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"github.com/hashicorp/vault/command/pkicli"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"strings"
@@ -86,6 +87,15 @@ func (c *PKIAddIntermediateCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *PKIAddIntermediateCommand) Run(args []string) int {
+
+	var mountPath string
+	var commonName string
+	var rootMounthPath string // optional
+	var parameters map[string]interface{}
+
+	ops := pkicli.NewOperations(c.client)
+	ops.CreateIntermediate(rootMounthPath, mountPath, /* commonName, */ parameters)
+
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
