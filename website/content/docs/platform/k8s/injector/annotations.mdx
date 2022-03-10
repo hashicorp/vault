@@ -222,7 +222,9 @@ etc.
   with Vault via mTLS.
 
 - `vault.hashicorp.com/client-max-retries` - configures number of Vault Agent retry
-  attempts when 5xx errors are encountered. Defaults to 2.
+  attempts when certain errors are encountered. Defaults to 2, for 3 total attempts.
+  Set this to `0` or less to disable retrying. Error codes that are retried are 412
+  (client consistency requirement not satisfied) and all 5xx except for 501 (not implemented).
 
 - `vault.hashicorp.com/client-timeout` - configures the request timeout threshold,
   in seconds, of the Vault Agent when communicating with Vault. Defaults to `60s`
