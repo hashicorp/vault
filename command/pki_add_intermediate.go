@@ -25,6 +25,7 @@ func (c *PKIAddIntermediateCommand) Synopsis() string {
 
 func (c *PKIAddIntermediateCommand) Help() string {
 	helpText := `
+
 Usage: vault pki add-intermediate [options] PATH COMMON_NAME [K=V]
 
   Configures an intermediate mount and generate the intermediate certificate.
@@ -89,7 +90,6 @@ func (c *PKIAddIntermediateCommand) Run(args []string) int {
 	rootMountPath = sanitizePath(rootMountPath)
 	mountPath := sanitizePath(args[0])
 	commonName := args[1]
-
 
 	client, err := c.Client()
 	if err != nil {
