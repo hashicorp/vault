@@ -16,9 +16,7 @@ var (
 type PKIAddIntermediateCommand struct {
 	*BaseCommand
 
-	flagMount string
 	flagRootMount string
-	flagCommonName string
 }
 
 func (c *PKIAddIntermediateCommand) Synopsis() string {
@@ -27,7 +25,7 @@ func (c *PKIAddIntermediateCommand) Synopsis() string {
 
 func (c *PKIAddIntermediateCommand) Help() string {
 	helpText := `
-Usage: vault pki add-intermediate [options] [ROOT_MOUNT] PATH COMMON_NAME [K=V]
+Usage: vault pki add-intermediate [options] PATH COMMON_NAME [K=V]
 
   Configures an intermediate mount and generate the intermediate certificate.
   The intermediate certificate is the one from which all leaf certificates will be generated.
@@ -36,7 +34,6 @@ Usage: vault pki add-intermediate [options] [ROOT_MOUNT] PATH COMMON_NAME [K=V]
 
   Configure an intermediate mount at path pki-int with a specific ttl:
       $ vault pki add-intermediate pki pki-int example.com ttl=48000h
-  
 
 ` + c.Flags().Help()
 
@@ -48,26 +45,11 @@ func (c *PKIAddIntermediateCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
-		Name:    "mount",
-		Target:  &c.flagMount,
-		Default: "pki",
-		EnvVar:  "",
-		Usage:   "PKI intermediate mount",
-	})
-
-	f.StringVar(&StringVar{
 		Name:    "root-mount",
 		Target:  &c.flagRootMount,
-		Default: "pki",
+		Default: "",
 		EnvVar:  "",
 		Usage:   "PKI root mount",
-	})
-
-	f.StringVar(&StringVar{
-		Name:    "common_name",
-		Target:  &c.flagCommonName,
-		EnvVar:  "",
-		Usage:   "Common name",
 	})
 
 	return set
@@ -93,31 +75,37 @@ func (c *PKIAddIntermediateCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	if len(args) < 3 {
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 3+, got %d)", len(args)))
+	if len(args) < 2 {
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2+, got %d)", len(args)))
 		return 1
 	}
 
-	rootMountPath := sanitizePath(args[0]) // TODO figure out how to check for optional fields
-	mountPath := sanitizePath(args[1])
-	commonName := args[2]
+	rootMountPath := c.flagRootMount
+	if rootMountPath == "" {
+		c.UI.Error(fmt.Sprintf("Either provide the root mount path to sign with vault root or provide an external CA"))
+		return 1
+	}
+
+	rootMountPath = sanitizePath(rootMountPath)
+	mountPath := sanitizePath(args[0])
+	commonName := args[1]
 
 
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
-		return 2
+		return 1
 	}
 	// Check if root-mount is already configured, if not return error
 	_, err = client.Logical().Read(sanitizePath(fmt.Sprintf("sys/mounts/%s", rootMountPath)))
 	if err != nil {
 		c.UI.Error(err.Error())
-		return 3
+		return 1
 	}
 	// It is assumed that root certificate is generated before making this request to add intermediate
 
 	// Get the remaining parameters
-	data, err := parseArgsData(nil, args[3:])
+	data, err := parseArgsData(nil, args[2:])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
