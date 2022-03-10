@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/go-test/deep"
 
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -399,5 +401,173 @@ secret "kv" "mykv" {
 	_, err = core.HandleRequest(ctx, req)
 	if err == nil {
 		t.Fatal("expected err on proj2")
+	}
+}
+
+func TestPolicyStore_RoleCRUD(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.Factory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole")
+	req.ClientToken = root
+	pathCaps := map[string][]string{"somepath": {"read"}}
+	req.Data["path_caps"] = pathCaps
+	resp, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.ListOperation, "sys/policies/acl/role/")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err, resp)
+	}
+	if !strutil.EquivalentSlices(resp.Data["keys"].([]string), []string{"testrole"}) {
+		t.Fatalf("expected testrole, got: %v", resp.Data["keys"])
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/policies/acl/role/testrole")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err, resp)
+	}
+	if resp.Data["path_caps"] == nil {
+		t.Fatal("no path_caps")
+	}
+	t.Log(resp)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `path "somepath" { capabilities = ["read"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.ListOperation, "sys/policies/acl/role/testrole")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err, resp)
+	}
+	if !strutil.EquivalentSlices(resp.Data["keys"].([]string), []string{"pol1"}) {
+		t.Fatalf("expected pol1, got: %v", resp.Data["keys"])
+	}
+}
+
+func TestPolicyStore_SetViaRole(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.Factory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole")
+	req.ClientToken = root
+	req.Data["path_caps"] = map[string][]string{"somep.*": {"read"}}
+	_, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a policy that's not allowed based on path
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `path "otherpath" { capabilities = ["read"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Create a policy that's not allowed based on capabilities
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `path "somepath" { capabilities = ["write"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Create a policy that's allowed based on path
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `path "somepath" { capabilities = ["read"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Expect an error if you try to modify that same policy without using the role
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `path "somepath" { capabilities = ["read"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPolicyStore_SetViaRole_MountPolicies(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.Factory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole")
+	req.ClientToken = root
+	req.Data["mount_actions"] = map[string]string{"mykv.*": "write-data,read-data"}
+	_, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/policies/acl/role/testrole")
+	req.ClientToken = root
+	resp, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err, resp)
+	}
+	if resp.Data["mount_actions"] == nil {
+		t.Fatal("no mount_actions")
+	}
+	t.Log(resp)
+
+	// Create a policy that's not allowed based on path
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `secret "kv" "otherkv" { actions = ["read-data"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Create a policy that's not allowed based on actions
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `secret "kv" "mykv1" { actions = ["delete-data"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Create a policy that's allowed
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/policies/acl/role/testrole/pol1")
+	req.ClientToken = root
+	req.Data["policy"] = `secret "kv" "mykv1" { actions = ["read-data"] }`
+	_, err = core.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

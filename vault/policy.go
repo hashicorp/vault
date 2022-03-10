@@ -102,6 +102,7 @@ type Policy struct {
 	Name       string               `hcl:"name"`
 	Paths      []*PathRules         `hcl:"-"`
 	MountRules []*logical.MountRule `hcl:"-"`
+	RoleName   string               `hcl:"-"`
 	Raw        string
 	Type       PolicyType
 	Templated  bool

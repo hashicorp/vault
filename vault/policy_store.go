@@ -26,9 +26,10 @@ const (
 	// policySubPath is the sub-path used for the policy store view. This is
 	// nested under the system view. policyRGPSubPath/policyEGPSubPath are
 	// similar but for RGPs/EGPs.
-	policyACLSubPath = "policy/"
-	policyRGPSubPath = "policy-rgp/"
-	policyEGPSubPath = "policy-egp/"
+	policyACLSubPath  = "policy/"
+	policyRGPSubPath  = "policy-rgp/"
+	policyEGPSubPath  = "policy-egp/"
+	policyRoleSubPath = "roles/"
 
 	// policyCacheSize is the number of policies that are kept cached
 	policyCacheSize = 1024
@@ -179,10 +180,11 @@ var (
 type PolicyStore struct {
 	entPolicyStore
 
-	core    *Core
-	aclView *BarrierView
-	rgpView *BarrierView
-	egpView *BarrierView
+	core     *Core
+	aclView  *BarrierView
+	rgpView  *BarrierView
+	egpView  *BarrierView
+	roleView *BarrierView
 
 	tokenPoliciesLRU *lru.TwoQueueCache
 	egpLRU           *lru.TwoQueueCache
@@ -208,6 +210,13 @@ type PolicyEntry struct {
 	Expanded  string
 	Templated bool
 	Type      PolicyType
+	RoleName  string
+}
+
+type PolicyRole struct {
+	Name             string
+	PathCaps         map[string][]string `json:"path_caps"`
+	MountPathActions map[string][]string `json:"mount_actions"`
 }
 
 // NewPolicyStore creates a new PolicyStore that is backed
@@ -217,6 +226,7 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 		aclView:    baseView.SubView(policyACLSubPath),
 		rgpView:    baseView.SubView(policyRGPSubPath),
 		egpView:    baseView.SubView(policyEGPSubPath),
+		roleView:   baseView.SubView(policyRoleSubPath),
 		modifyLock: new(sync.RWMutex),
 		logger:     logger,
 		core:       core,
@@ -419,6 +429,7 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 		Type:           p.Type,
 		Templated:      p.Templated,
 		sentinelPolicy: p.sentinelPolicy,
+		RoleName:       p.RoleName,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create entry: %w", err)
@@ -604,6 +615,7 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	policy.Templated = policyEntry.Templated
 	policy.sentinelPolicy = policyEntry.sentinelPolicy
 	policy.namespace = ns
+	policy.RoleName = policyEntry.RoleName
 	switch policyEntry.Type {
 	case PolicyTypeACL:
 		// Parse normally
@@ -1000,6 +1012,56 @@ func (ps *PolicyStore) ExpandMountPolicies(ctx context.Context, p *Policy, grabl
 	}
 	p.Paths = paths
 	return nil
+}
+
+func (ps *PolicyStore) PutPolicyRole(ctx context.Context, pr *PolicyRole) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	view := ps.getRoleView(ns)
+	entry, err := logical.StorageEntryJSON(pr.Name, pr)
+	if err != nil {
+		return fmt.Errorf("failed to create entry: %w", err)
+	}
+	return view.Put(ctx, entry)
+}
+
+func (ps *PolicyStore) GetPolicyRole(ctx context.Context, name string) (*PolicyRole, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view := ps.getRoleView(ns)
+	entry, err := view.Get(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	var result PolicyRole
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (ps *PolicyStore) DeletePolicyRole(ctx context.Context, name string) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	view := ps.getRoleView(ns)
+	return view.Delete(ctx, name)
+}
+
+func (ps *PolicyStore) ListPolicyRoles(ctx context.Context) ([]string, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view := ps.getRoleView(ns)
+	return view.List(ctx, "")
 }
 
 func expandMountPolicy(rule *logical.MountRule, mountPath string, actions map[string]framework.OpPath) (string, error) {

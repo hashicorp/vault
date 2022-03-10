@@ -28,6 +28,10 @@ func (ps *PolicyStore) getEGPView(ns *namespace.Namespace) *BarrierView {
 	return ps.egpView
 }
 
+func (ps *PolicyStore) getRoleView(*namespace.Namespace) *BarrierView {
+	return ps.roleView
+}
+
 func (ps *PolicyStore) getBarrierView(ns *namespace.Namespace, _ PolicyType) *BarrierView {
 	return ps.getACLView(ns)
 }

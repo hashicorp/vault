@@ -1635,7 +1635,8 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "policies/acl/(?P<name>.+)",
+			// TODO can policy names contain slashes?
+			Pattern: "policies/acl/(?P<name>[^/]+)",
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -1664,6 +1665,95 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesDelete(PolicyTypeACL),
 					Summary:  "Delete the ACL policy with the given name.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+
+		{
+			Pattern: "policies/acl/role/",
+
+			Fields: map[string]*framework.FieldSchema{},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePolicyRoleList(),
+					Summary:  "List the roles.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+		{
+			Pattern: "policies/acl/role/(?P<role_name>[^/]+)",
+
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": {
+					Type:        framework.TypeString,
+					Description: "Name of the policy role",
+				},
+				"path_caps": {
+					Type:        framework.TypeMap,
+					Description: "Map from path regexp to the CSV grantable capabilities on those paths",
+				},
+				"mount_actions": {
+					Type:        framework.TypeMap,
+					Description: "Map from mountpath regexp to the CSV grantable actions on those mountpaths",
+				},
+				//"mount_type": {
+				//	Type:        framework.TypeString,
+				//	Description: "Mount type that may be used for mount policies",
+				//},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePolicyRoleRead(),
+					Summary:  "Retrieve information about the named role.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handlePolicyRoleWrite(),
+					Summary:  "Add a new or update an existing role.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handlePolicyRoleDelete(),
+					Summary:  "Delete the role.",
+				},
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePolicyRoleListPolicies(),
+					Summary:  "List the policies attached to this role.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+
+		{
+			Pattern: "policies/acl/role/(?P<role_name>.+)/(?P<name>.+)",
+
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": {
+					Type:        framework.TypeString,
+					Description: "Name of the policy role",
+				},
+				"name": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["policy-name"][0]),
+				},
+				"policy": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handlePolicyRoleSet(),
+					Summary:  "Add a new or update an existing policy via role.",
 				},
 			},
 

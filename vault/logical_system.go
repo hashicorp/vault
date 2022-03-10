@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -2424,6 +2425,7 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 			Data: map[string]interface{}{
 				"name":             policy.Name,
 				respDataPolicyName: body,
+				"role_name":        policy.RoleName,
 			},
 		}
 
@@ -2707,6 +2709,241 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 		},
 	}
 	return resp, nil
+}
+
+func (b *SystemBackend) handlePolicyRoleList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		roles, err := b.Core.policyStore.ListPolicyRoles(ctx)
+		if err != nil {
+			return handleError(err)
+		}
+
+		return logical.ListResponse(roles), nil
+	}
+}
+
+func (b *SystemBackend) handlePolicyRoleRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		roleName := data.Get("role_name").(string)
+
+		role, err := b.Core.policyStore.GetPolicyRole(ctx, roleName)
+		if err != nil {
+			return handleError(err)
+		}
+
+		if role == nil {
+			return nil, nil
+		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"name":          roleName,
+				"path_caps":     role.PathCaps,
+				"mount_actions": role.MountPathActions,
+			},
+		}
+
+		return resp, nil
+	}
+}
+
+func (b *SystemBackend) handlePolicyRoleWrite() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		roleName := data.Get("role_name").(string)
+		pathCaps := data.Get("path_caps").(map[string]interface{})
+		mountPathActions := data.Get("mount_actions").(map[string]interface{})
+
+		role := &PolicyRole{
+			Name:             roleName,
+			PathCaps:         map[string][]string{},
+			MountPathActions: map[string][]string{},
+		}
+		for pathRE, capCSV := range pathCaps {
+			if _, err := regexp.Compile(pathRE); err != nil {
+				return handleError(fmt.Errorf("bad path regexp %q: %s", pathRE, err))
+			}
+			switch t := capCSV.(type) {
+			case string:
+				role.PathCaps[pathRE] = strings.Split(t, ",")
+			case []string:
+				role.PathCaps[pathRE] = t
+			default:
+				return handleError(fmt.Errorf("path_caps must be a map of string to string list"))
+			}
+		}
+
+		for pathRE, actCSV := range mountPathActions {
+			if _, err := regexp.Compile(pathRE); err != nil {
+				return handleError(fmt.Errorf("bad mount_path regexp %q: %s", pathRE, err))
+			}
+
+			switch t := actCSV.(type) {
+			case string:
+				role.MountPathActions[pathRE] = strings.Split(t, ",")
+			case []string:
+				role.MountPathActions[pathRE] = t
+			default:
+				return handleError(fmt.Errorf("mount_actions must be a map of string to string list"))
+			}
+		}
+
+		err := b.Core.policyStore.PutPolicyRole(ctx, role)
+		if err != nil {
+			return handleError(err)
+		}
+
+		return nil, nil
+	}
+}
+
+func (b *SystemBackend) handlePolicyRoleDelete() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		roleName := data.Get("role_name").(string)
+
+		err := b.Core.policyStore.DeletePolicyRole(ctx, roleName)
+		if err != nil {
+			return handleError(err)
+		}
+
+		return nil, nil
+	}
+}
+
+func (b *SystemBackend) handlePolicyRoleListPolicies() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		roleName := data.Get("role_name").(string)
+
+		role, err := b.Core.policyStore.GetPolicyRole(ctx, roleName)
+		if err != nil {
+			return handleError(err)
+		}
+
+		if role == nil {
+			return handleError(fmt.Errorf("unknown policy role %q", roleName))
+		}
+
+		policies, err := b.Core.policyStore.ListPolicies(ctx, PolicyTypeACL)
+		if err != nil {
+			return nil, fmt.Errorf("error listing policies: %v", err)
+		}
+
+		var rolePolicies []string
+		for _, name := range policies {
+			p, err := b.Core.policyStore.GetPolicy(ctx, name, PolicyTypeACL)
+			if err != nil {
+				return nil, fmt.Errorf("error reading policy %q: %v", name, err)
+			}
+			if p.RoleName == roleName {
+				rolePolicies = append(rolePolicies, name)
+			}
+		}
+		return logical.ListResponse(rolePolicies), nil
+	}
+}
+
+func (b *SystemBackend) handlePolicyRoleSet() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		roleName := data.Get("role_name").(string)
+
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		role, err := b.Core.policyStore.GetPolicyRole(ctx, roleName)
+		if err != nil {
+			return handleError(err)
+		}
+
+		if role == nil {
+			return handleError(fmt.Errorf("unknown policy role %q", roleName))
+		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{},
+		}
+
+		policy := &Policy{
+			Name:      strings.ToLower(data.Get("name").(string)),
+			Type:      PolicyTypeACL,
+			namespace: ns,
+		}
+		if policy.Name == "" {
+			return logical.ErrorResponse("policy name must be provided in the URL"), nil
+		}
+
+		curPolicy, err := b.Core.policyStore.GetPolicy(ctx, policy.Name, PolicyTypeACL)
+		if err != nil {
+			return nil, fmt.Errorf("error reading existing policy %q: %v", policy.Name, err)
+		}
+		if curPolicy != nil && curPolicy.RoleName != roleName {
+			return nil, fmt.Errorf("existing policy wasn't created using role %q", roleName)
+		}
+
+		policy.Raw = data.Get("policy").(string)
+		if policy.Raw == "" {
+			return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
+		}
+
+		if polBytes, err := base64.StdEncoding.DecodeString(policy.Raw); err == nil {
+			policy.Raw = string(polBytes)
+		}
+
+		p, err := ParseACLPolicy(ns, policy.Raw)
+		if err != nil {
+			return handleError(err)
+		}
+		policy.Paths = p.Paths
+		policy.Templated = p.Templated
+		policy.MountRules = p.MountRules
+		policy.RoleName = roleName
+
+		pathCaps := make(map[*regexp.Regexp][]string)
+		for reStr, caps := range role.PathCaps {
+			pathCaps[regexp.MustCompile(reStr)] = caps
+		}
+		for _, policyPath := range policy.Paths {
+			matched := false
+			for re, caps := range pathCaps {
+				if re.MatchString(policyPath.Path) {
+					matched = true
+					if !strutil.StrListSubset(caps, policyPath.Capabilities) {
+						return logical.ErrorResponse(fmt.Sprintf("capabilities on path %q not permitted by role", policyPath.Path)), logical.ErrPermissionDenied
+					}
+				}
+			}
+			if !matched {
+				return logical.ErrorResponse(fmt.Sprintf("path %q not permitted by role", policyPath.Path)), logical.ErrPermissionDenied
+			}
+		}
+
+		mountActs := make(map[*regexp.Regexp][]string)
+		for reStr, acts := range role.MountPathActions {
+			mountActs[regexp.MustCompile(reStr)] = acts
+		}
+		for _, mountRule := range policy.MountRules {
+			matched := false
+			for re, actions := range mountActs {
+				if re.MatchString(mountRule.MountPath) {
+					matched = true
+					if !strutil.StrListSubset(actions, mountRule.Actions) {
+						return logical.ErrorResponse(fmt.Sprintf("actions on mount path %q not permitted by role", mountRule.MountPath)), logical.ErrPermissionDenied
+					}
+				}
+			}
+			if !matched {
+				return logical.ErrorResponse(fmt.Sprintf("mount path %q not permitted by role, allowed: %v", mountRule.MountPath, role.MountPathActions)), logical.ErrPermissionDenied
+			}
+		}
+
+		// Update the policy
+		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
+			b.Core.logger.Error("SetPolicy ", "error", err, "policy", policy)
+			return handleError(err)
+		}
+
+		return resp, nil
+	}
 }
 
 // handleAuditTable handles the "audit" endpoint to provide the audit table
