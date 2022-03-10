@@ -300,12 +300,16 @@ func testPolicyStore_MountPolicies_KV(t *testing.T, kvv2 bool) {
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	policy := `
 secret "kv" "mykv" {
-	actions = ["read-data", "create-data", "list-data"]
+	actions = ["read-data", "create-data", "update-data", "list-keys"]
     allow {
         path = ["proj1/*"]
     }
 }
 `
+	var data, meta string
+	if kvv2 {
+		data, meta = "data/", "metadata/"
+	}
 	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/mykv")
 	req.ClientToken = root
@@ -337,7 +341,7 @@ secret "kv" "mykv" {
 	}
 	t.Log(resp.Data["rules"])
 
-	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.Data = map[string]interface{}{
 		"policies": []string{"test"},
 	}
@@ -351,30 +355,37 @@ secret "kv" "mykv" {
 	}
 	token := resp.Auth.ClientToken
 
-	req = logical.TestRequest(t, logical.CreateOperation, "mykv/data/proj1/foo")
+	req = logical.TestRequest(t, logical.UpdateOperation, "mykv/"+data+"proj1/foo")
 	req.ClientToken = token
 	val := map[string]interface{}{
 		"bar": "baz",
 	}
-	req.Data["data"] = val
+	if kvv2 {
+		req.Data["data"] = val
+	} else {
+		req.Data = val
+	}
 	_, err = core.HandleRequest(ctx, req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(err, req)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "mykv/data/proj1/foo")
+	req = logical.TestRequest(t, logical.ReadOperation, "mykv/"+data+"proj1/foo")
 	req.ClientToken = token
 	resp, err = core.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	data := resp.Data["data"]
-	if diff := deep.Equal(data, val); len(diff) != 0 {
+	got := resp.Data
+	if kvv2 {
+		got = resp.Data["data"].(map[string]interface{})
+	}
+	if diff := deep.Equal(got, val); len(diff) != 0 {
 		t.Fatal(diff)
 	}
 
 	// TODO this fails without the trailing slash
-	req = logical.TestRequest(t, logical.ListOperation, "mykv/data/proj1/")
+	req = logical.TestRequest(t, logical.ListOperation, "mykv/"+meta+"proj1/")
 	req.ClientToken = token
 	resp, err = core.HandleRequest(ctx, req)
 	if err != nil {
@@ -382,22 +393,25 @@ secret "kv" "mykv" {
 	}
 	keys := resp.Data["keys"]
 	if diff := deep.Equal(keys, []string{"foo"}); len(diff) != 0 {
-		t.Fatal(diff)
+		t.Fatal(diff, resp)
 	}
 
-	// We should have right to Create but not to Update
-	req = logical.TestRequest(t, logical.UpdateOperation, "mykv/data/proj1/foo")
+	// We don't have delete perms
+	req = logical.TestRequest(t, logical.DeleteOperation, "mykv/"+data+"proj1/foo")
 	req.ClientToken = token
-	req.Data["data"] = val
 	resp, err = core.HandleRequest(ctx, req)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	// We shouldn't be allowed to Create in proj2
-	req = logical.TestRequest(t, logical.CreateOperation, "mykv/data/proj2/foo")
+	req = logical.TestRequest(t, logical.CreateOperation, "mykv/"+data+"proj2/foo")
 	req.ClientToken = token
-	req.Data["data"] = val
+	if kvv2 {
+		req.Data["data"] = val
+	} else {
+		req.Data = val
+	}
 	_, err = core.HandleRequest(ctx, req)
 	if err == nil {
 		t.Fatal("expected err on proj2")

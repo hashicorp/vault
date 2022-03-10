@@ -181,6 +181,8 @@ type OperationProperties struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
+
+	ActionAlias string
 }
 
 type DisplayAttributes struct {
@@ -240,6 +242,7 @@ type PathOperation struct {
 	Deprecated                  bool
 	ForwardPerformanceSecondary bool
 	ForwardPerformanceStandby   bool
+	ActionAlias                 string
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -256,6 +259,7 @@ func (p *PathOperation) Properties() OperationProperties {
 		Deprecated:                  p.Deprecated,
 		ForwardPerformanceSecondary: p.ForwardPerformanceSecondary,
 		ForwardPerformanceStandby:   p.ForwardPerformanceStandby,
+		ActionAlias:                 p.ActionAlias,
 	}
 }
 

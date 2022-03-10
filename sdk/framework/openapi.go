@@ -825,6 +825,9 @@ func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*P
 			str := path[pair[0]+1 : pair[1]-1]
 			pd.PathParamNames = append(pd.PathParamNames, str)
 		}
+		if len(matches) == 0 && path != "" {
+			pd.PathParamNames = []string{"path"}
+		}
 
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
@@ -834,6 +837,9 @@ func describePath(logger log.Logger, p *Path, specialPaths *logical.Paths) ([]*P
 				continue
 			}
 
+			if props.ActionAlias != "" {
+				pd.Actions[props.ActionAlias] = string(opType)
+			}
 			pd.Operations = append(pd.Operations, string(opType))
 		}
 		// Think "help" /.*/ paths
