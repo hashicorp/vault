@@ -29,7 +29,7 @@ Usage: vault pki <subcommand> [options] [args]
        $ vault pki role-test -mount=pki-int server-role example.com
 
   To add new intermediate:
-       $ vault pki add-intermediate pki pki-int example.com ttl=43800h csr=@example.csr format=pem_bundle
+       $ vault pki add-intermediate pki pki-int example.com ttl=43800h
 
   Please see the individual subcommand help for detailed usage information.
 `

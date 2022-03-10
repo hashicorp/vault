@@ -31,14 +31,11 @@ Usage: vault pki add-intermediate [options] [ROOT_MOUNT] PATH COMMON_NAME [K=V]
 
   Configures an intermediate mount and generate the intermediate certificate.
   The intermediate certificate is the one from which all leaf certificates will be generated.
-  This intermediate will be signed by the root. Other parameters can be specified in
-  K=V format (mirroring vault write).
+  This intermediate will be signed by the root if root-mount specified in the input parameters.
+  Other parameters can be specified in K=V format (mirroring vault write).
 
   Configure an intermediate mount at path pki-int with a specific ttl:
       $ vault pki add-intermediate pki pki-int example.com ttl=48000h
-
-  Configure an intermediate mount at path pki-int with CSR type and common name:
-      $ vault pki add-intermediate pki pki-int example.com csr=@example.csr format=pem
   
 
 ` + c.Flags().Help()
