@@ -119,16 +119,41 @@ func (p pkiOps) configUrls(params *Params) error {
 	return err
 }
 
+func (p pkiOps) readCAChainPEM(mountPath string) (string, error) {
+	params := newParams(mapStringAny{"_mount": mountPath})
+	s, err := p.readMount(params, "cert/ca_chain")
+
+	return s.Data["ca_chain"].(string), err
+}
+
 func (p pkiOps) writeMount(params *Params, format string, a ...interface{}) (*api.Secret, error) {
-	mount := params.pop("_mount")
-	if err := params.error(); err != nil {
+	writePath, err := mountPath(params, format, a...)
+	if err != nil {
 		return nil, err
 	}
 
-	return p.write(params, "%s/%s", mount, fmt.Sprintf(format, a...))
+	return p.write(params, writePath)
+}
+
+func mountPath(params *Params, format string, a ...interface{}) (string, error) {
+	mount := params.pop("_mount")
+	if err := params.error(); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/%s", mount, fmt.Sprintf(format, a...)), nil
 }
 
 func (p pkiOps) write(params *Params, format string, a ...interface{}) (*api.Secret, error) {
 	writePath := fmt.Sprintf(format, a...)
 	return p.client.Logical().Write(writePath, params.data())
+}
+
+func (p pkiOps) readMount(params *Params, format string, a ...interface{}) (*api.Secret, error) {
+	readPath, err := mountPath(params, format, a...)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.client.Logical().Read(readPath)
 }
