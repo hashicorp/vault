@@ -27,7 +27,7 @@ func (c *PKIAddIntermediateCommand) Synopsis() string {
 
 func (c *PKIAddIntermediateCommand) Help() string {
 	helpText := `
-Usage: vault pki add-intermediate [options] ROOT_MOUNT PATH COMMON_NAME [K=V]
+Usage: vault pki add-intermediate [options] [ROOT_MOUNT] PATH COMMON_NAME [K=V]
 
   Configures an intermediate mount and generate the intermediate certificate.
   The intermediate certificate is the one from which all leaf certificates will be generated.
@@ -88,14 +88,6 @@ func (c *PKIAddIntermediateCommand) AutocompleteFlags() complete.Flags {
 
 func (c *PKIAddIntermediateCommand) Run(args []string) int {
 
-	var mountPath string
-	var commonName string
-	var rootMounthPath string // optional
-	var parameters map[string]interface{}
-
-	ops := pkicli.NewOperations(c.client)
-	ops.CreateIntermediate(rootMounthPath, mountPath, /* commonName, */ parameters)
-
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -105,45 +97,29 @@ func (c *PKIAddIntermediateCommand) Run(args []string) int {
 
 	args = f.Args()
 	if len(args) < 3 {
-		c.UI.Error(fmt.Sprintf("Not enough argumentssssss (expected 3+, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 3+, got %d)", len(args)))
 		return 1
 	}
-	//TODO - validate that root certificate exists and is valid, check if path is already in use.
-	//Step 1: Mount backend for root and generate root certificate
-	root_mount := sanitizePath(args[0])
-	root_path := sanitizePath(fmt.Sprintf("sys/mounts/%s", root_mount))
-	root_data := map[string]interface{}{
-		"path": sanitizePath(root_path),
-		"description": root_mount + " root CA",
-		"type": "pki",
-	}
+
+	rootMountPath := sanitizePath(args[0]) // TODO figure out how to check for optional fields
+	mountPath := sanitizePath(args[1])
+	commonName := args[2]
+
 
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
-	_, err = client.Logical().Write(root_path, root_data)
-
+	// Check if root-mount is already configured, if not return error
+	_, err = client.Logical().Read(sanitizePath(fmt.Sprintf("sys/mounts/%s", rootMountPath)))
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 3
 	}
+	// It is assumed that root certificate is generated before making this request to add intermediate
 
-	// Step 2: Generate root certificate
-	root_path = sanitizePath(fmt.Sprintf("%s/root/generate/internal", root_mount))
-	secret, err := client.Logical().Write(root_path, root_data)
-
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error generating root certificate: %v", err))
-		return 4
-	}
-
-    // Step 3: Mount the backend and configure intermediate CA
-	mount := sanitizePath(args[1])
-	commonName := args[2]
-	path := sanitizePath(fmt.Sprintf("sys/mounts/%s", mount))
-
+	// Get the remaining parameters
 	data, err := parseArgsData(nil, args[3:])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
@@ -153,73 +129,14 @@ func (c *PKIAddIntermediateCommand) Run(args []string) int {
 	if data == nil {
 		data = make(map[string]interface{})
 	}
-    data["path"] = sanitizePath(path)
-    data["description"] = mount + " intermediate CA"
-    data["type"] = "pki"
 	data["common_name"] = commonName
 
-	_, err = client.Logical().Write(path, data)
-
+	ops := pkicli.NewOperations(c.client)
+	intResp, err := ops.CreateIntermediate(rootMountPath, mountPath, data)
 	if err != nil {
-		c.UI.Error(err.Error())
-		return 3
+		c.UI.Error(fmt.Sprintf("Error creating intermediate CA: %s", err))
+		return 1
 	}
-	c.UI.Info(fmt.Sprintf("Successfully mounted backend for intermediate CA"))
-
-	// Step 4: Generate intermediate certificate signing request
-	path = sanitizePath(fmt.Sprintf("%s/intermediate/generate/internal", mount))
-	//c.UI.Error(fmt.Sprintf("data for generating csr: %v", data))
-	secret, err = client.Logical().Write(path, data)
-
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error generating intermediate certificate signing request: %v", err))
-		return 4
-	}
-	csr := secret.Data["csr"]
-	c.UI.Info(fmt.Sprintf("Successfully generated intermediate certificate signing request: %v", csr))
-	//fmt.Println(csr)
-
-	// Step 5: Sign the intermediate CA
-	path = sanitizePath(fmt.Sprintf("pki/root/sign-intermediate"))
-	data["csr"] = csr
-	data["format"] = "pem_bundle"
-	secret, err = client.Logical().Write(path, data)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error signing intermediate CA: %v", err))
-		return 5
-	}
-	cert := secret.Data["certificate"]
-	//fmt.Println(secret.Data)
-
-	// Set intermediate CA's signing certificate
-	path = sanitizePath(fmt.Sprintf("%s/intermediate/set-signed", mount))
-	data["certificate"] = cert
-	secret, err = client.Logical().Write(path, data)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error setting intermediate CA's signing certificate: %v", err))
-		return 5
-	}
-	c.UI.Info(fmt.Sprintf("Successfully set intermediate CA's signing certificate: %v", cert))
-
-	// STep 6: Configure a role
-	role := "example-dot-com" // Should we get the role name from parameters?
-	path = sanitizePath(fmt.Sprintf("%s/roles/%s", mount, role))
-	data["allowed_domains"] = commonName
-	data["allowed_subdomains"] = true
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error configuring role: %v", err))
-		return 5
-	}
-	c.UI.Info(fmt.Sprintf("Successfully configured role:%s", role))
-
-	//Step 7: Issue certificates
-	path = sanitizePath(fmt.Sprintf("%s/issue/%s", mount, role))
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error issuing leaf certificate: %v", err))
-		return 5
-	}
-
+	fmt.Println(*intResp)
 	return 0
 }
