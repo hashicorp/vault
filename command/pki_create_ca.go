@@ -119,7 +119,7 @@ func (c *PKICreateCACommand) Run(args []string) int {
 		return 1
 	}
 
-	fmt.Println(rootResp)
+	fmt.Println(*rootResp)
 
 	intResp, err := ops.CreateIntermediate(rootMount, intMount, intArgs)
 	if err != nil {
@@ -127,7 +127,7 @@ func (c *PKICreateCACommand) Run(args []string) int {
 		return 1
 	}
 
-	fmt.Println(intResp)
+	fmt.Println(*intResp)
 
 	return 0
 }

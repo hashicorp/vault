@@ -76,7 +76,7 @@ func (c *PKIAddRootCommand) Run(args []string) int {
 	var params map[string]interface{}
 
 	if _, ok := data["config"]; ok {
-		if err := jsonutil.DecodeJSONFromReader(strings.NewReader(args[0]), &params); err != nil {
+		if err := jsonutil.DecodeJSONFromReader(strings.NewReader(data["config"].(string)), &params); err != nil {
 			c.UI.Error(fmt.Sprintf("Error parsing arguments for root CA: %s", err))
 			return 1
 		}
@@ -99,7 +99,7 @@ func (c *PKIAddRootCommand) Run(args []string) int {
 		return 1
 	}
 
-	fmt.Println(resp)
+	fmt.Println(*resp)
 
 	return 0
 }
