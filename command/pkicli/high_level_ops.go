@@ -27,6 +27,7 @@ type pkiCreateRootResponse struct {
 }
 
 type pkiCreateIntermediateResponse struct {
+	csr     string
 	certPem string
 }
 
@@ -94,6 +95,12 @@ func (p pkiOps) CreateIntermediate(rootMountPath, mountPath string, parameterMap
 	err = p.configUrls(params)
 	if err != nil {
 		return nil, err
+	}
+
+	if rootMountPath == "" {
+		return &pkiCreateIntermediateResponse{
+			csr: generateResp.csr,
+		}, nil
 	}
 
 	// 4. Sign the intermediate CSR
