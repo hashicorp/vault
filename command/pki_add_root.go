@@ -61,17 +61,6 @@ func (c *PKIAddRootCommand) Run(args []string) int {
 		return 1
 	}
 
-	var params map[string]interface{}
-
-	if _, ok := data["config"]; ok {
-		if err := jsonutil.DecodeJSONFromReader(strings.NewReader(data["config"].(string)), &params); err != nil {
-			c.UI.Error(fmt.Sprintf("Error parsing arguments for root CA: %s", err))
-			return 1
-		}
-	} else {
-		params = data
-	}
-
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating client: %s", err))
