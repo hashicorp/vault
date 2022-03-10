@@ -48,7 +48,7 @@ func (c *PKICommand) testCreateRoot() int {
 	}
 	ops := pkicli.NewOperations(client)
 
-	vaultAddress := "http://localhost:8200"  // TODO: how to get the address?
+	vaultAddress := client.Address()
 	_, err = ops.CreateRoot("pki-root", map[string]interface{}{
 		"max_lease_ttl": "24h",
 		"common_name": "example.com",

@@ -22,14 +22,6 @@ type Operations interface {
 
 }
 
-type pkiCreateRootParameters struct {
-	path        string
-	maxLeaseTTL string
-	commonName  string
-	ttl         string
-	// etc.
-}
-
 type pkiCreateRootResponse struct {
 	cert string
 }
@@ -98,7 +90,7 @@ func (p pkiOps) CreateIntermediate(rootMountPath, mountPath string, parameterMap
 		return nil, err
 	}
 
-	// 3. Set the config URLs -- Is this necessary for intermediates??
+	// 3. Set the config URLs
 	err = p.configUrls(params)
 	if err != nil {
 		return nil, err
