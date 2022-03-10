@@ -14,7 +14,7 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#if (not (eq this.model.canParse true))}}
+{{#if (eq this.model.canParse false)}}
   <AlertBanner
     @type="info"
     @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the common name or the issue and expiration dates. This will not interfere with the certificate's functionality."
