@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/gcs: Add documentation explaining how to configure the gcs backend using environment variables instead of options in the configuration stanza
+```
