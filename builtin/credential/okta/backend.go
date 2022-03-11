@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/okta/okta-sdk-golang/v2/okta"
+	"github.com/patrickmn/go-cache"
 )
 
 const (
@@ -36,6 +37,7 @@ func Backend() *backend {
 
 			Unauthenticated: []string{
 				"login/*",
+				"verify/*",
 			},
 			SealWrapStorage: []string{
 				"config",
@@ -48,6 +50,7 @@ func Backend() *backend {
 			pathGroups(&b),
 			pathUsersList(&b),
 			pathGroupsList(&b),
+			pathVerify(&b),
 		},
 			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
 		),
@@ -55,15 +58,18 @@ func Backend() *backend {
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
 	}
+	b.verifyCache = cache.New(5*time.Minute, time.Minute)
+	b.verifyCache.SetDefault("test", 55)
 
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
+	verifyCache *cache.Cache
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp string) ([]string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp, nonce string) ([]string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, nil, err
@@ -92,11 +98,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		Id       string `json:"id"`
 		Type     string `json:"factorType"`
 		Provider string `json:"provider"`
+		Embedded struct {
+			Challenge struct {
+				CorrectAnswer *int `json:"correctAnswer"`
+			} `json:"challenge"`
+		} `json:"_embedded"`
 	}
 
 	type embeddedResult struct {
 		User    okta.User   `json:"user"`
 		Factors []mfaFactor `json:"factors"`
+		Factor  *mfaFactor  `json:"factor"`
 	}
 
 	type authResult struct {
@@ -236,6 +248,13 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 					return nil, logical.ErrorResponse(fmt.Sprintf("okta auth failed creating verify request: %v", err)), nil, nil
 				}
 				rsp, err := shim.Do(verifyReq, &result)
+
+				// Store number challenge if found
+				numberChallenge := result.Embedded.Factor.Embedded.Challenge.CorrectAnswer
+				if numberChallenge != nil {
+					b.verifyCache.SetDefault(nonce, *numberChallenge)
+				}
+
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed checking loop: %v", err)), nil, nil
 				}

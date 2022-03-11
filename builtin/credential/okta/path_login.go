@@ -28,6 +28,10 @@ func pathLogin(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "TOTP passcode.",
 			},
+			"nonce": {
+				Type:        framework.TypeString,
+				Description: "Nonce",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -59,8 +63,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 	totp := d.Get("totp").(string)
+	nonce := d.Get("nonce").(string)
 
-	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp)
+	defer b.verifyCache.Delete(nonce)
+
+	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp, nonce)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -116,6 +123,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
+	nonce := d.Get("nonce").(string)
 
 	cfg, err := b.getConfig(ctx, req)
 	if err != nil {
@@ -124,7 +132,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 	// No TOTP entry is possible on renew. If push MFA is enabled it will still be triggered, however.
 	// Sending "" as the totp will prompt the push action if it is configured.
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, "")
+	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, "", nonce)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}
@@ -149,6 +157,39 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{
 			Name: groupName,
 		})
+	}
+
+	return resp, nil
+}
+
+func pathVerify(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `verify/(?P<nonce>.+)`,
+		Fields: map[string]*framework.FieldSchema{
+			"nonce": {
+				Type:        framework.TypeString,
+				Description: "Nonce",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathVerify,
+		},
+	}
+}
+
+func (b *backend) pathVerify(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nonce := d.Get("nonce").(string)
+
+	correctRaw, ok := b.verifyCache.Get(nonce)
+	if !ok {
+		return nil, nil
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"correctAnswer": correctRaw.(int),
+		},
 	}
 
 	return resp, nil

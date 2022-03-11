@@ -1,10 +1,13 @@
 package okta
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	pwd "github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
 )
@@ -52,6 +55,20 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if ok {
 		data["passcode"] = mfa_passcode
 	}
+
+	nonce := base62.MustRandom(20)
+	data["nonce"] = nonce
+
+	go func() {
+		for {
+			resp, _ := c.Logical().Read(fmt.Sprintf("auth/%s/verify/%s", mount, nonce))
+			if resp != nil {
+				fmt.Printf("In Okta Verify, tap the number '%s'\n", resp.Data["correctAnswer"].(json.Number))
+				return
+			}
+			time.Sleep(time.Second)
+		}
+	}()
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
 	secret, err := c.Logical().Write(path, data)
