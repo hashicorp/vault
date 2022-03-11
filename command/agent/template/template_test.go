@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -210,7 +209,7 @@ func TestServerRun(t *testing.T) {
 	ts := createHttpTestServer()
 	defer ts.Close()
 
-	tmpDir, err := ioutil.TempDir("", "agent-tests")
+	tmpDir, err := os.MkdirTemp("", "agent-tests")
 	defer os.RemoveAll(tmpDir)
 	if err != nil {
 		t.Fatal(err)
@@ -384,7 +383,7 @@ func TestServerRun(t *testing.T) {
 				if template.Destination == nil {
 					t.Fatal("nil template destination")
 				}
-				content, err := ioutil.ReadFile(*template.Destination)
+				content, err := os.ReadFile(*template.Destination)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -411,7 +410,7 @@ func TestNewServerLogLevels(t *testing.T) {
 	ts := createHttpTestServer()
 	defer ts.Close()
 
-	tmpDir, err := ioutil.TempDir("", "agent-tests")
+	tmpDir, err := os.MkdirTemp("", "agent-tests")
 	defer os.RemoveAll(tmpDir)
 	if err != nil {
 		t.Fatal(err)
