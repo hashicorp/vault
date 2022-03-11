@@ -6,20 +6,23 @@ on:
     paths:
       - "ui/**"
 
+defaults:
+  run:
+    working-directory: ui
+
 jobs:
   build:
     # if: ${{ contains(github.event.pull_request.labels.*.name, 'ember-asset-size') }}
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2-beta
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
       - name: Use Node.js
         uses: actions/setup-node@v1
         with:
           node-version: "14.x"
-      - uses: backspace/ember-asset-size-action@edit-comment
+      - uses: simplabs/ember-asset-size-action@v2
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-          working-directory: "ui"
