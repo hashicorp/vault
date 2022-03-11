@@ -12,8 +12,6 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
-replace github.com/hashicorp/vault-plugin-secrets-kv => ../vault-plugin-secrets-kv
-
 require (
 	cloud.google.com/go v0.65.0
 	cloud.google.com/go/spanner v1.5.1
@@ -113,7 +111,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.11.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20220311144228-d2eeab4d3deb
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.4.0
@@ -121,7 +119,7 @@ require (
 	github.com/hashicorp/vault/api v1.4.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.4.1
+	github.com/hashicorp/vault/sdk v0.4.2-0.20220310213009-de768bfb19e8
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
