@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -252,18 +253,8 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		return logical.ErrorResponse("request namespace does not match method namespace"), nil
 	}
 
-	accessorRaw, ok := d.GetOk("mount_accessor")
-	if ok {
-		accessor := accessorRaw.(string)
-		validMount := i.mfaBackend.Core.router.ValidateMountByAccessor(accessor)
-		if validMount == nil {
-			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", accessor)), nil
-		}
-		mConfig.MountAccessor = accessor
-	}
-
 	mConfig.Type = methodType
-	usernameRaw, ok := d.GetOk("username_format")
+	usernameRaw, ok := d.GetOk("username_template")
 	if ok {
 		mConfig.UsernameFormat = usernameRaw.(string)
 	}
@@ -276,27 +267,18 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		}
 
 	case mfaMethodTypeOkta:
-		if mConfig.MountAccessor == "" {
-			return logical.ErrorResponse(fmt.Sprintf("mfa type %q requires a %q parameter", methodType, "mount_accessor")), nil
-		}
 		err = parseOktaConfig(mConfig, d)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
 	case mfaMethodTypeDuo:
-		if mConfig.MountAccessor == "" {
-			return logical.ErrorResponse(fmt.Sprintf("mfa type %q requires a %q parameter", methodType, "mount_accessor")), nil
-		}
 		err = parseDuoConfig(mConfig, d)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
 	case mfaMethodTypePingID:
-		if mConfig.MountAccessor == "" {
-			return logical.ErrorResponse(fmt.Sprintf("mfa type %q requires a %q parameter", methodType, "mount_accessor")), nil
-		}
 		err = parsePingIDConfig(mConfig, d)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -1210,13 +1192,13 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 			respData["production"] = oktaConfig.Production
 		}
 		respData["mount_accessor"] = mConfig.MountAccessor
-		respData["username_format"] = mConfig.UsernameFormat
+		respData["username_template"] = mConfig.UsernameFormat
 	case *mfa.Config_DuoConfig:
 		duoConfig := mConfig.GetDuoConfig()
 		respData["api_hostname"] = duoConfig.APIHostname
 		respData["pushinfo"] = duoConfig.PushInfo
 		respData["mount_accessor"] = mConfig.MountAccessor
-		respData["username_format"] = mConfig.UsernameFormat
+		respData["username_template"] = mConfig.UsernameFormat
 		respData["use_passcode"] = duoConfig.UsePasscode
 	case *mfa.Config_PingIDConfig:
 		pingConfig := mConfig.GetPingIDConfig()
@@ -1402,20 +1384,29 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		return fmt.Errorf("MFA method configuration not present")
 	}
 
-	var alias *identity.Alias
 	var finalUsername string
 	switch mConfig.Type {
 	case mfaMethodTypeDuo, mfaMethodTypeOkta, mfaMethodTypePingID:
-		for _, entry := range entity.Aliases {
-			if mConfig.MountAccessor == entry.MountAccessor {
-				alias = entry
-				break
+		if mConfig.UsernameFormat == "" {
+			finalUsername = entity.Name
+		} else {
+			directGroups, inheritedGroups, err := c.identityStore.groupsByEntityID(entity.ID)
+			if err != nil {
+				return fmt.Errorf("failed to fetch group memberships: %w", err)
+			}
+			groups := append(directGroups, inheritedGroups...)
+
+			_, finalUsername, err = identitytpl.PopulateString(identitytpl.PopulateStringInput{
+				Mode:        identitytpl.ACLTemplating,
+				String:      mConfig.UsernameFormat,
+				Entity:      identity.ToSDKEntity(entity),
+				Groups:      identity.ToSDKGroups(groups),
+				NamespaceID: entity.NamespaceID,
+			})
+			if err != nil {
+				return err
 			}
 		}
-		if alias == nil {
-			return fmt.Errorf("could not find alias in entity matching the MFA's mount accessor")
-		}
-		finalUsername = formatUsername(mConfig.UsernameFormat, alias, entity)
 	}
 
 	switch mConfig.Type {
