@@ -19,7 +19,6 @@ type Operations interface {
 	// - all the parameters for https://www.vaultproject.io/api-docs/secret/pki#sign-intermediate
 	// - all the parameters for https://www.vaultproject.io/api-docs/secret/pki#set-signed-intermediate
 	CreateIntermediate(signingMountPath, mountPath string, parameterMap mapStringAny) (*pkiCreateIntermediateResponse, error)
-
 }
 
 type pkiCreateRootResponse struct {
@@ -42,7 +41,6 @@ func NewOperations(client *api.Client) Operations {
 }
 
 func (p pkiOps) CreateRoot(mountPath string, parameterMap mapStringAny) (*pkiCreateRootResponse, error) {
-
 	params := newParams(parameterMap)
 	params.put("_mount", mountPath)
 	params.put("_ca_type", "root")
@@ -131,5 +129,3 @@ func (p pkiOps) CreateIntermediate(rootMountPath, mountPath string, parameterMap
 		certPem: signResp.certPem,
 	}, nil
 }
-
-

@@ -2,11 +2,12 @@ package pkicli
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/vault/api"
 )
 
 func (p pkiOps) enableBackend(params *Params) error {
-	//mountPath string, description string, maxLeaseTTL string) error {
+	// mountPath string, description string, maxLeaseTTL string) error {
 	// https://www.vaultproject.io/api-docs/system/mounts#enable-secrets-engine
 
 	params = params.clone()
@@ -30,8 +31,8 @@ func (p pkiOps) enableBackend(params *Params) error {
 
 type generateCAResponse struct {
 	secret *api.Secret
-	cert string
-	csr string
+	cert   string
+	csr    string
 }
 
 // Returns a secret with keys: certificate, expiration (number), issuing_ca, serial_number.
@@ -61,8 +62,8 @@ func (p pkiOps) generateCA(params *Params) (*generateCAResponse, error) {
 	}
 	return &generateCAResponse{
 		secret: secret,
-		cert: cert,
-		csr: csr,
+		cert:   cert,
+		csr:    csr,
 		// expiration json.Number
 		// issuing_ca string
 		// serial_number string
@@ -70,7 +71,7 @@ func (p pkiOps) generateCA(params *Params) (*generateCAResponse, error) {
 }
 
 type signIntermediateResponse struct {
-	secret *api.Secret
+	secret  *api.Secret
 	certPem string
 }
 
@@ -90,7 +91,7 @@ func (p pkiOps) signIntermediate(params *Params) (*signIntermediateResponse, err
 	}
 
 	return &signIntermediateResponse{
-		secret: secret,
+		secret:  secret,
 		certPem: secret.Data["certificate"].(string),
 	}, nil
 }

@@ -1,8 +1,9 @@
 package command
 
 import (
-	"github.com/hashicorp/vault/command/pkicli"
 	"strings"
+
+	"github.com/hashicorp/vault/command/pkicli"
 
 	"github.com/mitchellh/cli"
 )
@@ -38,9 +39,9 @@ Usage: vault pki <subcommand> [options] [args]
 }
 
 func (c *PKICommand) Run(args []string) int {
-	//c.testCreateRoot()
-	//c.testCreateIntermediate()
-	//return 0
+	// c.testCreateRoot()
+	// c.testCreateIntermediate()
+	// return 0
 	return cli.RunResultHelp
 }
 
@@ -53,10 +54,10 @@ func (c *PKICommand) testCreateRoot() int {
 
 	vaultAddress := client.Address()
 	_, err = ops.CreateRoot("pki-root", map[string]interface{}{
-		"max_lease_ttl": "24h",
-		"common_name": "example.com",
-		"ttl": "87600h",
-		"issuing_certificates": vaultAddress + "/v1/pki/ca",
+		"max_lease_ttl":           "24h",
+		"common_name":             "example.com",
+		"ttl":                     "87600h",
+		"issuing_certificates":    vaultAddress + "/v1/pki/ca",
 		"crl_distribution_points": vaultAddress + "/v1/pki/crl",
 	})
 	if err != nil {
@@ -75,8 +76,8 @@ func (c *PKICommand) testCreateIntermediate() int {
 
 	_, err = ops.CreateIntermediate("pki-root", "pki_int", map[string]interface{}{
 		"max_lease_ttl": "24h",
-		"common_name": "example.com Intermediate Authority",
-		"ttl": "43800h",
+		"common_name":   "example.com Intermediate Authority",
+		"ttl":           "43800h",
 	})
 	if err != nil {
 		c.UI.Error(err.Error())

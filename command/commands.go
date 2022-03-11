@@ -502,7 +502,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-    "pki add-intermediate": func() (cli.Command, error) {
+		"pki add-intermediate": func() (cli.Command, error) {
 			return &PKIAddIntermediateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil

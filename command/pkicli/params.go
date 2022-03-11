@@ -8,8 +8,8 @@ import (
 type mapStringAny map[string]interface{}
 
 type Params struct {
-	params mapStringAny
-	missingKeys []string
+	params       mapStringAny
+	missingKeys  []string
 	invalidTypes []string
 }
 
