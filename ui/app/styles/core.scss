@@ -122,3 +122,10 @@
 
 // bulma-free-zone
 @import './components/icon';
+
+.some-asset {
+  font-weight: bold;
+  background: blue;
+  text-decoration: underline;
+  z-index: 999999;
+}
