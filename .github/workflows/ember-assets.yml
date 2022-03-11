@@ -23,11 +23,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "14.x"
-        run: |
-          cd ui
-      - name: Run Asset Size Action
-        uses: simplabs/ember-asset-size-action@v2
+      - uses: backspace/ember-asset-size-action@edit-comment
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
-          cd ui
+          working-directory: "ui"
