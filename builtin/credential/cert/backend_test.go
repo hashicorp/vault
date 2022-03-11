@@ -1876,7 +1876,9 @@ func Test_Renew(t *testing.T) {
 			ConnState: &connState,
 		},
 		Storage: storage,
-		Auth:    &logical.Auth{},
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{},
+		},
 	}
 
 	fd := &framework.FieldData{
@@ -1905,7 +1907,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatalf("got error: %#v", *resp)
 	}
 	req.Auth.InternalData = resp.Auth.InternalData
-	req.Auth.Metadata = resp.Auth.Metadata
+	req.Auth.Alias.Metadata = resp.Auth.Alias.Metadata
 	req.Auth.LeaseOptions = resp.Auth.LeaseOptions
 	req.Auth.Policies = resp.Auth.Policies
 	req.Auth.TokenPolicies = req.Auth.Policies
