@@ -1,0 +1,26 @@
+name: Ember Asset Sizes
+
+on:
+  pull_request:
+    paths:
+      - "ui/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2-beta
+        with:
+          fetch-depth: 0
+      # - name: Use Node.js
+      #   uses: actions/setup-node@v1
+      #   with:
+      #     node-version: "10.x"
+      # - uses: backspace/ember-asset-size-action@edit-comment
+      #   with:
+      #     repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      - uses: simplabs/ember-asset-size-action@v2
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          working-directory: "ui"
