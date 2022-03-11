@@ -6,9 +6,9 @@ on:
     paths:
       - "ui/**"
 
-defaults:
-  run:
-    working-directory: ui
+# defaults:
+#   run:
+#     working-directory: ./ui
 
 jobs:
   build:
@@ -21,8 +21,10 @@ jobs:
           fetch-depth: 0
       - name: Use Node.js
         uses: actions/setup-node@v1
+        working-directory: ./ui
         with:
           node-version: "14.x"
       - uses: simplabs/ember-asset-size-action@v2
+        working-directory: ./ui
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
