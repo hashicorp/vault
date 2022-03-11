@@ -27,3 +27,4 @@ jobs:
       - uses: simplabs/ember-asset-size-action@v2
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          working-directory: ./ui
