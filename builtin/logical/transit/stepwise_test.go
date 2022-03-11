@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
+	stepwise "github.com/hashicorp/vault-testing-stepwise"
+	dockerEnvironment "github.com/hashicorp/vault-testing-stepwise/environments/docker"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
-	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -147,7 +147,7 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("minimum encryption version mismatch, expected (%#v), found (%#v)", minEncryptionVersion, d.MinDecryptionVersion)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("expected DeletionAllowed to be false, but got true")
 			}
 			if d.Derived != derived {

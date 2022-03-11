@@ -1,0 +1,3 @@
+```release-note:bug
+core/token: Fix null token panic from 'v1/auth/token/' endpoints and return proper error response.
+```

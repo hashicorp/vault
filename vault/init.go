@@ -11,7 +11,6 @@ import (
 
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/seal"
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
@@ -123,19 +122,19 @@ func (c *Core) InitializedLocally(ctx context.Context) (bool, error) {
 }
 
 func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
-	// Generate a master key
-	masterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
+	// Generate a root key
+	rootKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		return nil, nil, fmt.Errorf("key generation failed: %w", err)
 	}
 
-	// Return the master key if only a single key part is used
+	// Return the root key if only a single key part is used
 	var unsealKeys [][]byte
 	if sc.SecretShares == 1 {
-		unsealKeys = append(unsealKeys, masterKey)
+		unsealKeys = append(unsealKeys, rootKey)
 	} else {
-		// Split the master key using the Shamir algorithm
-		shares, err := shamir.Split(masterKey, sc.SecretShares, sc.SecretThreshold)
+		// Split the root key using the Shamir algorithm
+		shares, err := shamir.Split(rootKey, sc.SecretShares, sc.SecretThreshold)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to generate barrier shares: %w", err)
 		}
@@ -155,7 +154,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 		unsealKeys = encryptedShares
 	}
 
-	return masterKey, unsealKeys, nil
+	return rootKey, unsealKeys, nil
 }
 
 // Initialize is used to initialize the Vault with the given
@@ -173,7 +172,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// N.B. Although the core is capable of handling situations where some keys
 	// are stored and some aren't, in practice, replication + HSMs makes this
 	// extremely hard to reason about, to the point that it will probably never
-	// be supported. The reason is that each HSM needs to encode the master key
+	// be supported. The reason is that each HSM needs to encode the root key
 	// separately, which means the shares must be generated independently,
 	// which means both that the shares will be different *AND* there would
 	// need to be a way to actually allow fetching of the generated keys by
@@ -323,7 +322,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// If we are storing shares, pop them out of the returned results and push
 	// them through the seal
 	switch c.seal.StoredKeysSupported() {
-	case seal.StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirRoot:
 		keysToStore := [][]byte{barrierKey}
 		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
@@ -395,7 +394,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		c.logger.Error("root token generation failed", "error", err)
 		return nil, err
 	}
-	results.RootToken = rootToken.ID
+	results.RootToken = rootToken.ExternalID
 	c.logger.Info("root token generated")
 
 	if initParams.RootTokenPGPKey != "" {
@@ -467,11 +466,9 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	// This usually happens when auto-unseal is configured, but the servers have
 	// not been initialized yet.
 	if len(keys) == 0 {
-		diagnose.Error(ctx, errors.New("stored unseal keys are supported, but none were found"))
 		return NewNonFatalError(errors.New("stored unseal keys are supported, but none were found"))
 	}
 	if len(keys) != 1 {
-		diagnose.Error(ctx, errors.New("expected exactly one stored key"))
 		return NewNonFatalError(errors.New("expected exactly one stored key"))
 	}
 
@@ -485,7 +482,6 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		// subset of the required threshold of keys. We still consider this a
 		// "success", since trying again would yield the same result.
 		c.Logger().Warn("vault still sealed after using stored unseal key")
-		diagnose.Warn(ctx, "vault still sealed after using stored unseal key")
 	} else {
 		c.Logger().Info("unsealed with stored key")
 	}

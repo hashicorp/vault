@@ -106,6 +106,7 @@
 
 .message-inline {
   display: flex;
+  align-items: center;
   margin: 0 0 $spacing-l;
 
   .hs-icon {
@@ -130,6 +131,10 @@
 
   &.is-marginless {
     margin-bottom: 0;
+  }
+
+  > p::first-letter {
+    text-transform: capitalize;
   }
 }
 

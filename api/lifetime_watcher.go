@@ -225,7 +225,7 @@ func (r *LifetimeWatcher) Start() {
 	r.doneCh <- r.doRenew()
 }
 
-// Renew is for comnpatibility with the legacy api.Renewer. Calling Renew
+// Renew is for compatibility with the legacy api.Renewer. Calling Renew
 // simply chains to Start.
 func (r *LifetimeWatcher) Renew() {
 	r.Start()
@@ -377,7 +377,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 // assumptions given the total lease time; it also adds some jitter to not have
 // clients be in sync.
 func (r *LifetimeWatcher) calculateGrace(leaseDuration time.Duration) {
-	if leaseDuration == 0 {
+	if leaseDuration <= 0 {
 		r.grace = 0
 		return
 	}

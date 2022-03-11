@@ -6,7 +6,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const M = Model.extend({
   idPrefix: 'template/',
-  idForNav: computed('id', 'idPrefix', function() {
+  idForNav: computed('id', 'idPrefix', function () {
     let modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
@@ -31,13 +31,17 @@ const M = Model.extend({
     models: ['transform/alphabet'],
     selectLimit: 1,
   }),
+  encodeFormat: attr('string'),
+  decodeFormats: attr(),
+  backend: attr('string', { readOnly: true }),
 
-  attrs: computed(function() {
-    let keys = ['name', 'pattern', 'alphabet'];
+  readAttrs: computed(function () {
+    let keys = ['name', 'pattern', 'encodeFormat', 'decodeFormats', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
-
-  backend: attr('string', { readOnly: true }),
+  writeAttrs: computed(function () {
+    return expandAttributeMeta(this, ['name', 'pattern', 'alphabet']);
+  }),
 });
 
 export default attachCapabilities(M, {

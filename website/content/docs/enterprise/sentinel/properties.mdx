@@ -115,7 +115,8 @@ These can be retrieved from `identity.entity.aliases`.
 | `creation_time`          | `string`                 | The alias's creation time in RFC3339 format                                                                                                   |
 | `id`                     | `string`                 | The alias's ID                                                                                                                                |
 | `last_update_time`       | `string`                 | The alias's last update (modify) time in RFC3339 format                                                                                       |
-| `metadata`               | `map (string -> string)` | Metadata associated with the alias                                                                                                            |
+| `metadata`               | `map (string -> string)` | Metadata associated with the alias
+| `custom_metadata`        | `map (string -> string)` | Custom metadata associated with the alias                                                                                                            |
 | `merged_from_entity_ids` | `list (string)`          | If this alias was attached to the current entity via one or more merges, the original entity/entities will be in this list                    |
 | `mount_accessor`         | `string`                 | The immutable accessor of the mount that created this alias                                                                                   |
 | `mount_path`             | `string`                 | The path of the mount that created this alias; unlike the accessor, there is no guarantee that the current path represents the original mount |

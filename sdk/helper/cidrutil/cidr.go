@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 // RemoteAddrIsOk checks if the given remote address is either:

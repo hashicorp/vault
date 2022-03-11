@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -81,7 +82,7 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
@@ -115,7 +116,7 @@ func (c *Logical) List(path string) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
@@ -130,24 +131,35 @@ func (c *Logical) List(path string) (*Secret, error) {
 }
 
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	return c.write(path, r)
+	return c.write(ctx, path, r)
+}
+
+func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
+	r := c.c.NewRequest("PATCH", "/v1/"+path)
+	r.Headers.Set("Content-Type", "application/merge-patch+json")
+	if err := r.SetJSONBody(data); err != nil {
+		return nil, err
+	}
+
+	return c.write(ctx, path, r)
 }
 
 func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	r.BodyBytes = data
 
-	return c.write(path, r)
+	return c.write(context.Background(), path, r)
 }
 
-func (c *Logical) write(path string, request *Request) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
+func (c *Logical) write(ctx context.Context, path string, request *Request) (*Secret, error) {
 	resp, err := c.c.RawRequestWithContext(ctx, request)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -159,7 +171,7 @@ func (c *Logical) write(path string, request *Request) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -206,7 +218,7 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -221,12 +233,13 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
+	wt := strings.TrimSpace(wrappingToken)
 	if wrappingToken != "" {
 		if c.c.Token() == "" {
-			c.c.SetToken(wrappingToken)
+			c.c.SetToken(wt)
 		} else if wrappingToken != c.c.Token() {
 			data = map[string]interface{}{
-				"token": wrappingToken,
+				"token": wt,
 			}
 		}
 	}
@@ -259,7 +272,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	case io.EOF:
 		return nil, nil
 	default:
-		return nil, err
+		return nil, parseErr
 	}
 	if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 		return secret, nil

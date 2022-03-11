@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix oidc login with Safari
+```

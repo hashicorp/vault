@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -210,7 +211,7 @@ func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error)
 	}
 
 	filename := filepath.Join(f.path, id, databaseFilename)
-	boltDB, err := bolt.Open(filename, 0o666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(filename, 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +331,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 
 	// Create the BoltDB file
 	dbPath := filepath.Join(path, databaseFilename)
-	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
@@ -456,7 +457,15 @@ func (s *BoltSnapshotSink) Close() error {
 
 		// Move the directory into place
 		newPath := strings.TrimSuffix(s.dir, tmpSuffix)
-		if err := safeio.Rename(s.dir, newPath); err != nil {
+
+		var err error
+		if runtime.GOOS != "windows" {
+			err = safeio.Rename(s.dir, newPath)
+		} else {
+			err = os.Rename(s.dir, newPath)
+		}
+
+		if err != nil {
 			s.logger.Error("failed to move snapshot into place", "error", err)
 			return err
 		}
@@ -511,7 +520,11 @@ func (i *boltSnapshotInstaller) Install(filename string) error {
 	}
 
 	// Rename the snapshot to the FSM location
-	return safeio.Rename(i.filename, filename)
+	if runtime.GOOS != "windows" {
+		return safeio.Rename(i.filename, filename)
+	} else {
+		return os.Rename(i.filename, filename)
+	}
 }
 
 // snapshotName generates a name for the snapshot.

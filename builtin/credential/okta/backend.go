@@ -3,6 +3,7 @@ package okta
 import (
 	"context"
 	"fmt"
+	"net/textproto"
 	"time"
 
 	"github.com/hashicorp/vault/helper/mfa"
@@ -215,6 +216,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		verifyReq, err := shim.NewRequest("POST", requestPath, payload)
 		if err != nil {
 			return nil, nil, nil, err
+		}
+		if len(req.Headers["X-Forwarded-For"]) > 0 {
+			verifyReq.Header.Set("X-Forwarded-For", req.Headers[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")][0])
 		}
 
 		rsp, err := shim.Do(verifyReq, &result)

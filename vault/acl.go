@@ -9,9 +9,9 @@ import (
 
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -305,6 +305,9 @@ func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities [
 	if capabilities&CreateCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, CreateCapability)
 	}
+	if capabilities&PatchCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, PatchCapability)
+	}
 
 	// If "deny" is explicitly set or if the path has no capabilities at all,
 	// set the path capabilities to "deny"
@@ -406,6 +409,8 @@ CHECK:
 		operationAllowed = capabilities&DeleteCapabilityInt > 0
 	case logical.CreateOperation:
 		operationAllowed = capabilities&CreateCapabilityInt > 0
+	case logical.PatchOperation:
+		operationAllowed = capabilities&PatchCapabilityInt > 0
 
 	// These three re-use UpdateCapabilityInt since that's the most appropriate
 	// capability/operation mapping
@@ -440,7 +445,7 @@ CHECK:
 
 	// Only check parameter permissions for operations that can modify
 	// parameters.
-	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation {
+	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation {
 		for _, parameter := range permissions.RequiredParameters {
 			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
 				return

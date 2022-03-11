@@ -1,0 +1,4 @@
+~> When specifying a `userfilter`, either the templated value `{{.UserAttr}}` or
+the literal value that matches `userattr` should be present in the filter to
+ensure that the search returns a unique result that takes `userattr` into
+consideration for entity alias mapping purposes and avoid possible collisions on login.

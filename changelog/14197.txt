@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Small changes to ensure goroutines terminate in tests
+```

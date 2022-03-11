@@ -51,6 +51,7 @@ $gutter-grey: #2a2f36;
 .cm-s-hashi {
   &.CodeMirror {
     background-color: $black !important;
+    resize: vertical; 
     color: #cfd2d1 !important;
     border: none;
     font-family: $family-monospace;

@@ -1,0 +1,3 @@
+```release-notes:improvemment
+core: `num_uses` is now returned during authentication
+```

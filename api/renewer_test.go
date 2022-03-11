@@ -149,6 +149,17 @@ func TestLifetimeWatcher(t *testing.T) {
 			nil,
 			false,
 		},
+		{
+			15 * time.Second,
+			"negative_lease_duration",
+			-15,
+			15,
+			func(_ string, _ int) (*Secret, error) {
+				return renewedSecret, nil
+			},
+			nil,
+			true,
+		},
 	}
 
 	for _, tc := range cases {
@@ -163,8 +174,10 @@ func TestLifetimeWatcher(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			doneCh := make(chan error, 1)
 			go func() {
-				v.doneCh <- v.doRenewWithOptions(false, false, tc.leaseDurationSeconds, "myleaseID", tc.renew, time.Second)
+				doneCh <- v.doRenewWithOptions(false, false,
+					tc.leaseDurationSeconds, "myleaseID", tc.renew, time.Second)
 			}()
 			defer v.Stop()
 
@@ -178,12 +191,15 @@ func TestLifetimeWatcher(t *testing.T) {
 				if r.Secret != renewedSecret {
 					t.Fatalf("expected secret %v, got %v", renewedSecret, r.Secret)
 				}
-			case err := <-v.DoneCh():
+			case err := <-doneCh:
 				if tc.expectError != nil && !errors.Is(err, tc.expectError) {
 					t.Fatalf("expected error %q, got: %v", tc.expectError, err)
 				}
+				if tc.expectError == nil && err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
 				if tc.expectRenewal {
-					t.Fatal("expected at least one renewal")
+					t.Fatalf("expected at least one renewal, got donech result: %v", err)
 				}
 			}
 		})

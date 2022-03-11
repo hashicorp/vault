@@ -35,6 +35,16 @@ $ vault operator rekey \
     -key-threshold=9
 ```
 
+Initialize a rekey when Auto Unseal is used for the Vault cluster:
+
+```shell-session
+$ vault operator rekey \
+    -target=recovery \
+    -init \
+    -key-shares=15 \
+    -key-threshold=9
+```
+
 Initialize a rekey and activate the verification process:
 
 ```shell-session
@@ -125,7 +135,7 @@ flags](/docs/commands) included on all commands.
   nonce value must be provided with each unseal key.
 
 - `-pgp-keys` `(string: "...")` - Comma-separated list of paths to files on disk
-  containing public GPG keys OR a comma-separated list of Keybase usernames
+  containing public PGP keys OR a comma-separated list of Keybase usernames
   using the format `keybase:<username>`. When supplied, the generated unseal
   keys will be encrypted and base64-encoded in the order specified in this list.
 

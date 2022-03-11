@@ -6,12 +6,12 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )

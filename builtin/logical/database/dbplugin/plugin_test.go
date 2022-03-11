@@ -109,7 +109,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cluster.Start()
 	cores := cluster.Cores
 
-	sys := vault.TestDynamicSystemView(cores[0].Core)
+	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
 	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "TestPlugin_GRPC_Main", []string{}, "")
 
 	return cluster, sys
@@ -118,7 +118,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 // This is not an actual test case, it's a helper function that will be executed
 // by the go-plugin client via an exec call.
 func TestPlugin_GRPC_Main(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
 		return
 	}
 

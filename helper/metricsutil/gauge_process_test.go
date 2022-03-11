@@ -332,7 +332,7 @@ func waitForDone(t *testing.T,
 	done <-chan struct{},
 ) int {
 	t.Helper()
-	timeout := time.After(100 * time.Millisecond)
+	timeout := time.After(500 * time.Millisecond)
 
 	numTicks := 0
 	for {
@@ -433,11 +433,11 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 		2000000*time.Hour)
 
 	sink := NewClusterMetricSink("test", inmemSink)
-	sink.MaxGaugeCardinality = 500
+	sink.MaxGaugeCardinality = 100
 	sink.GaugeInterval = 2 * time.Hour
 
 	// Create a report larger than the default limit
-	excessGauges := 100
+	excessGauges := 20
 	values := makeLabels(sink.MaxGaugeCardinality + excessGauges)
 	rand.Shuffle(len(values), func(i, j int) {
 		values[i], values[j] = values[j], values[i]
@@ -468,9 +468,9 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 	sendTicker := s.waitForTicker(t)
 	numTicksSent := waitForDone(t, sendTicker.sender, done)
 
-	// 500 items, one delay after after each 25, means that
-	// 19 ticks are consumed, so 19 or 20 must be sent.
-	expectedTicks := sink.MaxGaugeCardinality/25 - 1
+	// 100 items, one delay after each batchSize (25), means that
+	// 3 ticks are consumed, so 3 or 4 must be sent.
+	expectedTicks := sink.MaxGaugeCardinality/batchSize - 1
 	if numTicksSent < expectedTicks || numTicksSent > expectedTicks+1 {
 		t.Errorf("Number of ticks = %v, expected %v.", numTicksSent, expectedTicks)
 	}

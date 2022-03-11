@@ -15,7 +15,7 @@ description: >-
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
 
-This is an authenticated endpoint.
+This is an unauthenticated endpoint.
 
 | Method | Path                         |
 | :----- | :--------------------------- |
@@ -340,6 +340,12 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 !> Only one performance primary should be active at a given time. Multiple primaries may
 result in data loss!
 
+~> It is not safe to replicate from a newer version of Vault to an older version.
+When upgrading replicated clusters, ensure that upstream clusters are always
+on older versions of Vault than downstream clusters. See
+[Upgrading Vault](/docs/upgrading#replication-installations) for an example.
+
+
 | Method | Path                                    |
 | :----- | :-------------------------------------- |
 | `POST` | `/sys/replication/dr/secondary/promote` |
@@ -524,7 +530,7 @@ generation attempt can take place at a time.
 
 | Method | Path                                                             |
 | :----- | :--------------------------------------------------------------- |
-| `PUT`  | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
 
 ### Parameters
 
@@ -536,7 +542,7 @@ generation attempt can take place at a time.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
 ```
 
@@ -582,7 +588,7 @@ nonce must be provided with each call.
 
 | Method | Path                                                            |
 | :----- | :-------------------------------------------------------------- |
-| `PUT`  | `/sys/replication/dr/secondary/generate-operation-token/update` |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/update` |
 
 ### Parameters
 
@@ -603,7 +609,7 @@ nonce must be provided with each call.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/update
 ```

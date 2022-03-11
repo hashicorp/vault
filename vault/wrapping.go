@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -166,7 +165,7 @@ DONELISTHANDLING:
 		},
 	)
 
-	resp.WrapInfo.Token = te.ID
+	resp.WrapInfo.Token = te.ExternalID
 	resp.WrapInfo.Accessor = te.Accessor
 	resp.WrapInfo.CreationTime = creationTime
 	// If this is not a rewrap, store the request path as creation_path
@@ -182,6 +181,11 @@ DONELISTHANDLING:
 	// case put the accessor in the wrap info.
 	if resp.Auth != nil {
 		resp.WrapInfo.WrappedAccessor = resp.Auth.Accessor
+	}
+
+	// Store the accessor of the approle secret in WrappedAccessor
+	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok && resp.Auth == nil && req.MountType == "approle" {
+		resp.WrapInfo.WrappedAccessor = secretIdAccessor.(string)
 	}
 
 	switch resp.WrapInfo.Format {
@@ -398,7 +402,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	// token to be a JWT -- namespaced tokens have two dots too, but Vault
 	// token types (for now at least) begin with a letter representing a type
 	// and then a dot.
-	if strings.Count(token, ".") == 2 && token[1] != '.' {
+	if IsJWT(token) {
 		// Implement the jose library way
 		parsedJWT, err := squarejwt.ParseSigned(token)
 		if err != nil {

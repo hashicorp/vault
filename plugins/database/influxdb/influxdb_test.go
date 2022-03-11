@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
-	influx "github.com/influxdata/influxdb/client/v2"
+	influx "github.com/influxdata/influxdb1-client/v2"
 	"github.com/stretchr/testify/require"
 )
 

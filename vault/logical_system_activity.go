@@ -41,7 +41,7 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 // monthlyActivityCountPath is available in every namespace
 func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 	return &framework.Path{
-		Pattern:         "internal/counters/activity/monthly",
+		Pattern:         "internal/counters/activity/monthly$",
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -50,6 +50,13 @@ func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
 			},
 		},
+	}
+}
+
+func (b *SystemBackend) activityPaths() []*framework.Path {
+	return []*framework.Path{
+		b.monthlyActivityCountPath(),
+		b.activityQueryPath(),
 	}
 }
 
@@ -142,7 +149,10 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	results := a.partialMonthClientCount(ctx)
+	results, err := a.partialMonthClientCount(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if results == nil {
 		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 	}
@@ -214,6 +224,11 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 		if config.RetentionMonths < 0 {
 			return logical.ErrorResponse("retention_months must be greater than or equal to 0"), logical.ErrInvalidRequest
+		}
+
+		if config.RetentionMonths > 36 {
+			config.RetentionMonths = 36
+			warnings = append(warnings, "retention_months cannot be greater than 36; capped to 36.")
 		}
 	}
 

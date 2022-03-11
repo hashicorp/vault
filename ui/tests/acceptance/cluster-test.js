@@ -8,7 +8,7 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
 
-const tokenWithPolicy = async function(name, policy) {
+const tokenWithPolicy = async function (name, policy) {
   await consoleComponent.runCommands([
     `write sys/policies/acl/${name} policy=${btoa(policy)}`,
     `write -field=client_token auth/token/create policies=${name}`,
@@ -17,15 +17,15 @@ const tokenWithPolicy = async function(name, policy) {
   return consoleComponent.lastLogOutput;
 };
 
-module('Acceptance | cluster', function(hooks) {
+module('Acceptance | cluster', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function() {
+  hooks.beforeEach(async function () {
     await logout.visit();
     return authPage.login();
   });
 
-  test('hides nav item if user does not have permission', async function(assert) {
+  test('hides nav item if user does not have permission', async function (assert) {
     const deny_policies_policy = `
       path "sys/policies/*" {
         capabilities = ["deny"]
@@ -40,7 +40,7 @@ module('Acceptance | cluster', function(hooks) {
     await logout.visit();
   });
 
-  test('enterprise nav item links to first route that user has access to', async function(assert) {
+  test('enterprise nav item links to first route that user has access to', async function (assert) {
     const read_rgp_policy = `
       path "sys/policies/rgp" {
         capabilities = ["read"]

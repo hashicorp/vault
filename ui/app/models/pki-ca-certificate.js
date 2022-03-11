@@ -5,11 +5,13 @@ import Certificate from './pki-certificate';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default Certificate.extend({
-  DISPLAY_FIELDS: computed(function() {
+  DISPLAY_FIELDS: computed(function () {
     return [
       'csr',
       'certificate',
-      'expiration',
+      'commonName',
+      'issueDate',
+      'expiryDate',
       'issuingCa',
       'caChain',
       'privateKey',
@@ -17,31 +19,88 @@ export default Certificate.extend({
       'serialNumber',
     ];
   }),
+  addBasicConstraints: attr('boolean', {
+    label: 'Add a Basic Constraints extension with CA: true',
+    helpText:
+      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
+  }),
   backend: attr('string', {
     readOnly: true,
   }),
-
+  canParse: attr('boolean'),
   caType: attr('string', {
     possibleValues: ['root', 'intermediate'],
     defaultValue: 'root',
     label: 'CA Type',
     readOnly: true,
   }),
-  uploadPemBundle: attr('boolean', {
-    label: 'Upload PEM bundle',
-    readOnly: true,
+  commonName: attr('string'),
+  csr: attr('string', {
+    editType: 'textarea',
+    label: 'CSR',
+    masked: true,
+  }),
+  expiryDate: attr('string', {
+    label: 'Expiration date',
+  }),
+  issueDate: attr('string'),
+  keyBits: attr('number', {
+    defaultValue: 2048,
+  }),
+  keyType: attr('string', {
+    possibleValues: ['rsa', 'ec', 'ed25519'],
+    defaultValue: 'rsa',
+  }),
+  maxPathLength: attr('number', {
+    defaultValue: -1,
+  }),
+  organization: attr({
+    editType: 'stringArray',
+  }),
+  ou: attr({
+    label: 'OU (OrganizationalUnit)',
+    editType: 'stringArray',
   }),
   pemBundle: attr('string', {
     label: 'PEM bundle',
     editType: 'file',
   }),
-  addBasicConstraints: attr('boolean', {
-    label: 'Add a Basic Constraints extension with CA: true',
-    helpText:
-      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
+  permittedDnsNames: attr('string', {
+    label: 'Permitted DNS domains',
+  }),
+  privateKeyFormat: attr('string', {
+    possibleValues: ['', 'der', 'pem', 'pkcs8'],
+    defaultValue: '',
+  }),
+  type: attr('string', {
+    possibleValues: ['internal', 'exported'],
+    defaultValue: 'internal',
+  }),
+  uploadPemBundle: attr('boolean', {
+    label: 'Upload PEM bundle',
+    readOnly: true,
   }),
 
-  fieldDefinition: computed('caType', 'uploadPemBundle', function() {
+  // address attrs
+  country: attr({
+    editType: 'stringArray',
+  }),
+  locality: attr({
+    editType: 'stringArray',
+    label: 'Locality/City',
+  }),
+  streetAddress: attr({
+    editType: 'stringArray',
+  }),
+  postalCode: attr({
+    editType: 'stringArray',
+  }),
+  province: attr({
+    editType: 'stringArray',
+    label: 'Province/State',
+  }),
+
+  fieldDefinition: computed('caType', 'uploadPemBundle', function () {
     const type = this.caType;
     const isUpload = this.uploadPemBundle;
     let groups = [{ default: ['caType', 'uploadPemBundle'] }];
@@ -92,60 +151,6 @@ export default Certificate.extend({
 
     return groups;
   }),
-
-  type: attr('string', {
-    possibleValues: ['internal', 'exported'],
-    defaultValue: 'internal',
-  }),
-  ou: attr({
-    label: 'OU (OrganizationalUnit)',
-    editType: 'stringArray',
-  }),
-  organization: attr({
-    editType: 'stringArray',
-  }),
-  country: attr({
-    editType: 'stringArray',
-  }),
-  locality: attr({
-    editType: 'stringArray',
-    label: 'Locality/City',
-  }),
-  province: attr({
-    editType: 'stringArray',
-    label: 'Province/State',
-  }),
-  streetAddress: attr({
-    editType: 'stringArray',
-  }),
-  postalCode: attr({
-    editType: 'stringArray',
-  }),
-
-  keyType: attr('string', {
-    possibleValues: ['rsa', 'ec'],
-    defaultValue: 'rsa',
-  }),
-  keyBits: attr('number', {
-    defaultValue: 2048,
-  }),
-  privateKeyFormat: attr('string', {
-    possibleValues: ['', 'der', 'pem', 'pkcs8'],
-    defaultValue: '',
-  }),
-  maxPathLength: attr('number', {
-    defaultValue: -1,
-  }),
-  permittedDnsNames: attr('string', {
-    label: 'Permitted DNS domains',
-  }),
-
-  csr: attr('string', {
-    editType: 'textarea',
-    label: 'CSR',
-    masked: true,
-  }),
-  expiration: attr(),
 
   deletePath: lazyCapabilities(apiPath`${'backend'}/root`, 'backend'),
   canDeleteRoot: and('deletePath.canDelete', 'deletePath.canSudo'),

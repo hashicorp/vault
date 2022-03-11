@@ -17,7 +17,7 @@ This endpoint reloads mounted plugin backends.
 
 | Method | Path -                        |
 | :----- | :---------------------------- |
-| `PUT`  | `/sys/plugins/reload/backend` |
+| `POST` | `/sys/plugins/reload/backend` |
 
 ### Parameters
 
@@ -27,7 +27,7 @@ This endpoint reloads mounted plugin backends.
 - `mounts` `(array: [])` – Array or comma-separated string mount paths
   of the plugin backends to reload.
 
-- `scope` `(string: "")` - The scope of the reload. If ommitted, reloads the
+- `scope` `(string: "")` - The scope of the reload. If omitted, reloads the
   plugin or mounts on this Vault instance. If 'global', will begin reloading the
   plugin on all instances of a cluster.
 
@@ -44,7 +44,7 @@ This endpoint reloads mounted plugin backends.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/plugins/reload/backend
 ```

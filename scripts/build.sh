@@ -70,6 +70,7 @@ IFS=$OLDIFS
 DEV_PLATFORM=${DEV_PLATFORM:-"./pkg/$(${GO_CMD} env GOOS)_$(${GO_CMD} env GOARCH)"}
 for F in $(find ${DEV_PLATFORM} -mindepth 1 -maxdepth 1 -type f); do
     cp ${F} bin/
+    rm -f ${MAIN_GOPATH}/bin/vault
     cp ${F} ${MAIN_GOPATH}/bin/
 done
 

@@ -8,10 +8,11 @@ export default Component.extend({
   flashMessages: service(),
   tagName: '',
   linkParams: null,
+  queryParams: null,
   componentName: null,
   hasMenu: true,
 
-  callMethod: task(function*(method, model, successMessage, failureMessage, successCallback = () => {}) {
+  callMethod: task(function* (method, model, successMessage, failureMessage, successCallback = () => {}) {
     let flash = this.flashMessages;
     try {
       yield model[method]();

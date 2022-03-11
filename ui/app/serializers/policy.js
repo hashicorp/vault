@@ -4,7 +4,7 @@ export default ApplicationSerializer.extend({
   primaryKey: 'name',
 
   normalizePolicies(payload) {
-    const data = payload.data.keys ? payload.data.keys.map(name => ({ name })) : payload.data;
+    const data = payload.data.keys ? payload.data.keys.map((name) => ({ name })) : payload.data;
     return data;
   },
 

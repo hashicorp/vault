@@ -41,7 +41,7 @@ export default class DatabaseListItem extends Component {
       .then(() => {
         this.flashMessages.success(`Success: ${id} connection was reset`);
       })
-      .catch(e => {
+      .catch((e) => {
         this.flashMessages.danger(e.errors);
       });
   }
@@ -54,7 +54,20 @@ export default class DatabaseListItem extends Component {
       .then(() => {
         this.flashMessages.success(`Success: ${id} connection was rotated`);
       })
-      .catch(e => {
+      .catch((e) => {
+        this.flashMessages.danger(e.errors);
+      });
+  }
+  @action
+  rotateRoleCred(id) {
+    const { backend } = this.args.item;
+    let adapter = this.store.adapterFor('database/credential');
+    adapter
+      .rotateRoleCredentials(backend, id)
+      .then(() => {
+        this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);
+      })
+      .catch((e) => {
         this.flashMessages.danger(e.errors);
       });
   }

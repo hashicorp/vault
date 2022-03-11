@@ -32,7 +32,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		return nil, nil
 	}
 
-	signingBundle, caErr := fetchCAInfo(ctx, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("could not fetch the CA certificate: %s", caErr)), nil
@@ -219,7 +219,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 	}
 
 WRITE:
-	signingBundle, caErr := fetchCAInfo(ctx, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
