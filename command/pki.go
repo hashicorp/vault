@@ -28,6 +28,9 @@ Usage: vault pki <subcommand> [options] [args]
 
        $ vault pki role-test -mount=pki-int server-role example.com
 
+  To add new intermediate:
+       $ vault pki add-intermediate pki pki-int example.com ttl=43800h
+
   Please see the individual subcommand help for detailed usage information.
 `
 
@@ -48,7 +51,7 @@ func (c *PKICommand) testCreateRoot() int {
 	}
 	ops := pkicli.NewOperations(client)
 
-	vaultAddress := "http://localhost:8200"  // TODO: how to get the address?
+	vaultAddress := client.Address()
 	_, err = ops.CreateRoot("pki-root", map[string]interface{}{
 		"max_lease_ttl": "24h",
 		"common_name": "example.com",

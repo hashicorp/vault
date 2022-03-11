@@ -22,19 +22,12 @@ type Operations interface {
 
 }
 
-type pkiCreateRootParameters struct {
-	path        string
-	maxLeaseTTL string
-	commonName  string
-	ttl         string
-	// etc.
-}
-
 type pkiCreateRootResponse struct {
 	cert string
 }
 
 type pkiCreateIntermediateResponse struct {
+	csr     string
 	certPem string
 }
 
@@ -98,10 +91,16 @@ func (p pkiOps) CreateIntermediate(rootMountPath, mountPath string, parameterMap
 		return nil, err
 	}
 
-	// 3. Set the config URLs -- Is this necessary for intermediates??
+	// 3. Set the config URLs
 	err = p.configUrls(params)
 	if err != nil {
 		return nil, err
+	}
+
+	if rootMountPath == "" {
+		return &pkiCreateIntermediateResponse{
+			csr: generateResp.csr,
+		}, nil
 	}
 
 	// 4. Sign the intermediate CSR
@@ -113,9 +112,16 @@ func (p pkiOps) CreateIntermediate(rootMountPath, mountPath string, parameterMap
 		return nil, err
 	}
 
-	// 5. Set the signed certificate in the intermediate
+	// 5. Read the root's CA chain
+	rootCAChainPEM, err := p.readCAChainPEM(rootMountPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 6. Set the signed certificate in the intermediate
 	setSignedParams := params.clone()
-	setSignedParams.put("certificate", signResp.certPem)
+	fullCert := signResp.certPem + "\n" + rootCAChainPEM
+	setSignedParams.put("certificate", fullCert)
 	err = p.setSigned(setSignedParams)
 	if err != nil {
 		return nil, err
