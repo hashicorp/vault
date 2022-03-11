@@ -2,13 +2,13 @@ name: Ember Asset Sizes
 
 on:
   pull_request:
-    types: [opened, synchronize, labeled] # necessary to watch for when the label is added
+    # types: [opened, synchronize, labeled] # necessary to watch for when the label is added
     paths:
       - "ui/**"
 
 jobs:
   build:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'ember-asset-size') }}
+    # if: ${{ contains(github.event.pull_request.labels.*.name, 'ember-asset-size') }}
     runs-on: ubuntu-latest
 
     steps:
