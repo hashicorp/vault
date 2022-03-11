@@ -487,13 +487,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"pki role-test": func() (cli.Command, error) {
-			return &PKIRoleTestCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"pki initialize-topology": func() (cli.Command, error) {
-			return &PKICreateCACommand{
+		"pki add-intermediate": func() (cli.Command, error) {
+			return &PKIAddIntermediateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -502,8 +497,18 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"pki add-intermediate": func() (cli.Command, error) {
-			return &PKIAddIntermediateCommand{
+		"pki initialize-topology": func() (cli.Command, error) {
+			return &PKICreateCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki role-test": func() (cli.Command, error) {
+			return &PKIRoleTestCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki role-update": func() (cli.Command, error) {
+			return &PKIRoleUpdateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
