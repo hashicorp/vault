@@ -25,12 +25,17 @@ Usage: vault pki <subcommand> [options] [args]
   This command groups subcommands for interacting with Vault's PKI Secrets
   Engine. Operators can manage PKI mounts and roles.
 
+  To add a new intermediate CA mount:
+
+       $ vault pki add-intermediate pki pki-int example.com ttl=43800h
+
   To test role based issuance:
 
        $ vault pki role-test -mount=pki-int server-role example.com
 
-  To add new intermediate:
-       $ vault pki add-intermediate pki pki-int example.com ttl=43800h
+  To update a role, changing only newly specified fields:
+
+       $ vault pki role-update /pki-int/roles/server-role allow_localhost=false
 
   Please see the individual subcommand help for detailed usage information.
 `
