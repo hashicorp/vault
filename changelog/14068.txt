@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/consul: Enable browsing the consul secrets engine via the ui, and generating secrets
+```
