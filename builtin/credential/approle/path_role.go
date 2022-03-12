@@ -481,6 +481,16 @@ the role.`,
 					Type:        framework.TypeCommaStringSlice,
 					Description: defTokenFields["token_bound_cidrs"].Description,
 				},
+				"num_uses": {
+					Type: framework.TypeInt,
+					Description: `Number of times this SecretID can be used, after which the SecretID expires.
+Overrides secret_id_num_uses role option when supplied.`,
+				},
+				"ttl": {
+					Type: framework.TypeDurationSecond,
+					Description: `Duration in seconds after which this SecretID expires. Defaults to 0, meaning no expiration.
+Overrides secret_id_ttl role option when supplied.`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.pathRoleSecretIDUpdate,
@@ -590,6 +600,16 @@ the role.`,
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
+				},
+				"num_uses": {
+					Type: framework.TypeInt,
+					Description: `Number of times this SecretID can be used, after which the SecretID expires.
+Overrides secret_id_num_uses role option when supplied.`,
+				},
+				"ttl": {
+					Type: framework.TypeDurationSecond,
+					Description: `Duration in seconds after which this SecretID expires. Defaults to 0, meaning no expiration.
+Overrides secret_id_ttl role option when supplied.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1497,7 +1517,7 @@ func (b *backend) pathRoleFieldRead(ctx context.Context, req *logical.Request, d
 					"bound_cidr_list": role.BoundCIDRList,
 				},
 			}
-			resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
+			resp.AddWarning(`The "bound_cidr_list" field is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
 			return resp, nil
 		default:
 			// shouldn't occur IRL
@@ -2355,9 +2375,28 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
+	var numUses int
+	// Check whether or not num_uses is defined, otherwise fallback to secret_id_num_uses
+	if numUsesRaw, ok := data.GetOk("num_uses"); ok {
+		if numUses < 0 {
+			return logical.ErrorResponse("num_uses cannot be negative"), nil
+		}
+		numUses = numUsesRaw.(int)
+	} else {
+		numUses = role.SecretIDNumUses
+	}
+
+	var ttl time.Duration
+	// Check whether or not ttl is defined, otherwise fallback to secret_id_ttl
+	if ttlRaw, ok := data.GetOk("ttl"); ok {
+		ttl = time.Second * time.Duration(ttlRaw.(int))
+	} else {
+		ttl = role.SecretIDTTL
+	}
+
 	secretIDStorage := &secretIDStorageEntry{
-		SecretIDNumUses: role.SecretIDNumUses,
-		SecretIDTTL:     role.SecretIDTTL,
+		SecretIDNumUses: numUses,
+		SecretIDTTL:     ttl,
 		Metadata:        make(map[string]string),
 		CIDRList:        secretIDCIDRs,
 		TokenBoundCIDRs: secretIDTokenCIDRs,
@@ -2476,11 +2515,11 @@ to be generated against only this specific role, it can be done via
 'role/<role_name>/secret-id' and 'role/<role_name>/custom-secret-id' endpoints.
 The properties of the SecretID created against the role and the properties
 of the token issued with the SecretID generated against the role, can be
-configured using the parameters of this endpoint.`,
+configured using the fields of this endpoint.`,
 	},
 	"role-bind-secret-id": {
 		"Impose secret_id to be presented during login using this role.",
-		`By setting this to 'true', during login the parameter 'secret_id' becomes a mandatory argument.
+		`By setting this to 'true', during login the field 'secret_id' becomes a mandatory argument.
 The value of 'secret_id' can be retrieved using 'role/<role_name>/secret-id' endpoint.`,
 	},
 	"role-bound-cidr-list": {
@@ -2514,14 +2553,15 @@ defined on the role, can access the role.`,
 		"Use limit of the SecretID generated against the role.",
 		`If the SecretIDs are generated/assigned against the role using the
 'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
-then the number of times that SecretID can access the role is defined by
-this option.`,
+then the number of times that SecretID can access the role is by default defined by this option.
+Can be overriden by the 'num_uses' field on either of the two endpoints.`,
 	},
 	"role-secret-id-ttl": {
-		`Duration in seconds, representing the lifetime of the SecretIDs
-that are generated against the role using 'role/<role_name>/secret-id' or
-'role/<role_name>/custom-secret-id' endpoints.`,
-		``,
+		"Duration in seconds of the SecretID generated against the role.",
+		`If the SecretIDs are generated/assigned against the role using the
+'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
+then the lifetime of the SecretID is by default defined by this option.
+Can be overriden by the 'ttl' field on either of the two endpoints.`,
 	},
 	"role-secret-id-lookup": {
 		"Read the properties of an issued secret_id",
@@ -2584,8 +2624,8 @@ this endpoint.`,
 		`The SecretID generated using this endpoint will be scoped to access
 just this role and none else. The properties of this SecretID will be
 based on the options set on the role. It will expire after a period
-defined by the 'secret_id_ttl' option on the role and/or the backend
-mount's maximum TTL value.`,
+defined by the 'ttl' field or 'secret_id_ttl' option on the role,
+and/or the backend mount's maximum TTL value.`,
 	},
 	"role-custom-secret-id": {
 		"Assign a SecretID of choice against the role.",
@@ -2593,8 +2633,8 @@ mount's maximum TTL value.`,
 to do so. This will assign a client supplied SecretID to be used to access
 the role. This SecretID will behave similarly to the SecretIDs generated by
 the backend. The properties of this SecretID will be based on the options
-set on the role. It will expire after a period defined by the 'secret_id_ttl'
-option on the role and/or the backend mount's maximum TTL value.`,
+set on the role. It will expire after a period defined by the 'ttl' field
+or 'secret_id_ttl' option on the role, and/or the backend mount's maximum TTL value.`,
 	},
 	"role-period": {
 		"Updates the value of 'period' on the role",
