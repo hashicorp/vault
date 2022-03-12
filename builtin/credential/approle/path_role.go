@@ -2415,6 +2415,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 			"secret_id":          secretID,
 			"secret_id_accessor": secretIDStorage.SecretIDAccessor,
 			"secret_id_ttl":      int64(b.deriveSecretIDTTL(secretIDStorage.SecretIDTTL).Seconds()),
+			"secret_id_num_uses": int(secretIDStorage.SecretIDNumUses),
 		},
 	}
 
