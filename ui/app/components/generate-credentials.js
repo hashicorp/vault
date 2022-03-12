@@ -15,6 +15,11 @@ const MODEL_TYPES = {
     title: 'Generate AWS Credentials',
     backIsListLink: true,
   },
+  'consul-creds': {
+    model: 'consul-credential',
+    title: 'Generate Consul Credentials',
+    backIsListLink: true,
+  },
   'pki-issue': {
     model: 'pki-certificate',
     title: 'Issue Certificate',

@@ -1,0 +1,109 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq mode "create")}}
+        Create a Consul Role
+      {{else if (eq mode 'edit')}}
+        Edit Consul Role <code>{{model.id}}</code>
+      {{else}}
+        Consul Role <code>{{model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if model.canGenerate}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="credentials"
+          @data-test-backend-credentials="iam"
+        >
+          Generate credentials
+        </ToolbarSecretLink>
+      {{/if}}
+      {{#if (and model.canGenerate (or model.canDelete model.canEdit))}}
+        <div class="toolbar-separator" />
+      {{/if}}
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+        >
+          Delete role
+        </ConfirmAction>
+      {{/if}}
+      {{#if model.canEdit}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="edit"
+          @replace=true
+        >
+          Edit role
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (or (eq mode 'edit') (eq mode 'create'))}}
+  <form onsubmit={{action "createOrUpdate" "create"}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{model}} />
+      <NamespaceReminder @mode={{mode}} @noun="AWS role" />
+      {{#if (gt model.credentialTypes.length 1)}}
+        <AlertBanner
+          @type="warning"
+          @message="This role has more than one credential_type, currently: {{join ', ' model.credentialTypes}}.
+            Multiple credential types is deprecated and you must choose one in order to save this role."
+        />
+      {{/if}}
+      {{#each (if (eq mode 'edit') (drop 1 (or model.fields (array))) model.fields) as |attr|}}
+        {{form-field data-test-field attr=attr model=model}}
+      {{/each}}
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          disabled={{buttonDisabled}}
+          class="button is-primary"
+          data-test-role-aws-create=true
+        >
+          {{#if (eq mode 'create')}}
+            Create role
+          {{else if (eq mode 'edit')}}
+            Save
+          {{/if}}
+        </button>
+        <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{model.id}}>
+          Cancel
+        </SecretLink>
+      </div>
+    </div>
+  </form>
+{{else}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#if (gt model.credentialTypes.length 1)}}
+      <AlertBanner
+        @type="warning"
+        @message="This role has more than one credential_type, currently: {{join ', ' model.credentialTypes}}.
+          When you next edit this role, you will have to choose a single credential type."
+      />
+    {{/if}}
+    {{#each model.fields as |attr|}}
+      {{#if (eq attr.name "policyDocument")}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{model.policyDocument}}>
+          <pre><code class="is-paddingless">{{stringify (jsonify model.policyDocument)}}</code></pre>
+        </InfoTableRow>
+      {{else}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
+      {{/if}}
+    {{/each}}
+  </div>
+{{/if}}

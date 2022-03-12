@@ -11,6 +11,15 @@ const DEFAULT_DISPLAY = {
   listItemPartial: 'secret-list/item',
 };
 const SECRET_BACKENDS = {
+  consul: {
+    displayName: 'Consul',
+    searchPlaceholder: 'Filter roles',
+    item: 'role',
+    create: 'Create role',
+    navigateTree: false,
+    editComponent: 'role-consul-edit',
+    listItemPartial: 'secret-list/consul-role-item',
+  },
   aws: {
     displayName: 'AWS',
     searchPlaceholder: 'Filter roles',

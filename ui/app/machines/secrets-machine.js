@@ -43,7 +43,7 @@ export default {
             cond: (type) => type === 'database',
           },
           role: {
-            cond: (type) => ['pki', 'aws', 'ssh'].includes(type),
+            cond: (type) => ['pki', 'aws', 'consul', 'ssh'].includes(type),
           },
           secret: {
             cond: (type) => ['kv'].includes(type),
@@ -138,7 +138,7 @@ export default {
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           role: {
-            cond: (type) => ['pki', 'aws', 'ssh'].includes(type),
+            cond: (type) => ['pki', 'aws', 'consul', 'ssh'].includes(type),
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           secret: {

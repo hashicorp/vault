@@ -56,6 +56,8 @@ export default Component.extend({
     switch (this.mountSubtype) {
       case 'aws':
         return 'Generate credential';
+      case 'consul':
+          return 'Generate credential';
       case 'ssh':
         return 'Sign keys';
       case 'pki':

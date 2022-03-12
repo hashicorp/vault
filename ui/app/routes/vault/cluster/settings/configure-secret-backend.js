@@ -2,7 +2,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 
-const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh', 'pki'];
+const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh', 'pki',  'consul'];
 
 export default Route.extend({
   model() {

@@ -3,7 +3,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
 
-const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'pki'];
+const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'consul', 'pki'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',

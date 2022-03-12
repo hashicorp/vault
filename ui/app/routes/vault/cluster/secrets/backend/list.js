@@ -78,6 +78,7 @@ export default Route.extend({
       database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
+      consul: 'role-consul',
       transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',

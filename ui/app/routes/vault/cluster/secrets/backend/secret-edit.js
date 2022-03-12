@@ -26,7 +26,7 @@ export default Route.extend(UnloadModelRoute, {
       path = `${backend}/data/${secret}`;
     } else if (backendType === 'transit') {
       path = backend + '/keys/' + secret;
-    } else if (backendType === 'ssh' || backendType === 'aws') {
+    } else if (backendType === 'ssh' || backendType === 'aws' || backendType === 'consul') {
       path = backend + '/roles/' + secret;
     } else if (modelType.startsWith('transform/')) {
       path = this.buildTransformPath(backend, secret, modelType);
@@ -100,6 +100,7 @@ export default Route.extend(UnloadModelRoute, {
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
+      consul: 'role-consul',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
