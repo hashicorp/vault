@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/approle: add 'ttl' and 'num_uses' fields when generating SecretIDs
+```
