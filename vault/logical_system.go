@@ -1202,7 +1202,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	if strings.Contains(fromPath, " ") {
-		return logical.ErrorResponse("'from' path cannot contain whitespaces"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("'from' path cannot contain whitespace"), logical.ErrInvalidRequest
 	}
 	if strings.Contains(toPath, " ") {
 		return logical.ErrorResponse("'to' path cannot contain whitespaces"), logical.ErrInvalidRequest
