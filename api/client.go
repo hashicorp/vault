@@ -1188,8 +1188,14 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	if c.headers != nil {
+		for header, vals := range c.headers {
+			for _, val := range vals {
+				req.Header.Add(header, val)
+			}
+		}
+	}
 	c.config.modifyLock.RUnlock()
-
 	c.modifyLock.RUnlock()
 
 	// OutputCurlString logic relies on the request type to be retryable.Request as
@@ -1201,14 +1207,6 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	req.URL.Scheme = r.URL.Scheme
 	req.URL.Host = r.URL.Host
 	req.Host = r.URL.Host
-
-	if r.Headers != nil {
-		for header, vals := range r.Headers {
-			for _, val := range vals {
-				req.Header.Add(header, val)
-			}
-		}
-	}
 
 	if len(r.ClientToken) != 0 {
 		req.Header.Set(consts.AuthHeaderName, r.ClientToken)
