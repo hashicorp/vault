@@ -26,4 +26,4 @@ jobs:
       - uses: backspace/ember-asset-size-action@edit-comment
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-          working-directory: "ui"
+          working-directory: ./ui
