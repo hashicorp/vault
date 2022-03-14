@@ -127,7 +127,7 @@ be larger than the role max TTL.`,
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
-                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
 	return fields
@@ -238,7 +238,7 @@ the alt_names map using OID 2.5.4.5.`,
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
-                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
 	return fields
