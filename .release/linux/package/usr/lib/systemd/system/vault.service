@@ -8,6 +8,7 @@ StartLimitIntervalSec=60
 StartLimitBurst=3
 
 [Service]
+Type=notify
 EnvironmentFile=/etc/vault.d/vault.env
 User=vault
 Group=vault
