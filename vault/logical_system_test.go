@@ -1026,6 +1026,7 @@ func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 }
+
 func TestSystemBackend_leases(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
