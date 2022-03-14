@@ -1205,7 +1205,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("'from' path cannot contain whitespace"), logical.ErrInvalidRequest
 	}
 	if strings.Contains(toPath, " ") {
-		return logical.ErrorResponse("'to' path cannot contain whitespaces"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("'to' path cannot contain whitespace"), logical.ErrInvalidRequest
 	}
 
 	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
