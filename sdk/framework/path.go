@@ -301,9 +301,17 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
+		// The plugin type (e.g. "kv", "cubbyhole") is only assigned at the time
+		// the plugin is enabled (mounted). If specified in the request, the type
+		// will be used as part of the request/response names in the OAS document
+		var requestResponsePrefix string
+		if v, ok := req.Data["requestResponsePrefix"]; ok {
+			requestResponsePrefix = v.(string)
+		}
+
 		// Build OpenAPI response for this path
 		doc := NewOASDocument()
-		if err := documentPath(p, b.SpecialPaths(), b.BackendType, doc); err != nil {
+		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, b.BackendType, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 

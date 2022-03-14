@@ -192,7 +192,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 		return fmt.Errorf("failed to configure userpass backend: %v", err)
 	}
 	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "test-entity",
+		"name": "test",
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create an entity")
@@ -213,12 +213,12 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	{
 		// create a config
 		mfaConfigData := map[string]interface{}{
-			"mount_accessor":  mountAccessor,
-			"secret_key":      secret_key,
-			"integration_key": integration_key,
-			"api_hostname":    api_hostname,
+			"username_template": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
+			"secret_key":        secret_key,
+			"integration_key":   integration_key,
+			"api_hostname":      api_hostname,
 		}
-		resp, err := client.Logical().Write("identity/mfa/method-id/duo", mfaConfigData)
+		resp, err := client.Logical().Write("identity/mfa/method/duo", mfaConfigData)
 
 		if err != nil || (resp == nil) {
 			return fmt.Errorf("bad: resp: %#v\n err: %v", resp, err)
