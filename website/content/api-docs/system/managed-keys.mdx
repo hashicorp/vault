@@ -132,7 +132,7 @@ $ curl \
 - `token_label` `(string: <slot or token label required>)`: The slot token label to
   use.
 
-- `curve` `(string: "")` - supplies the curve value when using the `CKM_ECDSA mechanism`.
+- `curve` `(string: "" <required if allow_generate_key is true>)` - supplies the curve value when using the `CKM_ECDSA mechanism`.
   The supported values are
     - `P384`
     - `P521`
