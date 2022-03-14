@@ -197,7 +197,7 @@ The option `when_inconsistent` controls how stale reads are prevented:
 In Vault 1.10, the token format has changed, where service tokens now employ server side consistency.
 This means that by default, requests made 
 to nodes which cannot support read-after-write consistency due to 
-not having the necessary WAL index to check vault tokens locally will yield 
+not having the necessary WAL index to check Vault tokens locally will yield 
 a 412 status code. The vault go api automatically retries when receiving 412s, so 
 unless there is a considerable replication delay, end-users will experience
 read-after-write consistency. 
