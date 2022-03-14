@@ -11,7 +11,7 @@ import (
 )
 
 func isIPAddr(cidr sockaddr.SockAddr) bool {
-	return (cidr.Type() & sockaddr.TypeIP) != 1
+	return (cidr.Type() & sockaddr.TypeIP) != 0
 }
 
 // RemoteAddrIsOk checks if the given remote address is either:
