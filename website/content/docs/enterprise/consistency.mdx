@@ -199,7 +199,7 @@ This means that by default, requests made
 to nodes which cannot support read-after-write consistency due to 
 not having the necessary WAL index to check Vault tokens locally will yield 
 a 412 status code. The Vault go API automatically retries when receiving 412s, so 
-unless there is a considerable replication delay, end-users will experience
+unless there is a considerable replication delay, users will experience
 read-after-write consistency. 
 
 The replication option [allow_forwarding_via_token](/docs/configuration/replication)
