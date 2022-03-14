@@ -90,9 +90,13 @@ $ curl \
 - `library` `(string: <required>)` - The name of the `kms_library` stanza to use from Vault's config to
    lookup the local library path. See [kms_library stanza](/docs/configuration/kms-library) for further details.
 
-- `key_label` `(string: <required>)`: The label of the key to use. If the key
-  does not exist and generation is enabled, this is the label that will be given
-  to the generated key.
+- `key_label` `(string: <required>)` - The label of the key to use. If the key does not exist
+  and generation is enabled, this is the label that will be given to the generated key. This
+  value or `key_id` must be specified.
+
+- `key_id` `(string: <required>)` - The id of a PKCS#11 key to use. As key ids are created by
+  the HSM, it is an error if the key does not yet exist. This value or `key_label` must be
+  specified.
 
 - `mechanism` `(string: <required>)` - The encryption/decryption mechanism to use,
   specified as a hexadecimal (prefixed by 0x) string. The following are supported mechanisms
