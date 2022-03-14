@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, settled, click } from '@ember/test-helpers';
+import { visit, currentURL, settled, click, waitUntil, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
@@ -90,7 +90,9 @@ module('Acceptance | clients current', function (hooks) {
     // Filter by namespace
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    await settled();
+    await waitUntil(() => {
+      return find('[data-test-horizontal-bar-chart]');
+    });
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
