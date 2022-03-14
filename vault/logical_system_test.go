@@ -1006,7 +1006,7 @@ func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'from' path cannot contain whitespaces` {
+	if resp.Data["error"] != `'from' path cannot contain whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
