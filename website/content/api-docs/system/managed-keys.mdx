@@ -98,7 +98,7 @@ $ curl \
 
 ~> NOTE: The `pkcs11` backend is only available with Vault Enterprise Plus (HSMs) edition
 
-- `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`
+- `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`.
 
 - `library` `(string: <required>)` - The name of the `kms_library` stanza to use from Vault's config to
    lookup the local library path. See [kms_library stanza](/docs/configuration/kms-library) for further details.
@@ -151,7 +151,7 @@ $ curl \
   pkcs11 implementation.
 
 #### AWS KMS Parameters
-- `type` `(string: "awskms")` - To select an AWS KMS backend, the type parameter must be set to `awskms`
+- `type` `(string: "awskms")` - To select an AWS KMS backend, the type parameter must be set to `awskms`.
 
 - `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in
   the `AWS_ACCESS_KEY_ID` environment variable or as part of the AWS profile from the AWS CLI or
@@ -195,7 +195,7 @@ $ curl \
   or instance profile.
 
 #### Azure Key Vault Parameters
-- `type` `(string: "azurekeyvault")` - To select an Azure Key Vault backend, the type parameter must be set to `azurekeyvault`
+- `type` `(string: "azurekeyvault")` - To select an Azure Key Vault backend, the type parameter must be set to `azurekeyvault`.
 
 - `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization.
 
