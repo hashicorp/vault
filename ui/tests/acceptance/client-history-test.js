@@ -337,7 +337,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert
       .dom(SELECTORS.emptyStateTitle)
-      .includesText('No start date found', 'Empty state shows no billing start date');
+      .includesText('start date found', 'Empty state shows no billing start date');
     await click(SELECTORS.monthDropdown);
     await click(this.element.querySelector('[data-test-month-list] button:not([disabled])'));
     await click(SELECTORS.yearDropdown);
