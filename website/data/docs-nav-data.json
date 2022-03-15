@@ -78,10 +78,6 @@
       },
       {
         "title": "Plugins",
-        "path": "internals/plugins"
-      },
-      {
-        "title": "Plugins",
         "routes": [
           {
             "title": "Overview",
