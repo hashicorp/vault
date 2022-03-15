@@ -126,6 +126,11 @@ func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
 		if err != nil {
 			return data, fmt.Errorf("unable to get rule data: %w", err)
 		}
+
+		if len(slice) == 0 {
+			return data, fmt.Errorf("rule info cannot be empty")
+		}
+
 		data = ruleInfo{
 			ruleType: key,
 			data:     slice[0],
