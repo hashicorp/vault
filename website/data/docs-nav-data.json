@@ -454,6 +454,10 @@
             "path": "commands/auth/list"
           },
           {
+            "title": "<code>move</code>",
+            "path": "commands/auth/move"
+          },
+          {
             "title": "<code>tune</code>",
             "path": "commands/auth/tune"
           }
