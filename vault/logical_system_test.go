@@ -995,6 +995,38 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = " foo / "
+	req.Data["to"] = "bar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'from' path cannot contain whitespace` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = " bar / "
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path cannot contain whitespace` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
 func TestSystemBackend_leases(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
