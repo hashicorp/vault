@@ -86,9 +86,9 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
     `${itemType}: navigates to edit on create`
   );
   await page.editForm.delete();
-  await settled();
+  await page.editForm.waitForConfirm();
   await page.editForm.confirmDelete();
-  await settled();
+  await page.editForm.waitForFlash();
   assert.ok(
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
