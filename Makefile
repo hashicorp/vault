@@ -215,10 +215,10 @@ fmt:
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 semgrep: 
- 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
+	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
 
- semgrep-ci: 
- 	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
+semgrep-ci: 
+	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."
