@@ -81,6 +81,23 @@
         "path": "internals/plugins"
       },
       {
+        "title": "Plugins",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "internals/plugins"
+          },
+          {
+            "title": "Plugin Architecture",
+            "path": "internals/plugins/plugin-architecture"
+          },
+          {
+            "title": "Plugin Development",
+            "path": "internals/plugins/plugin-development"
+          }
+        ]
+      },
+      {
         "title": "Limits and Maximums",
         "path": "internals/limits"
       }
