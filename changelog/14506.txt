@@ -1,0 +1,3 @@
+```release-note:bug
+sdk: Revert the change to OpenAPI code generator to extract request objects into /components/schemas since it's causing issue with the UI.
+```
