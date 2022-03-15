@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix panic caused by parsing policies with empty slice values.
+```
