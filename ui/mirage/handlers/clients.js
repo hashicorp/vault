@@ -1,3 +1,5 @@
+import { formatISO, sub } from 'date-fns';
+
 export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
@@ -182,7 +184,7 @@ export default function (server) {
             ],
           },
         ],
-        end_time: end_time || '2022-01-31T23:59:59Z',
+        end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
         months: [],
         start_time,
         total: {
