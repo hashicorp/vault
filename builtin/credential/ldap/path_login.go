@@ -103,6 +103,10 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		},
 	}
 
+	if cfg.UsernameAsAlias {
+		auth.Alias.Name = username
+	}
+
 	cfg.PopulateTokenAuth(auth)
 
 	// Add in configured policies from mappings
