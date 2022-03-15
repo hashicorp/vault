@@ -1,0 +1,9 @@
+rules:
+  - id: uses-path-callbacks
+    patterns:
+      - pattern: |
+            []*framework.Path{..., {..., Pattern: $PATTERN, ..., Callbacks:$CALL, ...}, ...}
+             
+    message: "Path has a Callback for pattern $PATTERN"
+    languages: [go]
+    severity: WARNING
