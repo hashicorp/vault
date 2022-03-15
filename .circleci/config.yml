@@ -798,6 +798,28 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
+  semgrep:
+    docker:
+    - image: docker.mirror.hashicorp.services/alpine:3.13
+    shell: /bin/sh
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+    steps:
+    - run:
+        command: |
+          apk add --no-cache python3 py3-pip make
+          python3 -m pip install --user semgrep
+          export PATH="$HOME/.local/bin:$PATH"
+
+          echo "$ semgrep --version"
+          semgrep --version
+        name: Setup Semgrep
+        working_directory: ~/
+    - checkout
+    - attach_workspace:
+        at: .
+    - run:
+        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
+        name: Run Semgrep Rules
   pre-flight-checks:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
@@ -1127,4 +1149,7 @@ workflows:
             only:
             - stable-website
         context: vault-docs
+    - semgrep:
+        requires:
+        - pre-flight-checks
   version: 2
