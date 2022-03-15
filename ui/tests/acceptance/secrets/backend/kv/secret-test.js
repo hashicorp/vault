@@ -696,7 +696,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await settled(); // eslint-disable-line
     assert
       .dom('[data-test-empty-state-title]')
-      .includesText('Version 2 of this secret has been permanently destroyed');
+      .includesText('Version 1 of this secret has been permanently destroyed');
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function (assert) {
