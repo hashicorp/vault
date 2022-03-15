@@ -207,7 +207,7 @@ export default Service.extend({
       let props = {};
       const schema = pathInfo?.post?.requestBody?.content['application/json'].schema;
       if (schema.$ref) {
-        // $ref will be shaped like `#/component/schema/MyResponseType
+        // $ref will be shaped like `#/components/schemas/MyResponseType
         // which maps to the location of the item within the openApi response
         let loc = schema.$ref.replace('#/', '').split('/');
         props = loc.reduce((prev, curr) => {
