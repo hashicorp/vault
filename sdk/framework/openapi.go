@@ -32,9 +32,6 @@ func NewOASDocument() *OASDocument {
 			},
 		},
 		Paths: make(map[string]*OASPathItem),
-		Components: OASComponents{
-			Schemas: make(map[string]*OASSchema),
-		},
 	}
 }
 
@@ -81,14 +78,9 @@ func NewOASDocumentFromMap(input map[string]interface{}) (*OASDocument, error) {
 }
 
 type OASDocument struct {
-	Version    string                  `json:"openapi" mapstructure:"openapi"`
-	Info       OASInfo                 `json:"info"`
-	Paths      map[string]*OASPathItem `json:"paths"`
-	Components OASComponents           `json:"components"`
-}
-
-type OASComponents struct {
-	Schemas map[string]*OASSchema `json:"schemas"`
+	Version string                  `json:"openapi" mapstructure:"openapi"`
+	Info    OASInfo                 `json:"info"`
+	Paths   map[string]*OASPathItem `json:"paths"`
 }
 
 type OASInfo struct {
@@ -156,7 +148,6 @@ type OASMediaTypeObject struct {
 }
 
 type OASSchema struct {
-	Ref         string                `json:"$ref,omitempty"`
 	Type        string                `json:"type,omitempty"`
 	Description string                `json:"description,omitempty"`
 	Properties  map[string]*OASSchema `json:"properties,omitempty"`
@@ -213,9 +204,9 @@ var (
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
+func documentPaths(backend *Backend, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -224,7 +215,7 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -233,7 +224,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		unauthPaths = specialPaths.Unauthenticated
 	}
 
-	// Convert optional parameters into distinct patterns to be processed independently.
+	// Convert optional parameters into distinct patterns to be process independently.
 	paths := expandPattern(p.Pattern)
 
 	for _, path := range paths {
@@ -367,12 +358,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := constructRequestName(requestResponsePrefix, path)
-					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
-								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestName)},
+								Schema: s,
 							},
 						},
 					}
@@ -468,30 +457,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	}
 
 	return nil
-}
-
-// constructRequestName joins the given prefix with the path elements into a
-// CamelCaseRequest string.
-//
-// For example, prefix="kv" & path=/config/lease/{name} => KvConfigLeaseRequest
-func constructRequestName(requestResponsePrefix string, path string) string {
-	var b strings.Builder
-
-	b.WriteString(strings.Title(requestResponsePrefix))
-
-	// split the path by / _ - separators
-	for _, token := range strings.FieldsFunc(path, func(r rune) bool {
-		return r == '/' || r == '_' || r == '-'
-	}) {
-		// exclude request fields
-		if !strings.ContainsAny(token, "{}") {
-			b.WriteString(strings.Title(token))
-		}
-	}
-
-	b.WriteString("Request")
-
-	return b.String()
 }
 
 func specialPathMatch(path string, specialPaths []string) bool {

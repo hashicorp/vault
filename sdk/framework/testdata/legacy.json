@@ -41,7 +41,13 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KvLookupRequest"
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "My token"
+                  }
+                }
               }
             }
           }
@@ -49,19 +55,6 @@
         "responses": {
           "200": {
             "description": "OK"
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "KvLookupRequest": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "type": "string",
-            "description": "My token"
           }
         }
       }

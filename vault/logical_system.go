@@ -4034,13 +4034,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	doc := framework.NewOASDocument()
 
 	procMountGroup := func(group, mountPrefix string) error {
-		for mount, entry := range resp.Data[group].(map[string]interface{}) {
-
-			var pluginType string
-			if t, ok := entry.(map[string]interface{})["type"]; ok {
-				pluginType = t.(string)
-			}
-
+		for mount := range resp.Data[group].(map[string]interface{}) {
 			backend := b.Core.router.MatchingBackend(ctx, mountPrefix+mount)
 
 			if backend == nil {
@@ -4050,7 +4044,6 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4105,11 +4098,6 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				}
 
 				doc.Paths["/"+mountPrefix+mount+path] = obj
-			}
-
-			// Merge backend schema components
-			for e, schema := range backendDoc.Components.Schemas {
-				doc.Components.Schemas[e] = schema
 			}
 		}
 		return nil

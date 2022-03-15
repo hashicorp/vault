@@ -3436,9 +3436,6 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 			},
 		},
 		"paths": map[string]interface{}{},
-		"components": map[string]interface{}{
-			"schemas": map[string]interface{}{},
-		},
 	}
 
 	if diff := deep.Equal(oapi, exp); diff != nil {
