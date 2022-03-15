@@ -139,6 +139,9 @@ export default class HorizontalBarChart extends Component {
 
     let labelActionBar = labelActionBarGroup
       .selectAll('.label-action-bar')
+
+    let yLegendBars = chartSvg
+      .selectAll('.label-bar')
       .remove()
       .exit()
       .data(dataset)
