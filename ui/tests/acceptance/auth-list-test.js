@@ -40,7 +40,7 @@ module('Acceptance | auth backend list', function (hooks) {
     await click('[data-test-save-config="true"]');
 
     await visit(`/vault/access/${path1}/item/user/create`);
-    await waitUntil(() => find('[data-test-input="username"]'));
+    await waitUntil(() => find('[data-test-input="username"]') && find('[data-test-textarea]'));
     await fillIn('[data-test-input="username"]', user1);
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user1);
