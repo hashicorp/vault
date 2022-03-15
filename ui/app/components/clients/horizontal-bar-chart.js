@@ -96,6 +96,8 @@ export default class HorizontalBarChart extends Component {
 
     groups
       .selectAll('rect')
+      .remove()
+      .exit()
       // iterate through the stacked data and chart respectively
       .data((stackedData) => stackedData)
       .enter()
@@ -111,6 +113,8 @@ export default class HorizontalBarChart extends Component {
 
     let actionBars = chartSvg
       .selectAll('.action-bar')
+      .remove()
+      .exit()
       .data(dataset)
       .enter()
       .append('rect')
@@ -126,6 +130,8 @@ export default class HorizontalBarChart extends Component {
 
     let yLegendBars = chartSvg
       .selectAll('.label-bar')
+      .remove()
+      .exit()
       .data(dataset)
       .enter()
       .append('rect')
