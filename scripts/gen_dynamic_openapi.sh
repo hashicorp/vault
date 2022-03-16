@@ -25,14 +25,14 @@ VAULT_PID=$!
 echo "Mounting all builtin backends..."
 
 # Read auth backends
-codeLineStarted=false
+codeLinesStarted=false
 regex='".*"'
 while read line; do
     if [[ $line == *"credentialBackends:"* ]] ; then
-        codeLineStarted=true
-    elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
+        codeLinesStarted=true
+    elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault auth enable ${plugin}
@@ -40,14 +40,14 @@ while read line; do
 done <../../vault/helper/builtinplugins/registry.go
 
 # Read secrets backends
-codeLineStarted=false
+codeLinesStarted=false
 regex='".*"'
 while read line; do
     if [[ $line == *"logicalBackends:"* ]] ; then
-        codeLineStarted=true
-    elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
+        codeLinesStarted=true
+    elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault secrets enable ${plugin}
@@ -61,13 +61,13 @@ if [ -f $entRegFile ] && [[ ! -z "$VAULT_LICENSE" ]]; then
   vault write sys/license text="$VAULT_LICENSE"
 
   regex='".*"'
-  codeLineStarted=false
+  codeLinesStarted=false
   while read line; do
         if [[ $line == *"ExternalPluginsEnt"* ]] ; then
-        codeLineStarted=true
-    elif [ $codeLineStarted = true ] && [[ $line = *"}"* ]]  ; then
+        codeLinesStarted=true
+    elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLineStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault secrets enable ${plugin}
