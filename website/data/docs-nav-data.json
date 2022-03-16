@@ -1211,7 +1211,16 @@
       },
       {
         "title": "Login MFA",
-        "path": "auth/login-mfa"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/login-mfa"
+          },
+          {
+            "title": "FAQ",
+            "path": "auth/login-mfa/faq"
+          }
+        ]
       },
       {
         "title": "Oracle Cloud Infrastructure",
