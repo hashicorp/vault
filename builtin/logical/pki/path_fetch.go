@@ -320,9 +320,11 @@ Fetch a CA, CRL, CA Chain, or non-revoked certificate.
 `
 
 const pathFetchHelpDesc = `
-This allows certificates to be fetched. If using the fetch/ prefix any non-revoked certificate can be fetched.
+This allows certificates to be fetched. Use /cert/:serial for JSON responses.
 
 Using "ca" or "crl" as the value fetches the appropriate information in DER encoding. Add "/pem" to either to get PEM encoding.
 
 Using "ca_chain" as the value fetches the certificate authority trust chain in PEM encoding.
+
+Otherwise, specify a serial number to fetch the specified certificate. Add "/raw" to get just the certificate in DER form, "/raw/pem" to get the PEM encoded certificate.
 `

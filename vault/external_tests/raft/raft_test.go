@@ -492,6 +492,9 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 	// Take a snapshot
 	buf := new(bytes.Buffer)
 	err := leaderClient.Sys().RaftSnapshot(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
 	snap, err := io.ReadAll(buf)
 	if err != nil {
 		t.Fatal(err)
