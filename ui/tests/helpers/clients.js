@@ -27,6 +27,15 @@ export const SELECTORS = {
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
 };
 
+export const CHART_ELEMENTS = {
+  entityClientDataBars: '[data-test-group="entity_clients"]',
+  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
+  yLabels: '[data-test-group="y-labels"]',
+  actionBars: '[data-test-group="action-bars"]',
+  labelActionBars: '[data-test-group="label-action-bars"]',
+  totalValues: '[data-test-group="total-values"]',
+};
+
 export function sendResponse(data, httpStatus = 200) {
   if (httpStatus === 403) {
     return [
@@ -60,7 +69,7 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   let mountCount = 1;
   const nsBlock = {
     namespace_id: `${idx}UUID`,
-    namespace_path: `my-namespace-${idx}/`,
+    namespace_path: `${idx}/namespace`,
     counts: {
       clients: mountCount * 15,
       entity_clients: mountCount * 5,
