@@ -358,7 +358,7 @@ export default Service.extend({
     return {};
   },
 
-  async authenticate(/*{clusterId, backend, data}*/) {
+  async authenticate(/*{clusterId, backend, data, selectedAuth}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
 
@@ -389,6 +389,8 @@ export default Service.extend({
   },
 
   async authSuccess(options, response) {
+    // persist selectedAuth to sessionStorage to rehydrate auth form on logout
+    sessionStorage.setItem('selectedAuth', options.selectedAuth);
     const authData = await this.persistAuthData(options, response, this.namespaceService.path);
     await this.permissions.getPaths.perform();
     return authData;
@@ -407,8 +409,11 @@ export default Service.extend({
   },
 
   getAuthType() {
-    if (!this.authData) return;
-    return this.authData.backend.type;
+    // check sessionStorage first
+    const selectedAuth = sessionStorage.getItem('selectedAuth');
+    if (selectedAuth) return selectedAuth;
+    // fallback to authData which discerns backend type from token
+    return this.authData ? this.authData.backend.type : null;
   },
 
   deleteCurrentToken() {
