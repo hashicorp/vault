@@ -16,10 +16,11 @@ This FAQ section contains frequently asked questions about the Login MFA feature
 - [Q: Are there new MFA API endpoints introduced as part of the new Vault version 1.10 MFA for login functionality?](#q-are-there-new-mfa-api-endpoints-introduced-as-part-of-the-new-vault-version-1-10-mfa-for-login-functionality)
 - [Q: How do MFA configurations differ between the Login MFA and Step-up Enterprise MFA?](#q-how-do-mfa-configurations-differ-between-the-login-mfa-and-step-up-enterprise-mfa)
 - [Q: What are the ways to configure the various MFA workflows?](#q-what-are-the-ways-to-configure-the-various-mfa-workflows)
+- [Q: What MFA mechanism is used with the different MFA workflows in Vault version 1.10?](#q-which-mfa-mechanism-is-used-with-the-different-mfa-workflows-in-vault-version-1-10)
 - [Q: Are namespaces supported with the MFA workflows that Vault has as of Vault version 1.10?](#q-are-namespaces-supported-with-the-mfa-workflows-that-vault-has-as-of-vault-version-1-10)
 - [Q: I use the Vault Agent. Does MFA pose any challenges for me?](#q-i-use-the-vault-agent-does-mfa-pose-any-challenges-for-me)
-- [Q: I am a Vault Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?](#q-i-am-a-vault-enterprise-mfa-user-using-mfa-for-login-should-i-migrate-to-the-new-login-mfa)
-- [Q: What are the steps to migrate to Login MFA?](#q-what-are-the-steps-to-migrate-to-login-mfa)
+- [Q: I am a Step-up Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?](#q-i-am-a-step-up-enterprise-mfa-user-using-mfa-for-login-should-i-migrate-to-the-new-login-mfa)
+- [Q: I am a Step-up Enterprise MFA user using MFA for login. What are the steps to migrate to Login MFA?](#q-i-am-a-step-up-enterprise-mfa-user-using-mfa-for-login-what-are-the-steps-to-migrate-to-login-mfa)
 
 ### Q: What MFA features can I access if I upgrade to Vault version 1.10?
 
@@ -98,19 +99,20 @@ However, the Login MFA supports namespaces. Users will need a Vault Enterprise l
 
 The Vault Agent should not use MFA to authenticate to Vault; it should be able to relay requests with MFA-related headers to Vault successfully.
 
-### Q: I am a Vault Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?
+### Q: I am a Step-up Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?
 
 If you are currently using Enterprise MFA, evaluate your MFA specific use cases to determine whether or not you should migrate to [Login MFA](/docs/auth/login-mfa).
 
 Here are some considerations:
 
-- We plan to remove Legacy MFA in Vault version 1.11.
 - If you use the Step-up Enterprise MFA for login (with Sentinel EGP), you may find value in the simpler Login MFA workflow. We recommend that you to test this out to evaluate if this meets all your requirements.
 - If you use the Step-up Enterprise MFA for more than login, please be aware that the new MFA workflow only supports the login use case. You will still need to use the Step-up Enterprise MFA for non-login use cases.
 
-### Q: What are the steps to migrate to Login MFA?
+### Q: I am a Step-up Enterprise MFA user using MFA for login. What are the steps to migrate to Login MFA?
 
-If you are a Vault Enterprise MFA user and wish to migrate to Login MFA, follow these steps and guidelines to migrate successfully.
+Refer to the question [Q: I am a Step-up Enterprise MFA user using MFA for login. Should I migrate to the new Login MFA?](#q-i-am-a-step-up-enterprise-mfa-user-using-mfa-for-login-should-i-migrate-to-the-new-login-mfa) to evaluate whether or not you should migrate.
+
+If you wish to migrate to Login MFA, follow these steps and guidelines to migrate successfully.
 
 1. First, create new MFA methods using the `identity/mfa/method` endpoints. These should mostly use the same fields as the MFA methods you defined using the `sys/mfa` method while keeping the following in mind:
 
