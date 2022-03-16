@@ -26,13 +26,13 @@ echo "Mounting all builtin backends..."
 
 # Read auth backends
 codeLinesStarted=false
-regex='".*"'
+inQuotesRegex='".*"'
 while read line; do
     if [[ $line == *"credentialBackends:"* ]] ; then
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault auth enable "${plugin}"
@@ -41,13 +41,12 @@ done <../../vault/helper/builtinplugins/registry.go
 
 # Read secrets backends
 codeLinesStarted=false
-regex='".*"'
 while read line; do
     if [[ $line == *"logicalBackends:"* ]] ; then
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault secrets enable "${plugin}"
@@ -60,14 +59,14 @@ entRegFile=../../vault/helper/builtinplugins/registry_util_ent.go
 if [ -f $entRegFile ] && [[ ! -z "$VAULT_LICENSE" ]]; then
   vault write sys/license text="$VAULT_LICENSE"
 
-  regex='".*"'
+  inQuotesRegex='".*"'
   codeLinesStarted=false
   while read line; do
         if [[ $line == *"ExternalPluginsEnt"* ]] ; then
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line =~ $regex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
         vault secrets enable "${plugin}"
