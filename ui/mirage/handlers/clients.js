@@ -1,3 +1,5 @@
+import { formatISO, isBefore, sub } from 'date-fns';
+
 export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
@@ -88,6 +90,8 @@ export default function (server) {
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
     const { start_time, end_time } = req.queryParams;
+    // fake client counting start date so warning shows if user queries earlier start date
+    const counts_start = '2020-10-17T00:00:00Z';
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',
@@ -182,9 +186,9 @@ export default function (server) {
             ],
           },
         ],
-        end_time: end_time || '2022-01-31T23:59:59Z',
+        end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
         months: [],
-        start_time,
+        start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
           distinct_entities: 37389,
           entity_clients: 37389,
