@@ -13,16 +13,10 @@
       &:focus {
         box-shadow: none;
       }
-      &.active,
-      .tab {
+      &.is-active,
+      &.is-active .tab {
         border-color: $blue;
         color: $blue;
-      }
-    }
-    li {
-      > a &.active {
-        border-color: $blue;
-        color: $blue !important;
       }
     }
   }
@@ -31,8 +25,8 @@
     &:focus {
       box-shadow: none;
     }
-    &.active a,
-    &.active .tab {
+    &.is-active a,
+    &.is-active .tab {
       border-color: $blue;
       color: $blue;
     }

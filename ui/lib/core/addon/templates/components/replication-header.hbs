@@ -55,10 +55,14 @@
         </ul>
       {{else}}
         <ul>
-          <LinkTo @route="vault.cluster.replication-dr-promote.details">
+          <LinkTo @route="vault.cluster.replication-dr-promote.details" @activeClass="is-active">
             Details
           </LinkTo>
-          <LinkTo @route="vault.cluster.replication-dr-promote" @current-when="vault.cluster.replication-dr-promote.index">
+          <LinkTo
+            @route="vault.cluster.replication-dr-promote"
+            @activeClass="is-active"
+            @current-when="vault.cluster.replication-dr-promote.index"
+          >
             Manage
           </LinkTo>
         </ul>
