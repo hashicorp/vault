@@ -6,22 +6,18 @@ import logout from 'vault/tests/pages/logout';
 import Ember from 'ember';
 
 let adapterException;
-let loggerError;
 
 module('Acceptance | not-found', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    loggerError = Ember.Logger.error;
     adapterException = Ember.Test.adapter.exception;
     Ember.Test.adapter.exception = () => {};
-    Ember.Logger.error = () => {};
     return authPage.login();
   });
 
   hooks.afterEach(function () {
     Ember.Test.adapter.exception = adapterException;
-    Ember.Logger.error = loggerError;
     return logout.visit();
   });
 
