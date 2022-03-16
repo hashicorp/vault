@@ -1,0 +1,3 @@
+```release-note:bug
+identity/oidc: Fix duplicate keys in well-known
+```
