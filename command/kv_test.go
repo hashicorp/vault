@@ -140,6 +140,12 @@ func TestKVPutCommand(t *testing.T) {
 			[]string{"== Secret Path ==", "kv/data/write/foo"},
 			0,
 		},
+		{
+			"v2_single_value_backslash",
+			[]string{"kv/write/foo", "foo=\\"},
+			[]string{"== Secret Path ==", "kv/data/write/foo"},
+			0,
+		},
 	}
 
 	for _, tc := range cases {
