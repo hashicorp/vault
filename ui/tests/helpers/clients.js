@@ -15,7 +15,7 @@ import { formatRFC3339 } from 'date-fns';
  */
 
 export const SELECTORS = {
-  activeTab: '.nav-tab-link.active',
+  activeTab: '.active',
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',
