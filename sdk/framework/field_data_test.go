@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -1081,6 +1082,16 @@ func TestFieldDataGet_Error(t *testing.T) {
 			},
 			map[string]interface{}{
 				"foo": -42.0,
+			},
+			"foo",
+		},
+
+		"comma string slice type, single JSON number value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": json.Number("123"),
 			},
 			"foo",
 		},
