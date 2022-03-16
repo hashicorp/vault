@@ -14,7 +14,7 @@
         box-shadow: none;
       }
       &.active,
-      .tab {
+      &.active .tab {
         border-color: $blue;
         color: $blue;
       }
