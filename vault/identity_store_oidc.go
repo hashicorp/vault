@@ -622,9 +622,7 @@ func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, nam
 	}
 
 	for _, k := range key.KeyRing {
-		if !strutil.StrListContains(keyIDs, k.KeyID) {
-			keyIDs = append(keyIDs, k.KeyID)
-		}
+		keyIDs = append(keyIDs, k.KeyID)
 	}
 
 	return keyIDs, nil
