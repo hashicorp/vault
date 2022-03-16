@@ -88,12 +88,11 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   await page.editForm.delete();
   await page.editForm.waitForConfirm();
   await page.editForm.confirmDelete();
-  await page.editForm.waitForFlash();
+  await settled();
   assert.ok(
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
   );
-
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',
