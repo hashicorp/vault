@@ -18,6 +18,7 @@ export default Component.extend(FocusOnInsertMixin, {
   onDataChange() {},
   onRefresh() {},
   key: null,
+  autoRotateInvalid: false,
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
   willDestroyElement() {
@@ -90,6 +91,15 @@ export default Component.extend(FocusOnInsertMixin, {
 
     setValueOnKey(key, event) {
       set(this.key, key, event.target.checked);
+    },
+
+    handleAutoRotateChange(ttlObj) {
+      if (ttlObj.enabled) {
+        set(this.key, 'autoRotatePeriod', ttlObj.goSafeTimeString);
+        this.set('autoRotateInvalid', ttlObj.seconds < 3600);
+      } else {
+        set(this.key, 'autoRotatePeriod', 0);
+      }
     },
 
     derivedChange(val) {

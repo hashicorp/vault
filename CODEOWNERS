@@ -25,11 +25,7 @@
 /command/agent/               @hashicorp/vault-ecosystem
 /plugins/                     @hashicorp/vault-ecosystem
 
-# Disabling for now to see if manually adding the reviewer when a PR
-# is ready will be more useful and accurate. There have been cases where
-# docs are being reviewed against PRs that haven't been vetted for acceptance.
-# /website/content/                         @taoism4504
-
+/website/content/                         @taoism4504
 /website/content/docs/plugin-portal.mdx   @taoism4504  @acahn
 
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.

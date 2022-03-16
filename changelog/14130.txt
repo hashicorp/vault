@@ -1,0 +1,8 @@
+```release-note:change
+secrets/azure: Changes the configuration parameter `use_microsoft_graph_api` to use the Microsoft 
+Graph API by default.
+```
+```release-note:bug
+secrets/azure: Fixes the [rotate root](https://www.vaultproject.io/api-docs/secret/azure#rotate-root) 
+operation for upgraded configurations with a `root_password_ttl` of zero.
+```

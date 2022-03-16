@@ -18,6 +18,6 @@ The `AuthConfigForm/Options` is options portion of the auth config form.
 **See**
 
 - [Uses of AuthConfigForm/options](https://github.com/hashicorp/vault/search?l=Handlebars&q=AuthConfigForm/options)
-- [AuthConfigForm/options Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-config-form/options.js)
+- [AuthConfigForm/options Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/auth-config-form/options.js)
 
 ---

@@ -6,9 +6,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
+	"net/http"
 	"net/url"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -74,4 +76,32 @@ func computeHashClaim(alg string, input string) (string, error) {
 	_, _ = h.Write([]byte(input))
 	sum := h.Sum(nil)
 	return base64.RawURLEncoding.EncodeToString(sum[:len(sum)/2]), nil
+}
+
+// computeCodeChallenge computes a Proof Key for Code Exchange (PKCE)
+// code challenge given a code verifier and code challenge method.
+func computeCodeChallenge(verifier string, method string) (string, error) {
+	switch method {
+	case codeChallengeMethodPlain:
+		return verifier, nil
+	case codeChallengeMethodS256:
+		hf := sha256.New()
+		hf.Write([]byte(verifier))
+		return base64.RawURLEncoding.EncodeToString(hf.Sum(nil)), nil
+	default:
+		return "", fmt.Errorf("invalid code challenge method %q", method)
+	}
+}
+
+// authCodeUsedPKCE returns true if the given entry was granted using PKCE.
+func authCodeUsedPKCE(entry *authCodeCacheEntry) bool {
+	return entry.codeChallenge != "" && entry.codeChallengeMethod != ""
+}
+
+// basicAuth returns the username/password provided in the logical.Request's
+// authorization header and a bool indicating if the request used basic
+// authentication.
+func basicAuth(req *logical.Request) (string, string, bool) {
+	headerReq := &http.Request{Header: req.Headers}
+	return headerReq.BasicAuth()
 }

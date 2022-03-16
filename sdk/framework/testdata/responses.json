@@ -46,6 +46,10 @@
         }
       }
     }
+  },
+  "components": {
+    "schemas": {
+    }
   }
 }
 

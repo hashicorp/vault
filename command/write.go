@@ -15,6 +15,13 @@ var (
 	_ cli.CommandAutocomplete = (*WriteCommand)(nil)
 )
 
+// MFAMethodInfo contains the information about an MFA method
+type MFAMethodInfo struct {
+	methodID    string
+	methodType  string
+	usePasscode bool
+}
+
 // WriteCommand is a Command that puts data into the Vault.
 type WriteCommand struct {
 	*BaseCommand
@@ -144,6 +151,20 @@ func (c *WriteCommand) Run(args []string) int {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return 0
+	}
+
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if c.isInteractiveEnabled(len(secret.Auth.MFARequirement.MFAConstraints)) {
+			// Currently, if there is only one MFA method configured, the login
+			// request is validated interactively
+			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
+			if methodInfo.methodID != "" {
+				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+			}
+		}
+		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
+			"MFA validation. Please make sure to validate the login by sending another "+
+			"request to sys/mfa/validate endpoint.") + "\n")
 	}
 
 	// Handle single field output

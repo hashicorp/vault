@@ -24,6 +24,6 @@ timestring when those two values are changed.
 **See**
 
 - [Uses of TtlForm](https://github.com/hashicorp/vault/search?l=Handlebars&q=TtlForm+OR+ttl-form)
-- [TtlForm Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/ttl-form.js)
+- [TtlForm Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/ttl-form.js)
 
 ---

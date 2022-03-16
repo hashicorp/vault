@@ -18,19 +18,19 @@ func pathConfigURLs(b *backend) *framework.Path {
 			"issuing_certificates": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
-for the issuing certificate attribute`,
+for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
 			},
 
 			"crl_distribution_points": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
-for the CRL distribution points attribute`,
+for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 			},
 
 			"ocsp_servers": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
-for the OCSP servers attribute`,
+for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 			},
 		},
 
