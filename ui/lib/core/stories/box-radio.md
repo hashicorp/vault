@@ -25,6 +25,6 @@ BoxRadio components are used to display options for a radio selection.
 **See**
 
 - [Uses of BoxRadio](https://github.com/hashicorp/vault/search?l=Handlebars&q=BoxRadio+OR+box-radio)
-- [BoxRadio Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/box-radio.js)
+- [BoxRadio Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/box-radio.js)
 
 ---

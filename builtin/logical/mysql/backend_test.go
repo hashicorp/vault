@@ -193,7 +193,7 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 
 func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
 	pathData := make(map[string]interface{})
-	if wildCard == true {
+	if wildCard {
 		pathData = map[string]interface{}{
 			"sql": testRoleWildCard,
 		}

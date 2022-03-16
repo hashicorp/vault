@@ -12,7 +12,7 @@
       {{on "input" this.onInput}}
     />
     <BasicDropdown @registerAPI={{fn (mut this.dropdownAPI)}} @renderInPlace={{true}} as |D|>
-      <D.Content class="autocomplete-input">
+      <D.Content @defaultClass="autocomplete-input">
         {{#each @options as |option|}}
           <div class="autocomplete-input-option" role="button" {{on "click" (fn this.selectOption option.value)}}>
             {{option.label}}

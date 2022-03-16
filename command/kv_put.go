@@ -130,7 +130,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "data")
+		path = addPrefixToKVPath(path, mountPath, "data")
 		data = map[string]interface{}{
 			"data":    data,
 			"options": map[string]interface{}{},
@@ -159,6 +159,13 @@ func (c *KVPutCommand) Run(args []string) int {
 
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	if Format(c.UI) == "table" {
+		outputPath(c.UI, path, "Secret Path")
+		metadata := secret.Data
+		c.UI.Info(getHeaderForMap("Metadata", metadata))
+		return OutputData(c.UI, metadata)
 	}
 
 	return OutputSecret(c.UI, secret)

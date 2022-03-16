@@ -124,20 +124,23 @@ func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *fram
 // role restrictions
 func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
 	entry := &roleEntry{
-		AllowLocalhost:       true,
-		AllowAnyName:         true,
-		AllowIPSANs:          true,
-		EnforceHostnames:     false,
-		KeyType:              "any",
-		UseCSRCommonName:     true,
-		UseCSRSANs:           true,
-		AllowedURISANs:       []string{"*"},
-		AllowedSerialNumbers: []string{"*"},
-		GenerateLease:        new(bool),
-		KeyUsage:             data.Get("key_usage").([]string),
-		ExtKeyUsage:          data.Get("ext_key_usage").([]string),
-		ExtKeyUsageOIDs:      data.Get("ext_key_usage_oids").([]string),
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		UseCSRCommonName:          true,
+		UseCSRSANs:                true,
+		AllowedOtherSANs:          []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		AllowedURISANs:            []string{"*"},
+		GenerateLease:             new(bool),
+		KeyUsage:                  data.Get("key_usage").([]string),
+		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
 	}
+	*entry.AllowWildcardCertificates = true
 
 	*entry.GenerateLease = false
 
@@ -172,13 +175,15 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 
 	var caErr error
 	signingBundle, caErr := fetchCAInfo(ctx, b, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	input := &inputBundle{

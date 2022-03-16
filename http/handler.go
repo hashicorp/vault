@@ -164,7 +164,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		}
 		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
 		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
-		if core.UIEnabled() == true {
+		if core.UIEnabled() {
 			if uiBuiltIn {
 				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
 				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
@@ -1127,7 +1127,7 @@ func parseMFAHeader(req *logical.Request) error {
 
 		shardSplits := strings.SplitN(mfaHeaderValue, ":", 2)
 		if shardSplits[0] == "" {
-			return fmt.Errorf("invalid data in header %q; missing method name", MFAHeaderName)
+			return fmt.Errorf("invalid data in header %q; missing method name or ID", MFAHeaderName)
 		}
 
 		if shardSplits[1] == "" {

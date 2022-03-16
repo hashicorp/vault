@@ -1,4 +1,9 @@
-<svg class="chart has-grid" {{on "mouseleave" this.removeTooltip}} {{did-insert this.renderChart @dataset}}>
+<svg
+  data-test-line-chart
+  class="chart has-grid"
+  {{on "mouseleave" this.removeTooltip}}
+  {{did-insert this.renderChart @dataset}}
+>
 </svg>
 
 {{! TOOLTIP }}

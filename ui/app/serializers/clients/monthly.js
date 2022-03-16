@@ -16,7 +16,7 @@ export default class MonthlySerializer extends ApplicationSerializer {
       flattenedNs.mounts = ns.mounts
         ? ns.mounts.map((mount) => {
             let flattenedMount = {};
-            flattenedMount.label = mount['path'];
+            flattenedMount.label = mount['mount_path'];
             Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
             return flattenedMount;
           })
