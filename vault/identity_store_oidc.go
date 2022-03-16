@@ -620,9 +620,13 @@ func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, nam
 	if err := entry.DecodeJSON(&key); err != nil {
 		return keyIDs, err
 	}
+
 	for _, k := range key.KeyRing {
-		keyIDs = append(keyIDs, k.KeyID)
+		if !strutil.StrListContains(keyIDs, k.KeyID) {
+			keyIDs = append(keyIDs, k.KeyID)
+		}
 	}
+
 	return keyIDs, nil
 }
 
@@ -1679,11 +1683,20 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		}
 
 		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, s, keyID)
-			if err != nil {
-				return nil, err
+			found := false
+			for _, key := range jwks.Keys {
+				if key.KeyID == keyID {
+					found = true
+				}
 			}
-			jwks.Keys = append(jwks.Keys, *key)
+
+			if !found {
+				key, err := loadOIDCPublicKey(ctx, s, keyID)
+				if err != nil {
+					return nil, err
+				}
+				jwks.Keys = append(jwks.Keys, *key)
+			}
 		}
 	}
 
