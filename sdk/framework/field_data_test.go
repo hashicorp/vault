@@ -856,6 +856,18 @@ func TestFieldDataGet(t *testing.T) {
 			false,
 		},
 
+		"comma string slice type, single JSON number value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": json.Number("123"),
+			},
+			"foo",
+			[]string{"123"},
+			false,
+		},
+
 		"type kv pair, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeKVPairs},
@@ -1082,16 +1094,6 @@ func TestFieldDataGet_Error(t *testing.T) {
 			},
 			map[string]interface{}{
 				"foo": -42.0,
-			},
-			"foo",
-		},
-
-		"comma string slice type, single JSON number value": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeCommaStringSlice},
-			},
-			map[string]interface{}{
-				"foo": json.Number("123"),
 			},
 			"foo",
 		},
