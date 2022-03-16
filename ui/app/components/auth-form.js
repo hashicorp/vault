@@ -110,6 +110,18 @@ export default Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
+  getAuthBackend(type) {
+    const { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
+    const selected = type || selectedAuth;
+    if (!methods && !wrappedToken) {
+      return {};
+    }
+    if (keyIsPath) {
+      return methods.findBy('path', selected);
+    }
+    return BACKENDS.findBy('type', selected);
+  },
+
   selectedAuthIsPath: match('selectedAuth', /\/$/),
   selectedAuthBackend: computed(
     'wrappedToken',
@@ -118,14 +130,7 @@ export default Component.extend(DEFAULTS, {
     'selectedAuth',
     'selectedAuthIsPath',
     function () {
-      let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
-      if (!methods && !wrappedToken) {
-        return {};
-      }
-      if (keyIsPath) {
-        return methods.findBy('path', selectedAuth);
-      }
-      return BACKENDS.findBy('type', selectedAuth);
+      return this.getAuthBackend();
     }
   ),
 
@@ -206,12 +211,15 @@ export default Component.extend(DEFAULTS, {
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   authenticate: task(
-    waitFor(function* (backendType, data) {
-      let clusterId = this.cluster.id;
+    waitFor(function* (backend, data) {
+      const {
+        selectedAuth,
+        cluster: { id: clusterId },
+      } = this;
       try {
         this.delayAuthMessageReminder.perform();
-        const authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
-        this.onSuccess(authResponse, backendType, data);
+        const authResponse = yield this.auth.authenticate({ clusterId, backend, data, selectedAuth });
+        this.onSuccess(authResponse, backend, data);
       } catch (e) {
         this.set('loading', false);
         if (!this.auth.mfaError) {
@@ -245,7 +253,10 @@ export default Component.extend(DEFAULTS, {
       this.setProperties({
         error: null,
       });
-      let backend = this.selectedAuthBackend || {};
+      // if callback from oidc or jwt we have a token at this point
+      let backend = ['oidc', 'jwt'].includes(this.selectedAuth)
+        ? this.getAuthBackend('token')
+        : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
