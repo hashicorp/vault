@@ -92,8 +92,8 @@ The Step-up Enterprise MFA uses the combination of mount accessors plus a `usern
 
 ### Q: Are namespaces supported with the MFA workflows that Vault has as of Vault version 1.10?
 
-The Step-up Enterprise MFA is not namespace-aware; MFA methods cannot be configured at a namespace level.
-However, the Login MFA supports namespaces. Users will need a Vault Enterprise license to use and configure namespaces with Login MFA. MFA method configurations can be defined per namespace with Login MFA, and used in enforcements defined in that namespace and its children. Everything operates in the root namespace in Vault OSS. MFA login enforcements can also be defined per namespace, and applied to that namespace and its children.
+The Step-up Enterprise MFA configurations can only be configured in the root [namespace](/docs/enterprise/mfa#namespaces), although they can be referenced in other namespaces via the policies.
+The Login MFA supports namespaces awareness. Users will need a Vault Enterprise license to user or configure Login MFA with namespaces. MFA method configurations can be defined per namespace with Login MFA, and used in enforcements defined in that namespace and its children. Everything operates in the root namespace in Vault OSS. MFA login enforcements can also be defined per namespace, and applied to that namespace and its children.
 
 ### Q: I use the Vault Agent. Does MFA pose any challenges for me?
 
