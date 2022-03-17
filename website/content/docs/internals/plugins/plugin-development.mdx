@@ -65,6 +65,14 @@ plugin.
 
 [api_addr]: /docs/configuration#api_addr
 
+## Building a Plugin from Source
+
+To build a plugin from source, first navigate to the location holding the
+desired plugin version. Next, run `go build` to obtain a new binary for the
+plugin. Finally,
+[register](/docs/internals/plugins/plugin-architecture#plugin-registration) the
+plugin and enable it.
+
 ## Plugin Development - Resources
 
 For more information on how to register and enable your plugin, check out the
