@@ -205,7 +205,7 @@ The following parameters are used on backends that support [high availability][h
 The following parameters are only used with Vault Enterprise
 
 - `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
-  for any value except the master key. If this value is toggled, the new
+  for any value except the root key. If this value is toggled, the new
   behavior will happen lazily (as values are read or written).
 
 - `disable_performance_standby` `(bool: false)` – Specifies whether performance
