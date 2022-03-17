@@ -34,15 +34,15 @@ class MessageError extends Component {
           return e;
         });
       }
-      return [adapterError.message];
+      return adapterError.message;
     }
     if (errorMessage) {
-      return [errorMessage];
+      return errorMessage;
     }
     if (errors && errors.length > 0) {
       return errors;
     }
-    return 'no error';
+    return null;
   }
 }
 
