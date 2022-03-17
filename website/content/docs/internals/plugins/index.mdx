@@ -18,11 +18,21 @@ Built-in plugins are shipped with Vault, often for commonly used implementations
 and require no additional operator intervention to run. Built-in plugins are
 just like any other backend code inside Vault.
 
-To use a different or edited version of a built-in plugin, you would first edit
-the plugin's code or navigate to the Vault version holding the version of the
-plugin you desire. Then, you'd `$ cd` into the `cmd/:plugin-name` directory
-contained alongside that plugin's code. For instance, for AppRole, you would:
-`$ cd vault/builtin/credential/approle/cmd/approle`. Once in that directory,
-you would run `$ go build` to obtain a new binary for the AppRole plugin. Then
-you would add it to the plugin catalog as per normal, and enable it.
+To use a different or edited version of a built-in plugin, the plugin must be
+run as an external plugin.
 
+## External Plugins
+
+External plugins are not shipped with Vault. External plugins require
+additional operator intervention to run.
+
+To use a different or edited version of a built-in plugin or a plugin that is
+not shipped with vault, the plugin must be run as an external plugin. To do
+this, first edit the plugin's code or navigate to the Vault version holding the
+desired plugin version. Next, `cd` into the `cmd/:plugin-name` directory
+contained alongside that plugin's code. For example, for AppRole `cd` into the
+`vault/builtin/credential/approle/cmd/approle` directory. Once in that
+directory, run `go build` to obtain a new binary for the AppRole plugin.
+Finally,
+[register](/docs/internals/plugins/plugin-architecture#plugin-registration) the
+plugin, and enable it.
