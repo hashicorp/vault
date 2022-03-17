@@ -3,7 +3,7 @@ import { create, attribute, visitable, collection, hasClass, text } from 'ember-
 export default create({
   visit: visitable('/vault/access/'),
   navLinks: collection('[data-test-link]', {
-    isActive: hasClass('is-active'),
+    isActive: hasClass('active'),
     text: text(),
     scope: '[data-test-sidebar]',
   }),
