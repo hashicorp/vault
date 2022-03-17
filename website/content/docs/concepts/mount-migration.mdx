@@ -27,7 +27,7 @@ the migration status using the `sys/remount/status` endpoint.
 ## Namespaces
 
 The `sys/remount` endpoint can move mounts across namespaces with the namespaces supplied as prefixes
-on the path arguments. In this case, namespaces for both the source and destination mounts need to be 
+on the path arguments. In this case, namespaces, for both the source and destination mounts, must be 
 either the namespace in which the `/sys/remount` endpoint is called, or the children of that namespace. Let us assume that 
 we have 3 namespaces ns1/, ns1/ns2/ and ns1/ns3. We want to move the mount `my-secret` from ns1/ns2/my-secret to ns1/ns3/my-secret. 
 This can be done in one of two ways. The first way is to invoke `/sys/remount` from the root namespace with the `from` argument as ns1/ns2/my-secret 
