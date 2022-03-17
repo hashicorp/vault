@@ -63,7 +63,7 @@ Vault will dynamically generate them upon login operations.
 Remounting can also result in policies referring to invalid paths. Any policy that refers to a moved secrets engine,
 would need to be updated to point to the new location of the engine, assuming that the policy is in the target namespace 
 or a parent of the target namespace, or updated to remove the original mount path if not. 
-Any policies associated with roles on a moved auth mount, would need to be inspected
+Any policies associated with roles on a moved auth mount need to be inspected
 to see if they still refer to valid paths after the remount operation. Say in namespace ns1/, a child of the root namespace, a role on the mount approle/
 has policies granting access to /my-secret. If the mount is moved to another child of the root namespace, say ns2/,
 which does not have a secrets engine called my-secret/, the Vault operator would either create an equivalent my-secret/
