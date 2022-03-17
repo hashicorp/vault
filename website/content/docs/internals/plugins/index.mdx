@@ -29,10 +29,9 @@ additional operator intervention to run.
 To use a different or edited version of a built-in plugin or a plugin that is
 not shipped with vault, the plugin must be run as an external plugin. To do
 this, first edit the plugin's code or navigate to the Vault version holding the
-desired plugin version. Next, `cd` into the `cmd/:plugin-name` directory
-contained alongside that plugin's code. For example, for AppRole `cd` into the
-`vault/builtin/credential/approle/cmd/approle` directory. Once in that
+desired plugin version. Next, navigate to the `cmd/:plugin-name` directory
+contained alongside that plugin's code. For example, for AppRole navigate to
+the `vault/builtin/credential/approle/cmd/approle` directory. Once in that
 directory, run `go build` to obtain a new binary for the AppRole plugin.
-Finally,
-[register](/docs/internals/plugins/plugin-architecture#plugin-registration) the
-plugin, and enable it.
+Finally, [register](/docs/internals/plugins/plugin-architecture#plugin-registration)
+the plugin and enable it.

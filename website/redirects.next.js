@@ -227,7 +227,7 @@ module.exports = [
   },
   {
     source: '/docs/secrets/custom',
-    destination: '/docs/plugin',
+    destination: '/docs/internals/plugins/custom-plugin-backends',
     permanent: true,
   },
   {
