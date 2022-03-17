@@ -46,7 +46,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
 
     assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
@@ -70,7 +70,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('Data tracking is disabled');
     assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is hidden when no data available');
   });
@@ -93,7 +93,7 @@ module('Acceptance | clients history tab', function (hooks) {
     // History Tab
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
 
     assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly history');
     assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
@@ -183,7 +183,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
     const { total, by_namespace } = activity.data;
@@ -269,7 +269,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     assert.dom('[data-test-flash-message] .message-actions').containsText(`You upgraded to Vault 1.9.0`);
   });
 
@@ -315,7 +315,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     // Message changes depending on ent or OSS
     assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
     assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');

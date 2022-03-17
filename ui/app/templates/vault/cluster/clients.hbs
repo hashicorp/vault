@@ -9,10 +9,10 @@
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
   <nav class="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.clients.current">
+      <LinkTo @route="vault.cluster.clients.current" data-test-current-month>
         Current month
       </LinkTo>
-      <LinkTo @route="vault.cluster.clients.history">
+      <LinkTo @route="vault.cluster.clients.history" data-test-history>
         History
       </LinkTo>
       {{#if (or @model.config.configPath.canRead @model.configPath.canRead)}}

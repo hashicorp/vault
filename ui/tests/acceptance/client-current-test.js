@@ -40,7 +40,7 @@ module('Acceptance | clients current', function (hooks) {
     });
     await visit('/vault/clients/current');
     assert.equal(currentURL(), '/vault/clients/current');
-    assert.dom(SELECTORS.activeTab).hasText('Current month', 'current month tab is active');
+    assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('Tracking is disabled');
   });
 
@@ -58,7 +58,7 @@ module('Acceptance | clients current', function (hooks) {
     });
     await visit('/vault/clients/current');
     assert.equal(currentURL(), '/vault/clients/current');
-    assert.dom(SELECTORS.activeTab).hasText('Current month', 'current month tab is active');
+    assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
   });
 
@@ -76,7 +76,7 @@ module('Acceptance | clients current', function (hooks) {
     });
     await visit('/vault/clients/current');
     assert.equal(currentURL(), '/vault/clients/current');
-    assert.dom(SELECTORS.activeTab).hasText('Current month', 'current month tab is active');
+    assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
     const { clients, entity_clients, non_entity_clients, by_namespace } = monthly.data;
@@ -189,7 +189,7 @@ module('Acceptance | clients current', function (hooks) {
     });
     await visit('/vault/clients/current');
     assert.equal(currentURL(), '/vault/clients/current');
-    assert.dom(SELECTORS.activeTab).hasText('Current month', 'current month tab is active');
+    assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
     const { clients, entity_clients, non_entity_clients } = monthly.data;

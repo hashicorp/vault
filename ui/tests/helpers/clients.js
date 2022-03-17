@@ -15,7 +15,8 @@ import { formatRFC3339 } from 'date-fns';
  */
 
 export const SELECTORS = {
-  activeTab: '.active',
+  currentMonthActiveTab: '.active[data-test-current-month]',
+  historyActiveTab: '.active[data-test-history]',
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',
