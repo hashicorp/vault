@@ -1811,6 +1811,10 @@
       {
         "title": "Login MFA",
         "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+      },
+      {
+        "title": "Server Side Consistent Token",
+        "path": "faq/ssct"
       }
     ]
   },
