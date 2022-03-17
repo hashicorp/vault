@@ -88,10 +88,6 @@
             "path": "internals/plugins/plugin-architecture"
           },
           {
-            "title": "Custom Plugin Backends",
-            "path": "internals/plugins/custom-plugin-backends"
-          },
-          {
             "title": "Plugin Development",
             "path": "internals/plugins/plugin-development"
           }
@@ -1300,6 +1296,10 @@
         "path": "audit/socket"
       }
     ]
+  },
+  {
+    "title": "Plugin Backends",
+    "path": "plugin"
   },
   {
     "title": "Plugin Portal",
