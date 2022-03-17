@@ -11,7 +11,7 @@ import layout from '../templates/components/message-error';
  * <MessageError @model={{model}} />
  * ```
  *
- * @param model=null{DS.Model} - An Ember data model that will be used to bind error statest to the internal
+ * @param model=null{DS.Model} - An Ember data model that will be used to bind error states to the internal
  * `errors` property.
  * @param errors=null{Array} - An array of error strings to show.
  * @param errorMessage=null{String} - An Error string to display.
@@ -24,13 +24,28 @@ export default Component.extend({
 
   displayErrors: computed(
     'errorMessage',
-    'model.{isError,adapterError.message,adapterError.errors.@each}',
-    'errors',
     'errors.[]',
+    'model.adapterError.{errors.[],message}',
+    'model.isError',
+    'parentView.mountModel.{adapterError,isError}',
     function () {
       const errorMessage = this.errorMessage;
       const errors = this.errors;
-      const modelIsError = this.model?.isError;
+      const modelIsError = this.model?.isError || this.parentView?.mountModel.isError;
+
+      if (modelIsError) {
+        let adapterError = this.model?.adapterError || this.parentView?.mountModel?.adapterError;
+        if (!adapterError) {
+          return;
+        }
+        if (adapterError.errors.length > 0) {
+          return adapterError.errors.map((e) => {
+            if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
+            return e;
+          });
+        }
+        return [adapterError.message];
+      }
       if (errorMessage) {
         return [errorMessage];
       }
@@ -38,20 +53,6 @@ export default Component.extend({
       if (errors && errors.length > 0) {
         return errors;
       }
-
-      if (modelIsError) {
-        if (!this.model.adapterError) {
-          return;
-        }
-        if (this.model.adapterError.errors.length > 0) {
-          return this.model.adapterError.errors.map((e) => {
-            if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
-            return e;
-          });
-        }
-        return [this.model.adapterError.message];
-      }
-
       return 'no error';
     }
   ),
