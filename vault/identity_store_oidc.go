@@ -1656,10 +1656,6 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	jwks := &jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 0),
-	}
-
 	// only return keys that are associated with a role
 	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
@@ -1685,6 +1681,10 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		for _, keyID := range roleKeyIDs {
 			keyIDs[keyID] = struct{}{}
 		}
+	}
+
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
 	}
 
 	// load the JSON web key for each key ID
