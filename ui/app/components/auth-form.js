@@ -49,6 +49,7 @@ export default Component.extend(DEFAULTS, {
   wrappedToken: null,
   // internal
   oldNamespace: null,
+  authMethods: BACKENDS,
 
   didReceiveAttrs() {
     this._super(...arguments);
