@@ -1302,10 +1302,6 @@
     ]
   },
   {
-    "title": "Plugin Backends",
-    "path": "plugin"
-  },
-  {
     "title": "Plugin Portal",
     "path": "plugin-portal"
   },
