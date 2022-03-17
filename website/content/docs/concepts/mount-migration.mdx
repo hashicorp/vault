@@ -53,7 +53,7 @@ There are two primary cleanup operations that Vault operators will need to keep 
 
 Any aliases that refer to users on the auth mount could now point to an invalid mount when an auth mount is moved. Pointing to an invalid mount may not be the case for every instance;
 a remount within a namespace will end in the aliases pointing to a valid mount.
-but a remount across namespaces will always result in the aliases pointing to an invalid mount. In the latter case,
+Still, a remount across namespaces will always result in the aliases pointing to an invalid mount. In the latter case,
 the Vault operator should find and remove those aliases from the source namespace, and create equivalent aliases
 and entities for the new mount in the target namespace. If new entities and aliases aren't created in the target namespace,
 Vault will dynamically generate them upon login operations.
