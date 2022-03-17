@@ -190,6 +190,10 @@
       {
         "title": "Transform",
         "path": "concepts/transform"
+      },
+      {
+        "title": "Mount Migration",
+        "path": "concepts/mount-migration"
       }
     ]
   },
