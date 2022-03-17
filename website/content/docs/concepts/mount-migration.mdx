@@ -36,7 +36,7 @@ as ns3/my-secret.
 
 ## Leases
 
-The remount operation will result in existing leases on a mount being revoked. This is potentially the 
+The remount operation will result in existing leases on a mount being revoked. On mounts with a large number of leases, the revocation process and hence remounting as a whole may be a time consuming process.
 most time consuming part of the operation. Any dynamic secrets for a secrets mount, and any tokens associated
 with an auth mount, will be revoked during the remount process.
 
