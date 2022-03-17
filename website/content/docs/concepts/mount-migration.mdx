@@ -21,7 +21,7 @@ of roles and responsibilities.
 ## Async Behavior
 
 The first thing to note about the `sys/remount` endpoint is that it is an asynchronous endpoint. An invocation
-will start the migration process, and the API will return a migration ID. That ID can in turn be used to monitor
+will start the migration process, and the API will return a migration ID. This ID, in turn, be used to monitor
 the status of the migration using the `sys/remount/status` endpoint.
 
 ## Namespaces
