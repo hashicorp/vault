@@ -60,7 +60,7 @@ Vault will dynamically generate them upon login operations.
 
 ### Policies
 
-Remounting can also result in policies referring to invalid paths. Any policy that refers to a moved secrets engine,
+Remounting can also result in policies referring to invalid paths. Any policy that refers to a moved secrets engine
 would need to be updated to point to the new location of the engine, assuming that the policy is in the target namespace 
 or a parent of the target namespace, or updated to remove the original mount path if not. 
 Any policies associated with roles on a moved auth mount need to be inspected
