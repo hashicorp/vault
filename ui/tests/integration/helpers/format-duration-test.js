@@ -33,4 +33,18 @@ module('Integration | Helper | format-duration', function (hooks) {
       .dom('[data-test-format-duration]')
       .includesText('1 minute', 'it renders duration when a number is passed in.');
   });
+
+  test('it renders the input if time not found', async function (assert) {
+    this.set('number', 'arg');
+
+    await render(hbs`<p data-test-format-duration>Date: {{format-duration number}}</p>`);
+    assert.dom('[data-test-format-duration]').hasText('Date: arg');
+  });
+
+  test('it renders no value if nullable true', async function (assert) {
+    this.set('number', 0);
+
+    await render(hbs`<p data-test-format-duration>Date: {{format-duration number nullable=true}}</p>`);
+    assert.dom('[data-test-format-duration]').hasText('Date:');
+  });
 });

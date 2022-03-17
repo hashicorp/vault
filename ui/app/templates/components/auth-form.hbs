@@ -53,7 +53,7 @@
       <Select
         @label="Method"
         @name="auth-method"
-        @options={{supported-auth-backends}}
+        @options={{this.authMethods}}
         @valueAttribute={{"type"}}
         @labelAttribute={{"typeDisplay"}}
         @isFullwidth={{true}}
