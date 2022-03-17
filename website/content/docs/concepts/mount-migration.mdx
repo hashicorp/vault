@@ -30,7 +30,7 @@ The `sys/remount` endpoint can move mounts across namespaces with the namespaces
 on the path arguments. In this case, namespaces, for both the source and destination mounts, must be 
 either the namespace in which the `/sys/remount` endpoint is called or the children of that namespace. Let us assume that 
 we have three namespaces ns1/, ns1/ns2/, and ns1/ns3. We want to move the mount `my-secret` from ns1/ns2/my-secret to ns1/ns3/my-secret. 
-This can be done in one of two ways. The first way is to invoke `/sys/remount` from the root namespace with the `from` argument as ns1/ns2/my-secret 
+Moving the mount can be accomplished in two ways. The first way is to invoke `/sys/remount` from the root namespace with the `from` argument as ns1/ns2/my-secret 
 and `to` argument as ns1/ns3/my-secret. The second way is to invoke `/sys/remount` from the namespace ns1/, with `from` as ns2/my-secret and `to` 
 as ns3/my-secret.
 
