@@ -76,7 +76,7 @@ will update these quotas to refer to the new path of the mount.
 
 ## Path Filters
 
-The remount operation will respect any existing path filters. There are 3 use cases in particular that are being handled
+The remount operation will respect any existing path filters. Three uses cases, in particular, are shown below.
 here. 
 * If a mount is moved into a namespace denylisted on a secondary cluster, it will not be available on that cluster.
 * If a mount is moved from a namespace denylisted on a secondary cluster to one that is not, it will now be available
