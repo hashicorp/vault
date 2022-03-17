@@ -22,9 +22,16 @@ class MessageError extends Component {
     const errorMessage = this.args.errorMessage;
     const errors = this.args.errors;
     const modelIsError = this.args.model?.isError;
+    if (errorMessage) {
+      return [errorMessage];
+    }
+
+    if (errors && errors.length > 0) {
+      return errors;
+    }
 
     if (modelIsError) {
-      let adapterError = this.args.model?.adapterError;
+      let adapterError = this.args.model.adapterError;
       if (!adapterError) {
         return null;
       }
@@ -34,16 +41,9 @@ class MessageError extends Component {
           return e;
         });
       }
-      return adapterError.message;
-    }
-    if (errorMessage) {
-      return errorMessage;
-    }
-    if (errors && errors.length > 0) {
-      return errors;
+      return [adapterError.message];
     }
     return null;
   }
 }
-
 export default setComponentTemplate(layout, MessageError);
