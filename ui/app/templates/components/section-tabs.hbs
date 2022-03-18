@@ -4,13 +4,11 @@
       <nav class="tabs">
         <ul>
           {{#each tabs as |tab|}}
-            {{! template-lint-configure no-curly-component-invocation "warn" }}
-            {{#link-to params=tab.routeParams tagName="li" data-test-auth-section-tab=true}}
-              {{#link-to params=tab.routeParams}}
+            <li>
+              <LinkTo @route={{get tab.routeParams 0}} @model={{get tab.routeParams 1}} data-test-auth-section-tab={{true}}>
                 {{tab.label}}
-              {{/link-to}}
-            {{/link-to}}
-            {{! template-lint-configure no-curly-component-invocation "on" }}
+              </LinkTo>
+            </li>
           {{/each}}
         </ul>
       </nav>
