@@ -1,12 +1,12 @@
 ---
 layout: docs
-page_title: Plugin Architecture
+page_title: External Plugin Architecture
 description: Learn about Vault's plugin architecture.
 ---
 
-# Plugin Architecture
+# External Plugin Architecture
 
-Vault's plugins are completely separate, standalone applications that Vault
+Vault's external plugins are completely separate, standalone applications that Vault
 executes and communicates with over RPC. This means the plugin process does not
 share the same memory space as Vault and therefore can only access the
 interfaces and arguments given to it. This also means a crash in a plugin can not
@@ -16,9 +16,9 @@ It is possible to enable a custom plugin with a name that's identical to a
 built-in plugin. In such a situation, Vault will always choose the custom plugin
 when enabling it.
 
-## Plugin Lifecycle
+## External Plugin Lifecycle
 
-Vault plugins are long-running processes that remain running once they are
+Vault external plugins are long-running processes that remain running once they are
 spawned by Vault, the parent process. Plugin processes can be started by Vault's
 active node and performance standby nodes. Additionally, there are cases where
 plugin processes may be terminated by Vault. These cases include but are not
@@ -117,7 +117,7 @@ Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
 
 ### Plugin Execution
 
-When a backend wants to run a plugin, it first looks up the plugin, by name, in
+When a backend wants to run a plugin, it first looks up the plugin by name in
 the catalog. It then checks the executable's SHA256 sum against the one
 configured in the plugin catalog. Finally Vault runs the command configured in
 the catalog, sending along the JWT formatted response wrapping token and mlock
@@ -129,8 +129,9 @@ must be given the ability to use the `mlock` syscall.
 
 ### Plugin Upgrades
 
-Plugins may be updated by registering and reloading them. More details on the
-upgrade procedure can be found in [Upgrading Vault Plugins](/docs/upgrading/plugins).
+External plugins may be updated by registering and reloading them. More details
+on the upgrade procedure can be found in
+[Upgrading Vault Plugins](/docs/upgrading/plugins).
 
 ## Plugin Multiplexing
 
