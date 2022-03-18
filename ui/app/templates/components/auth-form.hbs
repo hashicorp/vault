@@ -3,7 +3,7 @@
     <nav class="tabs is-marginless">
       <ul>
         {{#each this.methodsToShow as |method|}}
-          {{#with (or method.path method.type) as |methodKey|}}
+          {{#let (or method.path method.type) as |methodKey|}}
             <li
               class={{if
                 (and this.selectedAuthIsPath (eq (or this.selectedAuthBackend.path this.selectedAuthBackend.type) methodKey))
@@ -21,7 +21,7 @@
                 {{or method.id (capitalize method.type)}}
               </LinkTo>
             </li>
-          {{/with}}
+          {{/let}}
         {{/each}}
         {{#if this.hasMethodsWithPath}}
           <li class={{unless this.selectedAuthIsPath "is-active" ""}} data-test-auth-method>
