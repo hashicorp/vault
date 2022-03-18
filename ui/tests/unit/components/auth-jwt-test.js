@@ -3,7 +3,7 @@ import { setupTest } from 'ember-qunit';
 import EmberObject from '@ember/object';
 import Evented from '@ember/object/evented';
 import sinon from 'sinon';
-import { cancelTimers } from '@ember/runloop';
+import { _cancelTimers as cancelTimers } from '@ember/runloop';
 
 const mockWindow = EmberObject.extend(Evented, {
   origin: 'http://localhost:4200',

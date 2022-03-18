@@ -4,7 +4,7 @@ import { click, visit, fillIn, settled } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fakeWindow, buildMessage } from '../helpers/oidc-window-stub';
 import sinon from 'sinon';
-import { later, cancelTimers } from '@ember/runloop';
+import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 
 module('Acceptance | logout auth method', function (hooks) {
   setupApplicationTest(hooks);

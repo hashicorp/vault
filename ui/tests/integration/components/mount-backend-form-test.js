@@ -1,4 +1,4 @@
-import { later, cancelTimers } from '@ember/runloop';
+import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';

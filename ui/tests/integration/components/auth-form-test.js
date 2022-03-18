@@ -1,4 +1,4 @@
-import { later, cancelTimers } from '@ember/runloop';
+import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import EmberObject from '@ember/object';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
