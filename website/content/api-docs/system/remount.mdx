@@ -15,17 +15,9 @@ The Remount documentation details the endpoints required to trigger and monitor 
 The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. This process works for both secret 
 engines and auth methods.
 
-The endpoint can be used to move the backend across namespaces as well, with the namespaces supplied as prefixes
-on the path arguments. In this case, namespaces for both the source and destination mounts need to be 
-either the namespace in which the `/remount` endpoint is called, or the children of that namespace. Let us assume that 
-we have 3 namespaces ns1/, ns1/ns2/ and ns1/ns3. We want to move the mount `secret` from ns1/ns2/secret to ns1/ns3/secret. 
-This can be done in one of two ways. The first way is to invoke `/remount` from the root namespace with the `from` argument as ns1/ns2/secret 
-and `to` argument as ns1/ns3/new-secret. The second way is to invoke `/remount` from the namespace ns1/, with `from` as ns2/secret and `to` 
-as ns3/new-secret.
-
-The remount operation can be a long-running operation, hence the invocation of /remount triggers the start of 
-the remount process, returning a migration ID to the user. The user may utlizie the migration ID to look up 
-the status of the mount migration.
+The remount operation returns a migration ID to the user. The user may utlizie the migration ID to look up 
+the status of the mount migration. More details about the remount operation are described in 
+[Mount Migration](/docs/concepts/mount-migration).
 
 ~> Note: This endpoint requires a policy with both `sudo` and `update` capabilities to `sys/remount`
 

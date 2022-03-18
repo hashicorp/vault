@@ -759,6 +759,54 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	assertPublicKeyCount(t, ctx, storage, c, 2)
 }
 
+// TestOIDC_PublicKeys tests that public keys are updated by
+// key creation, rotation, and deletion
+func TestOIDC_SharedPublicKeysByRoles(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test role "test-role"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role2"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role3"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role3",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// .well-known/keys should contain 2 public keys
+	assertPublicKeyCount(t, ctx, storage, c, 2)
+}
+
 // TestOIDC_SignIDToken tests acquiring a signed token and verifying the public portion
 // of the signing key
 func TestOIDC_SignIDToken(t *testing.T) {

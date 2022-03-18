@@ -31,3 +31,24 @@ Vault storage to an Etcd v3 cluster prior to upgrading to Vault 1.10.
 All storage migrations should have
 [backups](/docs/concepts/storage#backing-up-vault-s-persisted-data)
 taken prior to migration.
+
+### OTP Generation Process
+
+Customers passing in OTPs during the the process of generating root tokens must modify
+the OTP generation to include an additional 2 characters before upgrading so that the
+OTP can be xor-ed with the encoded root token. This change was implemented as a result
+of the change in the prefix from hvs. to s. for service tokens.
+
+## Token Format Change
+
+Token prefixes were updated to be more easily identifiable.
+
+- Service tokens previously started with s. now start with hvs.
+- Batch tokens previously started with b. now start with hvb.
+- Recovery tokens previously started with r. now start with hvr.
+
+Additionally, non-root service tokens are now longer than before. Previously, service tokens
+were 26 characters; they now have a minimum of 95 characters. However, existing tokens will
+still work.
+
+Refer to the [Service Side Consistent Token FAQ](/docs/faq/ssct) for details.

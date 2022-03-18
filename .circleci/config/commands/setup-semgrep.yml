@@ -1,0 +1,14 @@
+---
+description: >
+  Ensure semgrep is installed.
+steps:
+  - run:
+      working_directory: ~/
+      name: Setup Semgrep
+      command: |
+        apk add --no-cache python3 py3-pip make
+        python3 -m pip install --user semgrep
+        export PATH="$HOME/.local/bin:$PATH"
+
+        echo "$ semgrep --version"
+        semgrep --version
