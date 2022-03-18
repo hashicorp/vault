@@ -109,5 +109,5 @@ management tool.
 ## API
 
 The GitHub auth method has a full HTTP API. Please see the
-[GitHub Auth API](/api/auth/github) for more
+[GitHub Auth API](/api-docs/auth/github) for more
 details.
