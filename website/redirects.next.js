@@ -15,6 +15,11 @@ module.exports = [
     permanent: false,
   },
   {
+    source: '/api',
+    destination: '/api-docs',
+    permanent: true,
+  },
+  {
     source: '/api/secret/generic',
     destination: '/api-docs/secret/kv',
     permanent: true,
