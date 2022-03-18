@@ -29,7 +29,8 @@ _testmain.go
 /pkg/
 
 # Generated Web UI goes here
-/http/web_ui/**
+/http/web_ui/*.*
+/http/web_ui/**/*.*
 
 # Vault-specific
 example.hcl
