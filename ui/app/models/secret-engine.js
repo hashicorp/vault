@@ -1,5 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
+import { equal } from '@ember/object/computed';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { validator, buildValidations } from 'ember-cp-validations';
@@ -78,7 +79,7 @@ export default Model.extend(Validations, {
     return modelType;
   }),
 
-  isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
+  isV2KV: equal('modelTypeForKV', 'secret-v2'),
 
   formFields: computed('engineType', 'options.version', function () {
     let type = this.engineType;

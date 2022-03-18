@@ -4,7 +4,7 @@ import { click, visit, fillIn, settled } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fakeWindow, buildMessage } from '../helpers/oidc-window-stub';
 import sinon from 'sinon';
-import { later, run } from '@ember/runloop';
+import { later, cancelTimers } from '@ember/runloop';
 
 module('Acceptance | logout auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -29,7 +29,7 @@ module('Acceptance | logout auth method', function (hooks) {
     sessionStorage.removeItem('selectedAuth');
     await visit('/vault/auth');
     await fillIn('[data-test-select="auth-method"]', 'oidc');
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await click('[data-test-auth-submit]');
     window.postMessage(buildMessage().data, window.origin);
     await settled();
