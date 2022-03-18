@@ -175,12 +175,12 @@ func (c *UIConfig) get(ctx context.Context) (*uiConfigEntry, error) {
 	if err := json.Unmarshal(configRaw.Value, config); err != nil {
 		return nil, err
 	}
-	if uiConfigGetErr == nil {
-		// Check that plaintext value matches barrier value, if not sync values
-		if plaintextConfigRaw == nil || bytes.Compare(plaintextConfigRaw.Value, configRaw.Value) != 0 {
-			if err := c.save(ctx, config); err != nil {
-				return nil, err
-			}
+
+	// Check that plaintext value matches barrier value, if not sync values
+	if uiConfigGetErr == nil && (plaintextConfigRaw == nil ||
+		!bytes.Equal(plaintextConfigRaw.Value, configRaw.Value)) {
+		if err := c.save(ctx, config); err != nil {
+			return nil, err
 		}
 	}
 	return config, nil
