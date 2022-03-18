@@ -64,11 +64,11 @@ export default ApplicationAdapter.extend({
       try {
         await this.ajax(this.url(path), 'POST', { data });
       } catch (e) {
-        // if error determine if path duplicate or permissions
-        if (e.httpStatus === 400) {
-          throw new Error('samePath');
+        // determine if permissions, otherwise return API error message
+        if (e.httpStatus === 403) {
+          throw new Error('permissionIssue');
         }
-        throw new Error('mountIssue');
+        throw e;
       }
       // second post to config
       try {
