@@ -211,15 +211,20 @@ export default Component.extend(DEFAULTS, {
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   authenticate: task(
-    waitFor(function* (backend, data) {
+    waitFor(function* (backendType, data) {
       const {
         selectedAuth,
         cluster: { id: clusterId },
       } = this;
       try {
         this.delayAuthMessageReminder.perform();
-        const authResponse = yield this.auth.authenticate({ clusterId, backend, data, selectedAuth });
-        this.onSuccess(authResponse, backend, data);
+        const authResponse = yield this.auth.authenticate({
+          clusterId,
+          backend: backendType,
+          data,
+          selectedAuth,
+        });
+        this.onSuccess(authResponse, backendType, data);
       } catch (e) {
         this.set('loading', false);
         if (!this.auth.mfaError) {
