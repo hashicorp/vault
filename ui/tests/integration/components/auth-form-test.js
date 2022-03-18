@@ -61,7 +61,7 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('cluster', EmberObject.create({ standby: true }));
     this.set('selectedAuth', 'token');
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
-    assert.equal(component.errorText, '');
+    assert.equal(component.errorMessagePresent, false);
     component.login();
     // because this is an ember-concurrency backed service,
     // we have to manually force settling the run queue
