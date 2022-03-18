@@ -29,6 +29,7 @@ export default Component.extend({
   onNamespace() {},
 
   didReceiveAttrs() {
+this._super();
     let { oldSelectedAuthPath, selectedAuthPath } = this;
     let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
     if (oldSelectedAuthPath !== selectedAuthPath) {
@@ -44,7 +45,7 @@ export default Component.extend({
 
   // Assumes authentication using OIDC until it's known that the mount is
   // configured for JWT authentication via static keys, JWKS, or OIDC discovery.
-  isOIDC: computed('errorMessage', function() {
+  isOIDC: computed('errorMessage', function () {
     return this.errorMessage !== ERROR_JWT_LOGIN;
   }),
 
@@ -52,7 +53,7 @@ export default Component.extend({
     return this.window || window;
   },
 
-  fetchRole: task(function*(roleName, options = { debounce: true }) {
+  fetchRole: task(function* (roleName, options = { debounce: true }) {
     if (options.debounce) {
       this.onRoleName(roleName);
       // debounce
@@ -82,7 +83,7 @@ export default Component.extend({
     this.onError(err);
   },
 
-  prepareForOIDC: task(function*(oidcWindow) {
+  prepareForOIDC: task(function* (oidcWindow) {
     const thisWindow = this.getWindow();
     // show the loading animation in the parent
     this.onLoading(true);
@@ -104,7 +105,7 @@ export default Component.extend({
     }
   }),
 
-  watchPopup: task(function*(oidcWindow) {
+  watchPopup: task(function* (oidcWindow) {
     while (true) {
       yield timeout(WAIT_TIME);
       if (!oidcWindow || oidcWindow.closed) {
@@ -113,7 +114,7 @@ export default Component.extend({
     }
   }),
 
-  watchCurrent: task(function*(oidcWindow) {
+  watchCurrent: task(function* (oidcWindow) {
     // when user is about to change pages, close the popup window
     yield waitForEvent(this.getWindow(), 'beforeunload');
     oidcWindow.close();
@@ -125,7 +126,7 @@ export default Component.extend({
     oidcWindow.close();
   },
 
-  exchangeOIDC: task(function*(oidcState, oidcWindow) {
+  exchangeOIDC: task(function* (oidcState, oidcWindow) {
     if (oidcState === null || oidcState === undefined) {
       return;
     }
@@ -163,7 +164,6 @@ export default Component.extend({
       return this.handleOIDCError(e);
     }
     let token = resp.auth.client_token;
-    this.onSelectedAuth('token');
     this.onToken(token);
     yield this.onSubmit();
   }),
