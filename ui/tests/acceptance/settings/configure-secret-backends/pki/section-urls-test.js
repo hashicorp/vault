@@ -22,7 +22,7 @@ module('Acceptance | settings/configure/secrets/pki/urls', function (hooks) {
 
     await page.form.fields.objectAt(0).textarea('foo').change();
     await page.form.submit();
-    await waitUntil(() => find(page.form.hasError));
+    await waitUntil(() => find('[data-test-error]'));
     assert.ok(page.form.hasError, 'shows error on invalid input');
 
     await page.form.fields.objectAt(0).textarea('foo.example.com').change();
