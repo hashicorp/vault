@@ -13,25 +13,25 @@ compromise. It is useful to first understand the
 
 As a review, Vault starts in a _sealed_ state. Vault is unsealed by providing the unseal keys.
 By default, Vault uses a technique known as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
-to split the master key into 5 shares, any 3 of which are required to reconstruct the master
-key. The master key is used to protect the encryption key, which is ultimately used to protect
+to split the root key into 5 shares, any 3 of which are required to reconstruct the master
+key. The root key is used to protect the encryption key, which is ultimately used to protect
 data written to the storage backend.
 
 [![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
 
-To support key rotation, we need to support changing the unseal keys, master key, and the
+To support key rotation, we need to support changing the unseal keys, root key, and the
 backend encryption key. We split this into two separate operations, `rekey` and `rotate`.
 
-The `rekey` operation is used to generate a new master key. When this is being done,
+The `rekey` operation is used to generate a new root key. When this is being done,
 it is possible to change the parameters of the key splitting, so that the number of shares
 and the threshold required to unseal can be changed. To perform a rekey a threshold of the
 current unseal keys must be provided. This is to prevent a single malicious operator from
-performing a rekey and invalidating the existing master key.
+performing a rekey and invalidating the existing root key.
 
 Performing a rekey is fairly straightforward. The rekey operation must be initialized with
 the new parameters for the split and threshold. Once initialized, the current unseal keys
 must be provided until the threshold is met. Once met, Vault will generate the new master
-key, perform the splitting, and re-encrypt the encryption key with the new master key.
+key, perform the splitting, and re-encrypt the encryption key with the new root key.
 The new unseal keys are then provided to the operator, and the old unseal keys are no
 longer usable.
 

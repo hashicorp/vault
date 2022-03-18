@@ -190,6 +190,10 @@
       {
         "title": "Transform",
         "path": "concepts/transform"
+      },
+      {
+        "title": "Mount Migration",
+        "path": "concepts/mount-migration"
       }
     ]
   },
@@ -452,6 +456,10 @@
           {
             "title": "<code>list</code>",
             "path": "commands/auth/list"
+          },
+          {
+            "title": "<code>move</code>",
+            "path": "commands/auth/move"
           },
           {
             "title": "<code>tune</code>",
@@ -1297,6 +1305,11 @@
             "title": "Overview",
             "path": "platform/k8s"
           },
+          {
+            "title": "Agent Injector vs. Vault CSI Provider",
+            "path": "platform/k8s/injector-csi"
+          },
+
           {
             "title": "Helm Chart",
             "routes": [

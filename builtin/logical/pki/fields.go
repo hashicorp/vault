@@ -107,9 +107,11 @@ email addresses.`,
 
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `The requested serial number, if any. If you want
-more than one, specify alternative names in
-the alt_names map using OID 2.5.4.5.`,
+		Description: `The Subject's requested serial number, if any.
+See RFC 4519 Section 2.31 'serialNumber' for a description of this field.
+If you want more than one, specify alternative names in the alt_names
+map using OID 2.5.4.5. This has no impact on the final certificate's
+Serial Number field.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
@@ -127,7 +129,7 @@ be larger than the role max TTL.`,
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
-                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
 	return fields
@@ -231,14 +233,16 @@ this value.`,
 
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `The requested serial number, if any. If you want
-more than one, specify alternative names in
-the alt_names map using OID 2.5.4.5.`,
+		Description: `The Subject's requested serial number, if any.
+See RFC 4519 Section 2.31 'serialNumber' for a description of this field.
+If you want more than one, specify alternative names in the alt_names
+map using OID 2.5.4.5. This has no impact on the final certificate's
+Serial Number field.`,
 	}
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
-                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
 	return fields
