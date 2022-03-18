@@ -1,0 +1,17 @@
+rules:
+  - id: atomics-64bit-safety
+    patterns:
+      - pattern: |
+          type $TYPE struct {
+              ...
+              $VAR atomic.$ATOMIC_TYPE
+              ...
+          }
+      - metavariable-regex:
+          # We only care about 64 bit atomic types
+          metavariable: "$ATOMIC_TYPE"
+          regex: ".*64"  
+    message: "Use pointers with member variables of uber-go/atomic types"
+    languages: [go]
+    severity: ERROR 
+  
