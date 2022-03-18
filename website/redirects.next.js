@@ -762,6 +762,11 @@ module.exports = [
     destination: '/docs/what-is-vault',
     permanent: true,
   },
+  {
+    source: '/api/:path*',
+    destination: '/api-docs/:path*',
+    permanent: true
+  },
   // disallow '.html' or '/index.html' in favor of cleaner, simpler paths
   { source: '/:path*/index', destination: '/:path*', permanent: true },
   { source: '/:path*.html', destination: '/:path*', permanent: true },
