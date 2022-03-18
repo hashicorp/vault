@@ -61,15 +61,8 @@ export default ApplicationAdapter.extend({
         data.id = path;
       }
       // first create the engine
-      try {
-        await this.ajax(this.url(path), 'POST', { data });
-      } catch (e) {
-        // determine if permissions, otherwise return API error message
-        if (e.httpStatus === 403) {
-          throw new Error('permissionIssue');
-        }
-        throw e;
-      }
+      await this.ajax(this.url(path), 'POST', { data });
+
       // second post to config
       try {
         await this.ajax(this.urlForConfig(path), 'POST', { data: configData });

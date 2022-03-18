@@ -112,43 +112,49 @@ export default Component.extend({
           throw err;
         }
       }
-      // TODO CMB: this flash message seems to be an over-generalization, so added the 'if...path !==' check, but want to revisit
-      // TODO should we check instead if config capabilities.capabilites.includes('deny')
-      if (!capabilities.get('canUpdate')) {
-        if (capabilities.get('path') !== 'userpass/config') {
-          // if there is no sys/mount issue then error is config endpoint.
-          this.flashMessages.warning(
-            'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
-          );
-          // remove the config data from the model otherwise it will save it even if the network request failed.
-          [this.mountModel.maxVersions, this.mountModel.casRequired, this.mountModel.deleteVersionAfter] = [
-            0,
-            false,
-            0,
-          ];
-        }
-      }
+
+      let changedAttrKeys = Object.keys(mountModel.changedAttributes());
+      const updatesConfig =
+        mountModel.isV2KV &&
+        (changedAttrKeys.includes('casRequired') ||
+          changedAttrKeys.includes('deleteVersionAfter') ||
+          changedAttrKeys.includes('maxVersions'));
+
       try {
         yield mountModel.save();
       } catch (err) {
-        if (err.message === 'permissionIssue') {
+        if (err.httpStatus === 403) {
           this.mountIssue = true;
           this.set('isFormInvalid', this.mountIssue);
           this.flashMessages.danger(
             'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
           );
           return;
-        } else if (err.errors) {
+        }
+        if (err.errors) {
           let errors = err.errors.map((e) => {
             if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
             return e;
           });
           this.set('errors', errors);
-          return;
-        } else {
+        } else if (err.message) {
           this.set('errorMessage', err.message);
-          return;
+        } else {
+          this.set('errorMessage', 'An error occurred, check the vault logs.');
         }
+        return;
+      }
+      if (updatesConfig && !capabilities.get('canUpdate')) {
+        // config error is not thrown from secret-engine adapter, so handling here
+        this.flashMessages.warning(
+          'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+        );
+        // remove the config data from the model otherwise it will save it even if the network request failed.
+        [this.mountModel.maxVersions, this.mountModel.casRequired, this.mountModel.deleteVersionAfter] = [
+          0,
+          false,
+          0,
+        ];
       }
       let mountType = this.mountType;
       mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
