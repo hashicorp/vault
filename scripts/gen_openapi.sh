@@ -11,6 +11,8 @@ set -e
 #   3. Vault isn't already running
 #   4. Jq is installed
 
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
 echo "Starting Vault..."
 if pgrep -x "vault" > /dev/null
 then
