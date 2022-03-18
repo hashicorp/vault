@@ -104,8 +104,8 @@ You will see a response that includes a token with the previously added policy.
 1.  Use the received token to read secrets, writer secrets, and add roles per the instructions in [/docs/secrets/kv/kv-v1](/docs/secrets/kv/kv-v1).
 1.  Log into Vault using the user API key.
 
-    - [Add an API Key](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/apisigningkey.htm) for a user in the console. This user should be part of a group that has previously been added to the Vault admin role.
-    - Create the config file `~/.oci/config` using the user's credentials as detailed in [https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm).
+    - [Add an API Key](https://docs.cloud.oracle.com/iaas/Content/api-docs/Concepts/apisigningkey.htm) for a user in the console. This user should be part of a group that has previously been added to the Vault admin role.
+    - Create the config file `~/.oci/config` using the user's credentials as detailed in [https://docs.cloud.oracle.com/iaas/Content/api-docs/Concepts/sdkconfig.htm](https://docs.cloud.oracle.com/iaas/Content/api-docs/Concepts/sdkconfig.htm).
       Ensure that the region in the config matches the region of the compute instance that is running Vault.
     - Log into Vault using the user API key.
 
@@ -152,7 +152,7 @@ With Compute Instance credentials:
 $ vault login -method=oci auth_type=instance role=devrole
 ```
 
-With User credentials: [SDK Config](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm)
+With User credentials: [SDK Config](https://docs.cloud.oracle.com/iaas/Content/api-docs/Concepts/sdkconfig.htm)
 
 ```shell-session
 $ vault login -method=oci auth_type=apikey role=devrole
@@ -160,7 +160,7 @@ $ vault login -method=oci auth_type=apikey role=devrole
 
 ### Via the API
 
-1.  First, sign the following request with your OCI credentials and obtain the signing string and the authorization header. Replace the endpoint, scheme (http or https) & role of the URL corresponding to your vault configuration. For more information on signing, see [signing the request](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm).
+1.  First, sign the following request with your OCI credentials and obtain the signing string and the authorization header. Replace the endpoint, scheme (http or https) & role of the URL corresponding to your vault configuration. For more information on signing, see [signing the request](https://docs.cloud.oracle.com/iaas/Content/api-docs/Concepts/signingrequests.htm).
 
     http://127.0.0.1/v1/auth/oci/login/devrole
 
@@ -199,4 +199,4 @@ POST http://127.0.0.1/v1/auth/oci/login/devrole
 
 ## API
 
-The OCI Auth method has a full HTTP API. Please see the [API docs](/api/auth/oci) for more details.
+The OCI Auth method has a full HTTP API. Please see the [API docs](/api-docs/auth/oci) for more details.
