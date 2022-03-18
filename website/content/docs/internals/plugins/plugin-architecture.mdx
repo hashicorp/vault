@@ -117,7 +117,7 @@ Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
 
 ### Plugin Execution
 
-When a backend wants to run a plugin, it first looks up the plugin by name in
+When a backend wants to run a plugin, it first looks up the plugin, by name, in
 the catalog. It then checks the executable's SHA256 sum against the one
 configured in the plugin catalog. Finally Vault runs the command configured in
 the catalog, sending along the JWT formatted response wrapping token and mlock
@@ -145,7 +145,9 @@ To enable multiplexing, the plugin must be compiled with the `ServeMultiplex`
 function call from Vault's `dbplugin` package. At this time, there is no
 opt-out capability for plugins that implement multiplexing. To use a
 non-multiplexed plugin, simply run an older version of the plugin. i.e. the
-plugin calls the `dbplugin.Serve` function.
+plugin calls the `dbplugin.Serve` function. More details
+on implementing plugin multiplexing can be found in
+[Upgrading Vault Plugins](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
 
 ## Troubleshooting
 
