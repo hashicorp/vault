@@ -82,8 +82,9 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.Core.loginMFABackend.handleMFALoginValidate,
-					Summary:  "Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token",
+					Callback:                  b.Core.loginMFABackend.handleMFALoginValidate,
+					Summary:                   "Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token",
+					ForwardPerformanceStandby: true,
 				},
 			},
 		},

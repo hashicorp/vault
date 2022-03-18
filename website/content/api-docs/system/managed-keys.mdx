@@ -1,12 +1,12 @@
 ---
 layout: api
 page_title: /sys/managed-keys - HTTP API
-description: The `/sys/managed-keys` endpoint is used manage the managed keys in Vault.
+description: The `/sys/managed-keys` endpoint is used to manage the managed keys in Vault.
 ---
 
 # `/sys/managed-keys`
 
-The `/sys/managed-keys` endpoint is used manage the Managed Key configuration within Vault.
+The `/sys/managed-keys` endpoint is used to manage the Managed Key configuration within Vault.
 See the [Managed Keys](/docs/enterprise/managed-keys) section for further details on the Managed Keys system.
 
 ## List managed keys.
@@ -51,12 +51,25 @@ the namespace.
 |:-------|:--------------------------------|
 | `POST` | `/sys/managed-keys/:type/:name` |
 
+### Sample Payload
+
+```json
+{
+  "library": "softhsm",
+  "slot": "693149389",
+  "pin": "12345",
+  "key_label": "hsm-key1",
+  "mechanism": "0x0001"
+}
+```
+
 ### Sample Request
 
 ```shell-session
 $ curl \
     --request POST \
     --header "X-Vault-Token: ..." \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1
 ```
 
@@ -85,7 +98,7 @@ $ curl \
 
 ~> NOTE: The `pkcs11` backend is only available with Vault Enterprise Plus (HSMs) edition
 
-- `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`
+- `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`.
 
 - `library` `(string: <required>)` - The name of the `kms_library` stanza to use from Vault's config to
    lookup the local library path. See [kms_library stanza](/docs/configuration/kms-library) for further details.
@@ -119,13 +132,13 @@ $ curl \
 - `token_label` `(string: <slot or token label required>)`: The slot token label to
   use.
 
-- `curve` `(string: "")` - supplies the curve value when using the `CKM_ECDSA mechanism`.
+- `curve` `(string: "" <required if allow_generate_key is true>)` - supplies the curve value when using the `CKM_ECDSA mechanism`.
   The supported values are
     - `P384`
     - `P521`
     - `P256`
 
-- `key_bits` `(int: 0)` - supplies the size in bits of the key when using `CKM_RSA_PKCS_PSS`,
+- `key_bits` `(int: 0 <required if allow_generate_key is true>)` - supplies the size in bits of the key when using `CKM_RSA_PKCS_PSS`,
   `CKM_RSA_PKCS_OAEP` or `CKM_RSA_PKCS` as a value for `mechanism`.
   The supported values are
     - 2048
@@ -138,12 +151,14 @@ $ curl \
   pkcs11 implementation.
 
 #### AWS KMS Parameters
+- `type` `(string: "awskms")` - To select an AWS KMS backend, the type parameter must be set to `awskms`.
+
 - `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in
   the `AWS_ACCESS_KEY_ID` environment variable or as part of the AWS profile from the AWS CLI or
   instance profile.
 
-- `curve` `(string: "")`: The curve to use for an ECDSA key. This field is used when
-  `key_type` is `ECDSA`. Supported options are `P256`, `P384`, or `P521`.
+- `curve` `(string: "" <required if allow_generate_key is true>)`: The curve to use for an ECDSA key.
+  This field is used when `key_type` is `ECDSA`. Supported options are `P256`, `P384`, or `P521`.
 
 - `endpoint` `(string: "")`: Used to specify a custom AWS endpoint. If not set, Vault will use
   the default API endpoint for your region.
@@ -174,6 +189,8 @@ $ curl \
   or instance profile.
 
 #### Azure Key Vault Parameters
+- `type` `(string: "azurekeyvault")` - To select an Azure Key Vault backend, the type parameter must be set to `azurekeyvault`.
+
 - `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization.
 
 - `client_id` `(string: <required or MSI>)`: The client id for credentials to query the Azure APIs.
@@ -191,6 +208,11 @@ $ curl \
 - `resource` `(string: "vault.azure.net")`: The Azure Key Vault resource's DNS Suffix to connect
   to. Needs to be changed to connect to Azure's Managed HSM KeyVault instance type.
 
+- `key_bits` `(string: <required if allow_generate_key is true>)`: The size in bits for an RSA key.
+   This field is required when `key_type` is `RSA`. Supported values are `2048`, `3072`, and `4096`.
+
+- `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA`.
+
 ## Read managed key
 
 This endpoint returns the managed key configuration at the given path.
@@ -202,7 +224,7 @@ This endpoint returns the managed key configuration at the given path.
 ### Parameters
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
-- `type` `(string: <required>)` – The backend type for the managed key.
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
 ### Sample Request
 
@@ -251,7 +273,7 @@ status code, the configuration can be considered valid.
 ### Parameters
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
-- `type` `(string: <required>)` – The backend type for the managed key.
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
 ### Sample Request
 
@@ -275,7 +297,7 @@ listed within any mount point's `allowed_managed_keys`.
 ### Parameters
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
-- `type` `(string: <required>)` – The backend type for the managed key.
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
 ### Sample Request
 

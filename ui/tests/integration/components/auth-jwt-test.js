@@ -208,7 +208,6 @@ module('Integration | Component | auth jwt', function (hooks) {
     });
     this.window.trigger('message', buildMessage());
     await settled();
-    assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
     assert.equal(this.token, 'token', 'calls onToken with token');
     assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
   });
