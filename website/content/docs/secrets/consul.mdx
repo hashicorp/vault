@@ -160,7 +160,7 @@ step-by-step tutorial.
 ## API
 
 The Consul secrets engine has a full HTTP API. Please see the
-[Consul secrets engine API](/api/secret/consul) for more
+[Consul secrets engine API](/api-docs/secret/consul) for more
 details.
 
 [consul-mgmt-token]: https://www.consul.io/docs/agent/http/acl.html#acl_create
