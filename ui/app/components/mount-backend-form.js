@@ -131,7 +131,7 @@ export default Component.extend({
       try {
         yield mountModel.save();
       } catch (err) {
-        if (err.message === 'mountIssue') {
+        if (err.message === 'permissionIssue') {
           this.mountIssue = true;
           this.set('isFormInvalid', this.mountIssue);
           this.flashMessages.danger(
