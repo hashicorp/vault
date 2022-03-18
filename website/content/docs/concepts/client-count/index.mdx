@@ -35,7 +35,7 @@ When anything authenticates to Vault, be it a user, application, machine, etc., 
 
 ## But wait, there’s more...
 
-Want to take full advantage of the Vault identity system and how clients are counted? The Vault identity system also has [Entity Aliases](https://www.vaultproject.io/api/secret/identity/entity-alias) and [Identity Groups](https://www.vaultproject.io/api-docs/secret/identity/group-alias).
+Want to take full advantage of the Vault identity system and how clients are counted? The Vault identity system also has [Entity Aliases](https://www.vaultproject.io/api-docs/secret/identity/entity-alias) and [Identity Groups](https://www.vaultproject.io/api-docs/secret/identity/group-alias).
 
 ![Vault Identity Entities and Aliases](https://www.datocms-assets.com/2885/1617325026-vault-clients-identity-entity-aliases.png)
 
@@ -213,7 +213,7 @@ entity_id           n/a
 
 To reduce the number of non-entity tokens in use, consider switching to an authentication method such as
 [AppRole](/docs/auth/approle) instead of handing out directly-created tokens. Ensure that entities and
-[entity aliases](/api/secret/identity/entity-alias) exist for all login methods used to create batch tokens.
+[entity aliases](/api-docs/secret/identity/entity-alias) exist for all login methods used to create batch tokens.
 
 ### Tracking non-entity tokens
 
@@ -242,7 +242,7 @@ request; this can happen if the request is unauthenticated, or made with a root 
 
 ## API and Permissions
 
-Please see [Client Count API](/api/system/internal-counters#client-count) for more details. Note that this API is marked as
+Please see [Client Count API](/api-docs/system/internal-counters#client-count) for more details. Note that this API is marked as
 "internal" so its behavior or format may change without warning. The UI is the preferred means of interacting with the
 client count feature.
 

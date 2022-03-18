@@ -63,8 +63,8 @@ $ vault login -method=okta username=my-username totp=123456
 
 If `totp` is not set and MFA Push is configured in Okta, a Push will be sent during login.
 
-The auth method uses the Okta [Authentication API](https://developer.okta.com/docs/reference/api/authn/).
-It does not manage Okta [sessions](https://developer.okta.com/docs/reference/api/sessions/) for authenticated
+The auth method uses the Okta [Authentication API](https://developer.okta.com/docs/reference/api-docs/authn/).
+It does not manage Okta [sessions](https://developer.okta.com/docs/reference/api-docs/sessions/) for authenticated
 users. This means that if MFA Push is configured, it will be required during both login and token renewal.
 
 Note that this MFA support is integrated with Okta Auth and is limited strictly to login
@@ -130,4 +130,4 @@ management tool.
 ## API
 
 The Okta auth method has a full HTTP API. Please see the
-[Okta Auth API](/api/auth/okta) for more details.
+[Okta Auth API](/api-docs/auth/okta) for more details.
