@@ -150,7 +150,7 @@
   {{else}}
     <h2 data-test-title class="title is-3">Sign intermediate</h2>
     <NamespaceReminder @mode="save" @noun="PKI change" />
-    <MessageError @model={{this.model}} />
+    <MessageError @model={{this.model}} @errors={{this.errors}} />
     <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
       <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped box is-fullwidth is-bottomless">

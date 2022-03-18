@@ -7,6 +7,7 @@ export default Component.extend({
   classNames: 'config-pki-ca',
   store: service('store'),
   flashMessages: service(),
+  errors: null,
 
   /*
    * @param boolean
@@ -150,8 +151,8 @@ export default Component.extend({
             );
           }
         })
-        .catch(() => {
-          // handle promise rejection - error will be shown by message-error component
+        .catch((e) => {
+          this.set('errors', e.errors);
         })
         .finally(() => {
           this.set('loading', false);
