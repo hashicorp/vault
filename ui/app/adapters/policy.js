@@ -15,9 +15,8 @@ export default ApplicationAdapter.extend({
 
     return this.ajax(this.buildURL(type.modelName, name), 'PUT', { data }).then(() => {
       // doing this to make it like a Vault response - ember data doesn't like 204s if it's not a DELETE
-      // this.serialize(snapshot)
       return {
-        data: assign({}, snapshot.record.toJSON(), { id: name }),
+        data: assign({}, this.serialize(snapshot), { id: name }),
       };
     });
   },
