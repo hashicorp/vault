@@ -135,7 +135,7 @@ on the upgrade procedure can be found in
 
 ## Plugin Multiplexing
 
-As of Vault 1.10, database plugins can be made to implement plugin multiplexing
+Database plugins can be made to implement plugin multiplexing
 which allows a single plugin process to be used for multiple database
 connections. This single process, per database plugin, will be multiplexed
 across all Vault namespaces for mounts of this type. Multiplexing a plugin
@@ -144,7 +144,7 @@ does not affect the current behavior of existing plugins.
 To enable multiplexing, the plugin must be compiled with the `ServeMultiplex`
 function call from Vault's `dbplugin` package. At this time, there is no
 opt-out capability for plugins that implement multiplexing. To use a
-non-multiplexed plugin, simply run an older version of the plugin. i.e. the
+non-multiplexed plugin, run an older version of the plugin. i.e. the
 plugin calls the `dbplugin.Serve` function. More details
 on implementing plugin multiplexing can be found in
 [Upgrading Vault Plugins](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
