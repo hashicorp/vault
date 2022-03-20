@@ -89,7 +89,7 @@ Starting with Vault 1.10, the Vault Agent supports a new metrics endpoint and [T
 
 With this [enhancement](/docs/agent/autoauth/methods/azure), users can specify user-assigned managed identities via the `object_id` and `client_id` when configuring Vault agent auto-auth for Azure. This enables users that have more than one user-assigned managed identity associated with their VM to specify which one they'd like to use when authenticating via the Vault's Azure auth method. Note that providing these parameters is an "exclusive or" operation.
 
-### Quit endpoint with config
+### Quit API endpoint with config
 
 Previously, for instances where the Agent is a sidecar in a Kubernetes job and the job hangs, you must either use `shareProcessNamespace: true` for the container so that the process kill signals can be sent, or avoid the sidecar container entirely and solely rely on an init container. With this [enhancement](/docs/agent#quit), we have added support for a Quit API endpoint to automatically shut down the Vault Agent, therefore eliminating the need to perform the workarounds.
 
@@ -109,7 +109,7 @@ We have made improvements to the `sys/remount` API endpoint to simplify the comp
 
 ### Scaling External Database plugins
 
-Database plugins can now implement [plugin multiplexing](/docs/internals/plugins#plugin-development) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. Built-in database plugins in Vault will transition to support multiplexing when running as external plugins in the next major release.
+Database plugins can now implement [plugin multiplexing](/docs/internals/plugins#plugin-development) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. We will extend this functionality to Vault built-in database in subsequent releases.
 
 Any external database plugins that want to adopt multiplexing support will have to update their main.go call from [dbplugin.Serve()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L13) to [dbplugin.ServeMultiplex()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L42). Multiplexable database plugins are compatible with older versions of Vault down to Vault 1.6. Refer to this [Oracle Database PR](https://github.com/hashicorp/vault-plugin-database-oracle/pull/74) as an example of the upgrade process.
 
