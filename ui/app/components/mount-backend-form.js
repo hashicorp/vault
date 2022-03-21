@@ -5,7 +5,6 @@ import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
-import { waitFor } from '@ember/test-waiters';
 
 const METHODS = methods();
 const ENGINES = engines();
@@ -63,11 +62,11 @@ export default Component.extend({
     });
   },
 
-  mountTypes: computed('engines', 'mountType', function () {
+  mountTypes: computed('engines', 'mountType', function() {
     return this.mountType === 'secret' ? this.engines : METHODS;
   }),
 
-  engines: computed('version.{features[],isEnterprise}', function () {
+  engines: computed('version.{features[],isEnterprise}', function() {
     if (this.version.isEnterprise) {
       return ENGINES.concat([KMIP, TRANSFORM]);
     }
@@ -92,77 +91,75 @@ export default Component.extend({
     }
   },
 
-  mountBackend: task(
-    waitFor(function* () {
-      const mountModel = this.mountModel;
-      const { type, path } = mountModel;
-      let capabilities = null;
-      try {
-        capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
-      } catch (err) {
-        if (Ember.testing) {
-          //captures mount-backend-form component test
-          yield mountModel.save();
-          let mountType = this.mountType;
-          mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
-          this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
-          yield this.onMountSuccess(type, path);
-          return;
-        } else {
-          throw err;
-        }
-      }
-
-      let changedAttrKeys = Object.keys(mountModel.changedAttributes());
-      const updatesConfig =
-        mountModel.isV2KV &&
-        (changedAttrKeys.includes('casRequired') ||
-          changedAttrKeys.includes('deleteVersionAfter') ||
-          changedAttrKeys.includes('maxVersions'));
-
-      try {
+  mountBackend: task(function*() {
+    const mountModel = this.mountModel;
+    const { type, path } = mountModel;
+    let capabilities = null;
+    try {
+      capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
+    } catch (err) {
+      if (Ember.testing) {
+        //captures mount-backend-form component test
         yield mountModel.save();
-      } catch (err) {
-        if (err.httpStatus === 403) {
-          this.mountIssue = true;
-          this.set('isFormInvalid', this.mountIssue);
-          this.flashMessages.danger(
-            'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
-          );
-          return;
-        }
-        if (err.errors) {
-          let errors = err.errors.map((e) => {
-            if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
-            return e;
-          });
-          this.set('errors', errors);
-        } else if (err.message) {
-          this.set('errorMessage', err.message);
-        } else {
-          this.set('errorMessage', 'An error occurred, check the vault logs.');
-        }
+        let mountType = this.mountType;
+        mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
+        this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
+        yield this.onMountSuccess(type, path);
+        return;
+      } else {
+        throw err;
+      }
+    }
+
+    let changedAttrKeys = Object.keys(mountModel.changedAttributes());
+    const updatesConfig =
+      mountModel.isV2KV &&
+      (changedAttrKeys.includes('casRequired') ||
+        changedAttrKeys.includes('deleteVersionAfter') ||
+        changedAttrKeys.includes('maxVersions'));
+
+    try {
+      yield mountModel.save();
+    } catch (err) {
+      if (err.httpStatus === 403) {
+        this.mountIssue = true;
+        this.set('isFormInvalid', this.mountIssue);
+        this.flashMessages.danger(
+          'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
+        );
         return;
       }
-      if (updatesConfig && !capabilities.get('canUpdate')) {
-        // config error is not thrown from secret-engine adapter, so handling here
-        this.flashMessages.warning(
-          'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
-        );
-        // remove the config data from the model otherwise it will save it even if the network request failed.
-        [this.mountModel.maxVersions, this.mountModel.casRequired, this.mountModel.deleteVersionAfter] = [
-          0,
-          false,
-          0,
-        ];
+      if (err.errors) {
+        let errors = err.errors.map(e => {
+          if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
+          return e;
+        });
+        this.set('errors', errors);
+      } else if (err.message) {
+        this.set('errorMessage', err.message);
+      } else {
+        this.set('errorMessage', 'An error occurred, check the vault logs.');
       }
-      let mountType = this.mountType;
-      mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
-      this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
-      yield this.onMountSuccess(type, path);
       return;
-    })
-  )
+    }
+    if (updatesConfig && !capabilities.get('canUpdate')) {
+      // config error is not thrown from secret-engine adapter, so handling here
+      this.flashMessages.warning(
+        'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+      );
+      // remove the config data from the model otherwise it will save it even if the network request failed.
+      [this.mountModel.maxVersions, this.mountModel.casRequired, this.mountModel.deleteVersionAfter] = [
+        0,
+        false,
+        0,
+      ];
+    }
+    let mountType = this.mountType;
+    mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
+    this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
+    yield this.onMountSuccess(type, path);
+    return;
+  })
     .drop()
     .withTestWaiter(),
 
