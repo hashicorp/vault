@@ -9,7 +9,7 @@ set -e
 #   1. Vault has been checked out at an appropriate version and built
 #   2. vault executable is in your path
 #   3. Vault isn't already running
-#   4. Jq is installed
+#   4. jq is installed
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
