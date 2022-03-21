@@ -61,15 +61,8 @@ export default ApplicationAdapter.extend({
         data.id = path;
       }
       // first create the engine
-      try {
-        await this.ajax(this.url(path), 'POST', { data });
-      } catch (e) {
-        // if error determine if path duplicate or permissions
-        if (e.httpStatus === 400) {
-          throw new Error('samePath');
-        }
-        throw new Error('mountIssue');
-      }
+      await this.ajax(this.url(path), 'POST', { data });
+
       // second post to config
       try {
         await this.ajax(this.urlForConfig(path), 'POST', { data: configData });
