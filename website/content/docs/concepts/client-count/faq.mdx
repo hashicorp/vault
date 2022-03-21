@@ -22,6 +22,7 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: Post Vault 1.9, will the clientID be viewable via the audit logs when non-entity tokens are used?](#q-post-vault-1-9-will-the-clientid-be-viewable-via-the-audit-logs-when-non-entity-tokens-are-used)
 - [Q: What happens if audit logs are unreadable for use by the Vault auditor tool?](#q-what-happens-if-audit-logs-are-unreadable-for-use-by-the-vault-auditor-tool)
 - [Q: What does the usage metrics UI look like for Vault 1.9?](#q-what-does-the-usage-metrics-ui-look-like-for-vault-1-9)
+- [Q: What does the usage metrics look like for Vault 1.10?](#q-what-does-the-usage-metrics-look-like-for-vault-1-10)
 - [Q: In versions prior to Vault 1.9, how do I compute changes to clients month to month from the UI?](#q-in-versions-prior-to-vault-1-9-how-do-i-compute-changes-to-clients-month-to-month-from-the-ui)
 - [Q: What if I selected an inaccurate billing period via the UI/API?](#q-what-if-i-selected-an-inaccurate-billing-period-via-the-ui-api)
 - [Q: What if I want to skip computation of clients for a period of time during the billing period?](#q-what-if-i-want-to-skip-computation-of-clients-for-a-period-of-time-during-the-billing-period)
@@ -114,7 +115,7 @@ Not all customers may be on a version greater than Vault version 1.6 that levera
 
 ### Q: How can I compute KMIP clients for Vault?
 
-As of Vault 1.9, KMIP clients are not available via the usage metrics UI or the client count API; they are provided via the [auditor tool](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool). To learn more, refer to the [Vault Usage Metrics](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) documentation.
+As of Vault 1.10, KMIP clients are not available via the usage metrics UI or the client count API; they are provided via the [auditor tool](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool). To learn more, refer to the [Vault Usage Metrics](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) documentation.
 
 ### Q: Why do the Vault auditor tool and the usage metrics UI show me different results for the total number of clients?
 
@@ -152,6 +153,10 @@ This issue may arise if the logs are too large and cannot be read, or you are ru
 In Vault 1.9, the client count dashboard provides two separate tabs: the **Current month** and the **Monthly history**. In addition to usage totals (active client count and its breakdown into entities and non-entity tokens), each tab will include a list of the top ten namespaces by client count and the ability to export client count data for all namespaces. Here is a screenshot for your reference:
 
 ![Vault Client Count](/img/client-counts.jpg)
+
+### Q: What does the usage metrics look like for Vault 1.10?
+
+![Vault Client Count](/img/vault-usage-metrics-1-10.png)
 
 ### Q: In versions prior to Vault 1.9, how do I compute changes to clients month to month from the UI?
 
