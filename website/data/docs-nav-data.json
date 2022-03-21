@@ -77,23 +77,6 @@
         "path": "internals/replication"
       },
       {
-        "title": "Plugins",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "internals/plugins"
-          },
-          {
-            "title": "Plugin Architecture",
-            "path": "internals/plugins/plugin-architecture"
-          },
-          {
-            "title": "Plugin Development",
-            "path": "internals/plugins/plugin-development"
-          }
-        ]
-      },
-      {
         "title": "Limits and Maximums",
         "path": "internals/limits"
       }
@@ -1298,14 +1281,30 @@
     ]
   },
   {
-    "title": "Plugin Backends",
-    "path": "plugin"
+    "title": "Plugins",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "plugins"
+      },
+      {
+        "title": "Plugin Architecture",
+        "path": "plugins/plugin-architecture"
+      },
+      {
+        "title": "Plugin Development",
+        "path": "plugins/plugin-development"
+      },
+      {
+        "title": "Plugin Management",
+        "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Plugin Portal",
+        "path": "plugins/plugin-portal"
+      }
+    ]
   },
-  {
-    "title": "Plugin Portal",
-    "path": "plugin-portal"
-  },
-
   {
     "title": "Vault Integration Program",
     "path": "partnerships"

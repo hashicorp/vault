@@ -1,29 +1,29 @@
 ---
 layout: docs
-page_title: Custom Plugin Backends
+page_title: Plugin Management
 description: >-
-  Plugin backends are mountable backends that are implemented using Vault's
+  External Plugins are mountable backends that are implemented using Vault's
   plugin system.
 ---
 
-# Custom Plugin Backends
+# Plugin Management
 
-Plugin backends are the components in Vault that can be implemented separately
-from Vault's builtin backends. These backends can be either authentication or
+External plugins are the components in Vault that can be implemented separately
+from Vault's built-in plugins. These plugins can be either authentication or
 secrets engines.
 
-The `api_addr` must be set in order for the plugin process to
+The [`api_addr`][api_addr] must be set in order for the plugin process to
 establish communication with the Vault server during mount time. If the storage
 backend has HA enabled and supports automatic host address detection (e.g.
 Consul), Vault will automatically attempt to determine the `api_addr` as well.
 
 Detailed information regarding the plugin system can be found in the
-[internals documentation](/docs/internals/plugins).
+[internals documentation](/docs/plugins).
 
-## Enabling/Disabling Plugin Backends
+## Enabling/Disabling External Plugins
 
-Before a plugin backend can be mounted, it needs to be registered via the
-[plugin catalog](/docs/internals/plugins/plugin-architecture#plugin-catalog).
+Before an external plugin can be mounted, it needs to be registered via the
+[plugin catalog](/docs/plugins/plugin-architecture#plugin-catalog).
 After the plugin is registered, it can be mounted by specifying the registered
 plugin name:
 
@@ -41,7 +41,7 @@ Path         Type       Accessor            Plugin              Default TTL  Max
 my-secrets/  plugin     plugin_deb84140     passthrough-plugin  system       system   false           replicated
 ```
 
-Disabling a plugin backend is the identical to disabling internal secrets engines:
+Disabling an external plugins is identical to disabling a built-in plugin:
 
 ```shell-session
 $ vault secrets disable my-secrets
