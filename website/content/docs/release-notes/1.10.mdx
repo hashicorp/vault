@@ -53,11 +53,9 @@ We have introduced three new resources to enable configuration of the [KMIP secr
 
 We now support a more streamlined method for managing [KV v2 secrets](/api-docs/secret/kv/kv-v2) to enable customers to better maintain least privilege security in automated environments. This feature allows performing partial updates to KV v2 secrets without needing the ability to read the full KV secret's key/value pairs.
 
-The work done above to support HSM-backed PKI operations inspired us to consider what other key possession paradigms we could support. This led us to extend the implementation to support Cloud Key Management Systems in addition to HSMs. In Vault 1.10, users will be able to generate new PKI pairs and perform sign/verify certificate workflows, all with those keys never leaving the cloud KMS itself. Vault 1.10 sees support for AWS Key Management Service and Azure Key Vault Key Management Service.
-
 ### DB2 Dynamic Secrets support
 
-Vault now supports credential management for IBM DB2. For more details, refer to the [IBM Db2 Credentials Management](https://learn.hashicorp.com//tutorials/vault/ibm-db2-openldap) tutorial.
+Vault now supports credential management for IBM DB2 by leveraging the LDAP security plugin for Db2 and Vault’s OpenLDAP secrets engine. This allows Db2 to offload authentication and authorization to the LDAP security plugin and allows Vault to manage static credentials or even generate dynamic users. For more details, refer to the [IBM Db2 Credentials Management](https://learn.hashicorp.com//tutorials/vault/ibm-db2-openldap) tutorial.
 
 ### Temporal Transit Key rotation
 
@@ -146,7 +144,7 @@ We now support Server Side Consistent Tokens (See [Replication](/docs/configurat
 
 For more details, see the [Server Side Consistent Tokens FAQ](/docs/faq/ssct).
 
-Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known issue, a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded.
+Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded.
 
 We will have a fix for this issue in Vault 1.10.1. Until this issue is fixed, you may be at risk of having performance standbys unable to service requests until all nodes are upgraded. We recommended that you plan for a maintenance window to upgrade.
 
