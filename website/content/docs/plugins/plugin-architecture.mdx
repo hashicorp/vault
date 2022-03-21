@@ -43,6 +43,17 @@ processes within Vault as well. Since Vault manages and tracks the lifecycle of
 its plugins, these processes should not be terminated by anything other than
 Vault.
 
+### External Plugin Scaling Characteristics
+
+External plugins are able to leverage [Performance Standbys](/docs/enterprise/performance-standby)
+without any explicit action by a plugin author. The default behavior of Vault
+Enterprise is to attempt to handle all requests, including requests to plugins,
+on performance standbys. If the plugin request makes any attempt to modify
+storage, the request will receive a readonly error, and the request routing
+code will then forward the request to the active node. In other words, plugins
+can scale horizontally on Vault Enterprise without any effort on the plugin
+author's part.
+
 ## Plugin Communication
 
 Vault creates a mutually authenticated TLS connection for communication with the
