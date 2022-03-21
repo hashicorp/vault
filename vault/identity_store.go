@@ -433,6 +433,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			}
 			if entity == nil {
 				i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+				continue
 			}
 
 			// Delete local aliases from the entity.
