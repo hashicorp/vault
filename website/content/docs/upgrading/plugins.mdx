@@ -6,11 +6,11 @@ description: These are general upgrade instructions for Vault plugins.
 
 # Upgrading Vault Plugins
 
-The following procedure details steps for upgrading an external plugin that has
-already been registered to the catalog on a running server. This procedure is
-applicable to secret engines, auth methods, and database plugins.
+## External Plugin Upgrade Procedure
 
-## Upgrade Procedure
+The following procedure details steps for upgrading an external plugin that has
+been registered to the catalog on a running server. This procedure is
+applicable to secret engines, auth methods, and database plugins.
 
 Vault executes plugin binaries when they are configured and roles are established
 around them. The binary cannot be modified or replaced while running, so
@@ -62,6 +62,124 @@ performed on each Vault instance. Performing a plugin upgrade on a single
 instance or through a load balancer can result in mismatched
 plugin binaries within a cluster. On a replicated cluster this may be accomplished
 by setting the 'scope' parameter of the reload to 'global'.
+
+## Overriding Built-in Plugins
+
+Vault's auth methods and secrets engines are structured as plugins, but this
+design is not obvious since many of them are built into Vault.
+
+You can see them with the vault plugin list command, for example the list of
+Secrets engines:
+
+```shell-session
+$ vault plugin list secret
+Plugins
+-------
+ad
+alicloud
+aws
+azure
+cassandra
+consul
+gcp
+gcpkms
+kv
+mongodb
+mongodbatlas
+mssql
+mysql
+nomad
+openldap
+pki
+postgresql
+rabbitmq
+ssh
+terraform
+totp
+transit
+```
+
+This will list all Secrets engines, internal (built-in) or external. To find
+out if a plugin is built-in we can query it's info:
+
+```shell-session
+$ vault plugin info secret azure
+Key        Value
+---        -----
+args       []
+builtin    true
+command    n/a
+name       azure
+sha256     n/a
+```
+
+Because these built-in engines are plugins, they can be overridden. This can be
+a useful way to leverage features or bug fixes in plugins that are newer than
+the version of Vault you're using, without updating or even restarting Vault,
+and while retaining the data for your existing mount.
+
+Assume you have a new version of Azure Secrets and the binary is called
+"azure_new". The binary needs to be in the [plugin directory](/docs/plugins/plugin-architecture#plugin-directory)
+and can then be registered as either a distinct plugin, or overriding the
+current one.
+
+~> **Important:** do not disable (`vault secrets disable ...`) any mount that has
+data you're interested in. That would erase storage. For the in-place update,
+register a new plugin atop the built-in one and leave any mounts alone.
+
+The syntax is the same as an external plugin, with the difference being you
+name it the same as a built-in:
+
+```shell-session
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> -command=azure_new secret azure
+```
+
+"-command=azure_new" is the name of the binary, "secret" is the plugin type,
+and "azure" is the name of the built-in plugin that we're overriding. We can
+verify that the override is in place:
+
+```shell-session
+$ vault plugin info secret azure
+Key        Value
+---        -----
+args       []
+builtin    false
+command    azure_new
+name       azure
+sha256     f6f6ec45d37484c257aa9ff80444b9f244aaef1c650edf8a42a2a1d3f00db2c5
+```
+
+At this point we've overridden the built-in, but it is not yet actively
+handling requests. For that we run:
+
+```shell-session
+$ vault plugin reload -plugin=azure
+```
+
+To revert the override, deregister the plugin:
+
+```shell-session
+$ vault plugin deregister secret azure
+```
+
+Verify the override has been reverted and we are now using the built-in plugin:
+```shell-session
+$ vault plugin info secret azure
+Key        Value
+---        -----
+args       []
+builtin    true
+command    n/a
+name       azure
+sha256     n/a
+```
+
+Note that we still have to reload even when going back to the built-in:
+
+```shell-session
+$ vault plugin reload -plugin=azure
+```
+
 
 [plugin_reload_api]: /api-docs/system/plugins-reload-backend
 [plugin_registration]: /docs/plugins/plugin-architecture#plugin-registration
