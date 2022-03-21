@@ -185,6 +185,13 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return code
 	}
 
+	if Format(c.UI) == "table" {
+		outputPath(c.UI, path, "Secret Path")
+		metadata := secret.Data
+		c.UI.Info(getHeaderForMap("Metadata", metadata))
+		return OutputData(c.UI, metadata)
+	}
+
 	return OutputSecret(c.UI, secret)
 }
 

@@ -139,7 +139,7 @@ module('Unit | Service | permissions', function (hooks) {
       },
     };
     service.set('exactPaths', policyPaths);
-    assert.equal(service.navPathParams('policies'), 'rgp');
+    assert.equal(service.navPathParams('policies').models[0], 'rgp');
   });
 
   test('returns the first allowed nav route for access', function (assert) {
@@ -152,7 +152,7 @@ module('Unit | Service | permissions', function (hooks) {
         capabilities: ['read'],
       },
     };
-    const expected = ['vault.cluster.access.identity', 'entities'];
+    const expected = { route: 'vault.cluster.access.identity', models: ['entities'] };
     service.set('exactPaths', accessPaths);
     assert.deepEqual(service.navPathParams('access'), expected);
   });

@@ -18,6 +18,11 @@
       @title="No data received"
       @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
     />
+  {{else if (eq @model.monthly.id "no-data")}}
+    <EmptyState
+      @title="No data available"
+      @message="Tracking may be turned off. Check with your administrator or check back later."
+    />
   {{else}}
     <div class="is-subtitle-gray has-bottom-margin-m">
       FILTERS

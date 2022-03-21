@@ -165,7 +165,6 @@ export default Component.extend({
       return this.handleOIDCError(e);
     }
     let token = resp.auth.client_token;
-    this.onSelectedAuth('token');
     this.onToken(token);
     yield this.onSubmit();
   }),

@@ -204,10 +204,18 @@ export default Service.extend({
         };
       }
 
-      // TODO: handle post endpoints without requestBody
-      const props = pathInfo.post
-        ? pathInfo.post.requestBody.content['application/json'].schema.properties
-        : {};
+      let props = {};
+      const schema = pathInfo?.post?.requestBody?.content['application/json'].schema;
+      if (schema.$ref) {
+        // $ref will be shaped like `#/components/schemas/MyResponseType
+        // which maps to the location of the item within the openApi response
+        let loc = schema.$ref.replace('#/', '').split('/');
+        props = loc.reduce((prev, curr) => {
+          return prev[curr] || {};
+        }, help.openapi).properties;
+      } else if (schema.properties) {
+        props = schema.properties;
+      }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
       const newProps = assign({}, paramProp, props);

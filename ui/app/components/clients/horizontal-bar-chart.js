@@ -69,21 +69,26 @@ export default class HorizontalBarChart extends Component {
 
     let chartSvg = select(element);
     chartSvg.attr('width', '100%').attr('viewBox', `0 0 564 ${(dataset.length + 1) * LINE_HEIGHT}`);
-    // chartSvg.attr('viewBox', `0 0 700 300`);
 
-    let groups = chartSvg
+    let dataBarGroup = chartSvg
       .selectAll('g')
       .remove()
       .exit()
       .data(stackedData)
       .enter()
       .append('g')
+      .attr('data-test-group', (d) => `${d.key}`)
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
       .style('fill', (d, i) => LIGHT_AND_DARK_BLUE[i]);
 
     let yAxis = axisLeft(yScale).tickSize(0);
-    yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
+
+    let yLabelsGroup = chartSvg
+      .append('g')
+      .attr('data-test-group', 'y-labels')
+      .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`);
+    yAxis(yLabelsGroup);
 
     chartSvg.select('.domain').remove();
 
@@ -94,8 +99,10 @@ export default class HorizontalBarChart extends Component {
 
     chartSvg.selectAll('.tick text').call(truncate);
 
-    groups
+    dataBarGroup
       .selectAll('rect')
+      .remove()
+      .exit()
       // iterate through the stacked data and chart respectively
       .data((stackedData) => stackedData)
       .enter()
@@ -109,8 +116,12 @@ export default class HorizontalBarChart extends Component {
       .attr('rx', 3)
       .attr('ry', 3);
 
-    let actionBars = chartSvg
+    let actionBarGroup = chartSvg.append('g').attr('data-test-group', 'action-bars');
+
+    let actionBars = actionBarGroup
       .selectAll('.action-bar')
+      .remove()
+      .exit()
       .data(dataset)
       .enter()
       .append('rect')
@@ -124,8 +135,12 @@ export default class HorizontalBarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    let yLegendBars = chartSvg
-      .selectAll('.label-bar')
+    let labelActionBarGroup = chartSvg.append('g').attr('data-test-group', 'label-action-bars');
+
+    let labelActionBar = labelActionBarGroup
+      .selectAll('.label-action-bar')
+      .remove()
+      .exit()
       .data(dataset)
       .enter()
       .append('rect')
@@ -173,10 +188,10 @@ export default class HorizontalBarChart extends Component {
       });
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
-    yLegendBars
+    labelActionBar
       .on('mouseover', (data) => {
         if (data.label.length >= CHAR_LIMIT) {
-          let hoveredElement = yLegendBars.filter((bar) => bar.label === data.label).node();
+          let hoveredElement = labelActionBar.filter((bar) => bar.label === data.label).node();
           this.tooltipTarget = hoveredElement;
           this.isLabel = true;
           this.tooltipText = data.label;
@@ -208,10 +223,13 @@ export default class HorizontalBarChart extends Component {
           .style('opacity', '0');
       });
 
-    // add client count total values to the right
-    chartSvg
+    // client count total values to the right
+    let totalValueGroup = chartSvg
       .append('g')
-      .attr('transform', `translate(${TRANSLATE.left}, ${TRANSLATE.down})`)
+      .attr('data-test-group', 'total-values')
+      .attr('transform', `translate(${TRANSLATE.left}, ${TRANSLATE.down})`);
+
+    totalValueGroup
       .selectAll('text')
       .data(dataset)
       .enter()

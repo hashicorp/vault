@@ -147,6 +147,11 @@ _Note_: When using _Authenticated Search_ for binding parameters (see above) the
 
 Use `vault path-help` for more details.
 
+### Other
+
+- `username_as_alias` (bool, optional) - If set to true, forces the auth method to use the username passed by the user as the alias name.
+
+
 ## Examples:
 
 ### Scenario 1
@@ -262,5 +267,5 @@ It should be noted that user -> policy mapping happens at token creation time. A
 ## API
 
 The LDAP auth method has a full HTTP API. Please see the
-[LDAP auth method API](/api/auth/ldap) for more
+[LDAP auth method API](/api-docs/auth/ldap) for more
 details.

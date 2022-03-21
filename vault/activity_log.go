@@ -2099,11 +2099,15 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 				mountRecord := make([]*activity.MountRecord, 0, len(nsMap[nsID].Mounts))
 				for mountAccessor, mountData := range nsMap[nsID].Mounts {
 					var displayPath string
-					valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
-					if valResp == nil {
-						displayPath = fmt.Sprintf("deleted mount; accessor %q", mountAccessor)
+					if mountAccessor == "" {
+						displayPath = "no mount accessor (pre-1.10 upgrade?)"
 					} else {
-						displayPath = valResp.MountPath
+						valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
+						if valResp == nil {
+							displayPath = fmt.Sprintf("deleted mount; accessor %q", mountAccessor)
+						} else {
+							displayPath = valResp.MountPath
+						}
 					}
 
 					mountRecord = append(mountRecord, &activity.MountRecord{

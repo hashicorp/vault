@@ -15,13 +15,26 @@ import { formatRFC3339 } from 'date-fns';
  */
 
 export const SELECTORS = {
-  activeTab: '.nav-tab-link.is-active',
+  currentMonthActiveTab: '.active[data-test-current-month]',
+  historyActiveTab: '.active[data-test-history]',
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
   rangeDropdown: '[data-test-popup-menu-trigger]',
+  monthDropdown: '[data-test-popup-menu-trigger="month"]',
+  yearDropdown: '[data-test-popup-menu-trigger="year"]',
+  dateDropdownSubmit: '[data-test-date-dropdown-submit]',
+};
+
+export const CHART_ELEMENTS = {
+  entityClientDataBars: '[data-test-group="entity_clients"]',
+  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
+  yLabels: '[data-test-group="y-labels"]',
+  actionBars: '[data-test-group="action-bars"]',
+  labelActionBars: '[data-test-group="label-action-bars"]',
+  totalValues: '[data-test-group="total-values"]',
 };
 
 export function sendResponse(data, httpStatus = 200) {
@@ -57,7 +70,7 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   let mountCount = 1;
   const nsBlock = {
     namespace_id: `${idx}UUID`,
-    namespace_path: `my-namespace-${idx}/`,
+    namespace_path: `${idx}/namespace`,
     counts: {
       clients: mountCount * 15,
       entity_clients: mountCount * 5,

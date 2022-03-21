@@ -100,12 +100,12 @@ func SplitIDFromString(input string) (string, string) {
 	slashIdx := strings.LastIndex(input, "/")
 
 	switch {
-	case strings.HasPrefix(input, "b."):
-		prefix = "b."
+	case strings.HasPrefix(input, consts.LegacyBatchTokenPrefix):
+		prefix = consts.LegacyBatchTokenPrefix
 		input = input[2:]
 
-	case strings.HasPrefix(input, "s."):
-		prefix = "s."
+	case strings.HasPrefix(input, consts.LegacyServiceTokenPrefix):
+		prefix = consts.LegacyServiceTokenPrefix
 		input = input[2:]
 	case strings.HasPrefix(input, consts.BatchTokenPrefix):
 		prefix = consts.BatchTokenPrefix

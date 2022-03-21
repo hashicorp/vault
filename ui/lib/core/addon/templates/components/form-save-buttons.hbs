@@ -10,13 +10,11 @@
         {{or @saveButtonText "Save"}}
       </button>
     </div>
-    {{#if @cancelLinkParams}}
+    {{#if this.cancelLink}}
       <div class="control">
-        {{! refactor to use @route and @model args and convert to angle brackets }}
-        {{! template-lint-configure no-curly-component-invocation "warn" }}
-        {{#link-to params=@cancelLinkParams class="button"}}
+        <LinkTo @route={{this.cancelLink.route}} @models={{this.cancelLink.models}} class="button">
           {{or @cancelButtonText "Cancel"}}
-        {{/link-to}}
+        </LinkTo>
       </div>
     {{/if}}
     {{#if @onCancel}}

@@ -3,7 +3,7 @@
 {{else}}
   <EmptyState
     @title={{if (eq @model.httpStatus 403) "You are not authorized" "Error"}}
-    @subTitle={{concat "Error " @model.httpStatus}}
+    @subTitle="Error {{@model.httpStatus}}"
     @icon="skip"
   >
     {{#if (eq @model.httpStatus 403)}}
@@ -16,8 +16,8 @@
       <ul>
         {{#if @model.message}}
           <li>{{@model.message}}</li>
+          <hr />
         {{/if}}
-        <hr />
         {{#each @model.errors as |error|}}
           <li>
             {{error}}

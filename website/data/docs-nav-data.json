@@ -190,6 +190,10 @@
       {
         "title": "Transform",
         "path": "concepts/transform"
+      },
+      {
+        "title": "Mount Migration",
+        "path": "concepts/mount-migration"
       }
     ]
   },
@@ -452,6 +456,10 @@
           {
             "title": "<code>list</code>",
             "path": "commands/auth/list"
+          },
+          {
+            "title": "<code>move</code>",
+            "path": "commands/auth/move"
           },
           {
             "title": "<code>tune</code>",
@@ -1206,6 +1214,19 @@
         "path": "auth/ldap"
       },
       {
+        "title": "Login MFA",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/login-mfa"
+          },
+          {
+            "title": "FAQ",
+            "path": "auth/login-mfa/faq"
+          }
+        ]
+      },
+      {
         "title": "Oracle Cloud Infrastructure",
         "path": "auth/oci"
       },
@@ -1297,6 +1318,11 @@
             "title": "Overview",
             "path": "platform/k8s"
           },
+          {
+            "title": "Agent Injector vs. Vault CSI Provider",
+            "path": "platform/k8s/injector-csi"
+          },
+
           {
             "title": "Helm Chart",
             "routes": [
@@ -1761,6 +1787,38 @@
       {
         "title": "FAQ",
         "path": "deprecation/faq"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "FAQ",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "faq"
+      },
+      {
+        "title": "Feature Deprecation Notice and Plans",
+        "href": "https://www.vaultproject.io/docs/deprecation/faq"
+      },
+      {
+        "title": "License",
+        "href": "https://www.vaultproject.io/docs/enterprise/license/faq"
+      },
+      {
+        "title": "Client Count",
+        "href": "https://www.vaultproject.io/docs/concepts/client-count/faq"
+      },
+      {
+        "title": "Login MFA",
+        "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+      },
+      {
+        "title": "Server Side Consistent Token",
+        "path": "faq/ssct"
       }
     ]
   },

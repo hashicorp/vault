@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 /*
@@ -1430,7 +1429,18 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 		},
 	})
 
-	// get the clientID
+	// Create a test client "test-client-2" that also uses "test-key-1"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":          "test-key-1",
+			"id_token_ttl": "1m",
+		},
+	})
+
+	// get the clientID for "test-client-1"
 	resp, _ := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client-1",
 		Operation: logical.ReadOperation,
@@ -1458,11 +1468,9 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	responseJWKS := &jose.JSONWebKeySet{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 2 {
-		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
-	}
+	// at this point only 2 public keys are expected since both clients use
+	// the same key "test-key-1"
+	assertRespPublicKeyCount(t, resp, 2)
 
 	// Create a test key "test-key-2"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -1494,11 +1502,7 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	responseJWKS = &jose.JSONWebKeySet{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 4 {
-		t.Fatalf("expected 4 public key but instead got %d", len(responseJWKS.Keys))
-	}
+	assertRespPublicKeyCount(t, resp, 4)
 
 	// Update the test provider "test-provider" to only allow test-client-1 -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -1519,11 +1523,7 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	responseJWKS = &jose.JSONWebKeySet{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 2 {
-		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
-	}
+	assertRespPublicKeyCount(t, resp, 2)
 }
 
 func TestOIDC_Path_OIDC_Client_Type(t *testing.T) {

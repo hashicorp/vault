@@ -117,6 +117,8 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 
 	delete(secret.Data, "versions")
 
+	outputPath(c.UI, path, "Metadata Path")
+
 	c.UI.Info(getHeaderForMap("Metadata", secret.Data))
 	OutputSecret(c.UI, secret)
 

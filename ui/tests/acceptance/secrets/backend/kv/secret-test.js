@@ -607,11 +607,22 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await assert
       .dom('[data-test-value-div="secret-key"]')
       .exists('secret view page and info table row with secret-key value');
-    // create new version should be disabled with no metadata read access
-    assert.dom('[data-test-secret-edit]').hasClass('disabled', 'Create new version action is disabled');
-    assert
-      .dom('[data-test-popup-menu-trigger="version"]')
-      .doesNotExist('the version drop down menu does not show');
+
+    // Create new version
+    assert.dom('[data-test-secret-edit]').doesNotHaveClass('disabled', 'Create new version is not disabled');
+    await click('[data-test-secret-edit]');
+
+    // create new version should not include version in the URL
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${enginePath}/edit/${secretPath}`,
+      'edit route does not include version query param'
+    );
+    // Update key
+    await editPage.secretKey('newKey');
+    await editPage.secretValue('some-value');
+    await editPage.save();
+    assert.dom('[data-test-value-div="newKey"]').exists('Info row table exists at newKey');
 
     // check metadata tab
     await click('[data-test-secret-metadata-tab]');
@@ -683,8 +694,9 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await settled(); // eslint-disable-line
     await click('[data-test-secret-tab]');
     await settled(); // eslint-disable-line
-    let text = document.querySelector('[data-test-empty-state-title]').innerText.trim();
-    assert.equal(text, 'Version 1 of this secret has been permanently destroyed');
+    assert
+      .dom('[data-test-empty-state-title]')
+      .includesText('Version 1 of this secret has been permanently destroyed');
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function (assert) {

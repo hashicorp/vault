@@ -2,6 +2,7 @@ import { gt } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { range } from 'ember-composable-helpers/helpers/range';
+import { A } from '@ember/array';
 import layout from '../templates/components/list-pagination';
 
 export default Component.extend({
@@ -10,7 +11,7 @@ export default Component.extend({
   page: null,
   lastPage: null,
   link: null,
-  model: null,
+  models: A(),
   // number of links to show on each side of page
   spread: 2,
   hasNext: computed('page', 'lastPage', function () {

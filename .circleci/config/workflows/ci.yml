@@ -50,3 +50,6 @@ jobs:
         branches:
           only:
             - stable-website
+  - semgrep:
+       requires:
+         - pre-flight-checks

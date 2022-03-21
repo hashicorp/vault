@@ -665,6 +665,13 @@ func assertPublicKeyCount(t *testing.T, ctx context.Context, s logical.Storage, 
 		Storage:   s,
 	})
 	expectSuccess(t, resp, err)
+
+	assertRespPublicKeyCount(t, resp, keyCount)
+}
+
+func assertRespPublicKeyCount(t *testing.T, resp *logical.Response, keyCount int) {
+	t.Helper()
+
 	// parse response
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
@@ -756,6 +763,54 @@ func TestOIDC_PublicKeys(t *testing.T) {
 
 	// .well-known/keys should contain 2 public keys, all of the public keys
 	// from named key "test-key" should have been deleted
+	assertPublicKeyCount(t, ctx, storage, c, 2)
+}
+
+// TestOIDC_PublicKeys tests that public keys are updated by
+// key creation, rotation, and deletion
+func TestOIDC_SharedPublicKeysByRoles(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test role "test-role"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role2"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role3"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role3",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+
+	// .well-known/keys should contain 2 public keys
 	assertPublicKeyCount(t, ctx, storage, c, 2)
 }
 

@@ -47,17 +47,10 @@
       this.identityType
     }} and click &quot;Create Alias&quot; to get started."
   >
-    {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
-    <LinkTo
-      @route="vault.cluster.access.identity.create"
-      @model={{pluralize this.identityType}}
-      @tagName="button"
-      class="link"
-    >
+    <LinkTo @route="vault.cluster.access.identity.create" @model={{pluralize this.identityType}} class="link">
       Create
       {{this.identityType}}
     </LinkTo>
-    {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
     <LearnLink @path="/vault/identity-access-management/iam-identity">
       Learn more
     </LearnLink>

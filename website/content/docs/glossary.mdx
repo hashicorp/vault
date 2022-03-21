@@ -39,7 +39,7 @@ allows users to authenticate via GitHub.
 
 ### Barrier
 
-Almost everything Vault writes to storage is encrypted using the keyring, which is protected by the seal. We refer to this practice as "the barrier". There are a few exceptions to the rule, for example, the seal configuration is stored in an unencrypted file since it's needed to unseal the barrier, and the keyring is encrypted using the master key, while the master key is encrypted using the seal.
+Almost everything Vault writes to storage is encrypted using the keyring, which is protected by the seal. We refer to this practice as "the barrier". There are a few exceptions to the rule, for example, the seal configuration is stored in an unencrypted file since it's needed to unseal the barrier, and the keyring is encrypted using the root key, while the root key is encrypted using the seal.
 
 ### Client Token
 

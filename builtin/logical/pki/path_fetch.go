@@ -221,7 +221,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 				Type:  "CERTIFICATE",
 				Bytes: ca.Bytes,
 			}
-			chainStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
+			chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
 		fullChain = []byte(strings.TrimSpace(chainStr))
 
@@ -320,9 +320,11 @@ Fetch a CA, CRL, CA Chain, or non-revoked certificate.
 `
 
 const pathFetchHelpDesc = `
-This allows certificates to be fetched. If using the fetch/ prefix any non-revoked certificate can be fetched.
+This allows certificates to be fetched. Use /cert/:serial for JSON responses.
 
 Using "ca" or "crl" as the value fetches the appropriate information in DER encoding. Add "/pem" to either to get PEM encoding.
 
 Using "ca_chain" as the value fetches the certificate authority trust chain in PEM encoding.
+
+Otherwise, specify a serial number to fetch the specified certificate. Add "/raw" to get just the certificate in DER form, "/raw/pem" to get the PEM encoded certificate.
 `
