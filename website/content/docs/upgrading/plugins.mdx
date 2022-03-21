@@ -65,6 +65,8 @@ by setting the 'scope' parameter of the reload to 'global'.
 
 ## Overriding Built-in Plugins
 
+### Background
+
 Vault's auth methods and secrets engines are structured as plugins, but this
 design is not obvious since many of them are built into Vault.
 
@@ -100,7 +102,7 @@ transit
 ```
 
 This will list all Secrets engines, internal (built-in) or external. To find
-out if a plugin is built-in we can query it's info:
+out if a plugin is built-in we can query its info:
 
 ```shell-session
 $ vault plugin info secret azure
@@ -127,11 +129,17 @@ current one.
 data you're interested in. That would erase storage. For the in-place update,
 register a new plugin atop the built-in one and leave any mounts alone.
 
+### Procedure for Overriding Built-in Plugins
+
 The syntax is the same as an external plugin, with the difference being you
 name it the same as a built-in:
 
 ```shell-session
-$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> -command=azure_new secret azure
+$ vault plugin register \
+  -sha256=<SHA256 Hex value of the plugin binary> \
+  -command=azure_new \
+  secret \
+  azure
 ```
 
 "-command=azure_new" is the name of the binary, "secret" is the plugin type,
@@ -156,13 +164,17 @@ handling requests. For that we run:
 $ vault plugin reload -plugin=azure
 ```
 
-To revert the override, deregister the plugin:
+### Procedure for Reverting After Overriding A Built-in Plugin
+
+To revert the override, first deregister the plugin:
 
 ```shell-session
 $ vault plugin deregister secret azure
 ```
 
-Verify the override has been reverted and we are now using the built-in plugin:
+Next, verify the override has been reverted and we are now using the built-in
+plugin:
+
 ```shell-session
 $ vault plugin info secret azure
 Key        Value
@@ -174,7 +186,7 @@ name       azure
 sha256     n/a
 ```
 
-Note that we still have to reload even when going back to the built-in:
+Finally, reload the plugin:
 
 ```shell-session
 $ vault plugin reload -plugin=azure
