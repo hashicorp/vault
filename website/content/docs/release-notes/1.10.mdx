@@ -48,11 +48,11 @@ We have introduced three new resources to enable configuration of the [KMIP secr
 
 ### KV Secrets Engine v2 patch operations
 
-We now support a more streamlined method for managing [KV v2 secrets](/api-docs/secret/kv/kv-v2) to enable customers to better maintain least privilege security in automated environments. This feature allows performing partial updates to KV v2 secrets without needing the ability to read the full KV secret's key/value pairs.
+We now support an additional method for managing [KV v2 secrets](/api-docs/secret/kv/kv-v2) to maintain least privilege security in certain types of automated environments. This feature creates a new PATCH capability that enables partial updates to KV v2 secrets without requiring the READ privilege to the entire endpoint for an entity.
 
 ### DB2 Dynamic Secrets support
 
-We now support an additional method for managing KV v2 secrets to maintain least priviledge security in certain types of automated environments. This feature creates a new PATCH capability that enables partial updates to KV v2 secrets without requiring the READ priviledge to the entire endpoint for an entity. For more details, refer to the [IBM Db2 Credentials Management](https://learn.hashicorp.com//tutorials/vault/ibm-db2-openldap) tutorial.
+This integration leverages existing functionality in Vault and we have recently validated the integration between DB2 and Vault. By leveraging the LDAP security plugin for Db2 and Vault’s OpenLDAP secrets engine, Db2 can offload authentication and authorization to the LDAP security plugin and allows Vault to manage static credentials or even generate dynamic users. For more details, refer to the [IBM Db2 Credentials Management](https://learn.hashicorp.com/tutorials/vault/ibm-db2-openldap) tutorial.
 
 ### Temporal Transit Key rotation
 
