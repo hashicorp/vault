@@ -87,4 +87,4 @@ fi
 kill $VAULT_PID
 sleep 1
 
-echo "\nopenapi.json generated."
+printf "\nopenapi.json generated."
