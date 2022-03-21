@@ -15,14 +15,11 @@ We encourage you to upgrade to the latest release to take advantage of the new b
 
 Some of these enhancements and changes in this release include:
 
-- Ability to view client counts per auth mount, providing more granular visibility into clients
+- Ability to view client counts per auth (UI and API), and changes to clients over months (API), providing more granular visibility into clients.
 - Extended the `sys/remount` API endpoint to support moving secrets engines and auth method mounts from one location to another, within a namespace or across namespaces.
-- Improved security posture that includes MFA on login for Vault OSS customers
-- Ability to implicitely achieve consistency via tokens
-- Support of PKCE on Vault’s OIDC auth method with the unification of OpenLDAP and AD engines.
-- Support of key/pair-based authentication for Snowflake Database users
-- Ability to generate short-lived dynamic service accounts to allow fine-grained access to Kubernetes clusters
-- Enabling of TTL capability for Key Management Secrets Engine keys
+- Improved security posture that includes MFA on login for Vault OSS customers.
+- Ability to implicitely achieve consistency via tokens.
+- Support of PKCE on Vault’s OIDC auth method with with Telemetry support for the Vault Agent.
 - Improvement of key areas and parity to support using Terraform Provider with Vault.
 
 ## New Features
@@ -47,7 +44,7 @@ With 0.6.0, Vault Lambda Extension supports caching in the local proxy server to
 
 ### Terraform Provider for Vault
 
-We have introduced three new resources to enable configuration of the [KMIP secrets engine](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/kmip_secret_backend) using the Terraform Provider for Vault.
+We have introduced three new resources to enable configuration of the [KMIP secrets engine](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/kmip_secret_backend) using the Terraform Provider for Vault. In addition, frequent releases on the Terraform Provider for Vault have been incorporating the ability to configure newer resources and data sources. Please read the [documentation](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) for more details.
 
 ### KV Secrets Engine v2 patch operations
 
@@ -109,11 +106,6 @@ Database plugins can now implement [plugin multiplexing](/docs/internals/plugins
 
 Any external database plugins that want to adopt multiplexing support will have to update their main.go call from [dbplugin.Serve()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L13) to [dbplugin.ServeMultiplex()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L42). Multiplexable database plugins are compatible with older versions of Vault down to Vault 1.6. Refer to this [Oracle Database PR](https://github.com/hashicorp/vault-plugin-database-oracle/pull/74) as an example of the upgrade process.
 
-### Integrated Storage enhancements
-
-When using `retry_join` stanzas to set up new raft nodes via config (instead of issuing explicit join requests), each of the "leaders" specified is tried until one is found that works, with a 2-second delay between each attempt. It is common when using `retry_join` to use the same config that lists all nodes for every node's HCL, which means a new node could take quite a while to join if the actual leader in the cluster is listed last.
-With this enhancement, `retry_join` is handled such that we reach out to every node listed in parallel and try to complete the join without an error. While we still maintain the current behavior of a 2-second delay between each attempt, this is a much-reduced delay since it is now applicable to retrying all nodes, providing an improved experience for customers.
-
 ### Consul Secrets Engine enhancements
 
 Consul has supported [namespace](https://www.consul.io/docs/enterprise/namespaces), [admin partitions](https://www.consul.io/docs/enterprise/admin-partitions) and [ACL roles](https://www.consul.io/commands/acl/role) for some time now. In this release we have added enhancements to the Consul Secrets engine to support [namespace]() awareness and add admin partition and role support for Consul ACL tokens. This significantly simplifies the integrations for customers who want to achieve a zero trust security posture with both Vault and Consul.
@@ -144,7 +136,7 @@ We now support Server Side Consistent Tokens (See [Replication](/docs/configurat
 
 For more details, see the [Server Side Consistent Tokens FAQ](/docs/faq/ssct).
 
-Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded.
+Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded. Note that this issue does not impact Vault OSS users.
 
 We will have a fix for this issue in Vault 1.10.1. Until this issue is fixed, you may be at risk of having performance standbys unable to service requests until all nodes are upgraded. We recommended that you plan for a maintenance window to upgrade.
 
