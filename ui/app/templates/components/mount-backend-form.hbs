@@ -2,14 +2,14 @@
   <p.levelLeft>
     <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
       {{#if this.showEnable}}
-        {{#with (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
+        {{#let (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
           <Icon @name={{or typeInfo.glyph typeInfo.type}} @size="24" class="has-text-grey-light" />
           {{#if (eq this.mountType "auth")}}
             {{concat "Enable " typeInfo.displayName " Authentication Method"}}
           {{else}}
             {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
           {{/if}}
-        {{/with}}
+        {{/let}}
       {{else if (eq this.mountType "auth")}}
         Enable an Authentication Method
       {{else}}
@@ -21,7 +21,7 @@
 <form {{action (perform this.mountBackend) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="enable" @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}} />
-    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} />
+    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
     {{#if this.showEnable}}
       <FormFieldGroups
         @model={{this.mountModel}}

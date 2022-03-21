@@ -4,12 +4,12 @@ import { computed } from '@ember/object';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default Model.extend({
+  errors: attr('array'),
   name: attr('string'),
   policy: attr('string'),
   policyType: computed('constructor.modelName', function () {
     return this.constructor.modelName.split('/')[1];
   }),
-
   updatePath: lazyCapabilities(apiPath`sys/policies/${'policyType'}/${'id'}`, 'id', 'policyType'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
