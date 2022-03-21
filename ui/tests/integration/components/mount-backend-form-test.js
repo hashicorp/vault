@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
@@ -63,7 +63,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     await component.mount('approle', 'foo');
 
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await settled();
     let enableRequest = this.server.handledRequests.findBy('url', '/v1/sys/auth/foo');
     assert.ok(enableRequest, 'it calls enable on an auth method');

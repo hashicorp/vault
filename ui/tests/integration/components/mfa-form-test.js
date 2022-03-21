@@ -4,7 +4,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fillIn, click, waitUntil } from '@ember/test-helpers';
-import { run, later } from '@ember/runloop';
+import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { VALIDATION_ERROR } from 'vault/components/mfa-form';
 
 module('Integration | Component | mfa-form', function (hooks) {
@@ -176,7 +176,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     `);
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await click('[data-test-mfa-validate]');
     assert
       .dom('[data-test-mfa-countdown]')
@@ -200,7 +200,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     `);
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await click('[data-test-mfa-validate]');
     assert
       .dom('[data-test-error]')

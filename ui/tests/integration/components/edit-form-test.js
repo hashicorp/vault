@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import EmberObject from '@ember/object';
 import Service from '@ember/service';
@@ -63,7 +63,7 @@ module('Integration | Component | edit form', function (hooks) {
     await render(hbs`{{edit-form model=model onSave=onSave}}`);
 
     component.submit();
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(saveSpy.calledOnce, 'calls passed onSave');
       assert.equal(saveSpy.getCall(0).args[0].saveType, 'save');

@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import EmberObject from '@ember/object';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
@@ -65,7 +65,7 @@ module('Integration | Component | auth form', function (hooks) {
     component.login();
     // because this is an ember-concurrency backed service,
     // we have to manually force settling the run queue
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.equal(component.errorText, CSP_ERR_TEXT);
     });
@@ -239,7 +239,7 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
     await render(hbs`<AuthForm @cluster={{cluster}} @wrappedToken={{wrappedToken}} />`);
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await settled();
     assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
     assert.equal(
@@ -267,7 +267,7 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('wrappedToken', '54321');
     await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
 
     await settled();
     assert.equal(
