@@ -180,6 +180,17 @@ Note that we still have to reload even when going back to the built-in:
 $ vault plugin reload -plugin=azure
 ```
 
+### Caveats to Overriding Built-in Plugins
+
+* As mentioned earlier, disabling existing mounts will wipe the existing data.
+* This type of upgrade affects all uses of the plugin. So if you have 5
+  different Azure Secrets mounts, they'll all change after the replacement. If
+  you don't want that you'll need to register the plugin under a different name
+  and start with a fresh mount.
+* In most cases, data upgrade and downgrade is not an issue. If the "new" version
+  introduces new data and you downgrade, the "old" version will ignore the
+  extraneous data. In some cases upgrading changes existing data in non-backwards
+  compatible ways, so it is good to check whether this is an issue.
 
 [plugin_reload_api]: /api-docs/system/plugins-reload-backend
 [plugin_registration]: /docs/plugins/plugin-architecture#plugin-registration
