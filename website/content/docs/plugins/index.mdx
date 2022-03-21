@@ -28,11 +28,11 @@ intervention to run.
 
 To run an external plugin, a binary of the plugin is required. Plugin
 binaries can be obtained from [releases.hashicorp.com](https://releases.hashicorp.com/)
-or they can be [built from source](/docs/internals/plugins/plugin-development#building-a-plugin-from-source).
+or they can be [built from source](/docs/plugins/plugin-development#building-a-plugin-from-source).
 
 Vault's external plugins are completely separate, standalone applications that
 Vault executes and communicates with over RPC. Each time a Vault secret engine
 or auth method is mounted, a new process is spawned. However, database plugins
-can be made to implement [plugin multiplexing](/docs/internals/plugins/plugin-architecture#plugin-multiplexing)
+can be made to implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing)
 which allows a single plugin process to be used for multiple database
 connections.

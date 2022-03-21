@@ -21,46 +21,41 @@ Instead, you can restart or reload a plugin with the
 `sys/plugins/reload/backend` [API][plugin_reload_api]. Follow these steps to
 replace or upgrade a Vault plugin binary:
 
-1. [Register][plugin_registration] `my-db-plugin-v1` to the catalog
+1. [Register][plugin_registration] version 1 of `my-db-plugin` to the catalog
 
 ```shell-session
 $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
-    secret \                  # type
-    `my-db-plugin-v1`
-
-Success! Registered plugin: my-db-plugin-v1
+    database \                  # type
+    my-db-plugin
 ```
 
 2. [Mount][plugin_management] the plugin backend
 
 ```shell-session
 $ vault secrets enable database
-Success! Enabled the database secrets engine at: database/
 ```
 
-3. Register `my-db-plugin-v2` to the catalog under the same plugin name, but with
-   updated command to run `my-db-plugin-v2` and updated sha256 of `my-db-plugin-v2`
+3. Register version 2 of `my-db-plugin` to the catalog under the same plugin
+   name, but with updated command to run version 2 of `my-db-plugin` and updated
+   sha256 of the new binary
 
 ```shell-session
 $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
-    secret \                  # type
-    `my-db-plugin-v2`
-
-Success! Registered plugin: my-db-plugin-v2
+    database \                  # type
+    my-db-plugin
 ```
 
-4. Trigger a plugin reload with `sys/plugins/reload/backend` to reload all
+4. Trigger a [plugin reload][/docs/commands/plugin/reload] to reload all
    mounted backends using that plugin or a subset of the mounts using that plugin
    with either the `plugin` or `mounts` parameter respectively.
 
 ```shell-session
-$ vault plugin reload -plugin my-db-plugin-v2
-Success! Reloaded plugin: my-db-plugin-v2
+$ vault plugin reload -plugin my-db-plugin
 ```
 
-Until step 4, the mount will still use `my-db-plugin-v1`, and when the reload is
-triggered, Vault will kill `my-db-plugin-v1`’s process and start a `my-db-plugin-v2`
-process.
+Until step 4, the mount will still use version 1 of `my-db-plugin`, and when
+the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
+new plugin process for `my-db-plugin` version 2.
 
 -> **Important:** Plugin reload of a new plugin binary must be
 performed on each Vault instance. Performing a plugin upgrade on a single
