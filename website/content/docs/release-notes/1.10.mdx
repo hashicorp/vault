@@ -53,9 +53,7 @@ We have introduced three new resources to enable configuration of the [KMIP secr
 
 We now support a more streamlined method for managing [KV v2 secrets](/api-docs/secret/kv/kv-v2) to enable customers to better maintain least privilege security in automated environments. This feature allows performing partial updates to KV v2 secrets without needing the ability to read the full KV secret's key/value pairs.
 
-### Advanced I/O Handling for Tranform FPE
-
-Currently, you can use Transform to securely encrypt important data while preserving its format using a template. However, the current option exposes limitations by expecting the input to always be the same without consideration for requirements, such as formatting, prefixes, etc. We have now added two new fields `encode_format` and `decode_format` to the Create template page on the UI under Advanced templating. With the additions of these two fields, more granular control can be achieved such as encoding only a portion of the data, regardless of input.
+The work done above to support HSM-backed PKI operations inspired us to consider what other key possession paradigms we could support. This led us to extend the implementation to support Cloud Key Management Systems in addition to HSMs. In Vault 1.10, users will be able to generate new PKI pairs and perform sign/verify certificate workflows, all with those keys never leaving the cloud KMS itself. Vault 1.10 sees support for AWS Key Management Service and Azure Key Vault Key Management Service.
 
 ### DB2 Dynamic Secrets support
 
@@ -67,11 +65,11 @@ Proper key management includes occasionally rotating encryption keys to reduce t
 
 ### PKI HSM Forwarding
 
-To address security and compliance needs, customers may require that keys be either created or stored within hardware security models (HSMs). This may introduce difficulties in managing Vault. To address this challenge, we now support offloading selected PKI operations to HSMs by allowing customers to generate new PKI key pairs and certificates, as well as verify and sign some certificate workflows, all within the external HSMs.
+To address security and compliance needs, customers may require that keys be either created or stored within Hardware Security Models (HSMs). Vault 1.10 introduces an accommodation for this requirement with regards to the PKI Secrets Engine. We now support offloading selected PKI operations to HSMs, in particular allowing customers to both generate new PKI key pairs and sign/verify some certificate workflows. All of these operations are conducted in a way that never allows the private key material to leave the secure confines of the HSM itself.
 
-### AWS KMS Forwarding
+### AWS and AKV KMS Forwarding
 
-To address security and compliance needs, customers may require that their PKI root be established in an external KMS. This may introduce difficulties in managing Vault. To address this challenge, we now support offloading selected PKI operations to AWK Key Management System (KMS) by allowing customers to generate new PKI key pairs and certifications, as well as verify and sign some certificate workflows, all within the external HSMs.
+The work done above to support HSM-backed PKI operations inspired us to consider what other key possession paradigms we could support. This led us to extend the implementation to support Cloud Key Management Systems in addition to HSMs. In Vault 1.10, users may generate new PKI pairs and perform sign/verify certificate workflows, all with those keys never leaving the cloud KMS itself. Vault 1.10 provides support for AWS Key Management Service and Azure Key Vault Key Management Service.
 
 ### Server Side Consisten Tokens
 
@@ -109,7 +107,7 @@ We have made improvements to the `sys/remount` API endpoint to simplify the comp
 
 ### Scaling External Database plugins
 
-Database plugins can now implement [plugin multiplexing](/docs/internals/plugins#plugin-development) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. We will extend this functionality to Vault built-in database in subsequent releases.
+Database plugins can now implement [plugin multiplexing](/docs/internals/plugins#plugin-development) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. We will extend this functionality to additional database plugins in subsequent releases.
 
 Any external database plugins that want to adopt multiplexing support will have to update their main.go call from [dbplugin.Serve()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L13) to [dbplugin.ServeMultiplex()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L42). Multiplexable database plugins are compatible with older versions of Vault down to Vault 1.6. Refer to this [Oracle Database PR](https://github.com/hashicorp/vault-plugin-database-oracle/pull/74) as an example of the upgrade process.
 
@@ -125,6 +123,10 @@ Consul has supported [namespace](https://www.consul.io/docs/enterprise/namespace
 ### Using sessionStorage instead of localStorage for the Vault UI
 
 Prior to Vault 1.10, the Vault UI used localStorage to store authentication information. The data in localStorage was persisted in browsers and removed only on demand. Now, we have switched the Vault UI to use sessionStorage instead, which ensures that the authentication information is stored in the current browser tab alone, thereby improving security.
+
+### Advanced I/O Handling for Transform FPE
+
+The Transform Secrets Engine allows users to securely encrypt data while providing control over the output format. In Vault 1.9, we introduced [additional format fields](docs/release-notes/1.9.0#advanced-i-o-handling-for-tranform-fpe-adp-transform) on the templates used for this workflow. In Vault 1.10, we have now added those two new fields, `encode_format` and `decode_format`, to the Create Template page on the UI under Advanced Templating.
 
 ## Breaking changes
 
