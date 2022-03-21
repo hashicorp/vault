@@ -20,10 +20,23 @@ Consul), Vault will automatically attempt to determine the `api_addr` as well.
 Detailed information regarding the plugin system can be found in the
 [internals documentation](/docs/plugins).
 
+## Registering External Plugins
+
+Before an external plugin can be mounted, it needs to be
+[registered](/docs/plugins/plugin-architecture#plugin-registration) in the
+plugin catalog to ensure the plugin invoked by Vault is authentic and maintains
+integrity:
+
+```shell-session
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+    secret \                  # type
+    my-secrets
+
+Success! Registered plugin: myplugin-database-plugin
+```
+
 ## Enabling/Disabling External Plugins
 
-Before an external plugin can be mounted, it needs to be registered via the
-[plugin catalog](/docs/plugins/plugin-architecture#plugin-catalog).
 After the plugin is registered, it can be mounted by specifying the registered
 plugin name:
 
