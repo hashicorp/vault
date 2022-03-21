@@ -140,6 +140,10 @@ Since service tokens are always created on the leader, as long as the leader is 
 
 We will have a fix for this issue in Vault 1.10.1. Until this issue is fixed, you may be at risk of having performance standbys unable to service requests until all nodes are upgraded. We recommended that you plan for a maintenance window to upgrade.
 
+### Limited policy shows unhelpful message in UI after mounting a secret engine
+
+When a user has a policy that allows creating a secret engine but not reading it, after successful creation, the user sees a message `n is undefined` instead of a permissions error. We will have a fix for this issue in an upcoming minor release.
+
 ## Feature Deprecations and EOL
 
 Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
