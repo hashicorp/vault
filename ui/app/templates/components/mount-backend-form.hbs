@@ -21,7 +21,7 @@
 <form {{action (perform this.mountBackend) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="enable" @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}} />
-    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} />
+    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
     {{#if this.showEnable}}
       <FormFieldGroups
         @model={{this.mountModel}}
