@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"fmt"
 	"time"
 
 	"golang.org/x/crypto/ed25519"
@@ -53,7 +54,7 @@ func (b *backend) getGenerationParams(ctx context.Context,
 			return
 		}
 		// Determine key type and key bits from the managed public key
-		withManagedPKIKey(ctx, b, keyId, mountPoint, func(ctx context.Context, key logical.ManagedSigningKey) error {
+		err = withManagedPKIKey(ctx, b, keyId, mountPoint, func(ctx context.Context, key logical.ManagedSigningKey) error {
 			pubKey, err := key.GetPublicKey(ctx)
 			if err != nil {
 				return err
@@ -66,9 +67,15 @@ func (b *backend) getGenerationParams(ctx context.Context,
 				keyType = "ec"
 			case *ed25519.PublicKey:
 				keyType = "ed25519"
+			default:
+				return fmt.Errorf("unsupported public key: %#v", pubKey)
 			}
 			return nil
 		})
+		if err != nil {
+			errorResp = logical.ErrorResponse("failed to lookup public key from managed key: %s", err.Error())
+			return
+		}
 	}
 
 	role = &roleEntry{
