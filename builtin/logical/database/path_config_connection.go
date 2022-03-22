@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/fatih/structs"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
+
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -195,13 +195,10 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			return nil, err
 		}
 
-		// Mask the password if it is in the url
+		// Ensure that we only ever include a redacted valid URL in the response.
 		if connURLRaw, ok := config.ConnectionDetails["connection_url"]; ok {
-			connURL := connURLRaw.(string)
-			if conn, err := url.Parse(connURL); err == nil {
-				if password, ok := conn.User.Password(); ok {
-					config.ConnectionDetails["connection_url"] = strings.Replace(connURL, password, "*****", -1)
-				}
+			if p, err := url.Parse(connURLRaw.(string)); err == nil {
+				config.ConnectionDetails["connection_url"] = p.Redacted()
 			}
 		}
 

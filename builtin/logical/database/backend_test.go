@@ -3,7 +3,9 @@ package database
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
@@ -12,6 +14,9 @@ import (
 
 	"github.com/go-test/deep"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	"github.com/lib/pq"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -25,8 +30,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/lib/pq"
-	"github.com/mitchellh/mapstructure"
 )
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
@@ -1319,6 +1322,116 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+}
+
+func TestBackend_ConnectionURL_redacted(t *testing.T) {
+	cluster, sys := getCluster(t)
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "basic",
+			password: "secret",
+		},
+		{
+			name:     "encoded",
+			password: "yourStrong(!)Password",
+		},
+	}
+
+	respCheck := func(req *logical.Request) *logical.Response {
+		t.Helper()
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp == nil {
+			t.Fatalf("expected a response, resp: %#v", resp)
+		}
+
+		if resp.Error() != nil {
+			t.Fatalf("unexpected error in response, err: %#v", resp.Error())
+		}
+
+		return resp
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cleanup, u := postgreshelper.PrepareTestContainerWithPassword(t, "13.4-buster", tt.password)
+			t.Cleanup(cleanup)
+
+			p, err := url.Parse(u)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			actualPassword, _ := p.User.Password()
+			if tt.password != actualPassword {
+				t.Fatalf("expected computed URL password %#v, actual %#v", tt.password, actualPassword)
+			}
+
+			// Configure a connection
+			data := map[string]interface{}{
+				"connection_url": u,
+				"plugin_name":    "postgresql-database-plugin",
+				"allowed_roles":  []string{"plugin-role-test"},
+			}
+			req := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("config/%s", tt.name),
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+			respCheck(req)
+
+			// read config
+			readReq := &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      req.Path,
+				Storage:   config.StorageView,
+			}
+			resp := respCheck(readReq)
+
+			var connDetails map[string]interface{}
+			if v, ok := resp.Data["connection_details"]; ok {
+				connDetails = v.(map[string]interface{})
+			}
+
+			if connDetails == nil {
+				t.Fatalf("response data missing connection_details, resp: %#v", resp)
+			}
+
+			actual := connDetails["connection_url"].(string)
+			expected := p.Redacted()
+			if expected != actual {
+				t.Fatalf("expected redacted URL %q, actual %q", expected, actual)
+			}
+
+			if tt.password != "" {
+				// extra test to ensure that URL.Redacted() is working as expected.
+				p, err = url.Parse(actual)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if pp, _ := p.User.Password(); pp == tt.password {
+					t.Fatalf("password was not redacted by URL.Redacted()")
+				}
+			}
+		})
 	}
 }
 
