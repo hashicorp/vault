@@ -58,12 +58,13 @@ author's part.
 
 Vault creates a mutually authenticated TLS connection for communication with
 the plugin's RPC server. Database secrets engines make use of the AutoMTLS
-feature of [go-plugin](github.com/hashicorp/go-plugin) which will automatically
-negotiate mTLS for transport authentication. For all other plugins, Vault
-passes a [wrapping token](/docs/concepts/response-wrapping) to the plugin
-process' environment. This token is single use and has a short TTL. Once
-unwrapped, it provides the plugin with a uniquely generated TLS certificate and
-private key for it to use to talk to the original Vault process.
+feature of [go-plugin](https://www.github.com/hashicorp/go-plugin) which will
+automatically negotiate mTLS for transport authentication. For all other
+plugins, Vault passes a [wrapping token](/docs/concepts/response-wrapping) to
+the plugin process' environment. This token is single use and has a short TTL.
+Once unwrapped, it provides the plugin with a uniquely generated TLS
+certificate and private key for it to use to talk to the original Vault
+process.
 
 The [`api_addr`](/docs/configuration#api_addr) must be set in order for the
 plugin process to establish communication with the Vault server during mount
