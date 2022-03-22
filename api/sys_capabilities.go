@@ -9,7 +9,7 @@ import (
 )
 
 func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
-	return c.Capabilities(c.c.Token(), path)
+	return c.CapabilitiesSelfWithContext(context.Background(), path)
 }
 
 func (c *Sys) CapabilitiesSelfWithContext(ctx context.Context, path string) ([]string, error) {
