@@ -1,9 +1,6 @@
 package api
 
-import (
-	"context"
-	"net/http"
-)
+import "context"
 
 func (c *Sys) InitStatus() (bool, error) {
 	return c.InitStatusWithContext(context.Background())

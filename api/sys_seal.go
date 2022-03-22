@@ -1,9 +1,6 @@
 package api
 
-import (
-	"context"
-	"net/http"
-)
+import "context"
 
 func (c *Sys) SealStatus() (*SealStatusResponse, error) {
 	return c.SealStatusWithContext(context.Background())

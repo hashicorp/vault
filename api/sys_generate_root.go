@@ -1,9 +1,6 @@
 package api
 
-import (
-	"context"
-	"net/http"
-)
+import "context"
 
 func (c *Sys) GenerateRootStatus() (*GenerateRootStatusResponse, error) {
 	return c.GenerateRootStatusWithContext(context.Background())

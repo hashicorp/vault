@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"net/http"
 )
 
 // TokenAuth is used to perform token backend operations on Vault
