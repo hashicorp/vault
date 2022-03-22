@@ -36,6 +36,6 @@
 }
 .box.has-container {
   box-shadow: 0 4px 4px rgba($black, 0.25);
-  border: 1px solid #bac1cc;
+  border: 1px solid $ui-gray-300;
   padding: $spacing-l;
 }

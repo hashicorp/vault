@@ -1,6 +1,10 @@
 @use 'tokens';
 // Colors that will eventually be in Structure package
 
+// Design System Colors: https://design-system-components-hashicorp.vercel.app/foundations/tokens
+$token-black: var(--token-color-vault-brand-alt); // black #000000
+$token-white: var(--token-color-palette-neutral-0); // white #fffff
+
 // Vault Gray
 $vault-gray-010: #fdfdfe;
 $vault-gray-050: #f7fafc;

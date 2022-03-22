@@ -1,5 +1,3 @@
-$dark-gray: #535f73;
-
 .calendar-content {
   display: flex;
   width: 234px;
@@ -72,14 +70,14 @@ $dark-gray: #535f73;
       border: 1px solid $ui-gray-900;
     }
     &:hover {
-      background-color: lighten($dark-gray, 30%);
+      background-color: $vault-gray-500;
       color: white;
       text-align: center;
       cursor: pointer;
     }
     &.is-readOnly {
       background-color: $ui-gray-100;
-      color: lighten($dark-gray, 30%);
+      color: $vault-gray-500;
       pointer-events: none;
     }
   }

@@ -96,9 +96,9 @@
   will-change: background-color;
   padding-right: $size-2;
   position: relative;
-  background-color: rgba(#000, 0);
+  background-color: rgba($token-black, 0);
   &:hover {
-    background-color: rgba(#000, 0.5);
+    background-color: rgba($token-black, 0.5);
   }
 }
 
