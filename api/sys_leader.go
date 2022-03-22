@@ -13,7 +13,7 @@ func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, "/v1/sys/leader")
+	r := c.c.NewRequest("GET", "/v1/sys/leader")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

@@ -53,7 +53,7 @@ func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, er
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/policies/acl/%s", name))
+	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
@@ -115,7 +115,7 @@ func (c *Sys) DeletePolicyWithContext(ctx context.Context, name string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/policies/acl/%s", name))
+	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {

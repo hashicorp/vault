@@ -89,7 +89,7 @@ func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke-prefix/"+id)
+	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-prefix/"+id)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -106,7 +106,7 @@ func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke-force/"+id)
+	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-force/"+id)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {

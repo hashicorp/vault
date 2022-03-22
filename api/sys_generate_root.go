@@ -30,7 +30,7 @@ func (c *Sys) generateRootStatusCommonWithContext(ctx context.Context, path stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, path)
+	r := c.c.NewRequest("GET", path)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -120,7 +120,7 @@ func (c *Sys) generateRootCancelCommonWithContext(ctx context.Context, path stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodDelete, path)
+	r := c.c.NewRequest("DELETE", path)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
