@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -50,7 +51,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 		t.Fatal("did not find github accessor")
 	}
 
-	resp, err := client.Logical().Write("identity/entity", nil)
+	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", nil)
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -61,7 +62,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	entityID := resp.Data["id"].(string)
 
 	// Create an alias
-	resp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
 		"name":           "testaliasname",
 		"mount_accessor": githubAccessor,
 	})
@@ -71,7 +72,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	testAliasCanonicalID := resp.Data["canonical_id"].(string)
 	testAliasAliasID := resp.Data["id"].(string)
 
-	resp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
 		"name":           "entityalias",
 		"mount_accessor": githubAccessor,
 		"canonical_id":   entityID,
@@ -81,7 +82,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	}
 	entityAliasAliasID := resp.Data["id"].(string)
 
-	resp, err = client.Logical().List("identity/entity-alias/id")
+	resp, err = client.Logical().ListWithContext(context.Background(), "identity/entity-alias/id")
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -118,7 +119,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	}
 
 	// Now do the same with entity info
-	resp, err = client.Logical().List("identity/entity/id")
+	resp, err = client.Logical().ListWithContext(context.Background(), "identity/entity/id")
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -193,13 +194,13 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/userpass/users/bsmith", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/bsmith", map[string]interface{}{
 		"password": "training",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "training",
 	})
 	if err != nil {
@@ -223,7 +224,7 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 	}
 
 	// Now create a new unrelated entity and alias
-	entityResp, err := client.Logical().Write("identity/entity", map[string]interface{}{
+	entityResp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
 		"name": "bob-smith",
 	})
 	if err != nil {
@@ -233,7 +234,7 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 		t.Fatalf("expected a non-nil response")
 	}
 
-	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+	aliasResp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
 		"name":           "bob",
 		"mount_accessor": mountAccessor,
 	})
@@ -243,7 +244,7 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 	aliasID2 := aliasResp.Data["id"].(string)
 
 	// Rename this new alias to have the same name as the one implicitly created by our login as bsmith
-	_, err = client.Logical().Write("identity/entity-alias/id/"+aliasID2, map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias/id/"+aliasID2, map[string]interface{}{
 		"name": "bsmith",
 	})
 	if err == nil {

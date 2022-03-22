@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -38,7 +39,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	}
 
 	// Tune the mount
-	err = client.Sys().TuneMount("auth/approle", api.MountConfigInput{
+	err = client.Sys().TuneMountWithContext(context.Background(), "auth/approle", api.MountConfigInput{
 		DefaultLeaseTTL: "5m",
 		MaxLeaseTTL:     "5m",
 	})
@@ -47,7 +48,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	}
 
 	// Create role
-	resp, err := client.Logical().Write("auth/approle/role/role-period", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/role-period", map[string]interface{}{
 		"period": "5m",
 	})
 	if err != nil {
@@ -55,7 +56,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	}
 
 	// Get role_id
-	resp, err = client.Logical().Read("auth/approle/role/role-period/role-id")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/role-period/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	roleID := resp.Data["role_id"]
 
 	// Get secret_id
-	resp, err = client.Logical().Write("auth/approle/role/role-period/secret-id", map[string]interface{}{})
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/role-period/secret-id", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +76,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	secretID := resp.Data["secret_id"]
 
 	// Login
-	resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/login", map[string]interface{}{
 		"role_id":   roleID,
 		"secret_id": secretID,
 	})
@@ -112,7 +113,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	}
 
 	client.SetToken(cluster.RootToken)
-	resp, err = client.Logical().Write("identity/entity/id/"+entityID, map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/entity/id/"+entityID, map[string]interface{}{
 		"disabled": true,
 	})
 	if err != nil {
@@ -131,7 +132,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 
 	// Attempting to get a new token should also now fail
 	client.SetToken("")
-	resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/login", map[string]interface{}{
 		"role_id":   roleID,
 		"secret_id": secretID,
 	})
@@ -143,7 +144,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	}
 
 	client.SetToken(cluster.RootToken)
-	resp, err = client.Logical().Write("identity/entity/id/"+entityID, map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/entity/id/"+entityID, map[string]interface{}{
 		"disabled": false,
 	})
 	if err != nil {
@@ -158,7 +159,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 
 	// Getting a new token should now work again too
 	client.SetToken("")
-	resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/login", map[string]interface{}{
 		"role_id":   roleID,
 		"secret_id": secretID,
 	})
@@ -202,7 +203,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	}
 
 	// Tune the mount
-	err = client.Sys().TuneMount("auth/approle", api.MountConfigInput{
+	err = client.Sys().TuneMountWithContext(context.Background(), "auth/approle", api.MountConfigInput{
 		DefaultLeaseTTL: "5m",
 		MaxLeaseTTL:     "5m",
 	})
@@ -211,7 +212,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	}
 
 	// Create role
-	resp, err := client.Logical().Write("auth/approle/role/role-period", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/role-period", map[string]interface{}{
 		"period": "5m",
 	})
 	if err != nil {
@@ -219,7 +220,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	}
 
 	// Get role_id
-	resp, err = client.Logical().Read("auth/approle/role/role-period/role-id")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/role-period/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +230,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	roleID := resp.Data["role_id"]
 
 	// Get secret_id
-	resp, err = client.Logical().Write("auth/approle/role/role-period/secret-id", map[string]interface{}{})
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/role-period/secret-id", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +240,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	secretID := resp.Data["secret_id"]
 
 	// Login
-	resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/login", map[string]interface{}{
 		"role_id":   roleID,
 		"secret_id": secretID,
 	})
@@ -300,7 +301,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 
 	// Write more policies into the entity
 	client.SetToken(cluster.RootToken)
-	resp, err = client.Logical().Write("identity/entity/id/"+entityID, map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/entity/id/"+entityID, map[string]interface{}{
 		"policies": []string{"foo", "bar"},
 	})
 	if err != nil {
@@ -309,7 +310,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 
 	// Reauthenticate to get a token with updated policies
 	client.SetToken("")
-	resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/login", map[string]interface{}{
 		"role_id":   roleID,
 		"secret_id": secretID,
 	})

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -103,7 +104,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+		resp, err := client.Sys().ListPluginsWithContext(context.Background(), &api.ListPluginsInput{
 			Type: consts.PluginTypeCredential,
 		})
 		if err != nil {

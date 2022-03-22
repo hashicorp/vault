@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -529,7 +530,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().Write("auth/cert/login", nil)
+		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/cert/login", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -594,7 +595,7 @@ func TestHTTP_Forwarding_LocalOnly(t *testing.T) {
 	vault.TestWaitActive(t, cores[0].Core)
 
 	testLocalOnly := func(client *api.Client) {
-		_, err := client.Logical().Read("sys/config/state/sanitized")
+		_, err := client.Logical().ReadWithContext(context.Background(), "sys/config/state/sanitized")
 		if err == nil {
 			t.Fatal("expected error")
 		}

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestAuthTokenCreate(t *testing.T) {
 	}
 	client.SetToken(token)
 
-	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+	secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 		Lease: "1h",
 	})
 	if err != nil {
@@ -37,7 +38,7 @@ func TestAuthTokenCreate(t *testing.T) {
 		Renewable: new(bool),
 	}
 
-	secret, err = client.Auth().Token().Create(renewCreateRequest)
+	secret, err = client.Auth().Token().CreateWithContext(context.Background(), renewCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +50,7 @@ func TestAuthTokenCreate(t *testing.T) {
 	}
 
 	*renewCreateRequest.Renewable = true
-	secret, err = client.Auth().Token().Create(renewCreateRequest)
+	secret, err = client.Auth().Token().CreateWithContext(context.Background(), renewCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func TestAuthTokenCreate(t *testing.T) {
 		ExplicitMaxTTL: "1800s",
 	}
 
-	secret, err = client.Auth().Token().Create(explicitMaxCreateRequest)
+	secret, err = client.Auth().Token().CreateWithContext(context.Background(), explicitMaxCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,7 @@ func TestAuthTokenCreate(t *testing.T) {
 	}
 
 	explicitMaxCreateRequest.ExplicitMaxTTL = "2h"
-	secret, err = client.Auth().Token().Create(explicitMaxCreateRequest)
+	secret, err = client.Auth().Token().CreateWithContext(context.Background(), explicitMaxCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +99,7 @@ func TestAuthTokenLookup(t *testing.T) {
 	client.SetToken(token)
 
 	// Create a new token ...
-	secret2, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+	secret2, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 		Lease: "1h",
 	})
 	if err != nil {
@@ -106,7 +107,7 @@ func TestAuthTokenLookup(t *testing.T) {
 	}
 
 	// lookup details of this token
-	secret, err := client.Auth().Token().Lookup(secret2.Auth.ClientToken)
+	secret, err := client.Auth().Token().LookupWithContext(context.Background(), secret2.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("unable to lookup details of token, err = %v", err)
 	}
@@ -159,7 +160,7 @@ func TestAuthTokenRenew(t *testing.T) {
 	client.SetToken(token)
 
 	// The default root token is not renewable, so this should not work
-	_, err = client.Auth().Token().Renew(token, 0)
+	_, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
 	if err == nil {
 		t.Fatal("should not be allowed to renew root token")
 	}
@@ -168,7 +169,7 @@ func TestAuthTokenRenew(t *testing.T) {
 	}
 
 	// Create a new token that should be renewable
-	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+	secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 		Lease: "1h",
 	})
 	if err != nil {
@@ -177,7 +178,7 @@ func TestAuthTokenRenew(t *testing.T) {
 	client.SetToken(secret.Auth.ClientToken)
 
 	// Now attempt a renew with the new token
-	secret, err = client.Auth().Token().Renew(secret.Auth.ClientToken, 3600)
+	secret, err = client.Auth().Token().RenewWithContext(context.Background(), secret.Auth.ClientToken, 3600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +192,7 @@ func TestAuthTokenRenew(t *testing.T) {
 	}
 
 	// Do the same thing with the self variant
-	secret, err = client.Auth().Token().RenewSelf(3600)
+	secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 3600)
 	if err != nil {
 		t.Fatal(err)
 	}

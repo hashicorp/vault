@@ -62,7 +62,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -73,7 +73,7 @@ func TestPKI_RequireCN(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
 	if err != nil {
@@ -84,7 +84,7 @@ func TestPKI_RequireCN(t *testing.T) {
 	}
 
 	// Create a role which does require CN (default)
-	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/example", map[string]interface{}{
 		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -96,7 +96,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/example", map[string]interface{}{
 		"common_name": "foobar.com",
 	})
 	if err != nil {
@@ -105,13 +105,13 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with out supplying the
 	// common name. It should error out.
-	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/example", map[string]interface{}{})
 	if err == nil {
 		t.Fatalf("expected an error due to missing common_name")
 	}
 
 	// Modify the role to make the common name optional
-	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/example", map[string]interface{}{
 		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -124,7 +124,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to false and without supplying the
 	// common name. It should succeed.
-	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/example", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to false and with a common name. It
 	// should succeed.
-	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/example", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -170,7 +170,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 		"not_after":   "9999-12-31T23:59:59Z",
 	})
@@ -197,7 +197,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 	}
 
 	// Create a role which does require CN (default)
-	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/example", map[string]interface{}{
 		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -209,7 +209,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/example", map[string]interface{}{
 		"common_name": "foobar.com",
 	})
 	if err != nil {
@@ -245,7 +245,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -256,7 +256,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 		"not_after":   "9999-12-31T23:59:59Z",
 		"ttl":         "25h",
@@ -265,7 +265,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 		"not_after":   "9999-12-31T23:59:59",
 	})
@@ -2156,7 +2156,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -2167,7 +2167,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
 	if err != nil {
@@ -2176,7 +2176,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	if resp == nil {
 		t.Fatal("expected ca info")
 	}
-	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "pki/cert/ca_chain")
 	if err != nil {
 		t.Fatalf("error reading ca_chain: %v", err)
 	}
@@ -2184,7 +2184,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	r1Data := resp.Data
 
 	// Try again, make sure it's a 204 and same CA
-	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
 	if err != nil {
@@ -2196,7 +2196,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	if resp.Data != nil || len(resp.Warnings) == 0 {
 		t.Fatalf("bad response: %#v", *resp)
 	}
-	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "pki/cert/ca_chain")
 	if err != nil {
 		t.Fatalf("error reading ca_chain: %v", err)
 	}
@@ -2205,7 +2205,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 		t.Fatal("got different ca certs")
 	}
 
-	resp, err = client.Logical().Delete("pki/root")
+	resp, err = client.Logical().DeleteWithContext(context.Background(), "pki/root")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2213,7 +2213,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 		t.Fatal("expected nil response")
 	}
 	// Make sure it behaves the same
-	resp, err = client.Logical().Delete("pki/root")
+	resp, err = client.Logical().DeleteWithContext(context.Background(), "pki/root")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2221,12 +2221,12 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 		t.Fatal("expected nil response")
 	}
 
-	_, err = client.Logical().Read("pki/cert/ca_chain")
+	_, err = client.Logical().ReadWithContext(context.Background(), "pki/cert/ca_chain")
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
 	if err != nil {
@@ -2236,7 +2236,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 		t.Fatal("expected ca info")
 	}
 
-	_, err = client.Logical().Read("pki/cert/ca_chain")
+	_, err = client.Logical().ReadWithContext(context.Background(), "pki/cert/ca_chain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2256,7 +2256,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "root", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -2266,7 +2266,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = client.Sys().Mount("int", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "int", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "4h",
@@ -2278,7 +2278,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	}
 
 	// Direct issuing from root
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2286,7 +2286,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
 	})
@@ -2294,7 +2294,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Write("int/intermediate/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "int/intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
 	if err != nil {
@@ -2303,7 +2303,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 	csr := resp.Data["csr"]
 
-	_, err = client.Logical().Write("root/sign/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/sign/test", map[string]interface{}{
 		"common_name": "myint.com",
 		"csr":         csr,
 		"ttl":         "60h",
@@ -2312,7 +2312,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	_, err = client.Logical().Write("root/sign-verbatim/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/sign-verbatim/test", map[string]interface{}{
 		"common_name": "myint.com",
 		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
@@ -2322,7 +2322,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/root/sign-intermediate", map[string]interface{}{
 		"common_name": "myint.com",
 		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
@@ -2650,7 +2650,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "root", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -2666,7 +2666,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	var block *pem.Block
 	var cert *x509.Certificate
 
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2674,7 +2674,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/roles/test", map[string]interface{}{
 		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -2688,7 +2688,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	// Get a baseline before adding OID SANs. In the next sections we'll verify
 	// that the SANs are all added even as the OID SAN inclusion forces other
 	// adding logic (custom rather than built-in Golang logic)
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foobar.com,foo.foobar.com,bar.foobar.com",
@@ -2714,7 +2714,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// First test some bad stuff that shouldn't work
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2726,7 +2726,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2738,7 +2738,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2750,7 +2750,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2762,7 +2762,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2775,7 +2775,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// Valid for first possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2805,7 +2805,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// Valid for second possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2841,7 +2841,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		fmt.Sprintf("%s;%s:%s", oid1, type1, val1),
 		fmt.Sprintf("%s;%s:%s", oid2, type2, val2),
 	}
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2893,7 +2893,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "root", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -2909,7 +2909,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	var block *pem.Block
 	var cert *x509.Certificate
 
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2918,7 +2918,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// First test that Serial Numbers are not allowed
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/roles/test", map[string]interface{}{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 	})
@@ -2926,7 +2926,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar",
 		"ttl":         "1h",
 	})
@@ -2934,7 +2934,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name":   "foobar",
 		"ttl":           "1h",
 		"serial_number": "foobar",
@@ -2944,7 +2944,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Update the role to allow serial numbers
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/roles/test", map[string]interface{}{
 		"allow_any_name":         true,
 		"enforce_hostnames":      false,
 		"allowed_serial_numbers": "f00*,b4r*",
@@ -2953,7 +2953,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar",
 		"ttl":         "1h",
 		// Not a valid serial number
@@ -2964,7 +2964,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Valid for first possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name":   "foobar",
 		"serial_number": "f00bar",
 	})
@@ -2985,7 +2985,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Valid for second possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name":   "foobar",
 		"serial_number": "b4rf00",
 	})
@@ -3020,7 +3020,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "root", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3031,7 +3031,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3039,7 +3039,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/roles/test", map[string]interface{}{
 		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -3051,7 +3051,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// First test some bad stuff that shouldn't work
-	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3063,7 +3063,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test valid single entry
-	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3075,7 +3075,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test globed entry
-	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3087,7 +3087,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test multiple entries
-	resp, err := client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3136,7 +3136,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
-	err := client.Sys().PutPolicy("test", `
+	err := client.Sys().PutPolicyWithContext(context.Background(), "test", `
    path "pki/*" {
      capabilities = ["update"]
    }`)
@@ -3150,7 +3150,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Configure test role for userpass.
-	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/userpassname", map[string]interface{}{
 		"password": "test",
 		"policies": "test",
 	}); err != nil {
@@ -3158,7 +3158,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Login userpass for test role and keep client token.
-	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
+	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/userpassname", map[string]interface{}{
 		"password": "test",
 	})
 	if err != nil || secret == nil {
@@ -3174,7 +3174,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Mount PKI.
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3186,7 +3186,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Generate internal CA.
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3195,7 +3195,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Write role PKI.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/test", map[string]interface{}{
 		"allowed_uri_sans": []string{
 			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}",
 			"spiffe://domain/{{identity.entity.aliases." + userpassAccessor + ".name}}/*", "spiffe://domain/foo",
@@ -3209,27 +3209,27 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 
 	// Issue certificate with identity templating
 	client.SetToken(userpassToken)
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname, spiffe://domain/foo"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname, spiffe://domain/foo"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate with identity templating and glob
 	client.SetToken(userpassToken)
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname/bar"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/userpassname/bar"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate with non-matching identity template parameter
 	client.SetToken(userpassToken)
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/unknownuser"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/unknownuser"})
 	if err == nil {
 		t.Fatal(err)
 	}
 
 	// Set allowed_uri_sans_template to false.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/test", map[string]interface{}{
 		"allowed_uri_sans_template": false,
 	})
 	if err != nil {
@@ -3237,7 +3237,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	}
 
 	// Issue certificate with userpassToken.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/users/userpassname"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"uri_sans": "spiffe://domain/users/userpassname"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3260,7 +3260,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
-	err := client.Sys().PutPolicy("test", `
+	err := client.Sys().PutPolicyWithContext(context.Background(), "test", `
    path "pki/*" {  
      capabilities = ["update"]
    }`)
@@ -3274,7 +3274,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Configure test role for userpass.
-	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/userpassname", map[string]interface{}{
 		"password": "test",
 		"policies": "test",
 	}); err != nil {
@@ -3295,7 +3295,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Mount PKI.
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3307,7 +3307,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Generate internal CA.
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3316,7 +3316,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Write role PKI.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/test", map[string]interface{}{
 		"allowed_domains": []string{
 			"foobar.com", "zipzap.com", "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 			"foo.{{identity.entity.aliases." + userpassAccessor + ".name}}.example.com",
@@ -3336,31 +3336,31 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	if err != nil || secret == nil {
 		t.Fatal(err)
 	}
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate for foobar.com to verify allowed_domain_templae doesnt break plain domains.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foobar.com"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"common_name": "foobar.com"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Issue certificate for unknown userpassname.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "unknownuserpassname"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"common_name": "unknownuserpassname"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	// Issue certificate for foo.userpassname.domain.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foo.userpassname.example.com"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"common_name": "foo.userpassname.example.com"})
 	if err != nil {
 		t.Fatal("expected error")
 	}
 
 	// Set allowed_domains_template to false.
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/test", map[string]interface{}{
 		"allowed_domains_template": false,
 	})
 	if err != nil {
@@ -3368,7 +3368,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Issue certificate with userpassToken.
-	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3510,7 +3510,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	var err error
 
 	// Mount /pki as a root CA
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3523,7 +3523,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Set the cluster's certificate as the root CA in /pki
 	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
-	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
 	if err != nil {
@@ -3531,7 +3531,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	}
 
 	// Mount /pki2 to operate as an intermediate CA
-	err = client.Sys().Mount("pki2", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki2", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3543,14 +3543,14 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	}
 
 	// Create a CSR for the intermediate CA
-	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
+	secret, err := client.Logical().WriteWithContext(context.Background(), "pki2/intermediate/generate/internal", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	intermediateCSR := secret.Data["csr"].(string)
 
 	// Sign the intermediate CSR using /pki
-	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+	secret, err = client.Logical().WriteWithContext(context.Background(), "pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
 		"csr":                   intermediateCSR,
 		"ttl":                   "10s",
@@ -3562,7 +3562,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	intermediateCASerialColon := strings.ReplaceAll(strings.ToLower(intermediateCertSerial), ":", "-")
 
 	// Get the intermediate cert after signing
-	secret, err = client.Logical().Read("pki/cert/" + intermediateCASerialColon)
+	secret, err = client.Logical().ReadWithContext(context.Background(), "pki/cert/"+intermediateCASerialColon)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3571,7 +3571,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	}
 
 	// Issue a revoke on on /pki
-	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/revoke", map[string]interface{}{
 		"serial_number": intermediateCertSerial,
 	})
 	if err != nil {
@@ -3583,7 +3583,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Issue a tidy on /pki
-	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/tidy", map[string]interface{}{
 		"tidy_cert_store":    true,
 		"tidy_revoked_certs": true,
 		"safety_buffer":      "1s",
@@ -3631,7 +3631,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	// Issue a tidy on /pki
-	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/tidy", map[string]interface{}{
 		"tidy_cert_store":    true,
 		"tidy_revoked_certs": true,
 		"safety_buffer":      "1s",
@@ -3645,7 +3645,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Issue a tidy-status on /pki
 	{
-		tidyStatus, err := client.Logical().Read("pki/tidy-status")
+		tidyStatus, err := client.Logical().ReadWithContext(context.Background(), "pki/tidy-status")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3770,7 +3770,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	var err error
 
 	// Generate a root CA at /pki-root
-	err = client.Sys().Mount("pki-root", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki-root", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3781,7 +3781,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Write("pki-root/root/generate/exported", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "pki-root/root/generate/exported", map[string]interface{}{
 		"common_name": "root myvault.com",
 	})
 	if err != nil {
@@ -3794,7 +3794,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	rootCert := rootData["certificate"].(string)
 
 	// Validate that root's /cert/ca-chain now contains the certificate.
-	resp, err = client.Logical().Read("pki-root/cert/ca_chain")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "pki-root/cert/ca_chain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3808,7 +3808,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	}
 
 	// Now generate an intermediate at /pki-intermediate, signed by the root.
-	err = client.Sys().Mount("pki-intermediate", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki-intermediate", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3819,7 +3819,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("pki-intermediate/intermediate/generate/exported", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki-intermediate/intermediate/generate/exported", map[string]interface{}{
 		"common_name": "intermediate myvault.com",
 	})
 	if err != nil {
@@ -3831,7 +3831,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	intermediateData := resp.Data
 	intermediateKey := intermediateData["private_key"].(string)
 
-	resp, err = client.Logical().Write("pki-root/root/sign-intermediate", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki-root/root/sign-intermediate", map[string]interface{}{
 		"csr":    intermediateData["csr"],
 		"format": "pem_bundle",
 	})
@@ -3844,7 +3844,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	intermediateSignedData := resp.Data
 	intermediateCert := intermediateSignedData["certificate"].(string)
 
-	resp, err = client.Logical().Write("pki-intermediate/intermediate/set-signed", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki-intermediate/intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -3853,7 +3853,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 
 	// Validate that intermediate's ca_chain field now includes the full
 	// chain.
-	resp, err = client.Logical().Read("pki-intermediate/cert/ca_chain")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "pki-intermediate/cert/ca_chain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3871,7 +3871,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 
 	// Finally, import this signing cert chain into a new mount to ensure
 	// "external" CAs behave as expected.
-	err = client.Sys().Mount("pki-external", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki-external", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -3882,7 +3882,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("pki-external/config/ca", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "pki-external/config/ca", map[string]interface{}{
 		"pem_bundle": intermediateKey + "\n" + intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -3890,7 +3890,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	}
 
 	// Validate the external chain information was loaded correctly.
-	resp, err = client.Logical().Read("pki-external/cert/ca_chain")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "pki-external/cert/ca_chain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3950,7 +3950,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, t
 				for _, AllowLocalhost := range test.AllowLocalhost.ToValues() {
 					for _, AllowWildcardCertificates := range test.AllowWildcardCertificates.ToValues() {
 						role := fmt.Sprintf("issuance-regression-%d-bare-%v-glob-%v-subdomains-%v-localhost-%v-wildcard-%v", index, AllowBareDomains, AllowGlobDomains, AllowSubdomains, AllowLocalhost, AllowWildcardCertificates)
-						resp, err := client.Logical().Write("pki/roles/"+role, map[string]interface{}{
+						resp, err := client.Logical().WriteWithContext(context.Background(), "pki/roles/"+role, map[string]interface{}{
 							"allowed_domains":             test.AllowedDomains,
 							"allow_bare_domains":          AllowBareDomains,
 							"allow_glob_domains":          AllowGlobDomains,
@@ -3967,7 +3967,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, t
 							t.Fatal(err)
 						}
 
-						resp, err = client.Logical().Write("pki/issue/"+role, map[string]interface{}{
+						resp, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/"+role, map[string]interface{}{
 							"common_name": test.CommonName,
 						})
 
@@ -4158,7 +4158,7 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 	var err error
 
 	// Generate a root CA at /pki to use for our tests
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "12h",
@@ -4169,7 +4169,7 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Write("pki/root/generate/exported", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "pki/root/generate/exported", map[string]interface{}{
 		"common_name": "myvault.com",
 		"ttl":         "128h",
 		"key_type":    "ec",

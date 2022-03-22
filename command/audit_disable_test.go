@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -63,7 +64,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			if err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+			if err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "file", &api.EnableAuditOptions{
 				Type: "file",
 				Options: map[string]string{
 					"file_path": "discard",
@@ -93,7 +94,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if err := client.Sys().EnableAuditWithOptions("integration_audit_disable", &api.EnableAuditOptions{
+		if err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "integration_audit_disable", &api.EnableAuditOptions{
 			Type: "file",
 			Options: map[string]string{
 				"file_path": "discard",

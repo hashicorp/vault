@@ -1,6 +1,7 @@
 package misc
 
 import (
+	"context"
 	"path"
 	"testing"
 
@@ -41,11 +42,11 @@ func TestRecovery(t *testing.T) {
 		client := cluster.Cores[0].Client
 		rootToken = client.Token()
 		fooVal := map[string]interface{}{"bar": 1.0}
-		_, err = client.Logical().Write("secret/foo", fooVal)
+		_, err = client.Logical().WriteWithContext(context.Background(), "secret/foo", fooVal)
 		if err != nil {
 			t.Fatal(err)
 		}
-		secret, err := client.Logical().List("secret/")
+		secret, err := client.Logical().ListWithContext(context.Background(), "secret/")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,7 +96,7 @@ func TestRecovery(t *testing.T) {
 		}
 		client.SetToken(recoveryToken)
 
-		secret, err := client.Logical().List(path.Join("sys/raw/logical", secretUUID))
+		secret, err := client.Logical().ListWithContext(context.Background(), path.Join("sys/raw/logical", secretUUID))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -103,7 +104,7 @@ func TestRecovery(t *testing.T) {
 			t.Fatalf("got=%v, want=%v, diff: %v", secret.Data, []string{"foo"}, diff)
 		}
 
-		_, err = client.Logical().Delete(path.Join("sys/raw/logical", secretUUID, "foo"))
+		_, err = client.Logical().DeleteWithContext(context.Background(), path.Join("sys/raw/logical", secretUUID, "foo"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +132,7 @@ func TestRecovery(t *testing.T) {
 
 		client := cluster.Cores[0].Client
 		client.SetToken(rootToken)
-		secret, err := client.Logical().List("secret/")
+		secret, err := client.Logical().ListWithContext(context.Background(), "secret/")
 		if err != nil {
 			t.Fatal(err)
 		}

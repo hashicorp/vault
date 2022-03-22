@@ -49,7 +49,7 @@ func TestMountTableMetrics(t *testing.T) {
 	}
 
 	// Mount new kv
-	if err = client.Sys().Mount("kv", &api.MountInput{
+	if err = client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
 		Type: "kv",
 		Options: map[string]string{
 			"version": "2",
