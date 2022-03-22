@@ -19,7 +19,7 @@ func (c *Sys) SealWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/seal")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/seal")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

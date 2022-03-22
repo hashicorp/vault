@@ -13,7 +13,7 @@ func (c *Sys) HAStatusWithContext(ctx context.Context) (*HAStatusResponse, error
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/ha-status")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/ha-status")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

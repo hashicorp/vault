@@ -59,7 +59,7 @@ func (c *Sys) ListAuditWithContext(ctx context.Context) (map[string]*Audit, erro
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/audit")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/audit")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -124,7 +124,7 @@ func (c *Sys) DisableAuditWithContext(ctx context.Context, path string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/audit/%s", path))
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/audit/%s", path))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 

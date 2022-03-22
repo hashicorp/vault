@@ -245,7 +245,7 @@ func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotStat
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/state")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
@@ -285,7 +285,7 @@ func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*Autop
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/configuration")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {

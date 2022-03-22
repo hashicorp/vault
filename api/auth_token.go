@@ -136,7 +136,7 @@ func (c *TokenAuth) LookupSelfWithContext(ctx context.Context) (*Secret, error) 
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
+	r := c.c.NewRequest(http.MethodGet, "/v1/auth/token/lookup-self")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

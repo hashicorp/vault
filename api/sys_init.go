@@ -10,7 +10,7 @@ func (c *Sys) InitStatusWithContext(ctx context.Context) (bool, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/init")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/init")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
