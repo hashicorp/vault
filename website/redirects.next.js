@@ -231,6 +231,16 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/internals/plugins',
+    destination: '/docs/plugin',
+    permanent: true,
+  },
+  {
+    source: '/docs/plugin-portal',
+    destination: '/docs/plugins/plugin-portal',
+    permanent: true,
+  },
+  {
     source: '/docs/secrets/generic',
     destination: '/docs/secrets/kv',
     permanent: true,
