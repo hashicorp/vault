@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"fmt"
 	"time"
 
 	"golang.org/x/crypto/ed25519"
@@ -66,6 +67,8 @@ func (b *backend) getGenerationParams(ctx context.Context,
 				keyType = "ec"
 			case *ed25519.PublicKey:
 				keyType = "ed25519"
+			default:
+				return fmt.Errorf("unsupported public key: %#v", pubKey)
 			}
 			return nil
 		})
