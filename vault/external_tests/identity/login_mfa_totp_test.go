@@ -75,7 +75,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		t.Fatalf("failed to configure userpass backend: %v", err)
 	}
 
-	auths, err := client.Sys().ListAuth()
+	auths, err := client.Sys().ListAuthWithContext(context.Background())
 	if err != nil {
 		t.Fatalf("bb")
 	}

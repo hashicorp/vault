@@ -166,7 +166,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 		t.Errorf("unseal metric or leader metric are missing")
 	}
 
-	err = client.Sys().StepDown()
+	err = client.Sys().StepDownWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

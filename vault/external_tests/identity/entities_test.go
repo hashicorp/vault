@@ -96,7 +96,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	roleToken := resp.Auth.ClientToken
 
 	client.SetToken(roleToken)
-	resp, err = client.Auth().Token().LookupSelf()
+	resp, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 
 	// This call should now fail
 	client.SetToken(roleToken)
-	resp, err = client.Auth().Token().LookupSelf()
+	resp, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 	if err == nil {
 		t.Fatalf("expected error, got %#v", *resp)
 	}
@@ -152,7 +152,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	}
 
 	client.SetToken(roleToken)
-	resp, err = client.Auth().Token().LookupSelf()
+	resp, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +268,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 
 	// Check policies
 	client.SetToken(resp.Auth.ClientToken)
-	resp, err = client.Auth().Token().LookupSelf()
+	resp, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	// Validate the policies on lookup again -- this ensures that the right
 	// policies were encoded on the token but all were looked up successfully
 	client.SetToken(resp.Auth.ClientToken)
-	resp, err = client.Auth().Token().LookupSelf()
+	resp, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

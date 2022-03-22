@@ -276,7 +276,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,7 +308,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -344,7 +344,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

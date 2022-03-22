@@ -264,7 +264,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 
 	// Empty the token in the client. Auto-auth token should be put to use.
 	testClient.SetToken("")
-	secret, err := testClient.Auth().Token().LookupSelf()
+	secret, err := testClient.Auth().Token().LookupSelfWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,7 +329,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 
 	// Empty the token in the client. Auto-auth token should be put to use.
 	testClient.SetToken(dummyToken)
-	_, err = testClient.Auth().Token().LookupSelf()
+	_, err = testClient.Auth().Token().LookupSelfWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -972,7 +972,7 @@ func TestCache_NonCacheable(t *testing.T) {
 	defer cleanup()
 
 	// Query mounts first
-	origMounts, err := testClient.Sys().ListMounts()
+	origMounts, err := testClient.Sys().ListMountsWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -988,7 +988,7 @@ func TestCache_NonCacheable(t *testing.T) {
 	}
 
 	// Query mounts again
-	newMounts, err := testClient.Sys().ListMounts()
+	newMounts, err := testClient.Sys().ListMountsWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

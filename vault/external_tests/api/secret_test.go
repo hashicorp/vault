@@ -260,7 +260,7 @@ func TestSecret_TokenID(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
+		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -528,7 +528,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		token, accessor := secret.Auth.ClientToken, secret.Auth.Accessor
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
+		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -776,7 +776,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
+		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1071,7 +1071,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
+		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1372,7 +1372,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
+		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1664,7 +1664,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
+		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1943,7 +1943,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
+		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

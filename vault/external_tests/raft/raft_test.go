@@ -688,7 +688,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 
 			if tCaseLocal.Rotate {
 				// Rotate
-				err = leaderClient.Sys().Rotate()
+				err = leaderClient.Sys().RotateWithContext(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -900,7 +900,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				}
 
 				// Rotate
-				err = leaderClient.Sys().Rotate()
+				err = leaderClient.Sys().RotateWithContext(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1190,7 +1190,7 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		t.Helper()
 		client := cluster.Cores[coreIdx].Client
 
-		initialized, err := client.Sys().InitStatus()
+		initialized, err := client.Sys().InitStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1199,7 +1199,7 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 			t.Errorf("core %d: expected init=%v, sys/init returned %v", coreIdx, expected, initialized)
 		}
 
-		status, err := client.Sys().SealStatus()
+		status, err := client.Sys().SealStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1208,7 +1208,7 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 			t.Errorf("core %d: expected init=%v, sys/seal-status returned %v", coreIdx, expected, status.Initialized)
 		}
 
-		health, err := client.Sys().Health()
+		health, err := client.Sys().HealthWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

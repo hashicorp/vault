@@ -1464,7 +1464,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuth()
+	auths, err := client.Sys().ListAuthWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1557,7 +1557,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuth()
+	auths, err := client.Sys().ListAuthWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1604,7 +1604,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuth()
+	auths, err := client.Sys().ListAuthWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

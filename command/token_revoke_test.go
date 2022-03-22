@@ -158,7 +158,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		secret, err := client.Auth().Token().LookupSelf()
+		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
 		if secret != nil || err == nil {
 			t.Errorf("expected token to be revoked: %#v", secret)
 		}

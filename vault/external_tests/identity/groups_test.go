@@ -37,7 +37,7 @@ func TestIdentityStore_ListGroupAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mounts, err := client.Sys().ListAuth()
+	mounts, err := client.Sys().ListAuthWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 
 	// Extract out the mount accessor for LDAP auth
-	auths, err := client.Sys().ListAuth()
+	auths, err := client.Sys().ListAuthWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 
 	// Extract the mount accessor
-	auths, err = client.Sys().ListAuth()
+	auths, err = client.Sys().ListAuthWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

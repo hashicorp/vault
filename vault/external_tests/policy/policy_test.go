@@ -252,7 +252,7 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 
 			// Set up entity if we're testing against an identity_policies
 			if len(tc.identityPolicies) > 0 {
-				auths, err := client.Sys().ListAuth()
+				auths, err := client.Sys().ListAuthWithContext(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}
