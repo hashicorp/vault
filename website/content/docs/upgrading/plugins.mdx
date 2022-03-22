@@ -70,7 +70,7 @@ by setting the 'scope' parameter of the reload to 'global'.
 Vault's auth methods and secrets engines are structured as plugins, but this
 design is not obvious since many of them are built into Vault.
 
-You can see them with the vault plugin list command, for example the list of
+You can see them with the Vault plugin list command, for example, the list of
 Secrets engines:
 
 ```shell-session
@@ -102,7 +102,7 @@ transit
 ```
 
 This will list all Secrets engines, internal (built-in) or external. To find
-out if a plugin is built-in we can query its info:
+out if a plugin is built-in, we can query its info:
 
 ```shell-session
 $ vault plugin info secret azure
@@ -126,7 +126,7 @@ and can then be registered as either a distinct plugin, or overriding the
 current one.
 
 ~> **Important:** do not disable (`vault secrets disable ...`) any mount that has
-data you're interested in. That would erase storage. For the in-place update,
+data you're interested in; that would erase storage. For the in-place update,
 register a new plugin atop the built-in one and leave any mounts alone.
 
 ### Procedure for Overriding Built-in Plugins
@@ -197,7 +197,7 @@ $ vault plugin reload -plugin=azure
 * As mentioned earlier, disabling existing mounts will wipe the existing data.
 * This type of upgrade affects all uses of the plugin. So if you have 5
   different Azure Secrets mounts, they'll all change after the replacement. If
-  you don't want that you'll need to register the plugin under a different name
+  you don't want that, you'll need to register the plugin under a different name
   and start with a fresh mount.
 * In most cases, data upgrade and downgrade is not an issue. If the "new" version
   introduces new data and you downgrade, the "old" version will ignore the

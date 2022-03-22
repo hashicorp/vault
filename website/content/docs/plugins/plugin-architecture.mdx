@@ -21,7 +21,7 @@ when enabling it.
 Vault external plugins are long-running processes that remain running once they are
 spawned by Vault, the parent process. Plugin processes can be started by Vault's
 active node and performance standby nodes. Additionally, there are cases where
-plugin processes may be terminated by Vault. These cases include but are not
+plugin processes may be terminated by Vault. These cases include, but are not
 limited to:
 
 - Vault active node step-down
@@ -79,21 +79,21 @@ connection state is not supported in plugins.
 
 An important consideration of Vault's plugin system is to ensure the plugin
 invoked by Vault is authentic and maintains integrity. There are two components
-that a Vault operator needs to configure before external plugins can be run, the
+that a Vault operator needs to configure before external plugins can be run- the
 plugin directory and the plugin catalog entry.
 
 ### Plugin Directory
 
-The plugin directory is a configuration option of Vault, and can be specified in
+The plugin directory is a configuration option of Vault and can be specified in
 the [configuration file](/docs/configuration).
 This setting specifies a directory in which all plugin binaries must live;
 _this value cannot be a symbolic link_. A plugin
-can not be added to Vault unless it exists in the plugin directory. There is no
-default for this configuration option, and if it is not set plugins can not be
+cannot be added to Vault unless it exists in the plugin directory. There is no
+default for this configuration option, and if it is not set, plugins cannot be
 added to Vault.
 
-~> Warning: A Vault operator should take care to lock down the permissions on
-this directory to ensure a plugin can not be modified by an unauthorized user
+~> Warning: A Vault operator should take caution and lock down the permissions on
+this directory to ensure a plugin cannot be modified by an unauthorized user
 between the time of the SHA check and the time of plugin execution.
 
 ### Plugin Catalog
@@ -102,9 +102,9 @@ The plugin catalog is Vault's list of approved plugins. The catalog is stored in
 Vault's barrier and can only be updated by a Vault user with sudo permissions.
 Upon adding a new plugin, the plugin name, SHA256 sum of the executable, and the
 command that should be used to run the plugin must be provided. The catalog will
-make sure the executable referenced in the command exists in the plugin
-directory. When added to the catalog the plugin is not automatically executed,
-it instead becomes visible to backends and can be executed by them. For more
+ensure the executable referenced in the command exists in the plugin
+directory. When added to the catalog, the plugin is not automatically executed,
+but becomes visible to backends and can be executed by them. For more
 information on the plugin catalog please see the [Plugin Catalog API
 docs](/api-docs/system/plugins-catalog).
 
@@ -149,8 +149,8 @@ on the upgrade procedure can be found in
 
 ## Plugin Multiplexing
 
-Database plugins can be made to implement plugin multiplexing
-which allows a single plugin process to be used for multiple database
+Database plugins can be made to implement plugin multiplexing,
+allowing a single plugin process to be used for multiple database
 connections. This single process, per database plugin, will be multiplexed
 across all Vault namespaces for mounts of this type. Multiplexing a plugin
 does not affect the current behavior of existing plugins.
@@ -158,7 +158,7 @@ does not affect the current behavior of existing plugins.
 To enable multiplexing, the plugin must be compiled with the `ServeMultiplex`
 function call from Vault's `dbplugin` package. At this time, there is no
 opt-out capability for plugins that implement multiplexing. To use a
-non-multiplexed plugin, run an older version of the plugin. i.e. the
+non-multiplexed plugin, run an older version of the plugin, i.e., the
 plugin calls the `dbplugin.Serve` function. More details
 on implementing plugin multiplexing can be found in
 [Upgrading Vault Plugins](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
@@ -181,7 +181,7 @@ needs to be recompiled to support the latest protocol.
 
 </CodeBlockConfig>
 
-Verify whether the Vault process has `mlock` enabled, and if so run the
+Verify whether the Vault process has `mlock` enabled, and if so, run the
 following command against the plugin binary:
 
 ```shell-session
