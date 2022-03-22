@@ -1,4 +1,4 @@
-import { run } from '@ember/runloop';
+import { _cancelTimers as cancelTimers } from '@ember/runloop';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -160,7 +160,7 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    run.cancelTimers();
+    cancelTimers();
     let call = this.openSpy.getCall(0);
     assert.deepEqual(
       call.args,
@@ -194,7 +194,7 @@ module('Integration | Component | auth jwt', function (hooks) {
       'message',
       buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
     );
-    run.cancelTimers();
+    cancelTimers();
     assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
 
@@ -208,7 +208,6 @@ module('Integration | Component | auth jwt', function (hooks) {
     });
     this.window.trigger('message', buildMessage());
     await settled();
-    assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
     assert.equal(this.token, 'token', 'calls onToken with token');
     assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
   });
@@ -222,7 +221,7 @@ module('Integration | Component | auth jwt', function (hooks) {
       return this.openSpy.calledOnce;
     });
     this.window.trigger('message', buildMessage({ origin: 'http://hackerz.com' }));
-    run.cancelTimers();
+    cancelTimers();
     await settled();
     assert.notOk(this.handler.called, 'should not call the submit handler');
   });
@@ -236,7 +235,7 @@ module('Integration | Component | auth jwt', function (hooks) {
       return this.openSpy.calledOnce;
     });
     this.window.trigger('message', buildMessage({ isTrusted: false }));
-    run.cancelTimers();
+    cancelTimers();
     await settled();
     assert.notOk(this.handler.called, 'should not call the submit handler');
   });

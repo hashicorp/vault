@@ -665,6 +665,13 @@ func assertPublicKeyCount(t *testing.T, ctx context.Context, s logical.Storage, 
 		Storage:   s,
 	})
 	expectSuccess(t, resp, err)
+
+	assertRespPublicKeyCount(t, resp, keyCount)
+}
+
+func assertRespPublicKeyCount(t *testing.T, resp *logical.Response, keyCount int) {
+	t.Helper()
+
 	// parse response
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)

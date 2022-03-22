@@ -972,6 +972,9 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 			}
 
 			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/foo")
+			if err != nil {
+				t.Fatal(err)
+			}
 			bar := secret.Data["data"].(map[string]interface{})["bar"]
 			if bar != tc.expected {
 				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
@@ -1042,6 +1045,9 @@ func TestKVPatchCommand_Methods(t *testing.T) {
 			}
 
 			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/foo")
+			if err != nil {
+				t.Fatal(err)
+			}
 			bar := secret.Data["data"].(map[string]interface{})["bar"]
 			if bar != tc.expected {
 				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
