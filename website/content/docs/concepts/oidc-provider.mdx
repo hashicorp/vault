@@ -160,12 +160,22 @@ Each Vault namespace will contain a built-in assignment resource named `allow_al
 
 ### Keys
 
-Key resources are referenced by clients via the `key` parameter. This parameter specifies the key that will be used to sign ID tokens for the client. See existing [documentation](/api-docs/secret/identity/tokens#create-a-named-key) for details on keyring management, supported signing algorithms, rotation periods, and verification TTLs. Currently, a key referenced by a client cannot be changed.
+Key resources are referenced by clients via the `key` parameter. This parameter specifies
+the key that will be used to sign ID tokens for the client. See existing
+[documentation](/api-docs/secret/identity/tokens#create-a-named-key) for details on keyring
+management, supported signing algorithms, rotation periods, and verification TTLs. Currently,
+a key referenced by a client cannot be changed.
 
-Each Vault namespace will contain a built-in key resource named `default`. Clients that don't
-specify the `key` parameter at creation time will use the `default` key. The `default` key
-will use the `RS256` signing algorithm, allow all client IDs, and have rotation and verification
-TTLs of `24h`. The `default` key can be modified but not deleted.
+Each Vault namespace will contain a built-in key resource named `default`. The `default`
+key can be modified but not deleted. Clients that don't specify the `key` parameter at
+creation time will use the `default` key.
+
+The `default` key will have the following configuration:
+
+- `rotation_period` - `RS256`
+- `allowed_client_ids` - `*`
+- `rotation_period` - `24h`
+- `verification_ttl` - `24h`
 
 ## OIDC flow
 
