@@ -1,6 +1,9 @@
 package api
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
 
 func (c *Sys) StepDown() error {
 	return c.StepDownWithContext(context.Background())

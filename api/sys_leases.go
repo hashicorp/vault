@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"net/http"
 )
 
 func (c *Sys) Renew(id string, increment int) (*Secret, error) {
