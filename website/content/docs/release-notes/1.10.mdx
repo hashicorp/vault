@@ -68,11 +68,11 @@ To address security and compliance needs, customers may require that keys be eit
 
 The work done above to support HSM-backed PKI operations inspired us to consider what other key possession paradigms we could support. This led us to extend the implementation to support Cloud Key Management Systems in addition to HSMs. In Vault 1.10, users may generate new PKI pairs and perform sign/verify certificate workflows, all with those keys never leaving the cloud KMS itself. Vault 1.10 provides support for AWS Key Management Service and Azure Key Vault Key Management Service.
 
-### Server Side Consisten Tokens
+### Server Side Consistent Tokens
 
 Vault’s [eventual consistency](/docs/enterprise/consistency) model precludes read-after-write guarantees when clients interact with performance standbys or performance replication clusters. The [Client Controlled Consistency](/docs/enterprise/consistency#vault-1-7-mitigations) mitigations supported with Vault 1.7 provide ways to achieve consistency through client modifications or by using the agent for proxied requests, which is not possible in all cases. The Server Side Consistent Tokens feature provides an implicit way to achieve consistency by embedding the minimum Write-Ahead-Log state information in the Service tokens returned from logins or token-create requests. This feature introduces changes in the token format and the new tokesn will be the default tokens starting in Vault 1.10. Vault 1.10 is backwards compatible with old tokens.
 
-See [Replication](/docs/configuration/replication), [Vault Eventual Consistency](/docs/enterprise/consistency), [Upgrade to 1.10](/docs/upgrading/upgrade-to-1.10.x) and [Service Side Consistent Token FAQ](/docs/faq/ssct) to understand the various consistency options available with Vault 1.10 and the considerations to be aware of prior to selecting an option for your use case.
+See [Replication](/docs/configuration/replication), [Vault Eventual Consistency](/docs/enterprise/consistency), [Upgrade to 1.10](/docs/upgrading/upgrade-to-1.10.x) and [Server Side Consistent Token FAQ](/docs/faq/ssct) to understand the various consistency options available with Vault 1.10 and the considerations to be aware of prior to selecting an option for your use case.
 
 ## Vault Agent Features
 
