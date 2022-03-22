@@ -2,7 +2,11 @@
   <JsonEditor
     @showToolbar={{false}}
     @value={{stringify this.content}}
-    @options={{hash readOnly=true lineNumbers=false autoHeight=true gutters=false theme="hashi auto-height"}}
+    @gutters={{false}}
+    @lineNumber={{false}}
+    @readOnly={{true}}
+    @theme="hashi auto-height"
+    @viewportMargin="Infinity"
   />
   <HoverCopyButton @copyValue={{stringify this.content}} />
 </div>

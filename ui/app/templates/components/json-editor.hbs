@@ -25,7 +25,20 @@
   {{/if}}
   {{! ARG TODO here }}
   {{! conditional class if readOnly }}
-  <div {{code-mirror content=@value readOnly=true}}></div>
+  <div
+    {{code-mirror
+      content=@value
+      extraKeys=@extraKeys
+      gutters=@gutters
+      lineNumbers=@lineNumbers
+      mode=@mode
+      readOnly=@readOnly
+      theme=@theme
+      viewportMarg=@viewportMargin
+    }}
+    {{!-- @valueUpdated={{action "updateValue"}}
+    @onFocusOut={{action "onFocus"}} --}}
+  ></div>
 
   {{!-- <IvyCodemirror
     @data-test-component="json-editor"
