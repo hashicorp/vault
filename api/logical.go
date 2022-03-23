@@ -31,7 +31,7 @@ var (
 			return os.Getenv(EnvVaultWrapTTL)
 		}
 
-		if (operation == "PUT" || operation == "POST") && path == "sys/wrapping/wrap" {
+		if (operation == http.MethodPut || operation == "POST") && path == "sys/wrapping/wrap" {
 			return DefaultWrappingTTL
 		}
 
@@ -150,7 +150,7 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 }
 
 func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PUT", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
 }
 
 func (c *Logical) WriteBytesWithContext(ctx context.Context, path string, data []byte) (*Secret, error) {
-	r := c.c.NewRequest("PUT", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
 	r.BodyBytes = data
 
 	return c.write(ctx, path, r)
@@ -283,7 +283,7 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 		}
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/wrapping/unwrap")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/wrapping/unwrap")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}

@@ -94,7 +94,7 @@ func (c *Sys) PutPolicyWithContext(ctx context.Context, name, rules string) erro
 		"policy": rules,
 	}
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
+	r := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}

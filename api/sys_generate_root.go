@@ -79,7 +79,7 @@ func (c *Sys) generateRootInitCommonWithContext(ctx context.Context, path, otp, 
 		"pgp_key": pgpKey,
 	}
 
-	r := c.c.NewRequest("PUT", path)
+	r := c.c.NewRequest(http.MethodPut, path)
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (c *Sys) generateRootUpdateCommonWithContext(ctx context.Context, path, sha
 		"nonce": nonce,
 	}
 
-	r := c.c.NewRequest("PUT", path)
+	r := c.c.NewRequest(http.MethodPut, path)
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}

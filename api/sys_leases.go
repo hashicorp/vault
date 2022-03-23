@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"net/http"
 )
 
 func (c *Sys) Renew(id string, increment int) (*Secret, error) {
@@ -13,7 +14,7 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/leases/renew")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/renew")
 
 	body := map[string]interface{}{
 		"increment": increment,
@@ -40,7 +41,7 @@ func (c *Sys) LookupWithContext(ctx context.Context, id string) (*Secret, error)
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/leases/lookup")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/lookup")
 
 	body := map[string]interface{}{
 		"lease_id": id,
@@ -66,7 +67,7 @@ func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke")
 	body := map[string]interface{}{
 		"lease_id": id,
 	}
@@ -89,7 +90,7 @@ func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-prefix/"+id)
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke-prefix/"+id)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -106,7 +107,7 @@ func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-force/"+id)
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke-force/"+id)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -137,7 +138,7 @@ func (c *Sys) RevokeWithOptionsWithContext(ctx context.Context, opts *RevokeOpti
 	}
 	path += opts.LeaseID
 
-	r := c.c.NewRequest("PUT", path)
+	r := c.c.NewRequest(http.MethodPut, path)
 	if !opts.Force {
 		body := map[string]interface{}{
 			"sync": opts.Sync,

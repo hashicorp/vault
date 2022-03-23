@@ -34,7 +34,7 @@ func (c *Sys) InitWithContext(ctx context.Context, opts *InitRequest) (*InitResp
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/init")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/init")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}

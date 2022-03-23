@@ -21,7 +21,7 @@ func (c *Sys) AuditHashWithContext(ctx context.Context, path string, input strin
 		"input": input,
 	}
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/audit-hash/%s", path))
+	r := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/sys/audit-hash/%s", path))
 	if err := r.SetJSONBody(body); err != nil {
 		return "", err
 	}
@@ -103,7 +103,7 @@ func (c *Sys) EnableAuditWithOptionsWithContext(ctx context.Context, path string
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/audit/%s", path))
+	r := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/sys/audit/%s", path))
 	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}

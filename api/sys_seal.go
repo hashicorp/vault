@@ -22,7 +22,7 @@ func (c *Sys) SealWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/seal")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/seal")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -40,7 +40,7 @@ func (c *Sys) ResetUnsealProcess() (*SealStatusResponse, error) {
 func (c *Sys) ResetUnsealProcessWithContext(ctx context.Context) (*SealStatusResponse, error) {
 	body := map[string]interface{}{"reset": true}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/unseal")
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *Sys) Unseal(shard string) (*SealStatusResponse, error) {
 func (c *Sys) UnsealWithContext(ctx context.Context, shard string) (*SealStatusResponse, error) {
 	body := map[string]interface{}{"key": shard}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/unseal")
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (c *Sys) UnsealWithOptions(opts *UnsealOpts) (*SealStatusResponse, error) {
 }
 
 func (c *Sys) UnsealWithOptionsWithContext(ctx context.Context, opts *UnsealOpts) (*SealStatusResponse, error) {
-	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/unseal")
 
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err

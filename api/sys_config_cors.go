@@ -49,7 +49,7 @@ func (c *Sys) ConfigureCORSWithContext(ctx context.Context, req *CORSRequest) er
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/sys/config/cors")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/config/cors")
 	if err := r.SetJSONBody(req); err != nil {
 		return err
 	}

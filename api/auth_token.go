@@ -181,7 +181,7 @@ func (c *TokenAuth) RenewWithContext(ctx context.Context, token string, incremen
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/renew")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/renew")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token":     token,
 		"increment": increment,
@@ -206,7 +206,7 @@ func (c *TokenAuth) RenewSelfWithContext(ctx context.Context, increment int) (*S
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/renew-self")
 
 	body := map[string]interface{}{"increment": increment}
 	if err := r.SetJSONBody(body); err != nil {
@@ -233,7 +233,7 @@ func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token strin
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/renew-self")
 	r.ClientToken = token
 
 	body := map[string]interface{}{"increment": increment}
@@ -288,7 +288,7 @@ func (c *TokenAuth) RevokeOrphanWithContext(ctx context.Context, token string) e
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-orphan")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/revoke-orphan")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
 	}); err != nil {
@@ -316,7 +316,7 @@ func (c *TokenAuth) RevokeSelfWithContext(ctx context.Context, token string) err
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/revoke-self")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -339,7 +339,7 @@ func (c *TokenAuth) RevokeTreeWithContext(ctx context.Context, token string) err
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/revoke")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
 	}); err != nil {

@@ -125,7 +125,7 @@ func TestClientHostHeader(t *testing.T) {
 	// Set the token manually
 	client.SetToken("foo")
 
-	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,13 +152,13 @@ func TestClientBadToken(t *testing.T) {
 	}
 
 	client.SetToken("foo")
-	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	client.SetToken("foo\u007f")
-	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err == nil || !strings.Contains(err.Error(), "printable") {
 		t.Fatalf("expected error due to bad token")
 	}
@@ -187,7 +187,7 @@ func TestClientRedirect(t *testing.T) {
 	client.SetToken("foo")
 
 	// Do a raw "/" request
-	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
