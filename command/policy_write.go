@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"unicode"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -92,10 +91,13 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 	}
 
 	// Policies are normalized to lowercase
-	policyName := args[0]
-	warnOnUpperCase(c.UI, policyName)
-	formattedPolicyName := strings.TrimSpace(strings.ToLower(policyName))
+	name := args[0]
+	formattedName := strings.TrimSpace(strings.ToLower(name))
 	path := strings.TrimSpace(args[1])
+
+	if name != formattedName {
+		c.UI.Warn(fmt.Sprintf("Policy name was converted to %s", formattedName))
+	}
 
 	// Get the policy contents, either from stdin of a file
 	var reader io.Reader
@@ -122,20 +124,11 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 	}
 	rules := buf.String()
 
-	if err := client.Sys().PutPolicy(formattedPolicyName, rules); err != nil {
+	if err := client.Sys().PutPolicy(formattedName, rules); err != nil {
 		c.UI.Error(fmt.Sprintf("Error uploading policy: %s", err))
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Uploaded policy: %s", formattedPolicyName))
+	c.UI.Output(fmt.Sprintf("Success! Uploaded policy: %s", formattedName))
 	return 0
-}
-
-func warnOnUpperCase(ui cli.Ui, s string) {
-	for _, r := range s {
-		if unicode.IsUpper(r) && unicode.IsLetter(r) {
-			ui.Warn("Policy name contains upper-case character(s) and will be converted to lower-case.")
-			break
-		}
-	}
 }
