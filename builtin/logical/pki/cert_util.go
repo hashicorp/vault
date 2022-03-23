@@ -114,7 +114,7 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request) (*certut
 		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 	}
 
-	caInfo := &certutil.CAInfoBundle{*parsedBundle, nil}
+	caInfo := &certutil.CAInfoBundle{ParsedCertBundle: *parsedBundle, URLs: nil}
 
 	entries, err := getURLs(ctx, req)
 	if err != nil {
@@ -721,7 +721,7 @@ func signCert(b *backend,
 
 	case "ed25519":
 		// Verify that the key matches the role type
-		if csr.PublicKeyAlgorithm != x509.PublicKeyAlgorithm(x509.Ed25519) {
+		if csr.PublicKeyAlgorithm != x509.Ed25519 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"role requires keys of type %s",
 				data.role.KeyType)}
@@ -1441,5 +1441,5 @@ func stringToOid(in string) (asn1.ObjectIdentifier, error) {
 		}
 		ret = append(ret, i)
 	}
-	return asn1.ObjectIdentifier(ret), nil
+	return ret, nil
 }

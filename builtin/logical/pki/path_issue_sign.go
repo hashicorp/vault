@@ -263,6 +263,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			respData["private_key_type"] = cb.PrivateKeyType
 		}
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
 
 	var resp *logical.Response
