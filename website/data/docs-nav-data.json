@@ -77,10 +77,6 @@
         "path": "internals/replication"
       },
       {
-        "title": "Plugins",
-        "path": "internals/plugins"
-      },
-      {
         "title": "Limits and Maximums",
         "path": "internals/limits"
       }
@@ -1285,14 +1281,30 @@
     ]
   },
   {
-    "title": "Plugin Backends",
-    "path": "plugin"
+    "title": "Plugins",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "plugins"
+      },
+      {
+        "title": "Plugin Architecture",
+        "path": "plugins/plugin-architecture"
+      },
+      {
+        "title": "Plugin Development",
+        "path": "plugins/plugin-development"
+      },
+      {
+        "title": "Plugin Management",
+        "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Plugin Portal",
+        "path": "plugins/plugin-portal"
+      }
+    ]
   },
-  {
-    "title": "Plugin Portal",
-    "path": "plugin-portal"
-  },
-
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
@@ -1751,6 +1763,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.10",
+        "path": "release-notes/1.10"
       },
       {
         "title": "1.9.0",
