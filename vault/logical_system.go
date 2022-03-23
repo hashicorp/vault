@@ -2445,9 +2445,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return logical.ErrorResponse("policy name must be provided in the URL"), nil
 		}
 		if name != policy.Name {
-			if resp == nil {
-				resp = &logical.Response{}
-			}
+			resp = &logical.Response{}
 			resp.AddWarning(fmt.Sprintf("policy name was converted to %s", policy.Name))
 		}
 
