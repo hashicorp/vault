@@ -40,9 +40,11 @@ func (d *OutputPolicyError) parseRequest() {
 		capabilities = append(capabilities, "read")
 	case "LIST":
 		capabilities = append(capabilities, "list")
-	case "POST", "PUT", "PATCH":
+	case "POST", "PUT":
 		capabilities = append(capabilities, "create")
 		capabilities = append(capabilities, "update")
+	case "PATCH":
+		capabilities = append(capabilities, "patch")
 	case "DELETE":
 		capabilities = append(capabilities, "delete")
 	}
