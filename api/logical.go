@@ -159,7 +159,7 @@ func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[st
 }
 
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PATCH", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodPatch, "/v1/"+path)
 	r.Headers.Set("Content-Type", "application/merge-patch+json")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
