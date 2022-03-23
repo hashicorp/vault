@@ -7974,7 +7974,7 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
   integrity sha1-DQcLTQQ6W+ozovGkDi7bPZpMz3c=
 
-codemirror@^5.47.0, codemirror@^5.58.2:
+codemirror@^5.58.2:
   version "5.61.0"
   resolved "https://registry.yarnpkg.com/codemirror/-/codemirror-5.61.0.tgz#318e5b034a707207948b92ffc2862195e8fdb08e"
   integrity sha512-D3wYH90tYY1BsKlUe0oNj2JAhQ9TepkD51auk3N7q+4uz7A/cgJ5JsWHreT0PqieW1QhOuqxQ2reCXV1YXzecg==
@@ -14290,14 +14290,6 @@ iterate-value@^1.0.2:
   dependencies:
     es-get-iterator "^1.0.2"
     iterate-iterator "^1.0.1"
-
-ivy-codemirror@IvyApp/ivy-codemirror#fb09333c5144da47e14a9e6260f80577d5408374:
-  version "2.1.0"
-  resolved "https://codeload.github.com/IvyApp/ivy-codemirror/tar.gz/fb09333c5144da47e14a9e6260f80577d5408374"
-  dependencies:
-    codemirror "^5.47.0"
-    ember-cli-babel "^7.7.3"
-    ember-cli-node-assets "^0.2.2"
 
 jest-worker@^26.2.1:
   version "26.6.2"
