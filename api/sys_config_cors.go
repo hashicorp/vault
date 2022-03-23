@@ -69,7 +69,7 @@ func (c *Sys) DisableCORSWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/sys/config/cors")
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/config/cors")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {

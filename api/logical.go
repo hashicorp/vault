@@ -223,7 +223,7 @@ func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, da
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
 
 	var values url.Values
 	for k, v := range data {

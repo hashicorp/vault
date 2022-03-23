@@ -148,7 +148,7 @@ func (c *Sys) RekeyCancelWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/init")
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/init")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -165,7 +165,7 @@ func (c *Sys) RekeyRecoveryKeyCancelWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/init")
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey-recovery-key/init")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -182,7 +182,7 @@ func (c *Sys) RekeyVerificationCancelWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/verify")
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/verify")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -199,7 +199,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationCancelWithContext(ctx context.Context)
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/verify")
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey-recovery-key/verify")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -340,7 +340,7 @@ func (c *Sys) RekeyDeleteBackupWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/backup")
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/backup")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -358,7 +358,7 @@ func (c *Sys) RekeyDeleteRecoveryBackupWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-key-backup")
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/recovery-key-backup")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {

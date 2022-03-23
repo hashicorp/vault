@@ -80,7 +80,7 @@ func (c *Sys) DisableAuthWithContext(ctx context.Context, path string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/auth/%s", path))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {

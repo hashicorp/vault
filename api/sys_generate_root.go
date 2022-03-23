@@ -123,7 +123,7 @@ func (c *Sys) generateRootCancelCommonWithContext(ctx context.Context, path stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", path)
+	r := c.c.NewRequest(http.MethodDelete, path)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
