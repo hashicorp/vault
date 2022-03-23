@@ -8,11 +8,16 @@ import (
 )
 
 func (c *Sys) CORSStatus() (*CORSResponse, error) {
+	return c.CORSStatusWithContext(context.Background())
+}
+
+func (c *Sys) CORSStatusWithContext(ctx context.Context) (*CORSResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/config/cors")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +41,19 @@ func (c *Sys) CORSStatus() (*CORSResponse, error) {
 }
 
 func (c *Sys) ConfigureCORS(req *CORSRequest) error {
+	return c.ConfigureCORSWithContext(context.Background(), req)
+}
+
+func (c *Sys) ConfigureCORSWithContext(ctx context.Context, req *CORSRequest) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/config/cors")
 	if err := r.SetJSONBody(req); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -51,11 +61,16 @@ func (c *Sys) ConfigureCORS(req *CORSRequest) error {
 }
 
 func (c *Sys) DisableCORS() error {
+	return c.DisableCORSWithContext(context.Background())
+}
+
+func (c *Sys) DisableCORSWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", "/v1/sys/config/cors")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}

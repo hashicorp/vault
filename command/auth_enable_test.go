@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -105,7 +106,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		auths, err := client.Sys().ListAuth()
+		auths, err := client.Sys().ListAuthWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

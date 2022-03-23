@@ -108,18 +108,24 @@ type AutopilotServer struct {
 	Meta        map[string]string `mapstructure:"meta"`
 }
 
-// RaftJoin adds the node from which this call is invoked from to the raft
-// cluster represented by the leader address in the parameter.
+// RaftJoin wraps RaftJoinWithContext using context.Background.
 func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
+	return c.RaftJoinWithContext(context.Background(), opts)
+}
+
+// RaftJoinWithContext adds the node from which this call is invoked from to the raft
+// cluster represented by the leader address in the parameter.
+func (c *Sys) RaftJoinWithContext(ctx context.Context, opts *RaftJoinRequest) (*RaftJoinResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/join")
 
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -130,12 +136,9 @@ func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 	return &result, err
 }
 
-// RaftSnapshot is a thin wrapper around RaftSnapshotWithContext
+// RaftSnapshot wraps RaftSnapshotWithContext using context.Background.
 func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	return c.RaftSnapshotWithContext(ctx, snapWriter)
+	return c.RaftSnapshotWithContext(context.Background(), snapWriter)
 }
 
 // RaftSnapshotWithContext invokes the API that takes the snapshot of the raft cluster and
@@ -207,12 +210,9 @@ func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer)
 	return nil
 }
 
-// RaftSnapshotRestore is a thin wrapper around RaftSnapshotRestoreWithContext
+// RaftSnapshotRestore wraps RaftSnapshotRestoreWithContext using context.Background.
 func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	return c.RaftSnapshotRestoreWithContext(ctx, snapReader, force)
+	return c.RaftSnapshotRestoreWithContext(context.Background(), snapReader, force)
 }
 
 // RaftSnapshotRestoreWithContext reads the snapshot from the io.Reader and installs that
@@ -235,13 +235,19 @@ func (c *Sys) RaftSnapshotRestoreWithContext(ctx context.Context, snapReader io.
 	return nil
 }
 
-// RaftAutopilotState returns the state of the raft cluster as seen by autopilot.
+// RaftAutopilotState wraps RaftAutopilotStateWithContext using context.Background.
 func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
+	return c.RaftAutopilotStateWithContext(context.Background())
+}
+
+// RaftAutopilotStateWithContext returns the state of the raft cluster as seen by autopilot.
+func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotState, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -269,13 +275,19 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 	return &result, err
 }
 
-// RaftAutopilotConfiguration fetches the autopilot config.
+// RaftAutopilotConfiguration wraps RaftAutopilotConfigurationWithContext using context.Background.
 func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
+	return c.RaftAutopilotConfigurationWithContext(context.Background())
+}
+
+// RaftAutopilotConfigurationWithContext fetches the autopilot config.
+func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*AutopilotConfig, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -311,17 +323,23 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 	return &result, err
 }
 
-// PutRaftAutopilotConfiguration allows modifying the raft autopilot configuration
+// PutRaftAutopilotConfiguration wraps PutRaftAutopilotConfigurationWithContext using context.Background.
 func (c *Sys) PutRaftAutopilotConfiguration(opts *AutopilotConfig) error {
+	return c.PutRaftAutopilotConfigurationWithContext(context.Background(), opts)
+}
+
+// PutRaftAutopilotConfigurationWithContext allows modifying the raft autopilot configuration
+func (c *Sys) PutRaftAutopilotConfigurationWithContext(ctx context.Context, opts *AutopilotConfig) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/autopilot/configuration")
 
 	if err := r.SetJSONBody(opts); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}

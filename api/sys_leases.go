@@ -6,6 +6,13 @@ import (
 )
 
 func (c *Sys) Renew(id string, increment int) (*Secret, error) {
+	return c.RenewWithContext(context.Background(), id, increment)
+}
+
+func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/renew")
 
 	body := map[string]interface{}{
@@ -16,9 +23,7 @@ func (c *Sys) Renew(id string, increment int) (*Secret, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +33,13 @@ func (c *Sys) Renew(id string, increment int) (*Secret, error) {
 }
 
 func (c *Sys) Lookup(id string) (*Secret, error) {
+	return c.LookupWithContext(context.Background(), id)
+}
+
+func (c *Sys) LookupWithContext(ctx context.Context, id string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/lookup")
 
 	body := map[string]interface{}{
@@ -37,9 +49,7 @@ func (c *Sys) Lookup(id string) (*Secret, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +59,13 @@ func (c *Sys) Lookup(id string) (*Secret, error) {
 }
 
 func (c *Sys) Revoke(id string) error {
+	return c.RevokeWithContext(context.Background(), id)
+}
+
+func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke")
 	body := map[string]interface{}{
 		"lease_id": id,
@@ -57,9 +74,7 @@ func (c *Sys) Revoke(id string) error {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -67,11 +82,16 @@ func (c *Sys) Revoke(id string) error {
 }
 
 func (c *Sys) RevokePrefix(id string) error {
+	return c.RevokePrefixWithContext(context.Background(), id)
+}
+
+func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-prefix/"+id)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -79,11 +99,16 @@ func (c *Sys) RevokePrefix(id string) error {
 }
 
 func (c *Sys) RevokeForce(id string) error {
+	return c.RevokeForceWithContext(context.Background(), id)
+}
+
+func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-force/"+id)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -91,6 +116,13 @@ func (c *Sys) RevokeForce(id string) error {
 }
 
 func (c *Sys) RevokeWithOptions(opts *RevokeOptions) error {
+	return c.RevokeWithOptionsWithContext(context.Background(), opts)
+}
+
+func (c *Sys) RevokeWithOptionsWithContext(ctx context.Context, opts *RevokeOptions) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	if opts == nil {
 		return errors.New("nil options provided")
 	}
@@ -115,9 +147,7 @@ func (c *Sys) RevokeWithOptions(opts *RevokeOptions) error {
 		}
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}

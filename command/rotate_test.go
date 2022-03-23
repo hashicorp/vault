@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -83,7 +84,7 @@ func TestOperatorRotateCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().KeyStatus()
+		status, err := client.Sys().KeyStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

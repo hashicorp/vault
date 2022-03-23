@@ -8,11 +8,16 @@ import (
 )
 
 func (c *Sys) Rotate() error {
+	return c.RotateWithContext(context.Background())
+}
+
+func (c *Sys) RotateWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("POST", "/v1/sys/rotate")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -20,11 +25,16 @@ func (c *Sys) Rotate() error {
 }
 
 func (c *Sys) KeyStatus() (*KeyStatus, error) {
+	return c.KeyStatusWithContext(context.Background())
+}
+
+func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", "/v1/sys/key-status")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

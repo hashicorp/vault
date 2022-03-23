@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -35,14 +36,14 @@ func TestBatchTokens(t *testing.T) {
 	var err error
 
 	// Set up a KV path
-	err = client.Sys().Mount("kv", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("kv/foo", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
 		"foo": "bar",
 		"ttl": "5m",
 	})
@@ -51,7 +52,7 @@ func TestBatchTokens(t *testing.T) {
 	}
 
 	// Write the test policy
-	err = client.Sys().PutPolicy("test", `
+	err = client.Sys().PutPolicyWithContext(context.Background(), "test", `
 path "kv/*" {
 	capabilities = ["read"]
 }`)
@@ -68,7 +69,7 @@ path "kv/*" {
 	}
 
 	// Tune the mount
-	if err = client.Sys().TuneMount("auth/approle", api.MountConfigInput{
+	if err = client.Sys().TuneMountWithContext(context.Background(), "auth/approle", api.MountConfigInput{
 		DefaultLeaseTTL: "5s",
 		MaxLeaseTTL:     "5s",
 	}); err != nil {
@@ -76,7 +77,7 @@ path "kv/*" {
 	}
 
 	// Create role
-	resp, err := client.Logical().Write("auth/approle/role/test", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test", map[string]interface{}{
 		"policies": "test",
 	})
 	if err != nil {
@@ -84,7 +85,7 @@ path "kv/*" {
 	}
 
 	// Get role_id
-	resp, err = client.Logical().Read("auth/approle/role/test/role-id")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/test/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +95,7 @@ path "kv/*" {
 	roleID := resp.Data["role_id"]
 
 	// Get secret_id
-	resp, err = client.Logical().Write("auth/approle/role/test/secret-id", map[string]interface{}{})
+	resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test/secret-id", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,19 +107,19 @@ path "kv/*" {
 	// Login
 	testLogin := func(mountTuneType, roleType string, batch bool) string {
 		t.Helper()
-		if err = client.Sys().TuneMount("auth/approle", api.MountConfigInput{
+		if err = client.Sys().TuneMountWithContext(context.Background(), "auth/approle", api.MountConfigInput{
 			TokenType: mountTuneType,
 		}); err != nil {
 			t.Fatal(err)
 		}
-		_, err = client.Logical().Write("auth/approle/role/test", map[string]interface{}{
+		_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test", map[string]interface{}{
 			"token_type": roleType,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+		resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/login", map[string]interface{}{
 			"role_id":   roleID,
 			"secret_id": secretID,
 		})
@@ -158,7 +159,7 @@ path "kv/*" {
 	finalToken := testLogin("batch", "batch", true)
 
 	client.SetToken(finalToken)
-	resp, err = client.Logical().Read("kv/foo")
+	resp, err = client.Logical().ReadWithContext(context.Background(), "kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +180,7 @@ path "kv/*" {
 	lastDuration := resp.LeaseDuration
 	for i := 0; i < 3; i++ {
 		time.Sleep(time.Second)
-		resp, err = client.Sys().Renew(leaseID, 0)
+		resp, err = client.Sys().RenewWithContext(context.Background(), leaseID, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -191,7 +192,7 @@ path "kv/*" {
 
 	client.SetToken(rootToken)
 	time.Sleep(2 * time.Second)
-	resp, err = client.Logical().Write("sys/leases/lookup", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "sys/leases/lookup", map[string]interface{}{
 		"lease_id": leaseID,
 	})
 	if err == nil {
@@ -221,14 +222,14 @@ func TestBatchToken_ParentLeaseRevoke(t *testing.T) {
 	var err error
 
 	// Set up a KV path
-	err = client.Sys().Mount("kv", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("kv/foo", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
 		"foo": "bar",
 		"ttl": "5m",
 	})
@@ -237,7 +238,7 @@ func TestBatchToken_ParentLeaseRevoke(t *testing.T) {
 	}
 
 	// Write the test policy
-	err = client.Sys().PutPolicy("test", `
+	err = client.Sys().PutPolicyWithContext(context.Background(), "test", `
 path "kv/*" {
 	capabilities = ["read"]
 }`)
@@ -246,7 +247,7 @@ path "kv/*" {
 	}
 
 	// Create a second root token
-	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+	secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 		Policies: []string{"root"},
 	})
 	if err != nil {
@@ -256,7 +257,7 @@ path "kv/*" {
 
 	// Use this new token to create a batch token
 	client.SetToken(rootToken2)
-	secret, err = client.Auth().Token().Create(&api.TokenCreateRequest{
+	secret, err = client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 		Policies: []string{"test"},
 		Type:     "batch",
 	})
@@ -265,7 +266,7 @@ path "kv/*" {
 	}
 	batchToken := secret.Auth.ClientToken
 	client.SetToken(batchToken)
-	_, err = client.Auth().Token().LookupSelf()
+	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ path "kv/*" {
 	}
 
 	// Get a lease with the batch token
-	resp, err := client.Logical().Read("kv/foo")
+	resp, err := client.Logical().ReadWithContext(context.Background(), "kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +288,7 @@ path "kv/*" {
 	leaseID := resp.LeaseID
 
 	// Check the lease
-	resp, err = client.Logical().Write("sys/leases/lookup", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "sys/leases/lookup", map[string]interface{}{
 		"lease_id": leaseID,
 	})
 	if err != nil {
@@ -296,7 +297,7 @@ path "kv/*" {
 
 	// Revoke the parent
 	client.SetToken(rootToken2)
-	err = client.Auth().Token().RevokeSelf("")
+	err = client.Auth().Token().RevokeSelfWithContext(context.Background(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,13 +306,13 @@ path "kv/*" {
 
 	// Verify the batch token is not usable anymore
 	client.SetToken(rootToken)
-	_, err = client.Auth().Token().Lookup(batchToken)
+	_, err = client.Auth().Token().LookupWithContext(context.Background(), batchToken)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	// Verify the lease has been revoked
-	resp, err = client.Logical().Write("sys/leases/lookup", map[string]interface{}{
+	resp, err = client.Logical().WriteWithContext(context.Background(), "sys/leases/lookup", map[string]interface{}{
 		"lease_id": leaseID,
 	})
 	if err == nil {
@@ -336,14 +337,14 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 
 	// Test service
 	{
-		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
 			"bound_cidrs": []string{},
 			"token_type":  "service",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			Type:     "batch",
 		}, "testrole")
@@ -351,7 +352,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -363,14 +364,14 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 	// Test batch
 	{
 		client.SetToken(rootToken)
-		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
 			"token_type": "batch",
 		})
 		// Orphan not set so we should error
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
 			"token_type": "batch",
 			"orphan":     true,
 		})
@@ -378,7 +379,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
 			"token_type": "batch",
 			"orphan":     true,
 			"renewable":  false,
@@ -386,7 +387,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			Type:     "service",
 		}, "testrole")
@@ -394,7 +395,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -406,14 +407,14 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 	// Test default-service
 	{
 		client.SetToken(rootToken)
-		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
 			"token_type": "default-service",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		// Client specifies batch
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			Type:     "batch",
 		}, "testrole")
@@ -421,7 +422,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -430,7 +431,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		}
 		// Client specifies service
 		client.SetToken(rootToken)
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			Type:     "service",
 		}, "testrole")
@@ -438,7 +439,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -447,14 +448,14 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		}
 		// Client doesn't specify
 		client.SetToken(rootToken)
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 		}, "testrole")
 		if err != nil {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -466,14 +467,14 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 	// Test default-batch
 	{
 		client.SetToken(rootToken)
-		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
 			"token_type": "default-batch",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		// Client specifies batch
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			Type:     "batch",
 		}, "testrole")
@@ -481,7 +482,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -490,7 +491,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		}
 		// Client specifies service
 		client.SetToken(rootToken)
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			Type:     "service",
 		}, "testrole")
@@ -498,7 +499,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -507,14 +508,14 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		}
 		// Client doesn't specify
 		client.SetToken(rootToken)
-		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 		}, "testrole")
 		if err != nil {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelf()
+		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

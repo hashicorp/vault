@@ -9,15 +9,20 @@ import (
 )
 
 func (c *Sys) ListPolicies() ([]string, error) {
+	return c.ListPoliciesWithContext(context.Background())
+}
+
+func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("LIST", "/v1/sys/policies/acl")
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
 	r.Method = "GET"
 	r.Params.Set("list", "true")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -41,11 +46,16 @@ func (c *Sys) ListPolicies() ([]string, error) {
 }
 
 func (c *Sys) GetPolicy(name string) (string, error) {
+	return c.GetPolicyWithContext(context.Background(), name)
+}
+
+func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == 404 {
@@ -72,6 +82,13 @@ func (c *Sys) GetPolicy(name string) (string, error) {
 }
 
 func (c *Sys) PutPolicy(name, rules string) error {
+	return c.PutPolicyWithContext(context.Background(), name, rules)
+}
+
+func (c *Sys) PutPolicyWithContext(ctx context.Context, name, rules string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]string{
 		"policy": rules,
 	}
@@ -81,9 +98,7 @@ func (c *Sys) PutPolicy(name, rules string) error {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -93,11 +108,16 @@ func (c *Sys) PutPolicy(name, rules string) error {
 }
 
 func (c *Sys) DeletePolicy(name string) error {
+	return c.DeletePolicyWithContext(context.Background(), name)
+}
+
+func (c *Sys) DeletePolicyWithContext(ctx context.Context, name string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
