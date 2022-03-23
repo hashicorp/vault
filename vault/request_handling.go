@@ -321,7 +321,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 			// fail later via bad path to avoid confusing items in the log
 			checkExists = false
 		case logical.ErrRelativePath:
-			return nil, te, err
+			return nil, te, errutil.UserError{Err: err.Error()}
 		case nil:
 			if existsResp != nil && existsResp.IsError() {
 				return nil, te, existsResp.Error()
