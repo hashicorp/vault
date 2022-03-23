@@ -25,14 +25,14 @@ func (b *backend) getGenerationParams(ctx context.Context,
 	case "kms":
 	default:
 		errorResp = logical.ErrorResponse(
-			`the "exported" path parameter must be "internal" or "exported"`)
+			`the "exported" path parameter must be "internal", "exported" or "kms"`)
 		return
 	}
 
 	format = getFormat(data)
 	if format == "" {
 		errorResp = logical.ErrorResponse(
-			`the "format" path parameter must be "pem", "der", "der_pkcs", or "pem_bundle"`)
+			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
 		return
 	}
 
