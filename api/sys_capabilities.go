@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -37,7 +38,7 @@ func (c *Sys) CapabilitiesWithContext(ctx context.Context, token, path string) (
 		reqPath = fmt.Sprintf("%s-self", reqPath)
 	}
 
-	r := c.c.NewRequest("POST", reqPath)
+	r := c.c.NewRequest(http.MethodPost, reqPath)
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}

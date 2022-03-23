@@ -119,7 +119,7 @@ func (c *Sys) RaftJoinWithContext(ctx context.Context, opts *RaftJoinRequest) (*
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/join")
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/join")
 
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
@@ -333,7 +333,7 @@ func (c *Sys) PutRaftAutopilotConfigurationWithContext(ctx context.Context, opts
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/autopilot/configuration")
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/autopilot/configuration")
 
 	if err := r.SetJSONBody(opts); err != nil {
 		return err

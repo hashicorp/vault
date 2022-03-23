@@ -58,7 +58,7 @@ func (c *Sys) EnableAuthWithOptionsWithContext(ctx context.Context, path string,
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s", path))
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/auth/%s", path))
 	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}

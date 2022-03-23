@@ -31,7 +31,7 @@ var (
 			return os.Getenv(EnvVaultWrapTTL)
 		}
 
-		if (operation == http.MethodPut || operation == "POST") && path == "sys/wrapping/wrap" {
+		if (operation == http.MethodPut || operation == http.MethodPost) && path == "sys/wrapping/wrap" {
 			return DefaultWrappingTTL
 		}
 

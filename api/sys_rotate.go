@@ -16,7 +16,7 @@ func (c *Sys) RotateWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/sys/rotate")
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/rotate")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
