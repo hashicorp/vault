@@ -37,13 +37,13 @@ export default class CodeMirrorModifier extends Modifier {
       throw new Error('CodeMirror modifier has no element');
     }
 
-    // ARG TODO I might be able to remove those with false or empty values check with defaults on codemirror
     const editor = codemirror(this.element, {
       matchBrackets: true,
       lint: { lintOnChange: false },
       showCursorWhenSelecting: true,
       styleActiveLine: true,
       tabSize: 2,
+      // all values we can pass into the JsonEditor
       extraKeys: this.args.named.extraKeys || '',
       gutters: this.args.named.gutters || ['CodeMirror-lint-markers'],
       lineNumbers: this.args.named.lineNumber || true,

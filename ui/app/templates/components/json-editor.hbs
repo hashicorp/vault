@@ -23,8 +23,6 @@
       </Toolbar>
     </div>
   {{/if}}
-  {{! ARG TODO here }}
-  {{! conditional class if readOnly }}
   <div
     {{code-mirror
       content=@value
@@ -38,6 +36,7 @@
       onUpdate=this.update
       onFocus=this.focus
     }}
+    class={{if @readOnly "readonly-codemirror"}}
   ></div>
 
   {{#if @helpText}}
