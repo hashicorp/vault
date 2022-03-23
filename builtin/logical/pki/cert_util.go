@@ -748,7 +748,7 @@ func signCert(b *backend,
 		}
 
 	default:
-		return nil, errutil.InternalError{Err: fmt.Sprintf("supported key type value: %s", data.role.KeyType)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported key type value: %s", data.role.KeyType)}
 	}
 
 	creation, err := generateCreationBundle(b, data, caSign, csr)
