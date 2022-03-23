@@ -95,10 +95,6 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 	formattedName := strings.TrimSpace(strings.ToLower(name))
 	path := strings.TrimSpace(args[1])
 
-	if name != formattedName {
-		c.UI.Warn(fmt.Sprintf("Policy name was converted to %s", formattedName))
-	}
-
 	// Get the policy contents, either from stdin of a file
 	var reader io.Reader
 	if path == "-" {
@@ -127,6 +123,10 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 	if err := client.Sys().PutPolicy(formattedName, rules); err != nil {
 		c.UI.Error(fmt.Sprintf("Error uploading policy: %s", err))
 		return 2
+	}
+
+	if name != formattedName {
+		c.UI.Warn(fmt.Sprintf("Policy name was converted to %s", formattedName))
 	}
 
 	c.UI.Output(fmt.Sprintf("Success! Uploaded policy: %s", formattedName))
