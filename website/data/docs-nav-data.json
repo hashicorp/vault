@@ -965,6 +965,10 @@
             "path": "secrets/databases/hanadb"
           },
           {
+            "title": "IBM Db2",
+            "path": "secrets/databases/db2"
+          },
+          {
             "title": "InfluxDB",
             "path": "secrets/databases/influxdb"
           },
