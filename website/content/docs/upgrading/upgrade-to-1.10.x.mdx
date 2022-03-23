@@ -71,7 +71,8 @@ If you created an [OIDC provider](/api-docs/secret/identity/oidc-provider#create
 with the name "default", [key](/api-docs/secret/identity/tokens#create-a-named-key) with the
 name "default", or [assignment](/api-docs/secret/identity/oidc-provider#create-or-update-an-assignment)
 with the name "allow_all" using the Vault 1.9 tech preview, the installation of these built-in
-resources will be skipped without an error. We recommend deleting any resources that have
-naming collisions with the built-in resources when upgrading from Vault 1.9 to Vault 1.10.
-Additionally, we recommend reading the corresponding details in the OIDC provider [concepts](/docs/concepts/oidc-provider)
-document to understand the implications of not deleting such resources.
+resources will be skipped. We _strongly_ recommend that you delete any resources that have
+naming collisions before upgrading to Vault 1.10. Failing to delete resources with naming
+collisions could result unexpected default behavior. Additionally, we recommend reading the
+corresponding details in the OIDC provider [concepts](/docs/concepts/oidc-provider) document
+to understand how the built-in resources are used in the system.
