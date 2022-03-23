@@ -20,12 +20,16 @@ export default class CodeMirrorModifier extends Modifier {
     }
 
     this._editor.setOption('readOnly', this.args.named.readOnly);
-    this._editor.setOption('mode', this.mode);
   }
 
   @action
   _onChange(editor) {
     this.args.named.onUpdate(editor.getValue());
+  }
+
+  @action
+  _onFocus(editor) {
+    this.args.named.onFocus(editor.getValue());
   }
 
   _setup() {
@@ -51,6 +55,7 @@ export default class CodeMirrorModifier extends Modifier {
     });
 
     editor.on('change', bind(this, this._onChange));
+    editor.on('focus', bind(this, this._onFocus));
 
     this._editor = editor;
   }
