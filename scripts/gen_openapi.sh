@@ -29,28 +29,28 @@ echo "Mounting all builtin backends..."
 # Read auth backends
 codeLinesStarted=false
 inQuotesRegex='".*"'
-while read line; do
+while read -r line; do
     if [[ $line == *"credentialBackends:"* ]] ; then
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
     elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
-        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
         vault auth enable "${plugin}"
     fi
 done <../../vault/helper/builtinplugins/registry.go
 
 # Read secrets backends
 codeLinesStarted=false
-while read line; do
+while read -r line; do
     if [[ $line == *"logicalBackends:"* ]] ; then
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
     elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
-        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
         vault secrets enable "${plugin}"
     fi
 done <../../vault/helper/builtinplugins/registry.go
@@ -58,23 +58,22 @@ done <../../vault/helper/builtinplugins/registry.go
 
 # Enable enterprise features
 entRegFile=../../vault/helper/builtinplugins/registry_util_ent.go
-if [ -f $entRegFile ] && [[ ! -z "$VAULT_LICENSE" ]]; then
+if [ -f $entRegFile ] && [[ -n "$VAULT_LICENSE" ]]; then
   vault write sys/license text="$VAULT_LICENSE"
 
   inQuotesRegex='".*"'
   codeLinesStarted=false
-  while read line; do
+  while read -r line; do
         if [[ $line == *"ExternalPluginsEnt"* ]] ; then
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
     elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
-        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend") 
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
         vault secrets enable "${plugin}"
     fi
   done <$entRegFile
-  
 fi
 
 # Output OpenAPI, optionally formatted
@@ -87,4 +86,5 @@ fi
 kill $VAULT_PID
 sleep 1
 
-printf "\nopenapi.json generated."
+echo
+echo "openapi.json generated"
