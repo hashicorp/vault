@@ -747,6 +747,8 @@ func signCert(b *backend,
 			return nil, errutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
 		}
 
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("supported key type value: %s", data.role.KeyType)}
 	}
 
 	creation, err := generateCreationBundle(b, data, caSign, csr)
