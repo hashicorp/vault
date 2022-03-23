@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -91,7 +92,9 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 	}
 
 	// Policies are normalized to lowercase
-	name := strings.TrimSpace(strings.ToLower(args[0]))
+	policyName := args[0]
+	warnOnUpperCase(c.UI, policyName)
+	name := strings.TrimSpace(strings.ToLower(policyName))
 	path := strings.TrimSpace(args[1])
 
 	// Get the policy contents, either from stdin of a file
@@ -126,4 +129,13 @@ func (c *PolicyWriteCommand) Run(args []string) int {
 
 	c.UI.Output(fmt.Sprintf("Success! Uploaded policy: %s", name))
 	return 0
+}
+
+func warnOnUpperCase(ui cli.Ui, s string) {
+	for _, r := range s {
+		if unicode.IsUpper(r) && unicode.IsLetter(r) {
+			ui.Warn("Policy name contains upper-case character(s) and will be converted to lower-case.")
+			break
+		}
+	}
 }
