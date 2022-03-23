@@ -103,21 +103,29 @@ export default class CodeMirrorModifier extends Modifier {
     if (!this.element) {
       throw new Error('CodeMirror modifier has no element');
     }
-    // ARG TODO I might be able to remove those with false or empty vlues check with defaults on codemirror
+
+    // const JSON_EDITOR_DEFAULTS = {
+    //   // IMPORTANT: `gutters` must come before `lint` since the presence of
+    //   // `gutters` is cached internally when `lint` is toggled
+    //   gutters: ['CodeMirror-lint-markers'],
+    //   tabSize: 2,
+    //   mode: 'application/json',
+    //   lineNumbers: true,
+    //   lint: { lintOnChange: false },
+    //   theme: 'hashi',
+    //   readOnly: false,
+    //   showCursorWhenSelecting: true,
+    // };
+
     const editor = codemirror(this.element, {
+      lineNumbers: false,
       matchBrackets: true,
-      lint: { lintOnChange: false },
-      showCursorWhenSelecting: true,
+      mode: this.mode,
+      readOnly: this.args.named.readOnly,
       styleActiveLine: true,
-      tabSize: 2,
-      extraKeys: this.args.named.extraKeys || '',
-      gutters: this.args.named.gutters || ['CodeMirror-lint-markers'],
-      lineNumbers: this.args.named.lineNumber || true,
-      mode: this.args.named.mode || 'application/json',
-      readOnly: this.args.named.readOnly || false,
-      theme: this.args.named.theme || 'hashi',
+      theme: 'hashi',
       value: this.args.named.content || '',
-      viewportMargin: this.args.named.viewportMargin || '',
+      viewportMargin: Infinity,
     });
 
     editor.on('change', bind(this, this._onChange));

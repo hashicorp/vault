@@ -233,7 +233,7 @@
           this.attr.options.defaultValue
         }}
         @valueUpdated={{action "codemirrorUpdated" this.attr.name "string"}}
-        @theme={{or this.attr.options.theme "hashi"}}
+        @options={{hash theme=(or this.attr.options.theme "hashi")}}
         @helpText={{this.attr.options.helpText}}
       >
         {{#if this.attr.options.allowReset}}
