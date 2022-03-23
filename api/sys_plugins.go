@@ -47,11 +47,11 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 		method = http.MethodGet
 	} else {
 		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Type)
-		method = "LIST"
+		method = http.MethodList
 	}
 
 	req := c.c.NewRequest(method, path)
-	if method == "LIST" {
+	if method == http.MethodList {
 		// Set this for broader compatibility, but we use LIST above to be able
 		// to handle the wrapping lookup function
 		req.Method = http.MethodGet
