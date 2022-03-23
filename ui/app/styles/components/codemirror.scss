@@ -169,30 +169,7 @@ $gutter-grey: #2a2f36;
 
 .readonly-codemirror {
   .CodeMirror-code {
-    cursor: pointer;
-  }
-
-  .cm-s-hashi {
-    span {
-      color: $light-grey;
-    }
-
-    span.cm-string,
-    span.cm-string-2 {
-      color: $faded-gray;
-    }
-
-    span.cm-number {
-      color: lighten($dark-gray, 30%);
-    }
-
-    span.cm-property {
-      color: white;
-    }
-
-    span.cm-variable-2 {
-      color: $light-grey-blue;
-    }
+    cursor: default;
   }
 }
 

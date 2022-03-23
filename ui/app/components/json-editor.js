@@ -16,7 +16,6 @@ import { action } from '@ember/object';
  * @param {string} [helpText] - helper text.
  * @param {Object} [extraKeys] - to provide keyboard shortcut methods for things like saving on shit + enter.
  * @param {Array} [gutters] - An array of CSS class names or class name / CSS string pairs, each of which defines a width (and optionally a background), and which will be used to draw the background of the gutters.
- * @param {Boolean} [lineNumber] - defaults to true, so set to false if don't want to show.
  * @param {string} [mode] - right now we only import ruby so must be ruby or defaults to effectively null.
  * @param {Boolean} [readOnly] - defaults to false.
  * @param {String} [theme] - specify or customize the look.
@@ -30,10 +29,10 @@ export default class JsonEditorComponent extends Component {
   }
 
   @action
-  update(value) {
+  update(...args) {
     if (!this.args.readOnly) {
       // catching a situation in which the user is not readOnly and has not provided a valueUpdated function to the instance
-      this.args.valueUpdated(value);
+      this.args.valueUpdated(...args);
     }
   }
 
