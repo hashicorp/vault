@@ -30,11 +30,6 @@ func (b *backend) pathCacheConfig() *framework.Path {
 				Callback: b.pathCacheConfigWrite,
 				Summary:  "Configures a new cache of the specified size",
 			},
-
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathCacheConfigWrite,
-				Summary:  "Configures a new cache of the specified size",
-			},
 		},
 
 		HelpSynopsis:    pathCacheConfigHelpSyn,
