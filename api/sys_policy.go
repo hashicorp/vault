@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -19,7 +20,7 @@ func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
 	r := c.c.NewRequest("LIST", "/v1/sys/policies/acl")
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
-	r.Method = "GET"
+	r.Method = http.MethodGet
 	r.Params.Set("list", "true")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
@@ -53,7 +54,7 @@ func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, er
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -15,7 +16,7 @@ func (c *Sys) CORSStatusWithContext(ctx context.Context) (*CORSResponse, error) 
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/config/cors")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/config/cors")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

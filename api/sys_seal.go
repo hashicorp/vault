@@ -1,13 +1,16 @@
 package api
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
 
 func (c *Sys) SealStatus() (*SealStatusResponse, error) {
 	return c.SealStatusWithContext(context.Background())
 }
 
 func (c *Sys) SealStatusWithContext(ctx context.Context) (*SealStatusResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/seal-status")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/seal-status")
 	return sealStatusRequestWithContext(ctx, c, r)
 }
 

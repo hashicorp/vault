@@ -331,7 +331,7 @@ func TestClientEnvNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	_, err = client.RawRequest(client.NewRequest("GET", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodGet, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -962,7 +962,7 @@ func TestClient_ReadYourWrites(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testRequest := func(client *Client, val string) {
-				req := client.NewRequest("GET", "/"+val)
+				req := client.NewRequest(http.MethodGet, "/"+val)
 				req.Headers.Set(HeaderIndex, val)
 				resp, err := client.RawRequestWithContext(context.Background(), req)
 				if err != nil {

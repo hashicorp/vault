@@ -1,6 +1,9 @@
 package api
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
 
 func (c *Sys) GenerateRootStatus() (*GenerateRootStatusResponse, error) {
 	return c.GenerateRootStatusWithContext(context.Background())
@@ -30,7 +33,7 @@ func (c *Sys) generateRootStatusCommonWithContext(ctx context.Context, path stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", path)
+	r := c.c.NewRequest(http.MethodGet, path)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

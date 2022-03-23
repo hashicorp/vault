@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/key-status")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/key-status")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

@@ -144,7 +144,7 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 // RaftSnapshotWithContext invokes the API that takes the snapshot of the raft cluster and
 // writes it to the supplied io.Writer.
 func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer) error {
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
 
 	resp, err := c.c.httpRequestWithContext(ctx, r)
@@ -245,7 +245,7 @@ func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotStat
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/state")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/state")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {
@@ -285,7 +285,7 @@ func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*Autop
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/autopilot/configuration")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/configuration")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if resp != nil {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -64,7 +65,7 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
 
 	var values url.Values
 	for k, v := range data {
@@ -116,7 +117,7 @@ func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, er
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
-	r.Method = "GET"
+	r.Method = http.MethodGet
 	r.Params.Set("list", "true")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)

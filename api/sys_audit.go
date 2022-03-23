@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -59,7 +60,7 @@ func (c *Sys) ListAuditWithContext(ctx context.Context) (map[string]*Audit, erro
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/audit")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/audit")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
