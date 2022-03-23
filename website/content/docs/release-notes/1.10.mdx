@@ -146,6 +146,10 @@ We will have a fix for this issue in Vault 1.10.1. Until this issue is fixed, yo
 
 When a user has a policy that allows creating a secret engine but not reading it, after successful creation, the user sees a message `n is undefined` instead of a permissions error. We will have a fix for this issue in an upcoming minor release.
 
+### Adding/Modifying Duo MFA method for Enterprise MFA triggers a panic error
+
+When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `sys/mfa/method/duo` endpoint, a panic gets triggered due to a missing schema field. We will have a fix for this in Vault 1.10.1. Until this issue is fixed, avoid making any changes to your Duo configuration if you are upgrading Vault to v1.10.0.
+
 ## Feature Deprecations and EOL
 
 Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
