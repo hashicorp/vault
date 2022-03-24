@@ -62,15 +62,15 @@ OIDC provider system to reduce configuration steps and enhance usability.
 The following built-in resources are included in each Vault namespace starting with Vault
 1.10:
 
-- A "default" OIDC provider that's usable by all client applications
-- A "default" key for signing and verification of ID tokens
-- An "allow_all" assignment which authorizes all Vault entities to authenticate via a
+- A `default` OIDC provider that's usable by all client applications
+- A `default` key for signing and verification of ID tokens
+- An `allow_all` assignment which authorizes all Vault entities to authenticate via a
   client application
 
 If you created an [OIDC provider](/api-docs/secret/identity/oidc-provider#create-or-update-a-provider)
-with the name "default", [key](/api-docs/secret/identity/tokens#create-a-named-key) with the
-name "default", or [assignment](/api-docs/secret/identity/oidc-provider#create-or-update-an-assignment)
-with the name "allow_all" using the Vault 1.9 tech preview, the installation of these built-in
+with the name `default`, [key](/api-docs/secret/identity/tokens#create-a-named-key) with the
+name `default`, or [assignment](/api-docs/secret/identity/oidc-provider#create-or-update-an-assignment)
+with the name `allow_all` using the Vault 1.9 tech preview, the installation of these built-in
 resources will be skipped. We *strongly* recommend that you delete any resources that have
 naming collisions before upgrading to Vault 1.10. Failing to delete resources with naming
 collisions could result unexpected default behavior. Additionally, we recommend reading the
