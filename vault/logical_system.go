@@ -2435,13 +2435,18 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return nil, err
 		}
 
+		name := data.Get("name").(string)
 		policy := &Policy{
-			Name:      strings.ToLower(data.Get("name").(string)),
+			Name:      strings.ToLower(name),
 			Type:      policyType,
 			namespace: ns,
 		}
 		if policy.Name == "" {
 			return logical.ErrorResponse("policy name must be provided in the URL"), nil
+		}
+		if name != policy.Name {
+			resp = &logical.Response{}
+			resp.AddWarning(fmt.Sprintf("policy name was converted to %s", policy.Name))
 		}
 
 		policy.Raw = data.Get("policy").(string)
@@ -2485,6 +2490,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
+
 		return resp, nil
 	}
 }
