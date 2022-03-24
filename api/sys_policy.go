@@ -17,7 +17,7 @@ func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodList, "/v1/sys/policies/acl")
+	r := c.c.NewRequest("LIST", "/v1/sys/policies/acl")
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
 	r.Method = http.MethodGet

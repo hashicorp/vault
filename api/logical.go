@@ -114,7 +114,7 @@ func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, er
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodList, "/v1/"+path)
+	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
 	r.Method = http.MethodGet
