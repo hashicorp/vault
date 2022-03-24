@@ -3379,6 +3379,126 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 }
 
+func TestReadWriteDeleteRoles(t *testing.T) {
+	ctx := context.Background()
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Mount PKI.
+	err := client.Sys().MountWithContext(ctx, "pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil {
+		t.Fatalf("response should have been emtpy but was:\n%#v", resp)
+	}
+
+	// Write role PKI.
+	_, err = client.Logical().WriteWithContext(ctx, "pki/roles/test", map[string]interface{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the role.
+	resp, err = client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data == nil {
+		t.Fatal("response data was nil when it should have contained data")
+	}
+
+	// Validate that we have not changed any defaults unknowingly
+	expectedData := map[string]interface{}{
+		"key_type":                           "rsa",
+		"use_csr_sans":                       true,
+		"client_flag":                        true,
+		"allowed_serial_numbers":             []interface{}{},
+		"generate_lease":                     false,
+		"signature_bits":                     json.Number("256"),
+		"allowed_domains":                    []interface{}{},
+		"allowed_uri_sans_template":          false,
+		"enforce_hostnames":                  true,
+		"policy_identifiers":                 []interface{}{},
+		"require_cn":                         true,
+		"allowed_domains_template":           false,
+		"allow_token_displayname":            false,
+		"country":                            []interface{}{},
+		"not_after":                          "",
+		"postal_code":                        []interface{}{},
+		"use_csr_common_name":                true,
+		"allow_localhost":                    true,
+		"allow_subdomains":                   false,
+		"allow_wildcard_certificates":        true,
+		"allowed_other_sans":                 []interface{}{},
+		"allowed_uri_sans":                   []interface{}{},
+		"basic_constraints_valid_for_non_ca": false,
+		"key_usage":                          []interface{}{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		"not_before_duration":                json.Number("30"),
+		"allow_glob_domains":                 false,
+		"ttl":                                json.Number("0"),
+		"ou":                                 []interface{}{},
+		"email_protection_flag":              false,
+		"locality":                           []interface{}{},
+		"server_flag":                        true,
+		"allow_bare_domains":                 false,
+		"allow_ip_sans":                      true,
+		"ext_key_usage_oids":                 []interface{}{},
+		"allow_any_name":                     false,
+		"ext_key_usage":                      []interface{}{},
+		"key_bits":                           json.Number("2048"),
+		"max_ttl":                            json.Number("0"),
+		"no_store":                           false,
+		"organization":                       []interface{}{},
+		"province":                           []interface{}{},
+		"street_address":                     []interface{}{},
+		"code_signing_flag":                  false,
+	}
+
+	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
+		t.Fatalf("pki role default values have changed, diff: %v", diff)
+	}
+
+	_, err = client.Logical().DeleteWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil {
+		t.Fatalf("response should have been emtpy but was:\n%#v", resp)
+	}
+}
+
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
