@@ -47,21 +47,31 @@ to read secrets, which can both be used side-by-side:
 - A secret in Vault that you want your Lambda to access, and a policy giving read access to it
 - Your Lambda function must use one of the [supported runtimes][lambda-supported-runtimes] for extensions
 
-#### 1. Configure Vault
+#### Step 1. Configure Vault
 
-First, set up AWS IAM auth on Vault, and attach a policy to your ARN:
+Enable the aws auth method.
 
-```bash
-vault auth enable aws
-vault write -force auth/aws/config/client
-vault write auth/aws/role/vault-lambda-role \
+```shell-session
+$ vault auth enable aws
+```
+
+Configure the AWS client to use the default options.
+
+```shell-session
+$ vault write -force auth/aws/config/client
+```
+
+Create a role prefixed with the AWS environment name.
+
+```shell-session
+$ vault write auth/aws/role/vault-lambda-role \
     auth_type=iam \
     bound_iam_principal_arn="${YOUR_ARN}" \
     policies="${YOUR_POLICY}" \
     ttl=1h
 ```
 
-#### 2. Option a) Install the extension for Lambda functions packaged in zip archives
+#### Step 2. Option a) Install the extension for Lambda functions packaged in zip archives
 
 If you deploy your Lambda function as a zip file, you can add the extension
 to your Lambda layers using the console or [cli](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html#configuration-layers-using):
@@ -70,39 +80,66 @@ to your Lambda layers using the console or [cli](https://docs.aws.amazon.com/lam
 arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:11
 ```
 
-#### 2. Option b) Install the extension for Lambda functions packaged in container images
+#### Step 2. Option b) Install the extension for Lambda functions packaged in container images
 
 Alternatively, if you deploy your Lambda function as a container image, simply
 place the built binary in the `/opt/extensions` directory of your image.
 
-Fetch the binary from releases.hashicorp.com:
+Fetch the binary from
+[releases.hashicorp.com](https://releases.hashicorp.com/vault-lambda-extension/).
+The following command requires cURL.
 
-```bash
-# Requires `curl` and `unzip`
-curl --silent https://releases.hashicorp.com/vault-lambda-extension/0.5.0/vault-lambda-extension_0.5.0_linux_amd64.zip \
+```shell-session
+$ curl --silent https://releases.hashicorp.com/vault-lambda-extension/0.5.0/vault-lambda-extension_0.5.0_linux_amd64.zip \
   --output vault-lambda-extension.zip
-unzip vault-lambda-extension.zip
 ```
 
-Optionally, you can verify the integrity of the downloaded zip using the release archive checksum verification instructions [here](https://www.hashicorp.com/security).
+Unzip the donwloaded binary.
 
-Or to build the binary from source:
-
-```bash
-# Requires Golang installed. Run from the root of this repository.
-GOOS=linux GOARCH=amd64 go build -o vault-lambda-extension main.go
+```shell-session
+$ unzip vault-lambda-extension.zip
 ```
 
-#### 3. Configure vault-lambda-extension
+Optionally, you can verify the integrity of the downloaded zip using the release
+archive checksum verification instructions
+[here](https://www.hashicorp.com/security).
 
-Configure the extension using [Lambda environment variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html):
+Or to build the binary from source. This requires Golang installed. Run from the root of this repository.
 
-```bash
-VAULT_ADDR=http://vault.example.com:8200    # Your Vault address
-VAULT_AUTH_PROVIDER=aws                     # The AWS IAM auth mount point, i.e. the path segment after auth/ from above
-VAULT_AUTH_ROLE=vault-lambda-role           # The Vault role to authenticate as. Must be configured for the ARN of your Lambda's role
-VAULT_SECRET_PATH=secret/lambda-app/token   # The path to a secret in Vault. Can be static or dynamic.
-                                            # Unless VAULT_SECRET_FILE is specified, JSON response will be written to /tmp/vault/secret.json
+```shell-session
+$ GOOS=linux GOARCH=amd64 go build -o vault-lambda-extension main.go
+```
+
+#### Step 3. Configure vault-lambda-extension
+
+Configure the extension using [Lambda environment
+variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html):
+
+Set the Vault API address.
+
+```shell-session
+$ VAULT_ADDR=http://vault.example.com:8200
+```
+
+Set the AWS IAM auth mount point (i.e. the path segment after `auth/` from above).
+
+```shell-session
+$ VAULT_AUTH_PROVIDER=aws
+```
+
+Set the Vault role to authenticate as. Must be configured for the ARN of your
+Lambda's role.
+
+```shell-session
+$ VAULT_AUTH_ROLE=vault-lambda-role
+```
+
+The path to a secret in Vault. Can be static or dynamic. Unless
+VAULT_SECRET_FILE is specified, JSON response will be written to
+`/tmp/vault/secret.json`.
+
+```shell-session
+$ VAULT_SECRET_PATH=secret/lambda-app/token
 ```
 
 If everything is correctly set up, your Lambda function can then read secret
@@ -163,10 +200,10 @@ In addition to Vault configuration, you can configure certain aspects of the STS
 client the extension uses through the usual AWS environment variables. For example,
 if your Vault instance's IAM auth is configured to use regional STS endpoints:
 
-```bash
-vault write auth/aws/config/client \
-  sts_endpoint="https://sts.eu-west-1.amazonaws.com" \
-  sts_region="eu-west-1"
+```shell-session
+$ vault write auth/aws/config/client \
+     sts_endpoint="https://sts.eu-west-1.amazonaws.com" \
+     sts_region="eu-west-1"
 ```
 
 Then you may need to configure the extension's STS client to also use the regional
@@ -242,14 +279,26 @@ so aim to give an approximate baseline.
 If you would like to upload the extension as a Lambda layer in your own AWS
 account and region, you can do the following:
 
-```bash
-curl --silent https://releases.hashicorp.com/vault-lambda-extension/0.5.0/vault-lambda-extension_0.5.0_linux_amd64.zip \
+```shell-session
+$ curl --silent https://releases.hashicorp.com/vault-lambda-extension/0.5.0/vault-lambda-extension_0.5.0_linux_amd64.zip \
   --output vault-lambda-extension.zip
-export REGION="YOUR REGION HERE"
-aws lambda publish-layer-version \
-  --layer-name vault-lambda-extension \
-  --zip-file  "fileb://vault-lambda-extension.zip" \
-  --region "${REGION}"
 ```
+
+Set your target AWS region.
+
+```shell-session
+$ export REGION="YOUR REGION HERE"
+```
+
+Upload the extension as a Lambda layer.
+
+```shell-session
+$ aws lambda publish-layer-version \
+     --layer-name vault-lambda-extension \
+     --zip-file  "fileb://vault-lambda-extension.zip" \
+     --region "${REGION}"
+```
+
+## Learn
 
 For step-by-step instructions, refer to the [Vault AWS Lambda Extension](https://learn.hashicorp.com/tutorials/vault/aws-lambda) tutorial for details on how to create an AWS Lambda function and use the Vault Lambda Extension to authenticate with Vault.
