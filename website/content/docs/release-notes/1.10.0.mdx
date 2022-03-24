@@ -28,13 +28,13 @@ This section describes the new features introduced as part of Vault
 
 ### Multi-Factor Authentication (MFA) for Vault OSS
 
-Vault has had support for the [Step-up Enterprise MFA](docs/enterprise/mfa) as part of its Enterprise edition. The Step-up Enterprise MFA allows having an MFA on login, or for step-up access to sensitive resources in Vault.
+Vault has had support for the [Step-up Enterprise MFA](/docs/enterprise/mfa) as part of its Enterprise edition. The Step-up Enterprise MFA allows having an MFA on login, or for step-up access to sensitive resources in Vault.
 
-With Vault 1.10.0, MFA as part of [login](/docs/auth.login-mfa) is now supported for Vault OSS. This demonstrates HashiCorp’s thought leadership in security and its continued endeavor to enable all Vault users to employ strong security policies with Vault.
+With Vault 1.10.0, MFA as part of [login](/docs/auth/login-mfa) is now supported for Vault OSS. This demonstrates HashiCorp’s thought leadership in security and its continued endeavor to enable all Vault users to employ strong security policies with Vault.
 
-~> **Note:** The Legacy MFA in Vault OSS is a [deprecated](https://www.vaultproject.io/docs/deprecation) feature and will be removed in Vault 1.11.
+~> **Note:** The Legacy MFA in Vault OSS is a [deprecated](/docs/deprecation) feature and will be removed in Vault 1.11.
 
-Refer to the [Login MFA FAQ](/auth/login-mfa/faq) to understand the various MFA workflows that are supported in Vault 1.10.0.
+Refer to the [Login MFA FAQ](/docs/auth/login-mfa/faq) to understand the various MFA workflows that are supported in Vault 1.10.0.
 
 ### Vault OIDC provider with PKCE support
 
@@ -104,7 +104,7 @@ We have made improvements to the `sys/remount` API endpoint to simplify the comp
 
 ### Scaling External Database plugins
 
-Database plugins can now implement [plugin multiplexing](/docs/internals/plugins#plugin-development) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. We will extend this functionality to additional database plugins in subsequent releases.
+Database plugins can now implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. We will extend this functionality to additional database plugins in subsequent releases.
 
 Any external database plugins that want to adopt multiplexing support will have to update their main.go call from [dbplugin.Serve()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L13) to [dbplugin.ServeMultiplex()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L42). Multiplexable database plugins are compatible with older versions of Vault down to Vault 1.6. Refer to this [Oracle Database PR](https://github.com/hashicorp/vault-plugin-database-oracle/pull/74) as an example of the upgrade process.
 
@@ -146,6 +146,10 @@ We will have a fix for this issue in Vault 1.10.1. Until this issue is fixed, yo
 
 When a user has a policy that allows creating a secret engine but not reading it, after successful creation, the user sees a message `n is undefined` instead of a permissions error. We will have a fix for this issue in an upcoming minor release.
 
+### »Adding/Modifying Duo MFA method for Enterprise MFA triggers a panic error
+
+When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `sys/mfa/method/duo` endpoint, a panic gets triggered due to a missing schema field. We will have a fix for this in Vault 1.10.1. Until this issue is fixed, avoid making any changes to your Duo configuration if you are upgrading Vault to v1.10.0.
+
 ## Feature Deprecations and EOL
 
-Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
+Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
