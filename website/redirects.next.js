@@ -15,6 +15,11 @@ module.exports = [
     permanent: false,
   },
   {
+    source: '/docs/release-notes/1.10',
+    destination: '/docs/release-notes/1.10.0',
+    permanent: true,
+  },
+  {
     source: '/api/secret/generic',
     destination: '/api-docs/secret/kv',
     permanent: true,
@@ -775,7 +780,7 @@ module.exports = [
   {
     source: '/api/:path*',
     destination: '/api-docs/:path*',
-    permanent: true
+    permanent: true,
   },
   // disallow '.html' or '/index.html' in favor of cleaner, simpler paths
   { source: '/:path*/index', destination: '/:path*', permanent: true },
