@@ -76,6 +76,18 @@ if [ -f $entRegFile ] && [[ -n "$VAULT_LICENSE" ]]; then
   done <$entRegFile
 fi
 
+# Enable database plugins
+vault secrets enable database
+
+# Configure db plugins. 
+vault write database/config/mssql \
+    plugin_name=mssql-database-plugin \
+    allowed_roles="dev-readonly" \
+    connection_url='sqlserver://{{username}}:{{password}}@database:1433' \
+    username="vault-db-user" \
+    password="VaultDatabasePassword1" \
+    verify_connection="false"
+
 # Output OpenAPI, optionally formatted
 if [ "$1" == "-p" ]; then
   curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
