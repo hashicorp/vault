@@ -19,7 +19,7 @@ explicitly specify the `algorithm_signer=ssh-rsa` for RSA keys if they used
 the implicit (empty) default, but newly created roles will use the new default
 value (preferring a literal `default` which presently uses `rsa-sha2-256`).
 
-### Etcd v2 API no longer supported
+## Etcd v2 API no longer supported
 
 Support for the Etcd v2 API is removed in Vault 1.10. The Etcd v2 API
 was deprecated with the release of [Etcd v3.5](https://etcd.io/blog/2021/announcing-etcd-3.5/),
@@ -32,9 +32,9 @@ All storage migrations should have
 [backups](/docs/concepts/storage#backing-up-vault-s-persisted-data)
 taken prior to migration.
 
-### OTP Generation Process
+## OTP Generation Process
 
-Customers passing in OTPs during the the process of generating root tokens must modify
+Customers passing in OTPs during the process of generating root tokens must modify
 the OTP generation to include an additional 2 characters before upgrading so that the
 OTP can be xor-ed with the encoded root token. This change was implemented as a result
 of the change in the prefix from hvs. to s. for service tokens.
@@ -96,3 +96,14 @@ When a user has a policy that allows creating a secret engine but not reading it
 ### Adding/Modifying Duo MFA method for Enterprise MFA triggers a panic error
 
 When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `sys/mfa/method/duo` endpoint, a panic gets triggered due to a missing schema field. We will have a fix for this in Vault 1.10.1. Until this issue is fixed, avoid making any changes to your Duo configuration if you are upgrading Vault to v1.10.0.
+
+### Sign in to UI using OIDC auth method results in an error
+
+Signing in to the Vault UI using an OIDC auth mount listed in the "tabs" of the form will result
+in the following error: "Authentication failed: role with oidc role_type is not allowed".
+The auth mounts listed in the "tabs" of the form are those that have [listing_visibility](/api-docs/system/auth#listing_visibility-1)
+set to `unauth`.
+
+There is a workaround for this error that will allow you to sign in to Vault using the OIDC
+auth method. Select the "Other" tab instead of selecting the specific OIDC auth mount tab.
+From there, select "OIDC" from the "Method" select box and proceed to sign in to Vault.
