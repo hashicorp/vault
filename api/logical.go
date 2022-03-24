@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -30,7 +31,7 @@ var (
 			return os.Getenv(EnvVaultWrapTTL)
 		}
 
-		if (operation == "PUT" || operation == "POST") && path == "sys/wrapping/wrap" {
+		if (operation == http.MethodPut || operation == http.MethodPost) && path == "sys/wrapping/wrap" {
 			return DefaultWrappingTTL
 		}
 
@@ -64,7 +65,7 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
 
 	var values url.Values
 	for k, v := range data {
@@ -116,7 +117,7 @@ func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, er
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
-	r.Method = "GET"
+	r.Method = http.MethodGet
 	r.Params.Set("list", "true")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
@@ -149,7 +150,7 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 }
 
 func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PUT", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[st
 }
 
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PATCH", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodPatch, "/v1/"+path)
 	r.Headers.Set("Content-Type", "application/merge-patch+json")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
@@ -172,7 +173,7 @@ func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
 }
 
 func (c *Logical) WriteBytesWithContext(ctx context.Context, path string, data []byte) (*Secret, error) {
-	r := c.c.NewRequest("PUT", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
 	r.BodyBytes = data
 
 	return c.write(ctx, path, r)
@@ -222,7 +223,7 @@ func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, da
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", "/v1/"+path)
+	r := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
 
 	var values url.Values
 	for k, v := range data {
@@ -282,7 +283,7 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 		}
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/wrapping/unwrap")
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/wrapping/unwrap")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}

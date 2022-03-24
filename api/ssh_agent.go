@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/errwrap"
@@ -218,7 +219,7 @@ func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVeri
 		"otp": otp,
 	}
 	verifyPath := fmt.Sprintf("/v1/%s/verify", c.MountPoint)
-	r := c.c.NewRequest("PUT", verifyPath)
+	r := c.c.NewRequest(http.MethodPut, verifyPath)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}

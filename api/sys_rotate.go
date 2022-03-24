@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"time"
 )
 
@@ -15,7 +16,7 @@ func (c *Sys) RotateWithContext(ctx context.Context) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/sys/rotate")
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/rotate")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -32,7 +33,7 @@ func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/key-status")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/key-status")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

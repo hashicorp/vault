@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"net/http"
 )
 
 // TokenAuth is used to perform token backend operations on Vault
@@ -22,7 +23,7 @@ func (c *TokenAuth) CreateWithContext(ctx context.Context, opts *TokenCreateRequ
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/auth/token/create")
+	r := c.c.NewRequest(http.MethodPost, "/v1/auth/token/create")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func (c *TokenAuth) CreateOrphanWithContext(ctx context.Context, opts *TokenCrea
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/auth/token/create-orphan")
+	r := c.c.NewRequest(http.MethodPost, "/v1/auth/token/create-orphan")
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
@@ -66,7 +67,7 @@ func (c *TokenAuth) CreateWithRoleWithContext(ctx context.Context, opts *TokenCr
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/auth/token/create/"+roleName)
+	r := c.c.NewRequest(http.MethodPost, "/v1/auth/token/create/"+roleName)
 	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
@@ -88,7 +89,7 @@ func (c *TokenAuth) LookupWithContext(ctx context.Context, token string) (*Secre
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/auth/token/lookup")
+	r := c.c.NewRequest(http.MethodPost, "/v1/auth/token/lookup")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
 	}); err != nil {
@@ -112,7 +113,7 @@ func (c *TokenAuth) LookupAccessorWithContext(ctx context.Context, accessor stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-accessor")
+	r := c.c.NewRequest(http.MethodPost, "/v1/auth/token/lookup-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"accessor": accessor,
 	}); err != nil {
@@ -136,7 +137,7 @@ func (c *TokenAuth) LookupSelfWithContext(ctx context.Context) (*Secret, error) 
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
+	r := c.c.NewRequest(http.MethodGet, "/v1/auth/token/lookup-self")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -155,7 +156,7 @@ func (c *TokenAuth) RenewAccessorWithContext(ctx context.Context, accessor strin
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/auth/token/renew-accessor")
+	r := c.c.NewRequest(http.MethodPost, "/v1/auth/token/renew-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"accessor":  accessor,
 		"increment": increment,
@@ -180,7 +181,7 @@ func (c *TokenAuth) RenewWithContext(ctx context.Context, token string, incremen
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/renew")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/renew")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token":     token,
 		"increment": increment,
@@ -205,7 +206,7 @@ func (c *TokenAuth) RenewSelfWithContext(ctx context.Context, increment int) (*S
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/renew-self")
 
 	body := map[string]interface{}{"increment": increment}
 	if err := r.SetJSONBody(body); err != nil {
@@ -232,7 +233,7 @@ func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token strin
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/renew-self")
 	r.ClientToken = token
 
 	body := map[string]interface{}{"increment": increment}
@@ -260,7 +261,7 @@ func (c *TokenAuth) RevokeAccessorWithContext(ctx context.Context, accessor stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", "/v1/auth/token/revoke-accessor")
+	r := c.c.NewRequest(http.MethodPost, "/v1/auth/token/revoke-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"accessor": accessor,
 	}); err != nil {
@@ -287,7 +288,7 @@ func (c *TokenAuth) RevokeOrphanWithContext(ctx context.Context, token string) e
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-orphan")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/revoke-orphan")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
 	}); err != nil {
@@ -315,7 +316,7 @@ func (c *TokenAuth) RevokeSelfWithContext(ctx context.Context, token string) err
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/revoke-self")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -338,7 +339,7 @@ func (c *TokenAuth) RevokeTreeWithContext(ctx context.Context, token string) err
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke")
+	r := c.c.NewRequest(http.MethodPut, "/v1/auth/token/revoke")
 	if err := r.SetJSONBody(map[string]interface{}{
 		"token": token,
 	}); err != nil {

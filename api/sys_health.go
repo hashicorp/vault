@@ -1,6 +1,9 @@
 package api
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
 
 func (c *Sys) Health() (*HealthResponse, error) {
 	return c.HealthWithContext(context.Background())
@@ -10,7 +13,7 @@ func (c *Sys) HealthWithContext(ctx context.Context) (*HealthResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/health")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/health")
 	// If the code is 400 or above it will automatically turn into an error,
 	// but the sys/health API defaults to returning 5xx when not sealed or
 	// inited, so we force this code to be something else so we parse correctly

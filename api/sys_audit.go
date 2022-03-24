@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -20,7 +21,7 @@ func (c *Sys) AuditHashWithContext(ctx context.Context, path string, input strin
 		"input": input,
 	}
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/audit-hash/%s", path))
+	r := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/sys/audit-hash/%s", path))
 	if err := r.SetJSONBody(body); err != nil {
 		return "", err
 	}
@@ -59,7 +60,7 @@ func (c *Sys) ListAuditWithContext(ctx context.Context) (map[string]*Audit, erro
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/audit")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/audit")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -102,7 +103,7 @@ func (c *Sys) EnableAuditWithOptionsWithContext(ctx context.Context, path string
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/audit/%s", path))
+	r := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/sys/audit/%s", path))
 	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func (c *Sys) DisableAuditWithContext(ctx context.Context, path string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/audit/%s", path))
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/audit/%s", path))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
 )
 
 // SSH is used to return a client to invoke operations on SSH backend.
@@ -34,7 +35,7 @@ func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[s
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/creds/%s", c.MountPoint, role))
+	r := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/%s/creds/%s", c.MountPoint, role))
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
@@ -59,7 +60,7 @@ func (c *SSH) SignKeyWithContext(ctx context.Context, role string, data map[stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/sign/%s", c.MountPoint, role))
+	r := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/%s/sign/%s", c.MountPoint, role))
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}

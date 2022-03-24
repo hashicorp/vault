@@ -1,6 +1,9 @@
 package api
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
 
 func (c *Sys) GenerateRootStatus() (*GenerateRootStatusResponse, error) {
 	return c.GenerateRootStatusWithContext(context.Background())
@@ -30,7 +33,7 @@ func (c *Sys) generateRootStatusCommonWithContext(ctx context.Context, path stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", path)
+	r := c.c.NewRequest(http.MethodGet, path)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -76,7 +79,7 @@ func (c *Sys) generateRootInitCommonWithContext(ctx context.Context, path, otp, 
 		"pgp_key": pgpKey,
 	}
 
-	r := c.c.NewRequest("PUT", path)
+	r := c.c.NewRequest(http.MethodPut, path)
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}
@@ -120,7 +123,7 @@ func (c *Sys) generateRootCancelCommonWithContext(ctx context.Context, path stri
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", path)
+	r := c.c.NewRequest(http.MethodDelete, path)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -162,7 +165,7 @@ func (c *Sys) generateRootUpdateCommonWithContext(ctx context.Context, path, sha
 		"nonce": nonce,
 	}
 
-	r := c.c.NewRequest("PUT", path)
+	r := c.c.NewRequest(http.MethodPut, path)
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}

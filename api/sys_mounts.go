@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -17,7 +18,7 @@ func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutpu
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", "/v1/sys/mounts")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/mounts")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -50,7 +51,7 @@ func (c *Sys) MountWithContext(ctx context.Context, path string, mountInfo *Moun
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s", path))
 	if err := r.SetJSONBody(mountInfo); err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/mounts/%s", path))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -124,7 +125,7 @@ func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*Mo
 		"to":   to,
 	}
 
-	r := c.c.NewRequest("POST", "/v1/sys/remount")
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/remount")
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}
@@ -161,7 +162,7 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
@@ -193,7 +194,7 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {
 		return err
 	}
@@ -213,7 +214,7 @@ func (c *Sys) MountConfigWithContext(ctx context.Context, path string) (*MountCo
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {

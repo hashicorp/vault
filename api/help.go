@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
 )
 
 // Help wraps HelpWithContext using context.Background.
@@ -15,7 +16,7 @@ func (c *Client) HelpWithContext(ctx context.Context, path string) (*Help, error
 	ctx, cancelFunc := c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.NewRequest("GET", fmt.Sprintf("/v1/%s", path))
+	r := c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/%s", path))
 	r.Params.Add("help", "1")
 
 	resp, err := c.rawRequestWithContext(ctx, r)
