@@ -76,3 +76,23 @@ that have naming collisions before upgrading to Vault 1.10. Failing to delete re
 naming collisions could result unexpected default behavior. Additionally, we recommend reading
 the corresponding details in the OIDC provider [concepts](/docs/concepts/oidc-provider) document
 to understand how the built-in resources are used in the system.
+
+## Known Issues
+
+### Single Vault follower restart causes election even with established quorum
+
+We now support Server Side Consistent Tokens (See [Replication](/docs/configuration/replication) and [Vault Eventual Consistency](/docs/enterprise/consistency)), which introduces a new token format that can only be used on nodes of 1.10 or higher version. This new format is enabled by default upon upgrading to the new version. Old format tokens can be read by Vault 1.10, but the new format Vault 1.10 tokens cannot be read by older Vault versions.
+
+For more details, see the [Server Side Consistent Tokens FAQ](/docs/faq/ssct).
+
+Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded. Note that this issue does not impact Vault OSS users.
+
+We will have a fix for this issue in Vault 1.10.1. Until this issue is fixed, you may be at risk of having performance standbys unable to service requests until all nodes are upgraded. We recommended that you plan for a maintenance window to upgrade.
+
+### Limited policy shows unhelpful message in UI after mounting a secret engine
+
+When a user has a policy that allows creating a secret engine but not reading it, after successful creation, the user sees a message n is undefined instead of a permissions error. We will have a fix for this issue in an upcoming minor release.
+
+### Adding/Modifying Duo MFA method for Enterprise MFA triggers a panic error
+
+When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `sys/mfa/method/duo` endpoint, a panic gets triggered due to a missing schema field. We will have a fix for this in Vault 1.10.1. Until this issue is fixed, avoid making any changes to your Duo configuration if you are upgrading Vault to v1.10.0.
