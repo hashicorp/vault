@@ -3,12 +3,15 @@ package pki
 import (
 	"context"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_CRL_EnableDisable(t *testing.T) {
@@ -64,16 +67,8 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	}
 
 	test := func(num int) {
-		resp, err := client.Logical().ReadWithContext(context.Background(), "pki/cert/crl")
-		if err != nil {
-			t.Fatal(err)
-		}
-		crlPem := resp.Data["certificate"].(string)
-		certList, err := x509.ParseCRL([]byte(crlPem))
-		if err != nil {
-			t.Fatal(err)
-		}
-		lenList := len(certList.TBSCertList.RevokedCertificates)
+		certList := getCrlCertificateList(t, client)
+		lenList := len(certList.RevokedCertificates)
 		if lenList != num {
 			t.Fatalf("expected %d, found %d", num, lenList)
 		}
@@ -122,4 +117,23 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	test(0)
 	toggle(false)
 	test(6)
+
+	// The rotate command should reset the update time of the CRL.
+	crlCreationTime1 := getCrlCertificateList(t, client).ThisUpdate
+	time.Sleep(1 * time.Second)
+	_, err = client.Logical().Read("pki/crl/rotate")
+	require.NoError(t, err)
+
+	crlCreationTime2 := getCrlCertificateList(t, client).ThisUpdate
+	require.NotEqual(t, crlCreationTime1, crlCreationTime2)
+}
+
+func getCrlCertificateList(t *testing.T, client *api.Client) pkix.TBSCertificateList {
+	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/cert/crl")
+	require.NoError(t, err)
+
+	crlPem := resp.Data["certificate"].(string)
+	certList, err := x509.ParseCRL([]byte(crlPem))
+	require.NoError(t, err)
+	return certList.TBSCertList
 }
