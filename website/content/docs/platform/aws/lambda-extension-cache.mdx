@@ -76,8 +76,8 @@ $ vault write auth/aws/role/vault-lambda-role \
 If you deploy your Lambda function as a zip file, you can add the extension
 to your Lambda layers using the console or [cli](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html#configuration-layers-using):
 
-```shell-session
-$ arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:11
+```text
+arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:11
 ```
 
 #### Step 2. Option b) Install the extension for Lambda functions packaged in container images
