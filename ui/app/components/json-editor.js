@@ -11,7 +11,7 @@ import { action } from '@ember/object';
  *
  * @param {string} [title] - Name above codemirror view
  * @param {string} value - a specific string the comes from codemirror. It's the value inside the codemirror display
- * @param {Function} valueUpdated - action to preform when you edit the codemirror value.
+ * @param {Function} [valueUpdated] - action to preform when you edit the codemirror value.
  * @param {Function} [onFocusOut] - action to preform when you focus out of codemirror.
  * @param {string} [helpText] - helper text.
  * @param {Object} [extraKeys] - to provide keyboard shortcut methods for things like saving on shit + enter.
