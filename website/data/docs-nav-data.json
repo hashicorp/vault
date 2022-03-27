@@ -1457,15 +1457,19 @@
         ]
       },
       {
-        "title": "AWS Marketplace",
+        "title": "AWS",
         "routes": [
           {
             "title": "Overview",
-            "path": "platform/aws-mp"
+            "path": "platform/aws"
+          },
+          {
+            "title": "Vault Lambda Extension Cache",
+            "path": "platform/aws/lambda-extension-cache"
           },
           {
             "title": "Running Vault",
-            "path": "platform/aws-mp/run"
+            "path": "platform/aws/run"
           }
         ]
       },
