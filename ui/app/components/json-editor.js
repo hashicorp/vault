@@ -37,7 +37,7 @@ export default class JsonEditorComponent extends Component {
   }
 
   @action
-  OnFocus(...args) {
+  onFocus(...args) {
     if (this.args.onFocusOut) {
       this.args.onFocusOut(...args);
     }
