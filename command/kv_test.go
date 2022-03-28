@@ -102,7 +102,7 @@ func TestKVPutCommand(t *testing.T) {
 		{
 			"v2_single_value_backslash",
 			[]string{"kv/write/foo", "foo=\\"},
-			"kv/data/write/foo",
+			"created_time",
 			0,
 		},
 	}
