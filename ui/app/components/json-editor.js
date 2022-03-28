@@ -14,12 +14,12 @@ import { action } from '@ember/object';
  * @param {Function} [valueUpdated] - action to preform when you edit the codemirror value.
  * @param {Function} [onFocusOut] - action to preform when you focus out of codemirror.
  * @param {string} [helpText] - helper text.
- * @param {Object} [extraKeys] - to provide keyboard shortcut methods for things like saving on shift + enter.
+ * @param {Object} [extraKeys] - Provides keyboard shortcut methods for things like saving on shift + enter.
  * @param {Array} [gutters] - An array of CSS class names or class name / CSS string pairs, each of which defines a width (and optionally a background), and which will be used to draw the background of the gutters.
- * @param {string} [mode] - right now we only import ruby so must mode but be ruby or defaults to javascript. If you wanted another language you need to import it into the modifier.
- * @param {Boolean} [readOnly] - defaults to false.
- * @param {String} [theme] - specify or customize the look via css.
- * @param {String} [value] - value within the display.
+ * @param {string} [mode] - The mode defined for styling. Right now we only import ruby so must mode but be ruby or defaults to javascript. If you wanted another language you need to import it into the modifier.
+ * @param {Boolean} [readOnly] - Sets the view to readOnly, allowing for copying but no editing. It also hides the cursor. Defaults to false.
+ * @param {String} [theme] - Specify or customize the look via a named "theme" class in scss.
+ * @param {String} [value] - Value within the display. Generally, a json string.
  * @param {String} [viewportMargin] - Size of viewport. Often set to "Infinity" to load/show all text regardless of length.
  */
 
