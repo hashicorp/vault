@@ -52,7 +52,7 @@ module('Integration | Component | secret edit', function (hooks) {
     assert.dom('[data-test-toggle-input="json"]').isNotDisabled();
   });
 
-  test('meep it shows an error when creating and data is not an object', async function (assert) {
+  test('it shows an error when creating and data is not an object', async function (assert) {
     this.set('mode', 'create');
     this.set('model', {
       secretData: null,

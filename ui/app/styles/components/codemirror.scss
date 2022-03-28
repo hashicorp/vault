@@ -175,8 +175,30 @@ $gutter-grey: #2a2f36;
     // https://github.com/codemirror/CodeMirror/issues/1099
     display: none;
   }
-}
+  // css for a specific theme
+  .cm-s-hashi {
+    span {
+      color: $light-grey;
+    }
 
+    span.cm-string,
+    span.cm-string-2 {
+      color: $faded-gray;
+    }
+
+    span.cm-number {
+      color: lighten($dark-gray, 30%);
+    }
+
+    span.cm-property {
+      color: white;
+    }
+
+    span.cm-variable-2 {
+      color: $light-grey-blue;
+    }
+  }
+}
 .cm-s-auto-height.CodeMirror {
   height: auto;
 }

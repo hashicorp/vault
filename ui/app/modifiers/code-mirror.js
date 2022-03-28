@@ -7,7 +7,7 @@ import 'codemirror/addon/edit/matchbrackets';
 import 'codemirror/addon/selection/active-line';
 import 'codemirror/addon/lint/lint.js';
 import 'codemirror/addon/lint/json-lint.js';
-// right now we only use the ruby mode, if you use another you need to import it.
+// right now we only use the ruby and javascript, if you use another mode you'll need to import it.
 // https://codemirror.net/mode/
 import 'codemirror/mode/ruby/ruby';
 import 'codemirror/mode/javascript/javascript';
@@ -42,6 +42,8 @@ export default class CodeMirrorModifier extends Modifier {
       throw new Error('CodeMirror modifier has no element');
     }
     const editor = codemirror(this.element, {
+      // IMPORTANT: `gutters` must come before `lint` since the presence of
+      // `gutters` is cached internally when `lint` is toggled
       gutters: this.args.named.gutters || ['CodeMirror-lint-markers'],
       matchBrackets: true,
       lint: { lintOnChange: true },

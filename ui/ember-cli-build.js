@@ -26,11 +26,6 @@ const appConfig = {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
-  // ARG TODO return figure htis out
-  // codemirror: {
-  //   modes: ['javascript', 'ruby'],
-  //   keyMaps: ['sublime'],
-  // },
   babel: {
     plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
   },
@@ -75,8 +70,6 @@ module.exports = function (defaults) {
 
   app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/codemirror/addon/lint/lint.css');
-  // app.import('node_modules/codemirror/addon/lint/lint.js');
-  // app.import('node_modules/codemirror/addon/lint/json-lint.js');
   app.import('node_modules/codemirror/lib/codemirror.css');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
   app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
