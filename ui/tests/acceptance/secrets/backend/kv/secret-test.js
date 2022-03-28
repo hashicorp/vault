@@ -374,13 +374,15 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.path(secretPath).toggleJSON();
-    await editPage.editor.fillIn(this, content);
+    let instance = document.querySelector('.CodeMirror').CodeMirror;
+    instance.setValue(content);
     await editPage.save();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+    let savedInstance = document.querySelector('.CodeMirror').CodeMirror;
     assert.equal(
-      showPage.editor.content(this),
+      savedInstance.options.value,
       JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
       'saves the content'
     );
