@@ -194,6 +194,9 @@ func testAccStepwiseDecrypt(
 		Path:      "decrypt/" + name,
 		Data:      decryptData,
 		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
 			var d struct {
 				Plaintext string `mapstructure:"plaintext"`
 			}
