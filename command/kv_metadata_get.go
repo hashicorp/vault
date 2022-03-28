@@ -17,6 +17,7 @@ var (
 
 type KVMetadataGetCommand struct {
 	*BaseCommand
+	flagMount string
 }
 
 func (c *KVMetadataGetCommand) Synopsis() string {
@@ -30,6 +31,10 @@ Usage: vault kv metadata get [options] KEY
   Retrieves the metadata from Vault's key-value store at the given key name. If no
   key exists with that name, an error is returned.
 
+      $ vault kv metadata get -mount=secret foo
+
+  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/metadata/foo): 
+  
       $ vault kv metadata get secret/foo
 
   Additional flags and more advanced use cases are detailed below.
@@ -40,6 +45,20 @@ Usage: vault kv metadata get [options] KEY
 
 func (c *KVMetadataGetCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	// Common Options
+	f := set.NewFlagSet("Common Options")
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /metadata/ automatically appended between KV 
+		v2 secrets.`,
+	})
 
 	return set
 }

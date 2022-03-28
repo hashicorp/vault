@@ -18,6 +18,7 @@ type KVRollbackCommand struct {
 	*BaseCommand
 
 	flagVersion int
+	flagMount   string
 }
 
 func (c *KVRollbackCommand) Synopsis() string {
@@ -35,6 +36,10 @@ Usage: vault kv rollback [options] KEY
   is 5 and the rollback version is 2, the data from version 2 will become
   version 6.
 
+      $ vault kv rollback -mount=secret -version=2 foo
+
+  A more path-like syntax can also be used, but note that this is not the full API path to the secret (secret/data/foo): 
+  
       $ vault kv rollback -version=2 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
@@ -53,6 +58,17 @@ func (c *KVRollbackCommand) Flags() *FlagSets {
 		Name:   "version",
 		Target: &c.flagVersion,
 		Usage:  `Specifies the version number that should be made current again.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set

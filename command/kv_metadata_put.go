@@ -22,6 +22,7 @@ type KVMetadataPutCommand struct {
 	flagCASRequired        BoolPtr
 	flagDeleteVersionAfter time.Duration
 	flagCustomMetadata     map[string]string
+	flagMount              string
 	testStdin              io.Reader // for tests
 }
 
@@ -38,23 +39,27 @@ Usage: vault metadata kv put [options] KEY
 
   Create a key in the key-value store with no data:
 
+      $ vault kv metadata put -mount=secret foo
+
+  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/metadata/foo): 
+  
       $ vault kv metadata put secret/foo
 
   Set a max versions setting on the key:
 
-      $ vault kv metadata put -max-versions=5 secret/foo
+      $ vault kv metadata put -mount=secret -max-versions=5 foo
 
   Set delete-version-after on the key:
 
-      $ vault kv metadata put -delete-version-after=3h25m19s secret/foo
+      $ vault kv metadata put -mount=secret -delete-version-after=3h25m19s foo
 
   Require Check-and-Set for this key:
 
-      $ vault kv metadata put -cas-required secret/foo
+      $ vault kv metadata put -mount=secret -cas-required foo
 
   Set custom metadata on the key:
 
-      $ vault kv metadata put -custom-metadata=foo=abc -custom-metadata=bar=123 secret/foo
+      $ vault kv metadata put -mount=secret -custom-metadata=foo=abc -custom-metadata=bar=123 foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -100,6 +105,17 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 		Default: map[string]string{},
 		Usage: "Specifies arbitrary version-agnostic key=value metadata meant to describe a secret." +
 			"This can be specified multiple times to add multiple pieces of metadata.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /metadata/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set

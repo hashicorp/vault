@@ -15,6 +15,7 @@ var (
 
 type KVMetadataDeleteCommand struct {
 	*BaseCommand
+	flagMount string
 }
 
 func (c *KVMetadataDeleteCommand) Synopsis() string {
@@ -27,6 +28,10 @@ Usage: vault kv metadata delete [options] PATH
 
   Deletes all versions and metadata for the provided key. 
 
+      $ vault kv metadata delete -mount=secret foo
+
+  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/metadata/foo): 
+  
       $ vault kv metadata delete secret/foo
 
   Additional flags and more advanced use cases are detailed below.
@@ -37,7 +42,23 @@ Usage: vault kv metadata delete [options] PATH
 }
 
 func (c *KVMetadataDeleteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP)
+
+	// Common Options
+	f := set.NewFlagSet("Common Options")
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /metadata/ automatically appended between KV 
+		v2 secrets.`,
+	})
+
+	return set
 }
 
 func (c *KVMetadataDeleteCommand) AutocompleteArgs() complete.Predictor {

@@ -17,6 +17,7 @@ type KVUndeleteCommand struct {
 	*BaseCommand
 
 	flagVersions []string
+	flagMount    string
 }
 
 func (c *KVUndeleteCommand) Synopsis() string {
@@ -31,6 +32,10 @@ Usage: vault kv undelete [options] KEY
   This restores the data, allowing it to be returned on get requests.
 
   To undelete version 3 of key "foo":
+  
+      $ vault kv undelete -mount=secret -versions=3 foo
+
+  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/data/foo): 
   
       $ vault kv undelete -versions=3 secret/foo
 
@@ -51,6 +56,17 @@ func (c *KVUndeleteCommand) Flags() *FlagSets {
 		Target:  &c.flagVersions,
 		Default: nil,
 		Usage:   `Specifies the version numbers to undelete.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set

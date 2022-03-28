@@ -22,6 +22,7 @@ type KVPatchCommand struct {
 
 	flagCAS    int
 	flagMethod string
+	flagMount  string
 	testStdin  io.Reader // for tests
 }
 
@@ -35,25 +36,29 @@ Usage: vault kv patch [options] KEY [DATA]
 
   *NOTE*: This is only supported for KV v2 engine mounts.
 
-  Writes the data to the given path in the key-value store. The data can be of
+  Writes the data to the corresponding path in the key-value store. The data can be of
   any type.
 
+      $ vault kv patch -mount=secret foo bar=baz
+
+  A more path-like syntax can also be used, but note that this is not the full API path to the secret (secret/data/foo): 
+  
       $ vault kv patch secret/foo bar=baz
 
   The data can also be consumed from a file on disk by prefixing with the "@"
   symbol. For example:
 
-      $ vault kv patch secret/foo @data.json
+      $ vault kv patch -mount=secret foo @data.json
 
   Or it can be read from stdin using the "-" symbol:
 
-      $ echo "abcd1234" | vault kv patch secret/foo bar=-
+      $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
 
   To perform a Check-And-Set operation, specify the -cas flag with the
   appropriate version number corresponding to the key you want to perform
   the CAS operation on:
 
-      $ vault kv patch -cas=1 secret/foo bar=baz
+      $ vault kv patch -mount=secret -cas=1 foo bar=baz
 
   By default, this operation will attempt an HTTP PATCH operation. If your
   policy does not allow that, it will fall back to a read/local update/write approach.
@@ -61,12 +66,12 @@ Usage: vault kv patch [options] KEY [DATA]
   with the -method flag. When -method=patch is specified, only an HTTP PATCH
   operation will be tried. If it fails, the entire command will fail.
 
-      $ vault kv patch -method=patch secret/foo bar=baz
+      $ vault kv patch -mount=secret -method=patch foo bar=baz
 
   When -method=rw is specified, only a read/local update/write approach will be tried.
   This was the default behavior previous to Vault 1.9.
 
-      $ vault kv patch -method=rw secret/foo bar=baz
+      $ vault kv patch -mount=secret -method=rw foo bar=baz
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -96,6 +101,17 @@ func (c *KVPatchCommand) Flags() *FlagSets {
 		Usage: `Specifies which method of patching to use. If set to "patch", then
 		an HTTP PATCH request will be issued. If set to "rw", then a read will be
 		performed, then a local update, followed by a remote update.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set

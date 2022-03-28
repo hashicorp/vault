@@ -19,6 +19,7 @@ type KVPutCommand struct {
 	*BaseCommand
 
 	flagCAS   int
+	flagMount string
 	testStdin io.Reader // for tests
 }
 
@@ -33,22 +34,26 @@ Usage: vault kv put [options] KEY [DATA]
   Writes the data to the given path in the key-value store. The data can be of
   any type.
 
+      $ vault kv put -mount=secret foo bar=baz
+
+  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/data/foo): 
+  
       $ vault kv put secret/foo bar=baz
 
   The data can also be consumed from a file on disk by prefixing with the "@"
   symbol. For example:
 
-      $ vault kv put secret/foo @data.json
+      $ vault kv put -mount=secret foo @data.json
 
   Or it can be read from stdin using the "-" symbol:
 
-      $ echo "abcd1234" | vault kv put secret/foo bar=-
+      $ echo "abcd1234" | vault kv put -mount=secret foo bar=-
 
   To perform a Check-And-Set operation, specify the -cas flag with the
   appropriate version number corresponding to the key you want to perform
   the CAS operation on:
 
-      $ vault kv put -cas=1 secret/foo bar=baz
+      $ vault kv put -mount=secret -cas=1 foo bar=baz
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -71,6 +76,17 @@ func (c *KVPutCommand) Flags() *FlagSets {
 		doesn’t exist. If the index is non-zero the write will only be allowed
 		if the key’s current version matches the version specified in the cas
 		parameter.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set

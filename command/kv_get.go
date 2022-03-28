@@ -17,6 +17,7 @@ type KVGetCommand struct {
 	*BaseCommand
 
 	flagVersion int
+	flagMount   string
 }
 
 func (c *KVGetCommand) Synopsis() string {
@@ -31,12 +32,16 @@ Usage: vault kv get [options] KEY
   key exists with that name, an error is returned. If a key exists with that
   name but has no data, nothing is returned.
 
+      $ vault kv get -mount=secret foo
+
+  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/data/foo): 
+  
       $ vault kv get secret/foo
 
   To view the given key name at a specific version in time, specify the "-version"
   flag:
 
-      $ vault kv get -version=1 secret/foo
+      $ vault kv get -mount=secret -version=1 foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -55,6 +60,17 @@ func (c *KVGetCommand) Flags() *FlagSets {
 		Target:  &c.flagVersion,
 		Default: 0,
 		Usage:   `If passed, the value at the version number will be returned.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set
