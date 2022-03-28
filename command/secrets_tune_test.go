@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -80,7 +81,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		// Mount
-		if err := client.Sys().Mount("kv", &api.MountInput{
+		if err := client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
 			Type: "kv",
 			Options: map[string]string{
 				"version": "2",
@@ -90,7 +91,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 		}
 
 		// confirm default max_versions
-		mounts, err := client.Sys().ListMounts()
+		mounts, err := client.Sys().ListMountsWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -125,7 +126,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		mounts, err = client.Sys().ListMounts()
+		mounts, err = client.Sys().ListMountsWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -155,7 +156,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			cmd.client = client
 
 			// Mount
-			if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
+			if err := client.Sys().MountWithContext(context.Background(), "mount_tune_integration", &api.MountInput{
 				Type: "pki",
 			}); err != nil {
 				t.Fatal(err)
@@ -184,7 +185,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to contain %q", combined, expected)
 			}
 
-			mounts, err := client.Sys().ListMounts()
+			mounts, err := client.Sys().ListMountsWithContext(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -232,7 +233,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				cmd.client = client
 
 				// Mount
-				if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
+				if err := client.Sys().MountWithContext(context.Background(), "mount_tune_integration", &api.MountInput{
 					Type:        "pki",
 					Description: "initial description",
 				}); err != nil {
@@ -253,7 +254,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 					t.Errorf("expected %q to contain %q", combined, expected)
 				}
 
-				mounts, err := client.Sys().ListMounts()
+				mounts, err := client.Sys().ListMountsWithContext(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -275,7 +276,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				cmd.client = client
 
 				// Mount
-				if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
+				if err := client.Sys().MountWithContext(context.Background(), "mount_tune_integration", &api.MountInput{
 					Type:        "pki",
 					Description: "initial description",
 				}); err != nil {
@@ -296,7 +297,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 					t.Errorf("expected %q to contain %q", combined, expected)
 				}
 
-				mounts, err := client.Sys().ListMounts()
+				mounts, err := client.Sys().ListMountsWithContext(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}

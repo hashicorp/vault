@@ -3,6 +3,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -143,7 +144,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		}
 
 		// Now init to verify the init response code
-		if _, err := client.Sys().Init(&api.InitRequest{
+		if _, err := client.Sys().InitWithContext(context.Background(), &api.InitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}); err != nil {
@@ -175,7 +176,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
 		}
 
-		init, err := client.Sys().InitStatus()
+		init, err := client.Sys().InitStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -198,7 +199,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		// Try unsealing with those keys - only use 3, which is the default
 		// threshold.
 		for i, key := range keys[:3] {
-			resp, err := client.Sys().Unseal(key)
+			resp, err := client.Sys().UnsealWithContext(context.Background(), key)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -209,7 +210,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			}
 		}
 
-		status, err := client.Sys().SealStatus()
+		status, err := client.Sys().SealStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -237,7 +238,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
 		}
 
-		init, err := client.Sys().InitStatus()
+		init, err := client.Sys().InitStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -260,7 +261,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		// Try unsealing with those keys - only use 3, which is the default
 		// threshold.
 		for i, key := range keys[:keyThreshold] {
-			resp, err := client.Sys().Unseal(key)
+			resp, err := client.Sys().UnsealWithContext(context.Background(), key)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -271,7 +272,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			}
 		}
 
-		status, err := client.Sys().SealStatus()
+		status, err := client.Sys().SealStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -320,7 +321,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 
 		// Try unsealing with one key
 		decryptedKey := testPGPDecrypt(t, pgpkeys.TestPrivKey1, keys[0])
-		if _, err := client.Sys().Unseal(decryptedKey); err != nil {
+		if _, err := client.Sys().UnsealWithContext(context.Background(), decryptedKey); err != nil {
 			t.Fatal(err)
 		}
 

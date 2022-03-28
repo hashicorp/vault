@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -67,9 +68,14 @@ func (f *PluginAPIClientMeta) GetTLSConfig() *TLSConfig {
 	return nil
 }
 
-// VaultPluginTLSProvider is run inside a plugin and retrieves the response
-// wrapped TLS certificate from vault. It returns a configured TLS Config.
+// VaultPluginTLSProvider wraps VaultPluginTLSProviderContext using context.Background.
 func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
+	return VaultPluginTLSProviderContext(context.Background(), apiTLSConfig)
+}
+
+// VaultPluginTLSProviderContext is run inside a plugin and retrieves the response
+// wrapped TLS certificate from vault. It returns a configured TLS Config.
+func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
 	if os.Getenv(PluginMetadataModeEnv) == "true" {
 		return nil
 	}
@@ -121,7 +127,7 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 		// Reset token value to make sure nothing has been set by default
 		client.ClearToken()
 
-		secret, err := client.Logical().Unwrap(unwrapToken)
+		secret, err := client.Logical().UnwrapWithContext(ctx, unwrapToken)
 		if err != nil {
 			return nil, errwrap.Wrapf("error during token unwrap request: {{err}}", err)
 		}

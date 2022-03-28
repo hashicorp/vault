@@ -2,6 +2,7 @@ package command
 
 import (
 	"archive/tar"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -640,7 +641,7 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 	defer closer()
 
 	// Create a new token with default policy
-	resp, err := client.Logical().Write("auth/token/create", map[string]interface{}{
+	resp, err := client.Logical().WriteWithContext(context.Background(), "auth/token/create", map[string]interface{}{
 		"policies": "default",
 	})
 	if err != nil {

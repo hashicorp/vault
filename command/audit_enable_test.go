@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -108,7 +109,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		audits, err := client.Sys().ListAudit()
+		audits, err := client.Sys().ListAuditWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

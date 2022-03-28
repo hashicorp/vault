@@ -3,6 +3,7 @@
 package command
 
 import (
+	"context"
 	"io"
 	"reflect"
 	"regexp"
@@ -117,7 +118,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		}
 
 		// Now init to verify the init response
-		if _, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+		if _, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}); err != nil {
@@ -148,7 +149,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a rekey
-		if _, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+		if _, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}); err != nil {
@@ -171,7 +172,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -205,7 +206,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().RekeyStatus()
+		status, err := client.Sys().RekeyStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -242,7 +243,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().RekeyStatus()
+		status, err := client.Sys().RekeyStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -261,7 +262,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a rekey
-		status, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+		status, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		})
@@ -307,7 +308,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		if err := client.Sys().Seal(); err != nil {
 			t.Fatal(err)
 		}
-		sealStatus, err := client.Sys().Unseal(unsealKey)
+		sealStatus, err := client.Sys().UnsealWithContext(context.Background(), unsealKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -323,7 +324,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a rekey
-		status, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+		status, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		})
@@ -383,7 +384,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		if err := client.Sys().Seal(); err != nil {
 			t.Fatal(err)
 		}
-		sealStatus, err := client.Sys().Unseal(unsealKey)
+		sealStatus, err := client.Sys().UnsealWithContext(context.Background(), unsealKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -416,7 +417,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		}
 
 		// Get the status for the nonce
-		status, err := client.Sys().RekeyStatus()
+		status, err := client.Sys().RekeyStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -479,7 +480,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
 		}
 
-		secret, err := client.Sys().RekeyRetrieveBackup()
+		secret, err := client.Sys().RekeyRetrieveBackupWithContext(context.Background())
 		if err == nil {
 			t.Errorf("expected error: %#v", secret)
 		}

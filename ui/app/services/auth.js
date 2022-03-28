@@ -35,9 +35,14 @@ export default Service.extend({
   clusterAdapter() {
     return getOwner(this).lookup('adapter:cluster');
   },
-
-  tokens: computed(function () {
-    return this.getTokensFromStorage() || [];
+  // eslint-disable-next-line
+  tokens: computed({
+    get() {
+      return this._tokens || this.getTokensFromStorage() || [];
+    },
+    set(key, value) {
+      return (this._tokens = value);
+    },
   }),
 
   generateTokenName({ backend, clusterId }, policies) {

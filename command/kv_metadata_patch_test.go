@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"strings"
@@ -62,7 +63,7 @@ func TestKvMetadataPatchCommand_EmptyArgs(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
-	if err := client.Sys().Mount("kv/", &api.MountInput{
+	if err := client.Sys().MountWithContext(context.Background(), "kv/", &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatalf("kv-v2 mount error: %#v", err)
@@ -179,7 +180,7 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 			secretPath := basePath + "my-secret"
 			metadataPath := basePath + "metadata/" + "my-secret"
 
-			if err := client.Sys().Mount(basePath, &api.MountInput{
+			if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
 				Type: "kv-v2",
 			}); err != nil {
 				t.Fatalf("kv-v2 mount error: %#v", err)
@@ -192,7 +193,7 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 				t.Fatalf("initial metadata put failed, code: %d, output: %s", code, combined)
 			}
 
-			initialMetadata, err := client.Logical().Read(metadataPath)
+			initialMetadata, err := client.Logical().ReadWithContext(context.Background(), metadataPath)
 			if err != nil {
 				t.Fatalf("metadata read failed, err: %#v", err)
 			}
@@ -208,7 +209,7 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 				t.Fatalf("expected code to be %d but was %d for patch cmd with args %#v", tc.code, code, patchArgs)
 			}
 
-			patchedMetadata, err := client.Logical().Read(metadataPath)
+			patchedMetadata, err := client.Logical().ReadWithContext(context.Background(), metadataPath)
 			if err != nil {
 				t.Fatalf("metadata read failed, err: %#v", err)
 			}
@@ -235,7 +236,7 @@ func TestKvMetadataPatchCommand_CasWarning(t *testing.T) {
 	defer closer()
 
 	basePath := "kv/"
-	if err := client.Sys().Mount(basePath, &api.MountInput{
+	if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatalf("kv-v2 mount error: %#v", err)
@@ -254,7 +255,7 @@ func TestKvMetadataPatchCommand_CasWarning(t *testing.T) {
 		"cas_required": true,
 	}
 
-	_, err := client.Logical().Write(basePath+"config", casConfig)
+	_, err := client.Logical().WriteWithContext(context.Background(), basePath+"config", casConfig)
 	if err != nil {
 		t.Fatalf("config write failed, err: #%v", err)
 	}

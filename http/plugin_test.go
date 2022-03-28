@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -54,7 +55,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
 
 	// Mount the mock plugin
-	err = core.Client.Sys().Mount("mock", &api.MountInput{
+	err = core.Client.Sys().MountWithContext(context.Background(), "mock", &api.MountInput{
 		Type: "mock-plugin",
 	})
 	if err != nil {
@@ -102,14 +103,14 @@ func TestPlugin_MockList(t *testing.T) {
 	cluster, core := getPluginClusterAndCore(t, logger)
 	defer cluster.Cleanup()
 
-	_, err := core.Client.Logical().Write("mock/kv/foo", map[string]interface{}{
+	_, err := core.Client.Logical().WriteWithContext(context.Background(), "mock/kv/foo", map[string]interface{}{
 		"value": "baz",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	keys, err := core.Client.Logical().List("mock/kv/")
+	keys, err := core.Client.Logical().ListWithContext(context.Background(), "mock/kv/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,14 +118,14 @@ func TestPlugin_MockList(t *testing.T) {
 		t.Fatal(keys)
 	}
 
-	_, err = core.Client.Logical().Write("mock/kv/zoo", map[string]interface{}{
+	_, err = core.Client.Logical().WriteWithContext(context.Background(), "mock/kv/zoo", map[string]interface{}{
 		"value": "baz",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	keys, err = core.Client.Logical().List("mock/kv/")
+	keys, err = core.Client.Logical().ListWithContext(context.Background(), "mock/kv/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +166,7 @@ func TestPlugin_GetParams(t *testing.T) {
 	cluster, core := getPluginClusterAndCore(t, logger)
 	defer cluster.Cleanup()
 
-	_, err := core.Client.Logical().Write("mock/kv/foo", map[string]interface{}{
+	_, err := core.Client.Logical().WriteWithContext(context.Background(), "mock/kv/foo", map[string]interface{}{
 		"value": "baz",
 	})
 	if err != nil {
