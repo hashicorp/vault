@@ -1,5 +1,5 @@
 .console-ui-panel {
-  background: linear-gradient(to right, #191a1c, #1b212d);
+  background: linear-gradient(to right, $gradient-darker, $gradient-lighter);
   height: 0;
   left: 0;
   position: fixed;
