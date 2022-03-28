@@ -201,51 +201,338 @@ $ curl \
 
 ```json
 {
-  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca647d5",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-    "start_time": "2019-11-01T00:00:00Z",
-    "end_time": "2020-10-31T23:59:59Z",
-    "total": {
-      "distinct_entities": 90,
-      "non_entity_tokens": 130,
-      "clients": 220
-    },
-    "by_namespace": [
-      {
-        "namespace_id": "root",
-        "namespace_path": "",
-        "counts": {
-          "distinct_entities": 85,
-          "non_entity_tokens": 15,
-          "clients": 100
-        }
-      },
-      {
-        "namespace_id": "DochC",
-        "namespace_path": "ns2/",
-        "counts": {
-          "distinct_entities": 0,
-          "non_entity_tokens": 100,
-          "clients": 100
-        }
-      },
-      {
-        "namespace_id": "RtgpW",
-        "namespace_path": "ns1/",
-        "counts": {
-          "distinct_entities": 5,
-          "non_entity_tokens": 15,
-          "clients": 20
-        }
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "by_namespace":[
+         {
+            "namespace_id":"root",
+            "namespace_path":"",
+            "counts":{
+               "distinct_entities":20,
+               "entity_clients":20,
+               "non_entity_tokens":10,
+               "non_entity_clients":10,
+               "clients":30
+            },
+            "mounts":[
+               {
+                  "path":"auth/up1/",
+                  "counts":{
+                     "distinct_entities":10,
+                     "entity_clients":10,
+                     "non_entity_tokens":10,
+                     "non_entity_clients":10,
+                     "clients":20
+                  }
+               },
+               {
+                  "path":"auth/up2/",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":10
+                  }
+               }
+            ]
+         },
+         {
+            "namespace_id":"s07UR",
+            "namespace_path":"ns1/",
+            "counts":{
+               "distinct_entities":5,
+               "entity_clients":5,
+               "non_entity_tokens":5,
+               "non_entity_clients":5,
+               "clients":10
+            },
+            "mounts":[
+               {
+                  "path":"auth/up1/",
+                  "counts":{
+                     "distinct_entities":0,
+                     "entity_clients":0,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":5
+                  }
+               },
+               {
+                  "path":"auth/up2/",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":0,
+                     "non_entity_clients":0,
+                     "clients":5
+                  }
+               }
+            ]
+         }
+      ],
+      "end_time":"2021-05-31T23:59:59Z",
+      "months":[
+         {
+            "timestamp":"2021-05-01T00:00:00Z",
+            "counts":{
+               "distinct_entities":20,
+               "entity_clients":20,
+               "non_entity_tokens":10,
+               "non_entity_clients":10,
+               "clients":30
+            },
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{
+                     "distinct_entities":15,
+                     "entity_clients":15,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":20
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                           "distinct_entities":10,
+                           "entity_clients":10,
+                           "non_entity_tokens":5,
+                           "non_entity_clients":5,
+                           "clients":15
+                        }
+                     },
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                           "distinct_entities":3,
+                           "entity_clients":3,
+                           "non_entity_tokens":2,
+                           "non_entity_clients":2,
+                           "clients":5
+                        }
+                     }
+                  ]
+               },
+               {
+                  "namespace_id":"s07UR",
+                  "namespace_path":"ns1/",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":10
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":5,
+                           "non_entity_clients":5,
+                           "clients":5
+                        }
+                     },
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                           "distinct_entities":5,
+                           "entity_clients":5,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "clients":5
+                        }
+                     }
+                  ]
+               }
+            ],
+            "new_clients":{
+               "counts":{
+                  "distinct_entities":10,
+                  "entity_clients":10,
+                  "non_entity_tokens":10,
+                  "non_entity_clients":10,
+                  "clients":20
+               },
+               "namespaces":[
+                  {
+                     "namespace_id":"root",
+                     "namespace_path":"",
+                     "counts":{
+                        "distinct_entities":5,
+                        "entity_clients":5,
+                        "non_entity_tokens":5,
+                        "non_entity_clients":5,
+                        "clients":10
+                     },
+                     "mounts":[
+                        {
+                           "path":"auth/up2/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":5,
+                              "non_entity_clients":5,
+                              "clients":5
+                           }
+                        },
+                        {
+                           "path":"auth/up1/",
+                           "counts":{
+                              "distinct_entities":5,
+                              "entity_clients":5,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "clients":5
+                           }
+                        }
+                     ]
+                  },
+                  {
+                     "namespace_id":"s07UR",
+                     "namespace_path":"ns1/",
+                     "counts":{
+                        "distinct_entities":5,
+                        "entity_clients":5,
+                        "non_entity_tokens":5,
+                        "non_entity_clients":5,
+                        "clients":10
+                     },
+                     "mounts":[
+                        {
+                           "path":"auth/up1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":5,
+                              "non_entity_clients":5,
+                              "clients":5
+                           }
+                        },
+                        {
+                           "path":"auth/up2/",
+                           "counts":{
+                              "distinct_entities":5,
+                              "entity_clients":5,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "clients":5
+                           }
+                        }
+                     ]
+                  }
+               ]
+            }
+         },
+         {
+            "timestamp":"2021-04-01T00:00:00Z",
+            "counts":{
+               "distinct_entities":5,
+               "entity_clients":5,
+               "non_entity_tokens":5,
+               "non_entity_clients":5,
+               "clients":10
+            },
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{
+                     "distinct_entities":5,
+                     "entity_clients":5,
+                     "non_entity_tokens":5,
+                     "non_entity_clients":5,
+                     "clients":10
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                           "distinct_entities":0,
+                           "entity_clients":0,
+                           "non_entity_tokens":5,
+                           "non_entity_clients":5,
+                           "clients":5
+                        }
+                     },
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                           "distinct_entities":5,
+                           "entity_clients":5,
+                           "non_entity_tokens":0,
+                           "non_entity_clients":0,
+                           "clients":5
+                        }
+                     }
+                  ]
+               }
+            ],
+            "new_clients":{
+               "counts":{
+                  "distinct_entities":5,
+                  "entity_clients":5,
+                  "non_entity_tokens":5,
+                  "non_entity_clients":5,
+                  "clients":10
+               },
+               "namespaces":[
+                  {
+                     "namespace_id":"root",
+                     "namespace_path":"",
+                     "counts":{
+                        "distinct_entities":5,
+                        "entity_clients":5,
+                        "non_entity_tokens":5,
+                        "non_entity_clients":5,
+                        "clients":10
+                     },
+                     "mounts":[
+                        {
+                           "path":"auth/up1/",
+                           "counts":{
+                              "distinct_entities":0,
+                              "entity_clients":0,
+                              "non_entity_tokens":5,
+                              "non_entity_clients":5,
+                              "clients":5
+                           }
+                        },
+                        {
+                           "path":"auth/up2/",
+                           "counts":{
+                              "distinct_entities":5,
+                              "entity_clients":5,
+                              "non_entity_tokens":0,
+                              "non_entity_clients":0,
+                              "clients":5
+                           }
+                        }
+                     ]
+                  }
+               ]
+            }
+         }
+      ],
+      "start_time":"2021-01-01T00:00:00Z",
+      "total":{
+         "distinct_entities":20,
+         "entity_clients":20,
+         "non_entity_tokens":20,
+         "non_entity_clients":20,
+         "clients":40
       }
-    ]
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+   },
+   "wrap_info":null,
+   "warnings":null,
+   "auth":null
 }
 ```
 
