@@ -99,6 +99,12 @@ func TestKVPutCommand(t *testing.T) {
 			"created_time",
 			0,
 		},
+		{
+			"v2_single_value_backslash",
+			[]string{"kv/write/foo", "foo=\\"},
+			"created_time",
+			0,
+		},
 	}
 
 	for _, tc := range cases {
