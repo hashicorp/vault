@@ -96,7 +96,7 @@
     }
 
     &.is-active {
-      background-color: $vault-gray-700;
+      background-color: $vault-gray-dark;
       color: $white;
     }
 
@@ -115,7 +115,7 @@
 }
 
 .navbar-separator {
-  background-color: $ui-gray-700;
+  background-color: $grey-dark;
   height: 1px;
   margin: $spacing-xs 0;
   width: 100%;
@@ -131,7 +131,7 @@
   flex: 1 1 auto;
 
   @include until($mobile) {
-    background-color: $ui-gray-900;
+    background-color: $grey-darkest;
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -235,7 +235,7 @@
   -webkit-overflow-scrolling: touch;
 
   &::before {
-    background-image: linear-gradient(to bottom, $ui-gray-900, rgba($ui-gray-900, 0));
+    background-image: linear-gradient(to bottom, $grey-darkest, rgba($grey-darkest, 0));
     content: '';
     height: $spacing-xs;
     left: 0;

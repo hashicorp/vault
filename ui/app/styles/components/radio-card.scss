@@ -51,7 +51,7 @@
   padding: $spacing-m;
 }
 .radio-card-icon {
-  color: $ui-gray-300;
+  color: $grey-light;
 }
 .radio-card-message {
   margin: $spacing-xxs;
@@ -64,20 +64,20 @@
 }
 .radio-card-message-body {
   line-height: 1.2;
-  color: $ui-gray-500;
+  color: $grey;
   font-size: $size-8;
 }
 
 .radio-card-radio-row {
   display: flex;
   justify-content: center;
-  background: $ui-gray-050;
+  background: $grey-lightest;
   padding: $spacing-xs;
 }
 
 .is-selected {
   &.radio-card {
-    border-color: $blue-500;
+    border-color: $blue;
     background: $ui-gray-010;
     box-shadow: $box-shadow-middle;
   }
@@ -85,6 +85,6 @@
     color: $black;
   }
   .radio-card-radio-row {
-    background: $blue-050;
+    background: $blue-lightest;
   }
 }

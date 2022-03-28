@@ -48,8 +48,8 @@
       &:focus,
       &.is-focused {
         background-color: transparent;
-        background-color: darken($ui-gray-050, 5%);
-        border-color: darken($ui-gray-300, 5%);
+        background-color: darken($grey-lightest, 5%);
+        border-color: darken($grey-light, 5%);
       }
     }
   }
@@ -136,7 +136,7 @@
   grid-column-start: 1;
   grid-column-end: 2;
   grid-row-start: 5;
-  color: $ui-gray-500;
+  color: $grey;
   font-size: $size-9;
   align-self: end;
 }
@@ -169,14 +169,14 @@ h2.chart-title {
 }
 
 p.chart-description {
-  color: $ui-gray-700;
+  color: $grey-dark;
   font-size: $body-size;
   line-height: 18px;
   margin-bottom: $spacing-xs;
 }
 
 p.chart-subtext {
-  color: $ui-gray-500;
+  color: $grey;
   font-size: $size-8;
   line-height: 16px;
   margin-top: $spacing-xs;
@@ -205,7 +205,7 @@ p.data-details {
 }
 
 .dark-dot {
-  background-color: $blue-500;
+  background-color: $blue;
   height: 10px;
   width: 10px;
   border-radius: 50%;
@@ -218,7 +218,7 @@ p.data-details {
 }
 
 .chart-tooltip {
-  background-color: $ui-gray-700;
+  background-color: $grey-dark;
   color: white;
   font-size: $size-9;
   padding: 6px;
@@ -250,7 +250,7 @@ p.data-details {
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 9px solid $ui-gray-700;
+  border-top: 9px solid $grey-dark;
   position: absolute;
   opacity: 0.8;
   bottom: -9px;
@@ -259,14 +259,14 @@ p.data-details {
 
 .has-grid {
   g > text {
-    color: $ui-gray-500;
+    color: $grey;
     font-size: $size-9;
   }
 
   g > line {
     // TODO: mix-blend doesn't work in firefox browser?
     mix-blend-mode: darken;
-    color: $ui-gray-300;
+    color: $grey-light;
   }
 }
 

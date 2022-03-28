@@ -5,8 +5,8 @@
 .toolbar {
   background-color: $ui-gray-010;
   border: 1px solid $ui-gray-100;
-  border-bottom-color: $ui-gray-300;
-  border-top-color: $ui-gray-300;
+  border-bottom-color: $grey-light;
+  border-top-color: $grey-light;
   position: relative;
 
   &::after {
@@ -49,7 +49,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: $ui-gray-300;
+    background: $grey-light;
     border-radius: $spacing-xxs;
   }
 }

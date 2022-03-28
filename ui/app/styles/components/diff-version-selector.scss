@@ -10,15 +10,15 @@
 .jsondiffpatch-deleted pre,
 .jsondiffpatch-modified .jsondiffpatch-left-value pre,
 .jsondiffpatch-textdiff-deleted {
-  background: $red-500;
+  background: $red;
 }
 .jsondiffpatch-added .jsondiffpatch-property-name,
 .jsondiffpatch-added .jsondiffpatch-value pre,
 .jsondiffpatch-modified .jsondiffpatch-right-value pre,
 .jsondiffpatch-textdiff-added {
-  background: $green-500;
+  background: $green;
 }
 
 .jsondiffpatch-property-name {
-  color: $ui-gray-300;
+  color: $grey-light;
 }

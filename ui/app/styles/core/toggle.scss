@@ -37,7 +37,7 @@
   height: 1.5rem;
   border: 0.1rem solid transparent;
   border-radius: 0.75rem;
-  background: $ui-gray-300;
+  background: $grey-light;
   content: '';
 }
 .toggle[type='checkbox'] + label::after {
@@ -54,7 +54,7 @@
   content: '';
 }
 .toggle[type='checkbox']:checked + label::before {
-  background: $ui-gray-700;
+  background: $grey-dark;
 }
 .toggle[type='checkbox']:checked + label::after {
   left: 1.625rem;

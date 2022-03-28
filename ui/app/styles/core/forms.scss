@@ -193,7 +193,7 @@ label {
 }
 
 .select select {
-  background-color: $ui-gray-050;
+  background-color: $grey-lightest;
   box-shadow: 0 3px 1px rgba($black, 0.12);
 
   .has-background-grey-lighter & {
@@ -327,7 +327,7 @@ fieldset.form-fieldset {
 }
 
 .has-error-border {
-  border: 1px solid $red-500;
+  border: 1px solid $red;
 }
 
 .autocomplete-input {

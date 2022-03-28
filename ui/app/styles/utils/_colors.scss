@@ -6,8 +6,8 @@ $token-black: var(--token-color-vault-brand-alt); // black #000000
 $token-white: var(--token-color-palette-neutral-0); // white #fffff
 
 // Vault Gray
-$vault-gray-010: $token-white;
-$vault-gray-050: var(--token-color-palette-neutral-50); // unused
+$vault-gray-010: $token-white; // formerly #fdfdfe
+$vault-gray-050: #f7fafc; // unused
 $vault-gray-100: #ebeef5; // unused
 $vault-gray-200: #d3dbe6; // unused
 $vault-gray-300: #b4bdcc; // unused
@@ -42,7 +42,7 @@ $grey-darkest: $ui-gray-900;
 $blue-010: #fbfcff;
 $blue-050: #f0f5ff;
 $blue-100: #bfd4ff;
-$blue-300: #5b92ff; // unused
+$blue-300: #5b92ff;
 $blue-500: #1563ff;
 $blue-700: #0e40a3; // unused
 $blue-900: #061b46; // unused
@@ -60,7 +60,7 @@ $red-300: #db7d88; // unused
 $red-500: #c73445;
 $red-700: #7f222c;
 $red-900: #370f13; // unused
-$red-lightest: $red-050; // unused
+$red-lightest: $red-050;
 $red-light: $red-300; // unused
 $red: $red-500;
 $red-dark: $red-700;
@@ -91,7 +91,7 @@ $orange-900: #45270f; // unused
 $orange-lightest: $orange-050; // unused
 $orange-light: $orange-300; // unused
 $orange: $orange-500; // unused
-$orange-dark: $orange-700; // unused
+$orange-dark: $orange-700;
 $orange-darkest: $orange-900; // unused
 
 // Yellow
@@ -100,7 +100,7 @@ $yellow-050: #fffbed; // unused
 $yellow-100: #fdeeba;
 $yellow-300: #fbd95e; // unused
 $yellow-500: #fac402;
-$yellow-700: #a07d02; // unused
+$yellow-700: #a07d02;
 $yellow-900: #453601;
 $yellow-lightest: $yellow-050; // unused
 $yellow-light: $yellow-300; // unused

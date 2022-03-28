@@ -21,7 +21,7 @@
   }
 
   .message-title {
-    color: $blue-500;
+    color: $blue;
     font-size: 16px;
     font-weight: $font-weight-bold;
     line-height: 1.25;
@@ -69,11 +69,11 @@
     border: 1px solid $yellow-100;
 
     .message-icon {
-      color: $yellow-500;
+      color: $yellow;
     }
 
     .message-title {
-      color: $orange-700;
+      color: $orange-dark;
     }
   }
 
@@ -82,24 +82,24 @@
     border: 1px solid $green-100;
 
     .message-icon {
-      color: $green-500;
+      color: $green;
     }
 
     .message-title {
-      color: $green-700;
+      color: $green-dark;
     }
   }
 
   &.is-danger {
     background: $red-010;
-    border: 1px solid $red-050;
+    border: 1px solid $red-lightest;
 
     .message-icon {
-      color: $red-500;
+      color: $red;
     }
 
     .message-title {
-      color: $red-700;
+      color: $red-dark;
     }
   }
 }
@@ -139,7 +139,7 @@
 }
 
 .has-text-highlight {
-  color: $yellow-500;
+  color: $yellow;
 }
 
 .message.message-marginless {
