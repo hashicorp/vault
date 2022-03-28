@@ -44,7 +44,6 @@ export default class CodeMirrorModifier extends Modifier {
     const editor = codemirror(this.element, {
       gutters: this.args.named.gutters || ['CodeMirror-lint-markers'],
       matchBrackets: true,
-      // lint: true,
       lint: { lintOnChange: true },
       showCursorWhenSelecting: true,
       styleActiveLine: true,

@@ -171,6 +171,10 @@ $gutter-grey: #2a2f36;
   .CodeMirror-code {
     cursor: default;
   }
+  .CodeMirror-cursor {
+    // https://github.com/codemirror/CodeMirror/issues/1099
+    display: none;
+  }
 }
 
 .cm-s-auto-height.CodeMirror {
