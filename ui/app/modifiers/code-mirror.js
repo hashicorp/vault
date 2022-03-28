@@ -46,7 +46,7 @@ export default class CodeMirrorModifier extends Modifier {
       // `gutters` is cached internally when `lint` is toggled
       gutters: this.args.named.gutters || ['CodeMirror-lint-markers'],
       matchBrackets: true,
-      lint: { lintOnChange: false },
+      lint: { lintOnChange: true },
       showCursorWhenSelecting: true,
       styleActiveLine: true,
       tabSize: 2,
