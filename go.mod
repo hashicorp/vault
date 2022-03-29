@@ -72,9 +72,9 @@ require (
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.1.5
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
-	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.1
+	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.3
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.4
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
