@@ -16,7 +16,7 @@ import { action } from '@ember/object';
  * @param {string} [helpText] - helper text.
  * @param {Object} [extraKeys] - Provides keyboard shortcut methods for things like saving on shift + enter.
  * @param {Array} [gutters] - An array of CSS class names or class name / CSS string pairs, each of which defines a width (and optionally a background), and which will be used to draw the background of the gutters.
- * @param {string} [mode] - The mode defined for styling. Right now we only import ruby so must mode but be ruby or defaults to javascript. If you wanted another language you need to import it into the modifier.
+ * @param {string} [mode] - The mode defined for styling. Right now we only import ruby so mode must but be ruby or defaults to javascript. If you wanted another language you need to import it into the modifier.
  * @param {Boolean} [readOnly] - Sets the view to readOnly, allowing for copying but no editing. It also hides the cursor. Defaults to false.
  * @param {String} [theme] - Specify or customize the look via a named "theme" class in scss.
  * @param {String} [value] - Value within the display. Generally, a json string.
