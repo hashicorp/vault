@@ -107,7 +107,7 @@ func (a *UserpassAuth) Login(ctx context.Context, client *api.Client) (*api.Secr
 	}
 
 	path := fmt.Sprintf("auth/%s/login/%s", a.mountPath, a.username)
-	resp, err := client.Logical().Write(path, loginData)
+	resp, err := client.Logical().WriteWithContext(ctx, path, loginData)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in with userpass auth: %w", err)
 	}
