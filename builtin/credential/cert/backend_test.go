@@ -1107,10 +1107,17 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: false}, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
-			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, false),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
-			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, false),
+			testAccStepSetConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, true),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, true),
 		},
 	})
 }
@@ -1515,6 +1522,42 @@ func testAccStepDeleteCRL(t *testing.T, connState tls.ConnectionState) logicalte
 	}
 }
 
+func testAccStepSetConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Data: map[string]interface{}{
+			"enable_identity_alias_metadata": conf.EnableIdentityAliasMetadata,
+		},
+	}
+}
+
+func testAccStepReadConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Check: func(resp *logical.Response) error {
+			value, ok := resp.Data["enable_identity_alias_metadata"]
+			if !ok {
+				t.Fatalf("enable_identity_alias_metadata not found in response")
+			}
+
+			b, ok := value.(bool)
+			if !ok {
+				t.Fatalf("bad: expected enable_identity_alias_metadata to be a bool")
+			}
+
+			if b != conf.EnableIdentityAliasMetadata {
+				t.Fatalf("bad: expected enable_identity_alias_metadata to be %t, got %t", conf.EnableIdentityAliasMetadata, b)
+			}
+
+			return nil
+		},
+	}
+}
+
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return testAccStepLoginWithName(t, connState, "")
 }
@@ -1560,7 +1603,7 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 	}
 }
 
-func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string) logicaltest.TestStep {
+func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string, expectAliasMetadata bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.UpdateOperation,
 		Path:            "login",
@@ -1582,6 +1625,21 @@ func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, c
 
 				if value != expected {
 					t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+				}
+
+				if expectAliasMetadata {
+					value, ok = resp.Auth.Alias.Metadata[key]
+					if !ok {
+						t.Fatalf("missing alias metadata key: %s", key)
+					}
+
+					if value != expected {
+						t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+					}
+				} else {
+					if len(resp.Auth.Alias.Metadata) > 0 {
+						t.Fatal("found alias metadata keys, but should not have any")
+					}
 				}
 			}
 
