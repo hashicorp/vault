@@ -127,7 +127,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// If the role had vhost permissions specified, assign those permissions
 	// to the created username for respective vhosts.
 	for vhost, permission := range role.VHosts {
-		if err := func() error {
+		err := func() error {
 			resp, err := client.UpdatePermissionsIn(vhost, username, rabbithole.Permissions{
 				Configure: permission.Configure,
 				Write:     permission.Write,
@@ -146,7 +146,9 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 				return fmt.Errorf("error updating vhost permissions for %s - %d: %s", vhost, resp.StatusCode, body)
 			}
 			return nil
-		}(); err != nil {
+		}()
+
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -155,7 +157,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// to the created username for respective vhosts and exchange.
 	for vhost, permissions := range role.VHostTopics {
 		for exchange, permission := range permissions {
-			if err := func() error {
+			err := func() error {
 				resp, err := client.UpdateTopicPermissionsIn(vhost, username, rabbithole.TopicPermissions{
 					Exchange: exchange,
 					Write:    permission.Write,
@@ -174,7 +176,9 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 					return fmt.Errorf("error updating vhost permissions for %s - %d: %s", vhost, resp.StatusCode, body)
 				}
 				return nil
-			}(); err != nil {
+			}()
+
+			if err != nil {
 				return nil, err
 			}
 		}
