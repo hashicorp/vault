@@ -1714,19 +1714,92 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
-	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	expectedSerial := "17:67:16:b0:b9:45:58:c0:3a:29:e3:cb:d6:98:33:7a:a6:3b:66:c1"
-	expectedCert := []byte("test certificate")
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"common_name": "test.com",
+			"ttl":         "6h",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", resp)
+	}
+	rootCaAsPem := resp.Data["certificate"].(string)
+
+	// The ca_chain call at least for now does not return the root CA authority
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "ca_chain",
+		Storage:    storage,
+		Data:       map[string]interface{}{},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed read ca_chain, %#v", resp)
+	}
+	require.Equal(t, []byte{}, resp.Data[logical.HTTPRawBody], "ca_chain response should have been empty")
+
+	// The ca/pem should return us the actual CA...
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "ca/pem",
+		Storage:    storage,
+		Data:       map[string]interface{}{},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed read ca/pem, %#v", resp)
+	}
+	// check the raw cert matches the response body
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), []byte(rootCaAsPem)) != 0 {
+		t.Fatalf("failed to get raw cert")
+	}
+	// Now issue a short-lived certificate from our pki-external.
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/example",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_domains":  "example.com",
+			"allow_subdomains": "true",
+			"max_ttl":          "1h",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/example",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"common_name": "test.example.com",
+			"ttl":         "5m",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "error issuing certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from issuing request")
+
+	issueCrtAsPem := resp.Data["certificate"].(string)
+	issuedCrt := parseCert(t, issueCrtAsPem)
+	expectedSerial := certutil.GetHexFormatted(issuedCrt.SerialNumber.Bytes(), ":")
+	expectedCert := []byte(issueCrtAsPem)
+
 	entry := &logical.StorageEntry{
 		Key:   fmt.Sprintf("certs/%s", normalizeSerial(expectedSerial)),
 		Value: expectedCert,
@@ -1737,7 +1810,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 
 	// get der cert
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      fmt.Sprintf("cert/%s/raw", expectedSerial),
 		Storage:   storage,
