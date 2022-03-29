@@ -147,7 +147,6 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 			}
 			return nil
 		}()
-
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +176,6 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 				}
 				return nil
 			}()
-
 			if err != nil {
 				return nil, err
 			}
