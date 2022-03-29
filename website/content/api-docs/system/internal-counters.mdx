@@ -108,14 +108,87 @@ Vault are leading to that top level activity count. First level of attribution
 breakdowns are by namespaces and months, under the `by_namespaces` and `months`
 JSON block respectively.
 
+```json
+{
+   "by_namespace":[],
+   "months":[],
+}
+```
+
 - `by_namespaces` breakdowns provide attributions of each namespace to the total
 activity count. These namespace attributions are further broken down by mount
 level attributions, wherein information can be found on attributions of each
 mount path within a given namespace to the overall activity of the namespace.
 
+```json
+{
+   "by_namespace":[
+      {
+         "namespace_id":"root",
+         "namespace_path":"",
+         "counts":{},
+         "mounts":[
+            {
+               "path":"auth/up1/",
+               "counts":{}
+            },
+            {
+               "path":"auth/up2/",
+               "counts":{}
+            }
+         ]
+      }
+   ]
+}
+```
+
 - `months` breakdowns provide attributions of each month to the total activity
 count. These month level attributions are further broken down into namespace and mount
 level attributions for each month.
+
+```json
+{
+   "months":[
+      {
+         "timestamp":"2021-05-01T00:00:00Z",
+         "counts":{},
+         "namespaces":[
+            {
+               "namespace_id":"root",
+               "namespace_path":"",
+               "counts":{},
+               "mounts":[
+                  {
+                     "path":"auth/up2/",
+                     "counts":{}
+                  },
+                  {
+                     "path":"auth/up1/",
+                     "counts":{}
+                  }
+               ]
+            },
+            {
+               "namespace_id":"s07UR",
+               "namespace_path":"ns1/",
+               "counts":{},
+               "mounts":[
+                  {
+                     "path":"auth/up1/",
+                     "counts":{}
+                  },
+                  {
+                     "path":"auth/up2/",
+                     "counts":{}
+                  }
+               ]
+            }
+         ],
+         "new_clients":{}
+      }
+   ],
+}
+```
 
 - Each entry in the `months` breakdown contains a `new_clients` block. Within a
 billing period, when a token is first used, regardless of when it was created,
@@ -133,6 +206,35 @@ of new clients differs for each combination of `start_time` and `end_time`.
 broken down by namespaces and mounts for visibility into which components in
 Vault lead to the new clients for each month.
 
+```json
+{
+   "months":[
+      {
+         "new_clients":{
+            "counts":{},
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{},
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{}
+                     },
+                     {
+                        "path":"auth/up1/",
+                        "counts":{}
+                     }
+                  ]
+               }
+            ]
+         }
+      }
+   ],
+}
+```
+
 - The `distinct_entities` field name is deprecated since Vault 1.10. Refer to
 `entity_clients` field instead. The `distinct_entities` field is currently
 returned by the API for backwards compatibility and it may be removed in future.
@@ -140,10 +242,6 @@ returned by the API for backwards compatibility and it may be removed in future.
 - The `non_entity_tokens` field name is deprecated since Vault 1.10. Refer to
 `non_entity_clients` field instead. The `non_entity_tokens` field is currently
 returned by the API for backwards compatibility and it may be removed in future.
-
-- All occurrences of namespace breakdowns, mount level breakdowns and month
-level breakdowns in the response are arranged in the decreasing order of their
-activity. Entries with highest activity will be at the top.
 
 - If the `end_date` supplied to the API is for the current month, the activity
 information returned by this API will only be till the previous month. The
@@ -159,13 +257,6 @@ months in the requested time range.
 For more information on how clients map to these client IDs, and how clients are
 counted, please visit the [client count](/docs/concepts/client-count) concepts
 page.
-
-A time period may be specified; otherwise it reports on a default reporting
-period, such as the previous twelve calendar months. Reports are only available
-with month granularity, after each month has completed. The response includes
-the actual time period covered, which may not exactly match the query parameters
-due to the monthly granularity of the data, or missing months in the requested
-time range.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
