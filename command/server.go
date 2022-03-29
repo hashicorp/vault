@@ -460,7 +460,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
-		c.logger.Error(cErr.String())
+		c.logger.Warn(cErr.String())
 	}
 
 	// Ensure logging is flushed if initialization fails
@@ -1117,7 +1117,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
-		c.logger.Error(cErr.String())
+		c.logger.Warn(cErr.String())
 	}
 
 	// Ensure logging is flushed if initialization fails
@@ -1553,7 +1553,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// reporting Errors found in the config
 			for _, cErr := range configErrors {
-				c.logger.Error(cErr.String())
+				c.logger.Warn(cErr.String())
 			}
 
 			core.SetConfig(config)
