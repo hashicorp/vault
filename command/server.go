@@ -1536,6 +1536,8 @@ func (c *ServerCommand) Run(args []string) int {
 					goto RUNRELOADFUNCS
 				}
 
+				configErrors = append(configErrors, current.Validate(path)...)
+
 				if config == nil {
 					config = current
 				} else {
