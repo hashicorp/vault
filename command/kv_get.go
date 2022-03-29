@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -108,35 +109,66 @@ func (c *KVGetCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// if true, we're working with "-mount=secret foo" syntax.
+	// if false, we're using "secret/foo" syntax.
+	var mountFlagSyntax bool
+	if c.flagMount != "" {
+		mountFlagSyntax = true
+	}
+
+	var mountPath string
+	var secretPath string
+	var fullPath string
+	var v2 bool
+
+	if mountFlagSyntax {
+		secretPath = sanitizePath(args[0])
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else {
+		// this is actually just a shortened friendly name that looks
+		// like a path, e.g. "secret/foo"
+		secretPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(secretPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 
 	var versionParam map[string]string
 
 	if v2 {
-		path = addPrefixToKVPath(path, mountPath, "data")
+		fullPath = addPrefixToKVPath(secretPath, mountPath, "data")
 
 		if c.flagVersion > 0 {
 			versionParam = map[string]string{
 				"version": fmt.Sprintf("%d", c.flagVersion),
 			}
 		}
+	} else {
+		// v1
+		if mountFlagSyntax {
+			fullPath = path.Join(mountPath, secretPath)
+		} else {
+			fullPath = secretPath
+		}
 	}
 
-	secret, err := kvReadRequest(client, path, versionParam)
+	secret, err := kvReadRequest(client, fullPath, versionParam)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error reading %s: %s", fullPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
 		return 2
 	}
 	if secret == nil {
-		c.UI.Error(fmt.Sprintf("No value found at %s", path))
+		c.UI.Error(fmt.Sprintf("No value found at %s", fullPath))
 		return 2
 	}
 
@@ -156,7 +188,7 @@ func (c *KVGetCommand) Run(args []string) int {
 				}
 				return PrintRawField(c.UI, data, c.flagField)
 			} else {
-				c.UI.Error(fmt.Sprintf("No data found at %s", path))
+				c.UI.Error(fmt.Sprintf("No data found at %s", fullPath))
 				return 2
 			}
 		} else {
@@ -175,7 +207,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	if v2 {
-		outputPath(c.UI, path, "Secret Path")
+		outputPath(c.UI, fullPath, "Secret Path")
 	}
 
 	if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {
