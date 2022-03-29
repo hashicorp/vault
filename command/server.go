@@ -428,7 +428,7 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 }
 
 func (c *ServerCommand) runRecoveryMode() int {
-	config, _, err := c.parseConfig()
+	config, configErrors, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -457,6 +457,11 @@ func (c *ServerCommand) runRecoveryMode() int {
 		// the resulting logger's format will be standard.
 		JSONFormat: logFormat == logging.JSONFormat,
 	})
+
+	// reporting Errors found in the config
+	for _, cErr := range configErrors {
+		c.logger.Error(cErr.String())
+	}
 
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
@@ -1065,7 +1070,7 @@ func (c *ServerCommand) Run(args []string) int {
 		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
-	parsedConfig, _, err := c.parseConfig()
+	parsedConfig, configErrors, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1108,6 +1113,11 @@ func (c *ServerCommand) Run(args []string) int {
 			// the resulting logger's format will be standard.
 			JSONFormat: logFormat == logging.JSONFormat,
 		})
+	}
+
+	// reporting Errors found in the config
+	for _, cErr := range configErrors {
+		c.logger.Error(cErr.String())
 	}
 
 	// Ensure logging is flushed if initialization fails
@@ -1518,6 +1528,7 @@ func (c *ServerCommand) Run(args []string) int {
 			// Check for new log level
 			var config *server.Config
 			var level hclog.Level
+			var configErrors []configutil.ConfigError
 			for _, path := range c.flagConfigs {
 				current, err := server.LoadConfig(path)
 				if err != nil {
@@ -1536,6 +1547,11 @@ func (c *ServerCommand) Run(args []string) int {
 			if config == nil {
 				c.logger.Error("no config found at reload time")
 				goto RUNRELOADFUNCS
+			}
+
+			// reporting Errors found in the config
+			for _, cErr := range configErrors {
+				c.logger.Error(cErr.String())
 			}
 
 			core.SetConfig(config)
