@@ -48,8 +48,7 @@ const appConfig = {
   autoprefixer: {
     enabled: isTest || isProd,
     grid: true,
-    // TODO CBS: Remove IE
-    browsers: ['defaults', 'ie 11'],
+    browsers: ['defaults'],
   },
   autoImport: {
     forbidEval: true,
