@@ -27,18 +27,13 @@ export default Mixin.create({
       let flash = this.flashMessages;
       let policyType = model.get('policyType');
       let name = model.get('name');
-      model
-        .save()
-        .then((m) => {
-          flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully saved.`);
-          if (this.wizard.featureState === 'create') {
-            this.wizard.transitionFeatureMachine('create', 'CONTINUE', policyType);
-          }
-          return this.transitionToRoute('vault.cluster.policy.show', m.get('policyType'), m.get('name'));
-        })
-        .catch((e) => {
-          model.set('errors', e.errors);
-        });
+      model.save().then((m) => {
+        flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully saved.`);
+        if (this.wizard.featureState === 'create') {
+          this.wizard.transitionFeatureMachine('create', 'CONTINUE', policyType);
+        }
+        return this.transitionToRoute('vault.cluster.policy.show', m.get('policyType'), m.get('name'));
+      });
     },
 
     setModelName(model, e) {
