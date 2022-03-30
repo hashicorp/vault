@@ -79,6 +79,7 @@ type pluginClient struct {
 	cleanupFunc func() error
 
 	plugin.ClientProtocol
+	logical.Backend
 }
 
 func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
@@ -160,15 +161,18 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	pc := extPlugin.connections[id]
 
 	delete(extPlugin.connections, id)
+	c.logger.Debug("removed plugin client connection", "id", id)
 	if !extPlugin.multiplexingSupport {
 		pc.client.Kill()
 
 		if len(extPlugin.connections) == 0 {
 			delete(c.externalPlugins, name)
 		}
+		c.logger.Debug("killed external plugin process", "name", name, "id", id)
 	} else if len(extPlugin.connections) == 0 || pc.client.Exited() {
 		pc.client.Kill()
 		delete(c.externalPlugins, name)
+		c.logger.Debug("killed external multiplexed plugin process", "name", name, "id", id)
 	}
 
 	return nil
@@ -323,15 +327,27 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	merr = multierror.Append(merr, err)
 
 	// Attempt to run as backend plugin
-	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	config := pluginutil.PluginClientConfig{
+		Name:            plugin.Name,
+		PluginSets:      backendplugin.PluginSet,
+		HandshakeConfig: backendplugin.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  true,
+	}
+
+	// Attempt to run as a multiplexed plugin
+	c.logger.Debug("attempting to load credential backend plugin", "name", plugin.Name)
+	pc, err := c.newPluginClient(ctx, plugin, config)
+
+	// dispense the plugin so we can get its type
+	client, err := backendplugin.Dispense(ctx, pc.ClientProtocol, pc)
 	if err == nil {
 		err := client.Setup(ctx, &logical.BackendConfig{})
 		if err != nil {
 			return consts.PluginTypeUnknown, err
 		}
-
 		backendType := client.Type()
-		client.Cleanup(ctx)
+		c.cleanupExternalPlugin(plugin.Name, pc.id)
 
 		switch backendType {
 		case logical.TypeCredential:

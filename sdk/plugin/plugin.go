@@ -7,18 +7,18 @@ import (
 	"sync"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
 
 // BackendPluginClient is a wrapper around backendPluginClient
 // that also contains its plugin.Client instance. It's primarily
 // used to cleanly kill the client on Cleanup()
 type BackendPluginClient struct {
-	client *plugin.Client
+	client pluginutil.PluginClient
 	sync.Mutex
 
 	logical.Backend
@@ -28,7 +28,7 @@ type BackendPluginClient struct {
 // the go-plugin's client Kill() func
 func (b *BackendPluginClient) Cleanup(ctx context.Context) {
 	b.Backend.Cleanup(ctx)
-	b.client.Kill()
+	b.client.Close()
 }
 
 // NewBackend will return an instance of an RPC-based client implementation of the backend for
@@ -60,7 +60,15 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		}
 	} else {
 		// create a backendPluginClient instance
-		backend, err = NewPluginClient(ctx, sys, pluginRunner, conf.Logger, isMetadataMode)
+		config := pluginutil.PluginClientConfig{
+			Name:            pluginName,
+			PluginSets:      PluginSet,
+			HandshakeConfig: HandshakeConfig,
+			Logger:          conf.Logger.Named(pluginName),
+			IsMetadataMode:  false,
+			// AutoMTLS:        true,
+		}
+		backend, err = NewPluginClient(ctx, sys, config)
 		if err != nil {
 			return nil, err
 		}
@@ -69,46 +77,58 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 	return backend, nil
 }
 
-func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
-	// pluginMap is the map of plugins we can dispense.
-	pluginSet := map[int]plugin.PluginSet{
-		// Version 3 used to supports both protocols. We want to keep it around
-		// since it's possible old plugins built against this version will still
-		// work with gRPC. There is currently no difference between version 3
-		// and version 4.
-		3: {
-			"backend": &GRPCBackendPlugin{
-				MetadataMode: isMetadataMode,
-			},
-		},
-		4: {
-			"backend": &GRPCBackendPlugin{
-				MetadataMode: isMetadataMode,
-			},
-		},
-	}
+// PluginSet is the map of plugins we can dispense.
+var PluginSet = map[int]plugin.PluginSet{
+	// Version 3 used to supports both protocols. We want to keep it around
+	// since it's possible old plugins built against this version will still
+	// work with gRPC. There is currently no difference between version 3
+	// and version 4.
+	3: {
+		"backend": &GRPCBackendPlugin{},
+	},
+	4: {
+		"backend": &GRPCBackendPlugin{},
+	},
+	5: {
+		"backend": &GRPCBackendPlugin{},
+	},
+}
 
-	namedLogger := logger.Named(pluginRunner.Name)
-
-	var client *plugin.Client
-	var err error
-	if isMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
-	} else {
-		client, err = pluginRunner.Run(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
-	}
+func Dispense(ctx context.Context, rpcClient plugin.ClientProtocol, pluginClient pluginutil.PluginClient) (logical.Backend, error) {
+	// Request the plugin
+	raw, err := rpcClient.Dispense("backend")
 	if err != nil {
 		return nil, err
 	}
 
-	// Connect via RPC
-	rpcClient, err := client.Client()
+	var backend logical.Backend
+	// We should have a logical backend type now. This feels like a normal interface
+	// implementation but is in fact over an RPC connection.
+	switch c := raw.(type) {
+	case *backendGRPCPluginClient:
+		// This is an abstraction leak from go-plugin but it is necessary in
+		// order to enable multiplexing on multiplexed plugins
+		c.client = pb.NewBackendClient(pluginClient.Conn())
+
+		backend = c
+	default:
+		return nil, errors.New("unsupported plugin client type")
+	}
+
+	return &BackendPluginClient{
+		client:  pluginClient,
+		Backend: backend,
+	}, nil
+}
+
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config pluginutil.PluginClientConfig) (logical.Backend, error) {
+	pluginClient, err := sys.NewPluginClient(ctx, config)
 	if err != nil {
 		return nil, err
 	}
 
 	// Request the plugin
-	raw, err := rpcClient.Dispense("backend")
+	raw, err := pluginClient.Dispense("backend")
 	if err != nil {
 		return nil, err
 	}
@@ -126,15 +146,15 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	}
 
 	// Wrap the backend in a tracing middleware
-	if namedLogger.IsTrace() {
+	if config.Logger.IsTrace() {
 		backend = &backendTracingMiddleware{
-			logger: namedLogger.With("transport", transport),
+			logger: config.Logger.With("transport", transport),
 			next:   backend,
 		}
 	}
 
 	return &BackendPluginClient{
-		client:  client,
+		client:  pluginClient,
 		Backend: backend,
 	}, nil
 }
