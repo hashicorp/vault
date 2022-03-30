@@ -699,8 +699,8 @@ github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea h1:xykPFhrBA
 github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pNv7Wc3ycL6F5oOWn+tPGo2gWD4a5X+yp/ntwdKLjRk=
 github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c h1:oiKun9QlrOz5yQxMZJ3tf1kWtFYuKSJzxzEDxDPevj4=
 github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c/go.mod h1:kiPs9g148eLShc2TYagUAyKDnD+dH9U+CQKsXzlY9xo=
-github.com/hashicorp/raft-snapshot v1.0.3 h1:lTgBBGMFcuKBTwHqWZ4r0TLzNsqo/OByCga/kM6F0uM=
-github.com/hashicorp/raft-snapshot v1.0.3/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHksSSszImWSOTC8Ic=
+github.com/hashicorp/raft-snapshot v1.0.4 h1:EuDuayAJPdiDmVk1ygTDnG2zDzrs0/6/yBuma1IYSow=
+github.com/hashicorp/raft-snapshot v1.0.4/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHksSSszImWSOTC8Ic=
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
 github.com/hashicorp/serf v0.9.4/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hashicorp/serf v0.9.5 h1:EBWvyu9tcRszt3Bxp3KNssBMP1KuHWyO51lz9+786iM=
