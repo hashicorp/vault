@@ -143,7 +143,7 @@
     "ember-source": "~3.28.8",
     "ember-svg-jar": "^2.1.0",
     "ember-template-lint": "^3.15.0",
-    "ember-test-selectors": "6.0.0",
+    "ember-test-selectors": "^2.1.0",
     "ember-tether": "^2.0.1",
     "ember-truth-helpers": "3.0.0",
     "ember-wormhole": "0.6.0",
