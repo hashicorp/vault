@@ -86,7 +86,7 @@ func (a *GCPAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 	}
 
 	path := fmt.Sprintf("auth/%s/login", a.mountPath)
-	resp, err := client.Logical().Write(path, loginData)
+	resp, err := client.Logical().WriteWithContext(ctx, path, loginData)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in with GCP auth: %w", err)
 	}
