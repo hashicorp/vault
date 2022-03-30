@@ -26,22 +26,39 @@ var (
 // String returns the consistent user-agent string for Vault.
 //
 // e.g. Vault/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
-func String() string {
-	return fmt.Sprintf("Vault/%s (+%s; %s)",
-		versionFunc(), projectURL, rt)
+//
+// Given comments will be appended to the semicolon-delimited comment section.
+//
+// e.g. Vault/0.10.4 (+https://www.vaultproject.io/; go1.10.1; comment-0; comment-1)
+func String(comments ...string) string {
+	ua := fmt.Sprintf("Vault/%s (+%s; %s", versionFunc(), projectURL, rt)
+
+	for _, c := range comments {
+		ua = fmt.Sprintf("%s; %s", ua, c)
+	}
+
+	return fmt.Sprintf("%s)", ua)
 }
 
 // PluginString is usable by plugins to return a user-agent string reflecting
 // the running Vault version and an optional plugin name.
 //
 // e.g. Vault/0.10.4 (+https://www.vaultproject.io/; azure-auth; go1.10.1)
-func PluginString(env *logical.PluginEnvironment, pluginName string) string {
+//
+// Given comments will be appended to the semicolon-delimited comment section.
+//
+// e.g. Vault/0.10.4 (+https://www.vaultproject.io/; azure-auth; go1.10.1; comment-0; comment-1)
+func PluginString(env *logical.PluginEnvironment, pluginName string, comments ...string) string {
 	var name string
-
 	if pluginName != "" {
 		name = pluginName + "; "
 	}
 
-	return fmt.Sprintf("Vault/%s (+%s; %s%s)",
-		env.VaultVersion, projectURL, name, rt)
+	ua := fmt.Sprintf("Vault/%s (+%s; %s%s", env.VaultVersion, projectURL, name, rt)
+
+	for _, c := range comments {
+		ua = fmt.Sprintf("%s; %s", ua, c)
+	}
+
+	return fmt.Sprintf("%s)", ua)
 }
