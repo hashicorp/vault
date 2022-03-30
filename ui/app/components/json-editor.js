@@ -32,7 +32,6 @@ export default Component.extend({
       delete this.options.autoHeight;
     }
     if (this.options.readOnly) {
-      this.options.readOnly = 'nocursor';
       this.options.lineNumbers = false;
       delete this.options.gutters;
     }
