@@ -1,0 +1,3 @@
+```release-note:change
+core: A request that fails path validation due to relative path check will now be responded to with a 400 rather than 500.
+```
