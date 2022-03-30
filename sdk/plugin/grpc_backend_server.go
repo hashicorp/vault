@@ -17,8 +17,9 @@ var ErrServerInMetadataMode = errors.New("plugin server can not perform action w
 type backendGRPCPluginServer struct {
 	pb.UnimplementedBackendServer
 
-	broker  *plugin.GRPCBroker
-	backend logical.Backend
+	broker    *plugin.GRPCBroker
+	backend   logical.Backend
+	Instances map[string]logical.Backend
 
 	factory logical.Factory
 

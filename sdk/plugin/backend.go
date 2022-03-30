@@ -8,6 +8,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
@@ -24,18 +25,32 @@ type GRPCBackendPlugin struct {
 	MetadataMode bool
 	Logger       log.Logger
 
+	MultiplexingSupport bool
+
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
 }
 
 func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	pb.RegisterBackendServer(s, &backendGRPCPluginServer{
+	server := backendGRPCPluginServer{
 		broker:  broker,
 		factory: b.Factory,
-		// We pass the logger down into the backend so go-plugin will forward
-		// logs for us.
+		// We pass the logger down into the backend so go-plugin will
+		// forward logs for us.
 		logger: b.Logger,
-	})
+	}
+
+	if b.MultiplexingSupport {
+		server.Instances = make(map[string]logical.Backend)
+
+		// Multiplexing is enabled for this plugin, register the server so we
+		// can tell the client in Vault.
+		pluginutil.RegisterPluginMultiplexingServer(s, pluginutil.PluginMultiplexingServerImpl{
+			Supported: true,
+		})
+	}
+
+	pb.RegisterBackendServer(s, &server)
 	return nil
 }
 

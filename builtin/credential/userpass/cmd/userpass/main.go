@@ -17,7 +17,7 @@ func main() {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
-	if err := plugin.Serve(&plugin.ServeOpts{
+	if err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: userpass.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	}); err != nil {
