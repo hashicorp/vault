@@ -32,13 +32,8 @@ var (
 //
 // e.g. Vault/0.10.4 (+https://www.vaultproject.io/; go1.10.1; comment-0; comment-1)
 func String(comments ...string) string {
-	c := strings.Join(comments, "; ")
-	if len(c) > 0 {
-		c = "; " + c
-	}
-
-	return fmt.Sprintf("Vault/%s (+%s; %s%s)",
-		versionFunc(), projectURL, rt, c)
+	c := append([]string{"+" + projectURL, rt}, comments...)
+	return fmt.Sprintf("Vault/%s (%s)", versionFunc(), strings.Join(c, "; "))
 }
 
 // PluginString is usable by plugins to return a user-agent string reflecting
@@ -50,16 +45,11 @@ func String(comments ...string) string {
 //
 // e.g. Vault/0.10.4 (+https://www.vaultproject.io/; azure-auth; go1.10.1; comment-0; comment-1)
 func PluginString(env *logical.PluginEnvironment, pluginName string, comments ...string) string {
-	var name string
+	c := []string{"+" + projectURL}
 	if pluginName != "" {
-		name = pluginName + "; "
+		c = append(c, pluginName)
 	}
-
-	c := strings.Join(comments, "; ")
-	if len(c) > 0 {
-		c = "; " + c
-	}
-
-	return fmt.Sprintf("Vault/%s (+%s; %s%s%s)",
-		env.VaultVersion, projectURL, name, rt, c)
+	c = append(c, rt)
+	c = append(c, comments...)
+	return fmt.Sprintf("Vault/%s (%s)", env.VaultVersion, strings.Join(c, "; "))
 }
