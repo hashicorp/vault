@@ -70,8 +70,9 @@ standalone applications that Vault executes and communicates with over RPC.
 Each time a Vault secret engine or auth method is mounted, a new process is
 spawned.
 
-#### Multiplexed Plugin
+#### External Multiplexed Plugin
 
+An external plugin may make use of [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing).
 A multiplexed plugin allows a single plugin process to be used for multiple
 mounts of the same type.
 
