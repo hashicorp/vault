@@ -22,6 +22,8 @@ type PluginClientConfig struct {
 	IsMetadataMode  bool
 	AutoMTLS        bool
 	MLock           bool
+	// TODO(JM): remove in favor of automtls?
+	Wrapper RunnerUtil
 }
 
 type runConfig struct {
@@ -33,8 +35,6 @@ type runConfig struct {
 	// Initialized with what's in PluginRunner.Env, but can be added to
 	env []string
 
-	wrapper RunnerUtil
-
 	PluginClientConfig
 }
 
@@ -43,7 +43,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	cmd.Env = append(cmd.Env, rc.env...)
 
 	// Add the mlock setting to the ENV of the plugin
-	if rc.MLock || (rc.wrapper != nil && rc.wrapper.MlockEnabled()) {
+	if rc.MLock || (rc.Wrapper != nil && rc.Wrapper.MlockEnabled()) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
@@ -70,7 +70,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 
 		// Use CA to sign a server cert and wrap the values in a response wrapped
 		// token.
-		wrapToken, err := wrapServerConfig(ctx, rc.wrapper, certBytes, key)
+		wrapToken, err := wrapServerConfig(ctx, rc.Wrapper, certBytes, key)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +120,7 @@ func Env(env ...string) RunOpt {
 
 func Runner(wrapper RunnerUtil) RunOpt {
 	return func(rc *runConfig) {
-		rc.wrapper = wrapper
+		rc.Wrapper = wrapper
 	}
 }
 
