@@ -129,6 +129,9 @@ export default class SecretCreateOrUpdate extends Component {
     return secretData
       .save()
       .then(() => {
+        if (!this.args.canReadSecretData) {
+          delete secret.selectedVersion.secretData;
+        }
         if (!secretData.isError) {
           if (isV2) {
             secret.set('id', key);
@@ -201,6 +204,7 @@ export default class SecretCreateOrUpdate extends Component {
   @action
   addRow() {
     const data = this.args.secretData;
+
     // fired off on init
     if (isNone(data.findBy('name', ''))) {
       data.pushObject({ name: '', value: '' });
