@@ -14,36 +14,38 @@ import (
 
 var ctx = context.Background()
 
-func Test_KeyConfigRoundTrip(t *testing.T) {
+func Test_ConfigsRoundTrip(t *testing.T) {
 	_, s := createBackendWithStorage(t)
 
-	origConfig := map[string]keyId{
-		"default": genKeyId(t),
+	// Verify we handle nothing stored properly
+	keyConfigEmpty, err := getKeysConfig(ctx, s)
+	require.NoError(t, err)
+	require.Equal(t, &keyConfig{}, keyConfigEmpty)
+
+	issuerConfigEmpty, err := getIssuersConfig(ctx, s)
+	require.NoError(t, err)
+	require.Equal(t, &issuerConfig{}, issuerConfigEmpty)
+
+	// Now attempt to store and reload properly
+	origKeyConfig := &keyConfig{
+		DefaultKeyId: genKeyId(t),
+	}
+	origIssuerConfig := &issuerConfig{
+		DefaultIssuerId: genIssuerId(t),
 	}
 
-	err := setKeysConfig(ctx, s, origConfig)
+	err = setKeysConfig(ctx, s, origKeyConfig)
+	require.NoError(t, err)
+	err = setIssuersConfig(ctx, s, origIssuerConfig)
 	require.NoError(t, err)
 
-	config, err := getKeysConfig(ctx, s)
+	keyConfig, err := getKeysConfig(ctx, s)
 	require.NoError(t, err)
+	require.Equal(t, origKeyConfig, keyConfig)
 
-	require.Equal(t, origConfig, config)
-}
-
-func Test_IssuerConfigRoundTrip(t *testing.T) {
-	_, s := createBackendWithStorage(t)
-
-	origConfig := map[string]issuerId{
-		"default": genIssuerId(t),
-	}
-
-	err := setIssuersConfig(ctx, s, origConfig)
+	issuerConfig, err := getIssuersConfig(ctx, s)
 	require.NoError(t, err)
-
-	config, err := getIssuersConfig(ctx, s)
-	require.NoError(t, err)
-
-	require.Equal(t, origConfig, config)
+	require.Equal(t, origIssuerConfig, issuerConfig)
 }
 
 func Test_IssuerRoundTrip(t *testing.T) {

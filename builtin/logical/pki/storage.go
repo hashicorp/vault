@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	keyConfig    = "/config/keys"
-	issuerConfig = "/config/issuers"
-	keyPrefix    = "/config/key/"
-	issuerPrefix = "/config/issuer/"
+	storageKeyConfig     = "/config/keys"
+	storeageIssuerConfig = "/config/issuers"
+	keyPrefix            = "/config/key/"
+	issuerPrefix         = "/config/issuer/"
 )
 
 type keyId string
@@ -41,6 +41,14 @@ type issuer struct {
 	Certificate  string   `json:"certificate" structs:"certificate" mapstructure:"certificate"`
 	CAChain      []string `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
 	SerialNumber string   `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
+}
+
+type keyConfig struct {
+	DefaultKeyId keyId `json:"default" structs:"default" mapstructure:"default"`
+}
+
+type issuerConfig struct {
+	DefaultIssuerId issuerId `json:"default" structs:"default" mapstructure:"default"`
 }
 
 func listKeys(ctx context.Context, s logical.Storage) ([]keyId, error) {
@@ -129,8 +137,8 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer issuer) error {
 	return s.Put(ctx, json)
 }
 
-func setKeysConfig(ctx context.Context, s logical.Storage, config map[string]keyId) error {
-	json, err := logical.StorageEntryJSON(keyConfig, config)
+func setKeysConfig(ctx context.Context, s logical.Storage, config *keyConfig) error {
+	json, err := logical.StorageEntryJSON(storageKeyConfig, config)
 	if err != nil {
 		return err
 	}
@@ -138,22 +146,24 @@ func setKeysConfig(ctx context.Context, s logical.Storage, config map[string]key
 	return s.Put(ctx, json)
 }
 
-func getKeysConfig(ctx context.Context, s logical.Storage) (map[string]keyId, error) {
-	keyConfigEntry, err := s.Get(ctx, keyConfig)
+func getKeysConfig(ctx context.Context, s logical.Storage) (*keyConfig, error) {
+	keyConfigEntry, err := s.Get(ctx, storageKeyConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	var keyConfig map[string]keyId
-	if err := keyConfigEntry.DecodeJSON(&keyConfig); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode key configuration: %v", err)}
+	keyConfig := &keyConfig{}
+	if keyConfigEntry != nil {
+		if err := keyConfigEntry.DecodeJSON(keyConfig); err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode key configuration: %v", err)}
+		}
 	}
 
 	return keyConfig, nil
 }
 
-func setIssuersConfig(ctx context.Context, s logical.Storage, config map[string]issuerId) error {
-	json, err := logical.StorageEntryJSON(issuerConfig, config)
+func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConfig) error {
+	json, err := logical.StorageEntryJSON(storeageIssuerConfig, config)
 	if err != nil {
 		return err
 	}
@@ -161,15 +171,17 @@ func setIssuersConfig(ctx context.Context, s logical.Storage, config map[string]
 	return s.Put(ctx, json)
 }
 
-func getIssuersConfig(ctx context.Context, s logical.Storage) (map[string]issuerId, error) {
-	issuerConfigEntry, err := s.Get(ctx, issuerConfig)
+func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfig, error) {
+	issuerConfigEntry, err := s.Get(ctx, storeageIssuerConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	var issuerConfig map[string]issuerId
-	if err := issuerConfigEntry.DecodeJSON(&issuerConfig); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
+	issuerConfig := &issuerConfig{}
+	if issuerConfigEntry != nil {
+		if err := issuerConfigEntry.DecodeJSON(issuerConfig); err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
+		}
 	}
 
 	return issuerConfig, nil
