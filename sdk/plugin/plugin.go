@@ -63,10 +63,12 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		config := pluginutil.PluginClientConfig{
 			Name:            pluginName,
 			PluginSets:      PluginSet,
+			PluginType:      pluginType,
 			HandshakeConfig: HandshakeConfig,
 			Logger:          conf.Logger.Named(pluginName),
 			IsMetadataMode:  false,
 			// AutoMTLS:        true,
+			Wrapper: sys,
 		}
 		backend, err = NewPluginClient(ctx, sys, config)
 		if err != nil {

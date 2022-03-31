@@ -257,9 +257,8 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			pluginutil.Logger(config.Logger),
 			pluginutil.MetadataMode(config.IsMetadataMode),
 			pluginutil.MLock(c.mlockPlugins),
-
-			// NewPluginClient only supports AutoMTLS today
-			pluginutil.AutoMTLS(true),
+			pluginutil.AutoMTLS(config.AutoMTLS),
+			pluginutil.Runner(config.Wrapper),
 		)
 		if err != nil {
 			return nil, err
@@ -333,6 +332,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 		HandshakeConfig: backendplugin.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  true,
+		AutoMTLS:        false,
 	}
 
 	// Attempt to run as a multiplexed plugin
