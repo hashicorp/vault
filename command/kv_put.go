@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -125,7 +126,6 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	var err error
-	path := sanitizePath(args[0])
 
 	client, err := c.Client()
 	if err != nil {
@@ -139,14 +139,42 @@ func (c *KVPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	var mountFlagSyntax bool
+	if c.flagMount != "" {
+		mountFlagSyntax = true
 	}
 
+	var mountPath string
+	var partialPath string
+	var fullPath string
+	var v2 bool
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	}
+
+	// Add /data to v2 paths only
 	if v2 {
-		path = addPrefixToKVPath(path, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
 		data = map[string]interface{}{
 			"data":    data,
 			"options": map[string]interface{}{},
@@ -155,11 +183,18 @@ func (c *KVPutCommand) Run(args []string) int {
 		if c.flagCAS > -1 {
 			data["options"].(map[string]interface{})["cas"] = c.flagCAS
 		}
+	} else {
+		// v1
+		if mountFlagSyntax {
+			fullPath = path.Join(mountPath, partialPath)
+		} else {
+			fullPath = partialPath
+		}
 	}
 
-	secret, err := client.Logical().Write(path, data)
+	secret, err := client.Logical().Write(fullPath, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", fullPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
@@ -168,7 +203,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", fullPath))
 		}
 		return 0
 	}
@@ -178,7 +213,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	if Format(c.UI) == "table" {
-		outputPath(c.UI, path, "Secret Path")
+		outputPath(c.UI, fullPath, "Secret Path")
 		metadata := secret.Data
 		c.UI.Info(getHeaderForMap("Metadata", metadata))
 		return OutputData(c.UI, metadata)

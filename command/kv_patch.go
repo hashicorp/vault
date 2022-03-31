@@ -150,7 +150,6 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	var err error
-	path := sanitizePath(args[0])
 
 	client, err := c.Client()
 	if err != nil {
@@ -164,10 +163,37 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 1
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	var mountFlagSyntax bool
+	if c.flagMount != "" {
+		mountFlagSyntax = true
+	}
+
+	var mountPath string
+	var partialPath string
+	var fullPath string
+	var v2 bool
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 
 	if !v2 {
@@ -175,7 +201,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	path = addPrefixToKVPath(path, mountPath, "data")
+	fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -187,11 +213,11 @@ func (c *KVPatchCommand) Run(args []string) int {
 
 	switch c.flagMethod {
 	case "rw":
-		secret, code = c.readThenWrite(client, path, newData)
+		secret, code = c.readThenWrite(client, fullPath, newData)
 	case "patch":
-		secret, code = c.mergePatch(client, path, newData, false)
+		secret, code = c.mergePatch(client, fullPath, newData, false)
 	case "":
-		secret, code = c.mergePatch(client, path, newData, true)
+		secret, code = c.mergePatch(client, fullPath, newData, true)
 	default:
 		c.UI.Error(fmt.Sprintf("Unsupported method provided to -method flag: %s", c.flagMethod))
 		return 2
@@ -202,7 +228,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	if Format(c.UI) == "table" {
-		outputPath(c.UI, path, "Secret Path")
+		outputPath(c.UI, fullPath, "Secret Path")
 		metadata := secret.Data
 		c.UI.Info(getHeaderForMap("Metadata", metadata))
 		return OutputData(c.UI, metadata)

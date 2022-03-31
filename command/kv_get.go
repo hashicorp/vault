@@ -116,25 +116,26 @@ func (c *KVGetCommand) Run(args []string) int {
 		mountFlagSyntax = true
 	}
 
-	var mountName string
+	var mountPath string
 	var partialPath string
 	var fullPath string
 	var v2 bool
 
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountName = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountName, client)
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
 		}
 	} else {
-		// This one is a shortened friendly name that just looks
-		// like a path, e.g. "secret/foo"
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
 		partialPath = sanitizePath(args[0])
-		mountName, v2, err = isKVv2(partialPath, client)
+		mountPath, v2, err = isKVv2(partialPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -145,7 +146,7 @@ func (c *KVGetCommand) Run(args []string) int {
 
 	// Add /data to v2 paths only
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountName, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
 
 		if c.flagVersion > 0 {
 			versionParam = map[string]string{
@@ -155,7 +156,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	} else {
 		// v1
 		if mountFlagSyntax {
-			fullPath = path.Join(mountName, partialPath)
+			fullPath = path.Join(mountPath, partialPath)
 		} else {
 			fullPath = partialPath
 		}

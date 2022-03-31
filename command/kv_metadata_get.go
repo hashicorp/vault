@@ -95,25 +95,52 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	var mountFlagSyntax bool
+	if c.flagMount != "" {
+		mountFlagSyntax = true
 	}
+
+	var mountPath string
+	var partialPath string
+	var fullPath string
+	var v2 bool
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	}
+
 	if !v2 {
 		c.UI.Error("Metadata not supported on KV Version 1")
 		return 1
 	}
 
-	path = addPrefixToKVPath(path, mountPath, "metadata")
-	secret, err := client.Logical().Read(path)
+	fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata")
+	secret, err := client.Logical().Read(fullPath)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error reading %s: %s", fullPath, err))
 		return 2
 	}
 	if secret == nil {
-		c.UI.Error(fmt.Sprintf("No value found at %s", path))
+		c.UI.Error(fmt.Sprintf("No value found at %s", fullPath))
 		return 2
 	}
 
@@ -128,7 +155,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 
 	versionsRaw, ok := secret.Data["versions"]
 	if !ok || versionsRaw == nil {
-		c.UI.Error(fmt.Sprintf("No value found at %s", path))
+		c.UI.Error(fmt.Sprintf("No value found at %s", fullPath))
 		OutputSecret(c.UI, secret)
 		return 2
 	}
@@ -136,7 +163,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 
 	delete(secret.Data, "versions")
 
-	outputPath(c.UI, path, "Metadata Path")
+	outputPath(c.UI, fullPath, "Metadata Path")
 
 	c.UI.Info(getHeaderForMap("Metadata", secret.Data))
 	OutputSecret(c.UI, secret)
