@@ -94,11 +94,11 @@ period, which is represented by the `start_time` and `end_time` parameters.
 
 There are a few things to keep in mind while using this API.
 
-- The activity information only accounts for activity that has happened for the
-latest contiguous months in the billing period. For example, if the billing
-period is from Jan 2022 to June 2022, and the activity subsystem in Vault
-was not capturing data for the months Jan to March for any reason, the response
-will only include information for the months of May and June.
+- The activity information only accounts for the activity of the latest
+contiguous months in the billing period. For example, if the billing period is
+from Jan 2022 to June 2022, and the activity subsystem in Vault was not
+capturing data for the months Jan to March, the response will only include
+information for May and June.
 
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This
@@ -115,9 +115,9 @@ JSON block, respectively.
 ```
 
 - `by_namespaces` breakdowns provide attributions of each namespace to the total
-activity count. These namespace attributions are further broken down by mount
-level attributions, wherein information can be found on attributions of each
-mount path within a given namespace to the overall activity of the namespace.
+activity count. Mount level attributions further break down these namespaces
+attributions, wherein information can be found on the attributions of each mount
+path within a given namespace to the overall activity of the namespace.
 
 ```json
 {
@@ -189,17 +189,16 @@ level attributions for each month.
 }
 ```
 
-- Each entry in the `months` breakdown contains a `new_clients` block. When a token is first used within a billing period, regardless of when it was created, that token is considered a new client for that billing period.
-billing period, when a token is first used, regardless of when it was created,
- This means that
-all the active clients in the first month of the billing period will be
-considered new clients for that billing period. These tokens could all be
-generated and counted in the previous billing period, but despite that they are
-still considered new clients in the context of the given billing period. For
-each subsequent month in the same billing period, the tokens used in those
- months that were unused in previous months of the same
-billing period are considered new clients for that month. Hence, the computation
-of new clients differs for each combination of `start_time` and `end_time`.
+- Each entry in the `months` breakdown contains a `new_clients` block. When a
+token is first used within a billing period, it is considered a new client for
+that billing period. This means that all the active clients in the first month
+of the billing period will be considered new clients for that billing period.
+While these tokens could be generated and counted in the previous billing
+period, they are still considered new clients in the context of the given
+billing period. For each subsequent month in the same billing period, the tokens
+used in those months that were unused in previous months of the same billing
+period are considered new clients for that month. Hence, the computation of new
+clients differs for each combination of `start_time` and `end_time`.
 
 - The `new_clients` block within the `months` breakdown will also be further
 broken down by namespaces and mounts for visibility into which components in
@@ -234,7 +233,7 @@ Vault lead to the new clients for each month.
 }
 ```
 
-- The `distinct_entities` field name is deprecated since Vault 1.10. Refer to
+- The `distinct_entities` field name has been deprecated since Vault 1.10. Refer to
 `entity_clients` field instead. The `distinct_entities` field is currently
 returned by the API for backward compatibility and it may be removed in the future.
 
@@ -245,16 +244,16 @@ returned by the API for backward compatibility, and it may be removed in the fut
 - If the `end_date` supplied to the API is for the current month, the activity
 information returned by this API will only be till the previous month. The
 activity system is designed to process the accumulated activity only at the end
-of the month. Since the current month's information is not fully processed by
-However, the accumulated
-response can be viewed using the partial month API.
+of the month. Since the system does not fully process the current month's
+information, it will not be added to the API response.
 
 - The response includes the actual time period covered, which may not exactly
-match the query parameters due to the month granularity of data, or missing
+match the query parameters due to the month granularity of data or missing
 months in the requested time range.
 
-For more information on how clients map to these client IDs, and how clients are
-page.
+Please visit the [client count](/docs/concepts/client-count) concepts page for
+more information on how clients map to these client IDs and how they are
+counted.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
