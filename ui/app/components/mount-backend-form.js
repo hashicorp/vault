@@ -114,11 +114,10 @@ export default Component.extend({
       }
 
       let changedAttrKeys = Object.keys(mountModel.changedAttributes());
-      const updatesConfig =
-        mountModel.isV2KV &&
-        (changedAttrKeys.includes('casRequired') ||
-          changedAttrKeys.includes('deleteVersionAfter') ||
-          changedAttrKeys.includes('maxVersions'));
+      let updatesConfig =
+        changedAttrKeys.includes('casRequired') ||
+        changedAttrKeys.includes('deleteVersionAfter') ||
+        changedAttrKeys.includes('maxVersions');
 
       try {
         yield mountModel.save();
@@ -144,7 +143,8 @@ export default Component.extend({
         }
         return;
       }
-      if (updatesConfig && !capabilities.get('canUpdate')) {
+      // mountModel must be after the save
+      if (mountModel.isV2KV && updatesConfig && !capabilities.get('canUpdate')) {
         // config error is not thrown from secret-engine adapter, so handling here
         this.flashMessages.warning(
           'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
