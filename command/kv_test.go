@@ -801,7 +801,6 @@ func TestKVPatchCommand_StdinFull(t *testing.T) {
 			t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
 		}
 	}
-
 }
 
 func TestKVPatchCommand_StdinValue(t *testing.T) {
