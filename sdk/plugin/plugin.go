@@ -139,9 +139,13 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config plug
 	var transport string
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	switch raw.(type) {
+	switch c := raw.(type) {
 	case *backendGRPCPluginClient:
-		backend = raw.(*backendGRPCPluginClient)
+		// This is an abstraction leak from go-plugin but it is necessary in
+		// order to enable multiplexing on multiplexed plugins
+		c.client = pb.NewBackendClient(pluginClient.Conn())
+
+		backend = c
 		transport = "gRPC"
 	default:
 		return nil, errors.New("unsupported plugin client type")
