@@ -191,7 +191,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	}
 
 	if serial == "ca_chain" {
-		caInfo, err := fetchCAInfo(ctx, b, req)
+		caInfo, err := fetchCAInfo(ctx, b, req, "default")
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

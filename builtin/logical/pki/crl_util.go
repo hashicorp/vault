@@ -32,7 +32,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		return nil, nil
 	}
 
-	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, "default")
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -223,7 +223,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 	}
 
 WRITE:
-	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, "default")
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
