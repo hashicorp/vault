@@ -14,6 +14,38 @@ import (
 
 var ctx = context.Background()
 
+func Test_KeyConfigRoundTrip(t *testing.T) {
+	_, s := createBackendWithStorage(t)
+
+	origConfig := map[string]keyId{
+		"default": genKeyId(t),
+	}
+
+	err := setKeysConfig(ctx, s, origConfig)
+	require.NoError(t, err)
+
+	config, err := getKeysConfig(ctx, s)
+	require.NoError(t, err)
+
+	require.Equal(t, origConfig, config)
+}
+
+func Test_IssuerConfigRoundTrip(t *testing.T) {
+	_, s := createBackendWithStorage(t)
+
+	origConfig := map[string]issuerId{
+		"default": genIssuerId(t),
+	}
+
+	err := setIssuersConfig(ctx, s, origConfig)
+	require.NoError(t, err)
+
+	config, err := getIssuersConfig(ctx, s)
+	require.NoError(t, err)
+
+	require.Equal(t, origConfig, config)
+}
+
 func Test_IssuerRoundTrip(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 	issuer1, key1 := genIssuerAndKey(t, b)
@@ -60,28 +92,39 @@ func Test_IssuerRoundTrip(t *testing.T) {
 
 func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
 	certBundle, err := genCertBundle(t, b)
-
-	keyIdStr, err := uuid.GenerateUUID()
 	require.NoError(t, err)
 
+	keyId := genKeyId(t)
+
 	pkiKey := key{
-		ID:             keyId(keyIdStr),
+		ID:             keyId,
 		PrivateKeyType: certBundle.PrivateKeyType,
 		PrivateKey:     certBundle.PrivateKey,
 	}
 
-	issuerIdStr, err := uuid.GenerateUUID()
-	require.NoError(t, err)
+	issuerId := genIssuerId(t)
 
 	pkiIssuer := issuer{
-		ID:           issuerId(issuerIdStr),
-		KeyID:        keyId(keyIdStr),
+		ID:           issuerId,
+		KeyID:        keyId,
 		Certificate:  certBundle.Certificate,
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
 	}
 
 	return pkiIssuer, pkiKey
+}
+
+func genIssuerId(t *testing.T) issuerId {
+	issuerIdStr, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	return issuerId(issuerIdStr)
+}
+
+func genKeyId(t *testing.T) keyId {
+	keyIdStr, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	return keyId(keyIdStr)
 }
 
 func genCertBundle(t *testing.T, b *backend) (*certutil.CertBundle, error) {

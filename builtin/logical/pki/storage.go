@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	keyConfig    = "/config/keys"
+	issuerConfig = "/config/issuers"
 	keyPrefix    = "/config/key/"
 	issuerPrefix = "/config/issuer/"
 )
@@ -127,3 +129,48 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer issuer) error {
 	return s.Put(ctx, json)
 }
 
+func setKeysConfig(ctx context.Context, s logical.Storage, config map[string]keyId) error {
+	json, err := logical.StorageEntryJSON(keyConfig, config)
+	if err != nil {
+		return err
+	}
+
+	return s.Put(ctx, json)
+}
+
+func getKeysConfig(ctx context.Context, s logical.Storage) (map[string]keyId, error) {
+	keyConfigEntry, err := s.Get(ctx, keyConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	var keyConfig map[string]keyId
+	if err := keyConfigEntry.DecodeJSON(&keyConfig); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode key configuration: %v", err)}
+	}
+
+	return keyConfig, nil
+}
+
+func setIssuersConfig(ctx context.Context, s logical.Storage, config map[string]issuerId) error {
+	json, err := logical.StorageEntryJSON(issuerConfig, config)
+	if err != nil {
+		return err
+	}
+
+	return s.Put(ctx, json)
+}
+
+func getIssuersConfig(ctx context.Context, s logical.Storage) (map[string]issuerId, error) {
+	issuerConfigEntry, err := s.Get(ctx, issuerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	var issuerConfig map[string]issuerId
+	if err := issuerConfigEntry.DecodeJSON(&issuerConfig); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
+	}
+
+	return issuerConfig, nil
+}
