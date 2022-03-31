@@ -17,21 +17,21 @@ $vault-gray-600: #5a6370; // unused
 $vault-gray-700: #3c434d; // unused
 $vault-gray-800: #1d2126; // unused
 $vault-gray-900: #060708; // unused
-$vault-gray: $ui-gray-500;
-$vault-gray-dark: $ui-gray-800;
 
 // UI Gray
-$ui-gray-010: #fbfbfc;
-$ui-gray-050: #f7f8fa;
-$ui-gray-100: #ebeef2;
-$ui-gray-200: #dce0e6;
-$ui-gray-300: #bac1cc;
-$ui-gray-400: #8e96a3;
-$ui-gray-500: #6f7682;
-$ui-gray-600: #626873;
-$ui-gray-700: #525761;
-$ui-gray-800: #373a42;
-$ui-gray-900: #1f2124;
+$ui-gray-010: var(--token-color-palette-neutral-50);
+$ui-gray-050: var(--token-color-palette-neutral-50);
+$ui-gray-100: var(--token-color-palette-neutral-100);
+$ui-gray-200: var(--token-color-palette-neutral-200);
+$ui-gray-300: var(--token-color-palette-neutral-300);
+$ui-gray-400: var(--token-color-palette-neutral-400);
+$ui-gray-500: var(--token-color-palette-neutral-500);
+$ui-gray-600: var(--token-color-palette-neutral-500);
+$ui-gray-700: var(--token-color-palette-neutral-500);
+$ui-gray-800: var(--token-color-foreground-primary);
+$ui-gray-900: var(--token-color-foreground-strong);
+$vault-gray: $ui-gray-500;
+$vault-gray-dark: $ui-gray-800;
 $grey-lightest: $ui-gray-050;
 $grey-light: $ui-gray-300;
 $grey: $ui-gray-500;
@@ -39,13 +39,13 @@ $grey-dark: $ui-gray-700;
 $grey-darkest: $ui-gray-900;
 
 // Blue
-$blue-010: #fbfcff;
-$blue-050: #f0f5ff;
-$blue-100: #bfd4ff;
-$blue-300: #5b92ff;
-$blue-500: #1563ff;
-$blue-700: #0e40a3; // unused
-$blue-900: #061b46; // unused
+$blue-010: var(--token-color-palette-blue-50);
+$blue-050: var(--token-color-palette-blue-50);
+$blue-100: var(--token-color-palette-blue-100);
+$blue-300: var(--token-color-palette-blue-200);
+$blue-500: var(--token-color-palette-blue-200);
+$blue-700: var(--token-color-palette-blue-400); // unused
+$blue-900: var(--token-color-palette-blue-500); // unused
 $blue-lightest: $blue-050;
 $blue-light: $blue-300;
 $blue: $blue-500;
@@ -53,13 +53,13 @@ $blue-dark: $blue-700;
 $blue-darkest: $blue-900;
 
 // Red
-$red-010: #fdfafb;
-$red-050: #f9ecee;
-$red-100: #efc7cc; // unused
-$red-300: #db7d88; // unused
-$red-500: #c73445;
-$red-700: #7f222c;
-$red-900: #370f13; // unused
+$red-010: var(--token-color-palette-red-50);
+$red-050: var(--token-color-palette-red-50);
+$red-100: var(--token-color-palette-red-100); // unused
+$red-300: var(--token-color-palette-red-100); // unused
+$red-500: var(--token-color-palette-red-200);
+$red-700: var(--token-color-palette-red-400);
+$red-900: var(--token-color-palette-red-500); // unused
 $red-lightest: $red-050;
 $red-light: $red-300; // unused
 $red: $red-500;
@@ -67,13 +67,13 @@ $red-dark: $red-700;
 $red-darkest: $red-900; // unused
 
 // Green
-$green-010: #fafdfa;
-$green-050: #ecf7ed;
-$green-100: #c6e9c9;
-$green-300: #7acc81;
-$green-500: #2eb039;
-$green-700: #1e7125;
-$green-900: #0d3010; // unused
+$green-010: var(--token-color-palette-green-50);
+$green-050: var(--token-color-palette-green-50);
+$green-100: var(--token-color-palette-green-100);
+$green-300: var(--token-color-palette-green-100);
+$green-500: var(--token-color-palette-green-200);
+$green-700: var(--token-color-palette-green-300);
+$green-900: var(--token-color-palette-green-500); // unused
 $green-lightest: $green-050;
 $green-light: $green-300;
 $green: $green-500;
@@ -86,7 +86,7 @@ $orange-050: #fef4ec; // unused
 $orange-100: #fde0c8; // unused
 $orange-300: #fbb77f; // unused
 $orange-500: #fa8f37; // unused
-$orange-700: #a05c23;
+$orange-700: var(--token-color-palette-amber-300);
 $orange-900: #45270f; // unused
 $orange-lightest: $orange-050; // unused
 $orange-light: $orange-300; // unused
@@ -95,13 +95,13 @@ $orange-dark: $orange-700;
 $orange-darkest: $orange-900; // unused
 
 // Yellow
-$yellow-010: #fffdf6;
-$yellow-050: #fffbed; // unused
-$yellow-100: #fdeeba;
-$yellow-300: #fbd95e; // unused
-$yellow-500: #fac402;
-$yellow-700: #a07d02;
-$yellow-900: #453601;
+$yellow-010: var(--token-color-vault-gradient-faint-start);
+$yellow-050: var(--token-color-palette-amber-50); // unused
+$yellow-100: var(--token-color-palette-amber-100);
+$yellow-300: var(--token-color-vault-brand); // unused
+$yellow-500: #fac402; // var(--token-color-vault-brand);
+$yellow-700: var(--token-color-vault-foreground);
+$yellow-900: var(--token-color-palette-amber-500);
 $yellow-lightest: $yellow-050; // unused
 $yellow-light: $yellow-300; // unused
 $yellow: $yellow-500;
@@ -109,5 +109,5 @@ $yellow-dark: $yellow-700;
 $yellow-darkest: $yellow-900;
 
 // Black (for browser CLI console)
-$gradient-darker: #191a1c;
+$gradient-darker: #191a1c; // var(--token-color-foreground-strong)
 $gradient-lighter: #1b212d;
