@@ -3,6 +3,7 @@ package useragent
 import (
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -31,13 +32,13 @@ var (
 //
 // e.g. Vault/0.10.4 (+https://www.vaultproject.io/; go1.10.1; comment-0; comment-1)
 func String(comments ...string) string {
-	ua := fmt.Sprintf("Vault/%s (+%s; %s", versionFunc(), projectURL, rt)
-
-	for _, c := range comments {
-		ua = fmt.Sprintf("%s; %s", ua, c)
+	c := strings.Join(comments, "; ")
+	if len(c) > 0 {
+		c = "; " + c
 	}
 
-	return fmt.Sprintf("%s)", ua)
+	return fmt.Sprintf("Vault/%s (+%s; %s%s)",
+		versionFunc(), projectURL, rt, c)
 }
 
 // PluginString is usable by plugins to return a user-agent string reflecting
@@ -54,11 +55,11 @@ func PluginString(env *logical.PluginEnvironment, pluginName string, comments ..
 		name = pluginName + "; "
 	}
 
-	ua := fmt.Sprintf("Vault/%s (+%s; %s%s", env.VaultVersion, projectURL, name, rt)
-
-	for _, c := range comments {
-		ua = fmt.Sprintf("%s; %s", ua, c)
+	c := strings.Join(comments, "; ")
+	if len(c) > 0 {
+		c = "; " + c
 	}
 
-	return fmt.Sprintf("%s)", ua)
+	return fmt.Sprintf("Vault/%s (+%s; %s%s%s)",
+		env.VaultVersion, projectURL, name, rt, c)
 }
