@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -112,22 +113,55 @@ func (c *KVDeleteCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	var mountFlagSyntax bool
+	if c.flagMount != "" {
+		mountFlagSyntax = true
+	}
+
+	var mountPath string
+	var partialPath string
+	var fullPath string
+	var v2 bool
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 
 	var secret *api.Secret
 	if v2 {
-		secret, err = c.deleteV2(path, mountPath, client)
+		secret, err = c.deleteV2(partialPath, mountPath, client)
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
 	} else {
-		secret, err = client.Logical().Delete(path)
+		// v1
+		if mountFlagSyntax {
+			fullPath = path.Join(mountPath, partialPath)
+		} else {
+			fullPath = partialPath
+		}
+		secret, err = client.Logical().Delete(fullPath)
 	}
 
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", fullPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
@@ -137,7 +171,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
+			c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", fullPath))
 		}
 		return 0
 	}
@@ -150,29 +184,14 @@ func (c *KVDeleteCommand) Run(args []string) int {
 }
 
 func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (*api.Secret, error) {
-	var err error
-	var secret *api.Secret
-	switch {
-	case len(c.flagVersions) > 0:
+	if len(c.flagVersions) > 0 {
 		path = addPrefixToKVPath(path, mountPath, "delete")
-		if err != nil {
-			return nil, err
-		}
-
 		data := map[string]interface{}{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
 
-		secret, err = client.Logical().Write(path, data)
-	default:
-
-		path = addPrefixToKVPath(path, mountPath, "data")
-		if err != nil {
-			return nil, err
-		}
-
-		secret, err = client.Logical().Delete(path)
+		return client.Logical().Write(path, data)
 	}
-
-	return secret, err
+	path = addPrefixToKVPath(path, mountPath, "data")
+	return client.Logical().Delete(path)
 }

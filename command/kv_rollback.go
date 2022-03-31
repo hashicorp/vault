@@ -112,7 +112,6 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	}
 
 	var err error
-	path := sanitizePath(args[0])
 
 	client, err := c.Client()
 	if err != nil {
@@ -120,10 +119,37 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 2
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	var mountFlagSyntax bool
+	if c.flagMount != "" {
+		mountFlagSyntax = true
+	}
+
+	var mountPath string
+	var partialPath string
+	var fullPath string
+	var v2 bool
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 
 	if !v2 {
@@ -131,7 +157,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 2
 	}
 
-	path = addPrefixToKVPath(path, mountPath, "data")
+	fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -140,31 +166,31 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	// First, do a read to get the current version for check-and-set
 	var meta map[string]interface{}
 	{
-		secret, err := kvReadRequest(client, path, nil)
+		secret, err := kvReadRequest(client, fullPath, nil)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
+			c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", fullPath, err))
 			return 2
 		}
 
 		// Make sure a value already exists
 		if secret == nil || secret.Data == nil {
-			c.UI.Error(fmt.Sprintf("No value found at %s", path))
+			c.UI.Error(fmt.Sprintf("No value found at %s", fullPath))
 			return 2
 		}
 
 		// Verify metadata found
 		rawMeta, ok := secret.Data["metadata"]
 		if !ok || rawMeta == nil {
-			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", path))
+			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
 		meta, ok = rawMeta.(map[string]interface{})
 		if !ok {
-			c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", path))
+			c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", fullPath))
 			return 2
 		}
 		if meta == nil {
-			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", path))
+			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
 	}
@@ -179,31 +205,31 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	// Now run it again and read the version we want to roll back to
 	var data map[string]interface{}
 	{
-		secret, err := kvReadRequest(client, path, versionParam)
+		secret, err := kvReadRequest(client, fullPath, versionParam)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
+			c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", fullPath, err))
 			return 2
 		}
 
 		// Make sure a value already exists
 		if secret == nil || secret.Data == nil {
-			c.UI.Error(fmt.Sprintf("No value found at %s", path))
+			c.UI.Error(fmt.Sprintf("No value found at %s", fullPath))
 			return 2
 		}
 
 		// Verify metadata found
 		rawMeta, ok := secret.Data["metadata"]
 		if !ok || rawMeta == nil {
-			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", path))
+			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
 		meta, ok := rawMeta.(map[string]interface{})
 		if !ok {
-			c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", path))
+			c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", fullPath))
 			return 2
 		}
 		if meta == nil {
-			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", path))
+			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
 
@@ -221,34 +247,34 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		// Verify old data found
 		rawData, ok := secret.Data["data"]
 		if !ok || rawData == nil {
-			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", path))
+			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
 		data, ok = rawData.(map[string]interface{})
 		if !ok {
-			c.UI.Error(fmt.Sprintf("Data found at %s is not the expected type (JSON object)", path))
+			c.UI.Error(fmt.Sprintf("Data found at %s is not the expected type (JSON object)", fullPath))
 			return 2
 		}
 		if data == nil {
-			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", path))
+			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", fullPath))
 			return 2
 		}
 	}
 
-	secret, err := client.Logical().Write(path, map[string]interface{}{
+	secret, err := client.Logical().Write(fullPath, map[string]interface{}{
 		"data": data,
 		"options": map[string]interface{}{
 			"cas": casVersion,
 		},
 	})
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", fullPath, err))
 		return 2
 	}
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", fullPath))
 		}
 		return 0
 	}

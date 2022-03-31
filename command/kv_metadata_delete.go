@@ -93,26 +93,53 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	var mountFlagSyntax bool
+	if c.flagMount != "" {
+		mountFlagSyntax = true
 	}
+
+	var mountPath string
+	var partialPath string
+	var fullPath string
+	var v2 bool
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath = sanitizePath(c.flagMount)
+		_, v2, err = isKVv2(mountPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	}
+
 	if !v2 {
 		c.UI.Error("Metadata not supported on KV Version 1")
 		return 1
 	}
 
-	path = addPrefixToKVPath(path, mountPath, "metadata")
-	if secret, err := client.Logical().Delete(path); err != nil {
-		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
+	fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata")
+	if secret, err := client.Logical().Delete(fullPath); err != nil {
+		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", fullPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
 		return 2
 	}
 
-	c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
+	c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", fullPath))
 	return 0
 }
