@@ -19,7 +19,6 @@
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
     "ember-power-select": "*",
-    "ember-radio-button": "*",
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
