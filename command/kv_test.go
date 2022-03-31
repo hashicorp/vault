@@ -1187,16 +1187,13 @@ func TestKVPatchCommand_RWMethodPolicyVariations(t *testing.T) {
 
 			client.SetToken(secretAuth.ClientToken)
 
-			if _, err := client.Logical().WriteWithContext(context.Background(), "kv/data/foo", map[string]interface{}{
-				"data": map[string]interface{}{
-					"foo": "bar",
-					"bar": "baz",
-				},
-			}); err != nil {
-				t.Fatalf("write failed, err: %#v\n", err)
+			putArgs := []string{"kv/foo", "foo=bar", "bar=baz"}
+			code, combined := kvPutWithRetry(t, client, putArgs)
+			if code != 0 {
+				t.Errorf("write failed, expected %d to be 0, output: %s", code, combined)
 			}
 
-			code, combined := kvPatchWithRetry(t, client, tc.args, nil)
+			code, combined = kvPatchWithRetry(t, client, tc.args, nil)
 			if code != tc.code {
 				t.Fatalf("expected code to be %d but was %d for patch cmd with args %#v\n", tc.code, code, tc.args)
 			}
