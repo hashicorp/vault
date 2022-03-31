@@ -14,12 +14,6 @@ const (
 	issuerPrefix = "/config/issuer/"
 )
 
-var (
-	emptyKey        = key{}
-	emptyIssuer     = issuer{}
-	emptyCertBundle = certutil.CertBundle{}
-)
-
 type keyId string
 
 func (p keyId) String() string {
@@ -47,22 +41,22 @@ type issuer struct {
 	SerialNumber string   `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
 
-func fetchKeyById(ctx context.Context, s logical.Storage, keyId keyId) (key, error) {
+func fetchKeyById(ctx context.Context, s logical.Storage, keyId keyId) (*key, error) {
 	keyEntry, err := s.Get(ctx, keyPrefix+keyId.String())
 	if err != nil {
-		return emptyKey, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
 	}
 	if keyEntry == nil {
 		// FIXME: Dedicated/specific error for this?
-		return emptyKey, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
+		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
 	}
 
 	var key key
 	if err := keyEntry.DecodeJSON(&key); err != nil {
-		return emptyKey, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki key with id %s: %v", keyId.String(), err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki key with id %s: %v", keyId.String(), err)}
 	}
 
-	return key, nil
+	return &key, nil
 }
 
 func writeKey(ctx context.Context, s logical.Storage, key key) error {
@@ -76,22 +70,22 @@ func writeKey(ctx context.Context, s logical.Storage, key key) error {
 	return s.Put(ctx, json)
 }
 
-func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) (issuer, error) {
+func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) (*issuer, error) {
 	issuerEntry, err := s.Get(ctx, issuerPrefix+issuerId.String())
 	if err != nil {
-		return emptyIssuer, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
 	}
 	if issuerEntry == nil {
 		// FIXME: Dedicated/specific error for this?
-		return emptyIssuer, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
+		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
 	}
 
 	var issuer issuer
 	if err := issuerEntry.DecodeJSON(&issuer); err != nil {
-		return emptyIssuer, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
 	}
 
-	return issuer, nil
+	return &issuer, nil
 }
 
 func writeIssuer(ctx context.Context, s logical.Storage, issuer issuer) error {
@@ -105,26 +99,3 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer issuer) error {
 	return s.Put(ctx, json)
 }
 
-func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, issuerId issuerId) (certutil.CertBundle, error) {
-	issuer, err := fetchIssuerById(ctx, s, issuerId)
-	if err != nil {
-		return emptyCertBundle, err
-	}
-
-	if issuer.KeyID == "" {
-		return emptyCertBundle, errutil.UserError{Err: fmt.Sprintf("requested a cert bundle for an issuer id %s that did not contain a key", issuerId.String())}
-	}
-
-	key, err := fetchKeyById(ctx, s, issuer.KeyID)
-	if err != nil {
-		return emptyCertBundle, err
-	}
-	return certutil.CertBundle{
-		PrivateKeyType: key.PrivateKeyType,
-		Certificate:    issuer.Certificate,
-		IssuingCA:      issuer.CAChain[0],
-		CAChain:        issuer.CAChain,
-		PrivateKey:     key.PrivateKey,
-		SerialNumber:   issuer.SerialNumber,
-	}, nil
-}

@@ -14,7 +14,7 @@ import (
 
 var ctx = context.Background()
 
-func Test_PKIIssuerRoundTrip(t *testing.T) {
+func Test_IssuerRoundTrip(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 	pkiIssuer, pkiKey := genIssuerAndKey(t, b)
 
@@ -38,8 +38,8 @@ func Test_PKIIssuerRoundTrip(t *testing.T) {
 	pkiIssuer2, err := fetchIssuerById(ctx, s, pkiIssuer.ID)
 	require.NoError(t, err)
 
-	require.Equal(t, pkiKey, pkiKey2)
-	require.Equal(t, pkiIssuer, pkiIssuer2)
+	require.Equal(t, &pkiKey, pkiKey2)
+	require.Equal(t, &pkiIssuer, pkiIssuer2)
 }
 
 func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
