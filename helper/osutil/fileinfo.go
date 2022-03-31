@@ -26,7 +26,7 @@ func checkPathInfo(info fs.FileInfo, path string, uid int, permissions int) erro
 	return nil
 }
 
-func FilePermissionsMatch(info fs.FileInfo, path string, permissions int) (err error) {
+func FilePermissionsMatch(info fs.FileInfo, path string, permissions int) error {
 	if permissions != 0 && int(info.Mode().Perm()) != permissions {
 		return fmt.Errorf("path %q does not have permissions %o", path, permissions)
 	}
@@ -34,11 +34,11 @@ func FilePermissionsMatch(info fs.FileInfo, path string, permissions int) (err e
 		return fmt.Errorf("path %q has insecure permissions %o. Vault expects no write permissions for group or others", path, info.Mode().Perm())
 	}
 
-	return err
+	return nil
 }
 
 // OwnerPermissionsMatch checks if vault user is the owner and permissions are secure for input path
-func OwnerPermissionsMatch(path string, uid int, permissions int) (err error) {
+func OwnerPermissionsMatch(path string, uid int, permissions int) error {
 	if path == "" {
 		return fmt.Errorf("could not verify permissions for path. No path provided ")
 	}
@@ -62,5 +62,5 @@ func OwnerPermissionsMatch(path string, uid int, permissions int) (err error) {
 		return err
 	}
 
-	return err
+	return nil
 }
