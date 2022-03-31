@@ -91,27 +91,29 @@ func getFormat(data *framework.FieldData) string {
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request) (*certutil.CAInfoBundle, error) {
-	bundleEntry, err := req.Storage.Get(ctx, "config/ca_bundle")
+func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string) (*certutil.CAInfoBundle, error) {
+	id, err := resolveIssuerReference(ctx, req.Storage, issuerRef)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
-	}
-	if bundleEntry == nil {
-		return nil, errutil.UserError{Err: "backend must be configured with a CA certificate/key"}
+		// Usually a bad label from the user or misconfigured default.
+		return nil, errutil.UserError{Err: err.Error()}
 	}
 
-	var bundle certutil.CertBundle
-	if err := bundleEntry.DecodeJSON(&bundle); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode local CA certificate/key: %v", err)}
+	bundle, err := fetchCertBundleByIssuerId(ctx, req.Storage, id, true)
+	if err != nil {
+		// Once we have an issuer id, usually a bug on our side if it isn't there.
+		return nil, errutil.InternalError{Err: err.Error()}
 	}
 
-	parsedBundle, err := parseCABundle(ctx, b, req, &bundle)
+	parsedBundle, err := parseCABundle(ctx, b, req, bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
 
 	if parsedBundle.Certificate == nil {
 		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+	}
+	if parsedBundle.PrivateKey == nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerRef)}
 	}
 
 	caInfo := &certutil.CAInfoBundle{ParsedCertBundle: *parsedBundle, URLs: nil}

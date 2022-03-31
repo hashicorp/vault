@@ -174,7 +174,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, "default")
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
