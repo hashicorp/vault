@@ -265,3 +265,31 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 	// Otherwise, we must not have found the issuer.
 	return issuerId("not-found"), errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
 }
+
+// Builds a certutil.CertBundle from the specified issuer identifier,
+// optionally loading the key or not.
+func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuerId, loadKey bool) (*certutil.CertBundle, error) {
+	issuer, err := fetchIssuerById(ctx, s, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var bundle certutil.CertBundle
+	bundle.Certificate = issuer.Certificate
+	bundle.IssuingCA = issuer.CAChain[0]
+	bundle.CAChain = issuer.CAChain
+	bundle.SerialNumber = issuer.SerialNumber
+
+	// Fetch the key if it exists. Sometimes we don't need the key immediately.
+	if loadKey && issuer.KeyID != keyId("") {
+		key, err := fetchKeyById(ctx, s, issuer.KeyID)
+		if err != nil {
+			return nil, err
+		}
+
+		bundle.PrivateKeyType = key.PrivateKeyType
+		bundle.PrivateKey = key.PrivateKey
+	}
+
+	return &bundle, nil
+}
