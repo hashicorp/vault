@@ -41,6 +41,20 @@ type issuer struct {
 	SerialNumber string   `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
 
+func listKeys(ctx context.Context, s logical.Storage) ([]keyId, error) {
+	strList, err := s.List(ctx, keyPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	keyIds := make([]keyId, 0, len(strList))
+	for _, entry := range strList {
+		keyIds = append(keyIds, keyId(entry))
+	}
+
+	return keyIds, nil
+}
+
 func fetchKeyById(ctx context.Context, s logical.Storage, keyId keyId) (*key, error) {
 	keyEntry, err := s.Get(ctx, keyPrefix+keyId.String())
 	if err != nil {
@@ -68,6 +82,20 @@ func writeKey(ctx context.Context, s logical.Storage, key key) error {
 	}
 
 	return s.Put(ctx, json)
+}
+
+func listIssuers(ctx context.Context, s logical.Storage) ([]issuerId, error) {
+	strList, err := s.List(ctx, issuerPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	issuerIds := make([]issuerId, 0, len(strList))
+	for _, entry := range strList {
+		issuerIds = append(issuerIds, issuerId(entry))
+	}
+
+	return issuerIds, nil
 }
 
 func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) (*issuer, error) {

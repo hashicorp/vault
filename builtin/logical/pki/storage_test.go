@@ -16,30 +16,46 @@ var ctx = context.Background()
 
 func Test_IssuerRoundTrip(t *testing.T) {
 	b, s := createBackendWithStorage(t)
-	pkiIssuer, pkiKey := genIssuerAndKey(t, b)
+	issuer1, key1 := genIssuerAndKey(t, b)
+	issuer2, key2 := genIssuerAndKey(t, b)
 
 	// We get an error when issuer id not found
-	_, err := fetchIssuerById(ctx, s, pkiIssuer.ID)
+	_, err := fetchIssuerById(ctx, s, issuer1.ID)
 	require.Error(t, err)
 
 	// We get an error when key id not found
-	_, err = fetchKeyById(ctx, s, pkiKey.ID)
+	_, err = fetchKeyById(ctx, s, key1.ID)
 	require.Error(t, err)
 
-	// Now write out our issuer and key
-	err = writeKey(ctx, s, pkiKey)
+	// Now write out our issuers and keys
+	err = writeKey(ctx, s, key1)
 	require.NoError(t, err)
-	err = writeIssuer(ctx, s, pkiIssuer)
-	require.NoError(t, err)
-
-	pkiKey2, err := fetchKeyById(ctx, s, pkiKey.ID)
+	err = writeIssuer(ctx, s, issuer1)
 	require.NoError(t, err)
 
-	pkiIssuer2, err := fetchIssuerById(ctx, s, pkiIssuer.ID)
+	err = writeKey(ctx, s, key2)
+	require.NoError(t, err)
+	err = writeIssuer(ctx, s, issuer2)
 	require.NoError(t, err)
 
-	require.Equal(t, &pkiKey, pkiKey2)
-	require.Equal(t, &pkiIssuer, pkiIssuer2)
+	fetchedKey1, err := fetchKeyById(ctx, s, key1.ID)
+	require.NoError(t, err)
+
+	fetchedIssuer1, err := fetchIssuerById(ctx, s, issuer1.ID)
+	require.NoError(t, err)
+
+	require.Equal(t, &key1, fetchedKey1)
+	require.Equal(t, &issuer1, fetchedIssuer1)
+
+	keys, err := listKeys(ctx, s)
+	require.NoError(t, err)
+
+	require.ElementsMatch(t, []keyId{key1.ID, key2.ID}, keys)
+
+	issuers, err := listIssuers(ctx, s)
+	require.NoError(t, err)
+
+	require.ElementsMatch(t, []issuerId{issuer1.ID, issuer2.ID}, issuers)
 }
 
 func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
