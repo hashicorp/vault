@@ -32,6 +32,6 @@ func parseCABundle(_ context.Context, _ *backend, _ *logical.Request, bundle *ce
 	return bundle.ToParsedCertBundle()
 }
 
-func withManagedPKIKey(_ context.Context, _ *backend, _ keyId, _ string, _ logical.ManagedSigningKeyConsumer) error {
+func withManagedPKIKey(_ context.Context, _ *backend, _ managedKeyId, _ string, _ logical.ManagedSigningKeyConsumer) error {
 	return errEntOnly
 }
