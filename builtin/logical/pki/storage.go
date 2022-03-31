@@ -15,10 +15,13 @@ import (
 )
 
 const (
-	storageKeyConfig     = "/config/keys"
-	storeageIssuerConfig = "/config/issuers"
-	keyPrefix            = "/config/key/"
-	issuerPrefix         = "/config/issuer/"
+	storageKeyConfig    = "config/keys"
+	storageIssuerConfig = "config/issuers"
+	keyPrefix           = "config/key/"
+	issuerPrefix        = "config/issuer/"
+
+	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
+	legacyCertBundlePath        = "config/ca_bundle"
 )
 
 type keyId string
@@ -105,6 +108,10 @@ func writeKey(ctx context.Context, s logical.Storage, key key) error {
 	return s.Put(ctx, json)
 }
 
+func deleteKey(ctx context.Context, s logical.Storage, id keyId) error {
+	return s.Delete(ctx, keyPrefix+id.String())
+}
+
 func importKey(ctx context.Context, s logical.Storage, keyValue string) (*key, bool, error) {
 	// importKey imports the specified PEM-format key (from keyValue) into
 	// the new PKI storage format. The first return field is a reference to
@@ -146,11 +153,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string) (*key, b
 
 	// Haven't found a key, so we've gotta create it and write it into storage.
 	var result key
-	uuid, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, false, err
-	}
-	result.ID = keyId(uuid)
+	result.ID = genKeyId()
 	result.PrivateKey = keyValue
 
 	// Extracting the signer is necessary for two reasons: first, to get the
@@ -198,7 +201,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string) (*key, b
 			// These public keys are equal, so this key entry must be the
 			// corresponding private key to this issuer; update it accordingly.
 			existingIssuer.KeyID = result.ID
-			if err := writeIssuer(ctx, s, *existingIssuer); err != nil {
+			if err := writeIssuer(ctx, s, existingIssuer); err != nil {
 				return nil, false, err
 			}
 		}
@@ -288,7 +291,7 @@ func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) 
 	return &issuer, nil
 }
 
-func writeIssuer(ctx context.Context, s logical.Storage, issuer issuer) error {
+func writeIssuer(ctx context.Context, s logical.Storage, issuer *issuer) error {
 	issuerId := issuer.ID
 
 	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)
@@ -297,6 +300,10 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer issuer) error {
 	}
 
 	return s.Put(ctx, json)
+}
+
+func deleteIssuer(ctx context.Context, s logical.Storage, id issuerId) error {
+	return s.Delete(ctx, issuerPrefix+id.String())
 }
 
 func importIssuer(ctx context.Context, s logical.Storage, certValue string) (*issuer, bool, error) {
@@ -341,11 +348,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string) (*is
 	// Haven't found an issuer, so we've gotta create it and write it into
 	// storage.
 	var result issuer
-	uuid, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, false, err
-	}
-	result.ID = issuerId(uuid)
+	result.ID = genIssuerId()
 	result.Certificate = certValue
 	result.CAChain = []string{certValue}
 
@@ -390,7 +393,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string) (*is
 	}
 
 	// Finally we can write the issuer to storage.
-	if err := writeIssuer(ctx, s, result); err != nil {
+	if err := writeIssuer(ctx, s, &result); err != nil {
 		return nil, false, err
 	}
 
@@ -424,7 +427,7 @@ func getKeysConfig(ctx context.Context, s logical.Storage) (*keyConfig, error) {
 }
 
 func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConfig) error {
-	json, err := logical.StorageEntryJSON(storeageIssuerConfig, config)
+	json, err := logical.StorageEntryJSON(storageIssuerConfig, config)
 	if err != nil {
 		return err
 	}
@@ -433,7 +436,7 @@ func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConf
 }
 
 func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfig, error) {
-	issuerConfigEntry, err := s.Get(ctx, storeageIssuerConfig)
+	issuerConfigEntry, err := s.Get(ctx, storageIssuerConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -513,4 +516,20 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 	}
 
 	return &bundle, nil
+}
+
+func genIssuerId() issuerId {
+	return issuerId(genUuid())
+}
+
+func genKeyId() keyId {
+	return keyId(genUuid())
+}
+
+func genUuid() string {
+	aUuid, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(err)
+	}
+	return aUuid
 }

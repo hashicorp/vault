@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -119,7 +121,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			secretCerts(&b),
 		},
 
-		BackendType: logical.TypeLogical,
+		BackendType:    logical.TypeLogical,
+		InitializeFunc: b.initialize,
 	}
 
 	b.crlLifetime = time.Hour * 72
@@ -232,4 +235,23 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 		}
 		return resp, err
 	}
+}
+
+// initialize is used to perform a possible PKI storage migration if needed
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	logger := b.Logger().Named("initialize")
+
+	// Early exit if not a primary cluster or performance secondary with a local mount.
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		logger.Debug("skipping pki migration as we are not on primary or secondary with a local mount")
+		return nil
+	}
+
+	if err := migrateStorage(ctx, req, logger); err != nil {
+		logger.Error("Error during migration of PKI mount: " + err.Error())
+		return err
+	}
+
+	return nil
 }
