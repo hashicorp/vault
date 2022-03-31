@@ -30,6 +30,7 @@ func (p issuerId) String() string {
 
 type key struct {
 	ID             keyId                   `json:"id" structs:"id" mapstructure:"id"`
+	Name           string                  `json:"name" structs:"name" mapstructure:"name"`
 	PrivateKeyType certutil.PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
 	PrivateKey     string                  `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 }
@@ -106,6 +107,45 @@ func listIssuers(ctx context.Context, s logical.Storage) ([]issuerId, error) {
 	}
 
 	return issuerIds, nil
+}
+
+func resolveKeyReference(ctx context.Context, s logical.Storage, reference string) (keyId, error) {
+	if reference == "default" {
+		// Handle fetching the default key.
+		config, err := getKeysConfig(ctx, s)
+		if err != nil {
+			return keyId("config-error"), err
+		}
+
+		return config.DefaultKeyId, nil
+	}
+
+	keys, err := listKeys(ctx, s)
+	if err != nil {
+		return keyId("list-error"), err
+	}
+
+	// Cheaper to list keys and check if an id is a match...
+	for _, key_id := range keys {
+		if key_id == keyId(reference) {
+			return key_id, nil
+		}
+	}
+
+	// ... than to pull all keys from storage.
+	for _, key_id := range keys {
+		key, err := fetchKeyById(ctx, s, key_id)
+		if err != nil {
+			return keyId("key-read"), err
+		}
+
+		if key.Name == reference {
+			return key.ID, nil
+		}
+	}
+
+	// Otherwise, we must not have found the key.
+	return keyId("not-found"), errutil.UserError{Err: fmt.Sprintf("unable to find PKI key for reference: %v", reference)}
 }
 
 func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) (*issuer, error) {
@@ -185,4 +225,43 @@ func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfig, er
 	}
 
 	return issuerConfig, nil
+}
+
+func resolveIssuerReference(ctx context.Context, s logical.Storage, reference string) (issuerId, error) {
+	if reference == "default" {
+		// Handle fetching the default issuer.
+		config, err := getIssuersConfig(ctx, s)
+		if err != nil {
+			return issuerId("config-error"), err
+		}
+
+		return config.DefaultIssuerId, nil
+	}
+
+	issuers, err := listIssuers(ctx, s)
+	if err != nil {
+		return issuerId("list-error"), err
+	}
+
+	// Cheaper to list issuers and check if an id is a match...
+	for _, issuer_id := range issuers {
+		if issuer_id == issuerId(reference) {
+			return issuer_id, nil
+		}
+	}
+
+	// ... than to pull all issuers from storage.
+	for _, issuer_id := range issuers {
+		issuer, err := fetchIssuerById(ctx, s, issuer_id)
+		if err != nil {
+			return issuerId("issuer-read"), err
+		}
+
+		if issuer.Name == reference {
+			return issuer.ID, nil
+		}
+	}
+
+	// Otherwise, we must not have found the issuer.
+	return issuerId("not-found"), errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
 }
