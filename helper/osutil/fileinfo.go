@@ -23,7 +23,7 @@ func checkPathInfo(info fs.FileInfo, path string, uid int, permissions int) erro
 	if err != nil {
 		return err
 	}
-	return err
+	return nil
 }
 
 func FilePermissionsMatch(info fs.FileInfo, path string, permissions int) (err error) {
