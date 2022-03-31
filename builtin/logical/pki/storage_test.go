@@ -19,47 +19,47 @@ func Test_PKIIssuerRoundTrip(t *testing.T) {
 	pkiIssuer, pkiKey := genIssuerAndKey(t, b)
 
 	// We get an error when issuer id not found
-	_, err := fetchPKIIssuerById(ctx, s, pkiIssuer.ID)
+	_, err := fetchIssuerById(ctx, s, pkiIssuer.ID)
 	require.Error(t, err)
 
-	// We get an error when pkiKey id not found
-	_, err = fetchPKIKeyById(ctx, s, pkiKey.ID)
+	// We get an error when key id not found
+	_, err = fetchKeyById(ctx, s, pkiKey.ID)
 	require.Error(t, err)
 
 	// Now write out our issuer and key
-	err = writePKIKey(ctx, s, pkiKey)
+	err = writeKey(ctx, s, pkiKey)
 	require.NoError(t, err)
-	err = writePKIIssuer(ctx, s, pkiIssuer)
-	require.NoError(t, err)
-
-	pkiKey2, err := fetchPKIKeyById(ctx, s, pkiKey.ID)
+	err = writeIssuer(ctx, s, pkiIssuer)
 	require.NoError(t, err)
 
-	pkiIssuer2, err := fetchPKIIssuerById(ctx, s, pkiIssuer.ID)
+	pkiKey2, err := fetchKeyById(ctx, s, pkiKey.ID)
+	require.NoError(t, err)
+
+	pkiIssuer2, err := fetchIssuerById(ctx, s, pkiIssuer.ID)
 	require.NoError(t, err)
 
 	require.Equal(t, pkiKey, pkiKey2)
 	require.Equal(t, pkiIssuer, pkiIssuer2)
 }
 
-func genIssuerAndKey(t *testing.T, b *backend) (pkiIssuer, pkiKey) {
+func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
 	certBundle, err := genCertBundle(t, b)
 
-	keyId, err := uuid.GenerateUUID()
+	keyIdStr, err := uuid.GenerateUUID()
 	require.NoError(t, err)
 
-	pkiKey := pkiKey{
-		ID:             pkiKeyId(keyId),
+	pkiKey := key{
+		ID:             keyId(keyIdStr),
 		PrivateKeyType: certBundle.PrivateKeyType,
 		PrivateKey:     certBundle.PrivateKey,
 	}
 
-	issuerId, err := uuid.GenerateUUID()
+	issuerIdStr, err := uuid.GenerateUUID()
 	require.NoError(t, err)
 
-	pkiIssuer := pkiIssuer{
-		ID:           pkiIssuerId(issuerId),
-		PKIKeyID:     pkiKeyId(keyId),
+	pkiIssuer := issuer{
+		ID:           issuerId(issuerIdStr),
+		KeyID:        keyId(keyIdStr),
 		Certificate:  certBundle.Certificate,
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
