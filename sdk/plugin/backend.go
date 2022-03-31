@@ -41,7 +41,7 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 	}
 
 	if b.MultiplexingSupport {
-		server.Instances = make(map[string]logical.Backend)
+		server.instances = make(map[string]backendInstance)
 
 		// Multiplexing is enabled for this plugin, register the server so we
 		// can tell the client in Vault.
