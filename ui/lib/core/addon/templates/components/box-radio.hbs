@@ -11,13 +11,13 @@
           <Icon @name={{@glyph}} @size="24" class="has-text-grey-light" />
           {{@displayName}}
           <RadioButton
+            id={{@type}}
+            name={{@groupName}}
+            class="radio"
+            disabled={{@disabled}}
             @value={{@type}}
-            @radioClass="radio"
             @groupValue={{@groupValue}}
-            @changed={{@onRadioChange}}
-            @name={{@groupName}}
-            @radioId={{@type}}
-            @disabled={{@disabled}}
+            @onChange={{@onRadioChange}}
           />
         </label>
       </T.Trigger>
@@ -39,13 +39,13 @@
       <Icon @name={{@glyph}} @size="24" class="has-text-grey-light" />
       {{@displayName}}
       <RadioButton
+        id={{@type}}
+        name={{@groupName}}
+        class="radio"
+        disabled={{@disabled}}
         @value={{@type}}
-        @radioClass="radio"
         @groupValue={{@mountType}}
-        @changed={{@onRadioChange}}
-        @name={{@groupName}}
-        @radioId={{@type}}
-        @disabled={{@disabled}}
+        @onChange={{@onRadioChange}}
       />
     </label>
   </div>
