@@ -1,4 +1,4 @@
-import { currentRouteName, settled, find } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -131,10 +131,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await mountSecrets.selectType('kv');
     await mountSecrets.next().path(enginePath).setMaxVersion(101).submit();
     await settled();
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
-    );
+    assert
+      .dom('[data-test-flash-message]')
+      .containsText(
+        `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
+      );
     await configPage.visit({ backend: enginePath });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
