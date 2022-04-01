@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -97,7 +98,7 @@ func TestSecretsMoveCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		mounts, err := client.Sys().ListMounts()
+		mounts, err := client.Sys().ListMountsWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

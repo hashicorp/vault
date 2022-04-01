@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -55,7 +56,7 @@ func testRouter_MountSubpath(t *testing.T, mountPoints []string) {
 	for _, mp := range mountPoints {
 		t.Logf("mounting %s", "s/"+mp)
 		var err error
-		err = client.Sys().Mount("s/"+mp, mountInput)
+		err = client.Sys().MountWithContext(context.Background(), "s/"+mp, mountInput)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}

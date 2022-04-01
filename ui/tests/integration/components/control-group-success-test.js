@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
@@ -61,7 +61,7 @@ module('Integration | Component | control group success', function (hooks) {
     await render(hbs`{{control-group-success model=model controlGroupResponse=response }}`);
     assert.ok(component.showsNavigateMessage, 'shows unwrap message');
     await component.navigate();
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(this.controlGroup.markTokenForUnwrap.calledOnce, 'marks token for unwrap');
       assert.ok(this.router.transitionTo.calledOnce, 'calls router transition');
@@ -74,7 +74,7 @@ module('Integration | Component | control group success', function (hooks) {
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');
     await component.token('token');
     component.unwrap();
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(component.showsJsonViewer, 'shows unwrapped data');
     });

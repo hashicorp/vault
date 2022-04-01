@@ -16,7 +16,7 @@ This program is intended to be largely a self-service process with links and gui
 
 Vault is an Identity-based security solution that leverages trusted sources of identity to keep secrets and application data secured with one centralized, audited workflow for tightly controlling access to secrets across applications, systems, and infrastructure while encrypting data both in flight and at rest. For a full description of the current features please refer to the Vault [website](/). 
 
-Vault has a secure [plugin](/docs/internals/plugins) architecture. Vault’s plugins are completely separate, standalone applications that Vault executes and communicates with over RPC. This means the plugin process does not share the same memory space as Vault and therefore can only access the interfaces and arguments given to it.
+Vault has a secure [plugin](/docs/plugins) architecture. Vault’s plugins are completely separate, standalone applications that Vault executes and communicates with over RPC. This means the plugin process does not share the same memory space as Vault and therefore can only access the interfaces and arguments given to it.
 
 Vault plugins can be built-in and bundled with the Vault binary, or be external that has to be manually mounted. Built-in plugins are developed by HashiCorp, while external plugins can be developed by HashiCorp, technology partners, or the community. There is a curated collection of all plugins, both built-in and external, located on the [Plugin Portal](/docs/plugin-portal).
 

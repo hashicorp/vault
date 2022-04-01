@@ -50,7 +50,8 @@
         @title="Policy"
         @value={{this.model.policy}}
         @valueUpdated={{action (mut this.model.policy)}}
-        @options={{hash mode="ruby" extraKeys=(hash Shift-Enter=(action "savePolicy" this.model))}}
+        @mode="ruby"
+        @extraKeys={{hash Shift-Enter=(action "savePolicy" this.model)}}
       />
       <div class="box is-shadowless is-fullwidth has-short-padding">
         <p class="help-text has-text-grey-dark is-size-7">

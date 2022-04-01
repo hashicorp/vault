@@ -1,6 +1,7 @@
 package expiration
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -23,7 +24,7 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 
 	params := make(map[string][]string)
 	params["type"] = []string{"irrevocable"}
-	resp, err := client.Logical().ReadWithData("sys/leases/count", params)
+	resp, err := client.Logical().ReadWithDataWithContext(context.Background(), "sys/leases/count", params)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +64,7 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().ReadWithData("sys/leases/count", params)
+	resp, err = client.Logical().ReadWithDataWithContext(context.Background(), "sys/leases/count", params)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +130,7 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 
 	params := make(map[string][]string)
 	params["type"] = []string{"irrevocable"}
-	resp, err := client.Logical().ReadWithData("sys/leases", params)
+	resp, err := client.Logical().ReadWithDataWithContext(context.Background(), "sys/leases", params)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +171,7 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().ReadWithData("sys/leases", params)
+	resp, err = client.Logical().ReadWithDataWithContext(context.Background(), "sys/leases", params)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +240,7 @@ func TestExpiration_irrevocableLeaseListAPI_includeAll(t *testing.T) {
 	params := make(map[string][]string)
 	params["type"] = []string{"irrevocable"}
 
-	resp, err := client.Logical().ReadWithData("sys/leases", params)
+	resp, err := client.Logical().ReadWithDataWithContext(context.Background(), "sys/leases", params)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -253,7 +254,7 @@ func TestExpiration_irrevocableLeaseListAPI_includeAll(t *testing.T) {
 
 	// now try it with the no limit on return size - we expect no errors and many results
 	params["limit"] = []string{"none"}
-	resp, err = client.Logical().ReadWithData("sys/leases", params)
+	resp, err = client.Logical().ReadWithDataWithContext(context.Background(), "sys/leases", params)
 	if err != nil {
 		t.Fatalf("unexpected error when using limit=none: %v", err)
 	}

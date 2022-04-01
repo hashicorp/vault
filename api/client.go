@@ -1123,6 +1123,9 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // RawRequest performs the raw request given. This request may be against
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
+//
+// Deprecated: This method should not be used directly. Use higher level
+// methods instead.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
 	return c.RawRequestWithContext(context.Background(), r)
 }
@@ -1130,7 +1133,19 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 // RawRequestWithContext performs the raw request given. This request may be against
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
+//
+// Deprecated: This method should not be used directly. Use higher level
+// methods instead.
 func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
+	// Note: we purposefully do not call cancel manually. The reason is
+	// when canceled, the request.Body will EOF when reading due to the way
+	// it streams data in. Cancel will still be run when the timeout is
+	// hit, so this doesn't really harm anything.
+	ctx, _ = c.withConfiguredTimeout(ctx)
+	return c.rawRequestWithContext(ctx, r)
+}
+
+func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	c.modifyLock.RLock()
 	token := c.token
 
@@ -1142,7 +1157,6 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
-	timeout := c.config.Timeout
 	outputCurlString := c.config.OutputCurlString
 	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
@@ -1197,13 +1211,6 @@ START:
 		return nil, LastOutputPolicyError
 	}
 
-	if timeout != 0 {
-		// Note: we purposefully do not call cancel manually. The reason is
-		// when canceled, the request.Body will EOF when reading due to the way
-		// it streams data in. Cancel will still be run when the timeout is
-		// hit, so this doesn't really harm anything.
-		ctx, _ = context.WithTimeout(ctx, timeout)
-	}
 	req.Request = req.Request.WithContext(ctx)
 
 	if backoff == nil {
@@ -1420,6 +1427,17 @@ func (c *Client) WithResponseCallbacks(callbacks ...ResponseCallback) *Client {
 	c2.modifyLock = sync.RWMutex{}
 	c2.responseCallbacks = callbacks
 	return &c2
+}
+
+// withConfiguredTimeout wraps the context with a timeout from the client configuration.
+func (c *Client) withConfiguredTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	timeout := c.ClientTimeout()
+
+	if timeout > 0 {
+		return context.WithTimeout(ctx, timeout)
+	}
+
+	return ctx, func() {}
 }
 
 // RecordState returns a response callback that will record the state returned

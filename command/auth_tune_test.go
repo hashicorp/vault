@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -109,7 +110,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to contain %q", combined, expected)
 			}
 
-			auths, err := client.Sys().ListAuth()
+			auths, err := client.Sys().ListAuthWithContext(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -175,7 +176,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 					t.Errorf("expected %q to contain %q", combined, expected)
 				}
 
-				auths, err := client.Sys().ListAuth()
+				auths, err := client.Sys().ListAuthWithContext(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -218,7 +219,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 					t.Errorf("expected %q to contain %q", combined, expected)
 				}
 
-				auths, err := client.Sys().ListAuth()
+				auths, err := client.Sys().ListAuthWithContext(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}

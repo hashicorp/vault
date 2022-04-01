@@ -36,7 +36,7 @@ jobs:
     - run:
         command: |
           case "$CIRCLE_BRANCH" in
-          main|ui/*|release/*|merge*) ;;
+          main|ui/*|backport/ui/*|release/*|merge*) ;;
           *) # If the branch being tested doesn't match one of the above patterns,
              # we don't need to run test-ui and can abort the job.
              circleci-agent step halt
@@ -807,7 +807,7 @@ jobs:
     - run:
         command: |
           apk add --no-cache python3 py3-pip make
-          python3 -m pip install --user semgrep
+          python3 -m pip install --user semgrep==0.86.5
           export PATH="$HOME/.local/bin:$PATH"
 
           echo "$ semgrep --version"

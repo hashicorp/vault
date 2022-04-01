@@ -3,6 +3,7 @@
 package command
 
 import (
+	"context"
 	"encoding/base64"
 	"io"
 	"os"
@@ -255,7 +256,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		if _, err := client.Sys().GenerateRootInit("", ""); err != nil {
+		if _, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", ""); err != nil {
 			t.Fatal(err)
 		}
 
@@ -275,7 +276,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -307,7 +308,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -343,7 +344,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -386,7 +387,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInit("", "")
+		status, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -447,7 +448,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInit("", "")
+		status, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", "")
 		if err != nil {
 			t.Fatal(err)
 		}
