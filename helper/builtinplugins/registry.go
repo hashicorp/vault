@@ -34,7 +34,6 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
-	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
 	logicalMysql "github.com/hashicorp/vault/builtin/logical/mysql"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
@@ -119,7 +118,6 @@ func newRegistry() *registry {
 			"gcpkms":       logicalGcpKms.Factory,
 			"kv":           logicalKv.Factory,
 			"mongodbatlas": logicalMongoAtlas.Factory,
-			"mssql":        logicalMssql.Factory, // Deprecated
 			"mysql":        logicalMysql.Factory, // Deprecated
 			"nomad":        logicalNomad.Factory,
 			"openldap":     logicalOpenLDAP.Factory,
