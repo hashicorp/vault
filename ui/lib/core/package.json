@@ -10,7 +10,6 @@
     "base64-js": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
-    "ember-basic-dropdown-hover": "*",
     "ember-cli-babel": "*",
     "ember-cli-clipboard": "*",
     "ember-cli-htmlbars": "*",
