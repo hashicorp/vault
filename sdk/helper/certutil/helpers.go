@@ -150,6 +150,46 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 	return nil, errutil.UserError{Err: "unable to parse out of either secret data or a secret object"}
 }
 
+func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType, err error) {
+	if signer, err = x509.ParseECPrivateKey(privateKeyBytes); err == nil {
+		format = ECBlock
+		return
+	}
+
+	if signer, err = x509.ParsePKCS1PrivateKey(privateKeyBytes); err == nil {
+		format = PKCS1Block
+		return
+	}
+
+	var rawKey interface{}
+	if rawKey, err = x509.ParsePKCS8PrivateKey(privateKeyBytes); err == nil {
+		switch rawSigner := rawKey.(type) {
+		case *rsa.PrivateKey:
+			signer = rawSigner
+		case *ecdsa.PrivateKey:
+			signer = rawSigner
+		case ed25519.PrivateKey:
+			signer = rawSigner
+		default:
+			return nil, UnknownBlock, errutil.InternalError{Err: "unknown type for parsed PKCS8 Private Key"}
+		}
+
+		format = PKCS8Block
+		return
+	}
+
+	return nil, UnknownBlock, err
+}
+
+func ParsePEMKey(keyPem string) (crypto.Signer, BlockType, error) {
+	pemBlock, _ := pem.Decode([]byte(keyPem))
+	if pemBlock == nil {
+		return nil, UnknownBlock, errutil.UserError{Err: "no data found in PEM block"}
+	}
+
+	return ParseDERKey(pemBlock.Bytes)
+}
+
 // ParsePEMBundle takes a string of concatenated PEM-format certificate
 // and private key values and decodes/parses them, checking validity along
 // the way. The first certificate must be the subject certificate and issuing
@@ -170,43 +210,19 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 			return nil, errutil.UserError{Err: "no data found in PEM block"}
 		}
 
-		if signer, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
+		if signer, format, err := ParseDERKey(pemBlock.Bytes); err == nil {
 			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
 				return nil, errutil.UserError{Err: "more than one private key given; provide only one private key in the bundle"}
 			}
-			parsedBundle.PrivateKeyFormat = ECBlock
-			parsedBundle.PrivateKeyType = ECPrivateKey
+
+			parsedBundle.PrivateKeyFormat = format
+			parsedBundle.PrivateKeyType = GetPrivateKeyTypeFromSigner(signer)
+			if parsedBundle.PrivateKeyType == UnknownPrivateKey {
+				return nil, errutil.UserError{Err: "Unknown type of private key included in the bundle: %v"}
+			}
+
 			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			parsedBundle.PrivateKey = signer
-
-		} else if signer, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
-			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
-				return nil, errutil.UserError{Err: "more than one private key given; provide only one private key in the bundle"}
-			}
-			parsedBundle.PrivateKeyType = RSAPrivateKey
-			parsedBundle.PrivateKeyFormat = PKCS1Block
-			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
-			parsedBundle.PrivateKey = signer
-		} else if signer, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes); err == nil {
-			parsedBundle.PrivateKeyFormat = PKCS8Block
-
-			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
-				return nil, errutil.UserError{Err: "More than one private key given; provide only one private key in the bundle"}
-			}
-			switch signer := signer.(type) {
-			case *rsa.PrivateKey:
-				parsedBundle.PrivateKey = signer
-				parsedBundle.PrivateKeyType = RSAPrivateKey
-				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
-			case *ecdsa.PrivateKey:
-				parsedBundle.PrivateKey = signer
-				parsedBundle.PrivateKeyType = ECPrivateKey
-				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
-			case ed25519.PrivateKey:
-				parsedBundle.PrivateKey = signer
-				parsedBundle.PrivateKeyType = Ed25519PrivateKey
-				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
-			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
 			certPath = append(certPath, &CertBlock{
 				Certificate: certificates[0],
