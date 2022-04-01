@@ -19,8 +19,7 @@ module('Integration | Component | console/log json', function (hooks) {
     this.set('content', objectContent);
 
     await render(hbs`{{console/log-json content=content}}`);
-    const instance = this.codeMirror.instanceFor(find('[data-test-component=json-editor]').id);
-
-    assert.equal(instance.getValue(), expectedText);
+    const instance = find('[data-test-component=code-mirror-modifier]').innerText;
+    assert.equal(instance, expectedText);
   });
 });

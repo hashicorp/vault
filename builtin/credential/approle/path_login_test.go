@@ -2,6 +2,7 @@ package approle
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -263,6 +264,26 @@ func TestAppRole_RoleLogin(t *testing.T) {
 
 	if resp.Auth.Period != period {
 		t.Fatalf("expected period value of %d in the response, got: %s", period, resp.Auth.Period)
+	}
+
+	// Test input validation with secret_id that exceeds max length
+	loginData["secret_id"] = strings.Repeat("a", maxHmacInputLength+1)
+
+	loginReq = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginData,
+		Connection: &logical.Connection{
+			RemoteAddr: "127.0.0.1",
+		},
+	}
+
+	loginResp, err = b.HandleRequest(context.Background(), loginReq)
+
+	expectedErr := "failed to create HMAC of secret_id"
+	if loginResp != nil || err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Fatalf("expected login test to fail with error %q, resp: %#v, err: %v", expectedErr, loginResp, err)
 	}
 }
 

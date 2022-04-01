@@ -50,9 +50,9 @@ without any explicit action by a plugin author. The default behavior of Vault
 Enterprise is to attempt to handle all requests, including requests to plugins,
 on performance standbys. If the plugin request makes any attempt to modify
 storage, the request will receive a readonly error, and the request routing
-code will then forward the request to the active node. In other words, plugins
-can scale horizontally on Vault Enterprise without any effort on the plugin
-author's part.
+code will then forward the full original request transparently to the active
+node. In other words, plugins can scale horizontally on Vault Enterprise
+without any effort on the plugin author's part.
 
 ## Plugin Communication
 
