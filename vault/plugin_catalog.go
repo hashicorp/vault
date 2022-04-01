@@ -258,6 +258,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			pluginutil.MetadataMode(config.IsMetadataMode),
 			pluginutil.MLock(c.mlockPlugins),
 			pluginutil.AutoMTLS(config.AutoMTLS),
+			// TODO(JM): remove this once secrets/auth plugins use AutoMTLS?
 			pluginutil.Runner(config.Wrapper),
 		)
 		if err != nil {
