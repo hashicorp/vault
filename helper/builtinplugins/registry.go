@@ -23,7 +23,6 @@ import (
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -71,7 +70,6 @@ func newRegistry() *registry {
 	reg := &registry{
 		credentialBackends: map[string]logical.Factory{
 			"alicloud":   credAliCloud.Factory,
-			"app-id":     credAppId.Factory,
 			"approle":    credAppRole.Factory,
 			"aws":        credAws.Factory,
 			"azure":      credAzure.Factory,

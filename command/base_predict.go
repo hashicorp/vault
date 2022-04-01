@@ -102,7 +102,6 @@ func (b *BaseCommand) PredictVaultAvailableMounts() complete.Predictor {
 // hard-coded.
 func (b *BaseCommand) PredictVaultAvailableAuths() complete.Predictor {
 	return complete.PredictSet(
-		"app-id",
 		"approle",
 		"aws",
 		"cert",

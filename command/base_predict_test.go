@@ -344,7 +344,6 @@ func TestPredict_Plugins(t *testing.T) {
 			[]string{
 				"ad",
 				"alicloud",
-				"app-id",
 				"approle",
 				"aws",
 				"azure",
