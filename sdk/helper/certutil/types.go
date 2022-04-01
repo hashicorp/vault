@@ -78,9 +78,10 @@ type BlockType string
 
 // Well-known formats
 const (
-	PKCS1Block BlockType = "RSA PRIVATE KEY"
-	PKCS8Block BlockType = "PRIVATE KEY"
-	ECBlock    BlockType = "EC PRIVATE KEY"
+	UnknownBlock BlockType = ""
+	PKCS1Block   BlockType = "RSA PRIVATE KEY"
+	PKCS8Block   BlockType = "PRIVATE KEY"
+	ECBlock      BlockType = "EC PRIVATE KEY"
 )
 
 // ParsedPrivateKeyContainer allows common key setting for certs and CSRs
@@ -135,6 +136,19 @@ type ParsedCSRBundle struct {
 	PrivateKey      crypto.Signer
 	CSRBytes        []byte
 	CSR             *x509.CertificateRequest
+}
+
+func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
+	switch signer.(type) {
+	case *rsa.PrivateKey:
+		return RSAPrivateKey
+	case *ecdsa.PrivateKey:
+		return ECPrivateKey
+	case ed25519.PrivateKey:
+		return Ed25519PrivateKey
+	default:
+		return UnknownPrivateKey
+	}
 }
 
 // ToPEMBundle converts a string-based certificate bundle
