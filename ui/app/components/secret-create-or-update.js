@@ -129,7 +129,7 @@ export default class SecretCreateOrUpdate extends Component {
     return secretData
       .save()
       .then(() => {
-        if (!this.args.canReadSecretData) {
+        if (!this.args.canReadSecretData && secret.selectedVersion) {
           delete secret.selectedVersion.secretData;
         }
         if (!secretData.isError) {
