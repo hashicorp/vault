@@ -6,14 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
@@ -310,87 +308,4 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 	}
 
 	return &result, err
-}
-
-// requestWithContext avoids the use of the go-retryable library and is useful when
-// making requests where the req or resp body is likely larger than available memory
-func (c *Sys) requestWithContext(ctx context.Context, r *Request, body io.Reader) (*Response, error) {
-	req, err := http.NewRequest(r.Method, r.URL.RequestURI(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.URL.User = r.URL.User
-	req.URL.Scheme = r.URL.Scheme
-	req.URL.Host = r.URL.Host
-	req.Host = r.URL.Host
-
-	if r.Headers != nil {
-		for header, vals := range r.Headers {
-			for _, val := range vals {
-				req.Header.Add(header, val)
-			}
-		}
-	}
-
-	if len(r.ClientToken) != 0 {
-		req.Header.Set(consts.AuthHeaderName, r.ClientToken)
-	}
-
-	if len(r.WrapTTL) != 0 {
-		req.Header.Set("X-Vault-Wrap-TTL", r.WrapTTL)
-	}
-
-	if len(r.MFAHeaderVals) != 0 {
-		for _, mfaHeaderVal := range r.MFAHeaderVals {
-			req.Header.Add("X-Vault-MFA", mfaHeaderVal)
-		}
-	}
-
-	if r.PolicyOverride {
-		req.Header.Set("X-Vault-Policy-Override", "true")
-	}
-
-	var result *Response
-
-	resp, err := c.c.config.HttpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp == nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	// Check for a redirect, only allowing for a single redirect
-	if resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307 {
-		// Parse the updated location
-		respLoc, err := resp.Location()
-		if err != nil {
-			return nil, err
-		}
-
-		// Ensure a protocol downgrade doesn't happen
-		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
-			return nil, fmt.Errorf("redirect would cause protocol downgrade")
-		}
-
-		// Update the request
-		req.URL = respLoc
-
-		// Retry the request
-		resp, err = c.c.config.HttpClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	result = &Response{Response: resp}
-	if err := result.Error(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
