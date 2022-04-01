@@ -33,7 +33,6 @@ import (
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
-	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
 	logicalMongo "github.com/hashicorp/vault/builtin/logical/mongodb"
 	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
@@ -116,7 +115,6 @@ func newRegistry() *registry {
 			"alicloud":     logicalAlicloud.Factory,
 			"aws":          logicalAws.Factory,
 			"azure":        logicalAzure.Factory,
-			"cassandra":    logicalCass.Factory, // Deprecated
 			"consul":       logicalConsul.Factory,
 			"gcp":          logicalGcp.Factory,
 			"gcpkms":       logicalGcpKms.Factory,
