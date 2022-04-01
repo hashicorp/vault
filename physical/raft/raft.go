@@ -274,7 +274,7 @@ func EnsurePath(path string, dir bool) error {
 	if !dir {
 		path = filepath.Dir(path)
 	}
-	return os.MkdirAll(path, 0o750)
+	return os.MkdirAll(path, 0o700)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
