@@ -39,7 +39,7 @@ For the sake of standardization between OSS and Enterprise, and due to the value
 
 Server Side Consistent Tokens introduces the following key changes:
 
-- Token length : Server side consistent tokens are longer, being 95+ characters as opposed to 27+ characters.
+- Token length : Server side consistent tokens are longer, being 95+ characters as opposed to 27+ characters. Since the token can be subject to change (see [Token](/docs/concepts/tokens)), we recommend that you plan for a maximum length of 255 bytes to future proof yourself if you have workflows that rely on the token size.
 - By default, Vault 1.10 will use the new token prefixes and new token format.
 - Tokens don't visibly have a ".namespaceID" suffix
 - Token prefix: Token prefixes are being changed as follows:

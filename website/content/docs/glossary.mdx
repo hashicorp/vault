@@ -15,6 +15,7 @@ documentation for Vault.
 - [Auth Method](#auth-method)
 - [Barrier](#barrier)
 - [Client Token](#client-token)
+- [Plugin](#plugin)
 - [Secret](#secret)
 - [Secrets Engine](#secrets-engine)
 - [Server](#server)
@@ -48,6 +49,32 @@ similar to a session cookie on a web site. Once a user authenticates, Vault
 returns a client token which is used for future requests. The token is used by
 Vault to verify the identity of the client and to enforce the applicable ACL
 policies. This token is passed via HTTP headers.
+
+### Plugin
+
+Plugins are a feature of Vault that can be enabled, disabled, and customized to
+some degree. All Vault [auth methods](/docs/auth) and [secrets engines](/docs/secrets)
+are considered plugins.
+
+#### Built-in Plugin
+
+Built-in plugins are shipped with Vault, often for commonly used
+implementations, and require no additional operator intervention to run.
+Built-in plugins are just like any other backend code inside Vault.
+
+#### External Plugin
+
+External plugins are not shipped with Vault and require additional operator
+intervention to run. Vault's external plugins are completely separate,
+standalone applications that Vault executes and communicates with over RPC.
+Each time a Vault secret engine or auth method is mounted, a new process is
+spawned.
+
+#### External Multiplexed Plugin
+
+An external plugin may make use of [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing).
+A multiplexed plugin allows a single plugin process to be used for multiple
+mounts of the same type.
 
 ### Secret
 
