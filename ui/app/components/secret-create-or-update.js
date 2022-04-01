@@ -204,7 +204,6 @@ export default class SecretCreateOrUpdate extends Component {
   @action
   addRow() {
     const data = this.args.secretData;
-
     // fired off on init
     if (isNone(data.findBy('name', ''))) {
       data.pushObject({ name: '', value: '' });
