@@ -343,10 +343,6 @@
       {
         "title": "Username & Password",
         "path": "auth/userpass"
-      },
-      {
-        "title": "App ID <sup>DEPRECATED</sup>",
-        "path": "auth/app-id"
       }
     ]
   },
