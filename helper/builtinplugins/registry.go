@@ -36,7 +36,6 @@ import (
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
-	logicalPostgres "github.com/hashicorp/vault/builtin/logical/postgresql"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
@@ -120,7 +119,6 @@ func newRegistry() *registry {
 			"nomad":        logicalNomad.Factory,
 			"openldap":     logicalOpenLDAP.Factory,
 			"pki":          logicalPki.Factory,
-			"postgresql":   logicalPostgres.Factory, // Deprecated
 			"rabbitmq":     logicalRabbit.Factory,
 			"ssh":          logicalSsh.Factory,
 			"terraform":    logicalTerraform.Factory,
