@@ -1259,8 +1259,8 @@ func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bo
 	return false, nil
 }
 
-// tokenCheck will check for non-printable characters to prevent a call that will fail at the api
-func tokenCheck(t string) error {
+// validateToken will check for non-printable characters to prevent a call that will fail at the api
+func validateToken(t string) error {
 	idx := strings.IndexFunc(t, func(c rune) bool {
 		return !unicode.IsPrint(c)
 	})
