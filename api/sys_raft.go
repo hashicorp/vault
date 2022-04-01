@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -132,87 +130,25 @@ func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
 	return &result, err
 }
 
-// RaftSnapshot invokes the API that takes the snapshot of the raft cluster and
-// writes it to the supplied io.Writer.
+// RaftSnapshot is a thin wrapper around RaftSnapshotWithContext
 func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	return c.RaftSnapshotWithContext(ctx, snapWriter)
+}
+
+// RaftSnapshotWithContext invokes the API that takes the snapshot of the raft cluster and
+// writes it to the supplied io.Writer.
+func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer) error {
 	r := c.c.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
 	r.URL.RawQuery = r.Params.Encode()
 
-	req, err := http.NewRequest(http.MethodGet, r.URL.RequestURI(), nil)
+	resp, err := c.c.httpRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
-
-	req.URL.User = r.URL.User
-	req.URL.Scheme = r.URL.Scheme
-	req.URL.Host = r.URL.Host
-	req.Host = r.URL.Host
-
-	if r.Headers != nil {
-		for header, vals := range r.Headers {
-			for _, val := range vals {
-				req.Header.Add(header, val)
-			}
-		}
-	}
-
-	if len(r.ClientToken) != 0 {
-		req.Header.Set(consts.AuthHeaderName, r.ClientToken)
-	}
-
-	if len(r.WrapTTL) != 0 {
-		req.Header.Set("X-Vault-Wrap-TTL", r.WrapTTL)
-	}
-
-	if len(r.MFAHeaderVals) != 0 {
-		for _, mfaHeaderVal := range r.MFAHeaderVals {
-			req.Header.Add("X-Vault-MFA", mfaHeaderVal)
-		}
-	}
-
-	if r.PolicyOverride {
-		req.Header.Set("X-Vault-Policy-Override", "true")
-	}
-
-	// Avoiding the use of RawRequestWithContext which reads the response body
-	// to determine if the body contains error message.
-	var result *Response
-	resp, err := c.c.config.HttpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp == nil {
-		return nil
-	}
-
-	// Check for a redirect, only allowing for a single redirect
-	if resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307 {
-		// Parse the updated location
-		respLoc, err := resp.Location()
-		if err != nil {
-			return err
-		}
-
-		// Ensure a protocol downgrade doesn't happen
-		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
-			return fmt.Errorf("redirect would cause protocol downgrade")
-		}
-
-		// Update the request
-		req.URL = respLoc
-
-		// Retry the request
-		resp, err = c.c.config.HttpClient.Do(req)
-		if err != nil {
-			return err
-		}
-	}
-
-	result = &Response{Response: resp}
-	if err := result.Error(); err != nil {
-		return err
-	}
+	defer resp.Body.Close()
 
 	// Make sure that the last file in the archive, SHA256SUMS.sealed, is present
 	// and non-empty.  This is to catch cases where the snapshot failed midstream,
@@ -271,20 +207,26 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	return nil
 }
 
-// RaftSnapshotRestore reads the snapshot from the io.Reader and installs that
-// snapshot, returning the cluster to the state defined by it.
+// RaftSnapshotRestore is a thin wrapper around RaftSnapshotRestoreWithContext
 func (c *Sys) RaftSnapshotRestore(snapReader io.Reader, force bool) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	return c.RaftSnapshotRestoreWithContext(ctx, snapReader, force)
+}
+
+// RaftSnapshotRestoreWithContext reads the snapshot from the io.Reader and installs that
+// snapshot, returning the cluster to the state defined by it.
+func (c *Sys) RaftSnapshotRestoreWithContext(ctx context.Context, snapReader io.Reader, force bool) error {
 	path := "/v1/sys/storage/raft/snapshot"
 	if force {
 		path = "/v1/sys/storage/raft/snapshot-force"
 	}
-	r := c.c.NewRequest("POST", path)
 
+	r := c.c.NewRequest(http.MethodPost, path)
 	r.Body = snapReader
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.httpRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
