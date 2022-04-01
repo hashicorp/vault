@@ -1,0 +1,3 @@
+```release-note:change
+plugin: Remove support for Standalone DB Engines for `cassandra`, `mongodb`, `mssql`, `mysql`, and `postgresql` in favor of [DB secrets engine](https://www.vaultproject.io/docs/secrets/databases)
+```
