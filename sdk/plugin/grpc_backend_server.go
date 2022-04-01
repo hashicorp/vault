@@ -27,10 +27,6 @@ type backendGRPCPluginServer struct {
 
 	broker *plugin.GRPCBroker
 
-	// TODO(JM): can we simplify this and just use backendInstance?
-	brokeredClient *grpc.ClientConn
-	singleImpl     logical.Backend
-
 	instances map[string]backendInstance
 	sync.RWMutex
 
@@ -60,8 +56,8 @@ func getMultiplexIDFromContext(ctx context.Context) (string, error) {
 
 // getBackendInternal returns the backend but does not hold a lock
 func (b *backendGRPCPluginServer) getBackendInternal(ctx context.Context) (logical.Backend, error) {
-	if b.singleImpl != nil {
-		return b.singleImpl, nil
+	if singleImpl, ok := b.instances["single"]; ok {
+		return singleImpl.backend, nil
 	}
 
 	id, err := getMultiplexIDFromContext(ctx)
@@ -85,8 +81,8 @@ func (b *backendGRPCPluginServer) getBackend(ctx context.Context) (logical.Backe
 
 // getBrokeredClientInternal returns the brokeredClient but does not hold a lock
 func (b *backendGRPCPluginServer) getBrokeredClientInternal(ctx context.Context) (*grpc.ClientConn, error) {
-	if b.brokeredClient != nil {
-		return b.brokeredClient, nil
+	if singleImpl, ok := b.instances["single"]; ok {
+		return singleImpl.brokeredClient, nil
 	}
 
 	id, err := getMultiplexIDFromContext(ctx)
@@ -112,19 +108,14 @@ func (b *backendGRPCPluginServer) getBrokeredClient(ctx context.Context) (*grpc.
 // system view of the backend. This method also instantiates the underlying
 // backend through its factory func for the server side of the plugin.
 func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
-	if b.singleImpl != nil {
-		// TODO(JM): singleImpl is set, do nothing?
-		return &pb.SetupReply{}, nil
-	}
+	var err error
+	id := "single"
 
-	id, err := getMultiplexIDFromContext(ctx)
-	if err != nil {
-		return &pb.SetupReply{}, err
-	}
-
-	if _, ok := b.instances[id]; ok {
-		// TODO(JM): multiplexed backend for this id is set, do nothing?
-		return &pb.SetupReply{}, nil
+	if _, ok := b.instances[id]; !ok {
+		id, err = getMultiplexIDFromContext(ctx)
+		if err != nil {
+			return &pb.SetupReply{}, err
+		}
 	}
 
 	// Dial for storage
@@ -161,7 +152,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 }
 
 func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.HandleRequestArgs) (*pb.HandleRequestReply, error) {
-	impl, err := b.getBackend(ctx)
+	backend, err := b.getBackend(ctx)
 	if err != nil {
 		return &pb.HandleRequestReply{}, err
 	}
@@ -182,7 +173,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	logicalReq.Storage = newGRPCStorageClient(brokeredClient)
 
-	resp, respErr := impl.HandleRequest(ctx, logicalReq)
+	resp, respErr := backend.HandleRequest(ctx, logicalReq)
 
 	pbResp, err := pb.LogicalResponseToProtoResponse(resp)
 	if err != nil {
@@ -196,7 +187,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 }
 
 func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.InitializeArgs) (*pb.InitializeReply, error) {
-	impl, err := b.getBackend(ctx)
+	backend, err := b.getBackend(ctx)
 	if err != nil {
 		return &pb.InitializeReply{}, err
 	}
@@ -214,7 +205,7 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Initiali
 		Storage: newGRPCStorageClient(brokeredClient),
 	}
 
-	respErr := impl.Initialize(ctx, req)
+	respErr := backend.Initialize(ctx, req)
 
 	return &pb.InitializeReply{
 		Err: pb.ErrToProtoErr(respErr),
@@ -222,12 +213,12 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Initiali
 }
 
 func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Empty) (*pb.SpecialPathsReply, error) {
-	impl, err := b.getBackend(ctx)
+	backend, err := b.getBackend(ctx)
 	if err != nil {
 		return &pb.SpecialPathsReply{}, err
 	}
 
-	paths := impl.SpecialPaths()
+	paths := backend.SpecialPaths()
 	if paths == nil {
 		return &pb.SpecialPathsReply{
 			Paths: nil,
@@ -245,7 +236,7 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 }
 
 func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args *pb.HandleExistenceCheckArgs) (*pb.HandleExistenceCheckReply, error) {
-	impl, err := b.getBackend(ctx)
+	backend, err := b.getBackend(ctx)
 	if err != nil {
 		return &pb.HandleExistenceCheckReply{}, err
 	}
@@ -266,7 +257,7 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 
 	logicalReq.Storage = newGRPCStorageClient(brokeredClient)
 
-	checkFound, exists, err := impl.HandleExistenceCheck(ctx, logicalReq)
+	checkFound, exists, err := backend.HandleExistenceCheck(ctx, logicalReq)
 	return &pb.HandleExistenceCheckReply{
 		CheckFound: checkFound,
 		Exists:     exists,
@@ -275,25 +266,39 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 }
 
 func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
-	impl, err := b.getBackend(ctx)
+	b.Lock()
+	defer b.Unlock()
+
+	backend, err := b.getBackendInternal(ctx)
 	if err != nil {
 		return &pb.Empty{}, err
 	}
 
-	impl.Cleanup(ctx)
+	backend.Cleanup(ctx)
 
-	brokeredClient, err := b.getBrokeredClient(ctx)
+	brokeredClient, err := b.getBrokeredClientInternal(ctx)
 	if err != nil {
 		return &pb.Empty{}, err
 	}
 
 	// Close rpc clients
 	brokeredClient.Close()
+
+	if _, ok := b.instances["single"]; ok {
+		delete(b.instances, "single")
+	} else {
+		id, err := getMultiplexIDFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		delete(b.instances, id)
+	}
+
 	return &pb.Empty{}, nil
 }
 
 func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
-	impl, err := b.getBackend(ctx)
+	backend, err := b.getBackend(ctx)
 	if err != nil {
 		return &pb.Empty{}, err
 	}
@@ -302,17 +307,17 @@ func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.In
 		return &pb.Empty{}, ErrServerInMetadataMode
 	}
 
-	impl.InvalidateKey(ctx, args.Key)
+	backend.InvalidateKey(ctx, args.Key)
 	return &pb.Empty{}, nil
 }
 
 func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.TypeReply, error) {
-	impl, err := b.getBackend(ctx)
+	backend, err := b.getBackend(ctx)
 	if err != nil {
 		return &pb.TypeReply{}, err
 	}
 
 	return &pb.TypeReply{
-		Type: uint32(impl.Type()),
+		Type: uint32(backend.Type()),
 	}, nil
 }

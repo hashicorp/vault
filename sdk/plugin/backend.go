@@ -33,21 +33,22 @@ type GRPCBackendPlugin struct {
 
 func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
 	server := backendGRPCPluginServer{
-		broker:  broker,
-		factory: b.Factory,
+		broker:    broker,
+		factory:   b.Factory,
+		instances: make(map[string]backendInstance),
 		// We pass the logger down into the backend so go-plugin will
 		// forward logs for us.
 		logger: b.Logger,
 	}
 
 	if b.MultiplexingSupport {
-		server.instances = make(map[string]backendInstance)
-
 		// Multiplexing is enabled for this plugin, register the server so we
 		// can tell the client in Vault.
 		pluginutil.RegisterPluginMultiplexingServer(s, pluginutil.PluginMultiplexingServerImpl{
 			Supported: true,
 		})
+	} else {
+		server.instances["single"] = backendInstance{}
 	}
 
 	pb.RegisterBackendServer(s, &server)
