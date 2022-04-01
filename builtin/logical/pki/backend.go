@@ -105,6 +105,15 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
+			pathRevoke(&b),
+			pathTidy(&b),
+			pathTidyStatus(&b),
+
+			// Issuer APIs
+			pathListIssuers(&b),
+			pathGetIssuer(&b),
+
+			// Fetch APIs have been lowered to favor the newer issuer API endpoints
 			pathFetchCA(&b),
 			pathFetchCAChain(&b),
 			pathFetchCRL(&b),
@@ -112,9 +121,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchValidRaw(&b),
 			pathFetchValid(&b),
 			pathFetchListCerts(&b),
-			pathRevoke(&b),
-			pathTidy(&b),
-			pathTidyStatus(&b),
 		},
 
 		Secrets: []*framework.Secret{
