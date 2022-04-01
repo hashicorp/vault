@@ -67,8 +67,10 @@ TMPDIR=/tmp
 
    2. Create a CSR.
 
+      The prefix `system:node:` in CN and Org `system:nodes` are required in new CSR API along with k8s 1.22+.
+
       ```bash
-      openssl req -new -key ${TMPDIR}/vault.key -subj "/CN=${SERVICE}.${NAMESPACE}.svc" -out ${TMPDIR}/server.csr -config ${TMPDIR}/csr.conf
+      openssl req -new -key ${TMPDIR}/vault.key -subj "/CN=system:node:${SERVICE}.${NAMESPACE}.svc;/O=system:nodes" -out ${TMPDIR}/server.csr -config ${TMPDIR}/csr.conf
       ```
 
 3. Create the certificate
@@ -78,7 +80,8 @@ TMPDIR=/tmp
       ```
       $ export CSR_NAME=vault-csr
       $ cat <<EOF >${TMPDIR}/csr.yaml
-      apiVersion: certificates.k8s.io/v1beta1
+      # Since k8s 1.22 CSR is moved to `v1`, previously apiVersion: certificates.k8s.io/v1beta1
+      apiVersion: certificates.k8s.io/v1
       kind: CertificateSigningRequest
       metadata:
         name: ${CSR_NAME}
@@ -90,6 +93,8 @@ TMPDIR=/tmp
         - digital signature
         - key encipherment
         - server auth
+        # signerName is required in certificates.k8s.io/v1
+        signerName: kubernetes.io/kubelet-serving
       EOF
       ```
 
