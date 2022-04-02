@@ -65,6 +65,7 @@ type sshRole struct {
 	AllowedUserKeyTypesLengths map[string][]int  `mapstructure:"allowed_user_key_types_lengths" json:"allowed_user_key_types_lengths"`
 	AlgorithmSigner            string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
 	Version                    int               `mapstructure:"role_version" json:"role_version"`
+	NotBeforeDuration          time.Duration     `mapstructure:"not_before_duration" json:"not_before_duration"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -363,6 +364,17 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Signing Algorithm",
 				},
 			},
+			"not_before_duration": {
+				Type:    framework.TypeDurationSecond,
+				Default: 30,
+				Description: `
+                The duration before now the SSH cert needs to be signed.
+				`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Not before duration",
+					Value: 30,
+				},
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -555,6 +567,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		KeyType:                   KeyTypeCA,
 		AlgorithmSigner:           signer,
 		Version:                   roleEntryVersion,
+		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {

@@ -612,5 +612,10 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 
 	certificate.Signature = sig
 
+    notBeforeDuration := b.Role.NotBeforeDuration
+    if notBeforeDuration > 0 {
+	    certificate.ValidAfter = uint64(now.Add(-notBeforeDuration * time.Second).In(time.UTC).Unix())
+    }
+
 	return certificate, nil
 }
