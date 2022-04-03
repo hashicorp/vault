@@ -80,6 +80,10 @@ const (
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
 
+	// defaultMaxTOTPValidateAttempts is the default value for the number
+	// of failed attempts to validate a request subject to TOTP MFA
+	defaultMaxTOTPValidateAttempts = 5
+
 	// ForwardSSCTokenToActive is the value that must be set in the
 	// forwardToActive to trigger forwarding if a perf standby encounters
 	// an SSC Token that it does not have the WAL state for.
@@ -1004,7 +1008,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.ha = conf.HAPhysical
 	}
 
-	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+	maxTOTPValidationAttempts := conf.RawConfig.MaximumTOTPValidationAttempts
+	if maxTOTPValidationAttempts == 0 {
+		maxTOTPValidationAttempts = defaultMaxTOTPValidateAttempts
+	}
+	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger, maxTOTPValidationAttempts)
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {

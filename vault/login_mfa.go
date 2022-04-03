@@ -96,13 +96,14 @@ func genericOptionalUUIDRegex(name string) string {
 }
 
 type MFABackend struct {
-	Core        *Core
-	mfaLock     *sync.RWMutex
-	db          *memdb.MemDB
-	mfaLogger   hclog.Logger
-	namespacer  Namespacer
-	methodTable string
-	usedCodes   *cache.Cache
+	Core                          *Core
+	mfaLock                       *sync.RWMutex
+	db                            *memdb.MemDB
+	mfaLogger                     hclog.Logger
+	namespacer                    Namespacer
+	methodTable                   string
+	usedCodes                     *cache.Cache
+	maximumTOTPValidationAttempts int64
 }
 
 type LoginMFABackend struct {
@@ -116,12 +117,12 @@ func loginMFASchemaFuncs() []func() *memdb.TableSchema {
 	}
 }
 
-func NewLoginMFABackend(core *Core, logger hclog.Logger) *LoginMFABackend {
-	b := NewMFABackend(core, logger, memDBLoginMFAConfigsTable, loginMFASchemaFuncs())
+func NewLoginMFABackend(core *Core, logger hclog.Logger, maxTOTPValidationAttempts int64) *LoginMFABackend {
+	b := NewMFABackend(core, logger, memDBLoginMFAConfigsTable, loginMFASchemaFuncs(), maxTOTPValidationAttempts)
 	return &LoginMFABackend{b}
 }
 
-func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs []func() *memdb.TableSchema) *MFABackend {
+func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs []func() *memdb.TableSchema, maxTOTPValidationAttempts int64) *MFABackend {
 	mfaSchemas := &memdb.DBSchema{
 		Tables: make(map[string]*memdb.TableSchema),
 	}
@@ -136,12 +137,13 @@ func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs [
 
 	db, _ := memdb.NewMemDB(mfaSchemas)
 	return &MFABackend{
-		Core:        core,
-		mfaLock:     &sync.RWMutex{},
-		db:          db,
-		mfaLogger:   logger.Named("mfa"),
-		namespacer:  core,
-		methodTable: prefix,
+		Core:                          core,
+		mfaLock:                       &sync.RWMutex{},
+		db:                            db,
+		mfaLogger:                     logger.Named("mfa"),
+		namespacer:                    core,
+		methodTable:                   prefix,
+		maximumTOTPValidationAttempts: maxTOTPValidationAttempts,
 	}
 }
 
@@ -1425,7 +1427,7 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA credentials not supplied")
 		}
 
-		return c.validateTOTP(ctx, mfaCreds, entityMFASecret, mConfig.ID, entity.ID)
+		return c.validateTOTP(ctx, mfaCreds, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, c.loginMFABackend.maximumTOTPValidationAttempts)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
@@ -1997,7 +1999,7 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSecret *mfa.Secret, configID, entityID string) error {
+func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts int64) error {
 	if len(creds) == 0 {
 		return fmt.Errorf("missing TOTP passcode")
 	}
@@ -2013,9 +2015,27 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 
 	usedName := fmt.Sprintf("%s_%s", configID, creds[0])
 
-	_, ok := c.loginMFABackend.usedCodes.Get(usedName)
+	_, ok := usedCodes.Get(usedName)
 	if ok {
 		return fmt.Errorf("code already used; new code is available in %v seconds", totpSecret.Period)
+	}
+
+	numAttempts, _ := usedCodes.Get(configID)
+	if numAttempts == nil {
+		usedCodes.Set(configID, int64(1), defaultMFAAuthResponseTTL)
+	} else {
+		err := usedCodes.Increment(configID, 1)
+		if err != nil {
+			return fmt.Errorf("failed to increment the TOTP code counter")
+		}
+	}
+	numAttempts, _ = usedCodes.Get(configID)
+	num, ok := numAttempts.(int64)
+	if !ok {
+		return fmt.Errorf("invalid counter type returned in TOTP usedCode cache")
+	}
+	if num > maximumValidationAttempts {
+		return fmt.Errorf("maximum TOTP validation attempts %d exceeded %d", num, maximumValidationAttempts)
 	}
 
 	key, err := c.fetchTOTPKey(ctx, configID, entityID)
@@ -2048,10 +2068,13 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 	validityPeriod := time.Duration(int64(time.Second) * int64(totpSecret.Period) * int64(2+totpSecret.Skew))
 
 	// Adding the used code to the cache
-	err = c.loginMFABackend.usedCodes.Add(usedName, nil, validityPeriod)
+	err = usedCodes.Add(usedName, nil, validityPeriod)
 	if err != nil {
 		return fmt.Errorf("error adding code to used cache: %w", err)
 	}
+
+	// resetting the number of attempts to 0 after a successful validation
+	usedCodes.Set(configID, int64(0), defaultMFAAuthResponseTTL)
 
 	return nil
 }
