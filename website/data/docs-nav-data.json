@@ -1271,6 +1271,10 @@
         "path": "audit"
       },
       {
+        "title": "Log",
+        "path": "audit/log"
+      },
+      {
         "title": "File",
         "path": "audit/file"
       },

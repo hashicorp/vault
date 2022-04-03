@@ -1,0 +1,2954 @@
+---
+layout: docs
+page_title: Log - Audit Devices
+description: The "log" audit device writes audit to a log file.
+---
+
+# Audit Log Device
+
+The goal of this document is to recommend _HashiCorp Vault_ Syslog Logging and Audit Logging configuration and notable events to create alerts for. Vault has two types of logs: syslog and audit logs. Syslogs are general high-level service logs where common global actions are recorded, such as service startup, shutdown, and configuration changes. The Audit Log contains fine-grained access, action, and security logs.
+
+- [Systemd Service Configuration](#systemd-service-configuration)
+- [Server Configuration](#server-configuration)
+- [Audit Log, File](#audit-log-file)
+- [Audit Log, Syslog](#audit-log-syslog)
+- [Server Actions](#server-actions)
+- [Vault Operator Actions](#vault-operator-actions)
+- [Secret Actions](#secret-actions)
+- [PKI Actions](#pki-actions)
+- [Auth, Token, Actions](#auth-token-actions)
+- [Auth, Userpass, Actions](#auth-userpass-actions)
+- [Auth, Approle, Actions](#auth-approle-actions)
+
+## Systemd Service Configuration
+
+[Vault Deployment Guide - Step 3: Configure systemd](https://learn.hashicorp.com/vault/operations/ops-deployment-guide#step-3-configure-systemd)
+
+The Vault systemd service file is located at: `/lib/systemd/system/vault.service`. Ensure that the `ExecStart` parameter configuration command does not contain a `>` character, which would redirecting STDOUT and STDERR into a file and may interferre with logging.
+
+```
+[Unit]
+Description=Vault Server
+Requires=consul-online.target
+After=consul-online.target
+
+[Service]
+Restart=on-failure
+EnvironmentFile=/etc/vault.d/vault.conf
+PermissionsStartOnly=true
+ExecStartPre=/sbin/setcap 'cap_ipc_lock=+ep' /usr/local/bin/vault
+ExecStart=/usr/local/bin/vault server -config /etc/vault.d $FLAGS
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
+User=vault
+Group=vault
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target
+```
+
+_systemd commands_
+
+```
+# enable the systemd HashiCorp Vault service
+sudo systemctl enable vault
+
+# start the systemd HashiCorp Vault service
+sudo systemctl start vault
+
+# check the status of the HashiCorp Vault service
+sudo systemctl status vault
+```
+
+Common commands to search _HashiCorp Vault_ logs.
+
+```
+grep -F 'vault[' /var/log/syslog
+
+journalctl -b --no-pager -u vault -o json | jq '.MESSAGE'
+
+cat /var/log/vault_audit.log | jq '.'
+```
+
+Check if any Vault Audit devices are enabled:
+
+`vault audit list -detailed`
+
+_cli response_
+
+```
+No audit devices are enabled.
+```
+
+## Server Configuration
+
+_HashiCorp Vault_ can be run in development mode by setting configuration in the file `/etc/vault.d/vault.conf`
+
+```
+FLAGS=-dev -dev-ha -dev-transactional -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200
+```
+
+Vault Syslog Logging and Audit Logging can be enabled in the default Vault configuration file: `/etc/vault.d/vault.hcl`
+
+- [Vault Configuration](/docs/configuration)
+- [Vault - Audit Device Overview](/docs/audit)
+- [Troubleshooting Vault - Vault Logs](https://learn.hashicorp.com/vault/operations/troubleshooting-vault#vault-logs)
+- [Vault - File Audit Device](/docs/audit/file/)
+- [Vault - Syslog Audit Device](/docs/audit/syslog)
+
+Vault Audit Logging can also be enabled with the Vault Server API.
+
+- [Vault API - /sys/audit](/api-docs/system/audit)
+- [Vault API - /sys/config/auditing/request-headers](/api-docs/system/config-auditing)
+
+Which Audit log fields are encrypted with HMAC can be configured by setting the `audit_non_hmac_request_keys ` and `audit_non_hmac_response_keys` parameters.
+
+[Vault - Tune Mount Configuration](/api-docs/system/mounts/#tune-mount-configuration)
+
+## Audit Log, File
+
+[Vault - File Audit Device](/docs/audit/file)
+
+Run these commands for initial setup:
+
+```
+# create the HashiCorp Vault Audit Log file
+touch /var/log/vault_audit.log
+
+# set permissions on the HashiCorp Vault Audit Log file
+chown vault:vault /var/log/vault_audit.log
+
+# clear out the HashiCorp Vault Audit Log file
+echo "" > /var/log/vault_audit.log
+```
+
+### enable Vault Audit Log, File, successful
+
+`vault audit enable file file_path=/var/log/vault_audit.log`
+
+_cli response_
+
+```
+Success! Enabled the file audit device at: file/
+```
+
+_syslog_
+
+```
+[INFO]  core: enabled audit backend: path=file/ type=file"
+```
+
+### error, enabling Vault Audit Log, File, missing file_path
+
+`vault audit enable file`
+
+_cli response_
+
+```
+Error enabling audit device: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/sys/audit/file
+Code: 400. Errors:
+
+* file_path is required
+```
+
+_syslog_
+
+```
+[ERROR] secrets.system.system_cadac0ac: enable audit mount failed: path=file/ error=\"file_path is required\""
+```
+
+### error, enable Vault Audit Log, File, file inaccessible
+
+`vault audit enable file file_path=/var/log/vault_audit.log`
+
+_cli response_
+
+```
+Error enabling audit device: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/sys/audit/file
+Code: 400. Errors:
+
+* sanity check failed; unable to open "/var/log/vault_audit.log" for writing: open /var/log/vault_audit.log: permission denied
+```
+
+_syslog_
+
+```
+[ERROR] secrets.system.system_dfa50a38: enable audit mount failed: path=file/ error="sanity check failed; unable to open "/var/log/vault_audit.log" for writing: open /var/log/vault_audit.log: permission denied"
+```
+
+### check Vault Audit Log, File, is enabled
+
+`vault audit list -detailed`
+
+_cli response_
+
+```
+Path     Type    Description    Replication    Options
+----     ----    -----------    -----------    -------
+file/    file    n/a            replicated     file_path=/var/log/vault_audit.log
+```
+
+### disable Vault Audit Log, File
+
+`vault audit disable file`
+
+_cli response_
+
+```
+Success! Disabled audit device (if it was enabled) at: file/
+```
+
+_syslog_
+
+```
+[INFO]  core: disabled audit backend: path=file/
+```
+
+## Audit Log, Syslog
+
+[Vault - Syslog Audit Device](/docs/audit/syslog)
+
+Run these commands for initial setup:
+
+```
+# create the journald folder
+mkdir -p /var/log/journal
+```
+
+If you want the syslog to be stored in a file on disk, on Ubuntu 16.04, the journald configuration is stored at `/etc/systemd/journald.conf` Set the configuration:
+
+```
+Storage=persistent
+```
+
+Now restart the systemd journald service with `systemctl force-reload systemd-journald`
+
+### enable Vault audit log, syslog
+
+`vault audit enable syslog tag="vault" facility="AUTH"`
+
+_cli response_
+
+```
+Success! Enabled the syslog audit device at: syslog/
+```
+
+You can verify HashiCorp Vault is logging to syslog with these commands:
+
+```
+# check that HashiCorp Vault Audit is logging to journald
+journalctl -b --no-pager -u vault
+
+# read the HashiCorp Vault Audit Log as JSON
+journalctl -b --no-pager -u vault -o json | jq '.'
+
+# save the HashiCorp Vault Audit Log into a compressed file
+journalctl -b --no-pager -u vault | gzip -9 > /tmp/"$(hostname)-$(date +%Y-%m-%dT%H-%M-%SZ)-vault.log.gz"
+```
+
+### check Vault Audit Log, Syslog, is enabled
+
+`vault audit list -detailed`
+
+_cli response_
+
+```
+Path       Type      Description    Replication    Options
+----       ----      -----------    -----------    -------
+syslog/    syslog    n/a            replicated     facility=AUTH tag=vault
+```
+
+### disable Vault Audit Log, Syslog
+
+`vault audit disable syslog`
+
+_cli response_
+
+```
+Success! Disabled audit device (if it was enabled) at: syslog/
+```
+
+_syslog_
+
+```
+[INFO]  core: disabled audit backend: path=syslog/
+```
+
+## Server Actions
+
+### restart the HashiCorp Vault service
+
+`sudo systemctl restart vault`
+
+_cli response_
+
+```
+
+```
+
+_syslog_
+
+```
+"==> Vault server started! Log data will stream in below:"
+```
+
+_audit log_
+
+```
+
+```
+
+## Vault Operator Actions
+
+### generate-root initialization
+
+`vault operator generate-root -init -otp=<otp>`
+
+_cli response_
+
+```
+Nonce         3645d967-b65b-c6b4-1578-69ffb34103df
+Started       true
+Progress      0/1
+Complete      false
+OTP Length    26
+```
+
+_syslog_
+
+```
+vault[3568]: 2020-02-13T03:17:55.041Z [INFO]  core: root generation initialized: nonce=3645d967-b65b-c6b4-1578-69ffb34103df
+```
+
+_audit log_
+
+```
+
+```
+
+### generate-root complete
+
+`vault operator generate-root -nonce=3645d967-b65b-c6b4-1578-69ffb34103df`
+
+_cli response_
+
+```
+Operation nonce: 3645d967-b65b-c6b4-1578-69ffb34103df
+Unseal Key (will be hidden):
+Nonce            3645d967-b65b-c6b4-1578-69ffb34103df
+Started          true
+Progress         1/1
+Complete         true
+Encoded Token    NWoCIiEYSAUODgYWDjJaKAR0NhZtBh4OTXo
+```
+
+_syslog_
+
+```
+vault[3568]: 2020-02-13T03:20:43.706Z [INFO]  core: root generation finished: nonce=3645d967-b65b-c6b4-1578-69ffb34103df
+```
+
+_audit log_
+
+```
+
+```
+
+## Secret Actions
+
+### add secret
+
+`vault kv put secret/cli foo=bar2`
+
+_cli response_
+
+```
+Key              Value
+---              -----
+created_time     2020-02-07T17:40:28.979642698Z
+deletion_time    n/a
+destroyed        false
+version          1
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T17:44:17.392595555Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "740e8209-f0b6-65e5-f297-1d7f44ead128",
+    "operation": "update",
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "client_token_accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "secret/data/cli",
+    "data": {
+      "data": {
+        "foo": "hmac-sha256:253d21e46187b7316904b84ca77f5726c9b25fb4abfb448d847655ffeeafa0c7"
+      },
+      "options": {}
+    },
+    "remote_address": "127.0.0.1"
+  },
+  "response": {
+    "data": {
+      "created_time": "hmac-sha256:a87da1197a40eb03493ee1b0597da5c23ab39c0ae9b8190050d081e4c47b7aba",
+      "deletion_time": "hmac-sha256:27d60b323b0b5b5c729f452950143be0c3e6dcb805f8def31c6d6dc2b1deb83d",
+      "destroyed": false,
+      "version": 1
+    }
+  }
+}
+```
+
+### read secret
+
+`vault kv get secret/cli`
+
+_cli response_
+
+```
+====== Metadata ======
+Key              Value
+---              -----
+created_time     2020-02-07T17:44:17.392457599Z
+deletion_time    n/a
+destroyed        false
+version          1
+
+=== Data ===
+Key    Value
+---    -----
+foo    bar2
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T17:45:04.153356834Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "39a6c39b-7dd0-8af5-da10-29e39559638c",
+    "operation": "read",
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "client_token_accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "secret/data/cli",
+    "remote_address": "127.0.0.1"
+  },
+  "response": {
+    "data": {
+      "data": {
+        "foo": "hmac-sha256:253d21e46187b7316904b84ca77f5726c9b25fb4abfb448d847655ffeeafa0c7"
+      },
+      "metadata": {
+        "created_time": "hmac-sha256:a87da1197a40eb03493ee1b0597da5c23ab39c0ae9b8190050d081e4c47b7aba",
+        "deletion_time": "hmac-sha256:27d60b323b0b5b5c729f452950143be0c3e6dcb805f8def31c6d6dc2b1deb83d",
+        "destroyed": false,
+        "version": 2
+      }
+    }
+  }
+}
+```
+
+### update secret
+
+Run this command against an existing secret.
+
+`vault kv put secret/cli foo=bar2`
+
+_cli response_
+
+```
+Key              Value
+---              -----
+created_time     2020-02-07T17:40:28.979642698Z
+deletion_time    n/a
+destroyed        false
+version          2
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T17:44:17.392595555Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "740e8209-f0b6-65e5-f297-1d7f44ead128",
+    "operation": "update",
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "client_token_accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "secret/data/cli",
+    "data": {
+      "data": {
+        "foo": "hmac-sha256:253d21e46187b7316904b84ca77f5726c9b25fb4abfb448d847655ffeeafa0c7"
+      },
+      "options": {}
+    },
+    "remote_address": "127.0.0.1"
+  },
+  "response": {
+    "data": {
+      "created_time": "hmac-sha256:a87da1197a40eb03493ee1b0597da5c23ab39c0ae9b8190050d081e4c47b7aba",
+      "deletion_time": "hmac-sha256:27d60b323b0b5b5c729f452950143be0c3e6dcb805f8def31c6d6dc2b1deb83d",
+      "destroyed": false,
+      "version": 1
+    }
+  }
+}
+```
+
+### delete secret
+
+Run this command against an existing secret.
+
+`vault kv delete secret/cli`
+
+_cli response_
+
+```
+Success! Data deleted (if it existed) at: secret/cli
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T17:47:03.414450349Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "182fe602-521e-e71f-d868-84e85bc530a9",
+    "operation": "delete",
+    "client_token": "hmac-sha256:7a3d335ebb428910b8540a364365a972f7106aacd2da085c931a689f70c77b1b",
+    "client_token_accessor": "hmac-sha256:edf259322ac1a3ae99f3d47148b0e2e0206a75b5c00f9ce90e430259f29f6716",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "secret/data/cli",
+    "remote_address": "127.0.0.1"
+  }
+}
+```
+
+## PKI Actions
+
+### Generate (issue) PKI certificate
+
+See [Generate Certificate](/api-docs/secret/pki#generate-certificate)
+
+### Enable PKI mount
+
+`$ vault secrets enable pki`
+
+`Success! Enabled the pki secrets engine at: pki/`
+
+_audit_log_
+
+```
+{
+    "time": "2021-09-14T15:56:34.189241684Z",
+    "type": "response",
+    "auth":
+    {
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "display_name": "token",
+        "policies":
+        [
+            "root"
+        ],
+        "token_policies":
+        [
+            "root"
+        ],
+        "token_type": "service",
+        "token_ttl": 1080000,
+        "token_issue_time": "2021-09-07T21:48:59Z"
+    },
+    "request":
+    {
+        "id": "2d7fb8e0-2fad-2e15-9501-c0383fea68c6",
+        "operation": "update",
+        "mount_type": "system",
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "client_token_accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "namespace":
+        {
+            "id": "root"
+        },
+        "path": "sys/mounts/pki",
+        "data":
+        {
+            "config":
+            {
+                "default_lease_ttl": "hmac-sha256:3d0157320d7a5d81ed0720f5093530a120df8eb2caddf630b9ea85925985d083",
+                "force_no_cache": false,
+                "max_lease_ttl": "hmac-sha256:3d0157320d7a5d81ed0720f5093530a120df8eb2caddf630b9ea85925985d083",
+                "options": null
+            },
+            "description": "hmac-sha256:f790eb010f3aa4407fd631b5a231c3b26b340d528f2191256e74a9efc4984f73",
+            "external_entropy_access": false,
+            "local": false,
+            "options": null,
+            "seal_wrap": false,
+            "type": "hmac-sha256:4abe3c34d15d87aba282584388b2f5eccb5ad0bd24fc4b0276d3f40eef861efd"
+        },
+        "remote_address": "192.168.105.1"
+    },
+    "response":
+    {
+        "mount_type": "system"
+    }
+}
+```
+
+### Disable PKI mount
+
+`$ vault secrets disable pki`
+
+`Success! Disabled the secrets engine (if it existed) at: pki/`
+
+_audit_log_
+
+```
+{
+    "time": "2021-09-14T15:53:01.927898254Z",
+    "type": "response",
+    "auth":
+    {
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "display_name": "token",
+        "policies":
+        [
+            "root"
+        ],
+        "token_policies":
+        [
+            "root"
+        ],
+        "token_type": "service",
+        "token_ttl": 1080000,
+        "token_issue_time": "2021-09-07T21:48:59Z"
+    },
+    "request":
+    {
+        "id": "19565882-2f83-2ee4-8141-6e77f3d75f89",
+        "operation": "delete",
+        "mount_type": "system",
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "client_token_accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "namespace":
+        {
+            "id": "root"
+        },
+        "path": "sys/mounts/pki",
+        "remote_address": "192.168.105.1"
+    },
+    "response":
+    {
+        "mount_type": "system"
+    }
+}
+```
+
+### Create PKI Role
+
+See [Create/Update Role](/api-docs/secret/pki#create-update-role)
+
+`$ vault write pki/roles/example_pki max_ttl=24h allow_any_name=true`
+
+`Success! Data written to: pki/roles/example_pki`
+
+_audit_log_
+
+```
+{
+    "time": "2021-09-14T15:59:35.640600701Z",
+    "type": "response",
+    "auth":
+    {
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "display_name": "token",
+        "policies":
+        [
+            "root"
+        ],
+        "token_policies":
+        [
+            "root"
+        ],
+        "token_type": "service",
+        "token_ttl": 1080000,
+        "token_issue_time": "2021-09-07T21:48:59Z"
+    },
+    "request":
+    {
+        "id": "971980cb-bb72-78ec-e975-adeea2063335",
+        "operation": "update",
+        "mount_type": "pki",
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "client_token_accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "namespace":
+        {
+            "id": "root"
+        },
+        "path": "pki/roles/example_pki",
+        "data":
+        {
+            "allow_any_name": "hmac-sha256:991eda3e3d467253fce468441db258e8b52a625fce5302eb28146e6a3ec3e5e8",
+            "max_ttl": "hmac-sha256:09fa6886605b48707a3ec29324f5f8b9bd7b0220fe282809c704499f20ce3315"
+        },
+        "remote_address": "192.168.105.1"
+    },
+    "response":
+    {
+        "mount_type": "pki"
+    }
+}
+```
+
+### Generate root certificate
+
+See [Generate Root](/api-docs/secret/pki#generate-root)
+
+`$ vault write pki/root/generate/internal common_name=my-website.com ttl=8h`
+
+```
+Key              Value
+---              -----
+certificate      -----BEGIN CERTIFICATE-----
+MIIDPjCCAiagAwIBAgIUJZdG0Z/EmLQ/4X876h2lSDfQjyYwDQYJKoZIhvcNAQEL
+...
+2pqdiGTxf01hFPBB1J8nj39A
+-----END CERTIFICATE-----
+expiration       1631664140
+issuing_ca       -----BEGIN CERTIFICATE-----
+MIIDPjCCAiagAwIBAgIUJZdG0Z/EmLQ/4X876h2lSDfQjyYwDQYJKoZIhvcNAQEL
+...
+2pqdiGTxf01hFPBB1J8nj39A
+-----END CERTIFICATE-----
+serial_number    25:97:46:d1:9f:c4:98:b4:3f:e1:7f:3b:ea:1d:a5:48:37:d0:8f:26`
+```
+
+_audit_log_
+
+```
+{
+    "time": "2021-09-14T16:02:21.394582Z",
+    "type": "response",
+    "auth":
+    {
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "display_name": "token",
+        "policies":
+        [
+            "root"
+        ],
+        "token_policies":
+        [
+            "root"
+        ],
+        "token_type": "service",
+        "token_ttl": 1080000,
+        "token_issue_time": "2021-09-07T21:48:59Z"
+    },
+    "request":
+    {
+        "id": "a508231f-f353-d267-8410-fd38f2b01c93",
+        "operation": "update",
+        "mount_type": "pki",
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "client_token_accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "namespace":
+        {
+            "id": "root"
+        },
+        "path": "pki/root/generate/internal",
+        "data":
+        {
+            "common_name": "hmac-sha256:dcf092ffe435f0d1561f8142645985ff11f24a94e37910d3bbadc52c3c3a3d3c",
+            "ttl": "hmac-sha256:4f818018bda87782ee1855376abaf5f8a9effacc1cb80cf0f5a8a4954f87cbc2"
+        },
+        "remote_address": "192.168.105.1"
+    },
+    "response":
+    {
+        "mount_type": "pki",
+        "data":
+        {
+            "certificate": "hmac-sha256:b0e2ed77e1cceca7e3e57a68bca34cd55802ef605180d3a609effb859059ec74",
+            "expiration": 1631664140,
+            "issuing_ca": "hmac-sha256:b0e2ed77e1cceca7e3e57a68bca34cd55802ef605180d3a609effb859059ec74",
+            "serial_number": "hmac-sha256:f424f595019aa1df47ff8e5cae9f1357e777415dededa9ef8971fd04603b1ca3"
+        }
+    }
+}
+```
+
+### PKI Generate Certificate
+
+See [Generate Certificate](/api-docs/secret/pki#generate-certificate)
+
+`$ vault write pki/issue/example_pki common_name=website.com ttl=1h`
+
+```
+Key                 Value
+---                 -----
+certificate         -----BEGIN CERTIFICATE-----
+MIIDSDCCAjCgAwIBAgIUOn/+U3kNeOynx7x6pMqcqykOH0AwDQYJKoZIhvcNAQEL
+...
+Ym9/coMot/8ZwioaXjk68LU7dqiHGilTzxhyCw==
+-----END CERTIFICATE-----
+expiration          1631639088
+issuing_ca          -----BEGIN CERTIFICATE-----
+MIIDPjCCAiagAwIBAgIUJZdG0Z/EmLQ/4X876h2lSDfQjyYwDQYJKoZIhvcNAQEL
+...
+2pqdiGTxf01hFPBB1J8nj39A
+-----END CERTIFICATE-----
+private_key         -----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAtRK8WZNKnvj9Crh4WcCh0MQthlaufRc/wUUrvb6nD2ZMWYRs
+...
+bbPY+mPJ3VucYp50benpA+DY4PnhWqP/IYKBl6k464WVupLpTWo=
+-----END RSA PRIVATE KEY-----
+private_key_type    rsa
+serial_number       3a:7f:fe:53:79:0d:78:ec:a7:c7:bc:7a:a4:ca:9c:ab:29:0e:1f:40
+```
+
+_audit_log_
+
+```
+{
+    "time": "2021-09-14T16:04:48.589098795Z",
+    "type": "response",
+    "auth":
+    {
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "display_name": "token",
+        "policies":
+        [
+            "root"
+        ],
+        "token_policies":
+        [
+            "root"
+        ],
+        "token_type": "service",
+        "token_ttl": 1080000,
+        "token_issue_time": "2021-09-07T21:48:59Z"
+    },
+    "request":
+    {
+        "id": "4357466a-4575-9da5-58b3-a079dcfd15e3",
+        "operation": "update",
+        "mount_type": "pki",
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "client_token_accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "namespace":
+        {
+            "id": "root"
+        },
+        "path": "pki/issue/example_pki",
+        "data":
+        {
+            "common_name": "hmac-sha256:58a7d3b28c43945c7a4f184dd8bf16ca443c7ffb2cfa967a3acd94795c5443af",
+            "ttl": "hmac-sha256:3849baf6d0651f2e28778a9854f2fc7bf6eb4b4a0477c1a6ec5b6d9df4dac23c"
+        },
+        "remote_address": "192.168.105.1"
+    },
+    "response":
+    {
+        "mount_type": "pki",
+        "data":
+        {
+            "certificate": "hmac-sha256:10b521b5b5c7aacfc821593740674ce5720e382be9124a0bded4a0edd1a6f95d",
+            "expiration": 1631639088,
+            "issuing_ca": "hmac-sha256:b0e2ed77e1cceca7e3e57a68bca34cd55802ef605180d3a609effb859059ec74",
+            "private_key": "hmac-sha256:74d89dc435246a39c16bfceee2ee1bdf5d77283aa400c6e27d445f8bb9863d0c",
+            "private_key_type": "hmac-sha256:aa482a6b3412512f4d6936289b613414df1c7cf14e8ad91518add23e58ae5eb2",
+            "serial_number": "hmac-sha256:b74c703955f350f331e4a22b4668680c9512a7008c25cd22488b5e8dd09db107"
+        }
+    }
+}
+```
+
+### PKI Revoke Certificate
+
+`$ vault write pki/revoke serial_number=3a:7f:fe:53:79:0d:78:ec:a7:c7:bc:7a:a4:ca:9c:ab:29:0e:1f:40`
+
+```
+Key                        Value
+---                        -----
+revocation_time            1631635723
+revocation_time_rfc3339    2021-09-14T16:08:43.296176232Z
+```
+
+_audit_log_
+
+```
+{
+    "time": "2021-09-14T16:08:43.359552006Z",
+    "type": "response",
+    "auth":
+    {
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "display_name": "token",
+        "policies":
+        [
+            "root"
+        ],
+        "token_policies":
+        [
+            "root"
+        ],
+        "token_type": "service",
+        "token_ttl": 1080000,
+        "token_issue_time": "2021-09-07T21:48:59Z"
+    },
+    "request":
+    {
+        "id": "74d634ac-d494-71a2-14ba-a6853b7b91db",
+        "operation": "update",
+        "mount_type": "pki",
+        "client_token": "hmac-sha256:8980d3b8ccf59099a99ec69f4fd1476a2e02480949696f02847cbe06013fa653",
+        "client_token_accessor": "hmac-sha256:d84825d897544afc5354a8d46b8d76cd0d923abbaeab879737576108b1b74c64",
+        "namespace":
+        {
+            "id": "root"
+        },
+        "path": "pki/revoke",
+        "data":
+        {
+            "serial_number": "hmac-sha256:b74c703955f350f331e4a22b4668680c9512a7008c25cd22488b5e8dd09db107"
+        },
+        "remote_address": "192.168.105.1"
+    },
+    "response":
+    {
+        "mount_type": "pki",
+        "data":
+        {
+            "revocation_time": 1631635723,
+            "revocation_time_rfc3339": "hmac-sha256:259c5d1d0cb29192ee9436dfecce1517a96b94fe8391e31b7603d6f1ff84eeb5"
+        }
+    }
+}
+```
+
+## Auth, Token, Actions
+
+### list enabled auth methods
+
+Initially only the `token auth` plugin is enabled by default.
+
+`vault auth list`
+
+_cli resposne_
+
+```
+Path         Type        Accessor                  Description
+----         ----        --------                  -----------
+token/       token       auth_token_66c5f65f       token based credentials
+```
+
+### lease TTL expires
+
+For most Auth methods that generate Tokens, these will have a TTL that the Vault system will use to automatically expire the lease. These don't show up in the audit log and aren't in response to a CLI command.
+
+_cli response_
+
+```
+
+```
+
+_syslog_
+
+```
+vault[3789]: 2020-03-05T17:05:38.792Z [INFO]  expiration: revoked lease: lease_id=auth/oidc/oidc/callback/h73157da4c9a4d588018f82bd9b6197316acf9bfe86bcf21664325ca42ef1ebfe
+```
+
+_audit log_
+
+```
+
+```
+
+## Auth, Userpass, Actions
+
+[Vault - Userpass Auth Method](/docs/auth/userpass)
+
+### failed Userpass login, with Auth Userpass plugin disabled
+
+```
+vault login -method=userpass \
+    username=mitchellh \
+    password=foo
+```
+
+_cli response_
+
+```
+Error authenticating: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
+Code: 400. Errors:
+
+* missing client token
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T00:54:00.796464016Z",
+  "type": "request",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "1dcb7a23-66a8-c022-273a-64a9251deb78",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/login/mitchellh",
+    "data": {
+      "password": "hmac-sha256:a477380f14f27b3b1ca15e2159fcf5e1e2418d0f5c3c85a56c326dbff3c5bc1b"
+    },
+    "remote_address": "127.0.0.1"
+  },
+  "error": "missing client token"
+}
+{
+  "time": "2020-02-07T00:54:00.796548157Z",
+  "type": "response",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "1dcb7a23-66a8-c022-273a-64a9251deb78",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/login/mitchellh",
+    "data": {
+      "password": "hmac-sha256:a477380f14f27b3b1ca15e2159fcf5e1e2418d0f5c3c85a56c326dbff3c5bc1b"
+    },
+    "remote_address": "127.0.0.1"
+  },
+  "response": {
+    "data": {
+      "error": "hmac-sha256:81157acaae6ddd38f3a39ecbf01a5b68e610a0edef9cfec25c9edf7429a1dab6"
+    }
+  },
+  "error": "1 error occurred:\n\t* invalid request\n\n"
+}
+```
+
+### failed Userpass login, with Auth Userpass plugin enabled
+
+```
+vault login -method=userpass \
+    username=mitchellh \
+    password=foo
+```
+
+_cli response_
+
+```
+Error authenticating: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
+Code: 400. Errors:
+
+* invalid username or password
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T00:50:29.918909125Z",
+  "type": "response",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "5dc1831b-3206-0182-560b-ca9d87a756df",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/login/mitchellh",
+    "data": {
+      "password": "hmac-sha256:a477380f14f27b3b1ca15e2159fcf5e1e2418d0f5c3c85a56c326dbff3c5bc1b"
+    },
+    "remote_address": "127.0.0.1"
+  },
+  "response": {
+    "data": {
+      "error": "hmac-sha256:14ae9611343a27e56c699672530264633681b8ecfcd1a6bc762047b506f5c31e"
+    }
+  }
+}
+```
+
+### enable Vault Auth Userpass plugin
+
+`vault auth enable userpass`
+
+_cli response_
+
+```
+Success! Enabled userpass auth method at: userpass/
+```
+
+_syslog_
+
+```
+[INFO]  core: enabled credential backend: path=userpass/ type=userpass"
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T00:59:42.329264265Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:469d8cf14abba3473341af6d3fc2a346c46a60e49b5aed3ce5f068e3c3487006",
+    "accessor": "hmac-sha256:dcc5909f60752ebb347a7765d2b2eef432fb8372fe35bda1308af1c8c8b773c4",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "7d5c2152-a208-6030-a0e7-64df1027a7b6",
+    "operation": "update",
+    "client_token": "hmac-sha256:469d8cf14abba3473341af6d3fc2a346c46a60e49b5aed3ce5f068e3c3487006",
+    "client_token_accessor": "hmac-sha256:dcc5909f60752ebb347a7765d2b2eef432fb8372fe35bda1308af1c8c8b773c4",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/auth/userpass",
+    "data": {
+      "config": {
+        "default_lease_ttl": "hmac-sha256:ec5aaedf9453686b0a1884a3c326dd5d5ae782abb8dc252f6da7126ad10199d9",
+        "force_no_cache": false,
+        "max_lease_ttl": "hmac-sha256:ec5aaedf9453686b0a1884a3c326dd5d5ae782abb8dc252f6da7126ad10199d9",
+        "options": null
+      },
+      "description": "hmac-sha256:79c567ca17b7aa2b25b11241af59396e79ec0f01ed8fe9fe7ee0648bbaf2c2f2",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "seal_wrap": false,
+      "type": "hmac-sha256:344261c9d017cbe93d4c4ce746f89b276f7d0454822e5a5e3b80846b986063ea"
+    },
+    "remote_address": "127.0.0.1"
+  },
+  "response": {}
+}
+```
+
+### add Vault Auth Userpass
+
+```
+vault write auth/userpass/users/mitchellh \
+    password=foo \
+    policies=admins
+```
+
+_cli response_
+
+```
+Success! Data written to: auth/userpass/users/mitchellh
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T00:57:00.33732471Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:469d8cf14abba3473341af6d3fc2a346c46a60e49b5aed3ce5f068e3c3487006",
+    "accessor": "hmac-sha256:dcc5909f60752ebb347a7765d2b2eef432fb8372fe35bda1308af1c8c8b773c4",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "6b8a9036-9b4f-2db7-b8c4-f7ad55ba7433",
+    "operation": "create",
+    "client_token": "hmac-sha256:469d8cf14abba3473341af6d3fc2a346c46a60e49b5aed3ce5f068e3c3487006",
+    "client_token_accessor": "hmac-sha256:dcc5909f60752ebb347a7765d2b2eef432fb8372fe35bda1308af1c8c8b773c4",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/users/mitchellh",
+    "data": {
+      "password": "hmac-sha256:a477380f14f27b3b1ca15e2159fcf5e1e2418d0f5c3c85a56c326dbff3c5bc1b",
+      "policies": "hmac-sha256:6e5c8c1732fbd4898ed7f72e53074766c4f4f32a2224d148da11b290b6ef4481"
+    },
+    "remote_address": "127.0.0.1"
+  },
+  "response": {}
+}
+```
+
+### login to Vault Auth Userpass, success
+
+```
+vault login -method=userpass \
+    username=mitchellh \
+    password=foo
+```
+
+_cli response_
+
+```
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                    Value
+---                    -----
+token                  s.XTzg4Fo1jOn0Y2uBiDPlD0tM
+token_accessor         HSXI8nkFrOF5FWn3FL7LSaO2
+token_duration         768h
+token_renewable        true
+token_policies         ["admins" "default"]
+identity_policies      []
+policies               ["admins" "default"]
+token_meta_username    mitchellh
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T01:08:08.410243403Z",
+  "type": "request",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "ee8630c6-d78e-4299-b542-1c129f392fdb",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/login/mitchellh",
+    "data": {
+      "password": "hmac-sha256:a477380f14f27b3b1ca15e2159fcf5e1e2418d0f5c3c85a56c326dbff3c5bc1b"
+    },
+    "remote_address": "127.0.0.1"
+  }
+}
+{
+  "time": "2020-02-07T01:08:08.477388575Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:db6971124ea5572cb81fd607ed4abd3e3711f8d2f9a646c32c81a1e50d2a3e03",
+    "accessor": "hmac-sha256:9ccf9ae5955fb4ab816bf872dfe2fcf330e647802639c22474efd8951da26d9d",
+    "display_name": "userpass-mitchellh",
+    "policies": [
+      "admins",
+      "default"
+    ],
+    "token_policies": [
+      "admins",
+      "default"
+    ],
+    "metadata": {
+      "username": "mitchellh"
+    },
+    "entity_id": "9fb72b4e-aeb1-a4c9-2290-0b807468f48f",
+    "token_type": "service"
+  },
+  "request": {
+    "id": "ee8630c6-d78e-4299-b542-1c129f392fdb",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/login/mitchellh",
+    "data": {
+      "password": "hmac-sha256:a477380f14f27b3b1ca15e2159fcf5e1e2418d0f5c3c85a56c326dbff3c5bc1b"
+    },
+    "remote_address": "127.0.0.1"
+  },
+  " response": {
+    "auth": {
+      "client_token": "hmac-sha256:db6971124ea5572cb81fd607ed4abd3e3711f8d2f9a646c32c81a1e50d2a3e03",
+      "accessor": "hmac-sha256:9ccf9ae5955fb4ab816bf872dfe2fcf330e647802639c22474efd8951da26d9d",
+      "display_name": "userpass-mitchellh",
+      "policies": [
+        "admins",
+        "default"
+      ],
+      "token_policies": [
+        "admins",
+        "default"
+      ],
+      "metadata": {
+        "username": "mitchellh"
+      },
+      "entity_id": "9fb72b4e-aeb1-a4c9-2290-0b807468f48f",
+      "token_type": "service"
+    }
+  }
+}
+
+```
+
+### delete Vault Auth Userpass user
+
+`vault delete auth/userpass/users/mitchellh`
+
+_cli response_
+
+```
+Success! Data deleted (if it existed) at: auth/userpass/users/mitchellh
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+{
+  "time": "2020-02-07T16:28:32.113813841Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:77e36759c6f66543e239ef72f44d7a23f10800021a7165ee5ce5458a9a4e46a2",
+    "accessor": "hmac-sha256:e7bd037d7b073c3b5e255ede4613540c275af526aa56196d60caa4d5803928e3",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "20876801-0c79-5895-3847-99aab05b1299",
+    "operation": "delete",
+    "client_token": "hmac-sha256:77e36759c6f66543e239ef72f44d7a23f10800021a7165ee5ce5458a9a4e46a2",
+    "client_token_accessor": "hmac-sha256:e7bd037d7b073c3b5e255ede4613540c275af526aa56196d60caa4d5803928e3",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/users/mitchellh",
+    "remote_address": "127.0.0.1"
+  }
+}
+{
+  "time": "2020-02-07T16:28:32.113961605Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:77e36759c6f66543e239ef72f44d7a23f10800021a7165ee5ce5458a9a4e46a2",
+    "accessor": "hmac-sha256:e7bd037d7b073c3b5e255ede4613540c275af526aa56196d60caa4d5803928e3",
+    "display_name": "token",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service"
+  },
+  "request": {
+    "id": "20876801-0c79-5895-3847-99aab05b1299",
+    "operation": "delete",
+    "client_token": "hmac-sha256:77e36759c6f66543e239ef72f44d7a23f10800021a7165ee5ce5458a9a4e46a2",
+    "client_token_accessor": "hmac-sha256:e7bd037d7b073c3b5e255ede4613540c275af526aa56196d60caa4d5803928e3",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/userpass/users/mitchellh",
+    "remote_address": "127.0.0.1"
+  },
+  "response": {}
+}
+```
+
+### change Vault Auth Userpass password
+
+``
+
+_cli response_
+
+```
+
+```
+
+_syslog_
+
+```
+
+```
+
+_audit log_
+
+```
+
+```
+
+## Updates to Vault policies - could indicate additional and unwarranted permissions for tokens
+
+### Vault policy modification
+
+```
+{
+  "time": "2022-03-07T18:47:20.006220694Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "03229ffd-8ea0-73b5-42a3-778850c12ca5",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/policies/acl/boundary",
+    "data": {
+      "name": "hmac-sha256:0d80aadcafa7a2b1d7916d6cd6f2f1ea3713e23b52e80285b6de241f0440674d",
+      "policy": "hmac-sha256:0482203d6bcbebae574bb01d8f8c040567a037c44f3afac5b5567e1c7d9ebb9c"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T18:47:20.01229732Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "03229ffd-8ea0-73b5-42a3-778850c12ca5",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/policies/acl/boundary",
+    "data": {
+      "name": "hmac-sha256:0d80aadcafa7a2b1d7916d6cd6f2f1ea3713e23b52e80285b6de241f0440674d",
+      "policy": "hmac-sha256:0482203d6bcbebae574bb01d8f8c040567a037c44f3afac5b5567e1c7d9ebb9c"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "system"
+  }
+}
+```
+
+### Enabling a new auth method
+
+```
+{
+  "time": "2022-03-07T18:43:01.458247078Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "59554149-dcd7-0b23-b86b-d1c9efaaf54c",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/auth/aws",
+    "data": {
+      "config": {
+        "default_lease_ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+        "force_no_cache": false,
+        "max_lease_ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+        "options": null
+      },
+      "description": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "seal_wrap": false,
+      "type": "hmac-sha256:dc4fbd72ca68f5f7be755976acdaf78874b05d1261e0aa81749d86e8c1fa25aa"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T18:43:01.463221252Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "59554149-dcd7-0b23-b86b-d1c9efaaf54c",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/auth/aws",
+    "data": {
+      "config": {
+        "default_lease_ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+        "force_no_cache": false,
+        "max_lease_ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+        "options": null
+      },
+      "description": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "seal_wrap": false,
+      "type": "hmac-sha256:dc4fbd72ca68f5f7be755976acdaf78874b05d1261e0aa81749d86e8c1fa25aa"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "system"
+  }
+}
+```
+
+### Creation of a new auth method role / Modification of an auth method role (same)
+
+```
+{
+  "time": "2022-03-07T18:52:59.221628186Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "d02a9630-69e0-6588-42bf-fc93af88bb40",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "update",
+    "mount_type": "approle",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/approle/role/my-role",
+    "data": {
+      "policies": "hmac-sha256:bfba3fb5fd57165a3171f53347964d2a2a64010e9549149ad7fa7de77c73dc0d"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T18:52:59.225601451Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "d02a9630-69e0-6588-42bf-fc93af88bb40",
+    "operation": "update",
+    "mount_type": "approle",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/approle/role/my-role",
+    "data": {
+      "policies": "hmac-sha256:bfba3fb5fd57165a3171f53347964d2a2a64010e9549149ad7fa7de77c73dc0d"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "approle"
+  }
+}
+
+```
+
+## Transit key deletions
+
+This could indicate an accidental or nefarious key deletion.
+
+### Transit key deletion
+
+```
+{
+  "time": "2022-03-07T18:35:58.811810518Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "864309d9-6af8-3477-629e-20fff99212d3",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "delete",
+    "mount_type": "transit",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "transit/keys/customer-key",
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T18:35:58.811941507Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "864309d9-6af8-3477-629e-20fff99212d3",
+    "operation": "delete",
+    "mount_type": "transit",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "transit/keys/customer-key",
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "transit",
+    "data": {
+      "error": "hmac-sha256:dd7a62e412697cd416521df2934f74a399221ffff9533be4874440e72ab4f5d1"
+    }
+  },
+  "error": "1 error occurred:\n\t* deletion is not allowed for this key\n\n"
+}
+```
+
+```
+{
+  "time": "2022-03-07T18:37:05.075095073Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "4e8c819b-a791-95df-4e12-556152eb60bf",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "delete",
+    "mount_type": "transit",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "transit/keys/customer-key",
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T18:37:05.082295282Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "4e8c819b-a791-95df-4e12-556152eb60bf",
+    "operation": "delete",
+    "mount_type": "transit",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "transit/keys/customer-key",
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "transit"
+  }
+}
+```
+
+## Transit minimum decryption version configurations
+
+This might indicate a potential problem with decrypting old data, if it exists.
+
+```
+{
+  "time": "2022-03-07T18:32:50.774471553Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "3e936497-284e-948f-d330-aa25b8c3c114",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "update",
+    "mount_type": "transit",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "transit/keys/customer-key/config",
+    "data": {
+      "min_decryption_version": "hmac-sha256:9967302abf07051cc72098049ceeec8d199ea230703ed0e670831b637b62796c"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T18:32:50.778048412Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "3e936497-284e-948f-d330-aa25b8c3c114",
+    "operation": "update",
+    "mount_type": "transit",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "transit/keys/customer-key/config",
+    "data": {
+      "min_decryption_version": "hmac-sha256:9967302abf07051cc72098049ceeec8d199ea230703ed0e670831b637b62796c"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "transit"
+  }
+}
+```
+
+## Number of active tokens
+
+This can sometimes reflect overuse or incorrect use of tokens by user.
+
+See [Tokens](/api-docs/system/internal-counters#tokens)
+
+### Use of a root token
+
+```
+{
+  "time": "2022-03-07T19:48:55.096212774Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "display_name": "root",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service",
+    "token_issue_time": "2022-03-07T19:44:26Z"
+  },
+  "request": {
+    "id": "1f427a0e-54b3-f03a-857d-4fb9a78db8f5",
+    "operation": "list",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "client_token_accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/namespaces/",
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:48:55.096836236Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "display_name": "root",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service",
+    "token_issue_time": "2022-03-07T19:44:26Z"
+  },
+  "request": {
+    "id": "1f427a0e-54b3-f03a-857d-4fb9a78db8f5",
+    "operation": "list",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "client_token_accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/namespaces/",
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "system",
+    "data": {
+      "key_info": {
+        "ttd_namespace_1/": {
+          "id": "hmac-sha256:78ca72902abc07f38256fd0fead8830783b016d76f699a9f79c96d64e9955051",
+          "path": "hmac-sha256:10384c583605b01b3fca7ed166889476c1a0575b528b566e1d2f55c1eacc2bcd"
+        }
+      },
+      "keys": [
+        "hmac-sha256:10384c583605b01b3fca7ed166889476c1a0575b528b566e1d2f55c1eacc2bcd"
+      ]
+    }
+  }
+}
+```
+
+## Number of secrets created
+
+Long-term trends could indicate a potential abuse of the service.
+
+### Creation of a new token
+
+```
+{
+  "time": "2022-03-07T19:14:54.633267711Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "54a36184-b0e8-ab29-c685-0d4b10eface8",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "update",
+    "mount_type": "token",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/token/create",
+    "data": {
+      "display_name": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "entity_alias": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "explicit_max_ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+      "num_uses": "hmac-sha256:cf4c00f399504cfbf1350e121b3a64ea992abc3f044a66fffb9dd917220fada6",
+      "period": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+      "renewable": true,
+      "ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+      "type": "hmac-sha256:84076edbd248cd843123625fcde3921b63b8673fb1e3d82269a737ece655f495"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:14:54.644516885Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "54a36184-b0e8-ab29-c685-0d4b10eface8",
+    "operation": "update",
+    "mount_type": "token",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/token/create",
+    "data": {
+      "display_name": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "entity_alias": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "explicit_max_ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+      "num_uses": "hmac-sha256:cf4c00f399504cfbf1350e121b3a64ea992abc3f044a66fffb9dd917220fada6",
+      "period": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+      "renewable": true,
+      "ttl": "hmac-sha256:d3f23341a8b115d1f2eb038a87e1d5e528d5f8ce3763baaf1ff29cadd7a32976",
+      "type": "hmac-sha256:84076edbd248cd843123625fcde3921b63b8673fb1e3d82269a737ece655f495"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "auth": {
+      "client_token": "hmac-sha256:85c226446bb2b82d9426ea8b561b46decaefd6fa999becd0608a408e6145208e",
+      "accessor": "hmac-sha256:e79a6f5e9b34505bceb11db435dec4ad244b32e2884018e5516a49d93725f9e0",
+      "display_name": "token",
+      "policies": [
+        "admin",
+        "default"
+      ],
+      "token_policies": [
+        "admin",
+        "default"
+      ],
+      "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+      "token_type": "service",
+      "token_ttl": 2764800
+    },
+    "mount_type": "token"
+  }
+}
+```
+
+### Creation of a new root token
+
+```
+{
+  "time": "2022-03-07T19:44:13.764545677Z",
+  "type": "request",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "dbef2430-1e3f-5140-a641-139429ca2260",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/attempt",
+    "data": {
+      "otp": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "pgp_key": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:44:13.764935746Z",
+  "type": "response",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "dbef2430-1e3f-5140-a641-139429ca2260",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/attempt",
+    "data": {
+      "otp": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "pgp_key": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "data": {
+      "complete": false,
+      "encoded_root_token": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "encoded_token": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "nonce": "hmac-sha256:3575d1981c25fbf6f8123e22e23927a6161ad8e71b21865cca897e4d3d528406",
+      "otp": "hmac-sha256:fc0f1dfd9e3226eff686fe97b8a5708934b0a0c89eaebe019423d7b9ef509da8",
+      "otp_length": "hmac-sha256:4e4ae4bcc15914bbd4d4e9d69144f4c9612c8b39d1f39ec70ab8fde13285b5fd",
+      "pgp_fingerprint": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "progress": "hmac-sha256:cf4c00f399504cfbf1350e121b3a64ea992abc3f044a66fffb9dd917220fada6",
+      "required": "hmac-sha256:67c1ca88cc37a47bbfbc99856e2c54a820aaa64847cec9d73ab7fd30376ccbba",
+      "started": true
+    },
+    "headers": {
+      "Cache-Control": [
+        "no-store"
+      ],
+      "Content-Type": [
+        "application/json"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains"
+      ]
+    }
+  }
+}
+{
+  "time": "2022-03-07T19:44:21.358562722Z",
+  "type": "request",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "f7a7e7ae-428d-9bb0-d12e-bd7aa41b5891",
+    "operation": "read",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/attempt",
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:44:21.358723309Z",
+  "type": "response",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "f7a7e7ae-428d-9bb0-d12e-bd7aa41b5891",
+    "operation": "read",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/attempt",
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "data": {
+      "complete": false,
+      "encoded_root_token": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "encoded_token": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "nonce": "hmac-sha256:3575d1981c25fbf6f8123e22e23927a6161ad8e71b21865cca897e4d3d528406",
+      "otp": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "otp_length": "hmac-sha256:4e4ae4bcc15914bbd4d4e9d69144f4c9612c8b39d1f39ec70ab8fde13285b5fd",
+      "pgp_fingerprint": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "progress": "hmac-sha256:cf4c00f399504cfbf1350e121b3a64ea992abc3f044a66fffb9dd917220fada6",
+      "required": "hmac-sha256:67c1ca88cc37a47bbfbc99856e2c54a820aaa64847cec9d73ab7fd30376ccbba",
+      "started": true
+    },
+    "headers": {
+      "Cache-Control": [
+        "no-store"
+      ],
+      "Content-Type": [
+        "application/json"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains"
+      ]
+    }
+  }
+}
+{
+  "time": "2022-03-07T19:44:26.605972351Z",
+  "type": "request",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "76452aa1-3306-452a-3d3d-5561cbf1c93e",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/update",
+    "data": {
+      "key": "hmac-sha256:42f3ab1350cf7487b959835aba482d24e5a01fc6bdbe0c9571dc4c3728f5c96f",
+      "nonce": "hmac-sha256:3575d1981c25fbf6f8123e22e23927a6161ad8e71b21865cca897e4d3d528406"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:44:26.955508733Z",
+  "type": "response",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "76452aa1-3306-452a-3d3d-5561cbf1c93e",
+    "operation": "update",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/update",
+    "data": {
+      "key": "hmac-sha256:42f3ab1350cf7487b959835aba482d24e5a01fc6bdbe0c9571dc4c3728f5c96f",
+      "nonce": "hmac-sha256:3575d1981c25fbf6f8123e22e23927a6161ad8e71b21865cca897e4d3d528406"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "data": {
+      "complete": true,
+      "encoded_root_token": "hmac-sha256:a8e48eb252408f281a4b5a9604ece72a2259c7c0960381fbeaa4448801ae842c",
+      "encoded_token": "hmac-sha256:a8e48eb252408f281a4b5a9604ece72a2259c7c0960381fbeaa4448801ae842c",
+      "nonce": "hmac-sha256:3575d1981c25fbf6f8123e22e23927a6161ad8e71b21865cca897e4d3d528406",
+      "otp": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "otp_length": "hmac-sha256:cf4c00f399504cfbf1350e121b3a64ea992abc3f044a66fffb9dd917220fada6",
+      "pgp_fingerprint": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "progress": "hmac-sha256:67c1ca88cc37a47bbfbc99856e2c54a820aaa64847cec9d73ab7fd30376ccbba",
+      "required": "hmac-sha256:67c1ca88cc37a47bbfbc99856e2c54a820aaa64847cec9d73ab7fd30376ccbba",
+      "started": true
+    },
+    "headers": {
+      "Cache-Control": [
+        "no-store"
+      ],
+      "Content-Type": [
+        "application/json"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains"
+      ]
+    }
+  }
+}
+{
+  "time": "2022-03-07T19:44:43.958291492Z",
+  "type": "request",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "81a49ed5-0f21-7f74-9f05-a5783f823674",
+    "operation": "read",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/attempt",
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:44:43.958603189Z",
+  "type": "response",
+  "auth": {
+    "token_type": "default"
+  },
+  "request": {
+    "id": "81a49ed5-0f21-7f74-9f05-a5783f823674",
+    "operation": "read",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/generate-root/attempt",
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "data": {
+      "complete": false,
+      "encoded_root_token": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "encoded_token": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "nonce": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "otp": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "otp_length": "hmac-sha256:4e4ae4bcc15914bbd4d4e9d69144f4c9612c8b39d1f39ec70ab8fde13285b5fd",
+      "pgp_fingerprint": "hmac-sha256:11f5b0b0d2a9a97b2d91df367d35cb91ac0ae3bb2092712ec9714edc5f35efe7",
+      "progress": "hmac-sha256:cf4c00f399504cfbf1350e121b3a64ea992abc3f044a66fffb9dd917220fada6",
+      "required": "hmac-sha256:67c1ca88cc37a47bbfbc99856e2c54a820aaa64847cec9d73ab7fd30376ccbba",
+      "started": false
+    },
+    "headers": {
+      "Cache-Control": [
+        "no-store"
+      ],
+      "Content-Type": [
+        "application/json"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains"
+      ]
+    }
+  }
+}
+```
+
+## Other
+
+### Permission denied (403) responses
+
+```
+{
+  "time": "2022-03-07T19:15:32.766009199Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "64026a53-97b9-3f8e-5b21-3048df903ca9",
+    "operation": "update",
+    "mount_type": "token",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/token/revoke",
+    "data": {
+      "token": "hmac-sha256:85c226446bb2b82d9426ea8b561b46decaefd6fa999becd0608a408e6145208e"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "error": "1 error occurred:\n\t* permission denied\n\n"
+}
+{
+  "time": "2022-03-07T19:15:32.766296494Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "64026a53-97b9-3f8e-5b21-3048df903ca9",
+    "operation": "update",
+    "mount_type": "token",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "auth/token/revoke",
+    "data": {
+      "token": "hmac-sha256:85c226446bb2b82d9426ea8b561b46decaefd6fa999becd0608a408e6145208e"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "token",
+    "data": {
+      "error": "hmac-sha256:cd2c90a3b97bd330711dc7692fc2a530c0c8fb434c10c4246dae6524c21b9ec3"
+    }
+  },
+  "error": "1 error occurred:\n\t* permission denied\n\n"
+}
+```
+
+### Use of a vault by human accounts outside of regular business hours
+
+### Vault requests originating from unrecognized subnets
+
+### Mounts
+
+### Write operations under /sys in general
+
+```
+{
+  "time": "2022-03-07T19:32:25.245219811Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "cdff7c91-ac55-f6ad-9e76-15fb84c26763",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/mounts/ad/tune",
+    "data": {
+      "default_lease_ttl": "hmac-sha256:3f477858be34a86307993ff706f6beb9894d5025baf32efdd1350879ad750c04",
+      "max_lease_ttl": "hmac-sha256:92499cd0025bf7595975078fef37b0a4c6ad45f7b167ecbe0f41750a1ef30de2"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:32:25.250342689Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "cdff7c91-ac55-f6ad-9e76-15fb84c26763",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/mounts/ad/tune",
+    "data": {
+      "default_lease_ttl": "hmac-sha256:3f477858be34a86307993ff706f6beb9894d5025baf32efdd1350879ad750c04",
+      "max_lease_ttl": "hmac-sha256:92499cd0025bf7595975078fef37b0a4c6ad45f7b167ecbe0f41750a1ef30de2"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "system"
+  }
+}
+```
+
+Anything under sys/raw - though normally that endpoint wouldn't be enabled
+
+```
+{
+  "time": "2022-03-07T19:27:27.381835515Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "4c6a3bab-accc-a45a-1a89-c0bd2b7ff248",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/raw/secret/foo",
+    "data": {
+      "value": "hmac-sha256:80fb7f4a05eb9412d1c5fdca484f894257b09b30af9d7d9f8bf50bc21f7a01af"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:27:27.385365666Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "4c6a3bab-accc-a45a-1a89-c0bd2b7ff248",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/raw/secret/foo",
+    "data": {
+      "value": "hmac-sha256:80fb7f4a05eb9412d1c5fdca484f894257b09b30af9d7d9f8bf50bc21f7a01af"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "system"
+  }
+}
+{
+  "time": "2022-03-07T19:28:16.449896153Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "efafeee0-e7c6-3835-0db7-16a3c97bd424",
+    "client_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "operation": "read",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/raw/secret/foo",
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:28:16.450620765Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "display_name": "oidc-user@email.com",
+    "policies": [
+      "admin",
+      "default"
+    ],
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "metadata": {
+      "role": "okta_admin"
+    },
+    "entity_id": "eaaa1d84-ddb8-046e-af99-2c7adf3c7b64",
+    "token_type": "service",
+    "token_ttl": 2764800,
+    "token_issue_time": "2022-03-07T18:15:34Z"
+  },
+  "request": {
+    "id": "efafeee0-e7c6-3835-0db7-16a3c97bd424",
+    "operation": "read",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:0c325431c703c842731fdfd1d4cdcea2c2312e3cf735c5132c3f61b20d02d079",
+    "client_token_accessor": "hmac-sha256:5473cc64458f840d6105a4b11a8d2a9e61b4ebd21d1c327fb6436ae4651ace52",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/raw/secret/foo",
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "system",
+    "data": {
+      "value": "hmac-sha256:80fb7f4a05eb9412d1c5fdca484f894257b09b30af9d7d9f8bf50bc21f7a01af"
+    }
+  }
+}
+```
+
+### Items modified by the root token
+
+```
+{
+  "time": "2022-03-07T19:47:31.145119975Z",
+  "type": "request",
+  "auth": {
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "display_name": "root",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service",
+    "token_issue_time": "2022-03-07T19:44:26Z"
+  },
+  "request": {
+    "id": "a2016dbd-135e-0b1d-06c7-2f1407de875c",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "client_token_accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/policies/acl/boundary-policy",
+    "data": {
+      "policy": "hmac-sha256:0482203d6bcbebae574bb01d8f8c040567a037c44f3afac5b5567e1c7d9ebb9c"
+    },
+    "remote_address": "192.168.105.22"
+  }
+}
+{
+  "time": "2022-03-07T19:47:31.148984306Z",
+  "type": "response",
+  "auth": {
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "display_name": "root",
+    "policies": [
+      "root"
+    ],
+    "token_policies": [
+      "root"
+    ],
+    "token_type": "service",
+    "token_issue_time": "2022-03-07T19:44:26Z"
+  },
+  "request": {
+    "id": "a2016dbd-135e-0b1d-06c7-2f1407de875c",
+    "operation": "update",
+    "mount_type": "system",
+    "client_token": "hmac-sha256:7683965d62204717b7961be4f1c443d58595d4aec91055b10cc0b1b88924f4ca",
+    "client_token_accessor": "hmac-sha256:8e7ba87c7673d39f11f8654afd9e33915260f15461e54868228099bdcabd8bc0",
+    "namespace": {
+      "id": "root"
+    },
+    "path": "sys/policies/acl/boundary-policy",
+    "data": {
+      "policy": "hmac-sha256:0482203d6bcbebae574bb01d8f8c040567a037c44f3afac5b5567e1c7d9ebb9c"
+    },
+    "remote_address": "192.168.105.22"
+  },
+  "response": {
+    "mount_type": "system"
+  }
+}
+```
