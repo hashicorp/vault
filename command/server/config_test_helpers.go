@@ -449,6 +449,8 @@ func testLoadConfigFile(t *testing.T) {
 		EnableUI:                 true,
 		EnableUIRaw:              true,
 
+		MaximumTOTPValidationAttempts: 10,
+
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
 
@@ -487,8 +489,8 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   583,
-				Line:     34,
+				Offset:   617,
+				Line:     35,
 				Column:   5,
 			},
 		},

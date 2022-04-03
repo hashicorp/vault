@@ -315,6 +315,30 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			t.Fatalf("expected error message to mention code already used")
 		}
 
+		// check for reaching max failed validation requests
+		secret, err = user2Client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+			"password": "testpassword",
+		})
+		if err != nil {
+			t.Fatalf("MFA failed: %v", err)
+		}
+
+		var maxErr error
+		for i := 0; i < 6; i++ {
+			_, maxErr = user2Client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+				"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
+				"mfa_payload": map[string][]string{
+					methodID: {fmt.Sprintf("%d", i)},
+				},
+			})
+			if maxErr == nil {
+				t.Fatalf("MFA succeeded with an invalid passcode")
+			}
+		}
+		if !strings.Contains(maxErr.Error(), "maximum TOTP validation attempts 6 exceeded 5") {
+			t.Fatalf("unexpected error message when exceeding max failed validation attempts")
+		}
+
 		// Destroy the secret so that the token can self generate
 		_, err = userClient.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-destroy"), map[string]interface{}{
 			"entity_id": entityID,
