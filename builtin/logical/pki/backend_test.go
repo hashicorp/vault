@@ -1953,6 +1953,23 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 }
 
 func TestBackend_SignVerbatim(t *testing.T) {
+	testCases := []struct {
+		testName string
+		keyType  string
+	}{
+		{testName: "RSA", keyType: "rsa"},
+		{testName: "ED25519", keyType: "ed25519"},
+		{testName: "EC", keyType: "ec"},
+		{testName: "Any", keyType: "any"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			runTestSignVerbatim(t, tc.keyType)
+		})
+	}
+}
+
+func runTestSignVerbatim(t *testing.T, keyType string) {
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -2030,8 +2047,9 @@ func TestBackend_SignVerbatim(t *testing.T) {
 
 	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
 	roleData := map[string]interface{}{
-		"ttl":     "4h",
-		"max_ttl": "8h",
+		"ttl":      "4h",
+		"max_ttl":  "8h",
+		"key_type": keyType,
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -2144,6 +2162,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"ttl":            "4h",
 		"max_ttl":        "8h",
 		"generate_lease": true,
+		"key_type":       keyType,
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
