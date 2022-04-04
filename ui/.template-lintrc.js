@@ -1,14 +1,40 @@
 'use strict';
-const recommended = require('ember-template-lint/lib/config/recommended').rules; // octane extends recommended - no additions as of 3.14
-const stylistic = require('ember-template-lint/lib/config/stylistic').rules;
 
-const testOverrides = { ...recommended, ...stylistic };
-for (const key in testOverrides) {
-  testOverrides[key] = false;
+const fs = require('fs');
+let testOverrides = {};
+try {
+  // ember-template-lint no longer exports anything so we cannot access the rule definitions conventionally
+  // read file, convert to json string and parse
+  const toJSON = (str) => {
+    return JSON.parse(
+      str
+        .slice(str.indexOf(':') + 2) // get rid of export statement
+        .slice(0, -(str.length - str.lastIndexOf(','))) // remove trailing brackets from export
+        .replace(/:.*,/g, `: ${false},`) // convert values to false
+        .replace(/,([^,]*)$/, '$1') // remove last comma
+        .replace(/'/g, '"') // convert to double quotes
+        .replace(/(\w[^"].*[^"]):/g, '"$1":') // wrap quotes around single word keys
+        .trim()
+    );
+  };
+  const recommended = toJSON(
+    fs.readFileSync('node_modules/ember-template-lint/lib/config/recommended.js').toString()
+  );
+  const stylistic = toJSON(
+    fs.readFileSync('node_modules/ember-template-lint/lib/config/stylistic.js').toString()
+  );
+  testOverrides = {
+    ...recommended,
+    ...stylistic,
+    prettier: false,
+  };
+} catch (error) {
+  console.log(error);
 }
 
 module.exports = {
-  extends: ['recommended', 'stylistic'],
+  plugins: ['ember-template-lint-plugin-prettier'],
+  extends: ['recommended', 'ember-template-lint-plugin-prettier:recommended'],
   rules: {
     'no-bare-strings': 'off',
     'no-action': 'off',
