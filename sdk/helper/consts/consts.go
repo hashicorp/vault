@@ -37,4 +37,6 @@ const (
 	MaxUint = ^uint(0)
 	MaxInt  = int(^uint(0) >> 1)
 	MinInt  = -MaxInt - 1
+	
+	VaultDisableFilePermissionsCheckEnv = "VAULT_DISABLE_FILE_PERMISSIONS_CHECK"
 )
