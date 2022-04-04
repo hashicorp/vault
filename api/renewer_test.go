@@ -109,6 +109,17 @@ func TestLifetimeWatcher(t *testing.T) {
 			expectRenewal: true,
 		},
 		{
+			maxTestTime:          time.Second,
+			name:                 "short_increment_duration",
+			leaseDurationSeconds: 60,
+			incrementSeconds:     10,
+			renew: func(_ string, _ int) (*Secret, error) {
+				return renewedSecret, nil
+			},
+			expectError:   nil,
+			expectRenewal: true,
+		},
+		{
 			maxTestTime:          5 * time.Second,
 			name:                 "one_error",
 			leaseDurationSeconds: 15,
