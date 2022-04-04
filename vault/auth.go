@@ -813,7 +813,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		f = plugin.Factory
+		f = wrapFactoryCheckPerms(c, plugin.Factory)
 	}
 
 	// Set up conf to pass in plugin_name
