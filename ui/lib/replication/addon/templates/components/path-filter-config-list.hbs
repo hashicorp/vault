@@ -16,12 +16,12 @@
     </div>
     <div class="radio-card-radio-row">
       <RadioButton
+        id="no-filtering"
+        name="config-mode"
+        class="radio"
         @value={{null}}
-        @radioClass="radio"
         @groupValue={{this.config.mode}}
-        @changed={{queue (action (mut this.config.mode))}}
-        @name="config-mode"
-        @radioId="no-filtering"
+        @onChange={{fn (mut this.config.mode)}}
       />
       <label for="no-filtering"></label>
     </div>
@@ -40,12 +40,12 @@
     </div>
     <div class="radio-card-radio-row">
       <RadioButton
+        id="allow"
+        name="config-mode"
+        class="radio"
         @value="allow"
-        @radioClass="radio"
         @groupValue={{this.config.mode}}
-        @changed={{queue (action (mut this.config.mode))}}
-        @name="config-mode"
-        @radioId="allow"
+        @onChange={{fn (mut this.config.mode)}}
       />
       <label for="allow"></label>
     </div>
@@ -64,12 +64,12 @@
     </div>
     <div class="radio-card-radio-row">
       <RadioButton
+        id="deny"
+        name="config-mode"
+        class="radio"
         @value="deny"
-        @radioClass="radio"
         @groupValue={{this.config.mode}}
-        @changed={{queue (action (mut this.config.mode))}}
-        @name="config-mode"
-        @radioId="deny"
+        @onChange={{fn (mut this.config.mode)}}
       />
       <label for="deny"></label>
     </div>
