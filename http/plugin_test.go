@@ -30,6 +30,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 	if err != nil {
 		t.Fatal(err)
 	}
+	os.Setenv(consts.VaultDisableFilePermissionsCheckEnv, "true")
 
 	coreConfig := &vault.CoreConfig{
 		Physical:   inm,
