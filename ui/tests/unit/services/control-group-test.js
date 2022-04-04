@@ -102,6 +102,8 @@ module('Unit | Service | control group', function (hooks) {
     ],
   ].forEach(function ([name, setup, args, expectation]) {
     test(`checkForControlGroup: ${name}`, function (assert) {
+      const assertCount = name === 'it rejects isOSS: false, wrapTTL:false, response: has wrap_info' ? 2 : 1;
+      assert.expect(assertCount);
       if (setup) {
         setup(this);
       }

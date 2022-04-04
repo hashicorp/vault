@@ -36,8 +36,8 @@ export default Route.extend({
       case 'alphabet':
         modelType = 'transform/alphabet';
         break;
-      default:
-        modelType = 'transform'; // CBS TODO: transform/transformation
+      default: // CBS TODO: transform/transformation
+        modelType = 'transform';
         break;
     }
     return modelType;

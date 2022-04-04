@@ -63,6 +63,7 @@ module('Acceptance | clients current', function (hooks) {
   });
 
   test('filters correctly on current with full data', async function (assert) {
+    assert.expect(65);
     const config = generateConfigResponse();
     const monthly = generateCurrentMonthResponse(3);
     this.server = new Pretender(function () {

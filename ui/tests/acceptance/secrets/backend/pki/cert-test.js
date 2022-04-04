@@ -52,6 +52,7 @@ elRplAzrMF4=
   };
 
   test('it issues a cert', async function (assert) {
+    assert.expect(9);
     await setup(assert);
     await settled();
     await generatePage.issueCert('foo');
@@ -71,6 +72,7 @@ elRplAzrMF4=
   });
 
   test('it signs a csr', async function (assert) {
+    assert.expect(4);
     await setup(assert, 'sign');
     await settled();
     await generatePage.sign('common', CSR);
@@ -82,6 +84,7 @@ elRplAzrMF4=
   });
 
   test('it views a cert', async function (assert) {
+    assert.expect(11);
     const path = await setup(assert);
     await generatePage.issueCert('foo');
     await settled();

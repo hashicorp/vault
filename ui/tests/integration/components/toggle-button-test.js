@@ -14,10 +14,10 @@ module('Integration | Component | toggle button', function (hooks) {
     assert.dom('button').hasText('More options', 'renders default closedLabel');
 
     await click('button');
-    assert.equal(this.toggleTarget.toggled, true, 'it toggles the attr on the target');
+    assert.true(this.toggleTarget.toggled, 'it toggles the attr on the target');
     assert.dom('button').hasText('Hide options', 'renders default openLabel');
     await click('button');
-    assert.equal(this.toggleTarget.toggled, false, 'it toggles the attr on the target');
+    assert.false(this.toggleTarget.toggled, 'it toggles the attr on the target');
 
     this.set('closedLabel', 'Open the options!');
     this.set('openLabel', 'Close the options!');
