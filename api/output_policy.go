@@ -141,7 +141,7 @@ func getSudoPaths(client *Client) (map[string]bool, error) {
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to read response body from OpenAPI: %v", err)
 	}
 	if buf.Len() == 0 {
 		return nil, fmt.Errorf("OpenAPI response had no content")
@@ -149,7 +149,7 @@ func getSudoPaths(client *Client) (map[string]bool, error) {
 
 	oasInfo := make(map[string]interface{})
 	if err := jsonutil.DecodeJSONFromReader(&buf, &oasInfo); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to decode JSON from OpenAPI response: %v", err)
 	}
 
 	paths, ok := oasInfo["paths"]
@@ -169,12 +169,14 @@ func getSudoPaths(client *Client) (map[string]bool, error) {
 			continue
 		}
 
-		if _, ok := pathInfoMap["x-vault-sudo"]; ok {
-			// Since many paths have templated fields like {name},
-			// our list of sudo paths will actually be a list of
-			// regular expressions that we can match against.
-			pathRegex := buildPathRegexp(pathName)
-			sudoPaths[pathRegex] = true
+		if sudo, ok := pathInfoMap["x-vault-sudo"]; ok {
+			if sudo == true {
+				// Since many paths have templated fields like {name},
+				// our list of sudo paths will actually be a list of
+				// regular expressions that we can match against.
+				pathRegex := buildPathRegexp(pathName)
+				sudoPaths[pathRegex] = true
+			}
 		}
 	}
 
