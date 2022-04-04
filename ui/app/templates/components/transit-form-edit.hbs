@@ -86,7 +86,7 @@
     <div class="field is-grouped">
       {{#if @capabilities.canUpdate}}
         <div class="control">
-          <button type="submit" disabled={{@requestInFlight}} class="button is-primary {{if @requestInFlight "is-loading"}}">
+          <button type="submit" disabled={{@requestInFlight}} class="button is-primary {{if @requestInFlight 'is-loading'}}">
             Update transit key
           </button>
         </div>
