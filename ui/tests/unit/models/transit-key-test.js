@@ -24,7 +24,7 @@ module('Unit | Model | transit key', function (hooks) {
   });
 
   test('encryption key versions', function (assert) {
-    assert.expect(1);
+    assert.expect(2);
     let done = assert.async();
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {

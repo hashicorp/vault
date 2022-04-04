@@ -307,7 +307,7 @@ module('Integration | Service | auth', function (hooks) {
   });
 
   test('token auth expiry with non-root token', function (assert) {
-    assert.expect(4);
+    assert.expect(5);
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
     this.server.map(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {

@@ -29,6 +29,7 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       [null, {}, JSON.stringify(['secret', 'foo', '2']), {}],
       'GET',
       '/v1/secret/data/foo?version=2',
+      null,
       2,
     ],
     [
@@ -72,6 +73,7 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       ],
       'PUT',
       '/v1/secret/data/foo',
+      null,
       2,
     ],
   ].forEach(

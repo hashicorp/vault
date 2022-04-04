@@ -48,7 +48,6 @@ module('Integration | Component | features-selection', function (hooks) {
   test('it enables the start button when user has permission and wizard items are checked', async function (assert) {
     await render(hbs`<Wizard::FeaturesSelection/>`);
     await component.selectSecrets();
-
-    assert.true(component.hasDisabledStartButton);
+    assert.false(component.hasDisabledStartButton);
   });
 });
