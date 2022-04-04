@@ -22,7 +22,7 @@ Instead, you can restart or reload a plugin with the
 replace or upgrade a Vault plugin binary:
 
 1. [Register][plugin_registration] version 1 of `my-db-plugin` to the catalog.
-Skip this step if your plugin is already registered.
+   Skip this step if your plugin is already registered.
 
     ```shell-session
     $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
@@ -31,7 +31,7 @@ Skip this step if your plugin is already registered.
     ```
 
 2. [Mount][plugin_management] the plugin backend. Skip this step if the backend
-is already mounted.
+   is already mounted.
 
     ```shell-session
     $ vault secrets enable database
