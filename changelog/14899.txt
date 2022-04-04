@@ -1,0 +1,3 @@
+```release-note:feature
+api/command: Global -output-policy flag to determine minimum required policy HCL for a given operation
+```
