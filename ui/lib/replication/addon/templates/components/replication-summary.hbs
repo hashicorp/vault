@@ -80,7 +80,13 @@
                 </p>
               </div>
               <div>
-                <RadioButton @value="dr" @groupValue={{this.replicationMode}} @name="replication-mode" @radioId="dr" />
+                <RadioButton
+                  id="dr"
+                  name="replication-mode"
+                  @value="dr"
+                  @groupValue={{this.replicationMode}}
+                  @onChange={{fn (mut this.replicationMode)}}
+                />
                 <label for="dr" data-test-replication-type-select="dr"></label>
               </div>
             </label>
@@ -107,14 +113,16 @@
               </div>
               <div>
                 {{#if (has-feature "Performance Replication")}}
-                  <RadioButton
-                    @value="performance"
-                    @groupValue={{this.replicationMode}}
-                    @name="replication-mode"
-                    @classNames="box columns is-centered"
-                    @radioId="performance"
-                  />
-                  <label for="performance" data-test-replication-type-select="performance"></label>
+                  <div class="box columns is-centered">
+                    <RadioButton
+                      id="performance"
+                      name="replication-mode"
+                      @value="performance"
+                      @groupValue={{this.replicationMode}}
+                      @onChange={{fn (mut this.replicationMode)}}
+                    />
+                    <label for="performance" data-test-replication-type-select="performance"></label>
+                  </div>
                 {{/if}}
               </div>
             </label>

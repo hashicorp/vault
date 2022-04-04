@@ -807,7 +807,7 @@ jobs:
     - run:
         command: |
           apk add --no-cache python3 py3-pip make
-          python3 -m pip install --user semgrep
+          python3 -m pip install --user semgrep==0.86.5
           export PATH="$HOME/.local/bin:$PATH"
 
           echo "$ semgrep --version"
