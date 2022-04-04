@@ -161,6 +161,7 @@ module('Integration | Service | auth', function (hooks) {
   });
 
   test('token authentication: root token', function (assert) {
+    assert.expect(6);
     let done = assert.async();
     let self = this;
     let service = this.owner.factoryFor('service:auth').create({
@@ -183,13 +184,13 @@ module('Integration | Service | auth', function (hooks) {
         const authData = service.get('authData');
 
         const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
-        assert.equal('test', clusterToken, 'token is saved properly');
+        assert.equal(clusterToken, 'test', 'token is saved properly');
         assert.equal(
           `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
           clusterTokenName,
           'token name is saved properly'
         );
-        assert.equal('token', authData.backend.type, 'backend is saved properly');
+        assert.equal(authData.backend.type, 'token', 'backend is saved properly');
         assert.equal(
           ROOT_TOKEN_RESPONSE.data.display_name,
           authData.displayName,
@@ -227,13 +228,13 @@ module('Integration | Service | auth', function (hooks) {
     const authData = service.get('authData');
 
     const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
-    assert.equal('test', clusterToken, 'token is saved properly');
+    assert.equal(clusterToken, 'test', 'token is saved properly');
     assert.equal(
       `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
       clusterTokenName,
       'token name is saved properly'
     );
-    assert.equal('token', authData.backend.type, 'backend is saved properly');
+    assert.equal(authData.backend.type, 'token', 'backend is saved properly');
     assert.equal(
       ROOT_TOKEN_RESPONSE.data.display_name,
       authData.displayName,
@@ -244,6 +245,7 @@ module('Integration | Service | auth', function (hooks) {
   });
 
   test('github authentication', function (assert) {
+    assert.expect(6);
     let done = assert.async();
     let service = this.owner.factoryFor('service:auth').create({
       storage: (type) => (type === 'memory' ? this.memStore : this.store),
@@ -258,7 +260,7 @@ module('Integration | Service | auth', function (hooks) {
 
         assert.equal(GITHUB_RESPONSE.auth.client_token, clusterToken, 'token is saved properly');
         assert.equal(expectedTokenName, clusterTokenName, 'token name is saved properly');
-        assert.equal('github', authData.backend.type, 'backend is saved properly');
+        assert.equal(authData.backend.type, 'github', 'backend is saved properly');
         assert.equal(
           GITHUB_RESPONSE.auth.metadata.org + '/' + GITHUB_RESPONSE.auth.metadata.username,
           authData.displayName,
@@ -272,6 +274,7 @@ module('Integration | Service | auth', function (hooks) {
   });
 
   test('userpass authentication', function (assert) {
+    assert.expect(4);
     let done = assert.async();
     let service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
     run(() => {
@@ -292,7 +295,7 @@ module('Integration | Service | auth', function (hooks) {
             clusterTokenName,
             'token name is saved properly'
           );
-          assert.equal('userpass', authData.backend.type, 'backend is saved properly');
+          assert.equal(authData.backend.type, 'userpass', 'backend is saved properly');
           assert.equal(
             USERPASS_RESPONSE.auth.metadata.username,
             authData.displayName,
@@ -304,6 +307,7 @@ module('Integration | Service | auth', function (hooks) {
   });
 
   test('token auth expiry with non-root token', function (assert) {
+    assert.expect(5);
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
     this.server.map(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
@@ -322,7 +326,7 @@ module('Integration | Service | auth', function (hooks) {
         const clusterToken = service.get('currentToken');
         const authData = service.get('authData');
 
-        assert.equal('test', clusterToken, 'token is saved properly');
+        assert.equal(clusterToken, 'test', 'token is saved properly');
         assert.equal(
           `${TOKEN_PREFIX}token${TOKEN_SEPARATOR}1`,
           clusterTokenName,
@@ -330,7 +334,7 @@ module('Integration | Service | auth', function (hooks) {
         );
         assert.equal(authData.backend.type, 'token', 'backend is saved properly');
         assert.equal(authData.displayName, tokenResp.data.display_name, 'displayName is saved properly');
-        assert.equal(service.get('tokenExpired'), false, 'token is not expired');
+        assert.false(service.get('tokenExpired'), 'token is not expired');
         done();
       });
     });

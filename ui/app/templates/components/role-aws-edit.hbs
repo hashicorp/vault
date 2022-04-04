@@ -54,7 +54,7 @@
       {{#if (gt this.model.credentialTypes.length 1)}}
         <AlertBanner
           @type="warning"
-          @message="This role has more than one credential_type, currently: {{join ", " this.model.credentialTypes}}.
+          @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
             Multiple credential types is deprecated and you must choose one in order to save this role."
         />
       {{/if}}
@@ -82,7 +82,7 @@
     {{#if (gt this.model.credentialTypes.length 1)}}
       <AlertBanner
         @type="warning"
-        @message="This role has more than one credential_type, currently: {{join ", " this.model.credentialTypes}}.
+        @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
           When you next edit this role, you will have to choose a single credential type."
       />
     {{/if}}

@@ -76,7 +76,7 @@
                       <button
                         type="button"
                         disabled={{get this (concat "loading-" @item.id)}}
-                        class="link button is-transparent {{if (get this (concat "loading-" @item.id)) "is-loading"}} "
+                        class="link button is-transparent {{if (get this (concat 'loading-' @item.id)) 'is-loading'}} "
                         {{on "click" @toggleZeroAddress}}
                       >
                         Disable Zero Address
@@ -87,7 +87,7 @@
                       <button
                         type="button"
                         disabled={{get this (concat "loading-" @item.id)}}
-                        class="link button is-transparent {{if (get this (concat "loading-" @item.id)) "is-loading"}}"
+                        class="link button is-transparent {{if (get this (concat 'loading-' @item.id)) 'is-loading'}}"
                         {{on "click" @toggleZeroAddress}}
                       >
                         Enable Zero Address

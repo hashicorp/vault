@@ -61,6 +61,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
   });
 
   test('replication', async function (assert) {
+    assert.expect(17);
     const secondaryName = 'firstSecondary';
     const mode = 'deny';
     let mountPath;

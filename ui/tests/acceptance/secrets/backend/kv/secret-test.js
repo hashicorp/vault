@@ -461,6 +461,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
   // the web cli does not handle a quote as part of a path, so we test it here via the UI
   test('creating a secret with a single or double quote works properly', async function (assert) {
+    assert.expect(4);
     await consoleComponent.runCommands('write sys/mounts/kv type=kv');
     let paths = ["'some", '"some'];
     for (let path of paths) {
