@@ -105,6 +105,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRotateCRL(&b),
 			pathFetchCA(&b),
 			pathFetchCAChain(&b),
+			pathFetchCAChainRaw(&b),
 			pathFetchCRL(&b),
 			pathFetchCRLViaCertPath(&b),
 			pathFetchValidRaw(&b),

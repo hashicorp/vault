@@ -17,7 +17,7 @@ func pathFetchCA(b *backend) *framework.Path {
 		Pattern: `ca(/pem)?`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+			logical.ReadOperation: b.pathFetchCARawHandler,
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -25,10 +25,22 @@ func pathFetchCA(b *backend) *framework.Path {
 	}
 }
 
+func (b *backend) pathFetchCARawHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var serial, pemType, contentType string
+	serial = "ca"
+	contentType = "application/pkix-cert"
+	if req.Path == "ca/pem" {
+		pemType = "CERTIFICATE"
+		contentType = "application/pem-certificate-chain"
+	}
+
+	return b.pathFetchReadRaw(ctx, req, data, serial, pemType, contentType)
+}
+
 // Returns the CA chain
 func pathFetchCAChain(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `(cert/)?ca_chain`,
+		Pattern: `cert/ca_chain`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathFetchRead,
@@ -37,6 +49,27 @@ func pathFetchCAChain(b *backend) *framework.Path {
 		HelpSynopsis:    pathFetchHelpSyn,
 		HelpDescription: pathFetchHelpDesc,
 	}
+}
+
+func pathFetchCAChainRaw(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `ca_chain`,
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathFetchCAChainRawHandler,
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
+func (b *backend) pathFetchCAChainRawHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var serial, pemType, contentType string
+	serial = "ca_chain"
+	contentType = "application/pkix-cert"
+
+	return b.pathFetchReadRaw(ctx, req, data, serial, pemType, contentType)
 }
 
 // Returns the CRL in raw format
@@ -45,12 +78,24 @@ func pathFetchCRL(b *backend) *framework.Path {
 		Pattern: `crl(/pem)?`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+			logical.ReadOperation: b.pathFetchCRLRawHandler,
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
 		HelpDescription: pathFetchHelpDesc,
 	}
+}
+
+func (b *backend) pathFetchCRLRawHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var serial, pemType, contentType string
+	serial = "crl"
+	contentType = "application/pkix-crl"
+	if req.Path == "crl/pem" {
+		pemType = "X509 CRL"
+		contentType = "application/x-pem-file"
+	}
+
+	return b.pathFetchReadRaw(ctx, req, data, serial, pemType, contentType)
 }
 
 // Returns any valid (non-revoked) cert in raw format.
@@ -66,12 +111,25 @@ hyphen-separated octal`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+			logical.ReadOperation: b.pathFetchCertificateRawHandler,
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
 		HelpDescription: pathFetchHelpDesc,
 	}
+}
+
+func (b *backend) pathFetchCertificateRawHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var serial, pemType, contentType string
+
+	serial = data.Get("serial").(string)
+	contentType = "application/pkix-cert"
+	if strings.HasSuffix(req.Path, "/pem") {
+		pemType = "CERTIFICATE"
+		contentType = "application/pem-certificate-chain"
+	}
+
+	return b.pathFetchReadRaw(ctx, req, data, serial, pemType, contentType)
 }
 
 // Returns any valid (non-revoked) cert. Since "ca" fits the pattern, this path
@@ -135,8 +193,19 @@ func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, d
 	return logical.ListResponse(entries), nil
 }
 
+func marshalPem(pemType string, certificate []byte) []byte {
+	block := pem.Block{
+		Type:  pemType,
+		Bytes: certificate,
+	}
+
+	// This is convoluted on purpose to ensure that we don't have trailing
+	// newlines via various paths
+	return []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
+}
+
 func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	var serial, pemType, contentType string
+	var serial, pemType string
 	var certEntry, revokedEntry *logical.StorageEntry
 	var funcErr error
 	var certificate []byte
@@ -146,41 +215,15 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		Data: map[string]interface{}{},
 	}
 
-	// Some of these need to return raw and some non-raw;
-	// this is basically handled by setting contentType or not.
 	// Errors don't cause an immediate exit, because the raw
 	// paths still need to return raw output.
 
 	switch {
-	case req.Path == "ca" || req.Path == "ca/pem":
-		serial = "ca"
-		contentType = "application/pkix-cert"
-		if req.Path == "ca/pem" {
-			pemType = "CERTIFICATE"
-			contentType = "application/pem-certificate-chain"
-		}
-	case req.Path == "ca_chain" || req.Path == "cert/ca_chain":
+	case req.Path == "cert/ca_chain":
 		serial = "ca_chain"
-		if req.Path == "ca_chain" {
-			contentType = "application/pkix-cert"
-		}
-	case req.Path == "crl" || req.Path == "crl/pem":
-		serial = "crl"
-		contentType = "application/pkix-crl"
-		if req.Path == "crl/pem" {
-			pemType = "X509 CRL"
-			contentType = "application/x-pem-file"
-		}
 	case req.Path == "cert/crl":
 		serial = "crl"
 		pemType = "X509 CRL"
-	case strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/raw"):
-		serial = data.Get("serial").(string)
-		contentType = "application/pkix-cert"
-		if strings.HasSuffix(req.Path, "/pem") {
-			pemType = "CERTIFICATE"
-			contentType = "application/pem-certificate-chain"
-		}
 	default:
 		serial = data.Get("serial").(string)
 		pemType = "CERTIFICATE"
@@ -245,15 +288,8 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	}
 
 	certificate = certEntry.Value
-
 	if len(pemType) != 0 {
-		block := pem.Block{
-			Type:  pemType,
-			Bytes: certEntry.Value,
-		}
-		// This is convoluted on purpose to ensure that we don't have trailing
-		// newlines via various paths
-		certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
+		certificate = marshalPem(pemType, certificate)
 	}
 
 	revokedEntry, funcErr = fetchCertBySerial(ctx, req, "revoked/", serial)
@@ -278,24 +314,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 reply:
 	switch {
-	case len(contentType) != 0:
-		response = &logical.Response{
-			Data: map[string]interface{}{
-				logical.HTTPContentType: contentType,
-				logical.HTTPRawBody:     certificate,
-			},
-		}
-		if retErr != nil {
-			if b.Logger().IsWarn() {
-				b.Logger().Warn("possible error, but cannot return in raw response. Note that an empty CA probably means none was configured, and an empty CRL is possibly correct", "error", retErr)
-			}
-		}
-		retErr = nil
-		if len(certificate) > 0 {
-			response.Data[logical.HTTPStatusCode] = 200
-		} else {
-			response.Data[logical.HTTPStatusCode] = 204
-		}
 	case retErr != nil:
 		response = nil
 		return
@@ -311,6 +329,83 @@ reply:
 			response.Data["ca_chain"] = string(fullChain)
 		}
 	}
+
+	return
+}
+
+func (b *backend) readCertByAlias(ctx context.Context, req *logical.Request, alias string) ([]byte, error) {
+	// ca_chain as an alias needs special handling.
+	if alias == "ca_chain" {
+		caInfo, err := fetchCAInfo(ctx, b, req)
+		if err != nil {
+			return nil, err
+		}
+
+		caChain := caInfo.GetCAChain()
+		var certStr string
+		for _, ca := range caChain {
+			block := pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: ca.Bytes,
+			}
+			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
+		}
+
+		return []byte(strings.TrimSpace(certStr)), nil
+	}
+
+	certEntry, err := fetchCertBySerial(ctx, req, req.Path, alias)
+	if err != nil {
+		return nil, err
+	}
+	if certEntry == nil {
+		return nil, nil
+	}
+
+	return certEntry.Value, nil
+}
+
+func (b *backend) pathFetchReadRaw(ctx context.Context, req *logical.Request, data *framework.FieldData, serial string, pemType string, contentType string) (response *logical.Response, retErr error) {
+	var certificate []byte
+
+	// Errors don't cause an immediate exit, because the raw
+	// paths still need to return raw output, even if it is empty.
+	// The error will instead be logged (in the event the log surfaces
+	// warnings).
+	certificate, retErr = b.readCertByAlias(ctx, req, serial)
+	if retErr != nil {
+		goto reply
+	}
+
+	if len(pemType) != 0 {
+		certificate = marshalPem(pemType, certificate)
+	}
+
+reply:
+	response = &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: contentType,
+			logical.HTTPRawBody:     certificate,
+		},
+	}
+
+	if len(certificate) > 0 {
+		response.Data[logical.HTTPStatusCode] = 200
+	} else {
+		response.Data[logical.HTTPStatusCode] = 204
+	}
+
+	if retErr != nil {
+		if b.Logger().IsWarn() {
+			b.Logger().Warn("possible error, but cannot return in raw response. Note that an empty CA probably means none was configured, and an empty CRL is possibly correct; call /crl/rotate to create a non-empty CRL", "error", retErr)
+
+			// Return a 500 response to indicate something went wrong with
+			// this request.
+			response.Data[logical.HTTPStatusCode] = 500
+		}
+	}
+
+	retErr = nil
 
 	return
 }
