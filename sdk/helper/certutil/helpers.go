@@ -600,10 +600,11 @@ func DefaultOrValueHashBits(keyType string, keyBits int, hashBits int) (int, err
 		// To match previous behavior (and ignoring NIST's recommendations for
 		// hash size to align with RSA key sizes), default to SHA-2-256.
 		hashBits = 256
-	} else if keyType == "ed25519" || keyType == "ed448" {
+	} else if keyType == "ed25519" || keyType == "ed448" || keyType == "any" {
 		// No-op; ed25519 and ed448 internally specify their own hash and
 		// we do not need to select one. Double hashing isn't supported in
-		// certificate signing and we must
+		// certificate signing. Additionally, the any key type can't know
+		// what hash algorithm to use yet, so default to zero.
 		return 0, nil
 	}
 
@@ -642,7 +643,7 @@ func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, h
 // Validates that the length of the hash (in bits) used in the signature
 // calculation is a known, approved value.
 func ValidateSignatureLength(keyType string, hashBits int) error {
-	if keyType == "ed25519" || keyType == "ed448" {
+	if keyType == "any" || keyType == "ed25519" || keyType == "ed448" {
 		// ed25519 and ed448 include built-in hashing and is not externally
 		// configurable. There are three modes for each of these schemes:
 		//
@@ -654,6 +655,9 @@ func ValidateSignatureLength(keyType string, hashBits int) error {
 		//
 		// In all cases, we won't have a hash algorithm to validate here, so
 		// return nil.
+		//
+		// Additionally, when KeyType is any, we can't yet validate the
+		// signature algorithm size, so it takes the default zero value.
 		return nil
 	}
 
