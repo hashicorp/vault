@@ -66,7 +66,7 @@ export default class SecretCreateOrUpdate extends Component {
       let adapter = this.store.adapterFor('secret-v2');
       let type = { modelName: 'secret-v2' };
       let query = { backend: this.args.model.backend };
-      adapter.query(this.store, type, query).then(result => {
+      adapter.query(this.store, type, query).then((result) => {
         this.secretPaths = result.data.keys;
       });
     }
@@ -130,6 +130,9 @@ export default class SecretCreateOrUpdate extends Component {
     return secretData
       .save()
       .then(() => {
+        if (!this.args.canReadSecretData && secret.selectedVersion) {
+          delete secret.selectedVersion.secretData;
+        }
         if (!secretData.isError) {
           if (isV2) {
             secret.set('id', key);
@@ -143,7 +146,7 @@ export default class SecretCreateOrUpdate extends Component {
               .then(() => {
                 this.saveComplete(successCallback, key);
               })
-              .catch(e => {
+              .catch((e) => {
                 // when mode is not create the metadata error is handled in secret-edit-metadata
                 if (this.args.mode === 'create') {
                   this.error = e.errors.join(' ');
@@ -155,7 +158,7 @@ export default class SecretCreateOrUpdate extends Component {
           }
         }
       })
-      .catch(error => {
+      .catch((error) => {
         if (error instanceof ControlGroupError) {
           let errorMessage = this.controlGroup.logFromError(error);
           this.error = errorMessage.content;
@@ -188,7 +191,7 @@ export default class SecretCreateOrUpdate extends Component {
     return false;
   }
 
-  @(task(function*(name, value) {
+  @(task(function* (name, value) {
     this.checkValidation(name, value);
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
