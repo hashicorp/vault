@@ -1256,10 +1256,6 @@
       {
         "title": "App ID <sup>DEPRECATED</sup>",
         "path": "auth/app-id"
-      },
-      {
-        "title": "MFA <sup>LEGACY / UNSUPPORTED</sup>",
-        "path": "auth/mfa"
       }
     ]
   },
