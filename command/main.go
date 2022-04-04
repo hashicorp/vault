@@ -291,7 +291,7 @@ func generatePolicy(exitCode int, runOpts *RunOptions) int {
 			return exitCode
 		}
 		if api.LastOutputPolicyError.Error() != api.ErrOutputPolicyRequest {
-			runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating policy HCL: %s\n", api.LastOutputPolicyError.Error())))
+			runOpts.Stdout.Write([]byte(fmt.Sprintf("Error assembling policy HCL: %s\n", api.LastOutputPolicyError.Error())))
 			return 1
 		}
 		runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputPolicyError.HCLString())))
