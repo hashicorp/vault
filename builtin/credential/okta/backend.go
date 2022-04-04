@@ -6,7 +6,6 @@ import (
 	"net/textproto"
 	"time"
 
-	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -32,8 +31,6 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: mfa.MFARootPaths(),
-
 			Unauthenticated: []string{
 				"login/*",
 			},
@@ -42,15 +39,14 @@ func Backend() *backend {
 			},
 		},
 
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathConfig(&b),
 			pathUsers(&b),
 			pathGroups(&b),
 			pathUsersList(&b),
 			pathGroupsList(&b),
+			pathLogin(&b),
 		},
-			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
-		),
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
