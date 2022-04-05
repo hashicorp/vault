@@ -585,6 +585,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
 	newConfig.OutputCurlString = c.config.OutputCurlString
+	newConfig.OutputPolicy = c.config.OutputPolicy
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
@@ -1027,6 +1028,7 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 		Logger:           config.Logger,
 		Limiter:          config.Limiter,
 		OutputCurlString: config.OutputCurlString,
+		OutputPolicy:     config.OutputPolicy,
 		AgentAddress:     config.AgentAddress,
 		SRVLookup:        config.SRVLookup,
 		CloneHeaders:     config.CloneHeaders,
@@ -1303,6 +1305,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
 	if c.headers != nil {
 		for header, vals := range c.headers {
 			for _, val := range vals {
@@ -1313,9 +1316,12 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 
-	// OutputCurlString logic relies on the request type to be retryable.Request as
+	// OutputCurlString and OutputPolicy logic relies on the request type to be retryable.Request
 	if outputCurlString {
 		return nil, fmt.Errorf("output-curl-string is not implemented for this request")
+	}
+	if outputPolicy {
+		return nil, fmt.Errorf("output-policy is not implemented for this request")
 	}
 
 	req.URL.User = r.URL.User

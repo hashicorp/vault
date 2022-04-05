@@ -287,7 +287,7 @@ func generatePolicy(exitCode int, runOpts *RunOptions) int {
 				// Usage, just pass it through
 				return exitCode
 			}
-			fmt.Fprint(runOpts.Stderr, "Required policy not clear from API operation; run without -output-policy to see the generated error\n")
+			fmt.Fprint(runOpts.Stderr, "Required policy not clear from API operation\n")
 			return exitCode
 		}
 		if api.LastOutputPolicyError.Error() != api.ErrOutputPolicyRequest {
