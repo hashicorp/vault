@@ -41,7 +41,9 @@ Usage: vault kv <subcommand> [options] [args]
 
       $ vault kv get -mount=secret -version=1 foo
 
-  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/data/foo): 
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/data/foo) can cause confusion:   
   
       $ vault kv get secret/foo
 

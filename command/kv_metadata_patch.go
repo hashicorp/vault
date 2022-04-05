@@ -42,7 +42,9 @@ Usage: vault metadata kv patch [options] KEY
 
       $ vault kv metadata patch -mount=secret foo
 
-  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/metadata/foo): 
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/metadata/foo) can cause confusion: 
   
       $ vault kv metadata patch secret/foo
 

@@ -35,7 +35,9 @@ Usage: vault kv destroy [options] KEY
 
       $ vault kv destroy -mount=secret -versions=3 foo
 
-  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/data/foo): 
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/data/foo) can cause confusion: 
   
       $ vault kv destroy -versions=3 secret/foo
 

@@ -35,8 +35,10 @@ Usage: vault kv undelete [options] KEY
   
       $ vault kv undelete -mount=secret -versions=3 foo
 
-  A more path-like syntax can also be used, but note that for KV v2, this is not the full API path to the secret (secret/data/foo): 
-  
+  The deprecated path-like syntax can also be used, but this should be avoided, 
+  as the fact that it is not actually the full API path to 
+  the secret (secret/data/foo) can cause confusion: 
+
       $ vault kv undelete -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
