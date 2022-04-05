@@ -2,8 +2,13 @@ package pki
 
 import (
 	"context"
+	"crypto"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"strings"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -52,6 +57,20 @@ type issuerConfig struct {
 	DefaultIssuerId issuerId `json:"default" structs:"default" mapstructure:"default"`
 }
 
+func genKeyIssuerUUID() (string, error) {
+	newId, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", err
+	}
+
+	return newId, nil
+}
+
+func (k key) GetSigner() (crypto.Signer, error) {
+	signer, _, err := certutil.ParsePEMKey(k.PrivateKey)
+	return signer, err
+}
+
 func listKeys(ctx context.Context, s logical.Storage) ([]keyId, error) {
 	strList, err := s.List(ctx, keyPrefix)
 	if err != nil {
@@ -93,6 +112,118 @@ func writeKey(ctx context.Context, s logical.Storage, key key) error {
 	}
 
 	return s.Put(ctx, json)
+}
+
+func importKey(ctx context.Context, s logical.Storage, keyValue string) (*key, bool, error) {
+	// importKey imports the specified PEM-format key (from keyValue) into
+	// the new PKI storage format. The first return field is a reference to
+	// the new key; the second is whether or not the key already existed
+	// during import (in which case, *key points to the existing key reference
+	// and identifier); the last return field is whether or not an error
+	// occurred.
+	//
+	// Before we can import a known key, we first need to know if the key
+	// exists in storage already. This means iterating through all known
+	// keys and comparing their private value against this value.
+	knownKeys, err := listKeys(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Before we return below, we need to iterate over _all_ issuers and see if
+	// one of them has a missing KeyId link, and if so, point it back to
+	// ourselves. We fetch the list of issuers up front, even when don't need
+	// it, to give ourselves a better chance of succeeding below.
+	knownIssuers, err := listIssuers(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+
+	for _, identifier := range knownKeys {
+		existingKey, err := fetchKeyById(ctx, s, identifier)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if existingKey.PrivateKey == keyValue {
+			// Here, we don't need to stitch together the issuer entries,
+			// because the last run should've done that for us (or, when
+			// importing an issuer).
+			return existingKey, true, nil
+		}
+	}
+
+	// Haven't found a key, so we've gotta create it and write it into storage.
+	var result key
+	uuid, err := genKeyIssuerUUID()
+	if err != nil {
+		return nil, false, err
+	}
+	result.ID = keyId(uuid)
+	result.PrivateKey = keyValue
+
+	// Extracting the signer is necessary for two reasons: first, to get the
+	// public key for comparison with existing issuers; second, to get the
+	// corresponding private key type.
+	keySigner, err := result.GetSigner()
+	if err != nil {
+		return nil, false, err
+	}
+	keyPublic := keySigner.Public()
+	result.PrivateKeyType = certutil.GetPrivateKeyTypeFromSigner(keySigner)
+
+	// Finally we can write the key to storage.
+	if err := writeKey(ctx, s, result); err != nil {
+		return nil, false, err
+	}
+
+	// Now, for each issuer, try and compute the issuer<->key link if missing.
+	for _, identifier := range knownIssuers {
+		existingIssuer, err := fetchIssuerById(ctx, s, identifier)
+		if err != nil {
+			return nil, false, err
+		}
+
+		// If the KeyID value is already present, we can skip it.
+		if len(existingIssuer.KeyID) > 0 {
+			continue
+		}
+
+		// Otherwise, compare public values. Note that there might be multiple
+		// certificates (e.g., cross-signed) with the same key.
+
+		cert, err := existingIssuer.GetCertificate()
+		if err != nil {
+			// Malformed issuer.
+			return nil, false, err
+		}
+
+		equal, err := certutil.ComparePublicKeys(cert.PublicKey, keyPublic)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if equal {
+			// These public keys are equal, so this key entry must be the
+			// corresponding private key to this issuer; update it accordingly.
+			existingIssuer.KeyID = result.ID
+			if err := writeIssuer(ctx, s, *existingIssuer); err != nil {
+				return nil, false, err
+			}
+		}
+	}
+
+	// All done; return our new key reference.
+	return &result, false, nil
+}
+
+func (i issuer) GetCertificate() (*x509.Certificate, error) {
+	block, _ := pem.Decode([]byte(i.Certificate))
+	if block == nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: invalid PEM: %v", i.ID)}
+	}
+
+	return x509.ParseCertificate(block.Bytes)
 }
 
 func listIssuers(ctx context.Context, s logical.Storage) ([]issuerId, error) {
@@ -175,6 +306,105 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer issuer) error {
 	}
 
 	return s.Put(ctx, json)
+}
+
+func importIssuer(ctx context.Context, s logical.Storage, certValue string) (*issuer, bool, error) {
+	// importIssuers imports the specified PEM-format certificate (from
+	// certValue) into the new PKI storage format. The first return field is a
+	// reference to the new issuer; the second is whether or not the issuer
+	// already existed during import (in which case, *issuer points to the
+	// existing issuer reference and identifier); the last return field is
+	// whether or not an error occurred.
+	//
+	// Before we can import a known issuer, we first need to know if the issuer
+	// exists in storage already. This means iterating through all known
+	// issuers and comparing their private value against this value.
+	knownIssuers, err := listIssuers(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Before we return below, we need to iterate over _all_ keys and see if
+	// one of them a public key matching this certificate, and if so, update our
+	// link accordingly. We fetch the list of keys up front, even may not need
+	// it, to give ourselves a better chance of succeeding below.
+	knownKeys, err := listKeys(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+
+	for _, identifier := range knownIssuers {
+		existingIssuer, err := fetchIssuerById(ctx, s, identifier)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if existingIssuer.Certificate == certValue {
+			// Here, we don't need to stitch together the key entries,
+			// because the last run should've done that for us (or, when
+			// importing a key).
+			return existingIssuer, true, nil
+		}
+	}
+
+	// Haven't found an issuer, so we've gotta create it and write it into
+	// storage.
+	var result issuer
+	uuid, err := genKeyIssuerUUID()
+	if err != nil {
+		return nil, false, err
+	}
+	result.ID = issuerId(uuid)
+	result.Certificate = certValue
+	result.CAChain = []string{certValue}
+
+	// Extracting the certificate is necessary for two reasons: first, it lets
+	// us fetch the serial number; second, for the public key comparison with
+	// known keys.
+	issuerCert, err := result.GetCertificate()
+	if err != nil {
+		return nil, false, err
+	}
+
+	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
+
+	// Now, for each key, try and compute the issuer<->key link. We delay
+	// writing issuer to storage as we won't need to update the key, only
+	// the issuer.
+	for _, identifier := range knownKeys {
+		existingKey, err := fetchKeyById(ctx, s, identifier)
+		if err != nil {
+			return nil, false, err
+		}
+
+		// Fetch the signer for its Public() value.
+		signer, err := existingKey.GetSigner()
+		if err != nil {
+			return nil, false, err
+		}
+
+		equal, err := certutil.ComparePublicKeys(issuerCert.PublicKey, signer.Public())
+		if err != nil {
+			return nil, false, err
+		}
+
+		if equal {
+			result.KeyID = existingKey.ID
+			// Here, there's exactly one stored key with the same public key
+			// as us, per guarantees in importKey; as we're importing an
+			// issuer, there's no other keys or issuers we'd need to read or
+			// update, so exit.
+			break
+		}
+	}
+
+	// Finally we can write the issuer to storage.
+	if err := writeIssuer(ctx, s, result); err != nil {
+		return nil, false, err
+	}
+
+	// All done; return our new key reference.
+	return &result, false, nil
 }
 
 func setKeysConfig(ctx context.Context, s logical.Storage, config *keyConfig) error {
