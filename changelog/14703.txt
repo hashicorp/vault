@@ -1,0 +1,3 @@
+```release-note:improvement
+transit/cache-config: remove CreateOperation from Operations map
+```
