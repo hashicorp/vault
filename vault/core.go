@@ -81,7 +81,9 @@ const (
 	defaultMFAAuthResponseTTL = 300 * time.Second
 
 	// defaultMaxTOTPValidateAttempts is the default value for the number
-	// of failed attempts to validate a request subject to TOTP MFA
+	// of failed attempts to validate a request subject to TOTP MFA. If the
+	// number of failed totp passcode validations exceeds this max value, the
+	// user needs to wait until a fresh totp passcode is generated.
 	defaultMaxTOTPValidateAttempts = 5
 
 	// ForwardSSCTokenToActive is the value that must be set in the
