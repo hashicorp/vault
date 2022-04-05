@@ -26,7 +26,9 @@ The goal of this document is to recommend _HashiCorp Vault_ Syslog Logging and A
 
 The Vault systemd service file is located at: `/lib/systemd/system/vault.service`. Ensure that the `ExecStart` parameter configuration command does not contain a `>` character, which would redirecting STDOUT and STDERR into a file and may interferre with logging.
 
-```
+<CodeBlockConfig filename="/lib/systemd/system/vault.service" lineNumbers>
+
+```plaintext
 [Unit]
 Description=Vault Server
 Requires=consul-online.target
@@ -48,44 +50,53 @@ LimitMEMLOCK=infinity
 WantedBy=multi-user.target
 ```
 
-_systemd commands_
+</CodeBlockConfig>
 
-```
-# enable the systemd HashiCorp Vault service
-sudo systemctl enable vault
+### Systemd Commands
 
-# start the systemd HashiCorp Vault service
-sudo systemctl start vault
+First, enable the Vault service.
 
-# check the status of the HashiCorp Vault service
-sudo systemctl status vault
+```shell-session
+$ sudo systemctl enable vault
 ```
 
-Common commands to search _HashiCorp Vault_ logs.
+Start the Vault service.
 
-```
-grep -F 'vault[' /var/log/syslog
-
-journalctl -b --no-pager -u vault -o json | jq '.MESSAGE'
-
-cat /var/log/vault_audit.log | jq '.'
+```shll-session
+$ sudo systemctl start vault
 ```
 
-Check if any Vault Audit devices are enabled:
+Check the status of the Vault service.
 
-`vault audit list -detailed`
-
-_cli response_
-
+```shell-session
+$ sudo systemctl status vault
 ```
-No audit devices are enabled.
+
+### Common Commands to Search Vault Logs
+
+Search all text starting with `vault[` in the syslog.
+
+```shell-session
+$ grep -F 'vault[' /var/log/syslog
+```
+
+Query the text includes `.MESSAGE` in the systemd journal written by the Vault service.
+
+```shell-session
+$ journalctl -b --no-pager -u vault -o json | jq '.MESSAGE'
+```
+
+Read the `/var/log/vault_audit.log` file using [jq](https://stedolan.github.io/jq/) to parse the output for readability.
+
+```shell-session
+$ cat /var/log/vault_audit.log | jq '.'
 ```
 
 ## Server Configuration
 
-_HashiCorp Vault_ can be run in development mode by setting configuration in the file `/etc/vault.d/vault.conf`
+Vault can be run in development mode by using the `-dev` flag in the configuration (`/etc/vault.d/vault.conf`).
 
-```
+```plaintext
 FLAGS=-dev -dev-ha -dev-transactional -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200
 ```
 
@@ -104,48 +115,62 @@ Vault Audit Logging can also be enabled with the Vault Server API.
 
 Which Audit log fields are encrypted with HMAC can be configured by setting the `audit_non_hmac_request_keys ` and `audit_non_hmac_response_keys` parameters.
 
-[Vault - Tune Mount Configuration](/api-docs/system/mounts/#tune-mount-configuration)
+- [Vault - Tune Mount Configuration](/api-docs/system/mounts/#tune-mount-configuration)
 
-## Audit Log, File
+## File Audit Device
 
-[Vault - File Audit Device](/docs/audit/file)
+Documentation: [Vault - File Audit Device](/docs/audit/file)
 
 Run these commands for initial setup:
 
+1. Create the HashiCorp Vault Audit Log file
+
+   ```shell-session
+   $ touch /var/log/vault_audit.log
+   ```
+
+1. Set permissions on the HashiCorp Vault Audit Log file.
+
+   ```shell-session
+   $ chown vault:vault /var/log/vault_audit.log
+   ```
+
+1. Clear out the HashiCorp Vault Audit Log file
+
+   ```shell-sessio
+   $ echo "" > /var/log/vault_audit.log
+   ```
+
+1. Enable a file audit device which generates the output at `/var/log/vault_audit.log`.
+
+   ```shell-session
+   $ vault audit enable file file_path=/var/log/vault_audit.log
+   Success! Enabled the file audit device at: file/
+   ```
+
+   In the syslog, you should find the following entry.
+
+   <CodeBlockConfig hideClipboard>
+
+   ```plaintext
+   [INFO]  core: enabled audit backend: path=file/ type=file"
+   ```
+
+   </CodeBlockConfig>
+
+### Common Errors
+
+#### Example 1: Missing `file_path`
+
+```shell-session
+$ vault audit enable file
 ```
-# create the HashiCorp Vault Audit Log file
-touch /var/log/vault_audit.log
 
-# set permissions on the HashiCorp Vault Audit Log file
-chown vault:vault /var/log/vault_audit.log
+**Error message:**
 
-# clear out the HashiCorp Vault Audit Log file
-echo "" > /var/log/vault_audit.log
-```
+<CodeBlockConfig hideClipboard>
 
-### enable Vault Audit Log, File, successful
-
-`vault audit enable file file_path=/var/log/vault_audit.log`
-
-_cli response_
-
-```
-Success! Enabled the file audit device at: file/
-```
-
-_syslog_
-
-```
-[INFO]  core: enabled audit backend: path=file/ type=file"
-```
-
-### error, enabling Vault Audit Log, File, missing file_path
-
-`vault audit enable file`
-
-_cli response_
-
-```
+```plaintext
 Error enabling audit device: Error making API request.
 
 URL: PUT http://127.0.0.1:8200/v1/sys/audit/file
@@ -154,19 +179,29 @@ Code: 400. Errors:
 * file_path is required
 ```
 
-_syslog_
+</CodeBlockConfig>
 
-```
+You should find the following entry in the syslog.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 [ERROR] secrets.system.system_cadac0ac: enable audit mount failed: path=file/ error=\"file_path is required\""
 ```
 
-### error, enable Vault Audit Log, File, file inaccessible
+</CodeBlockConfig>
 
-`vault audit enable file file_path=/var/log/vault_audit.log`
+#### Example 2: File inaccessible
 
-_cli response_
-
+```shell-session
+$ vault audit enable file file_path=/var/log/vault_audit.log
 ```
+
+**Error message:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 Error enabling audit device: Error making API request.
 
 URL: PUT http://127.0.0.1:8200/v1/sys/audit/file
@@ -175,143 +210,160 @@ Code: 400. Errors:
 * sanity check failed; unable to open "/var/log/vault_audit.log" for writing: open /var/log/vault_audit.log: permission denied
 ```
 
-_syslog_
+</CodeBlockConfig>
 
-```
+You should find the following entry in the syslog.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 [ERROR] secrets.system.system_dfa50a38: enable audit mount failed: path=file/ error="sanity check failed; unable to open "/var/log/vault_audit.log" for writing: open /var/log/vault_audit.log: permission denied"
 ```
 
-### check Vault Audit Log, File, is enabled
+</CodeBlockConfig>
 
-`vault audit list -detailed`
+### Validation
 
-_cli response_
+To check if Vault Audit devices are enabled, use the `vault audit list` command.
 
+```shell-session
+$ vault audit list -detailed
 ```
+
+The output lists configured audit device information.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 Path     Type    Description    Replication    Options
 ----     ----    -----------    -----------    -------
 file/    file    n/a            replicated     file_path=/var/log/vault_audit.log
 ```
 
-### disable Vault Audit Log, File
+</CodeBlockConfig>
 
-`vault audit disable file`
+### Disable the Vault Audit Device
 
-_cli response_
-
-```
+```shell-session
+$ vault audit disable file
 Success! Disabled audit device (if it was enabled) at: file/
 ```
 
-_syslog_
+You should find the following entry in the syslog.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 [INFO]  core: disabled audit backend: path=file/
 ```
 
-## Audit Log, Syslog
+</CodeBlockConfig>
 
-[Vault - Syslog Audit Device](/docs/audit/syslog)
+## Syslog Audit Device
 
-Run these commands for initial setup:
+Documentation: [Vault - Syslog Audit Device](/docs/audit/syslog)
 
-```
-# create the journald folder
-mkdir -p /var/log/journal
-```
+1. Create the journald folder.
 
-If you want the syslog to be stored in a file on disk, on Ubuntu 16.04, the journald configuration is stored at `/etc/systemd/journald.conf` Set the configuration:
+   ```shell-session
+   $ mkdir -p /var/log/journal
+   ```
 
-```
-Storage=persistent
-```
+   If you want the syslog to be stored in a file on disk, on Ubuntu 16.04, the
+   journald configuration is stored at `/etc/systemd/journald.conf` Set the
+   configuration:
 
-Now restart the systemd journald service with `systemctl force-reload systemd-journald`
+   ```plaintext
+   Storage=persistent
+   ```
 
-### enable Vault audit log, syslog
+1. Restart the systemd journald service.
 
-`vault audit enable syslog tag="vault" facility="AUTH"`
+   ```shell-session
+   $ systemctl force-reload systemd-journald
+   ```
 
-_cli response_
+1. Enable Vault audit log, syslog.
 
-```
-Success! Enabled the syslog audit device at: syslog/
-```
+   ```shell-session
+   $ vault audit enable syslog tag="vault" facility="AUTH"
+   Success! Enabled the syslog audit device at: syslog/
+   ```
 
-You can verify HashiCorp Vault is logging to syslog with these commands:
+### Validation
 
-```
-# check that HashiCorp Vault Audit is logging to journald
-journalctl -b --no-pager -u vault
+You can verify HashiCorp Vault is logging to syslog with these commands.
 
-# read the HashiCorp Vault Audit Log as JSON
-journalctl -b --no-pager -u vault -o json | jq '.'
+1. Check that HashiCorp Vault Audit is logging to journald.
 
-# save the HashiCorp Vault Audit Log into a compressed file
-journalctl -b --no-pager -u vault | gzip -9 > /tmp/"$(hostname)-$(date +%Y-%m-%dT%H-%M-%SZ)-vault.log.gz"
-```
+   ```shell-session
+   $ journalctl -b --no-pager -u vault
+   ```
 
-### check Vault Audit Log, Syslog, is enabled
+1. Read the HashiCorp Vault Audit Log as JSON.
 
-`vault audit list -detailed`
+   ```shell-session
+   $ journalctl -b --no-pager -u vault -o json | jq '.'
+   ```
 
-_cli response_
+1. Save the HashiCorp Vault Audit Log into a compressed file.
 
-```
-Path       Type      Description    Replication    Options
-----       ----      -----------    -----------    -------
-syslog/    syslog    n/a            replicated     facility=AUTH tag=vault
-```
+   ```shell-session
+   $ journalctl -b --no-pager -u vault | gzip -9 > /tmp/"$(hostname)-$(date +%Y-%m-%dT%H-%M-%SZ)-vault.log.gz"
+   ```
 
-### disable Vault Audit Log, Syslog
+1. Vault command to list enabled audit devices.
 
-`vault audit disable syslog`
+   ```shell-session
+   $ vault audit list -detailed
 
-_cli response_
+   Path       Type      Description    Replication    Options
+   ----       ----      -----------    -----------    -------
+   syslog/    syslog    n/a            replicated     facility=AUTH tag=vault
+   ```
 
-```
+### Disable Syslog Audit Device
+
+```shell-session
+$ vault audit disable syslog
 Success! Disabled audit device (if it was enabled) at: syslog/
 ```
 
-_syslog_
+You should find the following entry in the syslog.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 [INFO]  core: disabled audit backend: path=syslog/
 ```
 
+</CodeBlockConfig>
+
 ## Server Actions
 
-### restart the HashiCorp Vault service
+Restart the HashiCorp Vault service.
 
-`sudo systemctl restart vault`
-
-_cli response_
-
+```shell-session
+$ sudo systemctl restart vault
 ```
 
-```
+You should find the following entry in the syslog.
 
-_syslog_
+<CodeBlockConfig hideClipboard>
 
-```
+```plaintext
 "==> Vault server started! Log data will stream in below:"
 ```
 
-_audit log_
-
-```
-
-```
+</CodeBlockConfig>
 
 ## Vault Operator Actions
 
 ### generate-root initialization
 
-`vault operator generate-root -init -otp=<otp>`
+```shell-session
+$ vault operator generate-root -init -otp=<otp>
 
-_cli response_
-
-```
 Nonce         3645d967-b65b-c6b4-1578-69ffb34103df
 Started       true
 Progress      0/1
@@ -319,25 +371,21 @@ Complete      false
 OTP Length    26
 ```
 
-_syslog_
+You should find something similar to the following in the syslog.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 vault[3568]: 2020-02-13T03:17:55.041Z [INFO]  core: root generation initialized: nonce=3645d967-b65b-c6b4-1578-69ffb34103df
 ```
 
-_audit log_
-
-```
-
-```
+</CodeBlockConfig>
 
 ### generate-root complete
 
-`vault operator generate-root -nonce=3645d967-b65b-c6b4-1578-69ffb34103df`
+```shell-session
+$ vault operator generate-root -nonce=3645d967-b65b-c6b4-1578-69ffb34103df
 
-_cli response_
-
-```
 Operation nonce: 3645d967-b65b-c6b4-1578-69ffb34103df
 Unseal Key (will be hidden):
 Nonce            3645d967-b65b-c6b4-1578-69ffb34103df
@@ -347,27 +395,23 @@ Complete         true
 Encoded Token    NWoCIiEYSAUODgYWDjJaKAR0NhZtBh4OTXo
 ```
 
-_syslog_
+You should find the following entry in the syslog.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 vault[3568]: 2020-02-13T03:20:43.706Z [INFO]  core: root generation finished: nonce=3645d967-b65b-c6b4-1578-69ffb34103df
 ```
 
-_audit log_
-
-```
-
-```
+</CodeBlockConfig>
 
 ## Secret Actions
 
 ### add secret
 
-`vault kv put secret/cli foo=bar2`
+```shell-session
+$ vault kv put secret/cli foo=bar2
 
-_cli response_
-
-```
 Key              Value
 ---              -----
 created_time     2020-02-07T17:40:28.979642698Z
@@ -376,15 +420,11 @@ destroyed        false
 version          1
 ```
 
-_syslog_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-```
-
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T17:44:17.392595555Z",
   "type": "response",
@@ -428,13 +468,13 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### read secret
 
-`vault kv get secret/cli`
+```shell-session
+$ vault kv get secret/cli
 
-_cli response_
-
-```
 ====== Metadata ======
 Key              Value
 ---              -----
@@ -449,15 +489,11 @@ Key    Value
 foo    bar2
 ```
 
-_syslog_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-```
-
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T17:45:04.153356834Z",
   "type": "response",
@@ -500,15 +536,15 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### update secret
 
 Run this command against an existing secret.
 
-`vault kv put secret/cli foo=bar2`
+```shell-session
+$ vault kv put secret/cli foo=bar2
 
-_cli response_
-
-```
 Key              Value
 ---              -----
 created_time     2020-02-07T17:40:28.979642698Z
@@ -517,15 +553,11 @@ destroyed        false
 version          2
 ```
 
-_syslog_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-```
-
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T17:44:17.392595555Z",
   "type": "response",
@@ -569,27 +601,22 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### delete secret
 
 Run this command against an existing secret.
 
-`vault kv delete secret/cli`
-
-_cli response_
-
-```
+```shell-session
+$ vault kv delete secret/cli
 Success! Data deleted (if it existed) at: secret/cli
 ```
 
-_syslog_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-```
-
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T17:47:03.414450349Z",
   "type": "request",
@@ -619,21 +646,24 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ## PKI Actions
 
-### Generate (issue) PKI certificate
-
-See [Generate Certificate](/api-docs/secret/pki#generate-certificate)
+Refer to the [Generate Certificate](/api-docs/secret/pki#generate-certificate) documentation to issue PKI certificates.
 
 ### Enable PKI mount
 
-`$ vault secrets enable pki`
-
-`Success! Enabled the pki secrets engine at: pki/`
-
-_audit_log_
-
+```shell-session
+$ vault secrets enable pki
+Success! Enabled the pki secrets engine at: pki/
 ```
+
+You should find something similar to the following in the audit log.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
     "time": "2021-09-14T15:56:34.189241684Z",
     "type": "response",
@@ -691,15 +721,21 @@ _audit_log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### Disable PKI mount
 
-`$ vault secrets disable pki`
+```shell-session
+$ vault secrets disable pki
 
-`Success! Disabled the secrets engine (if it existed) at: pki/`
-
-_audit_log_
-
+Success! Disabled the secrets engine (if it existed) at: pki/
 ```
+
+You should find something similar to the following in the audit log.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
     "time": "2021-09-14T15:53:01.927898254Z",
     "type": "response",
@@ -741,17 +777,22 @@ _audit_log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### Create PKI Role
 
-See [Create/Update Role](/api-docs/secret/pki#create-update-role)
+Documentation: [Create/Update Role](/api-docs/secret/pki#create-update-role)
 
-`$ vault write pki/roles/example_pki max_ttl=24h allow_any_name=true`
-
-`Success! Data written to: pki/roles/example_pki`
-
-_audit_log_
-
+```shell-session
+$ vault write pki/roles/example_pki max_ttl=24h allow_any_name=true
+Success! Data written to: pki/roles/example_pki
 ```
+
+You should find something similar to the following in the audit log.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
     "time": "2021-09-14T15:59:35.640600701Z",
     "type": "response",
@@ -798,13 +839,15 @@ _audit_log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### Generate root certificate
 
-See [Generate Root](/api-docs/secret/pki#generate-root)
+Documentation: [Generate Root](/api-docs/secret/pki#generate-root)
 
-`$ vault write pki/root/generate/internal common_name=my-website.com ttl=8h`
+```shell-session
+$ vault write pki/root/generate/internal common_name=my-website.com ttl=8h
 
-```
 Key              Value
 ---              -----
 certificate      -----BEGIN CERTIFICATE-----
@@ -821,9 +864,11 @@ MIIDPjCCAiagAwIBAgIUJZdG0Z/EmLQ/4X876h2lSDfQjyYwDQYJKoZIhvcNAQEL
 serial_number    25:97:46:d1:9f:c4:98:b4:3f:e1:7f:3b:ea:1d:a5:48:37:d0:8f:26`
 ```
 
-_audit_log_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
     "time": "2021-09-14T16:02:21.394582Z",
     "type": "response",
@@ -877,13 +922,15 @@ _audit_log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### PKI Generate Certificate
 
-See [Generate Certificate](/api-docs/secret/pki#generate-certificate)
+Documentation: [Generate Certificate](/api-docs/secret/pki#generate-certificate)
 
-`$ vault write pki/issue/example_pki common_name=website.com ttl=1h`
+```shell-session
+$ vault write pki/issue/example_pki common_name=website.com ttl=1h
 
-```
 Key                 Value
 ---                 -----
 certificate         -----BEGIN CERTIFICATE-----
@@ -906,9 +953,11 @@ private_key_type    rsa
 serial_number       3a:7f:fe:53:79:0d:78:ec:a7:c7:bc:7a:a4:ca:9c:ab:29:0e:1f:40
 ```
 
-_audit_log_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
     "time": "2021-09-14T16:04:48.589098795Z",
     "type": "response",
@@ -964,20 +1013,24 @@ _audit_log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### PKI Revoke Certificate
 
-`$ vault write pki/revoke serial_number=3a:7f:fe:53:79:0d:78:ec:a7:c7:bc:7a:a4:ca:9c:ab:29:0e:1f:40`
+```shell-session
+$ vault write pki/revoke serial_number=3a:7f:fe:53:79:0d:78:ec:a7:c7:bc:7a:a4:ca:9c:ab:29:0e:1f:40
 
-```
 Key                        Value
 ---                        -----
 revocation_time            1631635723
 revocation_time_rfc3339    2021-09-14T16:08:43.296176232Z
 ```
 
-_audit_log_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
     "time": "2021-09-14T16:08:43.359552006Z",
     "type": "response",
@@ -1028,17 +1081,17 @@ _audit_log_
 }
 ```
 
+</CodeBlockConfig>
+
 ## Auth, Token, Actions
 
 ### list enabled auth methods
 
 Initially only the `token auth` plugin is enabled by default.
 
-`vault auth list`
+```shell-session
+$ vault auth list
 
-_cli resposne_
-
-```
 Path         Type        Accessor                  Description
 ----         ----        --------                  -----------
 token/       token       auth_token_66c5f65f       token based credentials
@@ -1048,39 +1101,33 @@ token/       token       auth_token_66c5f65f       token based credentials
 
 For most Auth methods that generate Tokens, these will have a TTL that the Vault system will use to automatically expire the lease. These don't show up in the audit log and aren't in response to a CLI command.
 
-_cli response_
+You should find the following entry in the syslog.
 
-```
+<CodeBlockConfig hideClipboard>
 
-```
-
-_syslog_
-
-```
+```plaintext
 vault[3789]: 2020-03-05T17:05:38.792Z [INFO]  expiration: revoked lease: lease_id=auth/oidc/oidc/callback/h73157da4c9a4d588018f82bd9b6197316acf9bfe86bcf21664325ca42ef1ebfe
 ```
 
-_audit log_
-
-```
-
-```
+</CodeBlockConfig>
 
 ## Auth, Userpass, Actions
 
-[Vault - Userpass Auth Method](/docs/auth/userpass)
+Documentation: [Vault - Userpass Auth Method](/docs/auth/userpass)
 
 ### failed Userpass login, with Auth Userpass plugin disabled
 
-```
-vault login -method=userpass \
+```shell-session
+$ vault login -method=userpass \
     username=mitchellh \
     password=foo
 ```
 
-_cli response_
+**Output example:**
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 Error authenticating: Error making API request.
 
 URL: PUT http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
@@ -1089,15 +1136,13 @@ Code: 400. Errors:
 * missing client token
 ```
 
-_syslog_
+</CodeBlockConfig>
 
-```
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T00:54:00.796464016Z",
   "type": "request",
@@ -1145,15 +1190,19 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### failed Userpass login, with Auth Userpass plugin enabled
 
-```
-vault login -method=userpass \
+```shell-session
+$ vault login -method=userpass \
     username=mitchellh \
     password=foo
 ```
 
-_cli response_
+**Output example:**
+
+<CodeBlockConfig hideClipboard>
 
 ```
 Error authenticating: Error making API request.
@@ -1164,15 +1213,13 @@ Code: 400. Errors:
 * invalid username or password
 ```
 
-_syslog_
+</CodeBlockConfig>
 
-```
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T00:50:29.918909125Z",
   "type": "response",
@@ -1199,25 +1246,30 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### enable Vault Auth Userpass plugin
 
-`vault auth enable userpass`
-
-_cli response_
-
-```
+```shell-session
+$ vault auth enable userpass
 Success! Enabled userpass auth method at: userpass/
 ```
 
-_syslog_
+You should find the following entry in the syslog.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 [INFO]  core: enabled credential backend: path=userpass/ type=userpass"
 ```
 
-_audit log_
+</CodeBlockConfig>
 
-```
+You should find something similar to the following in the audit log.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
   "time": "2020-02-07T00:59:42.329264265Z",
   "type": "response",
@@ -1262,29 +1314,32 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### add Vault Auth Userpass
 
-```
-vault write auth/userpass/users/mitchellh \
+```shell-session
+$ vault write auth/userpass/users/mitchellh \
     password=foo \
     policies=admins
 ```
 
-_cli response_
+**Expected output:**
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+
 Success! Data written to: auth/userpass/users/mitchellh
 ```
 
-_syslog_
+</CodeBlockConfig>
 
-```
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T00:57:00.33732471Z",
   "type": "response",
@@ -1319,17 +1374,21 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### login to Vault Auth Userpass, success
 
-```
-vault login -method=userpass \
+```shell-session
+$ vault login -method=userpass \
     username=mitchellh \
     password=foo
 ```
 
-_cli response_
+**Output example:**
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 Success! You are now authenticated. The token information displayed below
 is already stored in the token helper. You do NOT need to run "vault login"
 again. Future Vault requests will automatically use this token.
@@ -1346,15 +1405,13 @@ policies               ["admins" "default"]
 token_meta_username    mitchellh
 ```
 
-_syslog_
+</CodeBlockConfig>
 
-```
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T01:08:08.410243403Z",
   "type": "request",
@@ -1428,28 +1485,22 @@ _audit log_
     }
   }
 }
-
 ```
+
+</CodeBlockConfig>
 
 ### delete Vault Auth Userpass user
 
-`vault delete auth/userpass/users/mitchellh`
-
-_cli response_
-
-```
+```shell-session
+$ vault delete auth/userpass/users/mitchellh
 Success! Data deleted (if it existed) at: auth/userpass/users/mitchellh
 ```
 
-_syslog_
+You should find something similar to the following in the audit log.
 
-```
+<CodeBlockConfig hideClipboard>
 
-```
-
-_audit log_
-
-```
+```plaintext
 {
   "time": "2020-02-07T16:28:32.113813841Z",
   "type": "request",
@@ -1507,6 +1558,8 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### change Vault Auth Userpass password
 
 ``
@@ -1533,7 +1586,11 @@ _audit log_
 
 ### Vault policy modification
 
-```
+You should find something similar to the following in the audit log.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
   "time": "2022-03-07T18:47:20.006220694Z",
   "type": "request",
@@ -1620,9 +1677,15 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### Enabling a new auth method
 
-```
+You should find something similar to the following in the audit log.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
   "time": "2022-03-07T18:43:01.458247078Z",
   "type": "request",
@@ -1729,9 +1792,15 @@ _audit log_
 }
 ```
 
+</CodeBlockConfig>
+
 ### Creation of a new auth method role / Modification of an auth method role (same)
 
-```
+You should find something similar to the following in the audit log.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 {
   "time": "2022-03-07T18:52:59.221628186Z",
   "type": "request",
@@ -1814,8 +1883,9 @@ _audit log_
     "mount_type": "approle"
   }
 }
-
 ```
+
+</CodeBlockConfig>
 
 ## Transit key deletions
 
