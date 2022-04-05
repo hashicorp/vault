@@ -194,6 +194,7 @@ To get started with Login MFA, refer to the [Login MFA](https://learn.hashicorp.
 
 ### TOTP Passcode Validation Rate Limit
 
+Rate limiting of Login MFA paths are enforced by default in Vault 1.10.1 and above.
 By default, Vault allows for 5 consecutive failed TOTP passcode validation.
 This value can also be configured by adding `max_totp_validation_attempts` to the server configuration file as shown below.
 If the number of consecutive failed TOTP passcode validation exceeds the configured value, the user
