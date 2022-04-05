@@ -92,6 +92,61 @@ func Test_IssuerRoundTrip(t *testing.T) {
 	require.ElementsMatch(t, []issuerId{issuer1.ID, issuer2.ID}, issuers)
 }
 
+func Test_KeysIssuerImport(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+	issuer1, key1 := genIssuerAndKey(t, b)
+	issuer2, key2 := genIssuerAndKey(t, b)
+
+	// Key 1 before Issuer 1; Issuer 2 before Key 2.
+	// Remove KeyIDs from non-written entities before beginning.
+	key1.ID = ""
+	issuer1.ID = ""
+	issuer1.KeyID = ""
+
+	key1_ref1, existing, err := importKey(ctx, s, key1.PrivateKey)
+	require.NoError(t, err)
+	require.False(t, existing)
+	require.Equal(t, key1.PrivateKey, key1_ref1.PrivateKey)
+
+	key1_ref2, existing, err := importKey(ctx, s, key1.PrivateKey)
+	require.NoError(t, err)
+	require.True(t, existing)
+	require.Equal(t, key1.PrivateKey, key1_ref1.PrivateKey)
+	require.Equal(t, key1_ref1.ID, key1_ref2.ID)
+
+	issuer1_ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate)
+	require.NoError(t, err)
+	require.False(t, existing)
+	require.Equal(t, issuer1.Certificate, issuer1_ref1.Certificate)
+	require.Equal(t, key1_ref1.ID, issuer1_ref1.KeyID)
+
+	issuer1_ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate)
+	require.NoError(t, err)
+	require.True(t, existing)
+	require.Equal(t, issuer1.Certificate, issuer1_ref1.Certificate)
+	require.Equal(t, issuer1_ref1.ID, issuer1_ref2.ID)
+	require.Equal(t, key1_ref1.ID, issuer1_ref2.KeyID)
+
+	err = writeIssuer(ctx, s, issuer2)
+	require.NoError(t, err)
+
+	err = writeKey(ctx, s, key2)
+	require.NoError(t, err)
+
+	issuer2_ref, existing, err := importIssuer(ctx, s, issuer2.Certificate)
+	require.NoError(t, err)
+	require.True(t, existing)
+	require.Equal(t, issuer2.Certificate, issuer2_ref.Certificate)
+	require.Equal(t, issuer2_ref.ID, issuer2.ID)
+	require.Equal(t, issuer2_ref.KeyID, issuer2.KeyID)
+
+	key2_ref, existing, err := importKey(ctx, s, key2.PrivateKey)
+	require.NoError(t, err)
+	require.True(t, existing)
+	require.Equal(t, key2.PrivateKey, key2_ref.PrivateKey)
+	require.Equal(t, key2_ref.ID, key2.ID)
+}
+
 func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
 	certBundle, err := genCertBundle(t, b)
 	require.NoError(t, err)
