@@ -37,22 +37,27 @@ func (a *Auth) Login(ctx context.Context, authMethod AuthMethod) (*Secret, error
 // MFALogin is a wrapper that helps satisfy Vault's MFA implementation.
 // If optional credentials are provided a single-phase login will be attempted
 // and the resulting Secret will contain a ClientToken if the authentication is successful.
-// The client's token will also be set accordingly. If no credentials are provided a
-// two-phase MFA login will be assumed and the resulting Secret will have a
-// MFARequirement containing the MFARequestID to be used in a follow-up call to `sys/mfa/validate`
-// or by passing it to the method (*Auth).MFAValidate with the appropriate payload.
+// The client's token will also be set accordingly.
+//
+// If no credentials are provided a two-phase MFA login will be assumed and the resulting
+// Secret will have a MFARequirement containing the MFARequestID to be used in a follow-up
+// call to `sys/mfa/validate` or by passing it to the method (*Auth).MFAValidate.
 func (a *Auth) MFALogin(ctx context.Context, authMethod AuthMethod, creds ...string) (*Secret, error) {
 	if len(creds) > 0 {
 		a.c.SetMFACreds(creds)
 		return a.login(ctx, authMethod)
 	}
 
-	return a.twoPhaseLogin(ctx, authMethod)
+	return a.twoPhaseMFALogin(ctx, authMethod)
 }
 
 // MFAValidate validates an MFA request using the appropriate payload and a secret containing Auth.MFARequirement,
 // like the returned by MFALogin when credentials are not provided. Upon successful validation the client token
 // will be set accordingly.
+//
+// The Secret returned is the authentication secret, which if desired can be
+// passed as input to the NewLifetimeWatcher method in order to start
+// automatically renewing the token.
 func (a *Auth) MFAValidate(ctx context.Context, mfaSecret *Secret, payload map[string]interface{}) (*Secret, error) {
 	if mfaSecret == nil || mfaSecret.Auth == nil || mfaSecret.Auth.MFARequirement == nil {
 		return nil, fmt.Errorf("secret does not contain MFARequirements")
@@ -63,42 +68,45 @@ func (a *Auth) MFAValidate(ctx context.Context, mfaSecret *Secret, payload map[s
 		return nil, err
 	}
 
-	a.c.SetToken(s.Auth.ClientToken)
-
-	return s, nil
+	return a.checkAndSetToken(s)
 }
 
 // login performs the (*AuthMethod).Login() with the configured client and checks that a ClientToken is returned
 func (a *Auth) login(ctx context.Context, authMethod AuthMethod) (*Secret, error) {
-	authSecret, err := authMethod.Login(ctx, a.c)
+	s, err := authMethod.Login(ctx, a.c)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in to auth method: %w", err)
 	}
-	if authSecret == nil || authSecret.Auth == nil || authSecret.Auth.ClientToken == "" {
-		if authSecret != nil {
-			authSecret.Warnings = append(authSecret.Warnings, "expected secret to contain ClientToken")
-		}
-		return authSecret, fmt.Errorf("login response did not return ClientToken, client token not set")
-	}
 
-	a.c.SetToken(authSecret.Auth.ClientToken)
-
-	return authSecret, nil
+	return a.checkAndSetToken(s)
 }
 
-// twoPhaseLogin performs the (*AuthMethod).Login() with the configured client
+// twoPhaseMFALogin performs the (*AuthMethod).Login() with the configured client
 // and checks that an MFARequirement is returned
-func (a *Auth) twoPhaseLogin(ctx context.Context, authMethod AuthMethod) (*Secret, error) {
-	mfaSecret, err := authMethod.Login(ctx, a.c)
+func (a *Auth) twoPhaseMFALogin(ctx context.Context, authMethod AuthMethod) (*Secret, error) {
+	s, err := authMethod.Login(ctx, a.c)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in: %w", err)
 	}
-	if mfaSecret == nil || mfaSecret.Auth == nil || mfaSecret.Auth.MFARequirement == nil {
-		if mfaSecret != nil {
-			mfaSecret.Warnings = append(mfaSecret.Warnings, "expected secret to contain MFARequirements")
+	if s == nil || s.Auth == nil || s.Auth.MFARequirement == nil {
+		if s != nil {
+			s.Warnings = append(s.Warnings, "expected secret to contain MFARequirements")
 		}
-		return mfaSecret, fmt.Errorf("assumed two-phase MFA login, expected secret to contain MFARequirements")
+		return s, fmt.Errorf("assumed two-phase MFA login, returned secret is missing MFARequirements")
 	}
 
-	return mfaSecret, nil
+	return s, nil
+}
+
+func (a *Auth) checkAndSetToken(s *Secret) (*Secret, error) {
+	if s == nil || s.Auth == nil || s.Auth.ClientToken == "" {
+		if s != nil {
+			s.Warnings = append(s.Warnings, "expected secret to contain ClientToken")
+		}
+		return s, fmt.Errorf("response did not return ClientToken, client token not set")
+	}
+
+	a.c.SetToken(s.Auth.ClientToken)
+
+	return s, nil
 }

@@ -21,7 +21,7 @@ func (c *Sys) MFAValidateWithContext(ctx context.Context, requestID string, payl
 
 	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mfa/validate"))
 	if err := r.SetJSONBody(body); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set request body: %w", err)
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
@@ -34,7 +34,7 @@ func (c *Sys) MFAValidateWithContext(ctx context.Context, requestID string, payl
 
 	secret, err := ParseSecret(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse secret from response: %w", err)
 	}
 
 	if secret == nil {
