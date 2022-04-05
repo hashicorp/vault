@@ -53,19 +53,30 @@ func pathSign(b *backend) *framework.Path {
 	return ret
 }
 
+func pathIssuerSignVerbatim(b *backend) *framework.Path {
+	pattern := "issuers/" + framework.GenericNameRegex("ref") + "/sign-verbatim"
+	return buildPathIssuerSignVerbatim(b, pattern)
+}
+
 func pathSignVerbatim(b *backend) *framework.Path {
+	pattern := "root/sign-verbatim"
+	return buildPathIssuerSignVerbatim(b, pattern)
+}
+
+func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "sign-verbatim" + framework.OptionalParamRegex("role"),
+		Pattern: pattern,
+		Fields:  map[string]*framework.FieldSchema{},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
 		},
 
-		HelpSynopsis:    pathSignHelpSyn,
-		HelpDescription: pathSignHelpDesc,
+		HelpSynopsis:    pathIssuerSignVerbatimHelpSyn,
+		HelpDescription: pathIssuerSignVerbatimHelpDesc,
 	}
 
-	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addNonCACommonFields(ret.Fields)
 
 	ret.Fields["csr"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
@@ -103,6 +114,26 @@ this value to an empty list.`,
 
 	return ret
 }
+
+const (
+	pathIssuerSignVerbatimHelpSyn  = `Issue a certificate directly based on the provided CSR.`
+	pathIssuerSignVerbatimHelpDesc = `
+This API endpoint allows for directly signing the specified certificate
+signing request (CSR) without the typical role-based validation. This
+allows for attributes from the CSR to be directly copied to the resulting
+certificate.
+
+Usually the role-based sign operations (/sign and /issue) are preferred to
+this operation.
+
+Note that this is a very privileged operation and should be extremely
+restricted in terms of who is allowed to use it. All values will be taken
+directly from the incoming CSR. No further verification of attribute are
+performed, except as permitted by this endpoint's parameters.
+
+See the API documentation for more information about required parameters.
+`
+)
 
 // pathIssue issues a certificate and private key from given parameters,
 // subject to role restrictions
@@ -167,6 +198,11 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, logical.ErrReadOnly
 	}
 
+	issuerName := data.Get("ref").(string)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
+
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
@@ -174,7 +210,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, "default")
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
