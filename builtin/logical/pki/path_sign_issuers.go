@@ -77,3 +77,68 @@ another X.509 CA).
 See the API documentation for more information about required parameters.
 `
 )
+
+func pathIssuerSignSelfIssued(b *backend) *framework.Path {
+	pattern := "issuers/" + framework.GenericNameRegex("ref") + "/sign-self-issued"
+	return buildPathIssuerSignSelfIssued(b, pattern)
+}
+
+func pathSignSelfIssued(b *backend) *framework.Path {
+	pattern := "root/sign-self-issued"
+	return buildPathIssuerSignSelfIssued(b, pattern)
+}
+
+func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
+	path := &framework.Path{
+		Pattern: pattern,
+		Fields: map[string]*framework.FieldSchema{
+			"ref": {
+				Type:        framework.TypeString,
+				Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
+				Default:     "default",
+			},
+			"certificate": {
+				Type:        framework.TypeString,
+				Description: `PEM-format self-issued certificate to be signed.`,
+			},
+			"require_matching_certificate_algorithms": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathIssuerSignSelfIssued,
+		},
+
+		HelpSynopsis:    pathIssuerSignSelfIssuedHelpSyn,
+		HelpDescription: pathIssuerSignSelfIssuedHelpDesc,
+	}
+
+	return path
+}
+
+const (
+	pathIssuerSignSelfIssuedHelpSyn  = `Re-issue a self-signed certificate based on the provided certificate.`
+	pathIssuerSignSelfIssuedHelpDesc = `
+This API endpoint allows for signing the specified self-signed certificate,
+effectively allowing cross-signing of external root CAs. This allows for an
+alternative validation path, chaining back through this PKI mount. This
+endpoint is also useful in a rolling-root scenario, allowing devices to trust
+and validate later (or earlier) root certificates and their issued leaves.
+
+Usually the sign-intermediate operation is preferred to this operation.
+
+Note that this is a very privileged operation and should be extremely
+restricted in terms of who is allowed to use it. All values will be taken
+directly from the incoming certificate and only verification that it is
+self-issued will be performed.
+
+Configured URLs for CRLs/OCSP/etc. will be copied over and the issuer will
+be this mount's CA cert. Other than that, all other values will be used
+verbatim from the given certificate.
+
+See the API documentation for more information about required parameters.
+`
+)
