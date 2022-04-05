@@ -172,7 +172,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			ah.logger.Debug("lookup-self with preloaded token")
 			clientToUse.SetToken(ah.token)
 
-			secret, err = clientToUse.Logical().ReadWithContext(ctx, "auth/token/lookup-self")
+			secret, err = clientToUse.Auth().Token().LookupSelfWithContext(ctx)
 			if err != nil {
 				ah.logger.Error("could not look up token", "err", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
