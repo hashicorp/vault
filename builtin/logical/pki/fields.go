@@ -132,6 +132,12 @@ be larger than the role max TTL.`,
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
+	fields["ref"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
+		Default:     "default",
+	}
+
 	return fields
 }
 
