@@ -2518,8 +2518,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		ClusterName:                    config.ClusterName,
 		CacheSize:                      config.CacheSize,
 		PluginDirectory:                config.PluginDirectory,
-		PluginFileUid:                  config.PluginFileUid,
-		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
 		EnableRaw:                      config.EnableRawEndpoint,
 		DisableSealWrap:                config.DisableSealWrap,
@@ -2537,7 +2535,6 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
 	}
-
 	if c.flagDev {
 		coreConfig.EnableRaw = true
 		coreConfig.DevToken = c.flagDevRootTokenID
