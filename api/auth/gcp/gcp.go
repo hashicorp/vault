@@ -67,6 +67,10 @@ func NewGCPAuth(roleName string, opts ...LoginOption) (*GCPAuth, error) {
 // endpoint, and performs a write to it. This method defaults to the "gce"
 // auth type unless NewGCPAuth is called with WithIAMAuth().
 func (a *GCPAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	loginData := map[string]interface{}{
 		"role": a.roleName,
 	}

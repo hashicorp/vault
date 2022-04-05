@@ -68,6 +68,10 @@ func NewKubernetesAuth(roleName string, opts ...LoginOption) (*KubernetesAuth, e
 }
 
 func (a *KubernetesAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	loginData := map[string]interface{}{
 		"jwt":  a.serviceAccountToken,
 		"role": a.roleName,

@@ -90,6 +90,10 @@ func NewAzureAuth(roleName string, opts ...LoginOption) (*AzureAuth, error) {
 // Login sets up the required request body for the Azure auth method's /login
 // endpoint, and performs a write to it.
 func (a *AzureAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	jwtResp, err := a.getJWT()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get access token: %w", err)

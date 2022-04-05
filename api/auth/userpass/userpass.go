@@ -88,6 +88,10 @@ func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (
 }
 
 func (a *UserpassAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	loginData := make(map[string]interface{})
 
 	if a.passwordFile != "" {

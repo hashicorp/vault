@@ -100,6 +100,10 @@ func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*Ap
 }
 
 func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	loginData := map[string]interface{}{
 		"role_id": a.roleID,
 	}

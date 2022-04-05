@@ -84,6 +84,10 @@ func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
 // variables. To specify a path to a credentials file on disk instead, set
 // the environment variable AWS_SHARED_CREDENTIALS_FILE.
 func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	loginData := make(map[string]interface{})
 	switch a.authType {
 	case ec2Type:
