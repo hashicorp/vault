@@ -3493,7 +3493,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	}
 
 	if resp.Data == nil {
-		t.Fatal("response data was nil when it should have contained data")
+		t.Fatal("default data within response was nil when it should have contained data")
 	}
 
 	// Validate that we have not changed any defaults unknowingly
