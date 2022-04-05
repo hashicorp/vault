@@ -1,8 +1,8 @@
 package api
 
 import (
-	"bytes"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -36,19 +36,19 @@ func (d *OutputPolicyError) Error() string {
 
 // Builds a sample policy document from the request
 func (d *OutputPolicyError) parseRequest() {
-	capabilities := []string{}
+	var capabilities []string
 	switch d.Request.Method {
-	case "GET":
+	case http.MethodGet, "":
 		capabilities = append(capabilities, "read")
-	case "LIST":
-		capabilities = append(capabilities, "list")
-	case "POST", "PUT":
+	case http.MethodPost, http.MethodPut:
 		capabilities = append(capabilities, "create")
 		capabilities = append(capabilities, "update")
-	case "PATCH":
+	case http.MethodPatch:
 		capabilities = append(capabilities, "patch")
-	case "DELETE":
+	case http.MethodDelete:
 		capabilities = append(capabilities, "delete")
+	case "LIST":
+		capabilities = append(capabilities, "list")
 	}
 
 	// trim the Vault address and v1 from the front of the path
@@ -121,34 +121,23 @@ func getSudoPaths(client *Client) (map[string]bool, error) {
 	// so save any custom value and restore after.
 	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
 	client.SetWrappingLookupFunc(nil)
-	defer client.SetWrappingLookupFunc(currentWrappingLookupFunc)
 	currentOutputCurlString := client.OutputCurlString()
 	client.SetOutputCurlString(false)
-	defer client.SetOutputCurlString(currentOutputCurlString)
 	currentOutputPolicy := client.OutputPolicy()
 	client.SetOutputPolicy(false)
-	defer client.SetOutputPolicy(currentOutputPolicy)
+	defer restoreSpecialValues(client, currentWrappingLookupFunc, currentOutputCurlString, currentOutputPolicy)
 
 	r := client.NewRequest("GET", "/v1/sys/internal/specs/openapi")
 	resp, err := client.RawRequest(r)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve sudo endpoints: %v", err)
 	}
-
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read response body from OpenAPI: %v", err)
-	}
-	if buf.Len() == 0 {
-		return nil, fmt.Errorf("OpenAPI response had no content")
+	if resp != nil {
+		defer resp.Body.Close()
 	}
 
 	oasInfo := make(map[string]interface{})
-	if err := jsonutil.DecodeJSONFromReader(&buf, &oasInfo); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(resp.Body, &oasInfo); err != nil {
 		return nil, fmt.Errorf("unable to decode JSON from OpenAPI response: %v", err)
 	}
 
@@ -194,4 +183,10 @@ func buildPathRegexp(pathName string) string {
 	}
 
 	return pathWithRegexPatterns
+}
+
+func restoreSpecialValues(client *Client, lookupFunc WrappingLookupFunc, isCurlSet bool, isPolicySet bool) {
+	client.SetWrappingLookupFunc(lookupFunc)
+	client.SetOutputCurlString(isCurlSet)
+	client.SetOutputPolicy(isPolicySet)
 }

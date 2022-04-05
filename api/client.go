@@ -1316,7 +1316,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 
-	// OutputCurlString and OutputPolicy logic relies on the request type to be retryable.Request
+	// OutputCurlString and OutputPolicy logic rely on the request type to be retryable.Request
 	if outputCurlString {
 		return nil, fmt.Errorf("output-curl-string is not implemented for this request")
 	}
