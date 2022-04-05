@@ -1396,6 +1396,8 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		f = wrapFactoryCheckPerms(c, plugin.Factory)
+	} else if !ok && t == "mock-plugin" {
+		f = plugin.Factory
 	}
 
 	// Set up conf to pass in plugin_name
