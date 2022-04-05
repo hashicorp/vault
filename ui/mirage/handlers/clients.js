@@ -210,7 +210,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 8,
@@ -220,7 +220,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -243,7 +243,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -253,7 +253,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 5,
@@ -286,7 +286,7 @@ export default function (server) {
                   },
                   mounts: [
                     {
-                      path: 'auth/up2/',
+                      mount_path: 'auth/up2/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 3,
@@ -296,7 +296,7 @@ export default function (server) {
                       },
                     },
                     {
-                      path: 'auth/up1/',
+                      mount_path: 'auth/up1/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 0,
@@ -332,7 +332,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -342,7 +342,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 5,
@@ -365,7 +365,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -375,7 +375,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 2,
@@ -398,7 +398,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 3,
@@ -408,7 +408,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -441,7 +441,7 @@ export default function (server) {
                   },
                   mounts: [
                     {
-                      path: 'auth/up1/',
+                      mount_path: 'auth/up1/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 0,
@@ -451,7 +451,7 @@ export default function (server) {
                       },
                     },
                     {
-                      path: 'auth/up2/',
+                      mount_path: 'auth/up2/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 5,
@@ -474,7 +474,7 @@ export default function (server) {
                   },
                   mounts: [
                     {
-                      path: 'auth/up1/',
+                      mount_path: 'auth/up1/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 0,
@@ -484,7 +484,7 @@ export default function (server) {
                       },
                     },
                     {
-                      path: 'auth/up2/',
+                      mount_path: 'auth/up2/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 2,
@@ -507,7 +507,7 @@ export default function (server) {
                   },
                   mounts: [
                     {
-                      path: 'auth/up2/',
+                      mount_path: 'auth/up2/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 3,
@@ -517,7 +517,7 @@ export default function (server) {
                       },
                     },
                     {
-                      path: 'auth/up1/',
+                      mount_path: 'auth/up1/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 0,
@@ -553,7 +553,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -563,7 +563,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 5,
@@ -586,7 +586,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -596,7 +596,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 2,
@@ -629,7 +629,7 @@ export default function (server) {
                   },
                   mounts: [
                     {
-                      path: 'auth/up1/',
+                      mount_path: 'auth/up1/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 0,
@@ -639,7 +639,7 @@ export default function (server) {
                       },
                     },
                     {
-                      path: 'auth/up2/',
+                      mount_path: 'auth/up2/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 2,
@@ -675,7 +675,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 5,
@@ -685,7 +685,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -718,7 +718,7 @@ export default function (server) {
                   },
                   mounts: [
                     {
-                      path: 'auth/up2/',
+                      mount_path: 'auth/up2/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 3,
@@ -728,7 +728,7 @@ export default function (server) {
                       },
                     },
                     {
-                      path: 'auth/up1/',
+                      mount_path: 'auth/up1/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 0,
@@ -764,7 +764,7 @@ export default function (server) {
                 },
                 mounts: [
                   {
-                    path: 'auth/up1/',
+                    mount_path: 'auth/up1/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 0,
@@ -774,7 +774,7 @@ export default function (server) {
                     },
                   },
                   {
-                    path: 'auth/up2/',
+                    mount_path: 'auth/up2/',
                     counts: {
                       distinct_entities: 0,
                       entity_clients: 2,
@@ -807,7 +807,7 @@ export default function (server) {
                   },
                   mounts: [
                     {
-                      path: 'auth/up1/',
+                      mount_path: 'auth/up1/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 0,
@@ -817,7 +817,7 @@ export default function (server) {
                       },
                     },
                     {
-                      path: 'auth/up2/',
+                      mount_path: 'auth/up2/',
                       counts: {
                         distinct_entities: 0,
                         entity_clients: 2,
