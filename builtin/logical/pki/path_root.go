@@ -68,47 +68,6 @@ func pathDeleteRoot(b *backend) *framework.Path {
 	return ret
 }
 
-func pathSignIntermediate(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "root/sign-intermediate",
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathCASignIntermediate,
-			},
-		},
-
-		HelpSynopsis:    pathSignIntermediateHelpSyn,
-		HelpDescription: pathSignIntermediateHelpDesc,
-	}
-
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
-	ret.Fields = addCAIssueFields(ret.Fields)
-
-	ret.Fields["csr"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Default:     "",
-		Description: `PEM-format CSR to be signed.`,
-	}
-
-	ret.Fields["use_csr_values"] = &framework.FieldSchema{
-		Type:    framework.TypeBool,
-		Default: false,
-		Description: `If true, then:
-1) Subject information, including names and alternate
-names, will be preserved from the CSR rather than
-using values provided in the other parameters to
-this path;
-2) Any key usages requested in the CSR will be
-added to the basic set of key usages used for CA
-certs signed by this path; for instance,
-the non-repudiation flag;
-3) Extensions requested in the CSR will be copied
-into the issued certificate.`,
-	}
-
-	return ret
-}
-
 func pathSignSelfIssued(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/sign-self-issued",
@@ -273,8 +232,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	return resp, nil
 }
 
-func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+
+	issuerName := data.Get("ref").(string)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
 
 	format := getFormat(data)
 	if format == "" {
@@ -311,7 +275,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, "default")
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -550,14 +514,6 @@ Deletes the root CA key to allow a new one to be generated.
 
 const pathDeleteRootHelpDesc = `
 See the API documentation for more information.
-`
-
-const pathSignIntermediateHelpSyn = `
-Issue an intermediate CA certificate based on the provided CSR.
-`
-
-const pathSignIntermediateHelpDesc = `
-see the API documentation for more information.
 `
 
 const pathSignSelfIssuedHelpSyn = `
