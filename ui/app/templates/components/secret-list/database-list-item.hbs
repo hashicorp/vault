@@ -26,18 +26,14 @@
           <ul class="menu-list">
             {{#if @item.canEdit}}
               <li class="action">
-                <SecretLink @mode="show" @secret={{@item.id}} @class="has-text-black has-text-weight-semibold">
+                <SecretLink @mode="show" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
                   Edit connection
                 </SecretLink>
               </li>
             {{/if}}
             {{#if @item.canEditRole}}
               <li class="action">
-                <SecretLink
-                  @mode="edit"
-                  @secret={{concat "role/" @item.id}}
-                  @class="has-text-black has-text-weight-semibold"
-                >
+                <SecretLink @mode="edit" @secret={{concat "role/" @item.id}} class="has-text-black has-text-weight-semibold">
                   Edit Role
                 </SecretLink>
               </li>

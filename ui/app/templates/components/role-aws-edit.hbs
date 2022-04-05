@@ -33,7 +33,7 @@
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.model.canGenerate}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" @data-test-backend-credentials="iam">
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials="iam">
           Generate credentials
         </ToolbarSecretLink>
       {{/if}}
@@ -71,7 +71,7 @@
             Save
           {{/if}}
         </button>
-        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} @class="button" @secret={{this.model.id}}>
+        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
           Cancel
         </SecretLink>
       </div>

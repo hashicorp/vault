@@ -13,7 +13,7 @@
           @mode="show"
           @secret={{@itemPath}}
           @queryParams={{query-params type=@modelType}}
-          @class="has-text-black has-text-weight-semibold"
+          class="has-text-black has-text-weight-semibold"
         >
           <Icon @name="file" class="has-text-grey-light" />
           {{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}
@@ -26,14 +26,14 @@
               <ul class="menu-list">
                 {{#if @item.updatePath.canRead}}
                   <li class="action">
-                    <SecretLink @mode="show" @secret={{@itemPath}} @class="has-text-black has-text-weight-semibold">
+                    <SecretLink @mode="show" @secret={{@itemPath}} class="has-text-black has-text-weight-semibold">
                       Details
                     </SecretLink>
                   </li>
                 {{/if}}
                 {{#if @item.updatePath.canUpdate}}
                   <li class="action">
-                    <SecretLink @mode="edit" @secret={{@itemPath}} @class="has-text-black has-text-weight-semibold">
+                    <SecretLink @mode="edit" @secret={{@itemPath}} class="has-text-black has-text-weight-semibold">
                       Edit
                     </SecretLink>
                   </li>

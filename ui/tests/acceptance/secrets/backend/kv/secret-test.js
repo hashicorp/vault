@@ -551,7 +551,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await settled();
     await click(`[data-test-auth-backend-link=${enginePath}]`);
 
-    await click(`[data-test-secret-link=${secretPath}]`);
+    await click(`[data-test-secret-link="${secretPath}"]`);
 
     assert.dom('[data-test-empty-state-title]').hasText('You do not have permission to read this secret.');
     await editPage.metadataTab();
@@ -738,7 +738,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     let url = `/vault/secrets/${enginePath}/list`;
     await visit(url);
 
-    await click(`[data-test-secret-link=${secretPath}]`);
+    await click(`[data-test-secret-link="${secretPath}"]`);
     await settled(); // eslint-disable-line
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
