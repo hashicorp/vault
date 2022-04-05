@@ -21,37 +21,39 @@ Instead, you can restart or reload a plugin with the
 `sys/plugins/reload/backend` [API][plugin_reload_api]. Follow these steps to
 replace or upgrade a Vault plugin binary:
 
-1. [Register][plugin_registration] version 1 of `my-db-plugin` to the catalog
+1. [Register][plugin_registration] version 1 of `my-db-plugin` to the catalog.
+   Skip this step if your plugin is already registered.
 
-```shell-session
-$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
-    database \                  # type
-    my-db-plugin
-```
+    ```shell-session
+    $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+        database \                  # type
+        my-db-plugin
+    ```
 
-2. [Mount][plugin_management] the plugin backend
+2. [Mount][plugin_management] the plugin backend. Skip this step if the backend
+   is already mounted.
 
-```shell-session
-$ vault secrets enable database
-```
+    ```shell-session
+    $ vault secrets enable database
+    ```
 
 3. Register version 2 of `my-db-plugin` to the catalog under the same plugin
    name, but with updated command to run version 2 of `my-db-plugin` and updated
    sha256 of the new binary
 
-```shell-session
-$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
-    database \                  # type
-    my-db-plugin
-```
+    ```shell-session
+    $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+        database \                  # type
+        my-db-plugin
+    ```
 
-4. Trigger a [plugin reload][/docs/commands/plugin/reload] to reload all
+4. Trigger a [plugin reload](/docs/commands/plugin/reload) to reload all
    mounted backends using that plugin or a subset of the mounts using that plugin
    with either the `plugin` or `mounts` parameter respectively.
 
-```shell-session
-$ vault plugin reload -plugin my-db-plugin
-```
+    ```shell-session
+    $ vault plugin reload -plugin my-db-plugin
+    ```
 
 Until step 4, the mount will still use version 1 of `my-db-plugin`, and when
 the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
