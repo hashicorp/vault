@@ -68,34 +68,6 @@ func pathDeleteRoot(b *backend) *framework.Path {
 	return ret
 }
 
-func pathSignSelfIssued(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "root/sign-self-issued",
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathCASignSelfIssued,
-			},
-		},
-
-		Fields: map[string]*framework.FieldSchema{
-			"certificate": {
-				Type:        framework.TypeString,
-				Description: `PEM-format self-issued certificate to be signed.`,
-			},
-			"require_matching_certificate_algorithms": {
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
-			},
-		},
-
-		HelpSynopsis:    pathSignSelfIssuedHelpSyn,
-		HelpDescription: pathSignSelfIssuedHelpDesc,
-	}
-
-	return ret
-}
-
 func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return nil, req.Storage.Delete(ctx, "config/ca_bundle")
 }
@@ -381,8 +353,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	return resp, nil
 }
 
-func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+
+	issuerName := data.Get("ref").(string)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
 
 	certPem := data.Get("certificate").(string)
 	block, _ := pem.Decode([]byte(certPem))
@@ -406,7 +383,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, "default")
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -514,16 +491,4 @@ Deletes the root CA key to allow a new one to be generated.
 
 const pathDeleteRootHelpDesc = `
 See the API documentation for more information.
-`
-
-const pathSignSelfIssuedHelpSyn = `
-Signs another CA's self-issued certificate.
-`
-
-const pathSignSelfIssuedHelpDesc = `
-Signs another CA's self-issued certificate. This is most often used for rolling roots; unless you know you need this you probably want to use sign-intermediate instead.
-
-Note that this is a very privileged operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and only verification that it is self-issued will be performed.
-
-Configured URLs for CRLs/OCSP/etc. will be copied over and the issuer will be this mount's CA cert. Other than that, all other values will be used verbatim.
 `
