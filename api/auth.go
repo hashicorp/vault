@@ -75,7 +75,10 @@ func (a *Auth) login(ctx context.Context, authMethod AuthMethod) (*Secret, error
 		return nil, fmt.Errorf("unable to log in to auth method: %w", err)
 	}
 	if authSecret == nil || authSecret.Auth == nil || authSecret.Auth.ClientToken == "" {
-		return nil, fmt.Errorf("login response from auth method did not return client token")
+		if authSecret != nil {
+			authSecret.Warnings = append(authSecret.Warnings, "expected secret to contain ClientToken")
+		}
+		return authSecret, fmt.Errorf("login response did not return ClientToken, client token not set")
 	}
 
 	a.c.SetToken(authSecret.Auth.ClientToken)
@@ -88,10 +91,13 @@ func (a *Auth) login(ctx context.Context, authMethod AuthMethod) (*Secret, error
 func (a *Auth) twoPhaseLogin(ctx context.Context, authMethod AuthMethod) (*Secret, error) {
 	mfaSecret, err := authMethod.Login(ctx, a.c)
 	if err != nil {
-		return nil, fmt.Errorf("unable to log in to auth method: %w", err)
+		return nil, fmt.Errorf("unable to log in: %w", err)
 	}
 	if mfaSecret == nil || mfaSecret.Auth == nil || mfaSecret.Auth.MFARequirement == nil {
-		return nil, fmt.Errorf("login response from auth method did not return MFA requirements")
+		if mfaSecret != nil {
+			mfaSecret.Warnings = append(mfaSecret.Warnings, "expected secret to contain MFARequirements")
+		}
+		return mfaSecret, fmt.Errorf("assumed two-phase MFA login, expected secret to contain MFARequirements")
 	}
 
 	return mfaSecret, nil
