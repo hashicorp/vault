@@ -50,8 +50,8 @@ func (a *Auth) MFALogin(ctx context.Context, authMethod AuthMethod, creds ...str
 	return a.twoPhaseLogin(ctx, authMethod)
 }
 
-// MFAValidate validates an MFA request using the secret returned by MFALogin where credentials
-// are not provided and the appropriate payload. Upon successful validation the client token
+// MFAValidate validates an MFA request using the appropriate payload and a secret containing Auth.MFARequirement,
+// like the returned by MFALogin when credentials are not provided. Upon successful validation the client token
 // will be set accordingly.
 func (a *Auth) MFAValidate(ctx context.Context, mfaSecret *Secret, payload map[string]interface{}) (*Secret, error) {
 	if mfaSecret == nil || mfaSecret.Auth == nil || mfaSecret.Auth.MFARequirement == nil {
