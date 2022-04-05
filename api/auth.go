@@ -51,9 +51,9 @@ func (a *Auth) MFALogin(ctx context.Context, authMethod AuthMethod, creds ...str
 	return a.twoPhaseMFALogin(ctx, authMethod)
 }
 
-// MFAValidate validates an MFA request using the appropriate payload and a secret containing Auth.MFARequirement,
-// like the returned by MFALogin when credentials are not provided. Upon successful validation the client token
-// will be set accordingly.
+// MFAValidate validates an MFA request using the appropriate payload and a secret containing
+// Auth.MFARequirement, like the one returned by MFALogin when credentials are not provided.
+// Upon successful validation the client token will be set accordingly.
 //
 // The Secret returned is the authentication secret, which if desired can be
 // passed as input to the NewLifetimeWatcher method in order to start
