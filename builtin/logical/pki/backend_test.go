@@ -1768,7 +1768,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), []byte(rootCaAsPem)) != 0 {
 		t.Fatalf("failed to get raw cert")
 	}
-	// Now issue a short-lived certificate from our pki-external.
+
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/example",
@@ -1777,11 +1777,13 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 			"allowed_domains":  "example.com",
 			"allow_subdomains": "true",
 			"max_ttl":          "1h",
+			"no_store":         "false",
 		},
 		MountPoint: "pki/",
 	})
 	require.NoError(t, err, "error setting up pki role: %v", err)
 
+	// Now issue a short-lived certificate from our pki-external.
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "issue/example",
@@ -1800,15 +1802,6 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	expectedSerial := certutil.GetHexFormatted(issuedCrt.SerialNumber.Bytes(), ":")
 	expectedCert := []byte(issueCrtAsPem)
 
-	entry := &logical.StorageEntry{
-		Key:   fmt.Sprintf("certs/%s", normalizeSerial(expectedSerial)),
-		Value: expectedCert,
-	}
-	err = storage.Put(context.Background(), entry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// get der cert
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -1823,8 +1816,10 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 
 	// check the raw cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
-		t.Fatalf("failed to get raw cert")
+	rawBody := resp.Data[logical.HTTPRawBody].([]byte)
+	bodyAsPem := []byte(strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rawBody}))))
+	if bytes.Compare(bodyAsPem, expectedCert) != 0 {
+		t.Fatalf("failed to get raw cert for serial number: %s", expectedSerial)
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pkix-cert" {
 		t.Fatalf("failed to get raw cert content-type")
@@ -1843,13 +1838,8 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pemBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: expectedCert,
-	}
-	pemCert := []byte(strings.TrimSpace(string(pem.EncodeToMemory(pemBlock))))
 	// check the pem cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), pemCert) != 0 {
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
 		t.Fatalf("failed to get pem cert")
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pem-certificate-chain" {
@@ -3568,7 +3558,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	}
 
 	if resp != nil {
-		t.Fatalf("response should have been emtpy but was:\n%#v", resp)
+		t.Fatalf("response should have been empty but was:\n%#v", resp)
 	}
 }
 

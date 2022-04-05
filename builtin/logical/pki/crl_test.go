@@ -70,7 +70,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 		certList := getCrlCertificateList(t, client)
 		lenList := len(certList.RevokedCertificates)
 		if lenList != num {
-			t.Fatalf("expected %d, found %d", num, lenList)
+			t.Fatalf("expected %d revoked certificates, found %d", num, lenList)
 		}
 	}
 
