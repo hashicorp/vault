@@ -57,3 +57,25 @@ failures.
   how often Vault Agent Template should render non-leased secrets such as KV v2.
   This setting will not change how often Vault Agent Templating renders leased
   secrets.
+
+## Example Configuration
+
+Below is an example setting of `template_config` where the additional 
+[`error_on_missing_key` parameter in the template stanza](/docs/agent/template#error_on_missing_key) in conjunction with 
+`exit_on_retry_failure` result in the agent existing in case of no key / value 
+instead of the default retry behaviour when no configuration is set.
+
+```hcl
+# ... top level configuration parameters truncated.
+template_config {
+  exit_on_retry_failure = true
+  static_secret_render_interval = "5m"
+}
+
+# templates 
+template {
+  source      = "/tmp/agent/template.ctmpl"
+  destination = "/tmp/agent/render.txt"
+  error_on_missing_key = true
+}
+```

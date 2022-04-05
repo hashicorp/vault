@@ -59,7 +59,7 @@ The top level `template` block has multiple configurations entries:
 - `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
-  to "true".
+  to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/docs/agent/template-config#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
 - `perms` `(string: "")` - This is the permission to render the file. If
   this option is left unspecified, Vault Agent will attempt to match the permissions
   of the file that already exists at the destination path. If no file exists at that
@@ -127,6 +127,7 @@ auto_auth {
 template {
   source      = "/tmp/agent/template.ctmpl"
   destination = "/tmp/agent/render.txt"
+  error_on_missing_key = true
 }
 ```
 
