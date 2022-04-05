@@ -635,15 +635,16 @@ $ curl \
 
 ## Partial Month Client Count
 
-This endpoint returns the number of clients per namespace for the current month, as the sum of clients calculated from the use
-of active entities and non-entity tokens.
-An "active entity" is a distinct entity that has created one or more tokens in the given time period.
-A "non-entity token" is a token with no attached entity ID.
+This endpoint returns the client activity in the current month. The response
+will have activity attributions per namespace, per mount within each namespaces,
+and new clients information.
 
-The time period is from the start of the current month, up until the time that this request was made.
+The time period is from the start of the current month, up until the time that
+this request was made.
 
-Note: the client count may be inaccurate in the moments following a Vault reboot, or leadership change.
-The estimate will stabilize when background loading of client data has completed.
+Note: the client count may be inaccurate in the moments following a Vault
+reboot, or leadership change. The estimate will stabilize when background
+loading of client data has completed.
 
 This endpoint was added in Vault 1.7.
 
@@ -664,47 +665,114 @@ $ curl \
 
 ```json
 {
-  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca64742",
+  "request_id": "d0d37f90-96ec-28c7-b59c-b53612cbbcad",
   "lease_id": "",
-  "renewable": false,
   "lease_duration": 0,
+  "renewable": false,
   "data": {
-    "by_namespace":[
+    "by_namespace": [
       {
-        "namespace_id":"0lHBL",
-        "namespace_path":"ns1/",
-        "counts":{
-           "distinct_entities":0,
-           "non_entity_tokens":100,
-           "clients":100
-        }
-      },
-      {
-        "namespace_id":"RxD81",
-        "namespace_path":"ns2/",
-        "counts":{
-          "distinct_entities":5,
-          "non_entity_tokens":15,
-          "clients":20
-        }
-      },
-      {
-        "namespace_id":"root",
-        "namespace_path":"",
-        "counts":{
-          "distinct_entities":85,
-          "non_entity_tokens":15,
-          "clients":100
-        }
+        "counts": {
+          "clients": 1,
+          "distinct_entities": 0,
+          "entity_clients": 0,
+          "non_entity_clients": 1,
+          "non_entity_tokens": 1
+        },
+        "mounts": [
+          {
+            "counts": {
+              "clients": 1,
+              "distinct_entities": 0,
+              "entity_clients": 0,
+              "non_entity_clients": 1,
+              "non_entity_tokens": 0
+            },
+            "mount_path": "auth_token_0747d59c"
+          }
+        ],
+        "namespace_id": "root",
+        "namespace_path": ""
       }
     ],
-    "distinct_entities": 90,
-    "non_entity_tokens": 130,
-    "clients": 220
+    "clients": 1,
+    "distinct_entities": 0,
+    "entity_clients": 0,
+    "months": [
+      {
+        "counts": {
+          "clients": 1,
+          "distinct_entities": 0,
+          "entity_clients": 0,
+          "non_entity_clients": 1,
+          "non_entity_tokens": 0
+        },
+        "namespaces": [
+          {
+            "counts": {
+              "clients": 1,
+              "distinct_entities": 0,
+              "entity_clients": 0,
+              "non_entity_clients": 1,
+              "non_entity_tokens": 0
+            },
+            "mounts": [
+              {
+                "counts": {
+                  "clients": 1,
+                  "distinct_entities": 0,
+                  "entity_clients": 0,
+                  "non_entity_clients": 1,
+                  "non_entity_tokens": 0
+                },
+                "mount_path": "auth_token_0747d59c"
+              }
+            ],
+            "namespace_id": "root",
+            "namespace_path": ""
+          }
+        ],
+        "new_clients": {
+          "counts": {
+            "clients": 1,
+            "distinct_entities": 0,
+            "entity_clients": 0,
+            "non_entity_clients": 1,
+            "non_entity_tokens": 0
+          },
+          "namespaces": [
+            {
+              "counts": {
+                "clients": 1,
+                "distinct_entities": 0,
+                "entity_clients": 0,
+                "non_entity_clients": 1,
+                "non_entity_tokens": 0
+              },
+              "mounts": [
+                {
+                  "counts": {
+                    "clients": 1,
+                    "distinct_entities": 0,
+                    "entity_clients": 0,
+                    "non_entity_clients": 1,
+                    "non_entity_tokens": 0
+                  },
+                  "mount_path": "auth_token_0747d59c"
+                }
+              ],
+              "namespace_id": "root",
+              "namespace_path": ""
+            }
+          ]
+        },
+        "timestamp": "2022-04-01T04:00:00Z"
+      }
+    ],
+    "non_entity_clients": 1,
+    "non_entity_tokens": 1
   },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+  "warnings": null
 }
 ```
 
