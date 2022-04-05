@@ -4,17 +4,17 @@ package diagnose
 
 import (
 	"io/fs"
-
-	"github.com/hashicorp/vault/helper/osutil"
+	"syscall"
 )
 
 // IsOwnedByRoot checks if a file is owned by root
 func IsOwnedByRoot(info fs.FileInfo) bool {
-	if !osutil.FileUIDEqual(info, 0) {
-		return false
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		uid := int(stat.Uid)
+		gid := int(stat.Gid)
+		if uid == 0 && gid == 0 {
+			return true
+		}
 	}
-	if !osutil.FileGIDEqual(info, 0) {
-		return false
-	}
-	return true
+	return false
 }
