@@ -335,7 +335,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 				t.Fatalf("MFA succeeded with an invalid passcode")
 			}
 		}
-		if !strings.Contains(maxErr.Error(), "maximum TOTP validation attempts 6 exceeded 5") {
+		if !strings.Contains(maxErr.Error(), "maximum TOTP validation attempts 6 exceeded the allowed attempts 5") {
 			t.Fatalf("unexpected error message when exceeding max failed validation attempts")
 		}
 

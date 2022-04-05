@@ -2020,22 +2020,25 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		return fmt.Errorf("code already used; new code is available in %v seconds", totpSecret.Period)
 	}
 
+	// The duration in which a passcode is stored in cache to enforce
+	// rate limit on failed totp passcode validation
+	passcodeTTL := time.Duration(int64(time.Second) * int64(totpSecret.Period))
+
 	numAttempts, _ := usedCodes.Get(configID)
 	if numAttempts == nil {
-		usedCodes.Set(configID, int64(1), defaultMFAAuthResponseTTL)
+		usedCodes.Set(configID, int64(1), passcodeTTL)
 	} else {
+		num, ok := numAttempts.(int64)
+		if !ok {
+			return fmt.Errorf("invalid counter type returned in TOTP usedCode cache")
+		}
+		if num == maximumValidationAttempts {
+			return fmt.Errorf("maximum TOTP validation attempts %d exceeded the allowed attempts %d", num+1, maximumValidationAttempts)
+		}
 		err := usedCodes.Increment(configID, 1)
 		if err != nil {
 			return fmt.Errorf("failed to increment the TOTP code counter")
 		}
-	}
-	numAttempts, _ = usedCodes.Get(configID)
-	num, ok := numAttempts.(int64)
-	if !ok {
-		return fmt.Errorf("invalid counter type returned in TOTP usedCode cache")
-	}
-	if num > maximumValidationAttempts {
-		return fmt.Errorf("maximum TOTP validation attempts %d exceeded %d", num, maximumValidationAttempts)
 	}
 
 	key, err := c.fetchTOTPKey(ctx, configID, entityID)
@@ -2074,7 +2077,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 	}
 
 	// resetting the number of attempts to 0 after a successful validation
-	usedCodes.Set(configID, int64(0), defaultMFAAuthResponseTTL)
+	usedCodes.Set(configID, int64(0), passcodeTTL)
 
 	return nil
 }
