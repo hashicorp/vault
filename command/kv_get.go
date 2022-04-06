@@ -113,15 +113,13 @@ func (c *KVGetCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	var mountFlagSyntax bool
-	if c.flagMount != "" {
-		mountFlagSyntax = true
-	}
+	mountFlagSyntax := (c.flagMount != "")
 
-	var mountPath string
-	var partialPath string
-	var fullPath string
-	var v2 bool
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
 
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
@@ -145,7 +143,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	var versionParam map[string]string
-
+	var fullPath string
 	// Add /data to v2 paths only
 	if v2 {
 		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")

@@ -117,15 +117,13 @@ func (c *KVDeleteCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	var mountFlagSyntax bool
-	if c.flagMount != "" {
-		mountFlagSyntax = true
-	}
+	mountFlagSyntax := (c.flagMount != "")
 
-	var mountPath string
-	var partialPath string
-	var fullPath string
-	var v2 bool
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
 
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
@@ -149,6 +147,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	}
 
 	var secret *api.Secret
+	var fullPath string
 	if v2 {
 		secret, err = c.deleteV2(partialPath, mountPath, client)
 		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
@@ -186,14 +185,19 @@ func (c *KVDeleteCommand) Run(args []string) int {
 }
 
 func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (*api.Secret, error) {
-	if len(c.flagVersions) > 0 {
+	var err error
+	var secret *api.Secret
+	switch {
+	case len(c.flagVersions) > 0:
 		path = addPrefixToKVPath(path, mountPath, "delete")
 		data := map[string]interface{}{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
-
-		return client.Logical().Write(path, data)
+		secret, err = client.Logical().Write(path, data)
+	default:
+		path = addPrefixToKVPath(path, mountPath, "data")
+		secret, err = client.Logical().Delete(path)
 	}
-	path = addPrefixToKVPath(path, mountPath, "data")
-	return client.Logical().Delete(path)
+
+	return secret, err
 }

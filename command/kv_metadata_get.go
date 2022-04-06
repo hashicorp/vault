@@ -99,15 +99,13 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	var mountFlagSyntax bool
-	if c.flagMount != "" {
-		mountFlagSyntax = true
-	}
+	mountFlagSyntax := (c.flagMount != "")
 
-	var mountPath string
-	var partialPath string
-	var fullPath string
-	var v2 bool
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
 
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
@@ -135,7 +133,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
 	secret, err := client.Logical().Read(fullPath)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", fullPath, err))

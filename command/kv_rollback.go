@@ -123,15 +123,13 @@ func (c *KVRollbackCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	var mountFlagSyntax bool
-	if c.flagMount != "" {
-		mountFlagSyntax = true
-	}
+	mountFlagSyntax := (c.flagMount != "")
 
-	var mountPath string
-	var partialPath string
-	var fullPath string
-	var v2 bool
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
 
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
@@ -159,7 +157,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 2
 	}
 
-	fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "data")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
