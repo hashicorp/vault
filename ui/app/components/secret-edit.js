@@ -28,7 +28,7 @@ import { tracked } from '@glimmer/tracking';
 // import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
-import { alias } from '@ember/object/computed';
+import { alias, or } from '@ember/object/computed';
 // https://stackoverflow.com/questions/60843983/does-ember-octane-route-class-support-using-mixins
 export default class SecretEdit extends Component {
   // export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
@@ -58,11 +58,10 @@ export default class SecretEdit extends Component {
   @maybeQueryRecord(
     'capabilities',
     (context) => {
-      // ARG TODO check context works here
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
-      let backend = context.isV2 ? context.get('model.engine.id') : context.args.model.backend;
+      let backend = context.isV2 ? context.args.model.engine.id : context.args.model.backend;
       let id = context.args.model.id;
       let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
@@ -100,13 +99,8 @@ export default class SecretEdit extends Component {
   @alias('checkMetadataCapabilities.canUpdate') canUpdateSecretMetadata;
   @alias('checkMetadataCapabilities.canRead') canReadSecretMetadata;
 
-  get requestInFlight() {
-    return this.args.model.isLoading || this.args.model.isReloading || this.args.model.isSaving;
-  }
-
-  get buttonDisabled() {
-    return this.requestInFlight || this.args.model.isFolder || this.args.model.flagsIsInvalid;
-  }
+  @or('model.isLoading', 'model.isReloading', 'model.isSaving') requestInFlight;
+  @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
 
   get modelForData() {
     let { model } = this.args;
@@ -126,9 +120,7 @@ export default class SecretEdit extends Component {
     return this.secretData.isAdvanced();
   }
 
-  get showAdvancedMode() {
-    return this.secretDataIsAdvanced || this.args.preferAdvancedEdit;
-  }
+  @or('secretDataIsAdvanced', 'preferAdvancedEdit') showAdvancedMode;
 
   get isWriteWithoutRead() {
     if (!this.args.model) {
