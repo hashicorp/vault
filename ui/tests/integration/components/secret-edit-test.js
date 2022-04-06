@@ -59,6 +59,7 @@ module('Integration | Component | secret edit', function (hooks) {
     });
 
     await render(hbs`{{secret-edit mode=mode model=model preferAdvancedEdit=true }}`);
+
     let instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();

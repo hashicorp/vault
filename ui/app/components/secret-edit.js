@@ -25,6 +25,7 @@ import { tracked } from '@glimmer/tracking';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import { alias, or } from '@ember/object/computed';
+
 export default class SecretEdit extends Component {
   @service wizard;
   @service store;
