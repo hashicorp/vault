@@ -315,9 +315,8 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
-// type and if it supports multiplexing. It will first attempt to run as a
-// database plugin then a backend plugin. Both of these will be run in metadata
-// mode.
+// type. It will first attempt to run as a database plugin then a backend
+// plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
 	err := c.isDatabasePlugin(ctx, plugin)
@@ -336,9 +335,13 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 		AutoMTLS:        false,
 	}
 
-	// Attempt to run as a multiplexed plugin
 	c.logger.Debug("attempting to load credential backend plugin", "name", plugin.Name)
 	pc, err := c.newPluginClient(ctx, plugin, config)
+	if err != nil {
+		merr = multierror.Append(merr, err)
+		logger.Warn("unknown plugin type", "plugin name", plugin.Name, "error", merr.Error())
+		return consts.PluginTypeUnknown, err
+	}
 
 	// dispense the plugin so we can get its type
 	client, err := backendplugin.Dispense(ctx, pc.ClientProtocol, pc)
@@ -374,8 +377,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	return consts.PluginTypeUnknown, nil
 }
 
-// isDatabasePlugin returns true if the plugin supports multiplexing. An error
-// is returned if the plugin is not a database plugin.
+// isDatabasePlugin returns an error if the plugin is not a database plugin.
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	config := pluginutil.PluginClientConfig{
