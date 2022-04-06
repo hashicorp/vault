@@ -1749,30 +1749,96 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
-	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
+	require.NoError(t, err)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"common_name": "test.com",
+			"ttl":         "6h",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", resp)
+	}
+	rootCaAsPem := resp.Data["certificate"].(string)
+
+	// The ca_chain call at least for now does not return the root CA authority
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "ca_chain",
+		Storage:    storage,
+		Data:       map[string]interface{}{},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed read ca_chain, %#v", resp)
+	}
+	require.Equal(t, []byte{}, resp.Data[logical.HTTPRawBody], "ca_chain response should have been empty")
+
+	// The ca/pem should return us the actual CA...
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "ca/pem",
+		Storage:    storage,
+		Data:       map[string]interface{}{},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed read ca/pem, %#v", resp)
+	}
+	// check the raw cert matches the response body
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), []byte(rootCaAsPem)) != 0 {
+		t.Fatalf("failed to get raw cert")
 	}
 
-	expectedSerial := "17:67:16:b0:b9:45:58:c0:3a:29:e3:cb:d6:98:33:7a:a6:3b:66:c1"
-	expectedCert := []byte("test certificate")
-	entry := &logical.StorageEntry{
-		Key:   fmt.Sprintf("certs/%s", normalizeSerial(expectedSerial)),
-		Value: expectedCert,
-	}
-	err = storage.Put(context.Background(), entry)
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/example",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_domains":  "example.com",
+			"allow_subdomains": "true",
+			"max_ttl":          "1h",
+			"no_store":         "false",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	// Now issue a short-lived certificate from our pki-external.
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/example",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"common_name": "test.example.com",
+			"ttl":         "5m",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "error issuing certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from issuing request")
+
+	issueCrtAsPem := resp.Data["certificate"].(string)
+	issuedCrt := parseCert(t, issueCrtAsPem)
+	expectedSerial := certutil.GetHexFormatted(issuedCrt.SerialNumber.Bytes(), ":")
+	expectedCert := []byte(issueCrtAsPem)
 
 	// get der cert
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      fmt.Sprintf("cert/%s/raw", expectedSerial),
 		Storage:   storage,
@@ -1785,8 +1851,10 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 
 	// check the raw cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
-		t.Fatalf("failed to get raw cert")
+	rawBody := resp.Data[logical.HTTPRawBody].([]byte)
+	bodyAsPem := []byte(strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rawBody}))))
+	if bytes.Compare(bodyAsPem, expectedCert) != 0 {
+		t.Fatalf("failed to get raw cert for serial number: %s", expectedSerial)
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pkix-cert" {
 		t.Fatalf("failed to get raw cert content-type")
@@ -1805,13 +1873,8 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pemBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: expectedCert,
-	}
-	pemCert := []byte(strings.TrimSpace(string(pem.EncodeToMemory(pemBlock))))
 	// check the pem cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), pemCert) != 0 {
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
 		t.Fatalf("failed to get pem cert")
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pem-certificate-chain" {
@@ -3430,6 +3493,126 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	_, err = client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestReadWriteDeleteRoles(t *testing.T) {
+	ctx := context.Background()
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Mount PKI.
+	err := client.Sys().MountWithContext(ctx, "pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil {
+		t.Fatalf("response should have been emtpy but was:\n%#v", resp)
+	}
+
+	// Write role PKI.
+	_, err = client.Logical().WriteWithContext(ctx, "pki/roles/test", map[string]interface{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the role.
+	resp, err = client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data == nil {
+		t.Fatal("default data within response was nil when it should have contained data")
+	}
+
+	// Validate that we have not changed any defaults unknowingly
+	expectedData := map[string]interface{}{
+		"key_type":                           "rsa",
+		"use_csr_sans":                       true,
+		"client_flag":                        true,
+		"allowed_serial_numbers":             []interface{}{},
+		"generate_lease":                     false,
+		"signature_bits":                     json.Number("256"),
+		"allowed_domains":                    []interface{}{},
+		"allowed_uri_sans_template":          false,
+		"enforce_hostnames":                  true,
+		"policy_identifiers":                 []interface{}{},
+		"require_cn":                         true,
+		"allowed_domains_template":           false,
+		"allow_token_displayname":            false,
+		"country":                            []interface{}{},
+		"not_after":                          "",
+		"postal_code":                        []interface{}{},
+		"use_csr_common_name":                true,
+		"allow_localhost":                    true,
+		"allow_subdomains":                   false,
+		"allow_wildcard_certificates":        true,
+		"allowed_other_sans":                 []interface{}{},
+		"allowed_uri_sans":                   []interface{}{},
+		"basic_constraints_valid_for_non_ca": false,
+		"key_usage":                          []interface{}{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		"not_before_duration":                json.Number("30"),
+		"allow_glob_domains":                 false,
+		"ttl":                                json.Number("0"),
+		"ou":                                 []interface{}{},
+		"email_protection_flag":              false,
+		"locality":                           []interface{}{},
+		"server_flag":                        true,
+		"allow_bare_domains":                 false,
+		"allow_ip_sans":                      true,
+		"ext_key_usage_oids":                 []interface{}{},
+		"allow_any_name":                     false,
+		"ext_key_usage":                      []interface{}{},
+		"key_bits":                           json.Number("2048"),
+		"max_ttl":                            json.Number("0"),
+		"no_store":                           false,
+		"organization":                       []interface{}{},
+		"province":                           []interface{}{},
+		"street_address":                     []interface{}{},
+		"code_signing_flag":                  false,
+	}
+
+	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
+		t.Fatalf("pki role default values have changed, diff: %v", diff)
+	}
+
+	_, err = client.Logical().DeleteWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil {
+		t.Fatalf("response should have been empty but was:\n%#v", resp)
 	}
 }
 
