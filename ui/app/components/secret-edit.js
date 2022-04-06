@@ -120,7 +120,9 @@ export default class SecretEdit extends Component {
     return this.secretData.isAdvanced();
   }
 
-  @or('secretDataIsAdvanced', 'preferAdvancedEdit') showAdvancedMode;
+  get showAdvancedMode() {
+    return this.secretDataIsAdvanced || this.args.preferAdvancedEdit;
+  }
 
   get isWriteWithoutRead() {
     if (!this.args.model) {
