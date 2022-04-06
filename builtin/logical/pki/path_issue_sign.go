@@ -15,8 +15,18 @@ import (
 )
 
 func pathIssue(b *backend) *framework.Path {
+	pattern := "issue/" + framework.GenericNameRegex("role")
+	return buildPathIssue(b, pattern)
+}
+
+func pathIssuerIssue(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex("ref") + "/issue/" + framework.GenericNameRegex("role")
+	return buildPathIssue(b, pattern)
+}
+
+func buildPathIssue(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "issue/" + framework.GenericNameRegex("role"),
+		Pattern: pattern,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.metricsWrap("issue", roleRequired, b.pathIssue),
@@ -31,8 +41,18 @@ func pathIssue(b *backend) *framework.Path {
 }
 
 func pathSign(b *backend) *framework.Path {
+	pattern := "sign/" + framework.GenericNameRegex("role")
+	return buildPathSign(b, pattern)
+}
+
+func pathIssuerSign(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex("ref") + "/sign/" + framework.GenericNameRegex("role")
+	return buildPathSign(b, pattern)
+}
+
+func buildPathSign(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "sign/" + framework.GenericNameRegex("role"),
+		Pattern: pattern,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.metricsWrap("sign", roleRequired, b.pathSign),
