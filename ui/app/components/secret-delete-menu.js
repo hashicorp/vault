@@ -7,8 +7,6 @@ import { action } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
-// ARG TODO documentation
-
 const getErrorMessage = (errors) => {
   let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
   return errorMessage;

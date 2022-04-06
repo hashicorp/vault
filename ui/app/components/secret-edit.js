@@ -5,33 +5,27 @@
  *
  * @example
  * ```js
- * <SecretEdit @model={{model}} @mode="create" @baseKey=xx/>
+ * <SecretEdit @model={{model}} @mode="create" @baseKey={{this.baseKey}} @key={{this.model}} @initialKey={{this.initialKey}} @onRefresh={{action "refresh"}} @onToggleAdvancedEdit={{action "toggleAdvancedEdit"}} @preferAdvancedEdit={{this.preferAdvancedEdit}}/>
  * ```
-/
+/This component is initialized from the secret-edit-layout.hbs file
  * @param {object} model - Model returned from secret-v2 which is generated in the secret-edit route
  * @param {string} mode - Edit, create, etc.
- * @param {string} basekey - For navigation.
- * @param {string} key - ARG TODO
- * @param {string} initalKey - ARG TODO
- * @param {function} onRefresh - ARG TODO
- * @param {function} onToggleAdvancedEdit - ARG TODO
+ * @param {string} baseKey - Provided for navigation.
+ * @param {object} key - Passed through, copy of the model.
+ * @param {string} initialKey - model's name.
+ * @param {function} onRefresh - action that refreshes the model
+ * @param {function} onToggleAdvancedEdit - changes the preferAdvancedEdit to true or false
  * @param {boolean} preferAdvancedEdit - property set from the controller of show/edit/create route passed in through secret-edit-layout
- This component is initialized from the secret-edit-layout.hbs file
  */
 
 import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-// ARGTODO work on
-// import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-// import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import { alias, or } from '@ember/object/computed';
-// https://stackoverflow.com/questions/60843983/does-ember-octane-route-class-support-using-mixins
 export default class SecretEdit extends Component {
-  // export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   @service wizard;
   @service store;
 
@@ -127,7 +121,6 @@ export default class SecretEdit extends Component {
   get isWriteWithoutRead() {
     if (!this.args.model) {
       return false;
-      // ARG TODO was a return instead of null???
     }
     // if the version couldn't be read from the server
     if (this.isV2 && this.modelForData.failedServerRead) {
