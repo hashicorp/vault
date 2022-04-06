@@ -126,15 +126,15 @@ export default class SecretEdit extends Component {
 
   get isWriteWithoutRead() {
     if (!this.args.model) {
-      return null;
+      return false;
       // ARG TODO was a return instead of null???
     }
     // if the version couldn't be read from the server
-    if (this.args.isV2 && this.modelForData.failedServerRead) {
+    if (this.isV2 && this.modelForData.failedServerRead) {
       return true;
     }
     // if the model couldn't be read from the server
-    if (!this.args.isV2 && this.args.model.failedServerRead) {
+    if (!this.isV2 && this.args.model.failedServerRead) {
       return true;
     }
     return false;
