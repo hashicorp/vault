@@ -262,24 +262,37 @@ func TestDefaulRetryPolicy(t *testing.T) {
 
 func TestClientEnvSettings(t *testing.T) {
 	cwd, _ := os.Getwd()
+
+	caCertBytes, err := os.ReadFile(cwd + "/test-fixtures/keys/cert.pem")
+	if err != nil {
+		t.Fatalf("error reading %q cert file: %v", cwd+"/test-fixtures/keys/cert.pem", err)
+	}
+
 	oldCACert := os.Getenv(EnvVaultCACert)
+	oldCACertBytes := os.Getenv(EnvVaultCACertBytes)
 	oldCAPath := os.Getenv(EnvVaultCAPath)
 	oldClientCert := os.Getenv(EnvVaultClientCert)
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
+
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
+	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
 	os.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
 	os.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
-	defer os.Setenv(EnvVaultCACert, oldCACert)
-	defer os.Setenv(EnvVaultCAPath, oldCAPath)
-	defer os.Setenv(EnvVaultClientCert, oldClientCert)
-	defer os.Setenv(EnvVaultClientKey, oldClientKey)
-	defer os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
-	defer os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+
+	defer func() {
+		os.Setenv(EnvVaultCACert, oldCACert)
+		os.Setenv(EnvVaultCACertBytes, oldCACertBytes)
+		os.Setenv(EnvVaultCAPath, oldCAPath)
+		os.Setenv(EnvVaultClientCert, oldClientCert)
+		os.Setenv(EnvVaultClientKey, oldClientKey)
+		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
+		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+	}()
 
 	config := DefaultConfig()
 	if err := config.ReadEnvironment(); err != nil {
