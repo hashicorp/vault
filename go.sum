@@ -870,15 +870,13 @@ github.com/hashicorp/go-retryablehttp v0.7.0/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER
 github.com/hashicorp/go-rootcerts v1.0.2 h1:jzhAVGtqPKbwpyCPELlgNWhE1znq+qwJtW5Oi2viEzc=
 github.com/hashicorp/go-rootcerts v1.0.2/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
 github.com/hashicorp/go-secure-stdlib/awsutil v0.1.2/go.mod h1:QRJZ7siKie+SZJB9jLbfKrs0Gd0yPWMtbneg0iU1PrY=
-github.com/hashicorp/go-secure-stdlib/awsutil v0.1.5 h1:TkCWKqk1psjvUV7WktmZiRoZ1a9vw048AVnk/YbrzgY=
-github.com/hashicorp/go-secure-stdlib/awsutil v0.1.5/go.mod h1:MpCPSPGLDILGb4JMm94/mMi3YysIqsXzGCzkEZjcjXg=
+github.com/hashicorp/go-secure-stdlib/awsutil v0.1.6 h1:W9WN8p6moV1fjKLkeqEgkAMu5rauy9QeYDAmIaPuuiA=
+github.com/hashicorp/go-secure-stdlib/awsutil v0.1.6/go.mod h1:MpCPSPGLDILGb4JMm94/mMi3YysIqsXzGCzkEZjcjXg=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.1/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2 h1:ET4pqyjiGmY09R5y+rSd70J2w45CtbWDNvGqWp/R3Ng=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
 github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1 h1:9um9R8i0+HbRHS9d64kdvWR0/LJvo12sIonvR9zr1+U=
 github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1/go.mod h1:6RoRTSMDK2H/rKh3P/JIsk1tK8aatKTt3JyvIopi3GQ=
-github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.1 h1:IJgULbAXuvWxzKFfu+Au1FUmHIJulS6N4F7Hkn+Kck0=
-github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.1/go.mod h1:rf5JPE13wi+NwjgsmGkbg4b2CgHq8v7Htn/F0nDe/hg=
 github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2 h1:NS6BHieb/pDfx3M9jDdaPpGyyVp+aD4A3DjX3dgRmzs=
 github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2/go.mod h1:rf5JPE13wi+NwjgsmGkbg4b2CgHq8v7Htn/F0nDe/hg=
 github.com/hashicorp/go-secure-stdlib/mlock v0.1.1/go.mod h1:zq93CJChV6L9QTfGKtfBxKqD7BqqXx5O04A/ns2p5+I=
