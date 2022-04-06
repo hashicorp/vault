@@ -23,7 +23,7 @@
           @title="Input"
           @value={{@input}}
           @valueUpdated={{action (mut @input)}}
-          @options={{hash mode="ruby"}}
+          @mode="ruby"
           @data-test-transit-input="input"
         />
       </div>
@@ -140,12 +140,7 @@
           {{#if (or (and @verification (eq @verification "HMAC")) @hmac)}}
             <div class="field is-flex-column is-flex-1">
               <div class="control is-flex-column is-flex-1">
-                <JsonEditor
-                  @title="HMAC"
-                  @value={{@hmac}}
-                  @valueUpdated={{action (mut @hmac)}}
-                  @options={{hash mode="ruby"}}
-                />
+                <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
               </div>
             </div>
           {{else}}
@@ -155,7 +150,7 @@
                   @title="Signature"
                   @value={{@signature}}
                   @valueUpdated={{action (mut @signature)}}
-                  @options={{hash mode="ruby"}}
+                  @mode="ruby"
                 />
               </div>
             </div>
@@ -165,7 +160,7 @@
     {{else}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @options={{hash mode="ruby"}} />
+          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
         </div>
       </div>
       <div class="field">

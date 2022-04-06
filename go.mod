@@ -73,9 +73,9 @@ require (
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.1.5
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
-	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.1
+	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.3
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.4
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
@@ -90,7 +90,7 @@ require (
 	github.com/hashicorp/raft v1.3.3
 	github.com/hashicorp/raft-autopilot v0.1.3
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
-	github.com/hashicorp/raft-snapshot v1.0.3
+	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.11.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.10.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.11.0
@@ -115,7 +115,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.4.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
-	github.com/hashicorp/vault/api v1.4.1
+	github.com/hashicorp/vault/api v1.5.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.4.1

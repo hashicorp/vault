@@ -42,7 +42,8 @@
       @title="Policy"
       @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
       @value={{this.model.policy}}
-      @options={{hash readOnly=true mode="ruby"}}
+      @readOnly={{true}}
+      @mode="ruby"
     />
   </div>
   {{#if this.model.paths}}

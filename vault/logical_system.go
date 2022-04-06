@@ -450,6 +450,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
+	if err = b.Core.CheckPluginPerms(command); err != nil {
+		return nil, err
+	}
+
 	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
 	args := d.Get("args").([]string)
@@ -2435,13 +2439,18 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return nil, err
 		}
 
+		name := data.Get("name").(string)
 		policy := &Policy{
-			Name:      strings.ToLower(data.Get("name").(string)),
+			Name:      strings.ToLower(name),
 			Type:      policyType,
 			namespace: ns,
 		}
 		if policy.Name == "" {
 			return logical.ErrorResponse("policy name must be provided in the URL"), nil
+		}
+		if name != policy.Name {
+			resp = &logical.Response{}
+			resp.AddWarning(fmt.Sprintf("policy name was converted to %s", policy.Name))
 		}
 
 		policy.Raw = data.Get("policy").(string)
@@ -2485,6 +2494,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
+
 		return resp, nil
 	}
 }

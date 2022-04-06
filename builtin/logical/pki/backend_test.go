@@ -9,12 +9,15 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"hash"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -29,6 +32,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
@@ -697,6 +702,46 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	return ret
 }
 
+func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType string, keyBits int) (interface{}, []byte, string) {
+	var priv interface{}
+	var err error
+	switch keyType {
+	case "rsa":
+		priv, err = rsa.GenerateKey(rand.Reader, keyBits)
+	case "ec":
+		switch keyBits {
+		case 224:
+			priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
+		case 256:
+			priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		case 384:
+			priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		case 521:
+			priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		default:
+			t.Fatalf("Got unknown ec< key bits: %v", keyBits)
+		}
+	case "ed25519":
+		_, priv, err = ed25519.GenerateKey(rand.Reader)
+	}
+
+	if err != nil {
+		t.Fatalf("Got error generating private key for CSR: %v", err)
+	}
+
+	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, priv)
+	if err != nil {
+		t.Fatalf("Got error generating CSR: %v", err)
+	}
+
+	csrPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csr,
+	})))
+
+	return priv, csr, csrPem
+}
+
 func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
@@ -721,12 +766,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 	}
 
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	csr, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv)
-	csrPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csr,
-	})))
+	_, _, csrPem := generateCSR(t, &csrTemplate, "rsa", 2048)
 
 	ret := []logicaltest.TestStep{
 		{
@@ -1255,7 +1295,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		for name, allowedInt := range cnMap {
 			roleVals.KeyType = "rsa"
 			roleVals.KeyBits = 2048
-			if mathRand.Int()%2 == 1 {
+			if mathRand.Int()%3 == 1 {
 				roleVals.KeyType = "ec"
 				roleVals.KeyBits = 224
 			}
@@ -1709,30 +1749,96 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
-	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
+	require.NoError(t, err)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"common_name": "test.com",
+			"ttl":         "6h",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", resp)
+	}
+	rootCaAsPem := resp.Data["certificate"].(string)
+
+	// The ca_chain call at least for now does not return the root CA authority
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "ca_chain",
+		Storage:    storage,
+		Data:       map[string]interface{}{},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed read ca_chain, %#v", resp)
+	}
+	require.Equal(t, []byte{}, resp.Data[logical.HTTPRawBody], "ca_chain response should have been empty")
+
+	// The ca/pem should return us the actual CA...
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "ca/pem",
+		Storage:    storage,
+		Data:       map[string]interface{}{},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed read ca/pem, %#v", resp)
+	}
+	// check the raw cert matches the response body
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), []byte(rootCaAsPem)) != 0 {
+		t.Fatalf("failed to get raw cert")
 	}
 
-	expectedSerial := "17:67:16:b0:b9:45:58:c0:3a:29:e3:cb:d6:98:33:7a:a6:3b:66:c1"
-	expectedCert := []byte("test certificate")
-	entry := &logical.StorageEntry{
-		Key:   fmt.Sprintf("certs/%s", normalizeSerial(expectedSerial)),
-		Value: expectedCert,
-	}
-	err = storage.Put(context.Background(), entry)
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/example",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_domains":  "example.com",
+			"allow_subdomains": "true",
+			"max_ttl":          "1h",
+			"no_store":         "false",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	// Now issue a short-lived certificate from our pki-external.
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/example",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"common_name": "test.example.com",
+			"ttl":         "5m",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "error issuing certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from issuing request")
+
+	issueCrtAsPem := resp.Data["certificate"].(string)
+	issuedCrt := parseCert(t, issueCrtAsPem)
+	expectedSerial := certutil.GetHexFormatted(issuedCrt.SerialNumber.Bytes(), ":")
+	expectedCert := []byte(issueCrtAsPem)
 
 	// get der cert
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      fmt.Sprintf("cert/%s/raw", expectedSerial),
 		Storage:   storage,
@@ -1745,8 +1851,10 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 
 	// check the raw cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
-		t.Fatalf("failed to get raw cert")
+	rawBody := resp.Data[logical.HTTPRawBody].([]byte)
+	bodyAsPem := []byte(strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rawBody}))))
+	if bytes.Compare(bodyAsPem, expectedCert) != 0 {
+		t.Fatalf("failed to get raw cert for serial number: %s", expectedSerial)
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pkix-cert" {
 		t.Fatalf("failed to get raw cert content-type")
@@ -1765,13 +1873,8 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pemBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: expectedCert,
-	}
-	pemCert := []byte(strings.TrimSpace(string(pem.EncodeToMemory(pemBlock))))
 	// check the pem cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), pemCert) != 0 {
+	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
 		t.Fatalf("failed to get pem cert")
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pem-certificate-chain" {
@@ -1913,6 +2016,23 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 }
 
 func TestBackend_SignVerbatim(t *testing.T) {
+	testCases := []struct {
+		testName string
+		keyType  string
+	}{
+		{testName: "RSA", keyType: "rsa"},
+		{testName: "ED25519", keyType: "ed25519"},
+		{testName: "EC", keyType: "ec"},
+		{testName: "Any", keyType: "any"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			runTestSignVerbatim(t, tc.keyType)
+		})
+	}
+}
+
+func runTestSignVerbatim(t *testing.T, keyType string) {
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -1990,8 +2110,9 @@ func TestBackend_SignVerbatim(t *testing.T) {
 
 	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
 	roleData := map[string]interface{}{
-		"ttl":     "4h",
-		"max_ttl": "8h",
+		"ttl":      "4h",
+		"max_ttl":  "8h",
+		"key_type": keyType,
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -2104,6 +2225,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"ttl":            "4h",
 		"max_ttl":        "8h",
 		"generate_lease": true,
+		"key_type":       keyType,
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -3374,6 +3496,126 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 }
 
+func TestReadWriteDeleteRoles(t *testing.T) {
+	ctx := context.Background()
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Mount PKI.
+	err := client.Sys().MountWithContext(ctx, "pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil {
+		t.Fatalf("response should have been emtpy but was:\n%#v", resp)
+	}
+
+	// Write role PKI.
+	_, err = client.Logical().WriteWithContext(ctx, "pki/roles/test", map[string]interface{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the role.
+	resp, err = client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data == nil {
+		t.Fatal("default data within response was nil when it should have contained data")
+	}
+
+	// Validate that we have not changed any defaults unknowingly
+	expectedData := map[string]interface{}{
+		"key_type":                           "rsa",
+		"use_csr_sans":                       true,
+		"client_flag":                        true,
+		"allowed_serial_numbers":             []interface{}{},
+		"generate_lease":                     false,
+		"signature_bits":                     json.Number("256"),
+		"allowed_domains":                    []interface{}{},
+		"allowed_uri_sans_template":          false,
+		"enforce_hostnames":                  true,
+		"policy_identifiers":                 []interface{}{},
+		"require_cn":                         true,
+		"allowed_domains_template":           false,
+		"allow_token_displayname":            false,
+		"country":                            []interface{}{},
+		"not_after":                          "",
+		"postal_code":                        []interface{}{},
+		"use_csr_common_name":                true,
+		"allow_localhost":                    true,
+		"allow_subdomains":                   false,
+		"allow_wildcard_certificates":        true,
+		"allowed_other_sans":                 []interface{}{},
+		"allowed_uri_sans":                   []interface{}{},
+		"basic_constraints_valid_for_non_ca": false,
+		"key_usage":                          []interface{}{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		"not_before_duration":                json.Number("30"),
+		"allow_glob_domains":                 false,
+		"ttl":                                json.Number("0"),
+		"ou":                                 []interface{}{},
+		"email_protection_flag":              false,
+		"locality":                           []interface{}{},
+		"server_flag":                        true,
+		"allow_bare_domains":                 false,
+		"allow_ip_sans":                      true,
+		"ext_key_usage_oids":                 []interface{}{},
+		"allow_any_name":                     false,
+		"ext_key_usage":                      []interface{}{},
+		"key_bits":                           json.Number("2048"),
+		"max_ttl":                            json.Number("0"),
+		"no_store":                           false,
+		"organization":                       []interface{}{},
+		"province":                           []interface{}{},
+		"street_address":                     []interface{}{},
+		"code_signing_flag":                  false,
+	}
+
+	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
+		t.Fatalf("pki role default values have changed, diff: %v", diff)
+	}
+
+	_, err = client.Logical().DeleteWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().ReadWithContext(ctx, "pki/roles/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil {
+		t.Fatalf("response should have been empty but was:\n%#v", resp)
+	}
+}
+
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -3755,6 +3997,22 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 }
 
 func TestBackend_Root_FullCAChain(t *testing.T) {
+	testCases := []struct {
+		testName string
+		keyType  string
+	}{
+		{testName: "RSA", keyType: "rsa"},
+		{testName: "ED25519", keyType: "ed25519"},
+		{testName: "EC", keyType: "ec"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			runFullCAChainTest(t, tc.keyType)
+		})
+	}
+}
+
+func runFullCAChainTest(t *testing.T, keyType string) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
@@ -3783,6 +4041,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 
 	resp, err := client.Logical().WriteWithContext(context.Background(), "pki-root/root/generate/exported", map[string]interface{}{
 		"common_name": "root myvault.com",
+		"key_type":    keyType,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -3821,6 +4080,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 
 	resp, err = client.Logical().WriteWithContext(context.Background(), "pki-intermediate/intermediate/generate/exported", map[string]interface{}{
 		"common_name": "intermediate myvault.com",
+		"key_type":    keyType,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -3843,6 +4103,10 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	}
 	intermediateSignedData := resp.Data
 	intermediateCert := intermediateSignedData["certificate"].(string)
+
+	rootCaCert := parseCert(t, rootCert)
+	intermediaryCaCert := parseCert(t, intermediateCert)
+	requireSignedBy(t, intermediaryCaCert, rootCaCert.PublicKey)
 
 	resp, err = client.Logical().WriteWithContext(context.Background(), "pki-intermediate/intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCert + "\n" + rootCert + "\n",
@@ -3905,6 +4169,26 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 	if !strings.Contains(fullChain, rootCert) {
 		t.Fatal("expected full chain to contain root certificate")
 	}
+
+	// Now issue a short-lived certificate from our pki-external.
+	resp, err = client.Logical().Write("pki-external/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	resp, err = client.Logical().Write("pki-external/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "5m",
+	})
+	require.NoError(t, err, "error issuing certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from issuing request")
+	issueCrtAsPem := resp.Data["certificate"].(string)
+	issuedCrt := parseCert(t, issueCrtAsPem)
+
+	// Verify that the certificates are signed by the intermediary CA key...
+	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
 }
 
 type MultiBool int
@@ -4169,11 +4453,12 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// We need a RSA key so all signature sizes are valid with it.
 	resp, err := client.Logical().WriteWithContext(context.Background(), "pki/root/generate/exported", map[string]interface{}{
 		"common_name": "myvault.com",
 		"ttl":         "128h",
-		"key_type":    "ec",
-		"key_bits":    256,
+		"key_type":    "rsa",
+		"key_bits":    2048,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -4190,6 +4475,144 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 	t.Log(fmt.Sprintf("Issuance regression expanded matrix test scenarios: %d", tested))
 }
 
+type KeySizeRegression struct {
+	RoleKeyType       string
+	RoleKeyBits       []int
+	RoleSignatureBits []int
+
+	// These are tuples; must be of the same length.
+	TestKeyTypes []string
+	TestKeyBits  []int
+
+	// All of the above key types/sizes must pass or fail together.
+	ExpectError bool
+}
+
+func RoleKeySizeRegressionHelper(t *testing.T, client *api.Client, index int, test KeySizeRegression) int {
+	tested := 0
+
+	for _, roleKeyBits := range test.RoleKeyBits {
+		for _, roleSignatureBits := range test.RoleSignatureBits {
+			role := fmt.Sprintf("key-size-regression-%d-keytype-%v-keybits-%d-signature-bits-%d", index, test.RoleKeyType, roleKeyBits, roleSignatureBits)
+			resp, err := client.Logical().WriteWithContext(context.Background(), "pki/roles/"+role, map[string]interface{}{
+				"key_type":       test.RoleKeyType,
+				"key_bits":       roleKeyBits,
+				"signature_bits": roleSignatureBits,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for index, keyType := range test.TestKeyTypes {
+				keyBits := test.TestKeyBits[index]
+
+				_, _, csrPem := generateCSR(t, &x509.CertificateRequest{
+					Subject: pkix.Name{
+						CommonName: "localhost",
+					},
+				}, keyType, keyBits)
+
+				resp, err = client.Logical().WriteWithContext(context.Background(), "pki/sign/"+role, map[string]interface{}{
+					"common_name": "localhost",
+					"csr":         csrPem,
+				})
+
+				haveErr := err != nil || resp == nil
+
+				if haveErr != test.ExpectError {
+					t.Fatalf("key size regression test [%d] failed: haveErr: %v, expectErr: %v, err: %v, resp: %v, test case: %v, role: %v, keyType: %v, keyBits: %v", index, haveErr, test.ExpectError, err, resp, test, role, keyType, keyBits)
+				}
+
+				tested += 1
+			}
+		}
+	}
+
+	return tested
+}
+
+func TestBackend_Roles_KeySizeRegression(t *testing.T) {
+	// Regression testing of role's issuance policy.
+	testCases := []KeySizeRegression{
+		// RSA with default parameters should fail to issue smaller RSA keys
+		// and any size ECDSA/Ed25519 keys.
+		/*  0 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{512, 1024, 224, 256, 384, 521, 0}, true},
+		// But it should work to issue larger RSA keys.
+		/*  1 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "rsa"}, []int{2048, 3072, 4906}, false},
+
+		// EC with default parameters should fail to issue smaller EC keys
+		// and any size RSA/Ed25519 keys.
+		/*  2 */ {"ec", []int{0}, []int{0}, []string{"rsa", "rsa", "rsa", "ec", "ed25519"}, []int{1024, 2048, 4096, 224, 0}, true},
+		// But it should work to issue larger EC keys.
+		/*  3 */ {"ec", []int{0, 256}, []int{0, 256}, []string{"ec"}, []int{256}, false},
+		/*  4 */ {"ec", []int{384}, []int{0, 384}, []string{"ec"}, []int{384}, false},
+		/*  5 */ {"ec", []int{521}, []int{0, 512}, []string{"ec"}, []int{521}, false},
+
+		// Ed25519 should reject RSA and EC keys.
+		/*  6 */ {"ed25519", []int{0}, []int{0}, []string{"rsa", "rsa", "rsa", "ec", "ec"}, []int{1024, 2048, 4096, 256, 521}, true},
+		// But it should work to issue Ed25519 keys.
+		/*  7 */ {"ed25519", []int{0}, []int{0}, []string{"ed25519"}, []int{0}, false},
+
+		// Any key type should reject insecure RSA key sizes.
+		/*  8 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa"}, []int{512, 1024}, true},
+		// But work for everything else.
+		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 4906, 224, 256, 384, 521, 0}, false},
+
+		// RSA with larger than default key size should reject smaller ones.
+		/* 10 */ {"rsa", []int{3072}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "rsa"}, []int{512, 1024, 2048}, true},
+	}
+
+	if len(testCases) != 11 {
+		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
+	}
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+
+	// Generate a root CA at /pki to use for our tests
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "12h",
+			MaxLeaseTTL:     "128h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().WriteWithContext(context.Background(), "pki/root/generate/exported", map[string]interface{}{
+		"common_name": "myvault.com",
+		"ttl":         "128h",
+		"key_type":    "ec",
+		"key_bits":    256,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+
+	tested := 0
+	for index, test := range testCases {
+		tested += RoleKeySizeRegressionHelper(t, client, index, test)
+	}
+
+	t.Log(fmt.Sprintf("Key size regression expanded matrix test scenarios: %d", tested))
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string
@@ -4199,3 +4622,90 @@ var (
 	edCAKey   string
 	edCACert  string
 )
+
+func mountPKIEndpoint(t *testing.T, client *api.Client, path string) {
+	var err error
+	err = client.Sys().Mount(path, &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	require.NoError(t, err, "failed mounting pki endpoint")
+}
+
+func requireSignedBy(t *testing.T, cert x509.Certificate, key crypto.PublicKey) {
+	switch key.(type) {
+	case *rsa.PublicKey:
+		requireRSASignedBy(t, cert, key.(*rsa.PublicKey))
+	case *ecdsa.PublicKey:
+		requireECDSASignedBy(t, cert, key.(*ecdsa.PublicKey))
+	case ed25519.PublicKey:
+		requireED25519SignedBy(t, cert, key.(ed25519.PublicKey))
+	default:
+		require.Fail(t, "unknown public key type %#v", key)
+	}
+}
+
+func requireRSASignedBy(t *testing.T, cert x509.Certificate, key *rsa.PublicKey) {
+	require.Contains(t, []x509.SignatureAlgorithm{x509.SHA256WithRSA, x509.SHA512WithRSA},
+		cert.SignatureAlgorithm, "only sha256 signatures supported")
+
+	var hasher hash.Hash
+	var hashAlgo crypto.Hash
+
+	switch cert.SignatureAlgorithm {
+	case x509.SHA256WithRSA:
+		hasher = sha256.New()
+		hashAlgo = crypto.SHA256
+	case x509.SHA512WithRSA:
+		hasher = sha512.New()
+		hashAlgo = crypto.SHA512
+	}
+
+	hasher.Write(cert.RawTBSCertificate)
+	hashData := hasher.Sum(nil)
+
+	err := rsa.VerifyPKCS1v15(key, hashAlgo, hashData, cert.Signature)
+	require.NoError(t, err, "the certificate was not signed by the expected public rsa key.")
+}
+
+func requireECDSASignedBy(t *testing.T, cert x509.Certificate, key *ecdsa.PublicKey) {
+	require.Contains(t, []x509.SignatureAlgorithm{x509.ECDSAWithSHA256, x509.ECDSAWithSHA512},
+		cert.SignatureAlgorithm, "only ecdsa signatures supported")
+
+	var hasher hash.Hash
+	switch cert.SignatureAlgorithm {
+	case x509.ECDSAWithSHA256:
+		hasher = sha256.New()
+	case x509.ECDSAWithSHA512:
+		hasher = sha512.New()
+	}
+
+	hasher.Write(cert.RawTBSCertificate)
+	hashData := hasher.Sum(nil)
+
+	verify := ecdsa.VerifyASN1(key, hashData, cert.Signature)
+	require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
+}
+
+func requireED25519SignedBy(t *testing.T, cert x509.Certificate, key ed25519.PublicKey) {
+	require.Equal(t, x509.PureEd25519, cert.SignatureAlgorithm)
+	ed25519.Verify(key, cert.RawTBSCertificate, cert.Signature)
+}
+
+func parseCert(t *testing.T, pemCert string) x509.Certificate {
+	block, _ := pem.Decode([]byte(pemCert))
+	require.NotNil(t, block, "failed to decode PEM block")
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err)
+	return *cert
+}
+
+func requireMatchingPublicKeys(t *testing.T, cert x509.Certificate, key crypto.PublicKey) {
+	certPubKey := cert.PublicKey
+	require.True(t, reflect.DeepEqual(certPubKey, key),
+		"public keys mismatched: got: %v, expected: %v", certPubKey, key)
+}

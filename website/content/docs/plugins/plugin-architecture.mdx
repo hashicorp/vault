@@ -50,9 +50,9 @@ without any explicit action by a plugin author. The default behavior of Vault
 Enterprise is to attempt to handle all requests, including requests to plugins,
 on performance standbys. If the plugin request makes any attempt to modify
 storage, the request will receive a readonly error, and the request routing
-code will then forward the request to the active node. In other words, plugins
-can scale horizontally on Vault Enterprise without any effort on the plugin
-author's part.
+code will then forward the full original request transparently to the active
+node. In other words, plugins can scale horizontally on Vault Enterprise
+without any effort on the plugin author's part.
 
 ## Plugin Communication
 
@@ -161,7 +161,7 @@ opt-out capability for plugins that implement multiplexing. To use a
 non-multiplexed plugin, run an older version of the plugin, i.e., the
 plugin calls the `dbplugin.Serve` function. More details
 on implementing plugin multiplexing can be found in
-[Upgrading Vault Plugins](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
+[Serving a Multiplexed Plugin](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
 
 ## Troubleshooting
 
