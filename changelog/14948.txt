@@ -1,0 +1,3 @@
+```release-note:bug
+api: Unset namesapce header on calls that are intended for root endpoints
+```
