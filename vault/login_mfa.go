@@ -2024,18 +2024,21 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 	// rate limit on failed totp passcode validation
 	passcodeTTL := time.Duration(int64(time.Second) * int64(totpSecret.Period))
 
-	numAttempts, _ := usedCodes.Get(configID)
+	// Enforcing rate limit per MethodID per EntityID
+	rateLimitID := fmt.Sprintf("%s_%s", configID, entityID)
+
+	numAttempts, _ := usedCodes.Get(rateLimitID)
 	if numAttempts == nil {
-		usedCodes.Set(configID, int64(1), passcodeTTL)
+		usedCodes.Set(rateLimitID, int64(1), passcodeTTL)
 	} else {
 		num, ok := numAttempts.(int64)
 		if !ok {
 			return fmt.Errorf("invalid counter type returned in TOTP usedCode cache")
 		}
 		if num == maximumValidationAttempts {
-			return fmt.Errorf("maximum TOTP validation attempts %d exceeded the allowed attempts %d", num+1, maximumValidationAttempts)
+			return fmt.Errorf("maximum TOTP validation attempts %d exceeded the allowed attempts %d. Please try again in %v seconds", num+1, maximumValidationAttempts, passcodeTTL)
 		}
-		err := usedCodes.Increment(configID, 1)
+		err := usedCodes.Increment(rateLimitID, 1)
 		if err != nil {
 			return fmt.Errorf("failed to increment the TOTP code counter")
 		}
@@ -2077,7 +2080,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 	}
 
 	// resetting the number of attempts to 0 after a successful validation
-	usedCodes.Set(configID, int64(0), passcodeTTL)
+	usedCodes.Set(rateLimitID, int64(0), passcodeTTL)
 
 	return nil
 }
