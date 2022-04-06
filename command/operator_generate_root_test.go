@@ -3,7 +3,6 @@
 package command
 
 import (
-	"context"
 	"encoding/base64"
 	"io"
 	"os"
@@ -256,7 +255,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		if _, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", ""); err != nil {
+		if _, err := client.Sys().GenerateRootInit("", ""); err != nil {
 			t.Fatal(err)
 		}
 
@@ -387,7 +386,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", "")
+		status, err := client.Sys().GenerateRootInit("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -448,7 +447,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", "")
+		status, err := client.Sys().GenerateRootInit("", "")
 		if err != nil {
 			t.Fatal(err)
 		}

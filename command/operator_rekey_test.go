@@ -3,7 +3,6 @@
 package command
 
 import (
-	"context"
 	"io"
 	"reflect"
 	"regexp"
@@ -118,7 +117,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		}
 
 		// Now init to verify the init response
-		if _, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
+		if _, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}); err != nil {
@@ -149,7 +148,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a rekey
-		if _, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
+		if _, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}); err != nil {
@@ -262,7 +261,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a rekey
-		status, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
+		status, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		})
@@ -308,7 +307,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		if err := client.Sys().Seal(); err != nil {
 			t.Fatal(err)
 		}
-		sealStatus, err := client.Sys().UnsealWithContext(context.Background(), unsealKey)
+		sealStatus, err := client.Sys().Unseal(unsealKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -324,7 +323,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a rekey
-		status, err := client.Sys().RekeyInitWithContext(context.Background(), &api.RekeyInitRequest{
+		status, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		})
@@ -384,7 +383,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		if err := client.Sys().Seal(); err != nil {
 			t.Fatal(err)
 		}
-		sealStatus, err := client.Sys().UnsealWithContext(context.Background(), unsealKey)
+		sealStatus, err := client.Sys().Unseal(unsealKey)
 		if err != nil {
 			t.Fatal(err)
 		}

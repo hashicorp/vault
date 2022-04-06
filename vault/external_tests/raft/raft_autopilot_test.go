@@ -144,7 +144,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	}
 
 	writeConfigFunc := func(config map[string]interface{}, expectError bool) {
-		resp, err := client.Logical().WriteWithContext(context.Background(), "sys/storage/raft/autopilot/configuration", config)
+		resp, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", config)
 		if expectError {
 			require.Error(t, err)
 			return
@@ -251,7 +251,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
 	require.Equal(t, "leader", state.Servers["core-0"].Status)
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/storage/raft/autopilot/configuration", map[string]interface{}{
+	_, err = client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
 		"server_stabilization_time": "5s",
 	})
 	require.NoError(t, err)
@@ -343,7 +343,7 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 	// Create a very large stabilization time so we can test the state between
 	// joining and promotions
 	client := cluster.Cores[0].Client
-	_, err := client.Logical().WriteWithContext(context.Background(), "sys/storage/raft/autopilot/configuration", map[string]interface{}{
+	_, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
 		"server_stabilization_time": "1h",
 	})
 	require.NoError(t, err)
