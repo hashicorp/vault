@@ -117,16 +117,6 @@ func isSudoPath(client *Client, path string) (bool, error) {
 }
 
 func getSudoPaths(client *Client) (map[string]bool, error) {
-	// We don't want to use a wrapping call or any special flags here
-	// so save any custom value and restore after.
-	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
-	client.SetWrappingLookupFunc(nil)
-	currentOutputCurlString := client.OutputCurlString()
-	client.SetOutputCurlString(false)
-	currentOutputPolicy := client.OutputPolicy()
-	client.SetOutputPolicy(false)
-	defer restoreSpecialValues(client, currentWrappingLookupFunc, currentOutputCurlString, currentOutputPolicy)
-
 	r := client.NewRequest("GET", "/v1/sys/internal/specs/openapi")
 	resp, err := client.RawRequest(r)
 	if err != nil {
@@ -183,10 +173,4 @@ func buildPathRegexp(pathName string) string {
 	}
 
 	return pathWithRegexPatterns
-}
-
-func restoreSpecialValues(client *Client, lookupFunc WrappingLookupFunc, isCurlSet bool, isPolicySet bool) {
-	client.SetWrappingLookupFunc(lookupFunc)
-	client.SetOutputCurlString(isCurlSet)
-	client.SetOutputPolicy(isPolicySet)
 }
