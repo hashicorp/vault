@@ -1,5 +1,5 @@
 import ApplicationSerializer from '../application';
-import { format, formatISO } from 'date-fns';
+import { formatISO } from 'date-fns';
 export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(byNamespaceArray) {
     return byNamespaceArray.map((ns) => {
@@ -33,7 +33,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
     if (isNewClients) {
       return payload.map((m) => {
         return {
-          month: format(new Date(m.timestamp), 'M/yy'),
+          month: m.timestamp,
           entity_clients: m['new_clients']['counts']['entity_clients'],
           non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
           total: m['new_clients']['counts']['clients'],
@@ -43,7 +43,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
     } else {
       return payload.map((m) => {
         return {
-          month: format(new Date(m.timestamp), 'M/yy'),
+          month: m.timestamp,
           entity_clients: m['counts']['entity_clients'],
           non_entity_clients: m['counts']['non_entity_clients'],
           total: m['counts']['clients'],
@@ -109,7 +109,6 @@ export default class ActivitySerializer extends ApplicationSerializer {
     delete payload.data.by_namespace;
     delete payload.data.months;
     delete payload.data.total;
-    console.log(transformedPayload, 'TRASNFORMED');
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 }
