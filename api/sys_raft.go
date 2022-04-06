@@ -119,6 +119,13 @@ func (c *Sys) RaftJoinWithContext(ctx context.Context, opts *RaftJoinRequest) (*
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
+	// clear the namespace for this call
+	ns := c.c.Namespace()
+	c.c.ClearNamespace()
+	if ns != "" {
+		defer c.c.SetNamespace(ns)
+	}
+
 	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/join")
 
 	if err := r.SetJSONBody(opts); err != nil {
@@ -223,6 +230,13 @@ func (c *Sys) RaftSnapshotRestoreWithContext(ctx context.Context, snapReader io.
 		path = "/v1/sys/storage/raft/snapshot-force"
 	}
 
+	// clear the namespace for this call
+	ns := c.c.Namespace()
+	c.c.ClearNamespace()
+	if ns != "" {
+		defer c.c.SetNamespace(ns)
+	}
+
 	r := c.c.NewRequest(http.MethodPost, path)
 	r.Body = snapReader
 
@@ -244,6 +258,13 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotState, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
+
+	// clear the namespace for this call
+	ns := c.c.Namespace()
+	c.c.ClearNamespace()
+	if ns != "" {
+		defer c.c.SetNamespace(ns)
+	}
 
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/state")
 
@@ -284,6 +305,13 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*AutopilotConfig, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
+
+	// clear the namespace for this call
+	ns := c.c.Namespace()
+	c.c.ClearNamespace()
+	if ns != "" {
+		defer c.c.SetNamespace(ns)
+	}
 
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/configuration")
 
@@ -332,6 +360,13 @@ func (c *Sys) PutRaftAutopilotConfiguration(opts *AutopilotConfig) error {
 func (c *Sys) PutRaftAutopilotConfigurationWithContext(ctx context.Context, opts *AutopilotConfig) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
+
+	// clear the namespace for this call
+	ns := c.c.Namespace()
+	c.c.ClearNamespace()
+	if ns != "" {
+		defer c.c.SetNamespace(ns)
+	}
 
 	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/autopilot/configuration")
 
