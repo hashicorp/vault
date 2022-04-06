@@ -135,7 +135,10 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
-// separate pathing for CA, CRL, and revoked certificates.
+// separate pathing for CRL, and revoked certificates.
+//
+// Support for fetching CA certificates was removed, due to the new issuers
+// changes.
 func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
 	var path, legacyPath string
 	var err error
@@ -145,13 +148,11 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
 
 	switch {
-	// Revoked goes first as otherwise ca/crl get hardcoded paths which fail if
+	// Revoked goes first as otherwise crl get hardcoded paths which fail if
 	// we actually want revocation info
 	case strings.HasPrefix(prefix, "revoked/"):
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
-	case serial == "ca":
-		path = "ca"
 	case serial == "crl":
 		path = "crl"
 	default:

@@ -190,7 +190,8 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		goto reply
 	}
 
-	if serial == "ca_chain" {
+	// Prefer fetchCAInfo to fetchCertBySerial for CA certificates.
+	if serial == "ca_chain" || serial == "ca" {
 		caInfo, err := fetchCAInfo(ctx, b, req, "default")
 		if err != nil {
 			switch err.(type) {
@@ -203,27 +204,42 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			}
 		}
 
-		caChain := caInfo.GetCAChain()
-		var certStr string
-		for _, ca := range caChain {
-			block := pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: ca.Bytes,
+		if serial == "ca_chain" {
+			caChain := caInfo.GetCAChain()
+			var certStr string
+			for _, ca := range caChain {
+				block := pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: ca.Bytes,
+				}
+				certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 			}
-			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
-		}
-		certificate = []byte(strings.TrimSpace(certStr))
+			certificate = []byte(strings.TrimSpace(certStr))
 
-		rawChain := caInfo.GetFullChain()
-		var chainStr string
-		for _, ca := range rawChain {
-			block := pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: ca.Bytes,
+			rawChain := caInfo.GetFullChain()
+			var chainStr string
+			for _, ca := range rawChain {
+				block := pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: ca.Bytes,
+				}
+				chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 			}
-			chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
+			fullChain = []byte(strings.TrimSpace(chainStr))
+		} else if serial == "ca" {
+			certificate = caInfo.Certificate.Raw
+
+			if len(pemType) != 0 {
+				block := pem.Block{
+					Type:  pemType,
+					Bytes: certificate,
+				}
+
+				// This is convoluted on purpose to ensure that we don't have trailing
+				// newlines via various paths
+				certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
+			}
 		}
-		fullChain = []byte(strings.TrimSpace(chainStr))
 
 		goto reply
 	}
