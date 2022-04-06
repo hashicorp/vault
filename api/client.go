@@ -826,6 +826,14 @@ func (c *Client) ClearNamespace() {
 	c.headers.Del(consts.NamespaceHeaderName)
 }
 
+// Namespace returns the namespace currently set by this client. It will
+// return the empty string if there is no namespace set.
+func (c *Client) Namespace() string {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	return c.headers.Get(consts.NamespaceHeaderName)
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {

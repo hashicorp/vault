@@ -33,6 +33,13 @@ func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
+	// clear the namespace for this call
+	ns := c.c.Namespace()
+	c.c.ClearNamespace()
+	if ns != "" {
+		defer c.c.SetNamespace(ns)
+	}
+	
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/key-status")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
