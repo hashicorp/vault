@@ -43,14 +43,12 @@ func TestIsSudoPath(t *testing.T) {
 
 	client.SetToken("foo")
 
-	client.SetOutputPolicy(true)
-
 	testCases := []struct {
 		path     string
 		expected bool
 	}{
 		{
-			"secret/foo", // not in the openAPI response at all
+			"not/in/openapi/response",
 			false,
 		},
 		{
