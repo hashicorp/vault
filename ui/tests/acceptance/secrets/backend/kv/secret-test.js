@@ -213,7 +213,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
     await editPage.toggleMetadata();
     await settled();
-    /*
+    /* TODO
      * commenting out for now until ember-cp-validations is updated or removed
      * throws an error when attempting to use isHTMLSafe which is imported from @ember/string in the cp-validations code
      * in ember 3.28 the import changed to @ember/template
