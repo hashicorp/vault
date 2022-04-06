@@ -434,7 +434,6 @@ github.com/hashicorp/go-cleanhttp v0.5.1/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtng
 github.com/hashicorp/go-gatedio v0.5.0 h1:Jm1X5yP4yCqqWj5L1TgW7iZwCVPGtVc+mro5r/XX7Tg=
 github.com/hashicorp/go-gatedio v0.5.0/go.mod h1:Lr3t8L6IyxD3DAeaUxGcgl2JnRUpWMCsmBl4Omu/2t4=
 github.com/hashicorp/go-gcp-common v0.5.0/go.mod h1:IDGUI2N/OS3PiU4qZcXJeWKPI6O/9Y8hOrbSiMcqyYw=
-github.com/hashicorp/go-gcp-common v0.6.0 h1:m1X+DK003bj4WEjqOnv+Csepb3zpfN/bidboUeUSj68=
 github.com/hashicorp/go-gcp-common v0.6.0/go.mod h1:RuZi18562/z30wxOzpjeRrGcmk9Ro/rBzixaSZDhIhY=
 github.com/hashicorp/go-gcp-common v0.7.0 h1:DF2liDG2N71MYt5SN0FJRPdBjxeqx9wfM/PnF7a8Fqk=
 github.com/hashicorp/go-gcp-common v0.7.0/go.mod h1:RuZi18562/z30wxOzpjeRrGcmk9Ro/rBzixaSZDhIhY=
