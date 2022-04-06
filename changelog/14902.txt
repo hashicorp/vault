@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: linked relevant Agent template_config & template sections together.
+```
