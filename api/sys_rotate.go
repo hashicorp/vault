@@ -39,7 +39,7 @@ func (c *Sys) KeyStatusWithContext(ctx context.Context) (*KeyStatus, error) {
 	if ns != "" {
 		defer c.c.SetNamespace(ns)
 	}
-	
+
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/key-status")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
