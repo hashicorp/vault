@@ -39,6 +39,7 @@ import layout from '../templates/components/search-select';
 export default Component.extend({
   layout,
   'data-test-component': 'search-select',
+  attributeBindings: ['data-test-component'],
   classNameBindings: ['displayInherit:display-inherit'],
   classNames: ['field', 'search-select'],
   store: service(),

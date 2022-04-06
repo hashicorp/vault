@@ -31,7 +31,8 @@ import layout from '../templates/components/form-field';
 export default Component.extend({
   layout,
   'data-test-field': true,
-  classNames: ['field'],
+  attributeBindings: ['data-test-field'],
+  classNames: ['field-foo'],
   disabled: false,
   showHelpText: true,
   subText: '',

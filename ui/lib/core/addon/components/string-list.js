@@ -7,6 +7,7 @@ import layout from '../templates/components/string-list';
 export default Component.extend({
   layout,
   'data-test-component': 'string-list',
+  attributeBindings: ['data-test-component', 'data-test-input'],
   classNames: ['field', 'string-list', 'form-section'],
 
   /*

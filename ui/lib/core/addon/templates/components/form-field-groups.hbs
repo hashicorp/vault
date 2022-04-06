@@ -17,21 +17,23 @@
           {{/unless}}
         {{/each}}
       {{else}}
-        <ToggleButton
-          @class="is-block"
-          @toggleAttr={{camelize (concat "show" group)}}
-          @toggleTarget={{this}}
-          @openLabel={{concat "Hide " group}}
-          @closedLabel={{group}}
-          @data-test-toggle-group={{group}}
-        />
-        {{#if (get this (camelize (concat "show" group)))}}
-          <div class="box is-marginless">
-            {{#each fields as |attr|}}
-              <FormField data-test-field @attr={{attr}} @mode={{this.mode}} @model={{this.model}} />
-            {{/each}}
-          </div>
-        {{/if}}
+        {{#let (camelize (concat "show" group)) as |prop|}}
+          <ToggleButton
+            @isOpen={{get this prop}}
+            @openLabel={{concat "Hide " group}}
+            @closedLabel={{group}}
+            @onClick={{fn (mut (get this prop))}}
+            class="is-block"
+            data-test-toggle-group={{group}}
+          />
+          {{#if (get this prop)}}
+            <div class="box is-marginless">
+              {{#each fields as |attr|}}
+                <FormField data-test-field @attr={{attr}} @mode={{this.mode}} @model={{this.model}} />
+              {{/each}}
+            </div>
+          {{/if}}
+        {{/let}}
       {{/if}}
     {{/if}}
   {{/each-in}}

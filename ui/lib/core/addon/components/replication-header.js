@@ -28,4 +28,5 @@ export default Component.extend({
   secondaryId: null,
   isSummaryDashboard: false,
   'data-test-replication-header': true,
+  attributeBindings: ['data-test-replication-header'],
 });
