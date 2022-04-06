@@ -1,3 +1,4 @@
+/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 /**
  * @module SecretEdit
  * SecretEdit component manages the secret and model data, and displays either the create, update, empty state or show view of a KV secret.
@@ -27,6 +28,7 @@ import { tracked } from '@glimmer/tracking';
 // import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
+import { alias } from '@ember/object/computed';
 // https://stackoverflow.com/questions/60843983/does-ember-octane-route-class-support-using-mixins
 export default class SecretEdit extends Component {
   // export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
@@ -34,10 +36,8 @@ export default class SecretEdit extends Component {
   @service store;
 
   @tracked secretData = null;
-  @tracked
-  isV2 = false;
-  @tracked
-  codemirrorString = null;
+  @tracked isV2 = false;
+  @tracked codemirrorString = null;
 
   constructor() {
     super(...arguments);
@@ -49,74 +49,61 @@ export default class SecretEdit extends Component {
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.secretData = data;
     this.codemirrorString = data.toJSONString();
-    // if (data.isAdvanced()) {
-    //   // ARG TODO cannot set an args??
-    //   this.args.preferAdvancedEdit = true;
-    // }
     if (this.wizard.featureState === 'details' && this.args.mode === 'create') {
       let engine = this.args.model.backend.includes('kv') ? 'kv' : this.args.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
   }
 
-  checkSecretCapabilities() {
-    return maybeQueryRecord(
-      'capabilities',
-      (context) => {
-        // ARG TODO check context works here
-        if (!context.model || context.mode === 'create') {
-          return;
-        }
-        let backend = context.isV2 ? context.get('model.engine.id') : context.model.backend;
-        let id = context.model.id;
-        let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
-        return {
-          id: path,
-        };
-      },
-      'isV2',
-      'model',
-      'model.id',
-      'mode'
-    );
-  }
-  // these where alias
-  @tracked
-  canUpdateSecretData = this.checkSecretCapabilities.canUpdate;
-  @tracked
-  canReadSecretData = this.checkSecretCapabilities.canRead;
+  @maybeQueryRecord(
+    'capabilities',
+    (context) => {
+      // ARG TODO check context works here
+      if (!context.args.model || context.args.mode === 'create') {
+        return;
+      }
+      let backend = context.isV2 ? context.get('model.engine.id') : context.args.model.backend;
+      let id = context.args.model.id;
+      let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      return {
+        id: path,
+      };
+    },
+    'isV2',
+    'model',
+    'model.id',
+    'mode'
+  )
+  checkSecretCapabilities;
+  @alias('checkSecretCapabilities.canUpdate') canUpdateSecretData;
+  @alias('checkSecretCapabilities.canRead') canReadSecretData;
 
-  checkMetadataCapabilities() {
-    return maybeQueryRecord(
-      'capabilities',
-      (context) => {
-        // ARG TODO check context work here
-        if (!context.model || !context.isV2) {
-          return;
-        }
-        let backend = context.model.backend;
-        let path = `${backend}/metadata/`;
-        return {
-          id: path,
-        };
-      },
-      'isV2',
-      'model',
-      'model.id',
-      'mode'
-    );
-  }
-  @tracked
-  canDeleteSecretMetadata = this.checkMetadataCapabilities.canDelete;
-  @tracked
-  canUpdateSecretMetadata = this.checkMetadataCapabilities.canUpdate;
-  @tracked
-  canReadSecretMetadata = this.checkMetadataCapabilities.canRead;
-  // this was an or
+  @maybeQueryRecord(
+    'capabilities',
+    (context) => {
+      if (!context.args.model || !context.isV2) {
+        return;
+      }
+      let backend = context.args.model.backend;
+      let path = `${backend}/metadata/`;
+      return {
+        id: path,
+      };
+    },
+    'isV2',
+    'model',
+    'model.id',
+    'mode'
+  )
+  checkMetadataCapabilities;
+  @alias('checkMetadataCapabilities.canDelete') canDeleteSecretMetadata;
+  @alias('checkMetadataCapabilities.canUpdate') canUpdateSecretMetadata;
+  @alias('checkMetadataCapabilities.canRead') canReadSecretMetadata;
+
   get requestInFlight() {
     return this.args.model.isLoading || this.args.model.isReloading || this.args.model.isSaving;
   }
-  // this was an or
+
   get buttonDisabled() {
     return this.requestInFlight || this.args.model.isFolder || this.args.model.flagsIsInvalid;
   }
