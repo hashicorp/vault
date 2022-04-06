@@ -69,6 +69,30 @@ func registerEntityInTOTPEngine(client *api.Client, entityID, methodID string, t
 	return totpGenName
 }
 
+func doTwoPhaseLogin(client *api.Client, totpCodePath, methodID, username string, t *testing.T) {
+	totpResp, err := client.Logical().ReadWithContext(context.Background(), totpCodePath)
+	if err != nil {
+		t.Fatalf("failed to create totp passcode: %v", err)
+	}
+	totpPasscode := totpResp.Data["code"].(string)
+
+	secret, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/login/%s", username), map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatalf("first phase of login MFA failed: %v", err)
+	}
+	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
+		"mfa_payload": map[string][]string{
+			methodID: {totpPasscode},
+		},
+	})
+	if err != nil {
+		t.Fatalf("MFA validation failed: %v", err)
+	}
+}
+
 func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	var noop *vault.NoopAudit
 
@@ -329,26 +353,12 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	// let's make sure the configID is not blocked for other users
 	totpCodePath2 := fmt.Sprintf("totp/code/%s", totpEngineConfigName2)
-	totpResp, err = userClient2.Logical().ReadWithContext(context.Background(), totpCodePath2)
-	if err != nil {
-		t.Fatalf("failed to create totp passcode: %v", err)
-	}
-	totpPasscode2 := totpResp.Data["code"].(string)
-	secret, err = userClient2.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser2", map[string]interface{}{
-		"password": "testpassword",
-	})
-	if err != nil {
-		t.Fatalf("MFA failed: %v", err)
-	}
-	secret, err = userClient2.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
-		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-		"mfa_payload": map[string][]string{
-			methodID: {totpPasscode2},
-		},
-	})
-	if err != nil {
-		t.Fatalf("MFA failed: %v", err)
-	}
+	doTwoPhaseLogin(userClient2, totpCodePath2, methodID, "testuser2", t)
+
+	// let's see if user1 is able to login after 5 seconds
+	time.Sleep(5 * time.Second)
+	// getting a fresh totp passcode for the validation step
+	doTwoPhaseLogin(userClient1, totpCodePath1, methodID, "testuser1", t)
 
 	// Destroy the secret so that the token can self generate
 	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-destroy"), map[string]interface{}{
