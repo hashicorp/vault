@@ -259,42 +259,46 @@ func generateCurlString(exitCode int, runOpts *RunOptions) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
 		return 1
-	} else {
-		if api.LastOutputStringError == nil {
-			if exitCode == 127 {
-				// Usage, just pass it through
-				return exitCode
-			}
-			fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -output-curl-string to see the generated error\n")
+	}
+
+	if api.LastOutputStringError == nil {
+		if exitCode == 127 {
+			// Usage, just pass it through
 			return exitCode
 		}
-		if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
-			runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", api.LastOutputStringError.Error())))
-			return 1
-		}
-		runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputStringError.CurlString())))
-		return 0
+		fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -output-curl-string to see the generated error\n")
+		return exitCode
 	}
+
+	if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
+		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", api.LastOutputStringError.Error())))
+		return 1
+	}
+
+	runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputStringError.CurlString())))
+	return 0
 }
 
 func generatePolicy(exitCode int, runOpts *RunOptions) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate policy")
 		return 1
-	} else {
-		if api.LastOutputPolicyError == nil {
-			if exitCode == 127 {
-				// Usage, just pass it through
-				return exitCode
-			}
-			fmt.Fprint(runOpts.Stderr, "Required policy not clear from API operation\n")
+	}
+
+	if api.LastOutputPolicyError == nil {
+		if exitCode == 127 {
+			// Usage, just pass it through
 			return exitCode
 		}
-		if api.LastOutputPolicyError.Error() != api.ErrOutputPolicyRequest {
-			runOpts.Stdout.Write([]byte(fmt.Sprintf("Error assembling policy HCL: %s\n", api.LastOutputPolicyError.Error())))
-			return 1
-		}
-		runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputPolicyError.HCLString())))
-		return 0
+		fmt.Fprint(runOpts.Stderr, "Unable to generate policy from command\n")
+		return exitCode
 	}
+
+	if api.LastOutputPolicyError.Error() != api.ErrOutputPolicyRequest {
+		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error assembling policy HCL: %s\n", api.LastOutputPolicyError.Error())))
+		return 1
+	}
+
+	runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputPolicyError.HCLString())))
+	return 0
 }

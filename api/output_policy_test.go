@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strings"
 	"testing"
 )
 
@@ -35,7 +34,6 @@ func TestIsSudoPath(t *testing.T) {
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
 
-	config.Address = strings.ReplaceAll(config.Address, "127.0.0.1", "localhost")
 	client, err := NewClient(config)
 	if err != nil {
 		t.Fatalf("err: %s", err)

@@ -203,16 +203,12 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	outputPolicy := client.OutputPolicy()
 	client.SetOutputPolicy(false)
 	secret, err := kvReadRequest(client, path, nil)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
+		return nil, 2
+	}
 	client.SetOutputCurlString(curOutputCurl)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
-		return nil, 2
-	}
 	client.SetOutputPolicy(outputPolicy)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
-		return nil, 2
-	}
 
 	// Make sure a value already exists
 	if secret == nil || secret.Data == nil {

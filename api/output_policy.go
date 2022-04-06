@@ -87,8 +87,8 @@ func isSudoPath(client *Client, path string) (bool, error) {
 		return false, fmt.Errorf("unable to retrieve list of paths that require sudo capability: %v", err)
 	}
 	if sudoPaths == nil || len(sudoPaths) < 1 {
-		// OpenAPI spec did not return any paths that require sudo for
-		// some reason, but the user probably still shouldn't see an error.
+		// OpenAPI spec did not return any paths that require sudo,
+		// but the user probably still shouldn't see an error.
 		return false, nil
 	}
 
