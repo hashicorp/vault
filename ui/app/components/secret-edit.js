@@ -9,8 +9,12 @@
 /
  * @param {object} model - Model returned from secret-v2 which is generated in the secret-edit route
  * @param {string} mode - Edit, create, etc.
- * @param {boolean} isV2 - Whether it's kv version two or version 1.
  * @param {string} basekey - For navigation.
+ * @param {string} key - ARG TODO
+ * @param {string} initalKey - ARG TODO
+ * @param {function} onRefresh - ARG TODO
+ * @param {function} onToggleAdvancedEdit - ARG TODO
+ * @param {boolean} preferAdvancedEdit - ARG TODO
  This component is initialized from the secret-edit-layout.hbs file
  */
 
@@ -29,17 +33,6 @@ export default class SecretEdit extends Component {
   @service wizard;
   @service store;
 
-  // a key model
-  @tracked key = null;
-  // @tracked model = null;
-
-  // a value to pre-fill the key input - this is populated by the corresponding
-  // 'initialKey' queryParam
-  @tracked initialKey = null;
-
-  // set in the route's setupController hook
-  @tracked mode = null;
-
   @tracked secretData = null;
 
   // called with a bool indicating if there's been a change in the secretData and customMetadata
@@ -47,30 +40,30 @@ export default class SecretEdit extends Component {
   onRefresh() {}
   onToggleAdvancedEdit() {}
 
-  // did user request advanced mode
   @tracked
-  preferAdvancedEdit = false;
+  isV2 = false;
 
   // use a named action here so we don't have to pass one in
   // this will bubble to the route
-  toggleAdvancedEdit = 'toggleAdvancedEdit';
+  // toggleAdvancedEdit = 'toggleAdvancedEdit';
 
+  @tracked
   codemirrorString = null;
 
   constructor() {
     super(...arguments);
     let secrets = this.args.model.secretData;
     if (!secrets && this.args.model.selectedVersion) {
-      this.args.isV2 = true;
+      this.isV2 = true;
       secrets = this.args.model.belongsTo('selectedVersion').value().secretData;
     }
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.secretData = data;
     this.codemirrorString = data.toJSONString();
-    if (data.isAdvanced()) {
-      console.log('here');
-      this.preferAdvancedEdit = true;
-    }
+    // if (data.isAdvanced()) {
+    //   // ARG TODO cannot set an args??
+    //   this.args.preferAdvancedEdit = true;
+    // }
     if (this.wizard.featureState === 'details' && this.args.mode === 'create') {
       let engine = this.args.model.backend.includes('kv') ? 'kv' : this.args.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
@@ -142,7 +135,7 @@ export default class SecretEdit extends Component {
   get modelForData() {
     let { model } = this.args;
     if (!model) return null;
-    return this.args.isV2 ? model.belongsTo('selectedVersion').value() : model;
+    return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }
 
   get basicModeDisabled() {
@@ -179,11 +172,11 @@ export default class SecretEdit extends Component {
 
   @action
   refresh() {
-    this.onRefresh();
+    this.args.nRefresh();
   }
 
   @action
   toggleAdvanced(bool) {
-    this.onToggleAdvancedEdit(bool);
+    this.args.onToggleAdvancedEdit(bool);
   }
 }
