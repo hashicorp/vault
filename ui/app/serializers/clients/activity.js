@@ -15,9 +15,13 @@ export default class ActivitySerializer extends ApplicationSerializer {
       flattenedNs.mounts = ns.mounts
         ? ns.mounts.map((mount) => {
             let flattenedMount = {};
-            flattenedMount.label = mount['mount_path'];
+            let label = mount['mount_path'];
             Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
-            return this.homogenizeClientNaming(flattenedMount);
+            flattenedMount = this.homogenizeClientNaming(flattenedMount);
+            return {
+              label,
+              ...flattenedMount,
+            };
           })
         : [];
 
