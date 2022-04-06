@@ -1033,6 +1033,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
+		if b.mfaBackend != nil {
+			b.mfaBackend.maximumTOTPValidationAttempts = maxTOTPValidationAttempts
+		}
 		return b, nil
 	}
 	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
@@ -2256,6 +2259,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
+	if c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2332,6 +2338,9 @@ func (c *Core) preSeal() error {
 	}
 
 	c.loginMFABackend.usedCodes = nil
+	if c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = nil
+	}
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")

@@ -118,11 +118,12 @@ func loginMFASchemaFuncs() []func() *memdb.TableSchema {
 }
 
 func NewLoginMFABackend(core *Core, logger hclog.Logger, maxTOTPValidationAttempts int64) *LoginMFABackend {
-	b := NewMFABackend(core, logger, memDBLoginMFAConfigsTable, loginMFASchemaFuncs(), maxTOTPValidationAttempts)
+	b := NewMFABackend(core, logger, memDBLoginMFAConfigsTable, loginMFASchemaFuncs())
+	b.maximumTOTPValidationAttempts = maxTOTPValidationAttempts
 	return &LoginMFABackend{b}
 }
 
-func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs []func() *memdb.TableSchema, maxTOTPValidationAttempts int64) *MFABackend {
+func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs []func() *memdb.TableSchema) *MFABackend {
 	mfaSchemas := &memdb.DBSchema{
 		Tables: make(map[string]*memdb.TableSchema),
 	}
@@ -137,13 +138,12 @@ func NewMFABackend(core *Core, logger hclog.Logger, prefix string, schemaFuncs [
 
 	db, _ := memdb.NewMemDB(mfaSchemas)
 	return &MFABackend{
-		Core:                          core,
-		mfaLock:                       &sync.RWMutex{},
-		db:                            db,
-		mfaLogger:                     logger.Named("mfa"),
-		namespacer:                    core,
-		methodTable:                   prefix,
-		maximumTOTPValidationAttempts: maxTOTPValidationAttempts,
+		Core:        core,
+		mfaLock:     &sync.RWMutex{},
+		db:          db,
+		mfaLogger:   logger.Named("mfa"),
+		namespacer:  core,
+		methodTable: prefix,
 	}
 }
 
