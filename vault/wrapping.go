@@ -141,7 +141,7 @@ DONELISTHANDLING:
 		NamespaceID:    ns.ID,
 	}
 
-	if err := c.tokenStore.create(ctx, &te); err != nil {
+	if err := c.CreateToken(ctx, &te); err != nil {
 		c.logger.Error("failed to create wrapping token", "error", err)
 		return nil, ErrInternalError
 	}

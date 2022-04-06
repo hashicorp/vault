@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 var ErrServerInMetadataMode = errors.New("plugin server can not perform action while in metadata mode")
@@ -35,32 +34,13 @@ type backendGRPCPluginServer struct {
 	logger log.Logger
 }
 
-func getMultiplexIDFromContext(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("missing plugin multiplexing metadata")
-	}
-
-	multiplexIDs := md[pluginutil.MultiplexingCtxKey]
-	if len(multiplexIDs) != 1 {
-		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
-	}
-
-	multiplexID := multiplexIDs[0]
-	if multiplexID == "" {
-		return "", fmt.Errorf("empty multiplex ID in metadata")
-	}
-
-	return multiplexID, nil
-}
-
 // getBackendInternal returns the backend but does not hold a lock
 func (b *backendGRPCPluginServer) getBackendInternal(ctx context.Context) (logical.Backend, error) {
 	if singleImpl, ok := b.instances["single"]; ok {
 		return singleImpl.backend, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +65,7 @@ func (b *backendGRPCPluginServer) getBrokeredClientInternal(ctx context.Context)
 		return singleImpl.brokeredClient, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +92,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	id := "single"
 
 	if _, ok := b.instances[id]; !ok {
-		id, err = getMultiplexIDFromContext(ctx)
+		id, err = pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return &pb.SetupReply{}, err
 		}
@@ -287,7 +267,7 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 	if _, ok := b.instances["single"]; ok {
 		delete(b.instances, "single")
 	} else {
-		id, err := getMultiplexIDFromContext(ctx)
+		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return nil, err
 		}

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -30,25 +29,6 @@ type gRPCServer struct {
 	sync.RWMutex
 }
 
-func getMultiplexIDFromContext(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("missing plugin multiplexing metadata")
-	}
-
-	multiplexIDs := md[pluginutil.MultiplexingCtxKey]
-	if len(multiplexIDs) != 1 {
-		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
-	}
-
-	multiplexID := multiplexIDs[0]
-	if multiplexID == "" {
-		return "", fmt.Errorf("empty multiplex ID in metadata")
-	}
-
-	return multiplexID, nil
-}
-
 func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
 	defer g.Unlock()
@@ -57,7 +37,7 @@ func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) 
 		return g.singleImpl, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +63,7 @@ func (g *gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) 
 		return g.singleImpl, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +277,7 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 
 	if g.singleImpl == nil {
 		// only cleanup instances map when multiplexing is supported
-		id, err := getMultiplexIDFromContext(ctx)
+		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return nil, err
 		}

@@ -290,7 +290,7 @@ func TestMakeConfig(t *testing.T) {
 				Return(test.responseWrapInfo, test.responseWrapInfoErr)
 			mockWrapper.On("MlockEnabled").
 				Return(test.mlockEnabled)
-			test.rc.wrapper = mockWrapper
+			test.rc.Wrapper = mockWrapper
 			defer mockWrapper.AssertNumberOfCalls(t, "ResponseWrapData", test.responseWrapInfoTimes)
 			defer mockWrapper.AssertNumberOfCalls(t, "MlockEnabled", test.mlockEnabledTimes)
 

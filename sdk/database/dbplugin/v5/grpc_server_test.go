@@ -613,7 +613,7 @@ func TestGetMultiplexIDFromContext(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			resp, err := getMultiplexIDFromContext(test.ctx)
+			resp, err := pluginutil.GetMultiplexIDFromContext(test.ctx)
 
 			if test.expectedErr != nil && test.expectedErr.Error() != "" && err == nil {
 				t.Fatalf("err expected, got nil")

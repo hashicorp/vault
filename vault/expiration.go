@@ -1519,6 +1519,10 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
+	if m == nil {
+		return errors.New("unable to register auth with nil expiration manager")
+	}
+
 	// Triggers failure of RegisterAuth. This should only be set and triggered
 	// by tests to simulate partial failure during a token creation request.
 	if m.testRegisterAuthFailure.Load() {
