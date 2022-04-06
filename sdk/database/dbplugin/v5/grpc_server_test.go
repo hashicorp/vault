@@ -581,57 +581,6 @@ func TestGRPCServer_Close(t *testing.T) {
 	}
 }
 
-func TestGetMultiplexIDFromContext(t *testing.T) {
-	type testCase struct {
-		ctx          context.Context
-		expectedResp string
-		expectedErr  error
-	}
-
-	tests := map[string]testCase{
-		"missing plugin multiplexing metadata": {
-			ctx:          context.Background(),
-			expectedResp: "",
-			expectedErr:  fmt.Errorf("missing plugin multiplexing metadata"),
-		},
-		"unexpected number of IDs in metadata": {
-			ctx:          idCtx(t, "12345", "67891"),
-			expectedResp: "",
-			expectedErr:  fmt.Errorf("unexpected number of IDs in metadata: (2)"),
-		},
-		"empty multiplex ID in metadata": {
-			ctx:          idCtx(t, ""),
-			expectedResp: "",
-			expectedErr:  fmt.Errorf("empty multiplex ID in metadata"),
-		},
-		"happy path, id is returned from metadata": {
-			ctx:          idCtx(t, "12345"),
-			expectedResp: "12345",
-			expectedErr:  nil,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			resp, err := pluginutil.GetMultiplexIDFromContext(test.ctx)
-
-			if test.expectedErr != nil && test.expectedErr.Error() != "" && err == nil {
-				t.Fatalf("err expected, got nil")
-			} else if !reflect.DeepEqual(err, test.expectedErr) {
-				t.Fatalf("Actual error: %#v\nExpected error: %#v", err, test.expectedErr)
-			}
-
-			if test.expectedErr != nil && test.expectedErr.Error() == "" && err != nil {
-				t.Fatalf("no error expected, got: %s", err)
-			}
-
-			if !reflect.DeepEqual(resp, test.expectedResp) {
-				t.Fatalf("Actual response: %#v\nExpected response: %#v", resp, test.expectedResp)
-			}
-		})
-	}
-}
-
 // testGrpcServer is a test helper that returns a context with an ID set in its
 // metadata and a gRPCServer instance for a multiplexed plugin
 func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
