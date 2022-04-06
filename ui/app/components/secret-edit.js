@@ -4,10 +4,14 @@
  *
  * @example
  * ```js
- * <SecretEdit @model={{model}}/>
+ * <SecretEdit @model={{model}} @isV2/>
  * ```
 /
  * @param {object} model - Model returned from secret-v2 which is generated in the secret-edit route
+ * @param {string} mode - Edit, create, etc.
+ * @param {boolean} isV2 - Whether it's kv version two or version 1.
+ * @param {string} basekey - For navigation.
+ This component is initialized from the secret-edit-layout.hbs file
  */
 
 import { inject as service } from '@ember/service';
@@ -44,6 +48,7 @@ export default class SecretEdit extends Component {
   onToggleAdvancedEdit() {}
 
   // did user request advanced mode
+  @tracked
   preferAdvancedEdit = false;
 
   // use a named action here so we don't have to pass one in
@@ -51,8 +56,6 @@ export default class SecretEdit extends Component {
   toggleAdvancedEdit = 'toggleAdvancedEdit';
 
   codemirrorString = null;
-
-  @tracked isV2 = false;
 
   constructor() {
     super(...arguments);
@@ -65,12 +68,12 @@ export default class SecretEdit extends Component {
     this.secretData = data;
     this.codemirrorString = data.toJSONString();
     if (data.isAdvanced()) {
+      console.log('here');
       this.preferAdvancedEdit = true;
     }
-    // ARG unsure about this.args.wizard
-    if (this.args.wizard.featureState === 'details' && this.args.mode === 'create') {
+    if (this.wizard.featureState === 'details' && this.args.mode === 'create') {
       let engine = this.args.model.backend.includes('kv') ? 'kv' : this.args.model.backend;
-      this.args.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
+      this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
   }
 
