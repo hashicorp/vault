@@ -60,7 +60,7 @@ path "secret/foo" {
 }
 	`
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("failed to list auth mount")
 	}
@@ -180,7 +180,7 @@ func TestInteg_LoginMFADUO(t *testing.T) {
 func mfaGenerateLoginDUOTest(client *api.Client) error {
 	var err error
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("failed to list auth mount")
 	}

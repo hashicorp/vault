@@ -38,7 +38,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 		t.Fatalf("failed to enable userpass auth: %v", err)
 	}
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -53,7 +53,7 @@ func TestRecovery(t *testing.T) {
 		if diff := deep.Equal(secret.Data["keys"], []interface{}{"foo"}); len(diff) > 0 {
 			t.Fatalf("got=%v, want=%v, diff: %v", secret.Data["keys"], []string{"foo"}, diff)
 		}
-		mounts, err := cluster.Cores[0].Client.Sys().ListMountsWithContext(context.Background())
+		mounts, err := cluster.Cores[0].Client.Sys().ListMounts()
 		if err != nil {
 			t.Fatal(err)
 		}

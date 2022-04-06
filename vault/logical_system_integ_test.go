@@ -889,7 +889,7 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 	vault.RetryUntil(t, 15*time.Second, func() error {
 		// Use standby deliberately to make sure it forwards
 		client := cluster.Cores[1].Client
-		resp, err := client.Sys().HAStatusWithContext(context.Background())
+		resp, err := client.Sys().HAStatus()
 		if err != nil {
 			t.Fatal(err)
 		}

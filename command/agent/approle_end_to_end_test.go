@@ -321,7 +321,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 					}
 				}
 				client.SetToken(string(val))
-				secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+				secret, err := client.Auth().Token().LookupSelf()
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -345,7 +345,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -385,7 +385,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -664,7 +664,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 				}
 
 				client.SetToken(string(val))
-				secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+				secret, err := client.Auth().Token().LookupSelf()
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -690,7 +690,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -732,7 +732,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}

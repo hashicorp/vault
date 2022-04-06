@@ -3289,7 +3289,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	userpassToken := secret.Auth.ClientToken
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3410,7 +3410,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}

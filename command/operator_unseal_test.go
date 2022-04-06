@@ -107,7 +107,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 			}
 		}
 
-		status, err := client.Sys().SealStatusWithContext(context.Background())
+		status, err := client.Sys().SealStatus()
 		if err != nil {
 			t.Fatal(err)
 		}

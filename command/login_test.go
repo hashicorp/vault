@@ -303,7 +303,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		client.SetToken(token)
 
 		// Ensure the resulting token is unwrapped
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Error(err)
 		}

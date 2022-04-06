@@ -132,7 +132,7 @@ func TestAuthTokenLookupSelf(t *testing.T) {
 	client.SetToken(token)
 
 	// you should be able to lookup your own token
-	secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+	secret, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatalf("should be allowed to lookup self, err = %v", err)
 	}

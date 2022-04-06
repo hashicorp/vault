@@ -266,7 +266,7 @@ path "kv/*" {
 	}
 	batchToken := secret.Auth.ClientToken
 	client.SetToken(batchToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +352,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -395,7 +395,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -422,7 +422,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -439,7 +439,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -455,7 +455,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -482,7 +482,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -499,7 +499,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -515,7 +515,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.SetToken(secret.Auth.ClientToken)
-		_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		_, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}

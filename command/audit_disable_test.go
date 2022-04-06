@@ -119,7 +119,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		mounts, err := client.Sys().ListMountsWithContext(context.Background())
+		mounts, err := client.Sys().ListMounts()
 		if err != nil {
 			t.Fatal(err)
 		}

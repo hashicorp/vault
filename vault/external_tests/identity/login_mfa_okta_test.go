@@ -108,7 +108,7 @@ path "secret/foo" {
 	}
 
 	// listing auth mounts to find the mount accessor for the userpass
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("error listing auth mounts")
 	}
@@ -225,7 +225,7 @@ func TestInteg_LoginMFAOkta(t *testing.T) {
 func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 	var err error
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("failed to list auth mounts")
 	}

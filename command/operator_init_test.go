@@ -176,7 +176,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
 		}
 
-		init, err := client.Sys().InitStatusWithContext(context.Background())
+		init, err := client.Sys().InitStatus()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -210,7 +210,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			}
 		}
 
-		status, err := client.Sys().SealStatusWithContext(context.Background())
+		status, err := client.Sys().SealStatus()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -238,7 +238,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
 		}
 
-		init, err := client.Sys().InitStatusWithContext(context.Background())
+		init, err := client.Sys().InitStatus()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -272,7 +272,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			}
 		}
 
-		status, err := client.Sys().SealStatusWithContext(context.Background())
+		status, err := client.Sys().SealStatus()
 		if err != nil {
 			t.Fatal(err)
 		}

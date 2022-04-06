@@ -269,7 +269,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Create an external group and renew the token. This should add external
 	// group policies to the token.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +412,7 @@ path "auth/token/create" {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -433,7 +433,7 @@ path "auth/token/create" {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -451,7 +451,7 @@ path "auth/token/create" {
 		t.Fatal(err)
 	}
 	client.SetToken(childSecret.Auth.ClientToken)
-	childInfo, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+	childInfo, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,7 +474,7 @@ path "auth/token/create" {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -496,7 +496,7 @@ path "auth/token/create" {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -515,7 +515,7 @@ path "auth/token/create" {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err == nil {
 		t.Fatal("expected error")
 	}

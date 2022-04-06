@@ -103,7 +103,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 
 	// Create an external group and renew the token. This should add external
 	// group policies to the token.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}

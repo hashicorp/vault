@@ -70,7 +70,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 		require.NoError(t, err)
 
 		// Take out its accessor
-		auth, err := client.Sys().ListAuthWithContext(context.Background())
+		auth, err := client.Sys().ListAuth()
 		require.NoError(t, err)
 		accessor := auth[path+"/"].Accessor
 		require.NotEmpty(t, accessor)
@@ -175,7 +175,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	auth, err := client.Sys().ListAuthWithContext(context.Background())
+	auth, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -471,7 +471,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	auth, err := client.Sys().ListAuthWithContext(context.Background())
+	auth, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}

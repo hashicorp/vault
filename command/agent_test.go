@@ -219,7 +219,7 @@ cache {
 	time.Sleep(1 * time.Second)
 
 	// Invoke lookup self through the agent
-	secret, err := testClient.Auth().Token().LookupSelfWithContext(context.Background())
+	secret, err := testClient.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}

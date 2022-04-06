@@ -38,7 +38,7 @@ func TestIdentityStore_GroupAliasLocalMount(t *testing.T) {
 	}
 
 	// Extract out the mount accessor for LDAP auth
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}

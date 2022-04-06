@@ -35,7 +35,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mounts, err := client.Sys().ListAuthWithContext(context.Background())
+	mounts, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +207,7 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mounts, err := client.Sys().ListAuthWithContext(context.Background())
+	mounts, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
