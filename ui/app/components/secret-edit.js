@@ -4,7 +4,7 @@
  *
  * @example
  * ```js
- * <SecretEdit @model={{model}} @isV2/>
+ * <SecretEdit @model={{model}} @mode="create" @baseKey=xx/>
  * ```
 /
  * @param {object} model - Model returned from secret-v2 which is generated in the secret-edit route
@@ -14,7 +14,7 @@
  * @param {string} initalKey - ARG TODO
  * @param {function} onRefresh - ARG TODO
  * @param {function} onToggleAdvancedEdit - ARG TODO
- * @param {boolean} preferAdvancedEdit - ARG TODO
+ * @param {boolean} preferAdvancedEdit - property set from the controller of show/edit/create route passed in through secret-edit-layout
  This component is initialized from the secret-edit-layout.hbs file
  */
 
@@ -34,19 +34,8 @@ export default class SecretEdit extends Component {
   @service store;
 
   @tracked secretData = null;
-
-  // called with a bool indicating if there's been a change in the secretData and customMetadata
-  onDataChange() {}
-  onRefresh() {}
-  onToggleAdvancedEdit() {}
-
   @tracked
   isV2 = false;
-
-  // use a named action here so we don't have to pass one in
-  // this will bubble to the route
-  // toggleAdvancedEdit = 'toggleAdvancedEdit';
-
   @tracked
   codemirrorString = null;
 
@@ -151,7 +140,7 @@ export default class SecretEdit extends Component {
   }
 
   get showAdvancedMode() {
-    return this.secretDataIsAdvanced || this.preferAdvancedEdit;
+    return this.secretDataIsAdvanced || this.args.preferAdvancedEdit;
   }
 
   get isWriteWithoutRead() {
@@ -172,7 +161,7 @@ export default class SecretEdit extends Component {
 
   @action
   refresh() {
-    this.args.nRefresh();
+    this.args.onRefresh();
   }
 
   @action
