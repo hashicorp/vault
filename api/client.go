@@ -820,17 +820,23 @@ func (c *Client) setNamespace(namespace string) {
 	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
+// ClearNamespace removes the namespace header if set.
 func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-	c.headers.Del(consts.NamespaceHeaderName)
+	if c.headers != nil {
+		c.headers.Del(consts.NamespaceHeaderName)
+	}
 }
 
-// Namespace returns the namespace currently set by this client. It will
-// return the empty string if there is no namespace set.
+// Namespace returns the namespace currently set in this client. It will
+// return an empty string if there is no namespace set.
 func (c *Client) Namespace() string {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
+	if c.headers == nil {
+		return ""
+	}
 	return c.headers.Get(consts.NamespaceHeaderName)
 }
 
