@@ -196,7 +196,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    await waitUntil(() => find('[data-test-horizontal-bar-chart]'));
+    await settled();
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
 
