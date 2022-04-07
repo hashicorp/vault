@@ -244,6 +244,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 		"type":          "shamir",
 		"recovery_seal": false,
 		"initialized":   true,
+		"build_date":    version.BuildDate,
 		"migration":     false,
 	}
 	testResponseStatus(t, resp, 200)
