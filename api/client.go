@@ -1179,12 +1179,9 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	c.modifyLock.RUnlock()
 
+	// explicitly set the namespace header to the current client
 	if headers != nil {
-		for header, vals := range headers {
-			for _, val := range vals {
-				r.Headers.Set(header, val)
-			}
-		}
+		r.Headers.Set(consts.NamespaceHeaderName, headers.Get(consts.NamespaceHeaderName))
 	}
 
 	for _, cb := range c.requestCallbacks {
@@ -1318,13 +1315,17 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	// add headers
 	if c.headers != nil {
 		for header, vals := range c.headers {
 			for _, val := range vals {
-				req.Header.Set(header, val)
+				req.Header.Add(header, val)
 			}
 		}
+		// explicitly set the namespace header to current client
+		r.Headers.Set(consts.NamespaceHeaderName, c.headers.Get(consts.NamespaceHeaderName))
 	}
+
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 

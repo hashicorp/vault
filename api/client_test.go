@@ -1152,33 +1152,50 @@ func TestClientWithNamespace(t *testing.T) {
 	}
 	ogNS := "test"
 	client.SetNamespace(ogNS)
-
-	_, err = client.rawRequestWithContext(context.Background(), client.NewRequest(http.MethodGet, "/"))
+	_, err = client.rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	// check namespace
 	if ns != ogNS {
 		t.Fatalf("Expected namespace: \"%s\", got \"%s\"", ogNS, ns)
 	}
 
 	// make a call with a temporary namespace
 	newNS := "new-namespace"
-	_, err = client.WithNamespace(newNS).rawRequestWithContext(context.Background(), client.NewRequest(http.MethodGet, "/"))
+	_, err = client.WithNamespace(newNS).rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	// check namespace
 	if ns != newNS {
 		t.Fatalf("Expected new namespace: \"%s\", got \"%s\"", newNS, ns)
 	}
 
 	// ensure client has not been modified
-	_, err = client.rawRequestWithContext(context.Background(), client.NewRequest(http.MethodGet, "/"))
+	_, err = client.rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != ogNS {
+		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
+	}
+
+	// make call with empty ns
+	_, err = client.WithNamespace("").rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != "" {
+		t.Fatalf("Expected no namespace, got \"%s\"", ns)
+	}
+	if client.Namespace() != ogNS {
 		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
 	}
 }
