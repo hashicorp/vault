@@ -28,7 +28,7 @@ export default class LineChart extends Component {
   @tracked tooltipNew = '';
 
   get yKey() {
-    return this.args.yKey || 'clients';
+    return this.args.yKey || 'total';
   }
 
   get xKey() {
@@ -124,7 +124,7 @@ export default class LineChart extends Component {
       // TODO: how to genericize this?
       this.tooltipMonth = data[this.xKey];
       this.tooltipTotal = `${data[this.yKey]} total clients`;
-      this.tooltipNew = `${data.new_clients?.clients} new clients`;
+      this.tooltipNew = `${data.new_clients?.total} new clients`;
       let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
       this.tooltipTarget = node;
     });

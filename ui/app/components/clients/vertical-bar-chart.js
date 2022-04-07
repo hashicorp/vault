@@ -30,8 +30,8 @@ import {
 export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked tooltipTotal = '';
-  @tracked uniqueEntities = '';
-  @tracked nonEntityTokens = '';
+  @tracked entityClients = '';
+  @tracked nonEntityClients = '';
 
   get chartLegend() {
     return this.args.chartLegend;
@@ -47,7 +47,7 @@ export default class VerticalBarChart extends Component {
 
     // DEFINE DATA BAR SCALES
     let yScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.total))])
       .range([0, 100])
       .nice();
 
@@ -76,7 +76,7 @@ export default class VerticalBarChart extends Component {
 
     // MAKE AXES //
     let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))]) // TODO will need to recalculate when you get the data
+      .domain([0, max(dataset.map((d) => d.total))]) // TODO will need to recalculate when you get the data
       .range([`${SVG_DIMENSIONS.height}`, 0])
       .nice();
 
@@ -116,9 +116,9 @@ export default class VerticalBarChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
       let hoveredMonth = data.month;
-      this.tooltipTotal = `${data.clients} ${data.new_clients ? 'total' : 'new'} clients`;
-      this.uniqueEntities = `${data.entity_clients} unique entities`;
-      this.nonEntityTokens = `${data.non_entity_clients} non-entity tokens`;
+      this.tooltipTotal = `${data.total} ${data.new_clients ? 'total' : 'new'} clients`;
+      this.entityClients = `${data.entity_clients} entity clients`;
+      this.nonEntityClients = `${data.non_entity_clients} non-entity clients`;
       // let node = chartSvg
       //   .selectAll('rect.tooltip-rect')
       //   .filter(data => data.month === this.hoveredLabel)

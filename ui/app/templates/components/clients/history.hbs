@@ -131,6 +131,13 @@
         <LayoutLoading />
       {{else}}
         {{#if this.totalUsageCounts}}
+          <Clients::RunningTotal
+            @chartLegend={{this.chartLegend}}
+            @barChartData={{this.byMonthNewClients}}
+            @lineChartData={{this.byMonthTotalClients}}
+            @runningTotals={{this.totalUsageCounts}}
+            @timestamp={{this.responseTimestamp}}
+          />
           <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
           {{#if this.hasAttributionData}}
             <Clients::Attribution

@@ -1,5 +1,5 @@
 import ApplicationSerializer from '../application';
-import { formatISO } from 'date-fns';
+import { formatISO, parseISO, format, compareAsc } from 'date-fns';
 export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(byNamespaceArray) {
     return byNamespaceArray.map((ns) => {
@@ -34,10 +34,12 @@ export default class ActivitySerializer extends ApplicationSerializer {
 
   // for vault usage - vertical bar chart
   flattenByMonths(payload, isNewClients = false) {
+    const sortedPayload = [...payload];
+    sortedPayload.reverse();
     if (isNewClients) {
-      return payload.map((m) => {
+      return sortedPayload.map((m) => {
         return {
-          month: m.timestamp,
+          month: this.formatTimestamp(m.timestamp),
           entity_clients: m.new_clients.counts.entity_clients,
           non_entity_clients: m.new_clients.counts.non_entity_clients,
           total: m.new_clients.counts.clients,
@@ -45,9 +47,9 @@ export default class ActivitySerializer extends ApplicationSerializer {
         };
       });
     } else {
-      return payload.map((m) => {
+      return sortedPayload.map((m) => {
         return {
-          month: m.timestamp,
+          month: this.formatTimestamp(m.timestamp),
           entity_clients: m.counts.entity_clients,
           non_entity_clients: m.counts.non_entity_clients,
           total: m.counts.clients,
@@ -86,6 +88,14 @@ export default class ActivitySerializer extends ApplicationSerializer {
     }
     // TODO CMB: test what to return if neither key exists
     return object;
+  }
+
+  // TODO CMB make these two functions utils?
+
+  // format ISO timestamp to M/yy
+  formatTimestamp(timestamp) {
+    let date = timestamp.split('T')[0];
+    return format(parseISO(date), 'M/yy');
   }
 
   parseRFC3339(timestamp) {
