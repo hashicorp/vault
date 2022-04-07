@@ -79,7 +79,6 @@ type pluginClient struct {
 	cleanupFunc func() error
 
 	plugin.ClientProtocol
-	logical.Backend
 }
 
 func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
