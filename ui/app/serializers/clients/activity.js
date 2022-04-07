@@ -38,7 +38,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       return payload.map((m) => {
         return {
           month: m.timestamp,
-          entity_clients: m['new_clients']['counts']['entity_clients'],
+          entity_clients: m.new_clients.counts.entity_clients,
           non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
           total: m['new_clients']['counts']['clients'],
           namespaces: this.flattenDataset(m['new_clients']['namespaces']),
