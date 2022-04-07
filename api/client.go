@@ -847,7 +847,11 @@ func (c *Client) WithNamespace(namespace string) *Client {
 	c2 := *c
 	c2.modifyLock = sync.RWMutex{}
 	c2.headers = c.Headers()
-	c2.SetNamespace(namespace)
+	if namespace == "" {
+		c2.ClearNamespace()
+	} else {
+		c2.SetNamespace(namespace)
+	}
 	return &c2
 }
 
