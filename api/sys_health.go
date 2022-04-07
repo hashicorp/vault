@@ -13,13 +13,6 @@ func (c *Sys) HealthWithContext(ctx context.Context) (*HealthResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	// clear the namespace for this call
-	ns := c.c.Namespace()
-	c.c.ClearNamespace()
-	if ns != "" {
-		defer c.c.SetNamespace(ns)
-	}
-
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/health")
 	// If the code is 400 or above it will automatically turn into an error,
 	// but the sys/health API defaults to returning 5xx when not sealed or

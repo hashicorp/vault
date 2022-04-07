@@ -14,13 +14,6 @@ func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	// clear the namespace for this call
-	ns := c.c.Namespace()
-	c.c.ClearNamespace()
-	if ns != "" {
-		defer c.c.SetNamespace(ns)
-	}
-
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/leader")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)

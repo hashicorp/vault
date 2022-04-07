@@ -840,6 +840,16 @@ func (c *Client) Namespace() string {
 	return c.headers.Get(consts.NamespaceHeaderName)
 }
 
+// WithNamespace makes a shallow copy of Client, modifies it to use
+// the given namespace, and returns it.
+func (c *Client) WithNamespace(namespace string) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.headers = c.Headers()
+	c2.SetNamespace(namespace)
+	return &c2
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
@@ -1157,11 +1167,20 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
+	headers := c.headers
 	outputCurlString := c.config.OutputCurlString
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
+
+	if headers != nil {
+		for header, vals := range headers {
+			for _, val := range vals {
+				r.Headers.Set(header, val)
+			}
+		}
+	}
 
 	for _, cb := range c.requestCallbacks {
 		cb(r)
@@ -1297,7 +1316,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	if c.headers != nil {
 		for header, vals := range c.headers {
 			for _, val := range vals {
-				req.Header.Add(header, val)
+				req.Header.Set(header, val)
 			}
 		}
 	}
