@@ -841,7 +841,8 @@ func (c *Client) Namespace() string {
 }
 
 // WithNamespace makes a shallow copy of Client, modifies it to use
-// the given namespace, and returns it.
+// the given namespace, and returns it. Passing an empty string will
+// temporarily unset the namespace.
 func (c *Client) WithNamespace(namespace string) *Client {
 	c2 := *c
 	c2.modifyLock = sync.RWMutex{}
