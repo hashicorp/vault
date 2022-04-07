@@ -37,7 +37,7 @@ func TestReadCommand_Run(t *testing.T) {
 		{
 			"proper_args",
 			[]string{"foo", "bar=baz"},
-			"No value found at foo\n",
+			"Error reading foo",
 			2,
 		},
 		{
