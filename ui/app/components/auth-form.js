@@ -117,7 +117,8 @@ export default Component.extend(DEFAULTS, {
     if (!methods && !wrappedToken) {
       return {};
     }
-    if (keyIsPath) {
+    // if type is provided we can ignore path since we are attempting to lookup a specific backend by type
+    if (keyIsPath && !type) {
       return methods.findBy('path', selected);
     }
     return BACKENDS.findBy('type', selected);
@@ -227,7 +228,7 @@ export default Component.extend(DEFAULTS, {
         });
         this.onSuccess(authResponse, backendType, data);
       } catch (e) {
-        this.set('loading', false);
+        this.set('isLoading', false);
         if (!this.auth.mfaError) {
           this.set('error', `Authentication failed: ${this.auth.handleError(e)}`);
         }
@@ -260,7 +261,7 @@ export default Component.extend(DEFAULTS, {
         error: null,
       });
       // if callback from oidc or jwt we have a token at this point
-      let backend = ['oidc', 'jwt'].includes(this.selectedAuth)
+      let backend = ['oidc', 'jwt'].includes(this.providerName)
         ? this.getAuthBackend('token')
         : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
@@ -279,7 +280,7 @@ export default Component.extend(DEFAULTS, {
     },
     handleError(e) {
       this.setProperties({
-        loading: false,
+        isLoading: false,
         error: e ? this.auth.handleError(e) : null,
       });
     },
