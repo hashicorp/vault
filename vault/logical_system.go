@@ -4404,11 +4404,8 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	versions := make([]VaultVersion, 0)
 	respKeys := make([]string, 0)
 
-	for versionString, ts := range b.Core.versionTimestamps {
-		versions = append(versions, VaultVersion{
-			Version:            versionString,
-			TimestampInstalled: ts,
-		})
+	for _, versionEntry := range b.Core.versionHistory {
+		versions = append(versions, versionEntry)
 	}
 
 	sort.Slice(versions, func(i, j int) bool {
@@ -4422,6 +4419,7 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 
 		entry := map[string]interface{}{
 			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"build_date":          v.BuildDate,
 			"previous_version":    nil,
 		}
 
