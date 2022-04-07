@@ -1,7 +1,6 @@
 package transit_test
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -40,7 +39,7 @@ func TestTransit_Issue_2958(t *testing.T) {
 
 	client := cores[0].Client
 
-	err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "file", &api.EnableAuditOptions{
+	err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 		Type: "file",
 		Options: map[string]string{
 			"file_path": "/dev/null",
@@ -50,45 +49,45 @@ func TestTransit_Issue_2958(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = client.Sys().MountWithContext(context.Background(), "transit", &api.MountInput{
+	err = client.Sys().Mount("transit", &api.MountInput{
 		Type: "transit",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "transit/keys/foo", map[string]interface{}{
+	_, err = client.Logical().Write("transit/keys/foo", map[string]interface{}{
 		"type": "ecdsa-p256",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "transit/keys/foobar", map[string]interface{}{
+	_, err = client.Logical().Write("transit/keys/foobar", map[string]interface{}{
 		"type": "ecdsa-p384",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "transit/keys/bar", map[string]interface{}{
+	_, err = client.Logical().Write("transit/keys/bar", map[string]interface{}{
 		"type": "ed25519",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().ReadWithContext(context.Background(), "transit/keys/foo")
+	_, err = client.Logical().Read("transit/keys/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().ReadWithContext(context.Background(), "transit/keys/foobar")
+	_, err = client.Logical().Read("transit/keys/foobar")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().ReadWithContext(context.Background(), "transit/keys/bar")
+	_, err = client.Logical().Read("transit/keys/bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +144,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
-	err := client.Sys().MountWithContext(context.Background(), "transit", &api.MountInput{
+	err := client.Sys().Mount("transit", &api.MountInput{
 		Type: "transit",
 	})
 	if err != nil {
@@ -160,7 +159,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 			}
 			keyName := hex.EncodeToString(keyNameBytes)
 
-			_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
+			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
 				"auto_rotate_period": test.autoRotatePeriod,
 			})
 			switch {
@@ -171,7 +170,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 			}
 
 			if !test.shouldError {
-				resp, err := client.Logical().ReadWithContext(context.Background(), fmt.Sprintf("transit/keys/%s", keyName))
+				resp, err := client.Logical().Read(fmt.Sprintf("transit/keys/%s", keyName))
 				if err != nil {
 					t.Fatal(err)
 				}

@@ -236,7 +236,7 @@ func testVaultServerBad(tb testing.TB) (*api.Client, func()) {
 func testTokenAndAccessor(tb testing.TB, client *api.Client) (string, string) {
 	tb.Helper()
 
-	secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		Policies: []string{"default"},
 		TTL:      "30m",
 	})

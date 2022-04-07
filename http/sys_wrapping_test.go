@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -30,7 +29,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	client.SetToken(cluster.RootToken)
 
 	// Write a value that we will use with wrapping for lookup
-	_, err := client.Logical().WriteWithContext(context.Background(), "secret/foo", map[string]interface{}{
+	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
 		"zip": "zap",
 	})
 	if err != nil {
@@ -48,19 +47,19 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// First test: basic things that should fail, lookup edition
 	// Root token isn't a wrapping token
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/lookup", nil)
+	_, err = client.Logical().Write("sys/wrapping/lookup", nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	// Not supplied
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/lookup", map[string]interface{}{
+	_, err = client.Logical().Write("sys/wrapping/lookup", map[string]interface{}{
 		"foo": "bar",
 	})
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	// Nonexistent token isn't a wrapping token
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/lookup", map[string]interface{}{
+	_, err = client.Logical().Write("sys/wrapping/lookup", map[string]interface{}{
 		"token": "bar",
 	})
 	if err == nil {
@@ -69,24 +68,24 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Second: basic things that should fail, unwrap edition
 	// Root token isn't a wrapping token
-	_, err = client.Logical().UnwrapWithContext(context.Background(), cluster.RootToken)
+	_, err = client.Logical().Unwrap(cluster.RootToken)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	// Root token isn't a wrapping token
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", nil)
+	_, err = client.Logical().Write("sys/wrapping/unwrap", nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	// Not supplied
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", map[string]interface{}{
+	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"foo": "bar",
 	})
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	// Nonexistent token isn't a wrapping token
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", map[string]interface{}{
+	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": "bar",
 	})
 	if err == nil {
@@ -98,7 +97,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	//
 
 	// Create a wrapping token
-	secret, err := client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	secret, err := client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +108,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Test this twice to ensure no ill effect to the wrapping token as a result of the lookup
 	for i := 0; i < 2; i++ {
-		secret, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/lookup", map[string]interface{}{
+		secret, err = client.Logical().Write("sys/wrapping/lookup", map[string]interface{}{
 			"token": wrapInfo.Token,
 		})
 		if err != nil {
@@ -132,7 +131,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	//
 
 	// Create a wrapping token
-	secret, err = client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +142,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Test unwrap via the client token
 	client.SetToken(wrapInfo.Token)
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", nil)
+	secret, err = client.Logical().Write("sys/wrapping/unwrap", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,14 +151,14 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 	ret1 := secret
 	// Should be expired and fail
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", nil)
+	_, err = client.Logical().Write("sys/wrapping/unwrap", nil)
 	if err == nil {
 		t.Fatal("expected err")
 	}
 
 	// Create a wrapping token
 	client.SetToken(cluster.RootToken)
-	secret, err = client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +168,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	wrapInfo = secret.WrapInfo
 
 	// Test as a separate token
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", map[string]interface{}{
+	secret, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
 	if err != nil {
@@ -177,7 +176,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 	ret2 := secret
 	// Should be expired and fail
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", map[string]interface{}{
+	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
 	if err == nil {
@@ -185,7 +184,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 
 	// Create a wrapping token
-	secret, err = client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,20 +195,20 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Read response directly
 	client.SetToken(wrapInfo.Token)
-	secret, err = client.Logical().ReadWithContext(context.Background(), "cubbyhole/response")
+	secret, err = client.Logical().Read("cubbyhole/response")
 	if err != nil {
 		t.Fatal(err)
 	}
 	ret3 := secret
 	// Should be expired and fail
-	_, err = client.Logical().WriteWithContext(context.Background(), "cubbyhole/response", nil)
+	_, err = client.Logical().Write("cubbyhole/response", nil)
 	if err == nil {
 		t.Fatal("expected err")
 	}
 
 	// Create a wrapping token
 	client.SetToken(cluster.RootToken)
-	secret, err = client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,13 +218,13 @@ func TestHTTP_Wrapping(t *testing.T) {
 	wrapInfo = secret.WrapInfo
 
 	// Read via Unwrap method
-	secret, err = client.Logical().UnwrapWithContext(context.Background(), wrapInfo.Token)
+	secret, err = client.Logical().Unwrap(wrapInfo.Token)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ret4 := secret
 	// Should be expired and fail
-	_, err = client.Logical().UnwrapWithContext(context.Background(), wrapInfo.Token)
+	_, err = client.Logical().Unwrap(wrapInfo.Token)
 	if err == nil {
 		t.Fatal("expected err")
 	}
@@ -270,7 +269,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	client.SetWrappingLookupFunc(func(operation, path string) string {
 		return ""
 	})
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/wrap", data)
+	secret, err = client.Logical().Write("sys/wrapping/wrap", data)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -283,11 +282,11 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 		return api.DefaultWrappingLookupFunc(operation, path)
 	})
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/wrap", data)
+	secret, err = client.Logical().Write("sys/wrapping/wrap", data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err = client.Logical().UnwrapWithContext(context.Background(), secret.WrapInfo.Token)
+	secret, err = client.Logical().Unwrap(secret.WrapInfo.Token)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +299,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	//
 
 	// Create a wrapping token
-	secret, err = client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +314,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 
 	// Test rewrapping
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/rewrap", map[string]interface{}{
+	secret, err = client.Logical().Write("sys/wrapping/rewrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
 	if err != nil {
@@ -328,7 +327,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 
 	// Should be expired and fail
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", map[string]interface{}{
+	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
 	if err == nil {
@@ -337,12 +336,12 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Attempt unwrapping the rewrapped token
 	wrapToken := secret.WrapInfo.Token
-	secret, err = client.Logical().UnwrapWithContext(context.Background(), wrapToken)
+	secret, err = client.Logical().Unwrap(wrapToken)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Should be expired and fail
-	_, err = client.Logical().UnwrapWithContext(context.Background(), wrapToken)
+	_, err = client.Logical().Unwrap(wrapToken)
 	if err == nil {
 		t.Fatal("expected err")
 	}
