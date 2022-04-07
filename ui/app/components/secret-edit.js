@@ -1,84 +1,63 @@
+/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 /**
  * @module SecretEdit
  * SecretEdit component manages the secret and model data, and displays either the create, update, empty state or show view of a KV secret.
  *
  * @example
  * ```js
- * <SecretEdit @model={{model}}/>
+ * <SecretEdit @model={{model}} @mode="create" @baseKey={{this.baseKey}} @key={{this.model}} @initialKey={{this.initialKey}} @onRefresh={{action "refresh"}} @onToggleAdvancedEdit={{action "toggleAdvancedEdit"}} @preferAdvancedEdit={{this.preferAdvancedEdit}}/>
  * ```
-/
- * @param {object} model - Model returned from route secret-v2
+/This component is initialized from the secret-edit-layout.hbs file
+ * @param {object} model - Model returned from secret-v2 which is generated in the secret-edit route
+ * @param {string} mode - Edit, create, etc.
+ * @param {string} baseKey - Provided for navigation.
+ * @param {object} key - Passed through, copy of the model.
+ * @param {string} initialKey - model's name.
+ * @param {function} onRefresh - action that refreshes the model
+ * @param {function} onToggleAdvancedEdit - changes the preferAdvancedEdit to true or false
+ * @param {boolean} preferAdvancedEdit - property set from the controller of show/edit/create route passed in through secret-edit-layout
  */
 
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import { alias, or } from '@ember/object/computed';
-import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
+import { alias, or } from '@ember/object/computed';
 
-export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
-  wizard: service(),
-  store: service(),
+export default class SecretEdit extends Component {
+  @service wizard;
+  @service store;
 
-  // a key model
-  key: null,
-  model: null,
+  @tracked secretData = null;
+  @tracked isV2 = false;
+  @tracked codemirrorString = null;
 
-  // a value to pre-fill the key input - this is populated by the corresponding
-  // 'initialKey' queryParam
-  initialKey: null,
-
-  // set in the route's setupController hook
-  mode: null,
-
-  secretData: null,
-
-  // called with a bool indicating if there's been a change in the secretData and customMetadata
-  onDataChange() {},
-  onRefresh() {},
-  onToggleAdvancedEdit() {},
-
-  // did user request advanced mode
-  preferAdvancedEdit: false,
-
-  // use a named action here so we don't have to pass one in
-  // this will bubble to the route
-  toggleAdvancedEdit: 'toggleAdvancedEdit',
-
-  codemirrorString: null,
-
-  isV2: false,
-
-  init() {
-    this._super(...arguments);
-    let secrets = this.model.secretData;
-    if (!secrets && this.model.selectedVersion) {
-      this.set('isV2', true);
-      secrets = this.model.belongsTo('selectedVersion').value().secretData;
+  constructor() {
+    super(...arguments);
+    let secrets = this.args.model.secretData;
+    if (!secrets && this.args.model.selectedVersion) {
+      this.isV2 = true;
+      secrets = this.args.model.belongsTo('selectedVersion').value().secretData;
     }
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
-    this.set('secretData', data);
-    this.set('codemirrorString', data.toJSONString());
-    if (data.isAdvanced()) {
-      this.set('preferAdvancedEdit', true);
-    }
-    if (this.wizard.featureState === 'details' && this.mode === 'create') {
-      let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
+    this.secretData = data;
+    this.codemirrorString = data.toJSONString();
+    if (this.wizard.featureState === 'details' && this.args.mode === 'create') {
+      let engine = this.args.model.backend.includes('kv') ? 'kv' : this.args.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
-  },
+  }
 
-  checkSecretCapabilities: maybeQueryRecord(
+  @maybeQueryRecord(
     'capabilities',
     (context) => {
-      if (!context.model || context.mode === 'create') {
+      if (!context.args.model || context.args.mode === 'create') {
         return;
       }
-      let backend = context.isV2 ? context.get('model.engine.id') : context.model.backend;
-      let id = context.model.id;
+      let backend = context.isV2 ? context.args.model.engine.id : context.args.model.backend;
+      let id = context.args.model.id;
       let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
         id: path,
@@ -88,17 +67,18 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model',
     'model.id',
     'mode'
-  ),
-  canUpdateSecretData: alias('checkSecretCapabilities.canUpdate'),
-  canReadSecretData: alias('checkSecretCapabilities.canRead'),
+  )
+  checkSecretCapabilities;
+  @alias('checkSecretCapabilities.canUpdate') canUpdateSecretData;
+  @alias('checkSecretCapabilities.canRead') canReadSecretData;
 
-  checkMetadataCapabilities: maybeQueryRecord(
+  @maybeQueryRecord(
     'capabilities',
     (context) => {
-      if (!context.model || !context.isV2) {
+      if (!context.args.model || !context.isV2) {
         return;
       }
-      let backend = context.model.backend;
+      let backend = context.args.model.backend;
       let path = `${backend}/metadata/`;
       return {
         id: path,
@@ -108,60 +88,59 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model',
     'model.id',
     'mode'
-  ),
-  canDeleteSecretMetadata: alias('checkMetadataCapabilities.canDelete'),
-  canUpdateSecretMetadata: alias('checkMetadataCapabilities.canUpdate'),
-  canReadSecretMetadata: alias('checkMetadataCapabilities.canRead'),
+  )
+  checkMetadataCapabilities;
+  @alias('checkMetadataCapabilities.canDelete') canDeleteSecretMetadata;
+  @alias('checkMetadataCapabilities.canUpdate') canUpdateSecretMetadata;
+  @alias('checkMetadataCapabilities.canRead') canReadSecretMetadata;
 
-  requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
+  @or('model.isLoading', 'model.isReloading', 'model.isSaving') requestInFlight;
+  @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
 
-  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid'),
-
-  modelForData: computed('isV2', 'model', function () {
-    let { model } = this;
+  get modelForData() {
+    let { model } = this.args;
     if (!model) return null;
     return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
-  }),
+  }
 
-  basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function () {
+  get basicModeDisabled() {
     return this.secretDataIsAdvanced || this.showAdvancedMode === false;
-  }),
+  }
 
-  secretDataAsJSON: computed('secretData', 'secretData.[]', function () {
+  get secretDataAsJSON() {
     return this.secretData.toJSON();
-  }),
+  }
 
-  secretDataIsAdvanced: computed('secretData', 'secretData.[]', function () {
+  get secretDataIsAdvanced() {
     return this.secretData.isAdvanced();
-  }),
+  }
 
-  showAdvancedMode: or('secretDataIsAdvanced', 'preferAdvancedEdit'),
+  get showAdvancedMode() {
+    return this.secretDataIsAdvanced || this.args.preferAdvancedEdit;
+  }
 
-  isWriteWithoutRead: computed(
-    'model.failedServerRead',
-    'modelForData.failedServerRead',
-    'isV2',
-    function () {
-      if (!this.model) return;
-      // if the version couldn't be read from the server
-      if (this.isV2 && this.modelForData.failedServerRead) {
-        return true;
-      }
-      // if the model couldn't be read from the server
-      if (!this.isV2 && this.model.failedServerRead) {
-        return true;
-      }
+  get isWriteWithoutRead() {
+    if (!this.args.model) {
       return false;
     }
-  ),
+    // if the version couldn't be read from the server
+    if (this.isV2 && this.modelForData.failedServerRead) {
+      return true;
+    }
+    // if the model couldn't be read from the server
+    if (!this.isV2 && this.args.model.failedServerRead) {
+      return true;
+    }
+    return false;
+  }
 
-  actions: {
-    refresh() {
-      this.onRefresh();
-    },
+  @action
+  refresh() {
+    this.args.onRefresh();
+  }
 
-    toggleAdvanced(bool) {
-      this.onToggleAdvancedEdit(bool);
-    },
-  },
-});
+  @action
+  toggleAdvanced(bool) {
+    this.args.onToggleAdvancedEdit(bool);
+  }
+}

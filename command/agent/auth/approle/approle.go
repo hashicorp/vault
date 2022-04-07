@@ -138,7 +138,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 				}
 				clonedClient.SetToken(stringSecretID)
 				// Validate the creation path
-				resp, err := clonedClient.Logical().Read("sys/wrapping/lookup")
+				resp, err := clonedClient.Logical().ReadWithContext(ctx, "sys/wrapping/lookup")
 				if err != nil {
 					return "", nil, nil, fmt.Errorf("error looking up wrapped secret ID: %w", err)
 				}
@@ -161,7 +161,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 					return "", nil, nil, errors.New("unable to validate wrapping token creation path")
 				}
 				// Now get the secret ID
-				resp, err = clonedClient.Logical().Unwrap("")
+				resp, err = clonedClient.Logical().UnwrapWithContext(ctx, "")
 				if err != nil {
 					return "", nil, nil, fmt.Errorf("error unwrapping secret ID: %w", err)
 				}

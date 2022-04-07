@@ -232,12 +232,12 @@ module.exports = [
   },
   {
     source: '/docs/secrets/custom',
-    destination: '/docs/plugin',
+    destination: '/docs/plugins/plugin-management',
     permanent: true,
   },
   {
     source: '/docs/internals/plugins',
-    destination: '/docs/plugin',
+    destination: '/docs/plugins',
     permanent: true,
   },
   {

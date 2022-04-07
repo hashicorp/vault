@@ -90,12 +90,12 @@ require (
 	github.com/hashicorp/raft v1.3.3
 	github.com/hashicorp/raft-autopilot v0.1.3
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
-	github.com/hashicorp/raft-snapshot v1.0.3
+	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.11.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.10.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.11.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.11.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.12.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20220405202915-ab4f0f6abd2b
 	github.com/hashicorp/vault-plugin-auth-jwt v0.12.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.6.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.12.0
