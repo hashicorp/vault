@@ -843,7 +843,7 @@ func TestHandler_Parse_Form(t *testing.T) {
 	client := cores[0].Client
 	client.SetToken(cluster.RootToken)
 
-	apiResp, err := client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	apiResp, err := client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -28,7 +28,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
+	err = client.Sys().Mount("pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -36,7 +36,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 		},
 	})
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -45,7 +45,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	}
 	caSerial := resp.Data["serial_number"]
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "pki/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
 		"allowed_domains":    "foobar.com",
@@ -57,7 +57,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 
 	serials := make(map[int]string)
 	for i := 0; i < 6; i++ {
-		resp, err := client.Logical().WriteWithContext(context.Background(), "pki/issue/test", map[string]interface{}{
+		resp, err := client.Logical().Write("pki/issue/test", map[string]interface{}{
 			"common_name": "test.foobar.com",
 		})
 		if err != nil {
@@ -75,14 +75,14 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	}
 
 	revoke := func(num int) {
-		resp, err = client.Logical().WriteWithContext(context.Background(), "pki/revoke", map[string]interface{}{
+		resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 			"serial_number": serials[num],
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		resp, err = client.Logical().WriteWithContext(context.Background(), "pki/revoke", map[string]interface{}{
+		resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 			"serial_number": caSerial,
 		})
 		if err == nil {
@@ -91,7 +91,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	}
 
 	toggle := func(disabled bool) {
-		_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/crl", map[string]interface{}{
+		_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
 			"disable": disabled,
 		})
 		if err != nil {

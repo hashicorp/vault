@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -23,7 +22,7 @@ func testUnwrapCommand(tb testing.TB) (*cli.MockUi, *UnwrapCommand) {
 func testUnwrapWrappedToken(tb testing.TB, client *api.Client, data map[string]interface{}) string {
 	tb.Helper()
 
-	wrapped, err := client.Logical().WriteWithContext(context.Background(), "sys/wrapping/wrap", data)
+	wrapped, err := client.Logical().Write("sys/wrapping/wrap", data)
 	if err != nil {
 		tb.Fatal(err)
 	}
