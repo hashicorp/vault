@@ -267,9 +267,14 @@ ci-verify:
 # This is used for release builds by .github/workflows/build.yml
 build:
 	@echo "--> Building Vault $(VAULT_VERSION)"
-	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION)" -o dist/
+	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/sdk/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
 
 .PHONY: version
 # This is used for release builds by .github/workflows/build.yml
 version:
 	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+
+.PHONY: build-date
+# This is used for release builds by .github/workflows/build.yml
+build-date:
+	@$(CURDIR)/scripts/build_date.sh
