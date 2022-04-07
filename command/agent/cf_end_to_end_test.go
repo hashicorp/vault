@@ -68,7 +68,7 @@ func TestCFEndToEnd(t *testing.T) {
 	defer mockCFAPI.Close()
 
 	// Configure a CA certificate like a Vault operator would in setting up CF.
-	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/cf/config", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/cf/config", map[string]interface{}{
 		"identity_ca_certificates": testCFCerts.CACertificate,
 		"cf_api_addr":              mockCFAPI.URL,
 		"cf_username":              cfAPI.AuthUsername,
@@ -78,7 +78,7 @@ func TestCFEndToEnd(t *testing.T) {
 	}
 
 	// Configure a role to be used for logging in, another thing a Vault operator would do.
-	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/cf/roles/test-role", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/cf/roles/test-role", map[string]interface{}{
 		"bound_instance_ids":     cfAPI.FoundServiceGUID,
 		"bound_organization_ids": cfAPI.FoundOrgGUID,
 		"bound_space_ids":        cfAPI.FoundSpaceGUID,

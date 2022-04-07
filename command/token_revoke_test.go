@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -130,7 +129,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err := client.Auth().Token().Lookup(token)
 		if secret != nil || err == nil {
 			t.Errorf("expected token to be revoked: %#v", secret)
 		}
@@ -158,7 +157,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if secret != nil || err == nil {
 			t.Errorf("expected token to be revoked: %#v", secret)
 		}
@@ -189,7 +188,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err := client.Auth().Token().Lookup(token)
 		if secret != nil || err == nil {
 			t.Errorf("expected token to be revoked: %#v", secret)
 		}

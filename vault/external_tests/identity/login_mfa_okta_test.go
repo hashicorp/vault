@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -44,7 +43,7 @@ func TestOktaEngineMFA(t *testing.T) {
 		t.Fatalf("failed to enable okta auth: %v", err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/okta/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/okta/config", map[string]interface{}{
 		"base_url":  "okta.com",
 		"org_name":  org_name,
 		"api_token": api_token,
@@ -53,14 +52,14 @@ func TestOktaEngineMFA(t *testing.T) {
 		t.Fatalf("error configuring okta mount: %v", err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/okta/groups/testgroup", map[string]interface{}{
+	_, err = client.Logical().Write("auth/okta/groups/testgroup", map[string]interface{}{
 		"policies": "default",
 	})
 	if err != nil {
 		t.Fatalf("error configuring okta group, %v", err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/okta/login/<okta username>", map[string]interface{}{
+	_, err = client.Logical().Write("auth/okta/login/<okta username>", map[string]interface{}{
 		"password": "<okta password>",
 	})
 	if err != nil {
@@ -102,20 +101,20 @@ path "secret/foo" {
 }
 	`
 
-	err = client.Sys().PutPolicyWithContext(context.Background(), "mfa_policy", rules)
+	err = client.Sys().PutPolicy("mfa_policy", rules)
 	if err != nil {
 		return fmt.Errorf("failed to create mfa_policy: %v", err)
 	}
 
 	// listing auth mounts to find the mount accessor for the userpass
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("error listing auth mounts")
 	}
 	mountAccessor := auths["userpass/"].Accessor
 
 	// creating a user in userpass
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/testuser", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -123,7 +122,7 @@ path "secret/foo" {
 	}
 
 	// creating an identity with email metadata to be used for MFA validation
-	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
 		"name":     "test-entity",
 		"policies": "mfa_policy",
 		"metadata": map[string]string{
@@ -136,7 +135,7 @@ path "secret/foo" {
 	entityID := secret.Data["id"].(string)
 
 	// assigning the entity ID to the testuser alias
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+	_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "testuser",
 		"canonical_id":   entityID,
 		"mount_accessor": mountAccessor,
@@ -152,7 +151,7 @@ path "secret/foo" {
 		"primary_email":   true,
 		"username_format": "{{entity.metadata.email}}",
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/mfa/method/okta/my_okta", mfaConfigData)
+	_, err = client.Logical().Write("sys/mfa/method/okta/my_okta", mfaConfigData)
 	if err != nil {
 		return fmt.Errorf("failed to persist TOTP MFA configuration: %v", err)
 	}
@@ -161,7 +160,7 @@ path "secret/foo" {
 	genericData := map[string]interface{}{
 		"somedata": "which can only be read if MFA succeeds",
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), "secret/foo", genericData)
+	_, err = client.Logical().Write("secret/foo", genericData)
 	if err != nil {
 		return fmt.Errorf("failed to store data in generic backend: %v", err)
 	}
@@ -172,7 +171,7 @@ path "secret/foo" {
 	defer client.SetToken(originalToken)
 
 	// login to the testuser
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -182,7 +181,7 @@ path "secret/foo" {
 	userpassToken := secret.Auth.ClientToken
 	client.SetToken(userpassToken)
 
-	secret, err = client.Logical().ReadWithContext(context.Background(), "secret/foo")
+	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		return fmt.Errorf("failed to read the secret: %v", err)
 	}
@@ -225,20 +224,20 @@ func TestInteg_LoginMFAOkta(t *testing.T) {
 func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 	var err error
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("failed to list auth mounts")
 	}
 	mountAccessor := auths["userpass/"].Accessor
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/testuser", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
 		return fmt.Errorf("failed to configure userpass backend: %v", err)
 	}
 
-	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
 		"name": "test-entity",
 		"metadata": map[string]string{
 			"email": "<okta username>",
@@ -249,7 +248,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 	}
 	entityID := secret.Data["id"].(string)
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+	_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "testuser",
 		"canonical_id":   entityID,
 		"mount_accessor": mountAccessor,
@@ -270,7 +269,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 			"primary_email":   true,
 			"username_format": "{{entity.metadata.email}}",
 		}
-		resp, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method-id/okta", mfaConfigData)
+		resp, err := client.Logical().Write("identity/mfa/method-id/okta", mfaConfigData)
 
 		if err != nil || (resp == nil) {
 			return fmt.Errorf("bad: resp: %#v\n err: %v", resp, err)
@@ -281,7 +280,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 			return fmt.Errorf("method ID is empty")
 		}
 		// creating MFAEnforcementConfig
-		_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
+		_, err = client.Logical().Write("identity/mfa/login-enforcement/randomName", map[string]interface{}{
 			"auth_method_accessors": []string{mountAccessor},
 			"auth_method_types":     []string{"userpass"},
 			"identity_entity_ids":   []string{entityID},
@@ -293,7 +292,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 		}
 	}
 
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -323,7 +322,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 	}
 
 	// validation
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+	secret, err = client.Logical().Write("sys/mfa/validate", map[string]interface{}{
 		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 		"mfa_payload": map[string][]string{
 			methodID: {},
@@ -339,7 +338,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 	}
 
 	client.SetToken(client.Token())
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": userpassToken,
 	})
 	if err != nil {

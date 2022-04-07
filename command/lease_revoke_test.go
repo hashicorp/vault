@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -79,7 +78,7 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				if err := client.Sys().MountWithContext(context.Background(), "secret-leased", &api.MountInput{
+				if err := client.Sys().Mount("secret-leased", &api.MountInput{
 					Type: "generic-leased",
 				}); err != nil {
 					t.Fatal(err)
@@ -90,10 +89,10 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 					"key":   "value",
 					"lease": "1m",
 				}
-				if _, err := client.Logical().WriteWithContext(context.Background(), path, data); err != nil {
+				if _, err := client.Logical().Write(path, data); err != nil {
 					t.Fatal(err)
 				}
-				secret, err := client.Logical().ReadWithContext(context.Background(), path)
+				secret, err := client.Logical().Read(path)
 				if err != nil {
 					t.Fatal(err)
 				}
