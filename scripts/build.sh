@@ -57,7 +57,7 @@ echo "==> Building..."
 gox \
     -osarch="${XC_OSARCH}" \
     -gcflags "${GCFLAGS}" \
-    -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/sdk/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' ${LD_FLAGS}-X github.com/hashicorp/vault/sdk/version.BuildDate=${BUILD_DATE}" \
+    -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/sdk/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/sdk/version.BuildDate=${BUILD_DATE}" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
     ${GOX_PARALLEL_BUILDS+-parallel="${GOX_PARALLEL_BUILDS}"} \
     -tags="${BUILD_TAGS}" \
