@@ -1195,7 +1195,9 @@ func TestClientWithNamespace(t *testing.T) {
 	if ns != "" {
 		t.Fatalf("Expected no namespace, got \"%s\"", ns)
 	}
+
+	// ensure client has not been modified
 	if client.Namespace() != ogNS {
-		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
+		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, client.Namespace())
 	}
 }
