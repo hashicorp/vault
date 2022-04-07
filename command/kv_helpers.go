@@ -51,9 +51,6 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	currentOutputCurlString := client.OutputCurlString()
 	client.SetOutputCurlString(false)
 	defer client.SetOutputCurlString(currentOutputCurlString)
-	currentOutputPolicy := client.OutputPolicy()
-	client.SetOutputPolicy(false)
-	defer client.SetOutputPolicy(currentOutputPolicy)
 
 	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
 	resp, err := client.RawRequest(r)
