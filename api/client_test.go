@@ -526,8 +526,8 @@ func TestClone(t *testing.T) {
 			if parent.MaxRetries() != clone.MaxRetries() {
 				t.Fatalf("maxRetries don't match: %v vs %v", parent.MaxRetries(), clone.MaxRetries())
 			}
-			if parent.OutputCurlString() != clone.OutputCurlString() {
-				t.Fatalf("outputCurlString doesn't match: %v vs %v", parent.OutputCurlString(), clone.OutputCurlString())
+			if parent.OutputCurlString() == clone.OutputCurlString() {
+				t.Fatalf("outputCurlString was copied over when it shouldn't have been: %v and %v", parent.OutputCurlString(), clone.OutputCurlString())
 			}
 			if parent.SRVLookup() != clone.SRVLookup() {
 				t.Fatalf("SRVLookup doesn't match: %v vs %v", parent.SRVLookup(), clone.SRVLookup())

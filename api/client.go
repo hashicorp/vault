@@ -588,7 +588,6 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CheckRetry = c.config.CheckRetry
 	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
-	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
@@ -1002,22 +1001,21 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:          config.Address,
-		HttpClient:       config.HttpClient,
-		MinRetryWait:     config.MinRetryWait,
-		MaxRetryWait:     config.MaxRetryWait,
-		MaxRetries:       config.MaxRetries,
-		Timeout:          config.Timeout,
-		Backoff:          config.Backoff,
-		CheckRetry:       config.CheckRetry,
-		Logger:           config.Logger,
-		Limiter:          config.Limiter,
-		OutputCurlString: config.OutputCurlString,
-		AgentAddress:     config.AgentAddress,
-		SRVLookup:        config.SRVLookup,
-		CloneHeaders:     config.CloneHeaders,
-		CloneToken:       config.CloneToken,
-		ReadYourWrites:   config.ReadYourWrites,
+		Address:        config.Address,
+		HttpClient:     config.HttpClient,
+		MinRetryWait:   config.MinRetryWait,
+		MaxRetryWait:   config.MaxRetryWait,
+		MaxRetries:     config.MaxRetries,
+		Timeout:        config.Timeout,
+		Backoff:        config.Backoff,
+		CheckRetry:     config.CheckRetry,
+		Logger:         config.Logger,
+		Limiter:        config.Limiter,
+		AgentAddress:   config.AgentAddress,
+		SRVLookup:      config.SRVLookup,
+		CloneHeaders:   config.CloneHeaders,
+		CloneToken:     config.CloneToken,
+		ReadYourWrites: config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {
