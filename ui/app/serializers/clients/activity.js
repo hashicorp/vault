@@ -39,24 +39,24 @@ export default class ActivitySerializer extends ApplicationSerializer {
         return {
           month: m.timestamp,
           entity_clients: m.new_clients.counts.entity_clients,
-          non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
-          total: m['new_clients']['counts']['clients'],
-          namespaces: this.flattenDataset(m['new_clients']['namespaces']),
+          non_entity_clients: m.new_clients.counts.non_entity_clients,
+          total: m.new_clients.counts.clients,
+          namespaces: this.flattenDataset(m.new_clients.namespaces),
         };
       });
     } else {
       return payload.map((m) => {
         return {
           month: m.timestamp,
-          entity_clients: m['counts']['entity_clients'],
-          non_entity_clients: m['counts']['non_entity_clients'],
-          total: m['counts']['clients'],
-          namespaces: this.flattenDataset(m['namespaces']),
+          entity_clients: m.counts.entity_clients,
+          non_entity_clients: m.counts.non_entity_clients,
+          total: m.counts.clients,
+          namespaces: this.flattenDataset(m.namespaces),
           new_clients: {
-            entity_clients: m['new_clients']['counts']['entity_clients'],
-            non_entity_clients: m['new_clients']['counts']['non_entity_clients'],
-            total: m['new_clients']['counts']['clients'],
-            namespaces: this.flattenDataset(m['new_clients']['namespaces']),
+            entity_clients: m.new_clients.counts.entity_clients,
+            non_entity_clients: m.new_clients.counts.non_entity_clients,
+            total: m.new_clients.counts.clients,
+            namespaces: this.flattenDataset(m.new_clients.namespaces),
           },
         };
       });
@@ -67,7 +67,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
   // 'non_entity_tokens' to 'non_entity_clients'
   homogenizeClientNaming(object) {
     // if new key names exist, only return those key/value pairs
-    if (Object.keys(object).includes('entity_clients', 'non_entity_clients')) {
+    if (Object.keys(object).includes('entity_clients')) {
       let { clients, entity_clients, non_entity_clients } = object;
       return {
         clients,
@@ -76,16 +76,16 @@ export default class ActivitySerializer extends ApplicationSerializer {
       };
     }
     // if object only has outdated key names, update naming
-    if (Object.keys(object).includes('distinct_entities', 'non_entity_tokens')) {
-      let entity_clients = object.distinct_entities;
-      let non_entity_clients = object.non_entity_tokens;
-      let { clients } = object;
+    if (Object.keys(object).includes('distinct_entities')) {
+      let { clients, distinct_entities, non_entity_tokens } = object;
       return {
         clients,
-        entity_clients,
-        non_entity_clients,
+        entity_clients: distinct_entities,
+        non_entity_clients: non_entity_tokens,
       };
     }
+    // TODO CMB: test what to return if neither key exists
+    return object;
   }
 
   parseRFC3339(timestamp) {
