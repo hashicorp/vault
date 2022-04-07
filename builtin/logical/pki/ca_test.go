@@ -502,11 +502,11 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		// Verify it is now revoked
 		{
 			resp, err := client.Logical().ReadWithContext(context.Background(), rootName+"cert/"+intSerialNumber)
-			if err != nil {
-				t.Fatal(err)
-			}
 			switch shouldFind {
 			case true:
+				if err != nil {
+					t.Fatal(err)
+				}
 				if resp == nil {
 					t.Fatal("nil response")
 				}
@@ -514,6 +514,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 					t.Fatal("expected a non-zero revocation time")
 				}
 			default:
+				if err == nil {
+					t.Fatal(err)
+				}
 				if resp != nil {
 					t.Fatalf("expected nil response, got %#v", *resp)
 				}

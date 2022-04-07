@@ -3526,7 +3526,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	}
 
 	resp, err := client.Logical().ReadWithContext(ctx, "pki/roles/test")
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
 	}
 
@@ -3607,7 +3607,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	}
 
 	resp, err = client.Logical().ReadWithContext(ctx, "pki/roles/test")
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
 	}
 

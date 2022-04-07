@@ -173,7 +173,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 
 			// try to read it again - should 404
 			resp, err = client.Logical().ReadWithContext(context.Background(), myNewPath)
-			if !(resp == nil && err == nil) {
+			if !(resp == nil && err != nil) {
 				t.Fatal("expected a 404 but didn't get one")
 			}
 		})
@@ -333,8 +333,8 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	// try to read it back again - should 404
 	resp, err = client.Logical().ReadWithContext(context.Background(), myPath)
 
-	// when both the response and the error are nil on a read request, that gets translated into a 404
-	if !(resp == nil && err == nil) {
+	// should return 404
+	if !(resp == nil && err != nil) {
 		t.Fatal("expected the read to 404 but it didn't")
 	}
 }
