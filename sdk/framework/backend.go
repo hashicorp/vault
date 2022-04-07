@@ -215,14 +215,39 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
+	warnResp := &logical.Response{}
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
 	raw := make(map[string]interface{}, len(path.Fields))
+	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
+
+		// If a field supplied in the request is not present in the field schema
+		// of the path, add a warning to the response indicating that the
+		// parameter will be ignored.
+		if path.Fields[k] == nil {
+			ignored = append(ignored, k)
+		}
 	}
+
+	if len(ignored) != 0 {
+		warnResp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
+	}
+
+	var replaced []string
 	for k, v := range captures {
+		// If a field supplied in the request is being overwritten by the values
+		// supplied in the API request path, add a warning to the response
+		// indicating that the parameter will be replaced.
+		if raw[k] != nil {
+			replaced = append(replaced, k)
+		}
 		raw[k] = v
+	}
+
+	if len(replaced) != 0 {
+		warnResp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
 	}
 
 	// Look up the callback for this operation, preferring the
@@ -275,7 +300,22 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
-	return callback(ctx, req, &fd)
+	resp, err := callback(ctx, req, &fd)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle the nil response case.
+	if len(warnResp.Warnings) != 0 && resp == nil {
+		resp = &logical.Response{}
+	}
+
+	// Copy the accumulated warnings into the response.
+	for _, warning := range warnResp.Warnings {
+		resp.AddWarning(warning)
+	}
+
+	return resp, nil
 }
 
 // HandlePatchOperation acts as an abstraction for performing JSON merge patch
