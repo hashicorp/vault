@@ -96,6 +96,14 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 		return generateManagedKeyCSRBundle(ctx, b, input, data, addBasicConstraints, randomSource)
 	}
 
+	if existingKeyRequested(input) {
+		keyRef, err := getExistingKeyRef(input.apiData)
+		if err != nil {
+			return nil, err
+		}
+		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingGeneratePrivateKey(ctx, input.req.Storage, keyRef))
+	}
+	
 	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
 }
 
