@@ -1,5 +1,6 @@
 import ApplicationSerializer from '../application';
-import { formatISO, parseISO, format } from 'date-fns';
+import { formatISO } from 'date-fns';
+import { parseAPITimestamp, parseRFC3339 } from '../../utils/date-formatters';
 export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(byNamespaceArray) {
     return byNamespaceArray.map((ns) => {
@@ -39,7 +40,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
     if (isNewClients) {
       return sortedPayload.map((m) => {
         return {
-          month: this.formatTimestamp(m.timestamp),
+          month: parseAPITimestamp(m.timestamp, 'M/yy'),
           entity_clients: m.new_clients.counts.entity_clients,
           non_entity_clients: m.new_clients.counts.non_entity_clients,
           total: m.new_clients.counts.clients,
@@ -49,7 +50,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
     } else {
       return sortedPayload.map((m) => {
         return {
-          month: this.formatTimestamp(m.timestamp),
+          month: parseAPITimestamp(m.timestamp, 'M/yy'),
           entity_clients: m.counts.entity_clients,
           non_entity_clients: m.counts.non_entity_clients,
           total: m.counts.clients,
@@ -90,21 +91,6 @@ export default class ActivitySerializer extends ApplicationSerializer {
     return object;
   }
 
-  // TODO CMB make these two functions utils?
-
-  // format ISO timestamp to M/yy
-  formatTimestamp(timestamp) {
-    let date = timestamp.split('T')[0];
-    return format(parseISO(date), 'M/yy');
-  }
-
-  parseRFC3339(timestamp) {
-    // convert '2021-03-21T00:00:00Z' --> ['2021', 2] (e.g. 2021 March, month is zero indexed)
-    return timestamp
-      ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
-      : null;
-  }
-
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.id === 'no-data') {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
@@ -117,8 +103,8 @@ export default class ActivitySerializer extends ApplicationSerializer {
       by_month_total_clients: this.flattenByMonths(payload.data.months),
       by_month_new_clients: this.flattenByMonths(payload.data.months, { isNewClients: true }),
       total: this.homogenizeClientNaming(payload.data.total),
-      formatted_end_time: this.parseRFC3339(payload.data.end_time),
-      formatted_start_time: this.parseRFC3339(payload.data.start_time),
+      formatted_end_time: parseRFC3339(payload.data.end_time),
+      formatted_start_time: parseRFC3339(payload.data.start_time),
     };
     delete payload.data.by_namespace;
     delete payload.data.months;
@@ -126,7 +112,6 @@ export default class ActivitySerializer extends ApplicationSerializer {
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 }
-
 /* 
 SAMPLE PAYLOAD BEFORE/AFTER:
 
