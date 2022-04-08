@@ -17,7 +17,8 @@ import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/
  * ```js
  * <LineChart @dataset={dataset} />
  * ```
- * @param {array} dataset - dataset is an array of objects
+ * @param {string} xKey - string denoting key for x-axis data (data[xKey]) of dataset
+ * @param {string} yKey - string denoting key for y-axis data (data[yKey]) of dataset
  */
 
 export default class LineChart extends Component {
@@ -124,7 +125,7 @@ export default class LineChart extends Component {
       // TODO: how to genericize this?
       this.tooltipMonth = data[this.xKey];
       this.tooltipTotal = `${data[this.yKey]} total clients`;
-      this.tooltipNew = `${data.new_clients?.total} new clients`;
+      this.tooltipNew = `${data?.new_clients[this.yKey]} new clients`;
       let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
       this.tooltipTarget = node;
     });
