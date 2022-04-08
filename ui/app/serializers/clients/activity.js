@@ -1,5 +1,5 @@
 import ApplicationSerializer from '../application';
-import { formatISO, parseISO, format, compareAsc } from 'date-fns';
+import { formatISO, parseISO, format } from 'date-fns';
 export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(byNamespaceArray) {
     return byNamespaceArray.map((ns) => {
