@@ -258,7 +258,7 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 		cleanupFunc()
 	}
 
-	// check connections map
+	// check that externalPlugins map is cleaned up
 	if len(externalPlugins) != 0 {
 		t.Fatalf("expected external plugin map to be of len 0 but got %d", len(externalPlugins))
 	}
