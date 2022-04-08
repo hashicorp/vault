@@ -1,7 +1,6 @@
 package mfa
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -38,7 +37,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 		t.Fatalf("failed to enable userpass auth: %v", err)
 	}
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +110,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 		t.Run(tc.methodName, func(t *testing.T) {
 			// create a new method config
 			myPath := fmt.Sprintf("identity/mfa/method/%s", tc.methodName)
-			resp, err := client.Logical().WriteWithContext(context.Background(), myPath, tc.configData)
+			resp, err := client.Logical().Write(myPath, tc.configData)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -124,7 +123,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			myNewPath := fmt.Sprintf("%s/%s", myPath, methodId)
 
 			// read it back
-			resp, err = client.Logical().ReadWithContext(context.Background(), myNewPath)
+			resp, err = client.Logical().Read(myNewPath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -134,7 +133,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			}
 
 			// listing should show it
-			resp, err = client.Logical().ListWithContext(context.Background(), myPath)
+			resp, err = client.Logical().List(myPath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -144,12 +143,12 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 
 			// update it
 			tc.configData[tc.keyToUpdate] = tc.valueToUpdate
-			_, err = client.Logical().WriteWithContext(context.Background(), myNewPath, tc.configData)
+			_, err = client.Logical().Write(myNewPath, tc.configData)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			resp, err = client.Logical().ReadWithContext(context.Background(), myNewPath)
+			resp, err = client.Logical().Read(myNewPath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -166,13 +165,13 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			}
 
 			// delete it
-			_, err = client.Logical().DeleteWithContext(context.Background(), myNewPath)
+			_, err = client.Logical().Delete(myNewPath)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			// try to read it again - should 404
-			resp, err = client.Logical().ReadWithContext(context.Background(), myNewPath)
+			resp, err = client.Logical().Read(myNewPath)
 			if !(resp == nil && err == nil) {
 				t.Fatal("expected a 404 but didn't get one")
 			}
@@ -200,7 +199,7 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	configIDs := make([]string, 0)
 
 	for i := 0; i < 2; i++ {
-		resp, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp", map[string]interface{}{
+		resp, err := client.Logical().Write("identity/mfa/method/totp", map[string]interface{}{
 			"issuer":    fmt.Sprintf("fooCorp%d", i),
 			"period":    10,
 			"algorithm": "SHA1",
@@ -224,7 +223,7 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,19 +234,19 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	}
 
 	// create a few entities
-	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{"name": "bob"})
+	resp, err := client.Logical().Write("identity/entity", map[string]interface{}{"name": "bob"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	bobId := resp.Data["id"].(string)
-	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{"name": "alice"})
+	resp, err = client.Logical().Write("identity/entity", map[string]interface{}{"name": "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	aliceId := resp.Data["id"].(string)
 
 	// create a few groups
-	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"metadata":          map[string]interface{}{"rad": true},
 		"member_entity_ids": []string{aliceId},
 	})
@@ -256,7 +255,7 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	}
 	radGroupId := resp.Data["id"].(string)
 
-	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"metadata":          map[string]interface{}{"sad": true},
 		"member_entity_ids": []string{bobId},
 	})
@@ -272,13 +271,13 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	}
 
 	// create a login enforcement config
-	_, err = client.Logical().WriteWithContext(context.Background(), myPath, data)
+	_, err = client.Logical().Write(myPath, data)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// read it back
-	resp, err = client.Logical().ReadWithContext(context.Background(), myPath)
+	resp, err = client.Logical().Read(myPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +292,7 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	}
 
 	// listing should show it
-	resp, err = client.Logical().ListWithContext(context.Background(), "identity/mfa/login-enforcement")
+	resp, err = client.Logical().List("identity/mfa/login-enforcement")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,13 +303,13 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	// update it
 	data["identity_group_ids"] = []string{radGroupId, sadGroupId}
 	data["identity_entity_ids"] = []string{bobId, aliceId}
-	_, err = client.Logical().WriteWithContext(context.Background(), myPath, data)
+	_, err = client.Logical().Write(myPath, data)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// read it back
-	resp, err = client.Logical().ReadWithContext(context.Background(), myPath)
+	resp, err = client.Logical().Read(myPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,13 +324,13 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 	}
 
 	// delete it
-	_, err = client.Logical().DeleteWithContext(context.Background(), myPath)
+	_, err = client.Logical().Delete(myPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// try to read it back again - should 404
-	resp, err = client.Logical().ReadWithContext(context.Background(), myPath)
+	resp, err = client.Logical().Read(myPath)
 
 	// when both the response and the error are nil on a read request, that gets translated into a 404
 	if !(resp == nil && err == nil) {
@@ -352,7 +351,7 @@ func TestLoginMFA_LoginEnforcement_MethodIdsIsRequired(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// create a login enforcement config, which should fail
-	_, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/foo", map[string]interface{}{})
+	_, err := client.Logical().Write("identity/mfa/login-enforcement/foo", map[string]interface{}{})
 	if err == nil {
 		t.Fatal("expected an error but didn't get one")
 	}
@@ -378,7 +377,7 @@ func TestLoginMFA_LoginEnforcement_RequiredParameters(t *testing.T) {
 	configIDs := make([]string, 0)
 
 	for i := 0; i < 2; i++ {
-		resp, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp", map[string]interface{}{
+		resp, err := client.Logical().Write("identity/mfa/method/totp", map[string]interface{}{
 			"issuer":    fmt.Sprintf("fooCorp%d", i),
 			"period":    10,
 			"algorithm": "SHA1",
@@ -395,7 +394,7 @@ func TestLoginMFA_LoginEnforcement_RequiredParameters(t *testing.T) {
 	}
 
 	// create a login enforcement config, which should fail
-	_, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/foo", map[string]interface{}{
+	_, err := client.Logical().Write("identity/mfa/login-enforcement/foo", map[string]interface{}{
 		"mfa_method_ids": []string{configIDs[0], configIDs[1]},
 	})
 	if err == nil {
@@ -417,7 +416,7 @@ func TestLoginMFA_UpdateNonExistentConfig(t *testing.T) {
 	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
-	_, err := client.Logical().WriteWithContext(context.Background(), "mfa/method/totp/a51884c6-51f2-bdc3-f4c5-0da64fe4d061", map[string]interface{}{
+	_, err := client.Logical().Write("mfa/method/totp/a51884c6-51f2-bdc3-f4c5-0da64fe4d061", map[string]interface{}{
 		"issuer":    "yCorp",
 		"period":    10,
 		"algorithm": "SHA1",

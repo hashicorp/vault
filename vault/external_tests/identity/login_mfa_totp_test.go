@@ -122,7 +122,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Enable the audit backend
-	err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "noop", &api.EnableAuditOptions{Type: "noop"})
+	err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	mountInfo := &api.MountInput{
 		Type: "totp",
 	}
-	err = client.Sys().MountWithContext(context.Background(), "totp", mountInfo)
+	err = client.Sys().Mount("totp", mountInfo)
 	if err != nil {
 		t.Fatalf("failed to mount totp backend: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	// login MFA
 	{
 		// create a config
-		resp1, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp", map[string]interface{}{
+		resp1, err := client.Logical().Write("identity/mfa/method/totp", map[string]interface{}{
 			"issuer":    "yCorp",
 			"period":    5,
 			"algorithm": "SHA1",

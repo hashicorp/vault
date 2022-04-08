@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -30,10 +29,10 @@ func TestSysMountConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer client.Sys().UnmountWithContext(context.Background(), path)
+	defer client.Sys().Unmount(path)
 
 	// Get config info for this mount
-	mountConfig, err := client.Sys().MountConfigWithContext(context.Background(), path)
+	mountConfig, err := client.Sys().MountConfig(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,6 +60,6 @@ func testMount(client *api.Client) (string, error) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	path := fmt.Sprintf("testmount-%d", randInt)
-	err := client.Sys().MountWithContext(context.Background(), path, &api.MountInput{Type: "kv"})
+	err := client.Sys().Mount(path, &api.MountInput{Type: "kv"})
 	return path, err
 }

@@ -92,7 +92,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	}
 
 	// Add an admin policy
-	if err := activeClient.Sys().PutPolicyWithContext(context.Background(), "admin", policyAdmin); err != nil {
+	if err := activeClient.Sys().PutPolicy("admin", policyAdmin); err != nil {
 		t.Fatal(err)
 	}
 
@@ -105,7 +105,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		t.Fatal(err)
 	}
 
-	_, err = activeClient.Logical().WriteWithContext(context.Background(), "auth/userpass/users/foo", map[string]interface{}{
+	_, err = activeClient.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 		"policies": []string{"admin"},
 	})
@@ -174,7 +174,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 
 	// Login via userpass method to derive a managed token. Set that token as the
 	// testClient's token
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/userpass/login/foo", map[string]interface{}{
+	resp, err := testClient.Logical().Write("auth/userpass/login/foo", map[string]interface{}{
 		"password": "bar",
 	})
 	if err != nil {
@@ -264,7 +264,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 
 	// Empty the token in the client. Auto-auth token should be put to use.
 	testClient.SetToken("")
-	secret, err := testClient.Auth().Token().LookupSelfWithContext(context.Background())
+	secret, err := testClient.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +272,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 		t.Fatalf("failed to strip off auto-auth token on lookup-self")
 	}
 
-	secret, err = testClient.Auth().Token().LookupWithContext(context.Background(), "")
+	secret, err = testClient.Auth().Token().Lookup("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,7 +329,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 
 	// Empty the token in the client. Auto-auth token should be put to use.
 	testClient.SetToken(dummyToken)
-	_, err = testClient.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = testClient.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,7 +351,7 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
-	err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -364,13 +364,13 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			key := fmt.Sprintf("kv/foo/%d_%d", i, rand.Int())
-			_, err := testClient.Logical().WriteWithContext(context.Background(), key, map[string]interface{}{
+			_, err := testClient.Logical().Write(key, map[string]interface{}{
 				"key": key,
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			secret, err := testClient.Logical().ReadWithContext(context.Background(), key)
+			secret, err := testClient.Logical().Read(key)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -402,7 +402,7 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 	sampleSpace[token1] = "token"
 
 	// Mount the kv backend
-	err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -410,7 +410,7 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -419,14 +419,14 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 	}
 
 	// Read the secret and create a lease
-	leaseResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err := testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease1 := leaseResp.LeaseID
 	sampleSpace[lease1] = "lease"
 
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -435,14 +435,14 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 
 	testClient.SetToken(token2)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease2 := leaseResp.LeaseID
 	sampleSpace[lease2] = "lease"
 
-	resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -451,7 +451,7 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 
 	testClient.SetToken(token3)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -469,7 +469,7 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 	// including the child tokens and leases of the child tokens should be
 	// untouched.
 	testClient.SetToken(token2)
-	err = testClient.Auth().Token().RevokeOrphanWithContext(context.Background(), token2)
+	err = testClient.Auth().Token().RevokeOrphan(token2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -503,7 +503,7 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 	sampleSpace[token1] = "token"
 
 	// Mount the kv backend
-	err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -511,7 +511,7 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -520,14 +520,14 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 	}
 
 	// Read the secret and create a lease
-	leaseResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err := testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease1 := leaseResp.LeaseID
 	sampleSpace[lease1] = "lease"
 
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -536,14 +536,14 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 
 	testClient.SetToken(token2)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease2 := leaseResp.LeaseID
 	sampleSpace[lease2] = "lease"
 
-	resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -552,7 +552,7 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 
 	testClient.SetToken(token3)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -569,7 +569,7 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 	// token, evict entries for all the child tokens and their respective
 	// leases.
 	testClient.SetToken(token3)
-	err = testClient.Auth().Token().RevokeSelfWithContext(context.Background(), "")
+	err = testClient.Auth().Token().RevokeSelf("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -603,7 +603,7 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 	sampleSpace[token1] = "token"
 
 	// Mount the kv backend
-	err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -611,7 +611,7 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -620,14 +620,14 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 	}
 
 	// Read the secret and create a lease
-	leaseResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err := testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease1 := leaseResp.LeaseID
 	sampleSpace[lease1] = "lease"
 
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -636,14 +636,14 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 
 	testClient.SetToken(token2)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease2 := leaseResp.LeaseID
 	sampleSpace[lease2] = "lease"
 
-	resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -652,7 +652,7 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 
 	testClient.SetToken(token3)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -669,7 +669,7 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 	// belonging to this token, evict entries for all the child tokens and
 	// their respective leases.
 	testClient.SetToken(token2)
-	err = testClient.Auth().Token().RevokeSelfWithContext(context.Background(), "")
+	err = testClient.Auth().Token().RevokeSelf("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -701,7 +701,7 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 	sampleSpace[token1] = "token"
 
 	// Mount the kv backend
-	err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -709,7 +709,7 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -718,14 +718,14 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 	}
 
 	// Read the secret and create a lease
-	leaseResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err := testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease1 := leaseResp.LeaseID
 	sampleSpace[lease1] = "lease"
 
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -734,14 +734,14 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 
 	testClient.SetToken(token2)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease2 := leaseResp.LeaseID
 	sampleSpace[lease2] = "lease"
 
-	resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -750,7 +750,7 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 
 	testClient.SetToken(token3)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -767,7 +767,7 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 	// to this token, evict entries for all the child tokens and their
 	// respective leases.
 	testClient.SetToken(token1)
-	err = testClient.Auth().Token().RevokeSelfWithContext(context.Background(), "")
+	err = testClient.Auth().Token().RevokeSelf("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -797,7 +797,7 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 	sampleSpace[token1] = "token"
 
 	// Mount the kv backend
-	err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -805,7 +805,7 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -814,14 +814,14 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 	}
 
 	// Read the secret and create a lease
-	leaseResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err := testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease1 := leaseResp.LeaseID
 	sampleSpace[lease1] = "lease"
 
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -830,14 +830,14 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 
 	testClient.SetToken(token2)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease2 := leaseResp.LeaseID
 	sampleSpace[lease2] = "lease"
 
-	resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -846,7 +846,7 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 
 	testClient.SetToken(token3)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -886,7 +886,7 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 	sampleSpace[token1] = "token"
 
 	// Mount the kv backend
-	err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -894,7 +894,7 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -903,14 +903,14 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 	}
 
 	// Read the secret and create a lease
-	leaseResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err := testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease1 := leaseResp.LeaseID
 	sampleSpace[lease1] = "lease"
 
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -919,14 +919,14 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 
 	testClient.SetToken(token2)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lease2 := leaseResp.LeaseID
 	sampleSpace[lease2] = "lease"
 
-	resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -935,7 +935,7 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 
 	testClient.SetToken(token3)
 
-	leaseResp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	leaseResp, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -972,13 +972,13 @@ func TestCache_NonCacheable(t *testing.T) {
 	defer cleanup()
 
 	// Query mounts first
-	origMounts, err := testClient.Sys().ListMountsWithContext(context.Background())
+	origMounts, err := testClient.Sys().ListMounts()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Mount a kv backend
-	if err := testClient.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	if err := testClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 		Options: map[string]string{
 			"version": "2",
@@ -988,7 +988,7 @@ func TestCache_NonCacheable(t *testing.T) {
 	}
 
 	// Query mounts again
-	newMounts, err := testClient.Sys().ListMountsWithContext(context.Background())
+	newMounts, err := testClient.Sys().ListMounts()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1020,7 +1020,7 @@ func TestCache_Caching_AuthResponse(t *testing.T) {
 	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
-	resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1028,7 +1028,7 @@ func TestCache_Caching_AuthResponse(t *testing.T) {
 	testClient.SetToken(token)
 
 	authTokeCreateReq := func(t *testing.T, policies map[string]interface{}) *api.Secret {
-		resp, err := testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", policies)
+		resp, err := testClient.Logical().Write("auth/token/create", policies)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1079,7 +1079,7 @@ func TestCache_Caching_LeaseResponse(t *testing.T) {
 	cleanup, client, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
-	err := client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := client.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -1089,14 +1089,14 @@ func TestCache_Caching_LeaseResponse(t *testing.T) {
 	// Test proxy by issuing two different requests
 	{
 		// Write data to the lease-kv backend
-		_, err := testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+		_, err := testClient.Logical().Write("kv/foo", map[string]interface{}{
 			"value": "bar",
 			"ttl":   "1h",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foobar", map[string]interface{}{
+		_, err = testClient.Logical().Write("kv/foobar", map[string]interface{}{
 			"value": "bar",
 			"ttl":   "1h",
 		})
@@ -1104,12 +1104,12 @@ func TestCache_Caching_LeaseResponse(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		firstResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+		firstResp, err := testClient.Logical().Read("kv/foo")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		secondResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foobar")
+		secondResp, err := testClient.Logical().Read("kv/foobar")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1122,7 +1122,7 @@ func TestCache_Caching_LeaseResponse(t *testing.T) {
 
 	// Test caching behavior by issue the same request twice
 	{
-		_, err := testClient.Logical().WriteWithContext(context.Background(), "kv/baz", map[string]interface{}{
+		_, err := testClient.Logical().Write("kv/baz", map[string]interface{}{
 			"value": "foo",
 			"ttl":   "1h",
 		})
@@ -1130,12 +1130,12 @@ func TestCache_Caching_LeaseResponse(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		proxiedResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/baz")
+		proxiedResp, err := testClient.Logical().Read("kv/baz")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		cachedResp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/baz")
+		cachedResp, err := testClient.Logical().Read("kv/baz")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1181,7 +1181,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	cleanup, client, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
-	err := client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := client.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -1189,7 +1189,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	}
 
 	// Write data to the lease-kv backend
-	_, err = testClient.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -1198,7 +1198,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	}
 
 	// Proxy this request, agent should cache the response
-	resp, err := testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+	resp, err := testClient.Logical().Read("kv/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1228,7 +1228,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	case "token":
 		data["value"] = testClient.Token()
 	case "token_accessor":
-		lookupResp, err := client.Auth().Token().LookupWithContext(context.Background(), testClient.Token())
+		lookupResp, err := client.Auth().Token().Lookup(testClient.Token())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1285,7 +1285,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 				Policies: []string{"default"},
 				NoParent: true,
 			}
-			resp, err := testClient.Auth().Token().CreateWithContext(context.Background(), reqOpts)
+			resp, err := testClient.Auth().Token().Create(reqOpts)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1312,7 +1312,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 			// Use the test client but set the token to one that's not managed by agent
 			testClient.SetToken(clusterClient.Token())
 
-			resp, err := testClient.Auth().Token().CreateWithContext(context.Background(), reqOpts)
+			resp, err := testClient.Auth().Token().Create(reqOpts)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1336,7 +1336,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 			reqOpts := &api.TokenCreateRequest{
 				Policies: []string{"default"},
 			}
-			resp, err := testClient.Auth().Token().CreateOrphanWithContext(context.Background(), reqOpts)
+			resp, err := testClient.Auth().Token().CreateOrphan(reqOpts)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1362,7 +1362,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 			// Use the test client but set the token to one that's not managed by agent
 			testClient.SetToken(clusterClient.Token())
 
-			resp, err := testClient.Auth().Token().CreateOrphanWithContext(context.Background(), reqOpts)
+			resp, err := testClient.Auth().Token().CreateOrphan(reqOpts)
 			if err != nil {
 				t.Fatal(err)
 			}

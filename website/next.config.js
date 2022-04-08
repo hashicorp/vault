@@ -1,5 +1,5 @@
 const withHashicorp = require('@hashicorp/platform-nextjs-plugin')
-const redirects = require('./redirects.next')
+const redirects = require('./redirects')
 
 // log out our primary environment variables for clarity in build logs
 console.log(`HASHI_ENV: ${process.env.HASHI_ENV}`)
