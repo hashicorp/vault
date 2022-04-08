@@ -1172,16 +1172,18 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
-	headers := c.headers
+	ns := c.headers.Get(consts.NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
 
-	// explicitly set the namespace header to the current client
-	if headers != nil {
-		r.Headers.Set(consts.NamespaceHeaderName, headers.Get(consts.NamespaceHeaderName))
+	switch ns {
+	case "":
+		r.Headers.Del(consts.NamespaceHeaderName)
+	default:
+		r.Headers.Set(consts.NamespaceHeaderName, ns)
 	}
 
 	for _, cb := range c.requestCallbacks {
@@ -1323,7 +1325,10 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 			}
 		}
 		// explicitly set the namespace header to current client
-		r.Headers.Set(consts.NamespaceHeaderName, c.headers.Get(consts.NamespaceHeaderName))
+		ns := c.headers.Get(consts.NamespaceHeaderName)
+		if ns != "" {
+			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		}
 	}
 
 	c.config.modifyLock.RUnlock()

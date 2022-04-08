@@ -1173,7 +1173,6 @@ func TestClientWithNamespace(t *testing.T) {
 	if ns != newNS {
 		t.Fatalf("Expected new namespace: \"%s\", got \"%s\"", newNS, ns)
 	}
-
 	// ensure client has not been modified
 	_, err = client.rawRequestWithContext(
 		context.Background(),
