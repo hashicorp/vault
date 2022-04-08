@@ -33,17 +33,19 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 			return nil, err
 		}
 	}
-	// provider is an optional parameter
-	provider, _ := m["provider"]
 
 	data := map[string]interface{}{
 		"password": password,
-		"provider": provider,
 	}
 
 	// Okta or Google totp code
 	if totp, ok := m["totp"]; ok {
 		data["totp"] = totp
+	}
+
+	// provider is an optional parameter
+	if provider, ok := m["provider"]; ok {
+		data["provider"] = provider
 	}
 
 	// Legacy MFA support
