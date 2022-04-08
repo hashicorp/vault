@@ -2,7 +2,7 @@ import Route from '@ember/routing/route';
 import { isSameMonth } from 'date-fns';
 import RSVP from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
-import { parseRFC3339 } from '../../../../utils/date-formatters';
+import { parseRFC3339 } from 'core/utils/date-formatters';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 export default class HistoryRoute extends Route {

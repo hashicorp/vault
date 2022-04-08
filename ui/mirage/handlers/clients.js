@@ -1,7 +1,6 @@
 import { formatISO, isBefore, sub } from 'date-fns';
-// import { differenceInCalendarMonths, isAfter } from 'date-fns';
-// import isSameMonth from 'date-fns/isSameMonth';
-// import { parseAPITimestamp } from '../utils/date-formatters';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
+import isSameMonth from 'date-fns/isSameMonth';
 
 export default function (server) {
   // 1.10 API response
@@ -740,6 +739,14 @@ export default function (server) {
         },
       },
     ];
+    let slicedMonthlyData;
+    // query date is during mock monthly data window
+    // let indexOfQueriedDate = mockMonthlyData.findIndex((e) =>
+    //   isSameMonth(parseAPITimestamp(e.timestamp), parseAPITimestamp(start_time))
+    // );
+    // if (indexOfQueriedDate) {
+    //   slicedMonthlyData = mockMonthlyData.slice(indexOfQueriedDate);
+    // }
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',
@@ -835,7 +842,7 @@ export default function (server) {
           },
         ],
         end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
-        months: mockMonthlyData,
+        months: slicedMonthlyData || mockMonthlyData,
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
           distinct_entities: 37389,
