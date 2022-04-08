@@ -12,8 +12,12 @@ import (
 )
 
 func pathIssuerGenerateRoot(b *backend) *framework.Path {
+	return commonGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
+}
+
+func commonGenerateRoot(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "issuers/generate/root/" + framework.GenericNameRegex("exported"),
+		Pattern: pattern,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -31,6 +35,45 @@ func pathIssuerGenerateRoot(b *backend) *framework.Path {
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
+
+	ret.Fields["id"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `Assign a name to the generated issuer.`,
+	}
+
+	return ret
+}
+
+func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
+	return commonGenerateIntermediate(b,
+		"issuers/generate/intermediate/"+framework.GenericNameRegex("exported"))
+}
+
+func commonGenerateIntermediate(b *backend, pattern string) *framework.Path {
+	ret := &framework.Path{
+		Pattern: pattern,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathGenerateIntermediate,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathGenerateIntermediateHelpSyn,
+		HelpDescription: pathGenerateIntermediateHelpDesc,
+	}
+
+	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addCAKeyGenerationFields(ret.Fields)
+	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Whether to add a Basic Constraints
+extension with CA: true. Only needed as a
+workaround in some compatibility scenarios
+with Active Directory Certificate Services.`,
+	}
 
 	return ret
 }

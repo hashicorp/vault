@@ -28,9 +28,16 @@ func generateCABundle(ctx context.Context, _ *backend, input *inputBundle, data 
 	return certutil.CreateCertificateWithRandomSource(data, randomSource)
 }
 
-func generateCSRBundle(_ context.Context, _ *backend, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+func generateCSRBundle(ctx context.Context, _ *backend, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
 	if kmsRequested(input) {
 		return nil, errEntOnly
+	}
+	if existingKeyRequested(input) {
+		keyRef, err := getExistingKeyRef(input.apiData)
+		if err != nil {
+			return nil, err
+		}
+		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingGeneratePrivateKey(ctx, input.req.Storage, keyRef))
 	}
 
 	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)

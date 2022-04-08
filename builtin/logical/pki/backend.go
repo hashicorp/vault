@@ -117,6 +117,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathIssuerSignSelfIssued(&b),
 			pathIssuerSignVerbatim(&b),
 			pathIssuerGenerateRoot(&b),
+			pathIssuerGenerateIntermediate(&b),
 			pathConfigIssuers(&b),
 
 			// Fetch APIs have been lowered to favor the newer issuer API endpoints
