@@ -1199,7 +1199,7 @@ func TestAppRole_RoleSecretIDWithFields(t *testing.T) {
 		t.Fatalf("secret_id_ttl has not been set by the 'ttl' field")
 	}
 	if resp.Data["secret_id_num_uses"].(int) != 5 {
-		t.Fatalf("secret_id_ttl has not been set by the 'num_uses' field")
+		t.Fatalf("secret_id_num_uses has not been set by the 'num_uses' field")
 	}
 
 	roleSecretIDReq.Path = "role/role1/custom-secret-id"
@@ -1219,7 +1219,7 @@ func TestAppRole_RoleSecretIDWithFields(t *testing.T) {
 		t.Fatalf("secret_id_ttl has not been set by the 'ttl' field")
 	}
 	if resp.Data["secret_id_num_uses"].(int) != 5 {
-		t.Fatalf("secret_id_ttl has not been set by the 'num_uses' field")
+		t.Fatalf("secret_id_num_uses has not been set by the 'num_uses' field")
 	}
 }
 
