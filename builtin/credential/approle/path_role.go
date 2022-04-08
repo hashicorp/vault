@@ -2378,10 +2378,10 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	var numUses int
 	// Check whether or not num_uses is defined, otherwise fallback to secret_id_num_uses
 	if numUsesRaw, ok := data.GetOk("num_uses"); ok {
+		numUses = numUsesRaw.(int)
 		if numUses < 0 {
 			return logical.ErrorResponse("num_uses cannot be negative"), nil
 		}
-		numUses = numUsesRaw.(int)
 	} else {
 		numUses = role.SecretIDNumUses
 	}
