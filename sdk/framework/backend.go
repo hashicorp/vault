@@ -293,7 +293,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	resp, err := callback(ctx, req, &fd)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
 	switch resp {
