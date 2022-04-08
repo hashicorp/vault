@@ -15,9 +15,11 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
@@ -103,6 +105,7 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 }
 
 func TestServer_ReloadListener(t *testing.T) {
+	defer osutil.Umask(syscall.Umask(0o077))
 	t.Parallel()
 
 	wd, _ := os.Getwd()
