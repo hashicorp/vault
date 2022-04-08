@@ -2,6 +2,10 @@ package database
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"time"
 
@@ -90,12 +94,6 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
-		if err != nil {
-			b.CloseIfShutdown(dbi, err)
-			return nil, fmt.Errorf("unable to generate password: %w", err)
-		}
-
 		newUserReq := v5.NewUserRequest{
 			UsernameConfig: v5.UsernameMetadata{
 				DisplayName: req.DisplayName,
@@ -107,21 +105,61 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			RollbackStatements: v5.Statements{
 				Commands: role.Statements.Rollback,
 			},
-			Password:   password,
 			Expiration: expiration,
 		}
 
-		// Overwriting the password in the event this is a legacy database plugin and the provided password is ignored
+		// Set the credential, which will either be a password or private key
+		// depending on the role's credential type.
+		var credential string
+		switch role.CredentialType {
+		case v5.CredentialTypePassword:
+			password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
+			if err != nil {
+				b.CloseIfShutdown(dbi, err)
+				return nil, fmt.Errorf("unable to generate password: %w", err)
+			}
+
+			credential = password
+			newUserReq.Password = credential
+			newUserReq.CredentialType = v5.CredentialTypePassword
+		case v5.CredentialTypeRSA2048Keypair:
+			public, private, err := b.generateRSAKeypair(2048)
+			if err != nil {
+				b.CloseIfShutdown(dbi, err)
+				return nil, fmt.Errorf("unable to generate keypair: %w", err)
+			}
+
+			credential = string(private)
+			newUserReq.PublicKey = string(public)
+			newUserReq.CredentialType = v5.CredentialTypeRSA2048Keypair
+		}
+
+		// Overwriting the password in the event this is a legacy database
+		// plugin and the provided password is ignored
 		newUserResp, password, err := dbi.database.NewUser(ctx, newUserReq)
 		if err != nil {
 			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
 
+		// Database plugins using the v4 interface generate and return the password.
+		// If the returned password is not equal to the credential, then we need to
+		// set the credential to the password returned from the v4 database plugin.
+		if role.CredentialType == v5.CredentialTypePassword && password != credential {
+			credential = password
+		}
+
 		respData := map[string]interface{}{
 			"username": newUserResp.Username,
-			"password": password,
 		}
+
+		switch role.CredentialType {
+		case v5.CredentialTypePassword:
+			respData["password"] = credential
+		case v5.CredentialTypeRSA2048Keypair:
+			respData["private_key"] = credential
+		}
+
 		internal := map[string]interface{}{
 			"username":              newUserResp.Username,
 			"role":                  name,
@@ -168,6 +206,43 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 			},
 		}, nil
 	}
+}
+
+// generateRSAKeypair returns PEM encodings of an RSA public and private key pair.
+// The first return value is the PEM encoding of the PKIX marshalled public key.
+// The second return value is the PEM encoding of the PKCS #8 marshalled private key.
+func (b *databaseBackend) generateRSAKeypair(bits int) ([]byte, []byte, error) {
+	key, err := rsa.GenerateKey(rand.Reader, bits)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Marshal the public key to PKIX, ASN.1 DER form.
+	public, err := x509.MarshalPKIXPublicKey(key.Public())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Marshal the private key to PKCS #8, ASN.1 DER form
+	private, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create PEM blocks
+	publicBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: public,
+	}
+	privateBlock := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: private,
+	}
+
+	// TODO: x509.EncryptPEMBlock is deprecated, so not sure how we'll support
+	//       password encrypted private keys quite yet.
+
+	return pem.EncodeToMemory(publicBlock), pem.EncodeToMemory(privateBlock), nil
 }
 
 const pathCredsCreateReadHelpSyn = `

@@ -90,8 +90,17 @@ type NewUserRequest struct {
 	// if the new user creation process fails.
 	RollbackStatements Statements
 
+	// CredentialType is the type of credential to use when creating a new user.
+	// Respective fields for the credential type will contain the credential value.
+	CredentialType CredentialType
+
 	// Password credentials to use when creating the user
+	// Value is set when the credential type is 'password'
 	Password string
+
+	// PublicKey credentials to use when creating the user
+	// Value is set when the credential type is 'keypair_rsa_2048'.
+	PublicKey string
 
 	// Expiration of the user. Not all database plugins will support this.
 	Expiration time.Time
@@ -108,6 +117,30 @@ type NewUserResponse struct {
 	// Username of the user created within the database.
 	// REQUIRED so Vault knows the name of the user that was created
 	Username string
+}
+
+// CredentialType is a type of database credential.
+type CredentialType int
+
+const (
+	CredentialTypePassword CredentialType = iota
+	CredentialTypeRSA2048Keypair
+)
+
+func (k CredentialType) String() string {
+	switch k {
+	case CredentialTypePassword:
+		return "password"
+	case CredentialTypeRSA2048Keypair:
+		// TODO: Alternative idea is 'rsa_2048_private_key' for the name.
+		//       This could be better because it implies which part of the key,
+		//       public or private, is returned from Vault as the credential.
+		//       It would also allow us to have a future model where the private
+		//       key goes to the plugin by reversing the order (e.g., rsa_2048_public_key).
+		return "keypair_rsa_2048"
+	default:
+		return "unknown"
+	}
 }
 
 // ///////////////////////////////////////////////////////

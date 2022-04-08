@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -87,6 +88,12 @@ func fieldsForType(roleType string) map[string]*framework.FieldSchema {
 		"db_name": {
 			Type:        framework.TypeString,
 			Description: "Name of the database this role acts on.",
+		},
+		"credential_type": {
+			Type: framework.TypeString,
+			Description: "The type of credential to manage. Options include: 'password', " +
+				"'keypair_rsa_2048'. Defaults to 'password'",
+			Default: "password",
 		},
 	}
 
@@ -290,6 +297,7 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		"renew_statements":      role.Statements.Renewal,
 		"default_ttl":           role.DefaultTTL.Seconds(),
 		"max_ttl":               role.MaxTTL.Seconds(),
+		"credential_type":       role.CredentialType.String(),
 	}
 	if len(role.Statements.Creation) == 0 {
 		data["creation_statements"] = []string{}
@@ -355,6 +363,19 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		}
 		if role.DBName == "" {
 			return logical.ErrorResponse("database name is required"), nil
+		}
+
+		if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
+			credentialType := credentialTypeRaw.(string)
+
+			switch credentialType {
+			case v5.CredentialTypePassword.String():
+				role.CredentialType = v5.CredentialTypePassword
+			case v5.CredentialTypeRSA2048Keypair.String():
+				role.CredentialType = v5.CredentialTypeRSA2048Keypair
+			default:
+				return logical.ErrorResponse("invalid credential_type %q", credentialType), nil
+			}
 		}
 	}
 
@@ -558,11 +579,12 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
-	DBName        string         `json:"db_name"`
-	Statements    v4.Statements  `json:"statements"`
-	DefaultTTL    time.Duration  `json:"default_ttl"`
-	MaxTTL        time.Duration  `json:"max_ttl"`
-	StaticAccount *staticAccount `json:"static_account" mapstructure:"static_account"`
+	DBName         string            `json:"db_name"`
+	Statements     v4.Statements     `json:"statements"`
+	DefaultTTL     time.Duration     `json:"default_ttl"`
+	MaxTTL         time.Duration     `json:"max_ttl"`
+	CredentialType v5.CredentialType `json:"credential_type"`
+	StaticAccount  *staticAccount    `json:"static_account" mapstructure:"static_account"`
 }
 
 type staticAccount struct {

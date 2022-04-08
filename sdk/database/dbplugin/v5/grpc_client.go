@@ -95,8 +95,10 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 			DisplayName: req.UsernameConfig.DisplayName,
 			RoleName:    req.UsernameConfig.RoleName,
 		},
-		Password:   req.Password,
-		Expiration: expiration,
+		CredentialType: req.CredentialType.String(),
+		Password:       req.Password,
+		PublicKey:      req.PublicKey,
+		Expiration:     expiration,
 		Statements: &proto.Statements{
 			Commands: req.Statements.Commands,
 		},

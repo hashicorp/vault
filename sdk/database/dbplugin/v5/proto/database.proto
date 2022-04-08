@@ -27,6 +27,8 @@ message NewUserRequest {
     google.protobuf.Timestamp expiration = 3;
     Statements statements = 4;
     Statements rollback_statements = 5;
+    string credential_type = 6;
+    string public_key = 7;
 }
 
 message UsernameConfig {
