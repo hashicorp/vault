@@ -208,29 +208,29 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	TestAddTestPlugin(t, core, "single-userpass-1", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
 	TestAddTestPlugin(t, core, "single-userpass-2", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
 
-	var cleanupFuncs []func()
+	var pluginClients []*pluginClient
 	// run plugins
 	// run "mux-postgres" twice which will start a single plugin for 2
 	// distinct connections
 	c := TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "mux-postgres")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "mux-postgres")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "single-postgres-1")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "single-postgres-2")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 
 	// run "mux-userpass" twice which will start a single plugin for 2
 	// distinct connections
 	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "mux-userpass")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "mux-userpass")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "single-userpass-1")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "single-userpass-2")
-	cleanupFuncs = append(cleanupFuncs, c)
+	pluginClients = append(pluginClients, c)
 
 	externalPlugins := core.pluginCatalog.externalPlugins
 	if len(externalPlugins) != 6 {
@@ -254,8 +254,8 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	expectMultiplexingSupport(t, false, externalPlugins["single-userpass-2"].multiplexingSupport)
 
 	// cleanup all of the external plugin processes
-	for _, cleanupFunc := range cleanupFuncs {
-		cleanupFunc()
+	for _, client := range pluginClients {
+		client.Close()
 	}
 
 	// check that externalPlugins map is cleaned up
