@@ -567,9 +567,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 }
 
 // TestRunTestPlugin runs the testFunc which has already been registered to the
-// plugin catalog and returns a cleanup func. This can be called after calling
+// plugin catalog and returns a pluginClient. This can be called after calling
 // TestAddTestPlugin.
-func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, pluginName string) func() {
+func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, pluginName string) *pluginClient {
 	t.Helper()
 	config := TestPluginClientConfig(c, pluginType, pluginName)
 	client, err := c.pluginCatalog.NewPluginClient(context.Background(), config)
@@ -577,9 +577,7 @@ func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, plugi
 		t.Fatal(err)
 	}
 
-	return func() {
-		client.Close()
-	}
+	return client
 }
 
 func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
