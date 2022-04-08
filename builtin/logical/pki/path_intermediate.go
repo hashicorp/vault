@@ -12,32 +12,7 @@ import (
 )
 
 func pathGenerateIntermediate(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "intermediate/generate/" + framework.GenericNameRegex("exported"),
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathGenerateIntermediate,
-				// Read more about why these flags are set in backend.go
-				ForwardPerformanceStandby:   true,
-				ForwardPerformanceSecondary: true,
-			},
-		},
-
-		HelpSynopsis:    pathGenerateIntermediateHelpSyn,
-		HelpDescription: pathGenerateIntermediateHelpDesc,
-	}
-
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
-	ret.Fields = addCAKeyGenerationFields(ret.Fields)
-	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
-		Type: framework.TypeBool,
-		Description: `Whether to add a Basic Constraints
-extension with CA: true. Only needed as a
-workaround in some compatibility scenarios
-with Active Directory Certificate Services.`,
-	}
-
-	return ret
+	return commonGenerateIntermediate(b, "intermediate/generate/"+framework.GenericNameRegex("exported"))
 }
 
 func pathSetSignedIntermediate(b *backend) *framework.Path {
@@ -135,18 +110,11 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		}
 	}
 
-	cb := &certutil.CertBundle{}
-	cb.PrivateKey = csrb.PrivateKey
-	cb.PrivateKeyType = csrb.PrivateKeyType
-
-	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
+	myKey, _, err := importKey(ctx, req.Storage, csrb.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
+	resp.Data["key_id"] = myKey.ID
 
 	return resp, nil
 }

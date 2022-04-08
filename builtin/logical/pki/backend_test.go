@@ -4732,6 +4732,82 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, resp.Data["keys"], myIssuerId3)
 }
 
+func TestIntermediateWithExistingKey(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+
+	mountPKIEndpoint(t, client, "pki-root")
+
+	// Fail requests if type is existing, and we specify the key_type param
+	ctx := context.Background()
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/intermediate/generate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
+
+	// Fail requests if type is existing, and we specify the key_bits param
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/intermediate/generate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_bits":    "2048",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
+
+	// Fail if the specified key does not exist.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_id":      "my-key1",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
+
+	// Create the first intermediate CA
+	resp, err := client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+	})
+	require.NoError(t, err)
+	// csr1 := resp.Data["csr"]
+	myKeyId1 := resp.Data["key_id"]
+	require.NotEmpty(t, myKeyId1)
+
+	// Create the second intermediate CA
+	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+	})
+	require.NoError(t, err)
+	// csr2 := resp.Data["csr"]
+	myKeyId2 := resp.Data["key_id"]
+	require.NotEmpty(t, myKeyId2)
+
+	// Create a third intermediate CA re-using key from intermediate CA 1
+	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_id":      myKeyId1,
+	})
+	require.NoError(t, err)
+	// csr3 := resp.Data["csr"]
+	myKeyId3 := resp.Data["key_id"]
+	require.NotEmpty(t, myKeyId3)
+
+	require.NotEqual(t, myKeyId1, myKeyId2)
+	require.Equal(t, myKeyId1, myKeyId3)
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string

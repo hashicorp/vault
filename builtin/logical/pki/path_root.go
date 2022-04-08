@@ -26,27 +26,7 @@ import (
 )
 
 func pathGenerateRoot(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "root/generate/" + framework.GenericNameRegex("exported"),
-
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathCAGenerateRoot,
-				// Read more about why these flags are set in backend.go
-				ForwardPerformanceStandby:   true,
-				ForwardPerformanceSecondary: true,
-			},
-		},
-
-		HelpSynopsis:    pathGenerateRootHelpSyn,
-		HelpDescription: pathGenerateRootHelpDesc,
-	}
-
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
-	ret.Fields = addCAKeyGenerationFields(ret.Fields)
-	ret.Fields = addCAIssueFields(ret.Fields)
-
-	return ret
+	return commonGenerateRoot(b, "root/generate/"+framework.GenericNameRegex("exported"))
 }
 
 func pathDeleteRoot(b *backend) *framework.Path {
