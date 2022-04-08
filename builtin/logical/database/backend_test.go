@@ -689,7 +689,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
-	if len(resp.Warnings) != 1 {
+	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warning about password in url %s, resp:%#v\n", connURL, resp)
 	}
 
