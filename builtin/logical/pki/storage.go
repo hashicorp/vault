@@ -306,7 +306,7 @@ func deleteIssuer(ctx context.Context, s logical.Storage, id issuerId) error {
 	return s.Delete(ctx, issuerPrefix+id.String())
 }
 
-func importIssuer(ctx context.Context, s logical.Storage, certValue string) (*issuer, bool, error) {
+func importIssuer(ctx context.Context, s logical.Storage, certValue string, issuerName string) (*issuer, bool, error) {
 	// importIssuers imports the specified PEM-format certificate (from
 	// certValue) into the new PKI storage format. The first return field is a
 	// reference to the new issuer; the second is whether or not the issuer
@@ -349,6 +349,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string) (*is
 	// storage.
 	var result issuer
 	result.ID = genIssuerId()
+	result.Name = issuerName
 	result.Certificate = certValue
 	result.CAChain = []string{certValue}
 
@@ -516,6 +517,56 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 	}
 
 	return &bundle, nil
+}
+
+func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string) (*issuer, *key, error) {
+	allKeyIds, err := listKeys(ctx, s)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	allIssuerIds, err := listIssuers(ctx, s)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	myKey, _, err := importKey(ctx, s, caBundle.PrivateKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	myIssuer, _, err := importIssuer(ctx, s, caBundle.Certificate, issuerName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, cert := range caBundle.CAChain {
+		if _, _, err = importIssuer(ctx, s, cert, ""); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	keyDefaultSet, err := isKeyDefaultSet(ctx, s)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(allKeyIds) == 0 || !keyDefaultSet {
+		if err = updateDefaultKeyId(ctx, s, myKey.ID); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	issuerDefaultSet, err := isIssuerDefaultSet(ctx, s)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(allIssuerIds) == 0 || !issuerDefaultSet {
+		if err = updateDefaultIssuerId(ctx, s, myIssuer.ID); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return myIssuer, myKey, nil
 }
 
 func genIssuerId() issuerId {
