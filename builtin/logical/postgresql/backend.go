@@ -111,7 +111,7 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 		conn += " timezone=utc"
 	}
 
-	b.db, err = sql.Open("postgres", conn)
+	b.db, err = sql.Open("pgx", conn)
 	if err != nil {
 		return nil, err
 	}

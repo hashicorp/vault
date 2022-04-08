@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/stretchr/testify/require"
@@ -675,7 +675,7 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	t.Helper()
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "postgres:secret", fmt.Sprintf("%s:%s", username, password), 1)
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return err
 	}

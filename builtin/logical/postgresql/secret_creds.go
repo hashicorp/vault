@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/lib/pq"
 )
 
 const SecretCredsType = "creds"
@@ -75,7 +74,7 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 
 		query := fmt.Sprintf(
 			"ALTER ROLE %s VALID UNTIL '%s';",
-			pq.QuoteIdentifier(username),
+			quoteIdentifier(username),
 			expiration)
 		stmt, err := db.Prepare(query)
 		if err != nil {
@@ -171,27 +170,27 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 			}
 			revocationStmts = append(revocationStmts, fmt.Sprintf(
 				`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-				pq.QuoteIdentifier(schema),
-				pq.QuoteIdentifier(username)))
+				quoteIdentifier(schema),
+				quoteIdentifier(username)))
 
 			revocationStmts = append(revocationStmts, fmt.Sprintf(
 				`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-				pq.QuoteIdentifier(schema),
-				pq.QuoteIdentifier(username)))
+				quoteIdentifier(schema),
+				quoteIdentifier(username)))
 		}
 
 		// for good measure, revoke all privileges and usage on schema public
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-			pq.QuoteIdentifier(username)))
+			quoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %s;",
-			pq.QuoteIdentifier(username)))
+			quoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			"REVOKE USAGE ON SCHEMA public FROM %s;",
-			pq.QuoteIdentifier(username)))
+			quoteIdentifier(username)))
 
 		// get the current database name so we can issue a REVOKE CONNECT for
 		// this username
@@ -203,8 +202,8 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		if dbname.Valid {
 			revocationStmts = append(revocationStmts, fmt.Sprintf(
 				`REVOKE CONNECT ON DATABASE %s FROM %s;`,
-				pq.QuoteIdentifier(dbname.String),
-				pq.QuoteIdentifier(username)))
+				quoteIdentifier(dbname.String),
+				quoteIdentifier(username)))
 		}
 
 		// again, here, we do not stop on error, as we want to remove as
@@ -226,7 +225,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 		// Drop this user
 		stmt, err = db.Prepare(fmt.Sprintf(
-			`DROP ROLE IF EXISTS %s;`, pq.QuoteIdentifier(username)))
+			`DROP ROLE IF EXISTS %s;`, quoteIdentifier(username)))
 		if err != nil {
 			return nil, err
 		}
@@ -265,4 +264,17 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	return resp, nil
+}
+
+// quoteIdentifier quotes an "identifier" (e.g. a table or a column name) to be used as part of an SQL statement.
+//
+// This is a copy of the same function as found in lib/pq (https://github.com/lib/pq/blob/v1.10.4/conn.go#L1640)
+// and was added as part of our pq -> pgx migration. The pgx package doesn't expose a similar function at this
+// time (https://github.com/jackc/pgx/issues/868).
+func quoteIdentifier(name string) string {
+	end := strings.IndexRune(name, 0)
+	if end > -1 {
+		name = name[:end]
+	}
+	return `"` + strings.Replace(name, `"`, `""`, -1) + `"`
 }
