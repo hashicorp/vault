@@ -314,6 +314,18 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 			Value: "rsa",
 		},
 	}
+
+	fields["key_id"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing key; either "default"
+for the configured default key, an identifier or the name assigned
+to the key. Note this is only used for the existing generation type.`,
+	}
+
+	fields["id"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `Assign a name to the generated issuer.`,
+	}
 	return fields
 }
 

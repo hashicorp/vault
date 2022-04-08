@@ -50,10 +50,12 @@ func migrateStorage(ctx context.Context, req *logical.InitializationRequest, log
 
 	logger.Warn("performing PKI migration to new keys/issuers layout")
 
-	err = migrateToIssuers(ctx, s, legacyBundle)
+	anIssuer, aKey, err := writeCaBundle(ctx, s, legacyBundle, "")
 	if err != nil {
 		return err
 	}
+	logger.Info("Migration generated the following ids and set them as defaults",
+		"issuer id", anIssuer.ID, "key id", aKey.ID)
 
 	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigration{
 		hash:             hash,
@@ -80,35 +82,6 @@ func computeHashOfLegacyBundle(bundle *certutil.CertBundle) (string, error) {
 		}
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), nil
-}
-
-func migrateToIssuers(ctx context.Context, s logical.Storage, bundle *certutil.CertBundle) error {
-	defaultKey, _, err := importKey(ctx, s, bundle.PrivateKey)
-	if err != nil {
-		return err
-	}
-
-	defaultIssuer, _, err := importIssuer(ctx, s, bundle.Certificate)
-	if err != nil {
-		return err
-	}
-
-	for _, cert := range bundle.CAChain {
-		if _, _, err = importIssuer(ctx, s, cert); err != nil {
-			return err
-		}
-	}
-
-	if err = updateDefaultKeyId(ctx, s, defaultKey.ID); err != nil {
-		return err
-	}
-
-	if err = updateDefaultIssuerId(ctx, s, defaultIssuer.ID); err != nil {
-		return err
-	}
-
-	// FIXME: Call function that will recompute the CAChain on issuers here.
-	return nil
 }
 
 type legacyBundleMigration struct {
