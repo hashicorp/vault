@@ -1343,7 +1343,7 @@
     ember-cli-babel "^7.10.0"
     ember-modifier-manager-polyfill "^1.1.0"
 
-"@ember/render-modifiers@^2.0.0":
+"@ember/render-modifiers@^2.0.3":
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/@ember/render-modifiers/-/render-modifiers-2.0.4.tgz#0ac7af647cb736076dbfcd54ca71e090cd329d71"
   integrity sha512-Zh/fo5VUmVzYHkHVvzWVjJ1RjFUxA2jH0zCp2+DQa80Bf3DUXauiEByxU22UkN4LFT55DBFttC0xCQSJG3WTsg==
@@ -1391,19 +1391,6 @@
     ember-cli-babel "^7.23.0"
     lodash "^4.17.10"
     resolve "^1.8.1"
-    semver "^7.3.2"
-
-"@embroider/macros@0.47.2", "@embroider/macros@^0.47.2":
-  version "0.47.2"
-  resolved "https://registry.yarnpkg.com/@embroider/macros/-/macros-0.47.2.tgz#23cbe92cac3c24747f054e1eea2a22538bf7ebd0"
-  integrity sha512-ViNWluJCeM5OPlM3rs8kdOz3RV5rpfXX5D2rDnc/q86xRS0xf4NFEjYRV7W6fBcD0b3v5jSHDTwrjq9Kee4rHg==
-  dependencies:
-    "@embroider/shared-internals" "0.47.2"
-    assert-never "^1.2.1"
-    ember-cli-babel "^7.26.6"
-    find-up "^5.0.0"
-    lodash "^4.17.21"
-    resolve "^1.20.0"
     semver "^7.3.2"
 
 "@embroider/macros@1.6.0", "@embroider/macros@^1.0.0":
@@ -1458,19 +1445,6 @@
     semver "^7.3.5"
     typescript-memoize "^1.0.1"
 
-"@embroider/shared-internals@0.47.2":
-  version "0.47.2"
-  resolved "https://registry.yarnpkg.com/@embroider/shared-internals/-/shared-internals-0.47.2.tgz#24e9fa0dd9c529d5c996ee1325729ea08d1fa19f"
-  integrity sha512-SxdZYjAE0fiM5zGDz+12euWIsQZ1tsfR1k+NKmiWMyLhA5T3pNgbR2/Djvx/cVIxOtEavGGSllYbzRKBtV4xMg==
-  dependencies:
-    babel-import-util "^0.2.0"
-    ember-rfc176-data "^0.3.17"
-    fs-extra "^9.1.0"
-    lodash "^4.17.21"
-    resolve-package-path "^4.0.1"
-    semver "^7.3.5"
-    typescript-memoize "^1.0.1"
-
 "@embroider/shared-internals@1.6.0", "@embroider/shared-internals@^1.0.0":
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/@embroider/shared-internals/-/shared-internals-1.6.0.tgz#35ade2ce1202e529107bf6d1fae4ca753f6ebe5a"
@@ -1491,15 +1465,6 @@
   integrity sha512-ytA3J/YfQh7FEUEBwz3ezTqQNm/S5et5rZw3INBIy4Ak4x0NXV/VXLjyL8mv3txL8fGknZTBdXEhDsHUKIq8SQ==
   dependencies:
     "@embroider/macros" "0.41.0"
-    broccoli-funnel "^3.0.5"
-    ember-cli-babel "^7.23.1"
-
-"@embroider/util@^0.47.2":
-  version "0.47.2"
-  resolved "https://registry.yarnpkg.com/@embroider/util/-/util-0.47.2.tgz#d06497b4b84c07ed9c7b628293bb019c533f4556"
-  integrity sha512-g9OqnFJPktGu9NS0Ug3Pxz1JE3jeDceeVE4IrlxDrVmBXMA/GrBvpwjolWgl6jh97cMJyExdz62jIvPHV4256Q==
-  dependencies:
-    "@embroider/macros" "0.47.2"
     broccoli-funnel "^3.0.5"
     ember-cli-babel "^7.23.1"
 
@@ -8205,14 +8170,14 @@ ember-auto-import@^1.11.3, ember-auto-import@^1.12.0, ember-auto-import@^1.2.19:
     walk-sync "^0.3.3"
     webpack "^4.43.0"
 
-ember-basic-dropdown@4.0.0, "ember-basic-dropdown@^3.1.0 || ^4.0.2":
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/ember-basic-dropdown/-/ember-basic-dropdown-4.0.0.tgz#ad04cff6b4db04069456ce55c19e1155f2ae9e75"
-  integrity sha512-V7G2fhIiIPAcU6JFm8qzz4OoIE+9cO/Hkh8KlcRyenP9lEa+PHiWSwGmX5gtSFi6PYjdr58/oJMEKSbWFj/Iiw==
+ember-basic-dropdown@4.0.3, "ember-basic-dropdown@^3.1.0 || ^4.0.2":
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/ember-basic-dropdown/-/ember-basic-dropdown-4.0.3.tgz#69eed0f4ccb3fcc72bd8379c151504602949ac12"
+  integrity sha512-WND4LLGS6a3x6j7ZZVs6jmv22xm0HeMELgW4cTDhnNE7L9zJY/kxgAaqSAg19EJ81GzOHI+Ub+SqJ5QjSDtXaA==
   dependencies:
-    "@ember/render-modifiers" "^2.0.0"
-    "@embroider/macros" "^0.47.2"
-    "@embroider/util" "^0.47.2"
+    "@ember/render-modifiers" "^2.0.3"
+    "@embroider/macros" "^1.0.0"
+    "@embroider/util" "^1.0.0"
     "@glimmer/component" "^1.0.4"
     "@glimmer/tracking" "^1.0.4"
     ember-cli-babel "^7.26.6"
@@ -13632,9 +13597,9 @@ markdown-escapes@^1.0.0:
   integrity sha512-8z4efJYk43E0upd0NbVXwgSTQs6cT3T06etieCMEg7dRbzCbxUCK/GHlX8mhHRDcp+OLlHkPKsvqQTCvsRl2cg==
 
 markdown-it-anchor@^8.4.1:
-  version "8.6.1"
-  resolved "https://registry.yarnpkg.com/markdown-it-anchor/-/markdown-it-anchor-8.6.1.tgz#e321d445034135d83f666f420e47156e9e555401"
-  integrity sha512-F4yUlzM0PNMjtdZ5FrUCpp3GKwlO4OLN1+hAGvWp5dPf8lkRPVkybF77CaJjYUh2qbBDGmSFeKahh5TiLnKXHg==
+  version "8.6.2"
+  resolved "https://registry.yarnpkg.com/markdown-it-anchor/-/markdown-it-anchor-8.6.2.tgz#16d32ba7fb290a0152f588afb4ea83d3c0faa555"
+  integrity sha512-JNaekTlIwwyYGBN3zifZDxgz4bSL8sbEj58fdTZGmPSMMGXBZapFjcZk2I33Jy79c1fvCKHpF7MA/67FOTjvzA==
 
 markdown-it-terminal@0.2.1:
   version "0.2.1"
