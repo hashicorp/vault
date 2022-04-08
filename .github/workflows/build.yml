@@ -6,6 +6,7 @@ on:
     branches:    
       # Push events on main branch
       - main
+      - add-build-date
 
 env:
   PKG_NAME: "vault"
