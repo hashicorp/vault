@@ -11,6 +11,30 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func pathIssuerGenerateRoot(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "issuers/generate/root/" + framework.GenericNameRegex("exported"),
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAGenerateRoot,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathGenerateRootHelpSyn,
+		HelpDescription: pathGenerateRootHelpDesc,
+	}
+
+	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addCAKeyGenerationFields(ret.Fields)
+	ret.Fields = addCAIssueFields(ret.Fields)
+
+	return ret
+}
+
 func pathImportIssuer(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuers/import/(cert|bundle)",
@@ -88,7 +112,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	for _, certPem := range issuers {
-		cert, existing, err := importIssuer(ctx, req.Storage, certPem)
+		cert, existing, err := importIssuer(ctx, req.Storage, certPem, "")
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}

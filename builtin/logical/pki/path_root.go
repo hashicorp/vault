@@ -97,6 +97,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		role.MaxPathLength = &maxPathLength
 	}
 
+	issuerName := ""
+	issuerNameIface, ok := data.GetOk("id")
+	if ok {
+		issuerName = issuerNameIface.(string)
+	}
+
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
@@ -163,14 +169,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Store it as the CA bundle
-	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
+	myIssuer, myKey, err := writeCaBundle(ctx, req.Storage, cb, issuerName)
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
+	resp.Data["id"] = myIssuer.ID
+	resp.Data["key_id"] = myKey.ID
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
@@ -184,9 +188,10 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	// For ease of later use, also store just the certificate at a known
 	// location
-	entry.Key = "ca"
-	entry.Value = parsedBundle.CertificateBytes
-	err = req.Storage.Put(ctx, entry)
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
+		Key:   "ca",
+		Value: parsedBundle.CertificateBytes,
+	})
 	if err != nil {
 		return nil, err
 	}

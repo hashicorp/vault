@@ -23,11 +23,27 @@ func denormalizeSerial(serial string) string {
 }
 
 func kmsRequested(input *inputBundle) bool {
-	exportedStr, ok := input.apiData.GetOk("exported")
+	return kmsRequestedFromFieldData(input.apiData)
+}
+
+func kmsRequestedFromFieldData(data *framework.FieldData) bool {
+	exportedStr, ok := data.GetOk("exported")
 	if !ok {
 		return false
 	}
 	return exportedStr.(string) == "kms"
+}
+
+func existingKeyRequested(input *inputBundle) bool {
+	return existingKeyRequestedFromFieldData(input.apiData)
+}
+
+func existingKeyRequestedFromFieldData(data *framework.FieldData) bool {
+	exportedStr, ok := data.GetOk("exported")
+	if !ok {
+		return false
+	}
+	return exportedStr.(string) == "existing"
 }
 
 type managedKeyId interface {
@@ -61,6 +77,19 @@ func getManagedKeyId(data *framework.FieldData) (managedKeyId, error) {
 	}
 
 	return keyId, nil
+}
+
+func getExistingKeyRef(data *framework.FieldData) (string, error) {
+	keyRef, ok := data.GetOk("key_id")
+	if !ok {
+		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_id for existing type")}
+	}
+	trimmedKeyRef := strings.TrimSpace(keyRef.(string))
+	if len(trimmedKeyRef) == 0 {
+		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_id for existing type")}
+	}
+
+	return trimmedKeyRef, nil
 }
 
 func getManagedKeyNameOrUUID(data *framework.FieldData) (name string, UUID string, err error) {
