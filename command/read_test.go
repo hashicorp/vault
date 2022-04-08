@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -84,7 +83,7 @@ func TestReadCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				if _, err := client.Logical().WriteWithContext(context.Background(), "secret/read/foo", map[string]interface{}{
+				if _, err := client.Logical().Write("secret/read/foo", map[string]interface{}{
 					"foo": "bar",
 				}); err != nil {
 					t.Fatal(err)

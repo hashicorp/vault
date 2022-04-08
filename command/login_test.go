@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -49,7 +48,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("my-auth", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/my-auth/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/my-auth/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -99,7 +98,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 			TTL:      "30m",
 		})
@@ -145,7 +144,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 			TTL:      "30m",
 		})
@@ -188,7 +187,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -266,7 +265,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -303,7 +302,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		client.SetToken(token)
 
 		// Ensure the resulting token is unwrapped
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Error(err)
 		}
@@ -325,7 +324,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -368,7 +367,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		// Ensure the resulting token is, in fact, still wrapped.
 		client.SetToken(token)
-		secret, err := client.Logical().UnwrapWithContext(context.Background(), "")
+		secret, err := client.Logical().Unwrap("")
 		if err != nil {
 			t.Error(err)
 		}
@@ -386,7 +385,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {

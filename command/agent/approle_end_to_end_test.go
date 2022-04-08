@@ -93,7 +93,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1", addConstraints(!bindSecretID, map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test1", addConstraints(!bindSecretID, map[string]interface{}{
 		"bind_secret_id": bindSecretID,
 		"token_ttl":      "6s",
 		"token_max_ttl":  "10s",
@@ -109,7 +109,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	secretID1 := ""
 	secretID2 := ""
 	if bindSecretID {
-		resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1/secret-id", nil)
+		resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -117,13 +117,13 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	} else {
 		logger.Trace("skipped write to auth/approle/role/test1/secret-id")
 	}
-	resp, err := client.Logical().ReadWithContext(context.Background(), "auth/approle/role/test1/role-id")
+	resp, err := client.Logical().Read("auth/approle/role/test1/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
 	roleID1 := resp.Data["role_id"].(string)
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test2", addConstraints(!bindSecretID, map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test2", addConstraints(!bindSecretID, map[string]interface{}{
 		"bind_secret_id": bindSecretID,
 		"token_ttl":      "6s",
 		"token_max_ttl":  "10s",
@@ -132,7 +132,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		t.Fatal(err)
 	}
 	if bindSecretID {
-		resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test2/secret-id", nil)
+		resp, err = client.Logical().Write("auth/approle/role/test2/secret-id", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -140,7 +140,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	} else {
 		logger.Trace("skipped write to auth/approle/role/test2/secret-id")
 	}
-	resp, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/test2/role-id")
+	resp, err = client.Logical().Read("auth/approle/role/test2/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 					}
 				}
 				client.SetToken(string(val))
-				secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+				secret, err := client.Auth().Token().LookupSelf()
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -345,7 +345,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -385,7 +385,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -455,7 +455,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1", addConstraints(!bindSecretID, map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test1", addConstraints(!bindSecretID, map[string]interface{}{
 		"bind_secret_id": bindSecretID,
 		"token_ttl":      "6s",
 		"token_max_ttl":  "10s",
@@ -474,7 +474,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	secret := ""
 	secretID1 := ""
 	if bindSecretID {
-		resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1/secret-id", nil)
+		resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -482,7 +482,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	} else {
 		logger.Trace("skipped write to auth/approle/role/test1/secret-id")
 	}
-	resp, err := client.Logical().ReadWithContext(context.Background(), "auth/approle/role/test1/role-id")
+	resp, err := client.Logical().Read("auth/approle/role/test1/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -664,7 +664,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 				}
 
 				client.SetToken(string(val))
-				secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+				secret, err := client.Auth().Token().LookupSelf()
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -690,7 +690,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -708,7 +708,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	logger.Trace("origToken set into client", "origToken", origToken)
 
 	if bindSecretID {
-		resp, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1/secret-id", nil)
+		resp, err = client.Logical().Write("auth/approle/role/test1/secret-id", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -732,7 +732,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		if time.Now().After(timeout) {
 			break
 		}
-		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}

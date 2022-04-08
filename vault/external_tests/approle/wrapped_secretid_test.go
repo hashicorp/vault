@@ -1,7 +1,6 @@
 package approle
 
 import (
-	"context"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
@@ -45,7 +44,7 @@ func TestApproleSecretId_Wrapped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test-role-1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test-role-1", map[string]interface{}{
 		"name": "test-role-1",
 	})
 	require.NoError(t, err)
@@ -54,7 +53,7 @@ func TestApproleSecretId_Wrapped(t *testing.T) {
 		return "5m"
 	})
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "/auth/approle/role/test-role-1/secret-id", map[string]interface{}{})
+	resp, err := client.Logical().Write("/auth/approle/role/test-role-1/secret-id", map[string]interface{}{})
 	require.NoError(t, err)
 
 	wrappedAccessor := resp.WrapInfo.WrappedAccessor
@@ -64,7 +63,7 @@ func TestApproleSecretId_Wrapped(t *testing.T) {
 		return api.DefaultWrappingLookupFunc(operation, path)
 	})
 
-	unwrappedSecretid, err := client.Logical().UnwrapWithContext(context.Background(), wrappingToken)
+	unwrappedSecretid, err := client.Logical().Unwrap(wrappingToken)
 	require.NoError(t, err)
 	unwrappedAccessor := unwrappedSecretid.Data["secret_id_accessor"].(string)
 
@@ -105,12 +104,12 @@ func TestApproleSecretId_NotWrapped(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test-role-1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test-role-1", map[string]interface{}{
 		"name": "test-role-1",
 	})
 	require.NoError(t, err)
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "/auth/approle/role/test-role-1/secret-id", map[string]interface{}{})
+	resp, err := client.Logical().Write("/auth/approle/role/test-role-1/secret-id", map[string]interface{}{})
 	require.NoError(t, err)
 
 	if resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
