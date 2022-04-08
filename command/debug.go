@@ -963,7 +963,7 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 
 func (c *DebugCommand) compress(dst string) error {
 	if runtime.GOOS != "windows" {
-		defer osutil.Umask(0o077)
+		defer osutil.Umask(osutil.Umask(0o077))
 	}
 
 	tgz := archiver.NewTarGz()

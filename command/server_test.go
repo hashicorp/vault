@@ -15,7 +15,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -105,7 +104,7 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 }
 
 func TestServer_ReloadListener(t *testing.T) {
-	defer osutil.Umask(syscall.Umask(0o077))
+	defer osutil.Umask(osutil.Umask(0o077))
 	t.Parallel()
 
 	wd, _ := os.Getwd()
