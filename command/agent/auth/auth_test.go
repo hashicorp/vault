@@ -33,7 +33,7 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 }
 
 func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
-	_, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/foo", map[string]interface{}{
+	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 	})
 	if err != nil {

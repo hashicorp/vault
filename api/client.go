@@ -36,6 +36,7 @@ const (
 	EnvVaultAddress       = "VAULT_ADDR"
 	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
 	EnvVaultCACert        = "VAULT_CACERT"
+	EnvVaultCACertBytes   = "VAULT_CACERT_BYTES"
 	EnvVaultCAPath        = "VAULT_CAPATH"
 	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
 	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
@@ -180,8 +181,13 @@ type Config struct {
 // used to communicate with Vault.
 type TLSConfig struct {
 	// CACert is the path to a PEM-encoded CA cert file to use to verify the
-	// Vault server SSL certificate.
+	// Vault server SSL certificate. It takes precedence over CACertBytes
+	// and CAPath.
 	CACert string
+
+	// CACertBytes is a PEM-encoded certificate or bundle. It takes precedence
+	// over CAPath.
+	CACertBytes []byte
 
 	// CAPath is the path to a directory of PEM-encoded CA cert files to verify
 	// the Vault server SSL certificate.
@@ -274,12 +280,13 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
-	if t.CACert != "" || t.CAPath != "" {
+	if t.CACert != "" || len(t.CACertBytes) != 0 || t.CAPath != "" {
 		c.curlCACert = t.CACert
 		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
-			CAFile: t.CACert,
-			CAPath: t.CAPath,
+			CAFile:        t.CACert,
+			CACertificate: t.CACertBytes,
+			CAPath:        t.CAPath,
 		}
 		if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
 			return err
@@ -321,6 +328,7 @@ func (c *Config) ReadEnvironment() error {
 	var envAddress string
 	var envAgentAddress string
 	var envCACert string
+	var envCACertBytes []byte
 	var envCAPath string
 	var envClientCert string
 	var envClientKey string
@@ -350,6 +358,9 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultCACert); v != "" {
 		envCACert = v
+	}
+	if v := os.Getenv(EnvVaultCACertBytes); v != "" {
+		envCACertBytes = []byte(v)
 	}
 	if v := os.Getenv(EnvVaultCAPath); v != "" {
 		envCAPath = v
@@ -406,6 +417,7 @@ func (c *Config) ReadEnvironment() error {
 	// Configure the HTTP clients TLS configuration.
 	t := &TLSConfig{
 		CACert:        envCACert,
+		CACertBytes:   envCACertBytes,
 		CAPath:        envCAPath,
 		ClientCert:    envClientCert,
 		ClientKey:     envClientKey,
@@ -584,8 +596,6 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CheckRetry = c.config.CheckRetry
 	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
-	newConfig.OutputCurlString = c.config.OutputCurlString
-	newConfig.OutputPolicy = c.config.OutputPolicy
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
@@ -1017,23 +1027,21 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:          config.Address,
-		HttpClient:       config.HttpClient,
-		MinRetryWait:     config.MinRetryWait,
-		MaxRetryWait:     config.MaxRetryWait,
-		MaxRetries:       config.MaxRetries,
-		Timeout:          config.Timeout,
-		Backoff:          config.Backoff,
-		CheckRetry:       config.CheckRetry,
-		Logger:           config.Logger,
-		Limiter:          config.Limiter,
-		OutputCurlString: config.OutputCurlString,
-		OutputPolicy:     config.OutputPolicy,
-		AgentAddress:     config.AgentAddress,
-		SRVLookup:        config.SRVLookup,
-		CloneHeaders:     config.CloneHeaders,
-		CloneToken:       config.CloneToken,
-		ReadYourWrites:   config.ReadYourWrites,
+		Address:        config.Address,
+		HttpClient:     config.HttpClient,
+		MinRetryWait:   config.MinRetryWait,
+		MaxRetryWait:   config.MaxRetryWait,
+		MaxRetries:     config.MaxRetries,
+		Timeout:        config.Timeout,
+		Backoff:        config.Backoff,
+		CheckRetry:     config.CheckRetry,
+		Logger:         config.Logger,
+		Limiter:        config.Limiter,
+		AgentAddress:   config.AgentAddress,
+		SRVLookup:      config.SRVLookup,
+		CloneHeaders:   config.CloneHeaders,
+		CloneToken:     config.CloneToken,
+		ReadYourWrites: config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {

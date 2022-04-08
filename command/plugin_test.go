@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -68,7 +67,7 @@ func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name st
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
 
-	if err := client.Sys().RegisterPluginWithContext(context.Background(), &api.RegisterPluginInput{
+	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    pluginType,
 		Command: name,

@@ -45,7 +45,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Enable the audit backend
-	err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "noop", &api.EnableAuditOptions{Type: "noop"})
+	err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	mountInfo := &api.MountInput{
 		Type: "totp",
 	}
-	err = client.Sys().MountWithContext(context.Background(), "totp", mountInfo)
+	err = client.Sys().Mount("totp", mountInfo)
 	if err != nil {
 		t.Fatalf("failed to mount totp backend: %v", err)
 	}
@@ -68,14 +68,14 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	// Creating a user in the userpass auth mount
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/testuser", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatalf("failed to configure userpass backend: %v", err)
 	}
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatalf("bb")
 	}
@@ -93,7 +93,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	var entityID string
 	var groupID string
 	{
-		resp, err := userClient.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
+		resp, err := userClient.Logical().Write("identity/entity", map[string]interface{}{
 			"name": "test-entity",
 			"metadata": map[string]string{
 				"email":        "test@hashicorp.com",
@@ -106,7 +106,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		entityID = resp.Data["id"].(string)
 
 		// Create a group
-		resp, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+		resp, err = client.Logical().Write("identity/group", map[string]interface{}{
 			"name":              "engineering",
 			"member_entity_ids": []string{entityID},
 		})
@@ -115,7 +115,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		}
 		groupID = resp.Data["id"].(string)
 
-		_, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+		_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
 			"name":           "testuser",
 			"canonical_id":   entityID,
 			"mount_accessor": mountAccessor,
@@ -133,7 +133,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	// login MFA
 	{
 		// create a config
-		resp1, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp", map[string]interface{}{
+		resp1, err := client.Logical().Write("identity/mfa/method/totp", map[string]interface{}{
 			"issuer":    "yCorp",
 			"period":    5,
 			"algorithm": "SHA1",
@@ -152,7 +152,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			t.Fatalf("method ID is empty")
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-generate"), map[string]interface{}{
+		secret, err := client.Logical().Write(fmt.Sprintf("identity/mfa/method/totp/admin-generate"), map[string]interface{}{
 			"entity_id": entityID,
 			"method_id": methodID,
 		})
@@ -161,21 +161,21 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		}
 		totpURL := secret.Data["url"].(string)
 
-		_, err = client.Logical().WriteWithContext(context.Background(), "totp/keys/loginMFA", map[string]interface{}{
+		_, err = client.Logical().Write("totp/keys/loginMFA", map[string]interface{}{
 			"url": totpURL,
 		})
 		if err != nil {
 			t.Fatalf("failed to register a TOTP URL: %v", err)
 		}
 
-		secret, err = client.Logical().ReadWithContext(context.Background(), "totp/code/loginMFA")
+		secret, err = client.Logical().Read("totp/code/loginMFA")
 		if err != nil {
 			t.Fatalf("failed to create totp passcode: %v", err)
 		}
 		totpPasscode = secret.Data["code"].(string)
 
 		// creating MFAEnforcementConfig
-		_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
+		_, err = client.Logical().Write("identity/mfa/login-enforcement/randomName", map[string]interface{}{
 			"auth_method_accessors": []string{mountAccessor},
 			"auth_method_types":     []string{"userpass"},
 			"identity_group_ids":    []string{groupID},
@@ -189,7 +189,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 		// MFA single-phase login
 		userClient.AddHeader("X-Vault-MFA", fmt.Sprintf("%s:%s", methodID, totpPasscode))
-		secret, err = userClient.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+		secret, err = userClient.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 			"password": "testpassword",
 		})
 		if err != nil {
@@ -199,7 +199,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		userpassToken = secret.Auth.ClientToken
 
 		userClient.SetToken(client.Token())
-		secret, err = userClient.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+		secret, err = userClient.Logical().Write("auth/token/lookup", map[string]interface{}{
 			"token": userpassToken,
 		})
 		if err != nil {
@@ -219,7 +219,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		headers := user2Client.Headers()
 		headers.Del("X-Vault-MFA")
 		user2Client.SetHeaders(headers)
-		secret, err = user2Client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+		secret, err = user2Client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 			"password": "testpassword",
 		})
 		if err != nil {
@@ -256,13 +256,13 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		// waiting for 5 seconds so that a fresh code could be generated
 		time.Sleep(5 * time.Second)
 		// getting a fresh totp passcode for the validation step
-		totpResp, err := client.Logical().ReadWithContext(context.Background(), "totp/code/loginMFA")
+		totpResp, err := client.Logical().Read("totp/code/loginMFA")
 		if err != nil {
 			t.Fatalf("failed to create totp passcode: %v", err)
 		}
 		totpPasscode = totpResp.Data["code"].(string)
 
-		secret, err = user2Client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+		secret, err = user2Client.Logical().Write("sys/mfa/validate", map[string]interface{}{
 			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 			"mfa_payload": map[string][]string{
 				methodID: {totpPasscode},
@@ -291,7 +291,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		}
 
 		// check for login request expiration
-		secret, err = user2Client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+		secret, err = user2Client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 			"password": "testpassword",
 		})
 		if err != nil {
@@ -302,7 +302,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			t.Fatalf("two phase login returned nil MFARequirement")
 		}
 
-		_, err = user2Client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+		_, err = user2Client.Logical().Write("sys/mfa/validate", map[string]interface{}{
 			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 			"mfa_payload": map[string][]string{
 				methodID: {totpPasscode},
@@ -316,7 +316,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		}
 
 		// Destroy the secret so that the token can self generate
-		_, err = userClient.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-destroy"), map[string]interface{}{
+		_, err = userClient.Logical().Write(fmt.Sprintf("identity/mfa/method/totp/admin-destroy"), map[string]interface{}{
 			"entity_id": entityID,
 			"method_id": methodID,
 		})

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -188,7 +187,7 @@ func TestCacheConfigNoListener(t *testing.T) {
 	assert.NotNil(t, ctConfig.Vault.Transport.CustomDialer)
 }
 
-func TestServerRun(t *testing.T) {
+func createHttpTestServer() *httptest.Server {
 	// create http test server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/kv/myapp/config", func(w http.ResponseWriter, r *http.Request) {
@@ -203,9 +202,14 @@ func TestServerRun(t *testing.T) {
 		fmt.Fprintln(w, `{"errors":["1 error occurred:\n\t* permission denied\n\n"]}`)
 	})
 
-	ts := httptest.NewServer(mux)
+	return httptest.NewServer(mux)
+}
+
+func TestServerRun(t *testing.T) {
+	ts := createHttpTestServer()
 	defer ts.Close()
-	tmpDir, err := ioutil.TempDir("", "agent-tests")
+
+	tmpDir, err := os.MkdirTemp("", "agent-tests")
 	defer os.RemoveAll(tmpDir)
 	if err != nil {
 		t.Fatal(err)
@@ -379,7 +383,7 @@ func TestServerRun(t *testing.T) {
 				if template.Destination == nil {
 					t.Fatal("nil template destination")
 				}
-				content, err := ioutil.ReadFile(*template.Destination)
+				content, err := os.ReadFile(*template.Destination)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -395,6 +399,70 @@ func TestServerRun(t *testing.T) {
 			}
 			if fileCount != len(templatesToRender) {
 				t.Fatalf("mismatch file to template: (%d) / (%d)", fileCount, len(templatesToRender))
+			}
+		})
+	}
+}
+
+// TestNewServerLogLevels tests that the server can be started with any log
+// level.
+func TestNewServerLogLevels(t *testing.T) {
+	ts := createHttpTestServer()
+	defer ts.Close()
+
+	tmpDir, err := os.MkdirTemp("", "agent-tests")
+	defer os.RemoveAll(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	levels := []hclog.Level{hclog.NoLevel, hclog.Trace, hclog.Debug, hclog.Info, hclog.Warn, hclog.Error}
+	for _, level := range levels {
+		name := fmt.Sprintf("log_%s", level)
+		t.Run(name, func(t *testing.T) {
+			server := NewServer(&ServerConfig{
+				Logger:        logging.NewVaultLogger(level),
+				LogWriter:     hclog.DefaultOutput,
+				LogLevel:      level,
+				ExitAfterAuth: true,
+				AgentConfig: &config.Config{
+					Vault: &config.Vault{
+						Address: ts.URL,
+					},
+				},
+			})
+			if server == nil {
+				t.Fatal("nil server returned")
+			}
+			defer server.Stop()
+
+			templateTokenCh := make(chan string, 1)
+
+			templateTest := &ctconfig.TemplateConfig{
+				Contents: pointerutil.StringPtr(templateContents),
+			}
+			dstFile := fmt.Sprintf("%s/%s", tmpDir, name)
+			templateTest.Destination = pointerutil.StringPtr(dstFile)
+			templatesToRender := []*ctconfig.TemplateConfig{templateTest}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+
+			errCh := make(chan error)
+			go func() {
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
+			}()
+
+			// send a dummy value to trigger auth so the server will exit
+			templateTokenCh <- "test"
+
+			select {
+			case <-ctx.Done():
+				t.Fatal("timeout reached before templates were rendered")
+			case err := <-errCh:
+				if err != nil {
+					t.Fatalf("did not expect error, got: %v", err)
+				}
 			}
 		})
 	}

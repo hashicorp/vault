@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -76,7 +75,7 @@ func TestAgent_Cache_UnixListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/jwt/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
 		"bound_issuer":           "https://team-vault.auth0.com/",
 		"jwt_validation_pubkeys": agent.TestECDSAPubKey,
 	})
@@ -84,7 +83,7 @@ func TestAgent_Cache_UnixListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/jwt/role/test", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
 		"role_type":       "jwt",
 		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
 		"bound_audiences": "https://vault.plugin.auth.jwt.test",
@@ -219,7 +218,7 @@ cache {
 	time.Sleep(1 * time.Second)
 
 	// Invoke lookup self through the agent
-	secret, err := testClient.Auth().Token().LookupSelfWithContext(context.Background())
+	secret, err := testClient.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +263,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/jwt/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
 		"bound_issuer":           "https://team-vault.auth0.com/",
 		"jwt_validation_pubkeys": agent.TestECDSAPubKey,
 		"jwt_supported_algs":     "ES256",
@@ -273,7 +272,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/jwt/role/test", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
 		"role_type":       "jwt",
 		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
 		"bound_audiences": "https://vault.plugin.auth.jwt.test",
@@ -1307,7 +1306,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 	methodConf, cleanup := prepAgentApproleKV(t, serverClient)
 	defer cleanup()
 
-	err := serverClient.Sys().TuneMountWithContext(context.Background(), "secret", api.MountConfigInput{
+	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
 			"version": "2",
 		},
@@ -1316,7 +1315,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = serverClient.Logical().WriteWithContext(context.Background(), "secret/data/otherapp", map[string]interface{}{
+	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]interface{}{
 		"data": map[string]interface{}{
 			"username": "barstuff",
 			"password": "zap",
@@ -1500,7 +1499,7 @@ path "/secret/*" {
 }
 `
 	// Add an kv-admin policy
-	if err := client.Sys().PutPolicyWithContext(context.Background(), "test-autoauth", policyAutoAuthAppRole); err != nil {
+	if err := client.Sys().PutPolicy("test-autoauth", policyAutoAuthAppRole); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1512,7 +1511,7 @@ path "/secret/*" {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
 		"bind_secret_id": "true",
 		"token_ttl":      "1h",
 		"token_max_ttl":  "2h",
@@ -1522,14 +1521,14 @@ path "/secret/*" {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1/secret-id", nil)
+	resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	secretID := resp.Data["secret_id"].(string)
 	secretIDFile := makeTempFile(t, "secret_id.txt", secretID+"\n")
 
-	resp, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/test1/role-id")
+	resp, err = client.Logical().Read("auth/approle/role/test1/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1591,7 +1590,7 @@ func TestAgent_Cache_Retry(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	_, err := serverClient.Logical().WriteWithContext(context.Background(), "secret/foo", map[string]interface{}{
+	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{
 		"bar": "baz",
 	})
 	if err != nil {
@@ -1689,7 +1688,7 @@ vault {
 			if err != nil {
 				t.Fatal(err)
 			}
-			secret, err := client.Logical().ReadWithContext(context.Background(), "secret/foo")
+			secret, err := client.Logical().Read("secret/foo")
 			switch {
 			case (err != nil || secret == nil) && tc.expectError:
 			case (err == nil || secret != nil) && !tc.expectError:
@@ -1743,7 +1742,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	autoAuthConfig, cleanup := prepAgentApproleKV(t, serverClient)
 	defer cleanup()
 
-	err := serverClient.Sys().TuneMountWithContext(context.Background(), "secret", api.MountConfigInput{
+	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
 			"version": "2",
 		},
@@ -1752,7 +1751,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = serverClient.Logical().WriteWithContext(context.Background(), "secret/data/otherapp", map[string]interface{}{
+	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]interface{}{
 		"data": map[string]interface{}{
 			"username": "barstuff",
 			"password": "zap",

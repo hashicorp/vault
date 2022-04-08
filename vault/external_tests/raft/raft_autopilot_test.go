@@ -32,7 +32,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	state, err := client.Sys().RaftAutopilotStateWithContext(context.Background())
+	state, err := client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
 	require.Nil(t, nil, state)
 }
@@ -47,7 +47,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 
 	// Check that autopilot execution state is running
 	client := cluster.Cores[0].Client
-	state, err := client.Sys().RaftAutopilotStateWithContext(context.Background())
+	state, err := client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
 	require.Equal(t, true, state.Healthy)
 	require.Len(t, state.Servers, 1)
@@ -55,7 +55,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
 	require.Equal(t, "leader", state.Servers["core-0"].Status)
 
-	config, err := client.Sys().RaftAutopilotConfigurationWithContext(context.Background())
+	config, err := client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
 
 	// Wait for 110% of the stabilization time to add nodes
@@ -78,7 +78,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		joinFunc(core)
 		time.Sleep(2 * time.Second)
 
-		state, err = client.Sys().RaftAutopilotStateWithContext(context.Background())
+		state, err = client.Sys().RaftAutopilotState()
 		require.NoError(t, err)
 		require.Equal(t, false, state.Healthy)
 		require.Len(t, state.Servers, numServers)
@@ -91,7 +91,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		deadline := time.Now().Add(stabilizationWaitDuration)
 		healthy := false
 		for time.Now().Before(deadline) {
-			state, err := client.Sys().RaftAutopilotStateWithContext(context.Background())
+			state, err := client.Sys().RaftAutopilotState()
 			require.NoError(t, err)
 			if state.Healthy {
 				healthy = true
@@ -108,7 +108,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		deadline = time.Now().Add(2 * autopilot.DefaultReconcileInterval)
 		failed := true
 		for time.Now().Before(deadline) {
-			state, err = client.Sys().RaftAutopilotStateWithContext(context.Background())
+			state, err = client.Sys().RaftAutopilotState()
 			require.NoError(t, err)
 			if state.Servers[nodeID].Status == "voter" {
 				failed = false
@@ -123,7 +123,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	}
 	joinAndStabilizeFunc(cluster.Cores[1], "core-1", 2)
 	joinAndStabilizeFunc(cluster.Cores[2], "core-2", 3)
-	state, err = client.Sys().RaftAutopilotStateWithContext(context.Background())
+	state, err = client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
 	require.Equal(t, []string{"core-0", "core-1", "core-2"}, state.Voters)
 }
@@ -138,13 +138,13 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	configCheckFunc := func(config *api.AutopilotConfig) {
-		conf, err := client.Sys().RaftAutopilotConfigurationWithContext(context.Background())
+		conf, err := client.Sys().RaftAutopilotConfiguration()
 		require.NoError(t, err)
 		require.Equal(t, config, conf)
 	}
 
 	writeConfigFunc := func(config map[string]interface{}, expectError bool) {
-		resp, err := client.Logical().WriteWithContext(context.Background(), "sys/storage/raft/autopilot/configuration", config)
+		resp, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", config)
 		if expectError {
 			require.Error(t, err)
 			return
@@ -242,7 +242,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 
 	// Check that autopilot execution state is running
 	client := cluster.Cores[0].Client
-	state, err := client.Sys().RaftAutopilotStateWithContext(context.Background())
+	state, err := client.Sys().RaftAutopilotState()
 	require.NotNil(t, state)
 	require.NoError(t, err)
 	require.Equal(t, true, state.Healthy)
@@ -251,12 +251,12 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	require.Equal(t, "alive", state.Servers["core-0"].NodeStatus)
 	require.Equal(t, "leader", state.Servers["core-0"].Status)
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/storage/raft/autopilot/configuration", map[string]interface{}{
+	_, err = client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
 		"server_stabilization_time": "5s",
 	})
 	require.NoError(t, err)
 
-	config, err := client.Sys().RaftAutopilotConfigurationWithContext(context.Background())
+	config, err := client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
 
 	// Wait for 110% of the stabilization time to add nodes
@@ -295,7 +295,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	deadline := time.Now().Add(stabilizationWaitDuration)
 	var core1healthy, core2healthy bool
 	for time.Now().Before(deadline) {
-		state, err := client.Sys().RaftAutopilotStateWithContext(context.Background())
+		state, err := client.Sys().RaftAutopilotState()
 		require.NoError(t, err)
 		core1healthy = state.Servers["core-1"] != nil && state.Servers["core-1"].Healthy
 		core2healthy = state.Servers["core-2"] != nil && state.Servers["core-2"].Healthy
@@ -306,12 +306,12 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	}
 
 	time.Sleep(2 * time.Second) // wait for reconciliation
-	state, err = client.Sys().RaftAutopilotStateWithContext(context.Background())
+	state, err = client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
 	require.Equal(t, []string{"core-0", "core-1"}, state.Voters)
 
 	for time.Now().Before(core2shouldBeHealthyAt) {
-		state, err := client.Sys().RaftAutopilotStateWithContext(context.Background())
+		state, err := client.Sys().RaftAutopilotState()
 		require.NoError(t, err)
 		core2healthy = state.Servers["core-2"].Healthy
 		time.Sleep(1 * time.Second)
@@ -320,7 +320,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 
 	deadline = time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		state, err = client.Sys().RaftAutopilotStateWithContext(context.Background())
+		state, err = client.Sys().RaftAutopilotState()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -343,7 +343,7 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 	// Create a very large stabilization time so we can test the state between
 	// joining and promotions
 	client := cluster.Cores[0].Client
-	_, err := client.Logical().WriteWithContext(context.Background(), "sys/storage/raft/autopilot/configuration", map[string]interface{}{
+	_, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", map[string]interface{}{
 		"server_stabilization_time": "1h",
 	})
 	require.NoError(t, err)

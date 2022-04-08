@@ -48,7 +48,7 @@ func TestKVv2_UpgradePaths(t *testing.T) {
 	client := core.Client
 
 	// Enable KVv2
-	err := client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := client.Sys().Mount("kv", &api.MountInput{
 		Type: "kv-v2",
 	})
 	if err != nil {

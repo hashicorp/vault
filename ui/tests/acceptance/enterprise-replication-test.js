@@ -115,7 +115,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('[data-test-popup-menu-trigger]');
 
-    await click('[data-test-replication-mount-filter-link]');
+    await click('[data-test-replication-path-filter-link]');
 
     assert.equal(currentURL(), `/vault/replication/performance/secondaries/config/show/${secondaryName}`);
     assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
