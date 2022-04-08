@@ -92,9 +92,11 @@ cannot be added to Vault unless it exists in the plugin directory. There is no
 default for this configuration option, and if it is not set, plugins cannot be
 added to Vault.
 
-~> Warning: A Vault operator should take caution and lock down the permissions on
-this directory to ensure a plugin cannot be modified by an unauthorized user
-between the time of the SHA check and the time of plugin execution.
+~> Warning: By default, Vault expects the plugin directory and files to be owned by the
+user running Vault. It also expects no write or execute permissions for group or others.
+Vault allows operators to specify the user and permissions of the plugin directory and binaries 
+using parameters `plugin_file_uid` and `plugin_file_permissions` in config if an operator needs those to be different.  
+This check can be disabled via the environment variable `VAULT_DISABLE_FILE_PERMISSIONS_CHECK`.
 
 ### Plugin Catalog
 
