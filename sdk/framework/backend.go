@@ -296,16 +296,15 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return nil, err
 	}
 
-	// Handle the nil response case.
-	if (len(ignored) != 0 || len(replaced) != 0) && resp == nil {
-		resp = &logical.Response{}
-	}
-
-	if len(ignored) != 0 {
-		resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
-	}
-	if len(replaced) != 0 {
-		resp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
+	switch resp {
+	case nil:
+	default:
+		if len(ignored) != 0 {
+			resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
+		}
+		if len(replaced) != 0 {
+			resp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
+		}
 	}
 
 	return resp, nil
