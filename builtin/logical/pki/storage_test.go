@@ -113,13 +113,13 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, key1.PrivateKey, key1_ref1.PrivateKey)
 	require.Equal(t, key1_ref1.ID, key1_ref2.ID)
 
-	issuer1_ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate)
+	issuer1_ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate, "")
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, issuer1.Certificate, issuer1_ref1.Certificate)
 	require.Equal(t, key1_ref1.ID, issuer1_ref1.KeyID)
 
-	issuer1_ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate)
+	issuer1_ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate, "")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, issuer1.Certificate, issuer1_ref1.Certificate)
@@ -132,7 +132,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 	err = writeKey(ctx, s, key2)
 	require.NoError(t, err)
 
-	issuer2_ref, existing, err := importIssuer(ctx, s, issuer2.Certificate)
+	issuer2_ref, existing, err := importIssuer(ctx, s, issuer2.Certificate, "")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, issuer2.Certificate, issuer2_ref.Certificate)
