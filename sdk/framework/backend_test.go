@@ -87,8 +87,8 @@ func TestBackendHandleRequestFieldWarnings(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	t.Log(resp.Warnings)
 	require.Len(t, resp.Warnings, 2)
-
 	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint ignored these unrecognized parameters: [unrecognized1 unrecognized2]"))
 	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [name]"))
 }
