@@ -10,11 +10,13 @@ import (
 	"sort"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
 )
@@ -202,47 +204,109 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	TestAddTestPlugin(t, core, "single-postgres-1", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
 	TestAddTestPlugin(t, core, "single-postgres-2", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
 
+	TestAddTestPlugin(t, core, "mux-userpass", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_UserpassMultiplexed", []string{}, "")
+	TestAddTestPlugin(t, core, "single-userpass-1", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
+	TestAddTestPlugin(t, core, "single-userpass-2", consts.PluginTypeUnknown, "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
+
+	var cleanupFuncs []func()
 	// run plugins
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("mux-postgres")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("mux-postgres")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("single-postgres-1")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := core.pluginCatalog.NewPluginClient(context.Background(), testPluginClientConfig("single-postgres-2")); err != nil {
-		t.Fatal(err)
-	}
+	// run "mux-postgres" twice which will start a single plugin for 2
+	// distinct connections
+	c := TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "mux-postgres")
+	cleanupFuncs = append(cleanupFuncs, c)
+	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "mux-postgres")
+	cleanupFuncs = append(cleanupFuncs, c)
+	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "single-postgres-1")
+	cleanupFuncs = append(cleanupFuncs, c)
+	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "single-postgres-2")
+	cleanupFuncs = append(cleanupFuncs, c)
+
+	// run "mux-userpass" twice which will start a single plugin for 2
+	// distinct connections
+	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "mux-userpass")
+	cleanupFuncs = append(cleanupFuncs, c)
+	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "mux-userpass")
+	cleanupFuncs = append(cleanupFuncs, c)
+	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "single-userpass-1")
+	cleanupFuncs = append(cleanupFuncs, c)
+	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "single-userpass-2")
+	cleanupFuncs = append(cleanupFuncs, c)
 
 	externalPlugins := core.pluginCatalog.externalPlugins
-	if len(externalPlugins) != 3 {
-		t.Fatalf("expected externalPlugins map to be of len 3 but got %d", len(externalPlugins))
+	if len(externalPlugins) != 6 {
+		t.Fatalf("expected externalPlugins map to be of len 6 but got %d", len(externalPlugins))
 	}
 
 	// check connections map
-	expectedLen := 2
-	if len(externalPlugins["mux-postgres"].connections) != expectedLen {
-		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
-	}
-	expectedLen = 1
-	if len(externalPlugins["single-postgres-1"].connections) != expectedLen {
-		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
-	}
-	if len(externalPlugins["single-postgres-2"].connections) != expectedLen {
-		t.Fatalf("expected multiplexed external plugin's connections map to be of len %d but got %d", expectedLen, len(externalPlugins["mux-postgres"].connections))
-	}
+	expectConnectionLen(t, 2, externalPlugins["mux-postgres"].connections)
+	expectConnectionLen(t, 1, externalPlugins["single-postgres-1"].connections)
+	expectConnectionLen(t, 1, externalPlugins["single-postgres-2"].connections)
+	expectConnectionLen(t, 2, externalPlugins["mux-userpass"].connections)
+	expectConnectionLen(t, 1, externalPlugins["single-userpass-1"].connections)
+	expectConnectionLen(t, 1, externalPlugins["single-userpass-2"].connections)
 
 	// check multiplexing support
-	if !externalPlugins["mux-postgres"].multiplexingSupport {
-		t.Fatalf("expected external plugin to be multiplexed")
+	expectMultiplexingSupport(t, true, externalPlugins["mux-postgres"].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins["single-postgres-1"].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins["single-postgres-2"].multiplexingSupport)
+	expectMultiplexingSupport(t, true, externalPlugins["mux-userpass"].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins["single-userpass-1"].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins["single-userpass-2"].multiplexingSupport)
+
+	// cleanup all of the external plugin processes
+	for _, cleanupFunc := range cleanupFuncs {
+		cleanupFunc()
 	}
-	if externalPlugins["single-postgres-1"].multiplexingSupport {
-		t.Fatalf("expected external plugin to be non-multiplexed")
+
+	// check connections map
+	if len(externalPlugins) != 0 {
+		t.Fatalf("expected external plugin map to be of len 0 but got %d", len(externalPlugins))
 	}
-	if externalPlugins["single-postgres-2"].multiplexingSupport {
-		t.Fatalf("expected external plugin to be non-multiplexed")
+}
+
+func TestPluginCatalog_PluginMain_Userpass(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	apiClientMeta := &api.PluginAPIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(os.Args[1:])
+
+	tlsConfig := apiClientMeta.GetTLSConfig()
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
+
+	err := backendplugin.Serve(
+		&backendplugin.ServeOpts{
+			BackendFactoryFunc: userpass.Factory,
+			TLSProviderFunc:    tlsProviderFunc,
+		},
+	)
+	if err != nil {
+		t.Fatalf("Failed to initialize userpass: %s", err)
+	}
+}
+
+func TestPluginCatalog_PluginMain_UserpassMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	apiClientMeta := &api.PluginAPIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(os.Args[1:])
+
+	tlsConfig := apiClientMeta.GetTLSConfig()
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
+
+	err := backendplugin.ServeMultiplex(
+		&backendplugin.ServeOpts{
+			BackendFactoryFunc: userpass.Factory,
+			TLSProviderFunc:    tlsProviderFunc,
+		},
+	)
+	if err != nil {
+		t.Fatalf("Failed to initialize userpass: %s", err)
 	}
 }
 
@@ -267,14 +331,16 @@ func TestPluginCatalog_PluginMain_PostgresMultiplexed(t *testing.T) {
 	v5.ServeMultiplex(postgresql.New)
 }
 
-func testPluginClientConfig(pluginName string) pluginutil.PluginClientConfig {
-	return pluginutil.PluginClientConfig{
-		Name:            pluginName,
-		PluginType:      consts.PluginTypeDatabase,
-		PluginSets:      v5.PluginSets,
-		HandshakeConfig: v5.HandshakeConfig,
-		Logger:          log.NewNullLogger(),
-		IsMetadataMode:  false,
-		AutoMTLS:        true,
+// expectConnectionLen asserts that the PluginCatalog's externalPlugin
+// connections map has a length of expectedLen
+func expectConnectionLen(t *testing.T, expectedLen int, connections map[string]*pluginClient) {
+	if len(connections) != expectedLen {
+		t.Fatalf("expected external plugin's connections map to be of len %d but got %d", expectedLen, len(connections))
+	}
+}
+
+func expectMultiplexingSupport(t *testing.T, expected, actual bool) {
+	if expected != actual {
+		t.Fatalf("expected external plugin multiplexing support to be %t", expected)
 	}
 }
