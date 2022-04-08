@@ -192,10 +192,10 @@ export default function (server) {
             timestamp: '2021-05-01T00:00:00Z',
             counts: {
               distinct_entities: 0,
-              entity_clients: 13,
+              entity_clients: 20,
               non_entity_tokens: 0,
-              non_entity_clients: 12,
-              clients: 25,
+              non_entity_clients: 20,
+              clients: 40,
             },
             namespaces: [
               {
@@ -314,10 +314,10 @@ export default function (server) {
             timestamp: '2021-04-01T00:00:00Z',
             counts: {
               distinct_entities: 0,
-              entity_clients: 10,
+              entity_clients: 17,
               non_entity_tokens: 0,
-              non_entity_clients: 10,
-              clients: 20,
+              non_entity_clients: 18,
+              clients: 35,
             },
             namespaces: [
               {
