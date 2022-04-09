@@ -1,9 +1,17 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#each @model.attrs as |attr|}}
     {{#if (eq attr.type "object")}}
-      <InfoTableRow @alwaysRender={{not (is-empty-value (get @model attr.name))}} @label={{or attr.options.label (to-label attr.name)}} @value={{stringify (get @model attr.name)}} />
+      <InfoTableRow
+        @alwaysRender={{not (is-empty-value (get @model attr.name))}}
+        @label={{or attr.options.label (to-label attr.name)}}
+        @value={{stringify (get @model attr.name)}}
+      />
     {{else}}
-      <InfoTableRow @alwaysRender={{not (is-empty-value (get @model attr.name))}} @label={{or attr.options.label (to-label attr.name)}} @value={{get @model attr.name}} />
+      <InfoTableRow
+        @alwaysRender={{not (is-empty-value (get @model attr.name))}}
+        @label={{or attr.options.label (to-label attr.name)}}
+        @value={{get @model attr.name}}
+      />
     {{/if}}
   {{/each}}
 </div>

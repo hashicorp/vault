@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func TestCertificateValidation(t *testing.T) {
 	// certificate should default to "" without error if it doesn't exist
-	config := testConfig()
+	config := testConfig(t)
 	if err := config.Validate(); err != nil {
 		t.Fatal(err)
 	}
@@ -30,9 +31,24 @@ func TestCertificateValidation(t *testing.T) {
 	}
 }
 
+func TestNewConfigEntry(t *testing.T) {
+	s := &framework.FieldData{Schema: ConfigFields()}
+	config, err := NewConfigEntry(nil, s)
+	if err != nil {
+		t.Fatal("error getting default config")
+	}
+	configFromJSON := testJSONConfig(t, jsonConfigDefault)
+
+	t.Run("equality_check", func(t *testing.T) {
+		if diff := deep.Equal(config, configFromJSON); len(diff) > 0 {
+			t.Fatalf("bad, diff: %#v", diff)
+		}
+	})
+}
+
 func TestConfig(t *testing.T) {
-	config := testConfig()
-	configFromJSON := testJSONConfig(t)
+	config := testConfig(t)
+	configFromJSON := testJSONConfig(t, jsonConfig)
 
 	t.Run("equality_check", func(t *testing.T) {
 		if diff := deep.Equal(config, configFromJSON); len(diff) > 0 {
@@ -51,7 +67,9 @@ func TestConfig(t *testing.T) {
 	})
 }
 
-func testConfig() *ConfigEntry {
+func testConfig(t *testing.T) *ConfigEntry {
+	t.Helper()
+
 	return &ConfigEntry{
 		Url:            "ldap://138.91.247.105",
 		UserDN:         "example,com",
@@ -60,12 +78,16 @@ func testConfig() *ConfigEntry {
 		TLSMaxVersion:  "tls12",
 		TLSMinVersion:  "tls12",
 		RequestTimeout: 30,
+		ClientTLSCert:  "",
+		ClientTLSKey:   "",
 	}
 }
 
-func testJSONConfig(t *testing.T) *ConfigEntry {
+func testJSONConfig(t *testing.T, rawJson []byte) *ConfigEntry {
+	t.Helper()
+
 	config := new(ConfigEntry)
-	if err := json.Unmarshal(jsonConfig, config); err != nil {
+	if err := json.Unmarshal(rawJson, config); err != nil {
 		t.Fatal(err)
 	}
 	return config
@@ -108,14 +130,46 @@ Beq3QOqp2+dga36IzQybzPQ8QtotrpSJ3q82zztEvyWiJ7E=
 -----END CERTIFICATE-----
 `
 
-var jsonConfig = []byte(`
-{
+var jsonConfig = []byte(`{
 	"url": "ldap://138.91.247.105",
 	"userdn": "example,com",
 	"binddn": "kitty",
 	"bindpass": "cats",
 	"tls_max_version": "tls12",
 	"tls_min_version": "tls12",
-	"request_timeout": 30
+	"request_timeout": 30,
+	"ClientTLSCert":  "",
+	"ClientTLSKey":   ""
+}`)
+
+var jsonConfigDefault = []byte(`
+{
+  "url": "ldap://127.0.0.1",
+  "userdn": "",
+  "anonymous_group_search": false,
+  "groupdn": "",
+  "groupfilter": "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))",
+  "groupattr": "cn",
+  "upndomain": "",
+  "userattr": "cn",
+  "userfilter": "({{.UserAttr}}={{.Username}})",
+  "certificate": "",
+  "client_tls_cert": "",
+  "client_tsl_key": "",
+  "insecure_tls": false,
+  "starttls": false,
+  "binddn": "",
+  "bindpass": "",
+  "deny_null_bind": true,
+  "discoverdn": false,
+  "tls_min_version": "tls12",
+  "tls_max_version": "tls12",
+  "use_token_groups": false,
+  "use_pre111_group_cn_behavior": null,
+  "username_as_alias": false,
+  "request_timeout": 90,
+  "CaseSensitiveNames": false,
+  "ClientTLSCert": "",
+  "ClientTLSKey": ""
 }
 `)

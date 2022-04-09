@@ -12,22 +12,18 @@ import (
 var rawPolicy = strings.TrimSpace(`
 # Developer policy
 name = "dev"
-
 # Deny all paths by default
 path "*" {
 	policy = "deny"
 }
-
 # Allow full access to staging
 path "stage/*" {
 	policy = "sudo"
 }
-
 # Limited read privilege to production
 path "prod/version" {
 	policy = "read"
 }
-
 # Read access to foobar
 # Also tests stripping of leading slash and parsing of min/max as string and
 # integer
@@ -36,7 +32,6 @@ path "/foo/bar" {
 	min_wrapping_ttl = 300
 	max_wrapping_ttl = "1h"
 }
-
 # Add capabilities for creation and sudo to foobar
 # This will be separate; they are combined when compiled into an ACL
 # Also tests reverse string/int handling to the above
@@ -45,7 +40,6 @@ path "foo/bar" {
 	min_wrapping_ttl = "300s"
 	max_wrapping_ttl = 3600
 }
-
 # Check that only allowed_parameters are being added to foobar
 path "foo/bar" {
 	capabilities = ["create", "sudo"]
@@ -54,7 +48,6 @@ path "foo/bar" {
 	  "zap" = []
 	}
 }
-
 # Check that only denied_parameters are being added to bazbar
 path "baz/bar" {
 	capabilities = ["create", "sudo"]
@@ -63,7 +56,6 @@ path "baz/bar" {
 	  "zap" = []
 	}
 }
-
 # Check that both allowed and denied parameters are being added to bizbar
 path "biz/bar" {
 	capabilities = ["create", "sudo"]
@@ -90,6 +82,9 @@ path "test/types" {
 path "test/req" {
 	capabilities = ["create", "sudo"]
 	required_parameters = ["foo"]
+}
+path "test/patch" {
+	capabilities = ["patch"]
 }
 path "test/mfa" {
 	capabilities = ["create", "sudo"]
@@ -253,6 +248,13 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 		},
 		{
+			Path:         "test/patch",
+			Capabilities: []string{"patch"},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (PatchCapabilityInt),
+			},
+		},
+		{
 			Path: "test/mfa",
 			Capabilities: []string{
 				"create",
@@ -348,6 +350,69 @@ nope = "yes"
 
 	if !strings.Contains(err.Error(), `invalid key "nope" on line 3`) {
 		t.Errorf("bad error: %q", err)
+	}
+}
+
+// TestPolicy_ParseControlGroupWrongCaps makes sure an appropriate error is
+// thrown when a factor's controlled_capabilities are not a subset of
+// the path capabilities.
+func TestPolicy_ParseControlGroupWrongCaps(t *testing.T) {
+	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	name = "controlgroups"
+	path "secret/*" {
+		capabilities = ["create", "read"]
+		control_group = {
+			max_ttl = "1h"
+			factor "ops_manager" {
+				controlled_capabilities = ["read", "write"]
+				identity {
+					group_names = ["blah"]
+					approvals = 1
+				}
+			}
+		}
+	}
+	`))
+	if err == nil {
+		t.Fatalf("Bad policy was successfully parsed")
+	}
+	if !strings.Contains(err.Error(), ControlledCapabilityPolicySubsetError) {
+		t.Fatalf("Wrong error returned when control group's controlled capabilities are not a subset of the path capabilities: error was %s", err.Error())
+	}
+}
+
+func TestPolicy_ParseControlGroup(t *testing.T) {
+	pol, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	name = "controlgroups"
+	path "secret/*" {
+		capabilities = ["create", "read"]
+		control_group = {
+			max_ttl = "1h"
+			factor "ops_manager" {
+				controlled_capabilities = ["create"]
+				identity {
+					group_names = ["blah"]
+					approvals = 1
+				}
+			}
+		}
+	}
+	`))
+	if err != nil {
+		t.Fatalf("Policy could not be parsed")
+	}
+
+	// At this point paths haven't been merged yet. We must simply make sure
+	// that each factor has the correct associated permissions.
+
+	permFactors := pol.Paths[0].Permissions.ControlGroup.Factors
+
+	if len(permFactors) != 1 {
+		t.Fatalf("Expected 1 control group factor: got %d", len(permFactors))
+	}
+
+	if len(permFactors[0].ControlledCapabilities) != 1 && permFactors[0].ControlledCapabilities[0] != "create" {
+		t.Fatalf("controlled_capabilities on the first factor was not correct: %+v", permFactors[0].ControlledCapabilities)
 	}
 }
 

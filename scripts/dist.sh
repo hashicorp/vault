@@ -28,7 +28,7 @@ DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 cd $DIR
 
 if [ -z $RELBRANCH ]; then
-  RELBRANCH=master
+  RELBRANCH=main
 fi
 
 # Tag, unless told not to

@@ -4,10 +4,10 @@ import { render } from '@ember/test-helpers';
 import { isPresent } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | toolbar-download-button', function(hooks) {
+module('Integration | Component | toolbar-download-button', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<ToolbarDownloadButton @actionText="Link" />`);
 
     assert.dom(this.element).hasText('Link');

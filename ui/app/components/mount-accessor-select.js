@@ -15,7 +15,7 @@ export default Component.extend({
     this.authMethods.perform();
   },
 
-  authMethods: task(function*() {
+  authMethods: task(function* () {
     let methods = yield this.store.findAll('auth-method');
     if (!this.value) {
       this.set('value', methods.get('firstObject.accessor'));

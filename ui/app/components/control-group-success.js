@@ -15,7 +15,7 @@ export default Component.extend({
   error: null,
   unwrapData: null,
 
-  unwrap: task(function*(token) {
+  unwrap: task(function* (token) {
     let adapter = this.store.adapterFor('tools');
     this.set('error', null);
     try {
@@ -27,7 +27,7 @@ export default Component.extend({
     }
   }).drop(),
 
-  markAndNavigate: task(function*() {
+  markAndNavigate: task(function* () {
     this.controlGroup.markTokenForUnwrap(this.model.id);
     let { url } = this.controlGroupResponse.uiParams;
     yield this.router.transitionTo(url);

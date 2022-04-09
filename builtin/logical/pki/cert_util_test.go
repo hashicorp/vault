@@ -163,8 +163,9 @@ func TestPki_PermitFQDNs(t *testing.T) {
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
 	cases := map[string]struct {
-		input    *inputBundle
-		expected []string
+		input            *inputBundle
+		expectedDnsNames []string
+		expectedEmails   []string
 	}{
 		"base valid case": {
 			input: &inputBundle{
@@ -181,7 +182,8 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					EnforceHostnames: true,
 				},
 			},
-			expected: []string{"example.com."},
+			expectedDnsNames: []string{"example.com."},
+			expectedEmails:   []string{},
 		},
 		"case insensitivity validation": {
 			input: &inputBundle{
@@ -199,20 +201,65 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					MaxTTL:           3600,
 				},
 			},
-			expected: []string{"Example.Net", "eXaMPLe.COM"},
+			expectedDnsNames: []string{"Example.Net", "eXaMPLe.COM"},
+			expectedEmails:   []string{},
+		},
+		"case email as AllowedDomain with bare domains": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "test@testemail.com",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"test@testemail.com"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{},
+			expectedEmails:   []string{"test@testemail.com"},
+		},
+		"case email common name with bare domains": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "test@testemail.com",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"testemail.com"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{},
+			expectedEmails:   []string{"test@testemail.com"},
 		},
 	}
 
-	for _, testCase := range cases {
-		cb, err := generateCreationBundle(&b, testCase.input, nil, nil)
-		if err != nil {
-			t.Fatalf("Error: %v", err)
-		}
+	for name, testCase := range cases {
+		t.Run(name, func(t *testing.T) {
+			cb, err := generateCreationBundle(&b, testCase.input, nil, nil)
+			if err != nil {
+				t.Fatalf("Error: %v", err)
+			}
 
-		actual := cb.Params.DNSNames
+			actualDnsNames := cb.Params.DNSNames
 
-		if !reflect.DeepEqual(testCase.expected, actual) {
-			t.Fatalf("Expected %v, got %v", testCase.expected, actual)
-		}
+			if !reflect.DeepEqual(testCase.expectedDnsNames, actualDnsNames) {
+				t.Fatalf("Expected dns names %v, got %v", testCase.expectedDnsNames, actualDnsNames)
+			}
+
+			actualEmails := cb.Params.EmailAddresses
+
+			if !reflect.DeepEqual(testCase.expectedEmails, actualEmails) {
+				t.Fatalf("Expected email addresses %v, got %v", testCase.expectedEmails, actualEmails)
+			}
+		})
 	}
 }

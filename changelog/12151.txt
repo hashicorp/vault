@@ -1,0 +1,3 @@
+```release-note:bug
+identity: do not allow a role's token_ttl to be longer than the signing key's verification_ttl
+```

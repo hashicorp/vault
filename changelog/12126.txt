@@ -1,0 +1,3 @@
+```release-note:bug
+cli/api: Providing consistency for the use of comma separated parameters in auth/secret enable/tune
+```

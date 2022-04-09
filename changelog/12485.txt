@@ -1,0 +1,3 @@
+```release-note:feature
+**Customizable HTTP Headers**: Add support to define custom HTTP headers for root path (`/`) and also on API endpoints (`/v1/*`)
+```

@@ -6,8 +6,7 @@ description: Performance Standby Nodes - Vault Enterprise
 
 # Performance Standby Nodes
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-with the Multi-Datacenter & Scale Module.
+-> **Note**: This feature requires [Vault Enterprise Premium](https://www.hashicorp.com/products/vault/).
 
 Vault supports a multi-server mode for high availability. This mode protects
 against outages by running multiple Vault servers. High availability mode
@@ -54,7 +53,7 @@ based on consul configuration).
 
 Additionally, if you wish to point your load balancers at performance standby
 nodes, the `sys/health` endpoint can be used to determine if a node is a
-performance standby. See the [sys/health API](/api/system/health) docs for
+performance standby. See the [sys/health API](/api-docs/system/health) docs for
 more info.
 
 ## Disabling Performance Standbys

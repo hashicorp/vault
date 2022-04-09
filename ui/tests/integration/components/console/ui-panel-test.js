@@ -7,26 +7,26 @@ import hbs from 'htmlbars-inline-precompile';
 
 const component = create(uiPanel);
 
-module('Integration | Component | console/ui panel', function(hooks) {
+module('Integration | Component | console/ui panel', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`{{console/ui-panel}}`);
-    await settled();
+
     assert.ok(component.hasInput);
   });
 
-  test('it clears console input on enter', async function(assert) {
+  test('it clears console input on enter', async function (assert) {
     await render(hbs`{{console/ui-panel}}`);
-    await settled();
+
     await component.runCommands('list this/thing/here');
     await settled();
     assert.equal(component.consoleInputValue, '', 'empties input field on enter');
   });
 
-  test('it clears the log when using clear command', async function(assert) {
+  test('it clears the log when using clear command', async function (assert) {
     await render(hbs`{{console/ui-panel}}`);
-    await settled();
+
     await component.runCommands(['list this/thing/here', 'list this/other/thing', 'read another/thing']);
     await settled();
     assert.notEqual(component.logOutput, '', 'there is output in the log');
@@ -43,9 +43,9 @@ module('Integration | Component | console/ui panel', function(hooks) {
     );
   });
 
-  test('it adds command to history on enter', async function(assert) {
+  test('it adds command to history on enter', async function (assert) {
     await render(hbs`{{console/ui-panel}}`);
-    await settled();
+
     await component.runCommands('list this/thing/here');
     await settled();
     await component.up();
@@ -60,9 +60,9 @@ module('Integration | Component | console/ui panel', function(hooks) {
     assert.equal(component.consoleInputValue, '', 'populates console input with next command on down');
   });
 
-  test('it cycles through history with more than one command', async function(assert) {
+  test('it cycles through history with more than one command', async function (assert) {
     await render(hbs`{{console/ui-panel}}`);
-    await settled();
+
     await component.runCommands(['list this/thing/here', 'read that/thing/there', 'qwerty']);
     await settled();
     await component.up();

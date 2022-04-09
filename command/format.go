@@ -31,9 +31,9 @@ func OutputSecret(ui cli.Ui, secret *api.Secret) int {
 }
 
 func OutputList(ui cli.Ui, data interface{}) int {
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
-		secret := data.(*api.Secret)
+		secret := data
 		return outputWithFormat(ui, secret, secret.Data["keys"])
 	default:
 		return outputWithFormat(ui, nil, data)
@@ -73,9 +73,9 @@ var Formatters = map[string]Formatter{
 }
 
 func Format(ui cli.Ui) string {
-	switch ui.(type) {
+	switch ui := ui.(type) {
 	case *VaultUI:
-		return ui.(*VaultUI).format
+		return ui.format
 	}
 
 	format := os.Getenv(EnvVaultFormat)
@@ -158,7 +158,7 @@ func formatServer(srv *api.AutopilotServer) string {
 	buffer.WriteString(fmt.Sprintf("      Last Index:      %d\n", srv.LastIndex))
 
 	if len(srv.Meta) > 0 {
-		buffer.WriteString(fmt.Sprintf("      Meta\n"))
+		buffer.WriteString("      Meta\n")
 		var outputs []mapOutput
 		for k, v := range srv.Meta {
 			outputs = append(outputs, mapOutput{key: k, value: fmt.Sprintf("         %q: %q\n", k, v)})
@@ -218,7 +218,7 @@ func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
 		return t.OutputSecret(ui, secret)
 	case []interface{}:
@@ -226,7 +226,7 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 	case []string:
 		return t.OutputList(ui, nil, data)
 	case map[string]interface{}:
-		return t.OutputMap(ui, data.(map[string]interface{}))
+		return t.OutputMap(ui, data)
 	case SealStatusOutput:
 		return t.OutputSealStatusStruct(ui, nil, data)
 	default:
@@ -319,10 +319,10 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	t.printWarnings(ui, secret)
 
-	switch data.(type) {
+	switch data := data.(type) {
 	case []interface{}:
 	case []string:
-		ui.Output(tableOutput(data.([]string), nil))
+		ui.Output(tableOutput(data, nil))
 		return nil
 	default:
 		return errors.New("error: table formatter cannot output list for this data type")

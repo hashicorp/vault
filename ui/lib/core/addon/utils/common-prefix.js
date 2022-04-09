@@ -1,4 +1,4 @@
-export default function(arr = [], attribute = 'id') {
+export default function (arr = [], attribute = 'id') {
   if (!arr.length) {
     return '';
   }

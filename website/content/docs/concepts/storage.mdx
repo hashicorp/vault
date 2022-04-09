@@ -20,6 +20,11 @@ Many other options for storage are available with community support - see our
 [Storage Configuration](/docs/configuration/storage) section for more
 information.
 
+-> **Choosing a storage backend:** Refer to the [integrated storage vs. external
+storage](/docs/configuration/storage#integrated-storage-vs-external-storage)
+section of the storage configuration page to help make a decision about which
+storage backend to use.
+
 ## Backups
 
 Due to the highly flexible nature of Vault's potential storage configurations,
@@ -48,7 +53,7 @@ operations to the `/sys` API (excluding the `/sys/leases`, `/sys/namespaces`,
 Some examples of workflows that write to the `/sys` API are upgrades and rekeys.
 In the future, this guidance may change for the Integrated Storage backend.
 
-Backups _can_ also help with accidential data deletions or modifications. In
+Backups _can_ also help with accidental data deletions or modifications. In
 this case, the story can get a little tricky. If you simply recover a backup
 from 5AM with the correct data, but the current time is 10AM, you will lose data
 written between 5 and 10AM. Lucy Davinhart gave a HashiConf talk that serves as
@@ -87,8 +92,8 @@ HashiCorp-supported storage backend, see the instructions linked below. For
 other storage backends, follow the documentation of that backend for taking and
 restoring backups.
 
-* Integrated Storage [snapshots](/docs/commands/operator/raft#snapshot)
-* Consul [snapshots](https://www.consul.io/docs/commands/snapshot.html)
+- Integrated Storage [snapshots](/docs/commands/operator/raft#snapshot)
+- Consul [snapshots](https://www.consul.io/docs/commands/snapshot.html)
 
 #### Backing up Multiple Clusters
 

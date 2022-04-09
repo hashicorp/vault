@@ -11,13 +11,23 @@ storiesOf('InfoTable/InfoTableRow', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Info Table Row</h5>
-      <InfoTableRow @value={{value}} @label={{label}} @helperText={{helperText}} @alwaysRender={{alwaysRender}} />
+      <InfoTableRow 
+        @value={{value}} 
+        @label={{label}} 
+        @helperText={{helperText}} 
+        @alwaysRender={{alwaysRender}} 
+        @defaultShown={{defaultShown}} 
+        @tooltipText={{tooltipText}}
+        @isTooltipCopyable={{isTooltipCopyable}} />
     `,
       context: {
         label: text('Label', 'TTL'),
-        value: text('Value', '30m'),
-        helperText: text('helperText', 'A short description'),
+        value: text('Value', '30m (hover to see the tooltip!)'),
+        helperText: text('helperText', 'This is helperText - for a short description'),
         alwaysRender: boolean('Always render?', false),
+        defaultShown: text('Default value', 'Some default value'),
+        tooltipText: text('tooltipText', 'This is tooltipText'),
+        isTooltipCopyable: boolean('Allow tooltip to be copied', true),
       },
     }),
     { notes }
@@ -27,12 +37,16 @@ storiesOf('InfoTable/InfoTableRow', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Info Table Row</h5>
-      <InfoTableRow @value={{value}} @label={{label}} @helperText={{helperText}} @alwaysRender={{alwaysRender}} />
+      <InfoTableRow 
+        @value={{value}} 
+        @label={{label}} 
+        @helperText={{helperText}} 
+        @alwaysRender={{alwaysRender}} />
     `,
       context: {
         label: 'Local mount?',
         value: boolean('Value', true),
-        helperText: text('helperText', 'A short description'),
+        helperText: text('helperText', 'This is helperText - for a short description'),
         alwaysRender: boolean('Always render?', true),
       },
     }),

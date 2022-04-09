@@ -6,9 +6,9 @@ import { STORAGE_KEYS, DEFAULTS } from 'vault/helpers/wizard-constants';
 
 let routerStub = Service.extend({
   transitionTo: sinon.stub().returns({
-    followRedirects: function() {
+    followRedirects: function () {
       return {
-        then: function(callback) {
+        then: function (callback) {
           callback();
         },
       };
@@ -17,10 +17,10 @@ let routerStub = Service.extend({
   urlFor: sinon.stub().returns('/ui/vault/foo'),
 });
 
-module('Unit | Service | wizard', function(hooks) {
+module('Unit | Service | wizard', function (hooks) {
   setupTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.register('service:router', routerStub);
     this.router = this.owner.lookup('service:router');
   });
@@ -160,7 +160,10 @@ module('Unit | Service | wizard', function(hooks) {
       method: 'clearFeatureData',
       args: [],
       expectedResults: {
-        props: [{ prop: 'currentMachine', value: null }, { prop: 'featureMachineHistory', value: null }],
+        props: [
+          { prop: 'currentMachine', value: null },
+          { prop: 'featureMachineHistory', value: null },
+        ],
         storage: [
           { key: STORAGE_KEYS.FEATURE_STATE, value: undefined },
           { key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: undefined },
@@ -282,7 +285,10 @@ module('Unit | Service | wizard', function(hooks) {
       args: [],
       properties: { featureList: ['secrets', 'tools'] },
       expectedResults: {
-        props: [{ prop: 'featureState', value: 'idle' }, { prop: 'currentMachine', value: 'secrets' }],
+        props: [
+          { prop: 'featureState', value: 'idle' },
+          { prop: 'currentMachine', value: 'secrets' },
+        ],
       },
     },
     {
@@ -295,9 +301,9 @@ module('Unit | Service | wizard', function(hooks) {
     },
   ];
 
-  testCases.forEach(testCase => {
+  testCases.forEach((testCase) => {
     let store = storage();
-    test(`${testCase.method}`, function(assert) {
+    test(`${testCase.method}`, function (assert) {
       let wizard = this.owner.factoryFor('service:wizard').create({
         storage() {
           return store;
@@ -311,12 +317,12 @@ module('Unit | Service | wizard', function(hooks) {
       }
 
       if (testCase.storage) {
-        testCase.storage.forEach(item => wizard.storage().setItem(item.key, item.value));
+        testCase.storage.forEach((item) => wizard.storage().setItem(item.key, item.value));
       }
 
       let result = wizard[testCase.method](...testCase.args);
       if (testCase.expectedResults.props) {
-        testCase.expectedResults.props.forEach(property => {
+        testCase.expectedResults.props.forEach((property) => {
           assert.deepEqual(
             wizard.get(property.prop),
             property.value,
@@ -325,7 +331,7 @@ module('Unit | Service | wizard', function(hooks) {
         });
       }
       if (testCase.expectedResults.storage) {
-        testCase.expectedResults.storage.forEach(item => {
+        testCase.expectedResults.storage.forEach((item) => {
           assert.deepEqual(
             wizard.storage().getItem(item.key),
             item.value,

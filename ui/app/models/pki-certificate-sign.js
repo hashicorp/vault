@@ -15,7 +15,7 @@ export default Certificate.extend({
     editType: 'textarea',
   }),
 
-  fieldGroups: computed('newFields', 'signVerbatim', function() {
+  fieldGroups: computed('newFields', 'signVerbatim', function () {
     const options = { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'otherSans'] };
     let groups = [
       {

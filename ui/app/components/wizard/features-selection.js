@@ -17,7 +17,7 @@ export default Component.extend({
 
   maybeHideFeatures() {
     let features = this.allFeatures;
-    features.forEach(feat => {
+    features.forEach((feat) => {
       feat.disabled = this.doesNotHavePermission(feat.requiredPermissions);
     });
 
@@ -34,12 +34,12 @@ export default Component.extend({
     //   'example/path': ['capability'],
     //   'second/example/path': ['update', 'sudo'],
     // }
-    return !Object.keys(requiredPermissions).every(path => {
+    return !Object.keys(requiredPermissions).every((path) => {
       return this.permissions.hasPermission(path, requiredPermissions[path]);
     });
   },
 
-  estimatedTime: computed('selectedFeatures', function() {
+  estimatedTime: computed('selectedFeatures', function () {
     let time = 0;
     for (let feature of Object.keys(FEATURE_MACHINE_TIME)) {
       if (this.selectedFeatures.includes(feature)) {
@@ -48,8 +48,8 @@ export default Component.extend({
     }
     return time;
   }),
-  selectProgress: computed('selectedFeatures', function() {
-    let bar = this.selectedFeatures.map(feature => {
+  selectProgress: computed('selectedFeatures', function () {
+    let bar = this.selectedFeatures.map((feature) => {
       return { style: htmlSafe('width:0%;'), completed: false, showIcon: true, feature: feature };
     });
     if (bar.length === 0) {
@@ -57,7 +57,7 @@ export default Component.extend({
     }
     return bar;
   }),
-  allFeatures: computed(function() {
+  allFeatures: computed(function () {
     return [
       {
         key: 'secrets',
@@ -129,7 +129,7 @@ export default Component.extend({
 
   showReplication: or('version.hasPerfReplication', 'version.hasDRReplication'),
 
-  selectedFeatures: computed('allFeatures.@each.selected', function() {
+  selectedFeatures: computed('allFeatures.@each.selected', function () {
     return this.allFeatures.filterBy('selected').mapBy('key');
   }),
 

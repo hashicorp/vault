@@ -150,8 +150,8 @@ type registry struct {
 	logicalBackends    map[string]logical.Factory
 }
 
-// Get returns the BuiltinFactory func for a particular backend plugin
-// from the plugins map.
+// Get returns the Factory func for a particular backend plugin from the
+// plugins map.
 func (r *registry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
 	switch pluginType {
 	case consts.PluginTypeCredential:

@@ -2,4 +2,7 @@
   color: $link;
   text-decoration: none;
   font-weight: $font-weight-semibold;
+  &:hover {
+    text-decoration: underline !important;
+  }
 }

@@ -8,6 +8,14 @@
   .ember-basic-dropdown-trigger {
     display: inline-block;
   }
+
+  .center-inside-row {
+    width: 50%;
+    margin-left: auto;
+    font-size: $size-8;
+    font-weight: $font-weight-semibold;
+    color: $ui-gray-500;
+  }
 }
 
 a.list-item-row,

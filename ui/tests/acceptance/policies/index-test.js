@@ -9,14 +9,14 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
 
-module('Acceptance | policies/acl', function(hooks) {
+module('Acceptance | policies/acl', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it lists default and root acls', async function(assert) {
+  test('it lists default and root acls', async function (assert) {
     await page.visit({ type: 'acl' });
     await settled();
     assert.equal(currentURL(), '/vault/policies/acl');
@@ -24,7 +24,7 @@ module('Acceptance | policies/acl', function(hooks) {
     assert.ok(page.findPolicyByName('default'), 'default policy shown in the list');
   });
 
-  test('it navigates to show when clicking on the link', async function(assert) {
+  test('it navigates to show when clicking on the link', async function (assert) {
     await page.visit({ type: 'acl' });
     await settled();
     await page.findPolicyByName('default').click();
@@ -33,7 +33,7 @@ module('Acceptance | policies/acl', function(hooks) {
     assert.equal(currentURL(), '/vault/policy/acl/default');
   });
 
-  test('it allows deletion of policies with dots in names', async function(assert) {
+  test('it allows deletion of policies with dots in names', async function (assert) {
     const POLICY = 'path "*" { capabilities = ["list"]}';
     let policyName = 'list.policy';
     await consoleComponent.runCommands([`write sys/policies/acl/${policyName} policy=${btoa(POLICY)}`]);

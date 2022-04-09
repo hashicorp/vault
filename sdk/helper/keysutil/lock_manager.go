@@ -50,6 +50,9 @@ type PolicyRequest struct {
 
 	// Whether to allow plaintext backup
 	AllowPlaintextBackup bool
+
+	// How frequently the key should automatically rotate
+	AutoRotatePeriod time.Duration
 }
 
 type LockManager struct {
@@ -99,6 +102,24 @@ func (lm *LockManager) InvalidatePolicy(name string) {
 	if lm.useCache {
 		lm.cache.Delete(name)
 	}
+}
+
+func (lm *LockManager) InitCache(cacheSize int) error {
+	if lm.useCache {
+		switch {
+		case cacheSize < 0:
+			return errors.New("cache size must be greater or equal to zero")
+		case cacheSize == 0:
+			lm.cache = NewTransitSyncMap()
+		case cacheSize > 0:
+			newLRUCache, err := NewTransitLRU(cacheSize)
+			if err != nil {
+				return errwrap.Wrapf("failed to create cache: {{err}}", err)
+			}
+			lm.cache = newLRUCache
+		}
+	}
+	return nil
 }
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
@@ -362,6 +383,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 			Derived:              req.Derived,
 			Exportable:           req.Exportable,
 			AllowPlaintextBackup: req.AllowPlaintextBackup,
+			AutoRotatePeriod:     req.AutoRotatePeriod,
 		}
 
 		if req.Derived {

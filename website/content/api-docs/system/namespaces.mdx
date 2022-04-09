@@ -33,7 +33,7 @@ $ curl \
 
 ## Create Namespace
 
-This endpoint creates a namespace at the givent path.
+This endpoint creates a namespace at the given path.
 
 | Method | Path                    |
 | :----- | :---------------------- |
@@ -42,7 +42,7 @@ This endpoint creates a namespace at the givent path.
 ### Parameters
 
 - `path` `(string: <required>)` – Specifies the path where the namespace
-  will be namespace. This is specified as part of the URL.
+  will be created.
 
 ### Sample Request
 
@@ -72,7 +72,7 @@ $ curl \
 
 ## Read Namespace Information
 
-This endpoint get the metadata for the given namespace path.
+This endpoint gets the metadata for the given namespace path.
 
 | Method | Path                    |
 | :----- | :---------------------- |
@@ -93,4 +93,119 @@ $ curl \
   "id": "gsudj",
   "path": "ns1/"
 }
+```
+
+## Lock Namespace
+
+This endpoint locks the API for the current namespace path or optional subpath.
+The behavior when interacting with Vault from a locked namespace is described in
+[API Locked Response](/docs/concepts/namespace-api-lock#api-locked-response).
+
+| Method | Path                    |
+| :----- | :---------------------- |
+| `POST`  | `/sys/namespaces/api-lock/lock/:subpath` |
+
+### Sample Request - Current Namespace
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/namespaces/api-lock/lock
+```
+
+### Sample Response - Current Namespace
+
+```json
+{
+    "unlock_key": "<unlock key for current/ns/path>"
+}
+```
+
+### Sample Request - X-Vault-Namespace
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --header "X-Vault-Namespace: some/path
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/namespaces/api-lock/lock
+```
+
+### Sample Response - X-Vault-Namespace
+
+```json
+{
+    "unlock_key": "<unlock key for some/path>"
+}
+```
+
+### Sample Request - Descendant of Current Namespace
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/namespaces/api-lock/lock/some/descendant/subpath
+```
+
+### Sample Response - Descendant of Current Namespace
+
+```json
+{
+    "unlock_key": "<unlock key for current/ns/path/some/descendant/subpath>"
+}
+```
+
+## Unlock Namespace
+
+This endpoint unlocks the api for the current namespace path or optional subpath.
+
+| Method | Path                    |
+| :----- | :---------------------- |
+| `POST`  | `/sys/namespaces/api-lock/unlock/:subpath` |
+
+### Sample Payload - Current Namespace Non-Root
+
+```json
+{
+  "unlock_key": "<unlock key for current/ns/path>"
+}
+```
+
+### Sample Request - Current Namespace Non-Root
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/namespaces/api-lock/unlock
+```
+
+### Sample Request - Current Namespace Root
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: <some root token>" \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/namespaces/api-lock/unlock
+```
+
+### Sample Payload - Descendant Namespace Non-Root
+
+```json
+{
+  "unlock_key": "<unlock key for current/ns/path/some/descendant/subpath>"
+}
+```
+
+### Sample Request - Descendant Namespace Non-Root
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/namespaces/api-lock/unlock/some/descendant/path
 ```

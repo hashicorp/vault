@@ -1,0 +1,3 @@
+```release-note:improvement
+core/ha: Add new mechanism for keeping track of peers talking to active node, and new 'operator members' command to view them.
+```

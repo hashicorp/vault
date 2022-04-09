@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix bug where edit role form on auth method is invalid by default
+```

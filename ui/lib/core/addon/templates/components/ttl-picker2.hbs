@@ -1,66 +1,61 @@
 <Toggle
-  @name={{label}}
+  @name={{this.label}}
   @status="success"
   @size="small"
-  @onChange={{action 'toggleEnabled'}}
-  @checked={{enableTTL}}
+  @onChange={{action "toggleEnabled"}}
+  @checked={{this.enableTTL}}
   data-test-ttl-toggle
 >
-  <span class="ttl-picker-label is-large">{{label}}</span><br/>
+  <span class="ttl-picker-label is-large">{{this.label}}</span><br />
   <div class="description has-text-grey">
-    <span>{{helperText}}</span>
-    {{#if description}}
+    <span>{{this.helperText}}</span>
+    {{#if this.description}}
       <ToolTip @verticalPosition="below" as |T|>
-        <T.trigger data-test-tooltip-trigger tabindex="-1">
-          <Icon @glyph="info-circle-outline" aria-label="description" />
-        </T.trigger>
-        <T.content @class="tool-tip">
+        <T.Trigger data-test-tooltip-trigger tabindex="-1">
+          <Icon @name="info" aria-label="description" />
+        </T.Trigger>
+        <T.Content @defaultClass="tool-tip">
           <div class="box" data-test-hover-copy-tooltip-text>
-            {{description}}
+            {{this.description}}
           </div>
-        </T.content>
+        </T.Content>
       </ToolTip>
     {{/if}}
   </div>
 </Toggle>
-{{#if enableTTL}}
-  <div class="ttl-show-picker" data-test-ttl-picker-group="{{label}}">
+{{#if this.enableTTL}}
+  <div class="ttl-show-picker" data-test-ttl-picker-group={{this.label}}>
     <div class="field is-grouped is-marginless">
       <div class="control is-marginless">
         <input
-          data-test-ttl-value="{{label}}"
-          value={{time}}
-          id="time-{{elementId}}"
+          data-test-ttl-value={{this.label}}
+          value={{this.time}}
+          id="time-{{this.elementId}}"
           type="text"
           name="time"
-          class="input{{if errorMessage " has-error"}}"
-          oninput={{perform updateTime value="target.value"}}
+          class="input{{if this.errorMessage " has-error"}}"
+          oninput={{perform this.updateTime value="target.value"}}
           pattern="[0-9]*"
         />
       </div>
       <div class="control">
         <Select
-          data-test-ttl-unit="{{label}}"
-          @name='ttl-unit'
-          @options={{unitOptions}}
-          @onChange={{action 'updateUnit'}}
-          @selectedValue={{unit}}
+          data-test-ttl-unit={{this.label}}
+          @name="ttl-unit"
+          @options={{this.unitOptions}}
+          @onChange={{action "updateUnit"}}
+          @selectedValue={{this.unit}}
           @isFullwidth={{true}}
-          />
+        />
       </div>
     </div>
-    {{#if errorMessage}}
+    {{#if this.errorMessage}}
       <div class="columns is-mobile is-variable is-1 ttl-value-error">
         <div class="is-narrow message-icon">
-          <Icon
-            @size="s"
-            class="has-text-danger"
-            aria-hidden=true
-            @glyph="cancel-square-fill"
-          />
+          <Icon @name="x-square-fill" class="has-text-danger" />
         </div>
         <div class="has-text-danger">
-          {{errorMessage}}
+          {{this.errorMessage}}
         </div>
       </div>
     {{/if}}

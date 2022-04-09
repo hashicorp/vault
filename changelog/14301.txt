@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kv: add full secret path output to table-formatted responses
+```

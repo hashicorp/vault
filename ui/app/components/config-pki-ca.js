@@ -7,6 +7,7 @@ export default Component.extend({
   classNames: 'config-pki-ca',
   store: service('store'),
   flashMessages: service(),
+  errors: null,
 
   /*
    * @param boolean
@@ -100,7 +101,7 @@ export default Component.extend({
    * This array provides the text and download hrefs for those links.
    *
    */
-  downloadHrefs: computed('config', 'config.{backend,pem,caChain,der}', function() {
+  downloadHrefs: computed('config', 'config.{backend,pem,caChain,der}', function () {
     const config = this.config;
     const { backend, pem, caChain, der } = config;
 
@@ -139,7 +140,7 @@ export default Component.extend({
       const isUpload = this.model.uploadPemBundle;
       model
         .save({ adapterOptions: { method } })
-        .then(m => {
+        .then((m) => {
           if (method === 'setSignedIntermediate' || isUpload) {
             this.send('refresh');
             this.flashMessages.success('The certificate for this backend has been updated.');
@@ -150,8 +151,8 @@ export default Component.extend({
             );
           }
         })
-        .catch(() => {
-          // handle promise rejection - error will be shown by message-error component
+        .catch((e) => {
+          this.set('errors', e.errors);
         })
         .finally(() => {
           this.set('loading', false);

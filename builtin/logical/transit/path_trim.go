@@ -40,7 +40,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, retErr error) {
 		name := d.Get("name").(string)
 
-		p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 			Storage: req.Storage,
 			Name:    name,
 		}, b.GetRandomReader())
@@ -55,7 +55,10 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		}
 		defer p.Unlock()
 
-		minAvailableVersionRaw, ok := d.GetOk("min_available_version")
+		minAvailableVersionRaw, ok, err := d.GetOkErr("min_available_version")
+		if err != nil {
+			return nil, err
+		}
 		if !ok {
 			return logical.ErrorResponse("missing min_available_version"), nil
 		}

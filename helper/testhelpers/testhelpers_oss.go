@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package testhelpers
 
@@ -6,8 +6,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/go-testing-interface"
 )
-
-var IsEnterprise = false
 
 // WaitForActiveNodeAndStandbys does nothing more than wait for the active node
 // on OSS. On enterprise it waits for perf standbys to be healthy too.

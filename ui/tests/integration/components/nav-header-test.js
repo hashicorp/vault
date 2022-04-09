@@ -7,10 +7,10 @@ import navHeader from 'vault/tests/pages/components/nav-header';
 
 const component = create(navHeader);
 
-module('Integration | Component | nav header', function(hooks) {
+module('Integration | Component | nav header', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`
         {{#nav-header as |h|}}
           {{#h.home}}

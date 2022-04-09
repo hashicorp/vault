@@ -2,6 +2,7 @@ executor: go-machine
 steps:
   - setup-go
   - checkout
+  - restore_go_mod_cache
   - attach_workspace:
       at: .
   - run:

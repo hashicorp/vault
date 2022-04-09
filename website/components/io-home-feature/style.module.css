@@ -1,0 +1,79 @@
+.feature {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 32px;
+  gap: 24px 64px;
+  border-radius: 6px;
+  background-color: #f9f9fa;
+  color: var(--black);
+  box-shadow: 0 2px 3px rgba(101, 106, 118, 0.1),
+    0 8px 16px -10px rgba(101, 106, 118, 0.2);
+
+  @media (--medium-up) {
+    flex-direction: row;
+  }
+}
+
+.featureLink {
+  transition: box-shadow ease-in-out 0.2s;
+
+  &:hover {
+    box-shadow: 0 2px 3px rgba(101, 106, 118, 0.15),
+      0 16px 16px -10px rgba(101, 106, 118, 0.2);
+  }
+}
+
+.featureMedia {
+  flex-shrink: 0;
+  display: flex;
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--gray-5);
+
+  @media (--medium-up) {
+    width: 300px;
+  }
+
+  @media (--large) {
+    width: 400px;
+  }
+
+  & > * {
+    width: 100%;
+  }
+}
+
+.featureContent {
+  max-width: 520px;
+}
+
+.featureHeading {
+  margin: 0;
+  composes: g-type-display-4 from global;
+}
+
+.featureDescription {
+  margin: 8px 0 24px;
+  composes: g-type-body-small from global;
+  color: var(--gray-3);
+}
+
+.featureCta {
+  display: inline-flex;
+  align-items: center;
+
+  & > span {
+    display: flex;
+    margin-left: 12px;
+
+    & > svg {
+      transition: transform 0.2s;
+    }
+  }
+
+  @nest .feature:hover & span svg {
+    transform: translateX(2px);
+  }
+}

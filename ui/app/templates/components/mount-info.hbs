@@ -1,17 +1,22 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.access.method" @root={{root}} @showCurrent={{true}} />
+    <KeyValueHeader @baseKey={{this.model}} @path="vault.cluster.access.method" @root={{this.root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{capitalize model.methodType}}
+      {{capitalize this.model.methodType}}
     </h1>
   </p.levelLeft>
   <p.levelRight>
-    {{#if (eq section "configuration")}}
+    {{#if (eq this.section "configuration")}}
       <div class="field is-grouped">
         <div class="control">
-          <LinkTo @route="vault.cluster.settings.auth.configure" @model={{model.id}} class="button is-ghost has-icon-right is-compact" data-test-configure-link={{true}}>
+          <LinkTo
+            @route="vault.cluster.settings.auth.configure"
+            @model={{this.model.id}}
+            class="button is-ghost has-icon-right is-compact"
+            data-test-configure-link={{true}}
+          >
             Configure
             <Chevron />
           </LinkTo>
@@ -20,5 +25,5 @@
     {{/if}}
   </p.levelRight>
 </PageHeader>
-{{section-tabs model "authShow"}}
-{{component (concat "auth-method/" section) model=model}}
+{{section-tabs this.model "authShow"}}
+{{component (concat "auth-method/" this.section) model=this.model}}

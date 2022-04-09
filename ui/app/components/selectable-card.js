@@ -24,7 +24,7 @@ export default Component.extend({
   actionText: '',
   gridContainer: false,
   tagName: '', // do not wrap component with div
-  formattedCardTitle: computed('total', function() {
+  formattedCardTitle: computed('total', function () {
     const { cardTitle, total } = this;
 
     if (cardTitle === 'Tokens') {

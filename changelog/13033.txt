@@ -1,0 +1,3 @@
+```release-note:bug
+plugin/couchbase: Fix an issue in which the locking patterns did not allow parallel requests.
+```

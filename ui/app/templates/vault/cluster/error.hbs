@@ -1,10 +1,10 @@
-{{#if (eq model.httpStatus 404)}}
-  <NotFound @model={{model}} />
+{{#if (eq this.model.httpStatus 404)}}
+  <NotFound @model={{this.model}} />
 {{else}}
   <PageHeader as |p|>
     <p.levelLeft>
       <h1 class="title is-3 has-text-grey">
-        {{#if (eq model.httpStatus 403)}}
+        {{#if (eq this.model.httpStatus 403)}}
           Not authorized
         {{else}}
           Error
@@ -13,22 +13,23 @@
     </p.levelLeft>
   </PageHeader>
   <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
-    {{#if (and
-      (eq model.httpStatus 403)
-      (eq model.policyPath 'sys/capabilities-self')
-      )
-    }}
+    {{#if (and (eq this.model.httpStatus 403) (eq this.model.policyPath "sys/capabilities-self"))}}
       <p>
-        Your auth token does not have access to <code>{{model.policyPath}}</code>. Vault Enterprise uses this endpoint to determine what actions are allowed in the interface.
+        Your auth token does not have access to
+        <code>{{this.model.policyPath}}</code>. Vault Enterprise uses this endpoint to determine what actions are allowed in
+        the interface.
       </p>
       <p>
-      Make sure the policy for the path <code>{{model.policyPath}}</code> includes <code>capabilities = ['update']</code>.
+        Make sure the policy for the path
+        <code>{{this.model.policyPath}}</code>
+        includes
+        <code>capabilities = ['update']</code>.
       </p>
     {{else}}
-      {{#if model.message}}
-        <p>{{model.message}}</p>
+      {{#if this.model.message}}
+        <p>{{this.model.message}}</p>
       {{/if}}
-      {{#each model.errors as |error|}}
+      {{#each this.model.errors as |error|}}
         <p>
           {{error}}
         </p>

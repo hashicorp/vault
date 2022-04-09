@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
+	kvbuilder "github.com/hashicorp/go-secure-stdlib/kv-builder"
 	"github.com/hashicorp/vault/api"
-	kvbuilder "github.com/hashicorp/vault/internalshared/kv-builder"
 	"github.com/kr/text"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
@@ -52,7 +51,7 @@ func ensureTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoTrailingSlash ensures the given string has a trailing slash.
+// ensureNoTrailingSlash ensures the given string does not have a trailing slash.
 func ensureNoTrailingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -65,7 +64,7 @@ func ensureNoTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoLeadingSlash ensures the given string has a trailing slash.
+// ensureNoLeadingSlash ensures the given string does not have a leading slash.
 func ensureNoLeadingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -262,13 +261,13 @@ func humanDuration(d time.Duration) string {
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
 func humanDurationInt(i interface{}) interface{} {
-	switch i.(type) {
+	switch i := i.(type) {
 	case int:
-		return humanDuration(time.Duration(i.(int)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case int64:
-		return humanDuration(time.Duration(i.(int64)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case json.Number:
-		if i, err := i.(json.Number).Int64(); err == nil {
+		if i, err := i.Int64(); err == nil {
 			return humanDuration(time.Duration(i) * time.Second)
 		}
 	}
@@ -285,7 +284,7 @@ func parseFlagFile(raw string) (string, error) {
 	if len(raw) > 0 && raw[0] == '@' {
 		contents, err := ioutil.ReadFile(raw[1:])
 		if err != nil {
-			return "", errwrap.Wrapf("error reading file: {{err}}", err)
+			return "", fmt.Errorf("error reading file: %w", err)
 		}
 
 		return string(contents), nil

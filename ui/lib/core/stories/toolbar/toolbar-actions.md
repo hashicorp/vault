@@ -19,6 +19,6 @@ It should only be used inside of `Toolbar`.
 **See**
 
 - [Uses of ToolbarActions](https://github.com/hashicorp/vault/search?l=Handlebars&q=ToolbarActions+OR+toolbar-actions)
-- [ToolbarActions Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/toolbar-actions.js)
+- [ToolbarActions Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/toolbar-actions.js)
 
 ---

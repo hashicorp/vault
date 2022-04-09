@@ -24,8 +24,8 @@ export default Route.extend({
     const clusterMode = model.get(replicationMode).get('modeForUrl');
     const actions = replicationActionForMode([replicationMode, clusterMode]);
     return all(
-      actions.map(action => {
-        return store.findRecord('capabilities', pathForAction(action)).then(capability => {
+      actions.map((action) => {
+        return store.findRecord('capabilities', pathForAction(action)).then((capability) => {
           model.set(`can${camelize(action)}`, capability.get('canUpdate'));
         });
       })

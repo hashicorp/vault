@@ -27,7 +27,7 @@ export function hasFeature(featureName, features) {
 
 export default Helper.extend({
   version: service(),
-  onFeaturesChange: observer('version.features.[]', function() {
+  onFeaturesChange: observer('version.features.[]', function () {
     this.recompute();
   }),
   compute([featureName]) {

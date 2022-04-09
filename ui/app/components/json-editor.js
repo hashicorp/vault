@@ -1,53 +1,45 @@
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 
-const JSON_EDITOR_DEFAULTS = {
-  // IMPORTANT: `gutters` must come before `lint` since the presence of
-  // `gutters` is cached internally when `lint` is toggled
-  gutters: ['CodeMirror-lint-markers'],
-  tabSize: 2,
-  mode: 'application/json',
-  lineNumbers: true,
-  lint: { lintOnChange: false },
-  theme: 'hashi',
-  readOnly: false,
-  showCursorWhenSelecting: true,
-};
+/**
+ * @module JsonEditor
+ *
+ * @example
+ * ```js
+ * <JsonEditor @title="Policy" @value={{codemirror.string}} @valueUpdated={{ action "codemirrorUpdate"}} />
+ * ```
+ *
+ * @param {string} [title] - Name above codemirror view
+ * @param {string} value - a specific string the comes from codemirror. It's the value inside the codemirror display
+ * @param {Function} [valueUpdated] - action to preform when you edit the codemirror value.
+ * @param {Function} [onFocusOut] - action to preform when you focus out of codemirror.
+ * @param {string} [helpText] - helper text.
+ * @param {Object} [extraKeys] - Provides keyboard shortcut methods for things like saving on shift + enter.
+ * @param {Array} [gutters] - An array of CSS class names or class name / CSS string pairs, each of which defines a width (and optionally a background), and which will be used to draw the background of the gutters.
+ * @param {string} [mode] - The mode defined for styling. Right now we only import ruby so mode must but be ruby or defaults to javascript. If you wanted another language you need to import it into the modifier.
+ * @param {Boolean} [readOnly] - Sets the view to readOnly, allowing for copying but no editing. It also hides the cursor. Defaults to false.
+ * @param {String} [theme] - Specify or customize the look via a named "theme" class in scss.
+ * @param {String} [value] - Value within the display. Generally, a json string.
+ * @param {String} [viewportMargin] - Size of viewport. Often set to "Infinity" to load/show all text regardless of length.
+ */
 
-export default Component.extend({
-  showToolbar: true,
-  title: null,
-  subTitle: null,
-  helpText: null,
-  value: null,
-  options: null,
-  valueUpdated: null,
-  onFocusOut: null,
-  readOnly: false,
+export default class JsonEditorComponent extends Component {
+  get getShowToolbar() {
+    return this.args.showToolbar === false ? false : true;
+  }
 
-  init() {
-    this._super(...arguments);
-    this.options = { ...JSON_EDITOR_DEFAULTS, ...this.options };
-    if (this.options.autoHeight) {
-      this.options.viewportMargin = Infinity;
-      delete this.options.autoHeight;
+  @action
+  onUpdate(...args) {
+    if (!this.args.readOnly) {
+      // catching a situation in which the user is not readOnly and has not provided a valueUpdated function to the instance
+      this.args.valueUpdated(...args);
     }
-    if (this.options.readOnly) {
-      this.options.readOnly = 'nocursor';
-      this.options.lineNumbers = false;
-      delete this.options.gutters;
-    }
-  },
+  }
 
-  actions: {
-    updateValue(...args) {
-      if (this.valueUpdated) {
-        this.valueUpdated(...args);
-      }
-    },
-    onFocus(...args) {
-      if (this.onFocusOut) {
-        this.onFocusOut(...args);
-      }
-    },
-  },
-});
+  @action
+  onFocus(...args) {
+    if (this.args.onFocusOut) {
+      this.args.onFocusOut(...args);
+    }
+  }
+}

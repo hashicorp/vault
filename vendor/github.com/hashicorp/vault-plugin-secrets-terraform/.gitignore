@@ -1,6 +1,0 @@
-vault/plugins
-dist/
-*.test
-pkg
-bin
-tmp

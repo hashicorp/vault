@@ -10,14 +10,14 @@ import itemDetails from 'vault/tests/pages/components/identity/item-details';
 
 const component = create(itemDetails);
 
-module('Integration | Component | identity/item details', function(hooks) {
+module('Integration | Component | identity/item details', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
   });
 
-  test('it renders the disabled warning', async function(assert) {
+  test('it renders the disabled warning', async function (assert) {
     let model = EmberObject.create({
       save() {
         return resolve();
@@ -34,7 +34,7 @@ module('Integration | Component | identity/item details', function(hooks) {
     assert.ok(model.save.calledOnce, 'clicking enable calls model save');
   });
 
-  test('it does not render the button if canEdit is false', async function(assert) {
+  test('it does not render the button if canEdit is false', async function (assert) {
     let model = EmberObject.create({
       disabled: true,
     });
@@ -45,7 +45,7 @@ module('Integration | Component | identity/item details', function(hooks) {
     assert.dom('[data-test-enable]').doesNotExist('does not show the enable button');
   });
 
-  test('it does not render the banner when item is enabled', async function(assert) {
+  test('it does not render the banner when item is enabled', async function (assert) {
     let model = EmberObject.create();
     this.set('model', model);
 

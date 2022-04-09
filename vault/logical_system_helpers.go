@@ -7,14 +7,16 @@ import (
 	"strings"
 	"time"
 
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
-	invalidateMFAConfig = func(context.Context, *SystemBackend, string) {}
+	invalidateMFAConfig                      = func(context.Context, *SystemBackend, string) {}
+	invalidateLoginMFAConfig                 = func(context.Context, *SystemBackend, string) {}
+	invalidateLoginMFALoginEnforcementConfig = func(context.Context, *SystemBackend, string) {}
 
 	sysInvalidate = func(b *SystemBackend) func(context.Context, string) {
 		return nil
@@ -78,7 +80,11 @@ var (
 	handleSetupPluginReload = func(*Core) error {
 		return nil
 	}
-
+	handleLicenseReload = func(b *SystemBackend) framework.OperationFunc {
+		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+			return nil, nil
+		}
+	}
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
 

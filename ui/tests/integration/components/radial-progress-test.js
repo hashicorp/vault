@@ -7,10 +7,10 @@ import radialProgress from 'vault/tests/pages/components/radial-progress';
 
 const component = create(radialProgress);
 
-module('Integration | Component | radial progress', function(hooks) {
+module('Integration | Component | radial progress', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     // We have to manually round the circumference, strokeDash, and strokeDashOffset because
     // ie11 truncates decimals differently than other browsers.
     let circumference = ((19 / 2) * Math.PI * 2).toFixed(2);

@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import IdentityModel from './_base';
 
 export default IdentityModel.extend({
-  formFields: computed(function() {
+  formFields: computed(function () {
     return ['toEntityId', 'fromEntityIds', 'force'];
   }),
   toEntityId: attr('string', {

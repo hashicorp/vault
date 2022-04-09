@@ -1,0 +1,3 @@
+```release-note:bug
+service_registration/consul: Print config service_address set in DEBUG log
+```

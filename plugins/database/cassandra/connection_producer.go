@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -27,6 +26,7 @@ type cassandraConnectionProducer struct {
 	Password           string      `json:"password" structs:"password" mapstructure:"password"`
 	TLS                bool        `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS        bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	TLSServerName      string      `json:"tls_server_name" structs:"tls_server_name" mapstructure:"tls_server_name"`
 	ProtocolVersion    int         `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
 	ConnectTimeoutRaw  interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
 	SocketKeepAliveRaw interface{} `json:"socket_keep_alive" structs:"socket_keep_alive" mapstructure:"socket_keep_alive"`
@@ -39,7 +39,7 @@ type cassandraConnectionProducer struct {
 
 	connectTimeout  time.Duration
 	socketKeepAlive time.Duration
-	certBundle      *certutil.CertBundle
+	sslOpts         *gocql.SslOptions
 	rawConfig       map[string]interface{}
 
 	Initialized bool
@@ -60,7 +60,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 
 	if c.ConnectTimeoutRaw == nil {
-		c.ConnectTimeoutRaw = "0s"
+		c.ConnectTimeoutRaw = "5s"
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
@@ -82,38 +82,46 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 		return fmt.Errorf("username cannot be empty")
 	case len(c.Password) == 0:
 		return fmt.Errorf("password cannot be empty")
+	case len(c.PemJSON) > 0 && len(c.PemBundle) > 0:
+		return fmt.Errorf("cannot specify both pem_json and pem_bundle")
 	}
 
-	var certBundle *certutil.CertBundle
-	var parsedCertBundle *certutil.ParsedCertBundle
+	var tlsMinVersion uint16 = tls.VersionTLS12
+	if c.TLSMinVersion != "" {
+		ver, exists := tlsutil.TLSLookup[c.TLSMinVersion]
+		if !exists {
+			return fmt.Errorf("unrecognized TLS version [%s]", c.TLSMinVersion)
+		}
+		tlsMinVersion = ver
+	}
+
 	switch {
 	case len(c.PemJSON) != 0:
-		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
+		cfg, err := jsonBundleToTLSConfig(c.PemJSON, tlsMinVersion, c.TLSServerName, c.InsecureTLS)
 		if err != nil {
-			return fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %w", err)
+			return fmt.Errorf("failed to parse pem_json: %w", err)
 		}
-		certBundle, err = parsedCertBundle.ToCertBundle()
-		if err != nil {
-			return fmt.Errorf("error marshaling PEM information: %w", err)
+		c.sslOpts = &gocql.SslOptions{
+			Config:                 cfg,
+			EnableHostVerification: !cfg.InsecureSkipVerify,
 		}
-		c.certBundle = certBundle
 		c.TLS = true
 
 	case len(c.PemBundle) != 0:
-		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
+		cfg, err := pemBundleToTLSConfig(c.PemBundle, tlsMinVersion, c.TLSServerName, c.InsecureTLS)
 		if err != nil {
-			return fmt.Errorf("error parsing the given PEM information: %w", err)
+			return fmt.Errorf("failed to parse pem_bundle: %w", err)
 		}
-		certBundle, err = parsedCertBundle.ToCertBundle()
-		if err != nil {
-			return fmt.Errorf("error marshaling PEM information: %w", err)
+		c.sslOpts = &gocql.SslOptions{
+			Config:                 cfg,
+			EnableHostVerification: !cfg.InsecureSkipVerify,
 		}
-		c.certBundle = certBundle
 		c.TLS = true
-	}
 
-	if c.InsecureTLS {
-		c.TLS = true
+	case c.InsecureTLS:
+		c.sslOpts = &gocql.SslOptions{
+			EnableHostVerification: !c.InsecureTLS,
+		}
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -181,15 +189,9 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	}
 
 	clusterConfig.Timeout = c.connectTimeout
+	clusterConfig.ConnectTimeout = c.connectTimeout
 	clusterConfig.SocketKeepalive = c.socketKeepAlive
-
-	if c.TLS {
-		sslOpts, err := getSslOpts(c.certBundle, c.TLSMinVersion, c.InsecureTLS)
-		if err != nil {
-			return nil, err
-		}
-		clusterConfig.SslOpts = sslOpts
-	}
+	clusterConfig.SslOpts = c.sslOpts
 
 	if c.LocalDatacenter != "" {
 		clusterConfig.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(c.LocalDatacenter)
@@ -228,48 +230,6 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	}
 
 	return session, nil
-}
-
-func getSslOpts(certBundle *certutil.CertBundle, minTLSVersion string, insecureSkipVerify bool) (*gocql.SslOptions, error) {
-	tlsConfig := &tls.Config{}
-	if certBundle != nil {
-		if certBundle.Certificate == "" && certBundle.PrivateKey != "" {
-			return nil, fmt.Errorf("found private key for TLS authentication but no certificate")
-		}
-		if certBundle.Certificate != "" && certBundle.PrivateKey == "" {
-			return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
-		}
-
-		parsedCertBundle, err := certBundle.ToParsedCertBundle()
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse certificate bundle: %w", err)
-		}
-
-		tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%w", tlsConfig, err)
-		}
-	}
-
-	tlsConfig.InsecureSkipVerify = insecureSkipVerify
-
-	if minTLSVersion != "" {
-		var ok bool
-		tlsConfig.MinVersion, ok = tlsutil.TLSLookup[minTLSVersion]
-		if !ok {
-			return nil, fmt.Errorf("invalid 'tls_min_version' in config")
-		}
-	} else {
-		// MinVersion was not being set earlier. Reset it to
-		// zero to gracefully handle upgrades.
-		tlsConfig.MinVersion = 0
-	}
-
-	opts := &gocql.SslOptions{
-		Config:                 tlsConfig,
-		EnableHostVerification: !insecureSkipVerify,
-	}
-	return opts, nil
 }
 
 func (c *cassandraConnectionProducer) secretValues() map[string]string {

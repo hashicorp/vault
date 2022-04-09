@@ -2,7 +2,7 @@ const invariant = (truthy, error) => {
   if (!truthy) throw new Error(error);
 };
 
-export default function(context, selector) {
+export default function (context, selector) {
   let cmService = context.owner.lookup('service:code-mirror');
 
   let element = document.querySelector(selector);

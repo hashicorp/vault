@@ -12,7 +12,7 @@ func TestCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealCon
 	t.Helper()
 	opts := &seal.TestSealOpts{}
 	if recoveryConf == nil {
-		opts.StoredKeys = seal.StoredKeysSupportedShamirMaster
+		opts.StoredKeys = seal.StoredKeysSupportedShamirRoot
 	}
 	return TestCoreUnsealedWithConfigSealOpts(t, barrierConf, recoveryConf, opts)
 }

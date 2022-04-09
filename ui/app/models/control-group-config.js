@@ -6,7 +6,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default Model.extend({
-  fields: computed(function() {
+  fields: computed(function () {
     return expandAttributeMeta(this, ['maxTtl']);
   }),
 

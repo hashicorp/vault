@@ -10,22 +10,22 @@ const REPLICATION_DETAILS = {
 
 const CLUSTER_MODE = 'primary';
 
-module('Integration | Component | replication-table-rows', function(hooks) {
+module('Integration | Component | replication-table-rows', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('clusterMode', CLUSTER_MODE);
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(
       hbs`<ReplicationTableRows @replicationDetails={{replicationDetails}} @clusterMode={{clusterMode}}/>`
     );
     assert.dom('[data-test-table-rows]').exists();
   });
 
-  test('it renders with merkle root, mode, replication set', async function(assert) {
+  test('it renders with merkle root, mode, replication set', async function (assert) {
     await render(
       hbs`<ReplicationTableRows @replicationDetails={{replicationDetails}} @clusterMode={{clusterMode}}/>`
     );
@@ -40,7 +40,7 @@ module('Integration | Component | replication-table-rows', function(hooks) {
       .includesText(REPLICATION_DETAILS.clusterId, `shows the correct Cluster ID`);
   });
 
-  test('it renders unknown if values cannot be found', async function(assert) {
+  test('it renders unknown if values cannot be found', async function (assert) {
     const noAttrs = {
       clusterId: null,
       merkleRoot: null,

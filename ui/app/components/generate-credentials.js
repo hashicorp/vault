@@ -48,7 +48,7 @@ export default Component.extend({
     this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.backendPath);
   },
 
-  options: computed('action', 'backendType', function() {
+  options: computed('action', 'backendType', function () {
     const action = this.action || 'creds';
     return MODEL_TYPES[`${this.backendType}-${action}`];
   }),
@@ -59,6 +59,7 @@ export default Component.extend({
   },
 
   didReceiveAttrs() {
+    this._super();
     if (this.wizard.featureState === 'displayRole') {
       this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
     }

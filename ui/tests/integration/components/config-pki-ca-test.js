@@ -24,21 +24,21 @@ const storeStub = Service.extend({
   },
 });
 
-module('Integration | Component | config pki ca', function(hooks) {
+module('Integration | Component | config pki ca', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = apiStub();
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.owner.register('service:store', storeStub);
     this.storeService = this.owner.lookup('service:store');
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
-  const config = function(pem) {
+  const config = function (pem) {
     return EmberObject.create({
       pem: pem,
       backend: 'pki',
@@ -47,14 +47,14 @@ module('Integration | Component | config pki ca', function(hooks) {
     });
   };
 
-  const setupAndRender = async function(context, onRefresh) {
-    const refreshFn = onRefresh || function() {};
+  const setupAndRender = async function (context, onRefresh) {
+    const refreshFn = onRefresh || function () {};
     context.set('config', config());
     context.set('onRefresh', refreshFn);
     await context.render(hbs`{{config-pki-ca onRefresh=onRefresh config=config}}`);
   };
 
-  test('it renders, no pem', async function(assert) {
+  test('it renders, no pem', async function (assert) {
     await setupAndRender(this);
 
     assert.notOk(component.hasTitle, 'no title in the default state');
@@ -69,7 +69,7 @@ module('Integration | Component | config pki ca', function(hooks) {
     assert.equal(component.title, 'Set signed intermediate');
   });
 
-  test('it renders, with pem', async function(assert) {
+  test('it renders, with pem', async function (assert) {
     const c = config('pem');
     this.set('config', c);
     await render(hbs`{{config-pki-ca config=config}}`);

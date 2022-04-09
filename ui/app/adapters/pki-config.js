@@ -31,7 +31,7 @@ export default ApplicationAdapter.extend({
       }
       return data;
     }, {});
-    return this.ajax(url, 'POST', { data }).then(resp => {
+    return this.ajax(url, 'POST', { data }).then((resp) => {
       let response = resp || {};
       response.id = `${snapshot.record.get('backend')}-${snapshot.adapterOptions.method}`;
       return response;
@@ -69,9 +69,11 @@ export default ApplicationAdapter.extend({
     return hash({
       backend: backendPath,
       id: this.id(backendPath),
-      der: this.rawRequest(derURL, 'GET', { unauthenticated: true }).then(response => response.blob()),
-      pem: this.rawRequest(pemURL, 'GET', { unauthenticated: true }).then(response => response.text()),
-      ca_chain: this.rawRequest(chainURL, 'GET', { unauthenticated: true }).then(response => response.text()),
+      der: this.rawRequest(derURL, 'GET', { unauthenticated: true }).then((response) => response.blob()),
+      pem: this.rawRequest(pemURL, 'GET', { unauthenticated: true }).then((response) => response.text()),
+      ca_chain: this.rawRequest(chainURL, 'GET', { unauthenticated: true }).then((response) =>
+        response.text()
+      ),
     });
   },
 
@@ -79,12 +81,12 @@ export default ApplicationAdapter.extend({
     const url = `/v1/${backendPath}/config/urls`;
     const id = this.id(backendPath);
     return this.ajax(url, 'GET')
-      .then(resp => {
+      .then((resp) => {
         resp.id = id;
         resp.backend = backendPath;
         return resp;
       })
-      .catch(e => {
+      .catch((e) => {
         if (e.httpStatus === 404) {
           return resolve({ id });
         } else {
@@ -97,12 +99,12 @@ export default ApplicationAdapter.extend({
     const url = `/v1/${backendPath}/config/crl`;
     const id = this.id(backendPath);
     return this.ajax(url, 'GET')
-      .then(resp => {
+      .then((resp) => {
         resp.id = id;
         resp.backend = backendPath;
         return resp;
       })
-      .catch(e => {
+      .catch((e) => {
         if (e.httpStatus === 404) {
           return { id };
         } else {
@@ -118,7 +120,7 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     const { backend, section } = query;
-    return this.fetchSection(backend, section).then(resp => {
+    return this.fetchSection(backend, section).then((resp) => {
       resp.backend = backend;
       return resp;
     });

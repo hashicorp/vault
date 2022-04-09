@@ -4,10 +4,10 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-module('Integration | Component | Confirm', function(hooks) {
+module('Integration | Component | Confirm', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('id', 'foo');
     this.set('title', 'Are you sure?');
     this.set('message', 'You will not be able to recover this item later.');
@@ -15,7 +15,7 @@ module('Integration | Component | Confirm', function(hooks) {
     this.set('onConfirm', sinon.spy());
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message
@@ -32,7 +32,7 @@ module('Integration | Component | Confirm', function(hooks) {
     assert.dom('.confirm').containsText(this.triggerText);
   });
 
-  test('does not show the confirmation message until it is triggered', async function(assert) {
+  test('does not show the confirmation message until it is triggered', async function (assert) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message
@@ -52,7 +52,7 @@ module('Integration | Component | Confirm', function(hooks) {
     assert.dom('.confirm-overlay').containsText(this.message);
   });
 
-  test('it calls onConfirm when the confirm button is clicked', async function(assert) {
+  test('it calls onConfirm when the confirm button is clicked', async function (assert) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message
@@ -70,7 +70,7 @@ module('Integration | Component | Confirm', function(hooks) {
     assert.ok(this.onConfirm.calledOnce);
   });
 
-  test('it shows only the active triggers message', async function(assert) {
+  test('it shows only the active triggers message', async function (assert) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message

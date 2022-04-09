@@ -15,7 +15,7 @@ export default Controller.extend(ListController, {
           this.send('reload');
           this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
         })
-        .catch(e => {
+        .catch((e) => {
           this.flashMessages.success(
             `There was a problem deleting ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
@@ -33,7 +33,7 @@ export default Controller.extend(ListController, {
         .then(() => {
           this.flashMessages.success(`Successfully ${action[0]} ${type}: ${id}`);
         })
-        .catch(e => {
+        .catch((e) => {
           this.flashMessages.success(
             `There was a problem ${action[1]} ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );

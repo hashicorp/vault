@@ -5,7 +5,7 @@ import { decodeString } from 'core/utils/b64';
  * @returns config Object if successful | undefined if not
  *
  */
-export default function(token) {
+export default function (token) {
   if (!token) {
     return;
   }

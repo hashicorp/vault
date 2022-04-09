@@ -14,7 +14,7 @@ export default ApplicationAdapter.extend({
       url = url + '/config';
     }
 
-    return this.ajax(url, 'POST', { data }).then(resp => {
+    return this.ajax(url, 'POST', { data }).then((resp) => {
       let response = resp || {};
       response.id = name;
       return response;
@@ -86,7 +86,7 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(query) {
     const { id, backend } = query;
-    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id)).then((resp) => {
       resp.id = id;
       resp.backend = backend;
       return resp;

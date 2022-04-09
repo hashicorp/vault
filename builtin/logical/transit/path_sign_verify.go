@@ -88,6 +88,10 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256". Not valid for all key types,
 including ed25519.`,
@@ -183,6 +187,10 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256". Not valid for all key types.`,
 			},
@@ -246,7 +254,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -464,7 +472,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())

@@ -36,6 +36,10 @@ func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
 }
 
+func TestParseSockaddrTemplate(t *testing.T) {
+	testParseSockaddrTemplate(t)
+}
+
 func TestConfigRaftRetryJoin(t *testing.T) {
 	testConfigRaftRetryJoin(t)
 }

@@ -47,6 +47,11 @@ Responses from auth login methods that generate an authentication token are
 sent back to the client via JSON. The resulting token should be saved on the
 client or passed via the `X-Vault-Token` or `Authorization` header for future requests.
 
+## Parameter restrictions
+
+Several Vault APIs require specifying path parameters. The path parameter cannot end 
+in periods. Otherwise, Vault will return a 404 unsupported path error.
+
 ## Namespaces
 
 If using the [Namespaces](/docs/enterprise/namespaces) feature, API
@@ -126,7 +131,7 @@ $ curl \
 The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
 with the `?list=true` query string.
 
-To use an API that consumes data via request body, issue a `POST` or `PUT`:
+To use an API that consumes data via request body, issue a `POST`:
 
 ```text
 /v1/secret/foo
@@ -147,7 +152,7 @@ $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -H "Content-Type: application/json" \
     -X POST \
-    -d '{"value":"bar"}' \
+    -d '{"data":{"value":"bar"}}' \
     http://127.0.0.1:8200/v1/secret/baz
 ```
 
@@ -271,6 +276,12 @@ warnings are generated during the operation.
 - `404` - Invalid path. This can both mean that the path truly doesn't exist or
   that you don't have permission to view a specific path. We use 404 in some
   cases to avoid state leakage.
+- `405` - Unsupported operation.  You tried to use a method inappropriate to
+  the request path, e.g. a POST on an endpoint that only accepts GETs.
+- `412` - Precondition failed.  Returned on Enterprise when a request can't be
+  processed yet due to some missing eventually consistent data.  Should be retried,
+  perhaps with a little backoff.
+  See [Vault Eventual Consistency](/docs/enterprise/consistency).
 - `429` - Default return code for health status of standby nodes. This will
   likely change in the future.
 - `473` - Default return code for health status of performance standby nodes.

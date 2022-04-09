@@ -2,9 +2,10 @@ package configutil
 
 import (
 	"fmt"
+
 	"github.com/asaskevich/govalidator"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/hcl/hcl/token"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 type UnusedKeyMap map[string][]token.Pos
@@ -29,7 +30,7 @@ func ValidateUnusedFields(unusedKeyPositions UnusedKeyMap, sourceFilePath string
 	}
 	var errors []ConfigError
 	for field, positions := range unusedKeyPositions {
-		problem := fmt.Sprintf("unknown field %s found in configuration", field)
+		problem := fmt.Sprintf("unknown or unsupported field %s found in configuration", field)
 		for _, pos := range positions {
 			if pos.Filename == "" && sourceFilePath != "" {
 				pos.Filename = sourceFilePath
@@ -47,9 +48,6 @@ func ValidateUnusedFields(unusedKeyPositions UnusedKeyMap, sourceFilePath string
 func UnusedFieldDifference(a, b UnusedKeyMap, foundKeys []string) UnusedKeyMap {
 	if a == nil {
 		return nil
-	}
-	if b == nil {
-		return a
 	}
 	res := make(UnusedKeyMap)
 	for k, v := range a {

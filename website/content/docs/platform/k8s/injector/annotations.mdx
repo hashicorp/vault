@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `vault:1.7.0`.
+  not needed. Defaults to `hashicorp/vault:1.9.4`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -55,6 +55,10 @@ them, optional commands to run, etc.
   unique value provided in `vault.hashicorp.com/agent-inject-secret-`. If not provided,
   a default generic template is used.
 
+- `vault.hashicorp.com/agent-inject-containers` - comma-separated list that specifies in
+  which containers the secrets volume should be mounted. If not provided, the secrets
+  volume will be mounted in all containers in the pod.
+
 - `vault.hashicorp.com/secret-volume-path` - configures where on the filesystem a secret
   will be rendered. To map a path to a specific secret, use the same unique secret name:
   `vault.hashicorp.com/secret-volume-path-SECRET-NAME`. For example, if a secret annotation
@@ -72,22 +76,38 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
 
-- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the 
-  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`, 
-  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret, 
-  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`. 
+- `vault.hashicorp.com/agent-inject-perms` - configures the permissions of the
+  file to create in the secrets volume. The name of the secret is the string
+  after "vault.hashicorp.com/agent-inject-perms-", and should map to the same
+  unique value provided in "vault.hashicorp.com/agent-inject-secret-". The value
+  is the octal permission, for example: `0644`.
+
+- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the
+  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`,
+  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret,
+  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`.
   For example, if a secret annotation `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-template-file-foobar` would configure the template file.
 
-- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering 
+- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering
   secrets if no custom template is defined. Possible values include `map` and `json`. Defaults to `map`.
+
+- `vault.hashicorp.com/template-config-exit-on-retry-failure` - controls whether
+  Vault Agent exits after it has exhausted its number of template retry attempts
+  due to failures. Defaults to `true`. See [Vault Agent Template
+  Config](/docs/agent/template-config) for more details.
+
+- `vault.hashicorp.com/template-static-secret-render-interval` - If specified,
+  configures how often Vault Agent Template should render non-leased secrets such as KV v2.
+  See [Vault Agent Template Config](/docs/agent/template-config) for more details.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at
   `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with
   auto-auth methods such as approle that require paths to secrets be present.
 
 - `vault.hashicorp.com/agent-inject-token` - configures Vault Agent to share the Vault
-  token with other containers in the pod. This is helpful when other containers
+  token with other containers in the pod, in a file named `token` in the root of the
+  secrets volume (i.e. `/vault/secrets/token`). This is helpful when other containers
   communicate directly with Vault but require auto-authentication provided by Vault
   Agent. This should be set to a `true` or `false` value. Defaults to `false`.
 
@@ -122,7 +142,8 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-pre-populate-only` - configures whether an init container
   is the only injected container. If true, no sidecar container will be injected
-  at runtime of the pod.
+  at runtime of the pod. Enabling this option is recommended for workloads of
+  type `CronJob` or `Job` to ensure a clean pod termination.
 
 - `vault.hashicorp.com/preserve-secret-case` - configures Vault Agent to preserve
   the secret name case when creating the secret files. This should be set to a `true`
@@ -169,6 +190,8 @@ them, optional commands to run, etc.
   container and mounts them to the Vault Agent containers. The service account volume is
   ignored.
 
+- `vault.hashicorp.com/agent-service-account-token-volume-name` - the optional name of a projected volume containing a service account token for use with auto-auth against Vault's Kubernetes auth method. If the volume is mounted to another container in the deployment, the token volume will be mounted to the same location in the vault-agent containers. Otherwise it will be mounted at the default location of `/var/run/secrets/vault.hashicorp.com/serviceaccount/`.
+
 ## Vault Annotations
 
 Vault annotations change how the Vault Agent containers communicate with Vault. For
@@ -203,7 +226,9 @@ etc.
   with Vault via mTLS.
 
 - `vault.hashicorp.com/client-max-retries` - configures number of Vault Agent retry
-  attempts when 5xx errors are encountered. Defaults to 2.
+  attempts when certain errors are encountered. Defaults to 2, for 3 total attempts.
+  Set this to `0` or less to disable retrying. Error codes that are retried are 412
+  (client consistency requirement not satisfied) and all 5xx except for 501 (not implemented).
 
 - `vault.hashicorp.com/client-timeout` - configures the request timeout threshold,
   in seconds, of the Vault Agent when communicating with Vault. Defaults to `60s`

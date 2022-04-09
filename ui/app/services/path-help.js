@@ -14,6 +14,7 @@ import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { dasherize, capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
+import buildValidations from 'vault/utils/build-api-validators';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -63,7 +64,7 @@ export default Service.extend({
     // use paths to dynamically create our openapi help url
     // if we have a brand new model
     return this.getPaths(apiPath, backend, itemType)
-      .then(pathInfo => {
+      .then((pathInfo) => {
         const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
         // if we have an adapter already use that, otherwise create one
         if (!adapterFactory) {
@@ -74,7 +75,7 @@ export default Service.extend({
         let path, paths;
         // if we have an item we want the create info for that itemType
         paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
-        const createPath = paths.find(path => path.operations.includes('post') && path.action !== 'Delete');
+        const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
         path = createPath.path;
         path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
         if (!path) {
@@ -88,7 +89,7 @@ export default Service.extend({
         newModel = newModel.extend({ paths: pathInfo });
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       })
-      .catch(err => {
+      .catch((err) => {
         // TODO: we should handle the error better here
         console.error(err);
       });
@@ -108,7 +109,7 @@ export default Service.extend({
       itemType = displayAttrs.itemType;
       let items = itemType.split(':');
       itemName = items[items.length - 1];
-      items = items.map(item => dasherize(singularize(item.toLowerCase())));
+      items = items.map((item) => dasherize(singularize(item.toLowerCase())));
       itemType = items.join('~*');
     }
 
@@ -147,7 +148,7 @@ export default Service.extend({
     if (!itemType) {
       return pathInfo.paths;
     }
-    return pathInfo.paths.filter(path => {
+    return pathInfo.paths.filter((path) => {
       return itemType === path.itemType;
     });
   },
@@ -158,7 +159,7 @@ export default Service.extend({
         ? `Fetching relevant paths for ${backend} ${itemType} ${itemID} from ${apiPath}`
         : `Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`;
     debug(debugString);
-    return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
+    return this.ajax(`/v1/${apiPath}?help=1`, backend).then((help) => {
       const pathInfo = help.openapi.paths;
       let paths = Object.entries(pathInfo);
 
@@ -179,7 +180,7 @@ export default Service.extend({
     // add name of thing you want
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
 
-    return this.ajax(helpUrl, backend).then(help => {
+    return this.ajax(helpUrl, backend).then((help) => {
       // paths is an array but it will have a single entry
       // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
@@ -203,10 +204,18 @@ export default Service.extend({
         };
       }
 
-      // TODO: handle post endpoints without requestBody
-      const props = pathInfo.post
-        ? pathInfo.post.requestBody.content['application/json'].schema.properties
-        : {};
+      let props = {};
+      const schema = pathInfo?.post?.requestBody?.content['application/json'].schema;
+      if (schema.$ref) {
+        // $ref will be shaped like `#/components/schemas/MyResponseType
+        // which maps to the location of the item within the openApi response
+        let loc = schema.$ref.replace('#/', '').split('/');
+        props = loc.reduce((prev, curr) => {
+          return prev[curr] || {};
+        }, help.openapi).properties;
+      } else if (schema.properties) {
+        props = schema.properties;
+      }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
       const newProps = assign({}, paramProp, props);
@@ -218,13 +227,13 @@ export default Service.extend({
     // we need list and create paths to set the correct urls for actions
     let paths = this.filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
-    const getPath = paths.find(path => path.operations.includes('get'));
+    const getPath = paths.find((path) => path.operations.includes('get'));
 
     // the action might be "Generate" or something like that so we'll grab the first post endpoint if there
     // isn't one with "Create"
     // TODO: look into a more sophisticated way to determine the create endpoint
-    const createPath = paths.find(path => path.action === 'Create' || path.operations.includes('post'));
-    const deletePath = paths.find(path => path.operations.includes('delete'));
+    const createPath = paths.find((path) => path.action === 'Create' || path.operations.includes('post'));
+    const deletePath = paths.find((path) => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
       urlForItem(id, isList, dynamicApiPath) {
@@ -273,18 +282,25 @@ export default Service.extend({
   },
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
-    return this.getProps(helpUrl, backend).then(props => {
+    return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       let owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });
       // if our newModel doesn't have fieldGroups already
       // we need to create them
       try {
+        // Initialize prototype to access field groups
         let fieldGroups = newModel.proto().fieldGroups;
         if (!fieldGroups) {
           debug(`Constructing fieldGroups for ${backend}`);
           fieldGroups = this.getFieldGroups(newModel);
           newModel = newModel.extend({ fieldGroups });
+          // Build and add validations on model
+          // NOTE: For initial phase, initialize validations only for user pass auth
+          if (backend === 'userpass') {
+            let validations = buildValidations(fieldGroups);
+            newModel = newModel.extend(validations);
+          }
         }
       } catch (err) {
         // eat the error, fieldGroups is computed in the model definition
@@ -299,7 +315,7 @@ export default Service.extend({
       default: [],
     };
     let fieldGroups = [];
-    newModel.attributes.forEach(attr => {
+    newModel.attributes.forEach((attr) => {
       // if the attr comes in with a fieldGroup from OpenAPI,
       // add it to that group
       if (attr.options.fieldGroup) {

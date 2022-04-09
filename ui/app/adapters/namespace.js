@@ -31,4 +31,7 @@ export default ApplicationAdapter.extend({
     }
     return this._super(...arguments);
   },
+  query() {
+    return this.ajax(`/${this.urlPrefix()}/namespaces?list=true`);
+  },
 });

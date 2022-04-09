@@ -3,10 +3,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | modal', function(hooks) {
+module('Integration | Component | modal', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
@@ -28,7 +28,7 @@ module('Integration | Component | modal', function(hooks) {
     assert.dom('[data-test-modal-glyph]').doesNotExist('Glyph is not rendered by default');
   });
 
-  test('it adds the correct type class', async function(assert) {
+  test('it adds the correct type class', async function (assert) {
     await render(hbs`
       <Modal @type="warning">
         template block text

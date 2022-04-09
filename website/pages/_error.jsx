@@ -1,5 +1,5 @@
 import NotFound from './404'
-import Bugsnag from '@hashicorp/nextjs-scripts/lib/bugsnag'
+import Bugsnag from '@hashicorp/platform-runtime-error-monitoring'
 
 function Error({ statusCode }) {
   return <NotFound statusCode={statusCode} />

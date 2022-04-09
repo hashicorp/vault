@@ -22,7 +22,7 @@ export default ApplicationAdapter.extend({
       return this.ajax(url, 'GET', {
         unauthenticated: true,
       })
-        .then(result => {
+        .then((result) => {
           return {
             data: result.data.auth,
           };
@@ -33,7 +33,7 @@ export default ApplicationAdapter.extend({
           };
         });
     }
-    return this.ajax(this.url(), 'GET').catch(e => {
+    return this.ajax(this.url(), 'GET').catch((e) => {
       if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/auth');
       }

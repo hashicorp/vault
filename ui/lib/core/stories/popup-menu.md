@@ -18,6 +18,6 @@ block.
 **See**
 
 - [Uses of PopupMenu](https://github.com/hashicorp/vault/search?l=Handlebars&q=PopupMenu)
-- [PopupMenu Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/popup-menu.js)
+- [PopupMenu Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/popup-menu.js)
 
 ---

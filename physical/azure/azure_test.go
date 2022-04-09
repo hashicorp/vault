@@ -9,13 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/azurite"
+
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
-/// These tests run against an actual azure storage account
+/// These tests run against an Azurite docker container, unless AZURE_ACCOUNT_NAME is given.
 /// Authentication options:
 /// - Use a static access key via AZURE_ACCOUNT_KEY
 /// - Use managed identities (leave AZURE_ACCOUNT_KEY empty)
@@ -32,12 +34,34 @@ func testFixture(t *testing.T) (*AzureBackend, func()) {
 	name := fmt.Sprintf("vault-test-%d", ts)
 	_ = os.Setenv("AZURE_BLOB_CONTAINER", name)
 
-	logger := logging.NewVaultLogger(log.Debug)
-
-	backend, err := NewAzureBackend(map[string]string{
+	cleanup := func() {}
+	backendConf := map[string]string{
 		"container": name,
-	}, logger)
+	}
+
+	if os.Getenv("AZURE_ACCOUNT_NAME") == "" {
+		dockerCleanup, conf := azurite.PrepareTestContainer(t, "")
+		cfgaz := conf.(*azurite.Config)
+		backendConf["accountName"] = cfgaz.AccountName
+		backendConf["accountKey"] = cfgaz.AccountKey
+		backendConf["testHost"] = cfgaz.Endpoint
+		cleanup = dockerCleanup
+	} else {
+		accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
+		if accountKey != "" {
+			t.Log("using account key provided to authenticate against storage account")
+		} else {
+			t.Log("using managed identity to authenticate against storage account")
+			if !isIMDSReachable(t) {
+				t.Log("running managed identity test requires access to the Azure IMDS with a valid identity for a storage account attached to it, skipping")
+				t.SkipNow()
+			}
+		}
+	}
+
+	backend, err := NewAzureBackend(backendConf, logging.NewVaultLogger(log.Debug))
 	if err != nil {
+		defer cleanup()
 		t.Fatalf("err: %s", err)
 	}
 
@@ -56,12 +80,11 @@ func testFixture(t *testing.T) (*AzureBackend, func()) {
 				t.Logf("clean up failed: %v", err)
 			}
 		}
+		cleanup()
 	}
 }
 
 func TestAzureBackend(t *testing.T) {
-	checkTestPreReqs(t)
-
 	backend, cleanup := testFixture(t)
 	defer cleanup()
 
@@ -70,15 +93,13 @@ func TestAzureBackend(t *testing.T) {
 }
 
 func TestAzureBackend_ListPaging(t *testing.T) {
-	checkTestPreReqs(t)
-
 	backend, cleanup := testFixture(t)
 	defer cleanup()
 
 	// by default, azure returns 5000 results in a page, load up more than that
 	for i := 0; i < MaxListResults+100; i++ {
 		if err := backend.Put(context.Background(), &physical.Entry{
-			Key:   strconv.Itoa(i),
+			Key:   "foo" + strconv.Itoa(i),
 			Value: []byte(strconv.Itoa(i)),
 		}); err != nil {
 			t.Fatalf("err: %s", err)
@@ -91,26 +112,7 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 	}
 
 	if len(results) != MaxListResults+100 {
-		t.Fatalf("expected %d, got %d", MaxListResults+100, len(results))
-	}
-}
-
-func checkTestPreReqs(t *testing.T) {
-	t.Helper()
-
-	if os.Getenv("AZURE_ACCOUNT_NAME") == "" {
-		t.SkipNow()
-	}
-
-	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
-	if accountKey != "" {
-		t.Log("using account key provided to authenticate against storage account")
-	} else {
-		t.Log("using managed identity to authenticate against storage account")
-		if !isIMDSReachable(t) {
-			t.Log("running managed identity test requires access to the Azure IMDS with a valid identity for a storage account attached to it, skipping")
-			t.SkipNow()
-		}
+		t.Fatalf("expected %d, got %d, %v", MaxListResults+100, len(results), results)
 	}
 }
 

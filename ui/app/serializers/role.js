@@ -5,13 +5,13 @@ export default ApplicationSerializer.extend({
     let ret;
 
     if (payload.zero_address_roles) {
-      payload.zero_address_roles.forEach(role => {
+      payload.zero_address_roles.forEach((role) => {
         // mutate key_info object to add zero_address info
         payload.data.key_info[role].zero_address = true;
       });
     }
     if (!payload.data.key_info) {
-      return payload.data.keys.map(key => {
+      return payload.data.keys.map((key) => {
         let model = {
           id: key,
         };
@@ -22,7 +22,7 @@ export default ApplicationSerializer.extend({
       });
     }
 
-    ret = payload.data.keys.map(key => {
+    ret = payload.data.keys.map((key) => {
       let model = {
         id: key,
         key_type: payload.data.key_info[key].key_type,

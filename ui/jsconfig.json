@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "allowJs": true
+  },
+  "exclude": [
+    "node_modules",
+    ".storybook",
+    ".yarn",
+    "public",
+    "storybook-static"
+  ]
+}

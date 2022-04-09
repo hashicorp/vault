@@ -6,7 +6,7 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  <EditForm @model={{model}} @onSave={{action "onSave"}} />
+  <EditForm @model={{this.model}} @onSave={{action "onSave"}} />
 {{else}}
   <UpgradePage @title="Control Groups" @minimumEdition="Vault Enterprise Premium" />
 {{/if}}

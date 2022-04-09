@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix a deadlock on HA leadership transfer
+```

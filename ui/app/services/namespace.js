@@ -23,7 +23,7 @@ export default Service.extend({
     this.set('path', path);
   },
 
-  findNamespacesForUser: task(function*() {
+  findNamespacesForUser: task(function* () {
     // uses the adapter and the raw response here since
     // models get wiped when switching namespaces and we
     // want to keep track of these separately
@@ -40,7 +40,7 @@ export default Service.extend({
       let keys = ns.data.keys || [];
       this.set(
         'accessibleNamespaces',
-        keys.map(n => {
+        keys.map((n) => {
           let fullNS = n;
           // if the user's root isn't '', then we need to construct
           // the paths so they connect to the user root to the list

@@ -141,3 +141,40 @@ func TestPathManager_HasExactPath(t *testing.T) {
 		t.Fatalf("removing all paths did not clear manager: paths %v", m.Paths())
 	}
 }
+
+func TestPathManager_HasPath(t *testing.T) {
+	m := New()
+
+	m.AddPaths([]string{"a/b/c/"})
+	if m.HasPath("a/") {
+		t.Fatal("should not have path 'a/'")
+	}
+	if m.HasPath("a/b/") {
+		t.Fatal("should not have path 'a/b/'")
+	}
+	if !m.HasPath("a/b/c/") {
+		t.Fatal("should have path 'a/b/c'")
+	}
+
+	m.AddPaths([]string{"a/"})
+	if !m.HasPath("a/") {
+		t.Fatal("should have path 'a/'")
+	}
+	if !m.HasPath("a/b/") {
+		t.Fatal("should have path 'a/b/'")
+	}
+	if !m.HasPath("a/b/c/") {
+		t.Fatal("should have path 'a/b/c'")
+	}
+
+	m.RemovePaths([]string{"a/"})
+	if m.HasPath("a/") {
+		t.Fatal("should not have path 'a/'")
+	}
+	if m.HasPath("a/b/") {
+		t.Fatal("should not have path 'a/b/'")
+	}
+	if !m.HasPath("a/b/c/") {
+		t.Fatal("should have path 'a/b/c'")
+	}
+}

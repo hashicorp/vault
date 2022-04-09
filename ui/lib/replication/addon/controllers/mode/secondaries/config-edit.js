@@ -41,7 +41,7 @@ export default Controller.extend({
               );
             });
         })
-        .catch(e => {
+        .catch((e) => {
           const errString = e.errors.join('.');
           flash.error(
             `There was an error ${isDelete ? 'deleting' : 'saving'} the config for ${id}: ${errString}`

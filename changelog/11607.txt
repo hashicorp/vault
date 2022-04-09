@@ -1,0 +1,3 @@
+```release-note:improvement
+core: add irrevocable lease list and count apis
+```

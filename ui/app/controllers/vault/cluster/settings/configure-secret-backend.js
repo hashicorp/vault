@@ -43,7 +43,7 @@ export default Controller.extend(CONFIG_ATTRS, {
 
     save(method, data) {
       this.set('loading', true);
-      const hasData = Object.keys(data).some(key => {
+      const hasData = Object.keys(data).some((key) => {
         return isPresent(data[key]);
       });
       if (!hasData) {

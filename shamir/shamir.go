@@ -6,8 +6,6 @@ import (
 	"fmt"
 	mathrand "math/rand"
 	"time"
-
-	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -164,7 +162,7 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 	for idx, val := range secret {
 		p, err := makePolynomial(val, uint8(threshold-1))
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to generate polynomial: {{err}}", err)
+			return nil, fmt.Errorf("failed to generate polynomial: %w", err)
 		}
 
 		// Generate a `parts` number of (x,y) pairs

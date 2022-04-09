@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix Version History queryParams on LinkedBlock
+```

@@ -5,7 +5,7 @@ import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
 import createItemPage from 'vault/tests/pages/access/identity/create';
 import showItemPage from 'vault/tests/pages/access/identity/show';
 
-export const testAliasCRUD = async function(name, itemType, assert) {
+export const testAliasCRUD = async function (name, itemType, assert) {
   let itemID;
   let aliasID;
   let idRow;
@@ -59,7 +59,7 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row is deleted`);
 };
 
-export const testAliasDeleteFromForm = async function(name, itemType, assert) {
+export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   let itemID;
   let aliasID;
   let idRow;
@@ -86,14 +86,13 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     `${itemType}: navigates to edit on create`
   );
   await page.editForm.delete();
-  await settled();
+  await page.editForm.waitForConfirm();
   await page.editForm.confirmDelete();
   await settled();
   assert.ok(
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
   );
-
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',

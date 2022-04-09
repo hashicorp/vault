@@ -16,15 +16,15 @@ export default Mixin.create({
 
   isLoading: false,
 
-  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
+  filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     let { filter, model: content } = this;
     return !!(content.length && content.findBy('id', filter));
   }),
 
-  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
+  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function () {
     let { filter, filterMatchesKey, model: content } = this;
     let re = new RegExp('^' + escapeStringRegexp(filter));
-    let matchSet = content.filter(key => re.test(key.id));
+    let matchSet = content.filter((key) => re.test(key.id));
     let match = matchSet[0];
 
     if (filterMatchesKey || !match) {

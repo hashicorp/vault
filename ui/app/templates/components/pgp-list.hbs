@@ -1,4 +1,4 @@
-{{#each listData as |key index|}}
+{{#each this.listData as |key index|}}
   <PgpFile @key={{key}} @index={{index}} @onChange={{action "setKey"}} />
 {{else}}
   <p class="has-text-grey" data-test-empty-text>

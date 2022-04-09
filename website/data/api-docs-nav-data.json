@@ -133,6 +133,10 @@
           {
             "title": "AWS KMS",
             "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
           }
         ]
       },
@@ -187,6 +191,39 @@
           {
             "title": "Lookup",
             "path": "secret/identity/lookup"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "secret/identity/oidc-provider"
+          },
+          {
+            "title": "MFA",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secret/identity/mfa"
+              },
+              {
+                "title": "Duo",
+                "path": "secret/identity/mfa/duo"
+              },
+              {
+                "title": "Okta",
+                "path": "secret/identity/mfa/okta"
+              },
+              {
+                "title": "PingID",
+                "path": "secret/identity/mfa/pingid"
+              },
+              {
+                "title": "TOTP",
+                "path": "secret/identity/mfa/totp"
+              },
+              {
+                "title": "Login Enforcement",
+                "path": "secret/identity/mfa/login-enforcement"
+              }
+            ]
           }
         ]
       },
@@ -357,6 +394,10 @@
         "path": "system/config-cors"
       },
       {
+        "title": "<code>/sys/config/reload</code>",
+        "path": "system/config-reload"
+      },
+      {
         "title": "<code>/sys/config/state</code>",
         "path": "system/config-state"
       },
@@ -386,6 +427,10 @@
         "path": "system/host-info"
       },
       {
+        "title": "<code>/sys/in-flight-req</code>",
+        "path": "system/in-flight-req"
+      },
+      {
         "title": "<code>/sys/init</code>",
         "path": "system/init"
       },
@@ -406,8 +451,20 @@
         "path": "system/internal-ui-mounts"
       },
       {
+        "title": "<code>/sys/internal/ui/namespaces</code>",
+        "path": "system/internal-ui-namespaces"
+      },
+      {
+        "title": "<code>/sys/internal/ui/resultant-acl</code>",
+        "path": "system/internal-ui-resultant-acl"
+      },
+      {
         "title": "<code>/sys/key-status</code>",
         "path": "system/key-status"
+      },
+      {
+        "title": "<code>/sys/ha-status</code>",
+        "path": "system/ha-status"
       },
       {
         "title": "<code>/sys/leader</code>",
@@ -420,6 +477,10 @@
       {
         "title": "<code>/sys/license</code>",
         "path": "system/license"
+      },
+      {
+        "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
+        "path": "system/managed-keys"
       },
       {
         "title": "<code>/sys/metrics</code>",
@@ -447,6 +508,10 @@
           {
             "title": "<code>/sys/mfa/method/totp</code>",
             "path": "system/mfa/totp"
+          },
+          {
+            "title": "<code>/sys/mfa/validate</code>",
+            "path": "system/mfa/validate"
           }
         ]
       },
@@ -583,6 +648,10 @@
       {
         "title": "<code>/sys/unseal</code>",
         "path": "system/unseal"
+      },
+      {
+        "title": "<code>/sys/version-history</code>",
+        "path": "system/version-history"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

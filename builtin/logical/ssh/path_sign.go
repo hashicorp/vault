@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
@@ -220,7 +220,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
 		if role.AllowedUsersTemplate {
 			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`^{{.+?}}$`, principal)
+			matched, _ := regexp.MatchString(`{{.+?}}`, principal)
 			if matched {
 				if req.EntityID != "" {
 					// Retrieve principal based on template + entityID from request.
@@ -362,19 +362,21 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 
 	if len(unparsedExtensions) > 0 {
 		extensions := convertMapToStringValue(unparsedExtensions)
-		if role.AllowedExtensions != "" {
-			notAllowed := []string{}
-			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		if role.AllowedExtensions == "*" {
+			// Allowed extensions was configured to allow all
+			return extensions, nil
+		}
 
-			for extensionKey, _ := range extensions {
-				if !strutil.StrListContains(allowedExtensions, extensionKey) {
-					notAllowed = append(notAllowed, extensionKey)
-				}
+		notAllowed := []string{}
+		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		for extensionKey := range extensions {
+			if !strutil.StrListContains(allowedExtensions, extensionKey) {
+				notAllowed = append(notAllowed, extensionKey)
 			}
+		}
 
-			if len(notAllowed) != 0 {
-				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
-			}
+		if len(notAllowed) != 0 {
+			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 		}
 		return extensions, nil
 	}
@@ -445,59 +447,101 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 }
 
 func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *sshRole) error {
-	if len(role.AllowedUserKeyLengths) != 0 {
-		var kstr string
-		var kbits int
+	if len(role.AllowedUserKeyTypesLengths) != 0 {
+		var keyType string
+		var keyBits int
 
 		switch k := publickey.(type) {
 		case ssh.CryptoPublicKey:
 			ff := k.CryptoPublicKey()
 			switch k := ff.(type) {
 			case *rsa.PublicKey:
-				kstr = "rsa"
-				kbits = k.N.BitLen()
+				keyType = "rsa"
+				keyBits = k.N.BitLen()
 			case *dsa.PublicKey:
-				kstr = "dsa"
-				kbits = k.Parameters.P.BitLen()
+				keyType = "dsa"
+				keyBits = k.Parameters.P.BitLen()
 			case *ecdsa.PublicKey:
-				kstr = "ecdsa"
-				kbits = k.Curve.Params().BitSize
+				keyType = "ecdsa"
+				keyBits = k.Curve.Params().BitSize
 			case ed25519.PublicKey:
-				kstr = "ed25519"
+				keyType = "ed25519"
 			default:
-				return fmt.Errorf("public key type of %s is not allowed", kstr)
+				return fmt.Errorf("public key type of %s is not allowed", keyType)
 			}
 		default:
 			return fmt.Errorf("pubkey not suitable for crypto (expected ssh.CryptoPublicKey but found %T)", k)
 		}
 
-		if value, ok := role.AllowedUserKeyLengths[kstr]; ok {
-			var pass bool
-			switch kstr {
-			case "rsa":
-				if kbits == value {
-					pass = true
-				}
-			case "dsa":
-				if kbits == value {
-					pass = true
-				}
-			case "ecdsa":
-				if kbits == value {
-					pass = true
-				}
-			case "ed25519":
-				// ed25519 public keys are always 256 bits in length,
-				// so there is no need to inspect their value
-				pass = true
+		keyTypeToMapKey := map[string][]string{
+			"rsa":     {"rsa", ssh.KeyAlgoRSA},
+			"dsa":     {"dsa", ssh.KeyAlgoDSA},
+			"ecdsa":   {"ecdsa", "ec"},
+			"ed25519": {"ed25519", ssh.KeyAlgoED25519},
+		}
+
+		if keyType == "ecdsa" {
+			ecCurveBitsToAlgoName := map[int]string{
+				256: ssh.KeyAlgoECDSA256,
+				384: ssh.KeyAlgoECDSA384,
+				521: ssh.KeyAlgoECDSA521,
 			}
 
-			if !pass {
-				return fmt.Errorf("key is of an invalid size: %v", kbits)
+			if algo, ok := ecCurveBitsToAlgoName[keyBits]; ok {
+				keyTypeToMapKey[keyType] = append(keyTypeToMapKey[keyType], algo)
 			}
 
-		} else {
-			return fmt.Errorf("key type of %s is not allowed", kstr)
+			// If the algorithm is not found, it could be that we have a curve
+			// that we haven't added a constant for yet. But they could allow it
+			// (assuming x/crypto/ssh can parse it) via setting a ec: <keyBits>
+			// mapping rather than using a named SSH key type, so erring out here
+			// isn't advisable.
+		}
+
+		var present bool
+		var pass bool
+		for _, kstr := range keyTypeToMapKey[keyType] {
+			allowed_values, ok := role.AllowedUserKeyTypesLengths[kstr]
+			if !ok {
+				continue
+			}
+
+			present = true
+
+			for _, value := range allowed_values {
+				if keyType == "rsa" || keyType == "dsa" {
+					// Regardless of map naming, we always need to validate the
+					// bit length of RSA and DSA keys. Use the keyType flag to
+					if keyBits == value {
+						pass = true
+					}
+				} else if kstr == "ec" || kstr == "ecdsa" {
+					// If the map string is "ecdsa", we have to validate the keyBits
+					// are a match for an allowed value, meaning that our curve
+					// is allowed. This isn't necessary when a named curve (e.g.
+					// ssh.KeyAlgoECDSA256) is allowed (and hence kstr is that),
+					// because keyBits is already specified in the kstr. Thus,
+					// we have conditioned around kstr and not keyType (like with
+					// rsa or dsa).
+					if keyBits == value {
+						pass = true
+					}
+				} else {
+					// We get here in two cases: we have a algo-named EC key
+					// matching a format specifier in the key map (e.g., a P-256
+					// key with a KeyAlgoECDSA256 entry in the map) or we have a
+					// ed25519 key (which is always allowed).
+					pass = true
+				}
+			}
+		}
+
+		if !present {
+			return fmt.Errorf("key of type %s is not allowed", keyType)
+		}
+
+		if !pass {
+			return fmt.Errorf("key is of an invalid size: %v", keyBits)
 		}
 	}
 	return nil
@@ -553,6 +597,14 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	certificateBytes := out[:len(out)-4]
 
 	algo := b.Role.AlgorithmSigner
+
+	// Handle the new default algorithm selection process correctly.
+	if algo == DefaultAlgorithmSigner && sshAlgorithmSigner.PublicKey().Type() == ssh.KeyAlgoRSA {
+		algo = ssh.SigAlgoRSASHA2256
+	} else if algo == DefaultAlgorithmSigner {
+		algo = ""
+	}
+
 	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate signed SSH key: sign error: %w", err)

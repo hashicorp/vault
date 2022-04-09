@@ -188,7 +188,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 
 	// Validate name/accessor whether new or update
 	{
-		mountEntry := i.core.router.MatchingMountByAccessor(mountAccessor)
+		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 		}

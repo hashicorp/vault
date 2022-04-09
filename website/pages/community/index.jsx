@@ -2,15 +2,16 @@ import VerticalTextBlockList from '@hashicorp/react-vertical-text-block-list/ind
 import SectionHeader from '@hashicorp/react-section-header'
 import Head from 'next/head'
 import HashiHead from '@hashicorp/react-head'
+import s from './style.module.css'
 
 function CommunityPage() {
   return (
-    <div id="community">
+    <main className={s.root}>
       <HashiHead is={Head} title="Community | Vault by HashiCorp" />
       <SectionHeader
         headline="Community"
         description="Vault is an open source project with a growing community. There are active, dedicated users willing to help you through various mediums."
-        use_h1={true}
+        useH1={true}
       />
       <VerticalTextBlockList
         product="vault"
@@ -37,7 +38,7 @@ function CommunityPage() {
           },
         ]}
       />
-    </div>
+    </main>
   )
 }
 

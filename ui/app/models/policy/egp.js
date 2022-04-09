@@ -8,7 +8,7 @@ export default PolicyModel.extend({
   paths: attr({
     editType: 'stringArray',
   }),
-  additionalAttrs: computed(function() {
+  additionalAttrs: computed(function () {
     return expandAttributeMeta(this, ['enforcementLevel', 'paths']);
   }),
 });

@@ -12,14 +12,30 @@ import (
 
 // Job is an interface for jobs used with this job manager
 type Job interface {
+	// Execute performs the work.
+	// It should be synchronous if a cleanupFn is provided.
 	Execute() error
+
+	// OnFailure handles the error resulting from a failed Execute().
+	// It should be synchronous if a cleanupFn is provided.
 	OnFailure(err error)
+}
+
+type (
+	initFn    func()
+	cleanupFn func()
+)
+
+type wrappedJob struct {
+	job     Job
+	init    initFn
+	cleanup cleanupFn
 }
 
 // worker represents a single worker in a pool
 type worker struct {
 	name   string
-	jobCh  <-chan Job
+	jobCh  <-chan wrappedJob
 	quit   chan struct{}
 	logger log.Logger
 
@@ -37,10 +53,18 @@ func (w *worker) start() {
 			case <-w.quit:
 				w.wg.Done()
 				return
-			case job := <-w.jobCh:
-				err := job.Execute()
+			case wJob := <-w.jobCh:
+				if wJob.init != nil {
+					wJob.init()
+				}
+
+				err := wJob.job.Execute()
 				if err != nil {
-					job.OnFailure(err)
+					wJob.job.OnFailure(err)
+				}
+
+				if wJob.cleanup != nil {
+					wJob.cleanup()
 				}
 			}
 		}
@@ -52,7 +76,7 @@ type dispatcher struct {
 	name       string
 	numWorkers int
 	workers    []worker
-	jobCh      chan Job
+	jobCh      chan wrappedJob
 	onceStart  sync.Once
 	onceStop   sync.Once
 	quit       chan struct{}
@@ -68,10 +92,17 @@ func newDispatcher(name string, numWorkers int, l log.Logger) *dispatcher {
 	return d
 }
 
-// dispatch dispatches a job to the worker pool
-func (d *dispatcher) dispatch(job Job) {
+// dispatch dispatches a job to the worker pool, with optional initialization
+// and cleanup functions (useful for tracking job progress)
+func (d *dispatcher) dispatch(job Job, init initFn, cleanup cleanupFn) {
+	wJob := wrappedJob{
+		init:    init,
+		job:     job,
+		cleanup: cleanup,
+	}
+
 	select {
-	case d.jobCh <- job:
+	case d.jobCh <- wJob:
 	case <-d.quit:
 		d.logger.Info("shutting down during dispatch")
 	}
@@ -123,7 +154,7 @@ func createDispatcher(name string, numWorkers int, l log.Logger) *dispatcher {
 		name:       name,
 		numWorkers: numWorkers,
 		workers:    make([]worker, 0),
-		jobCh:      make(chan Job),
+		jobCh:      make(chan wrappedJob),
 		quit:       make(chan struct{}),
 		logger:     l,
 		wg:         &wg,

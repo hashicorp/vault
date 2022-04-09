@@ -37,6 +37,11 @@ To get help for a subcommand, run:
 $ vault <subcommand> -h
 ```
 
+To see the equivalent API call required to perform the same operation, use the `-output-curl-string` flag after the subcommand.
+```shell-session
+vault auth enable -output-curl-string approle
+```
+
 ## CLI Command Structure
 
 There are a number of command and subcommand options available: HTTP options,
@@ -59,7 +64,7 @@ vault <command> [options] [path] [args]
 The following `write` command creates a new user (`bob`) in the userpass auth
 method. It passes the `-address` flag to specify the Vault server address which
 precedes the path (`auth/userpass/users/bob`) and its
-[argument](/api/auth/userpass#create-update-user)
+[argument](/api-docs/auth/userpass#create-update-user)
 (`password="long-password"`) at last.
 
 ```shell-session
@@ -67,7 +72,7 @@ $ vault write -address="http://127.0.0.1:8200" auth/userpass/users/bob password=
 ```
 
 If multiple options (`-address` and `-namespace`) and
-[arguments](/api/auth/userpass#create-update-user) (`password` and
+[arguments](/api-docs/auth/userpass#create-update-user) (`password` and
 `policies`) are specified, the command would look like:
 
 ```shell-session
@@ -172,6 +177,10 @@ Or specify the contents of a file as a value:
 $ vault kv put secret/password value=@data.txt
 ```
 
+Note that if an argument is supplied in a @key=value format, Vault will treat that as a
+kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
+does not support filenames with `=` in them.
+
 ### Reading Data
 
 After data is persisted, read it back using `vault kv get`:
@@ -246,10 +255,24 @@ when in High Availability mode.
 
 Provide Vault output (read/status/write) in the specified format. Valid formats are "table", "json", or "yaml".
 
+### `VAULT_LICENSE`
+
+[Enterprise, Server only] Specify a license to use for this node.  This takes
+precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
+[license_path in config](/docs/configuration#license_path).
+
+### `VAULT_LICENSE_PATH`
+
+[Enterprise, Server only] Specify a path to a license on disk to use for this node.
+This takes precedence over [license_path in config](/docs/configuration#license_path).
+
 ### `VAULT_MAX_RETRIES`
 
-Maximum number of retries when a `5xx` error code is encountered. The default is
-`2`, for three total attempts. Set this to `0` or less to disable retrying.
+Maximum number of retries when certain error codes are encountered. The default
+is `2`, for three total attempts. Set this to `0` or less to disable retrying.
+
+Error codes that are retried are 412 (client consistency requirement not
+satisfied) and all 5xx except for 501 (not implemented).
 
 ### `VAULT_REDIRECT_ADDR`
 
@@ -284,7 +307,7 @@ limiting is off by default.
 _Note:_ The rate is limited for each invocation of the `vault` CLI. Since
 each invocation of the `vault` CLI typically only makes a few requests,
 this environment variable is most useful when using the Go
-[Vault client API](/api/libraries#go).
+[Vault client API](/api-docs/libraries#go).
 
 ### `VAULT_NAMESPACE`
 
@@ -308,11 +331,17 @@ can be supplied. If a MFA method expects multiple credential values, or if there
 are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be
 used.
 
+### `VAULT_HTTP_PROXY`
+
+HTTP proxy location which should be used to access Vault. When present, this
+overrides any other proxies found in the environment. Format should be
+`http://server:port`.
+
 ## Flags
 
 There are different CLI flags that are available depending on subcommands. Some
 flags, such as those used for setting HTTP and output options, are available
-globally, while others are specific to a particular subcommand. For a completely
+globally, while others are specific to a particular subcommand. For a complete
 list of available flags, run:
 
 ```shell-session

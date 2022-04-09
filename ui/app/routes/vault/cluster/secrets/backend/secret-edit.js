@@ -155,12 +155,9 @@ export default Route.extend(UnloadModelRoute, {
     try {
       if (secretModel.failedServerRead) {
         // we couldn't read metadata, so we want to directly fetch the version
-
-        versionModel =
-          this.store.peekRecord('secret-v2-version', JSON.stringify(versionId)) ||
-          (await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
-            reload: true,
-          }));
+        versionModel = await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
+          reload: true,
+        });
       } else {
         // we may have previously errored, so roll it back here
         version.rollbackAttributes();
@@ -169,8 +166,8 @@ export default Route.extend(UnloadModelRoute, {
         versionModel = await version.reload();
       }
     } catch (error) {
-      // cannot read the version data, but can write according to capabilities-self endpoint
-      if (error.httpStatus === 403 && capabilities.get('canUpdate')) {
+      // cannot read the data endpoint but still allow them to see show page to access metadata if they have permissions
+      if (error.httpStatus === 403) {
         // versionModel is then a partial model from the metadata (if we have read there), or
         // we need to create one on the client
         if (version) {
@@ -219,6 +216,7 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let modelType = this.modelType(backend, secret);
+    let type = params.type || '';
     if (!secret) {
       secret = '\u0020';
     }
@@ -235,7 +233,7 @@ export default Route.extend(UnloadModelRoute, {
 
     let capabilities = this.capabilities(secret, modelType);
     try {
-      secretModel = await this.store.queryRecord(modelType, { id: secret, backend });
+      secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
     } catch (err) {
       // we've failed the read request, but if it's a kv-type backend, we want to
       // do additional checks of the capabilities
@@ -272,10 +270,7 @@ export default Route.extend(UnloadModelRoute, {
       capabilities: model.capabilities,
       baseKey: { id: secret },
       // mode will be 'show', 'edit', 'create'
-      mode: this.routeName
-        .split('.')
-        .pop()
-        .replace('-root', ''),
+      mode: this.routeName.split('.').pop().replace('-root', ''),
       backend,
       preferAdvancedEdit,
       backendType,
@@ -307,11 +302,19 @@ export default Route.extend(UnloadModelRoute, {
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();
       let changedKeys = Object.keys(changed);
+
+      // when you don't have read access on metadata we add currentVersion to the model
+      // this makes it look like you have unsaved changes and prompts a browser warning
+      // here we are specifically ignoring it.
+      if (mode === 'edit' && changedKeys.length && changedKeys[0] === 'currentVersion') {
+        version && version.rollbackAttributes();
+        return true;
+      }
       // until we have time to move `backend` on a v1 model to a relationship,
       // it's going to dirty the model state, so we need to look for it
       // and explicity ignore it here
       if (
-        (mode !== 'show' && (changedKeys.length && changedKeys[0] !== 'backend')) ||
+        (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') ||
         (mode !== 'show' && version && Object.keys(version.changedAttributes()).length)
       ) {
         if (

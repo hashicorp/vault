@@ -13,10 +13,9 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/oracle/oci-go-sdk/common"
 	"github.com/oracle/oci-go-sdk/common/auth"
@@ -89,7 +88,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	if haEnabledStr != "" {
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse HA enabled: %w", err)
 		}
 
 		if haEnabled {
@@ -105,7 +104,7 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	if authTypeAPIKeyStr != "" {
 		authTypeAPIKeyBool, err = strconv.ParseBool(authTypeAPIKeyStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing auth_type_api_key parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing auth_type_api_key parameter: %w", err)
 		}
 	}
 
@@ -115,13 +114,13 @@ func NewBackend(conf map[string]string, logger log.Logger) (physical.Backend, er
 	} else {
 		cp, err = auth.InstancePrincipalConfigurationProvider()
 		if err != nil {
-			return nil, errwrap.Wrapf("failed creating InstancePrincipalConfigurationProvider: {{err}}", err)
+			return nil, fmt.Errorf("failed creating InstancePrincipalConfigurationProvider: %w", err)
 		}
 	}
 
 	objectStorageClient, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(cp)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed creating NewObjectStorageClientWithConfigurationProvider: {{err}}", err)
+		return nil, fmt.Errorf("failed creating NewObjectStorageClientWithConfigurationProvider: %w", err)
 	}
 
 	region := conf["region"]
@@ -164,7 +163,7 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	if err != nil {
 		metrics.IncrCounter(metricPutFailed, 1)
 		o.logger.Error("failed to generate UUID")
-		return errwrap.Wrapf("failed to generate UUID: {{err}}", err)
+		return fmt.Errorf("failed to generate UUID: %w", err)
 	}
 
 	o.logger.Debug("PUT", "opc-client-request-id", opcClientRequestId)
@@ -185,7 +184,7 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 
 	if err != nil {
 		metrics.IncrCounter(metricPutFailed, 1)
-		return errwrap.Wrapf("failed to put data: {{err}}", err)
+		return fmt.Errorf("failed to put data: %w", err)
 	}
 
 	o.logRequest("PUT", resp.RawResponse, resp.OpcClientRequestId, resp.OpcRequestId, err)
@@ -207,7 +206,7 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
 		o.logger.Error("failed to generate UUID")
-		return nil, errwrap.Wrapf("failed to generate UUID: {{err}}", err)
+		return nil, fmt.Errorf("failed to generate UUID: %w", err)
 	}
 	o.logger.Debug("GET", "opc-client-request-id", opcClientRequestId)
 	request := objectstorage.GetObjectRequest{
@@ -228,13 +227,13 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 			return nil, nil
 		}
 		metrics.IncrCounter(metricGetFailed, 1)
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read Value: {{err}}"), err)
+		return nil, fmt.Errorf("failed to read Value: %w", err)
 	}
 
 	body, err := ioutil.ReadAll(resp.Content)
 	if err != nil {
 		metrics.IncrCounter(metricGetFailed, 1)
-		return nil, errwrap.Wrapf("failed to decode Value into bytes: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode Value into bytes: %w", err)
 	}
 
 	o.logger.Debug("GET completed")
@@ -258,7 +257,7 @@ func (o *Backend) Delete(ctx context.Context, key string) error {
 	opcClientRequestId, err := uuid.GenerateUUID()
 	if err != nil {
 		o.logger.Error("Delete: error generating UUID")
-		return errwrap.Wrapf("failed to generate UUID: {{err}}", err)
+		return fmt.Errorf("failed to generate UUID: %w", err)
 	}
 	o.logger.Debug("Delete", "opc-client-request-id", opcClientRequestId)
 	request := objectstorage.DeleteObjectRequest{
@@ -280,7 +279,7 @@ func (o *Backend) Delete(ctx context.Context, key string) error {
 			return nil
 		}
 		metrics.IncrCounter(metricDeleteFailed, 1)
-		return errwrap.Wrapf("failed to delete Key: {{err}}", err)
+		return fmt.Errorf("failed to delete Key: %w", err)
 	}
 	o.logger.Debug("DELETE completed")
 
@@ -305,7 +304,7 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 		opcClientRequestId, err := uuid.GenerateUUID()
 		if err != nil {
 			o.logger.Error("List: error generating UUID")
-			return nil, errwrap.Wrapf("failed to generate UUID {{err}}", err)
+			return nil, fmt.Errorf("failed to generate UUID %w", err)
 		}
 		o.logger.Debug("LIST", "opc-client-request-id", opcClientRequestId)
 		request := objectstorage.ListObjectsRequest{
@@ -322,7 +321,7 @@ func (o *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 		if err != nil {
 			metrics.IncrCounter(metricListFailed, 1)
-			return nil, errwrap.Wrapf("failed to list using prefix: {{err}}", err)
+			return nil, fmt.Errorf("failed to list using prefix: %w", err)
 		}
 
 		for _, commonPrefix := range resp.Prefixes {

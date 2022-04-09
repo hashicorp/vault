@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/go-testing-interface"
 )
@@ -655,7 +655,7 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	// If the collection is non-empty, it means that the peer was not found in
 	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+		t.Fatalf("failed to read configuration successfully, expected peers not found in configuration list: %v", expected)
 	}
 }
 
@@ -690,11 +690,82 @@ func SysMetricsReq(client *api.Client, cluster *vault.TestCluster, unauth bool) 
 }
 
 type SysMetricsJSON struct {
-	Gauges []GaugeJSON `json:"Gauges"`
+	Gauges   []gaugeJSON   `json:"Gauges"`
+	Counters []counterJSON `json:"Counters"`
+
+	// note: this is referred to as a "Summary" type in our telemetry docs, but
+	// the field name in the JSON is "Samples"
+	Summaries []summaryJSON `json:"Samples"`
 }
 
-type GaugeJSON struct {
+type baseInfoJSON struct {
 	Name   string                 `json:"Name"`
-	Value  int                    `json:"Value"`
 	Labels map[string]interface{} `json:"Labels"`
+}
+
+type gaugeJSON struct {
+	baseInfoJSON
+	Value int `json:"Value"`
+}
+
+type counterJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    int     `json:"Sum"`
+	Min    int     `json:"Min"`
+	Max    int     `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
+}
+
+type summaryJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    float64 `json:"Sum"`
+	Min    float64 `json:"Min"`
+	Max    float64 `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
+}
+
+// SetNonRootToken sets a token on :client: with a fairly generic policy.
+// This is useful if a test needs to examine differing behavior based on if a
+// root token is passed with the request.
+func SetNonRootToken(client *api.Client) error {
+	policy := `path "*" { capabilities = ["create", "update", "read"] }`
+	if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		return fmt.Errorf("error putting policy: %v", err)
+	}
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"policy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		return fmt.Errorf("error creating token secret: %v", err)
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return fmt.Errorf("missing token auth data")
+	}
+
+	client.SetToken(secret.Auth.ClientToken)
+	return nil
+}
+
+// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
 }

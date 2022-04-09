@@ -28,20 +28,22 @@ export default Component.extend({
   openTrigger: null,
   height: 0,
   focusTrigger: null,
-  style: computed('height', function() {
+  style: computed('height', function () {
     return htmlSafe(`height: ${this.height}px`);
   }),
   wormholeReference: null,
-  wormholeId: computed('elementId', function() {
+  wormholeId: computed('elementId', function () {
     return `confirm-${this.elementId}`;
   }),
   didInsertElement() {
+    this._super(...arguments);
     this.set('wormholeReference', this.element.querySelector(`#${this.wormholeId}`));
   },
   didRender() {
+    this._super(...arguments);
     this.updateHeight();
   },
-  updateHeight: function() {
+  updateHeight: function () {
     let height;
     height = this.openTrigger
       ? this.element.querySelector('.confirm-overlay').clientHeight
@@ -49,7 +51,7 @@ export default Component.extend({
     this.set('height', height);
   },
   actions: {
-    onTrigger: function(itemId, e) {
+    onTrigger: function (itemId, e) {
       this.set('openTrigger', itemId);
 
       // store a reference to the trigger so we can focus the element
@@ -57,7 +59,7 @@ export default Component.extend({
       this.set('focusTrigger', e.target);
       this.updateHeight();
     },
-    onCancel: function() {
+    onCancel: function () {
       this.set('openTrigger', '');
       this.updateHeight();
 

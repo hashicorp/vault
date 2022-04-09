@@ -19,7 +19,7 @@ export default AuthConfig.extend({
     label: 'IAM Server ID Header Value',
   }),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed(function () {
     const groups = [
       { default: ['accessKey', 'secretKey'] },
       { 'AWS Options': ['endpoint', 'iamEndpoint', 'stsEndpoint', 'iamServerIdHeaderValue'] },

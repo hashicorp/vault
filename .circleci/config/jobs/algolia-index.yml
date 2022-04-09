@@ -1,5 +1,5 @@
 docker:
-  - image: node:12
+  - image: node:14
 steps:
   - checkout
   - run:
@@ -10,5 +10,6 @@ steps:
           exit 0
         fi
         cd website/
+        npm install -g npm@latest
         npm install
         node scripts/index_search_content.js

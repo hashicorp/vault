@@ -1,0 +1,7 @@
+```release-note:change
+expiration: VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY environment variable has
+been removed.
+```
+```release-note:change
+expiration: VAULT_16_REVOKE_PERMITPOOL environment variable has been removed.
+```

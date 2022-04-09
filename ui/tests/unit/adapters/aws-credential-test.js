@@ -2,14 +2,14 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
-module('Unit | Adapter | aws credential', function(hooks) {
+module('Unit | Adapter | aws credential', function (hooks) {
   setupTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = apiStub();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
@@ -22,12 +22,12 @@ module('Unit | Adapter | aws credential', function(hooks) {
     },
   };
 
-  let makeSnapshot = obj => {
+  let makeSnapshot = (obj) => {
     obj.role = {
       backend: 'aws',
       name: 'foo',
     };
-    obj.attr = attr => obj[attr];
+    obj.attr = (attr) => obj[attr];
     return obj;
   };
 
@@ -67,7 +67,7 @@ module('Unit | Adapter | aws credential', function(hooks) {
     ],
   ];
   cases.forEach(([description, args, expectedMethod, expectedRequestBody]) => {
-    test(`aws-credential: ${description}`, function(assert) {
+    test(`aws-credential: ${description}`, function (assert) {
       assert.expect(3);
       let adapter = this.owner.lookup('adapter:aws-credential');
       adapter.createRecord(...args);

@@ -1,0 +1,66 @@
+.callToAction {
+  --columns: 1;
+
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 0 32px;
+  padding: 32px;
+  background-color: var(--background-color);
+  border-radius: 6px;
+
+  &.light {
+    color: var(--black);
+  }
+
+  &.dark {
+    color: var(--white);
+  }
+
+  @media (--medium-up) {
+    --columns: 12;
+
+    padding: 0;
+  }
+}
+
+.heading {
+  grid-column: 1 / -1;
+  margin: 0 0 16px;
+  composes: g-type-display-3 from global;
+
+  @media (--medium-up) {
+    grid-column: 1 / 6;
+    padding: 88px 32px 88px 64px;
+  }
+}
+
+.content {
+  grid-column: 1 / -1;
+
+  @media (--medium-up) {
+    grid-column: 6 / 11;
+    padding: 88px 0;
+  }
+}
+
+.description {
+  margin: 0 0 32px;
+  composes: g-type-body-large from global;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+}
+
+.pattern {
+  position: relative;
+  display: none;
+
+  @media (--medium-up) {
+    grid-column: 11 / -1;
+    display: flex;
+  }
+}

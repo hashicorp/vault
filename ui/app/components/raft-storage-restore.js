@@ -12,7 +12,7 @@ export default Component.extend({
   flashMessages: service(),
   isUploading: alias('restore.isRunning'),
   abortController: null,
-  restore: task(function*() {
+  restore: task(function* () {
     this.set('errors', null);
     let adapter = getOwner(this).lookup('adapter:application');
     try {

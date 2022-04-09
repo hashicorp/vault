@@ -1,0 +1,3 @@
+```release-note:bug
+identity/oidc: Make the `nonce` parameter optional for the Authorization Endpoint of OIDC providers.
+```

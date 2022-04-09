@@ -1,0 +1,3 @@
+```release-note:bug
+identity: disallow creation of role without a key parameter
+```

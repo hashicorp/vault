@@ -17,10 +17,10 @@
       </tr>
     </thead>
     <tbody>
-      {{#each secondaries as |secondary|}}
+      {{#each this.secondaries as |secondary|}}
         <tr>
           <th scope="row">
-            <code data-test-secondaries={{concat 'row-for-' secondary.node_id}}>
+            <code data-test-secondaries={{concat "row-for-" secondary.node_id}}>
               {{secondary.node_id}}
             </code>
           </th>
@@ -28,10 +28,11 @@
             {{#if secondary.api_address}}
               <a
                 class="link"
-                href={{concat secondary.api_address '/ui/'}}
+                href={{concat secondary.api_address "/ui/"}}
                 target="_blank"
                 rel="noopener noreferrer"
-                data-test-secondaries={{concat 'api-address-for-' secondary.node_id}}>
+                data-test-secondaries={{concat "api-address-for-" secondary.node_id}}
+              >
                 <p class="is-word-break">{{secondary.api_address}}</p>
               </a>
             {{else}}
@@ -39,7 +40,7 @@
             {{/if}}
           </td>
           <td>
-            <code data-test-secondaries={{concat 'connection-status-for-' (or secondary.node_id secondary)}}>
+            <code data-test-secondaries={{concat "connection-status-for-" (or secondary.node_id secondary)}}>
               {{secondary.connection_status}}
             </code>
           </td>

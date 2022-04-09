@@ -6,7 +6,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import identityCapabilities from 'vault/macros/identity-capabilities';
 
 export default IdentityModel.extend({
-  formFields: computed('type', function() {
+  formFields: computed('type', function () {
     let fields = ['name', 'type', 'policies', 'metadata'];
     if (this.type === 'internal') {
       return fields.concat(['memberGroupIds', 'memberEntityIds']);
@@ -62,7 +62,7 @@ export default IdentityModel.extend({
     'memberEntityIds.[]',
     'memberGroupIds',
     'memberGroupIds.[]',
-    function() {
+    function () {
       let { memberEntityIds, memberGroupIds } = this;
       let numEntities = (memberEntityIds && memberEntityIds.length) || 0;
       let numGroups = (memberGroupIds && memberGroupIds.length) || 0;
@@ -76,7 +76,7 @@ export default IdentityModel.extend({
   canEdit: alias('updatePath.canUpdate'),
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
-  canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function() {
+  canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function () {
     let type = this.type;
     let alias = this.alias;
     // internal groups can't have aliases, and external groups can only have one

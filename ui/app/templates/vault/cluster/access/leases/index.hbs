@@ -6,15 +6,17 @@
   </p.levelLeft>
 </PageHeader>
 
-<form {{action "lookupLease" leaseId on="submit"}}>
+<form {{action "lookupLease" this.leaseId on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="field">
       <label for="lease-id" class="is-label">Lease ID</label>
       <div class="control">
-        <Input @value={{leaseId}} @id="lease-id" class="input" />
+        <Input @value={{this.leaseId}} id="lease-id" class="input" />
       </div>
       <p class="help has-text-grey">
-        If you know the <code>id</code> of a lease, enter it above to lookup details of the lease.
+        If you know the
+        <code>id</code>
+        of a lease, enter it above to lookup details of the lease.
       </p>
     </div>
   </div>

@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Fix using kv patch with older server versions that don't support HTTP PATCH.
+```

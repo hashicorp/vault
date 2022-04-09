@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"github.com/hashicorp/errwrap"
 )
 
 // ExternalTokenHelperPath takes the configured path to a helper and expands it to
@@ -64,7 +62,7 @@ func (h *ExternalTokenHelper) Erase() error {
 		return err
 	}
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", string(output)), err)
+		return fmt.Errorf("%q: %w", string(output), err)
 	}
 	return nil
 }
@@ -79,7 +77,7 @@ func (h *ExternalTokenHelper) Get() (string, error) {
 	cmd.Stdout = &buf
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", stderr.String()), err)
+		return "", fmt.Errorf("%q: %w", stderr.String(), err)
 	}
 
 	return buf.String(), nil
@@ -94,7 +92,7 @@ func (h *ExternalTokenHelper) Store(v string) error {
 	}
 	cmd.Stdin = buf
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", string(output)), err)
+		return fmt.Errorf("%q: %w", string(output), err)
 	}
 
 	return nil

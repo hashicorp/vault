@@ -38,7 +38,7 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type, query) {
-    return this.ajax(this.urlForQuery(query, type.modelName), 'GET').then(resp => {
+    return this.ajax(this.urlForQuery(query, type.modelName), 'GET').then((resp) => {
       // remove pagination query items here
       const { ...modelAttrs } = query;
       resp._requestQuery = modelAttrs;
@@ -49,7 +49,7 @@ export default ApplicationAdapter.extend({
   queryRecord(store, type, query) {
     let id = query.id;
     delete query.id;
-    return this.ajax(this._url(type.modelName, query, id), 'GET').then(resp => {
+    return this.ajax(this._url(type.modelName, query, id), 'GET').then((resp) => {
       resp.id = id;
       resp = { ...resp, ...query };
       return resp;

@@ -64,11 +64,11 @@ export default Route.extend({
       !model.connectionCapabilities.canCreate &&
       !model.connectionCapabilities.canUpdate;
 
-    let emptyStateMessage = function() {
+    let emptyStateMessage = function () {
       if (noConnectionCapabilities) {
         return 'You cannot yet generate credentials.  Ask your administrator if you think you should have access.';
       } else {
-        return 'You can connect and external database to Vault.  We recommend that you create a user for Vault rather than using the database root user.';
+        return 'You can connect an external database to Vault.  We recommend that you create a user for Vault rather than using the database root user.';
       }
     };
     controller.set('showEmptyState', showEmptyState);

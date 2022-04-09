@@ -1,3 +1,4 @@
+import { parsePkiCert } from '../helpers/parse-pki-cert';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -33,7 +34,7 @@ export default ApplicationAdapter.extend({
       data = serializer.serialize(snapshot, requestType);
     }
 
-    return this.ajax(this.url(snapshot, action), 'POST', { data }).then(response => {
+    return this.ajax(this.url(snapshot, action), 'POST', { data }).then((response) => {
       // uploading CA, setting signed intermediate cert, and attempting to generate
       // a new CA if one exists, all return a 204
       if (!response) {
@@ -41,7 +42,14 @@ export default ApplicationAdapter.extend({
       }
       response.id = snapshot.id;
       response.modelName = type.modelName;
-      store.pushPayload(type.modelName, response);
+      // only parse if certificate is attached to response
+      if (response.data && response.data.certificate) {
+        const caCertMetadata = parsePkiCert([response.data]);
+        const transformedResponse = { ...response, ...caCertMetadata };
+        store.pushPayload(type.modelName, transformedResponse);
+      } else {
+        store.pushPayload(type.modelName, response);
+      }
     });
   },
 

@@ -1,0 +1,15 @@
+.container {
+  composes: g-grid-container from global;
+}
+
+/*
+ * Use cases
+ */
+
+.useCases {
+  margin: 60px auto;
+
+  @media (--medium-up) {
+    margin: 120px auto;
+  }
+}

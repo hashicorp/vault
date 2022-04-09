@@ -11,7 +11,7 @@ export default ApplicationAdapter.extend({
       data: {
         accessor: id,
       },
-    }).then(response => {
+    }).then((response) => {
       response.id = id;
       return response;
     });

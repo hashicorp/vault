@@ -3,8 +3,14 @@ package vault
 import (
 	"bytes"
 	"context"
+	"errors"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
 
 	proto "github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -156,4 +162,66 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 		t.Fatalf("UpgradeKeys: want no error, got %v", err)
 	}
 	check()
+}
+
+func TestAutoSeal_HealthCheck(t *testing.T) {
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+
+	metricsConf := metrics.DefaultConfig("")
+	metricsConf.EnableHostname = false
+	metricsConf.EnableHostnameLabel = false
+	metricsConf.EnableServiceLabel = false
+	metricsConf.EnableTypePrefix = false
+
+	metrics.NewGlobal(metricsConf, inmemSink)
+
+	pBackend := newTestBackend(t)
+	testSealAccess, setErr := seal.NewToggleableTestSeal(nil)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
+		Physical:   pBackend,
+	})
+	sealHealthTestIntervalNominal = 10 * time.Millisecond
+	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
+	autoSeal := NewAutoSeal(testSealAccess)
+	autoSeal.SetCore(core)
+	core.seal = autoSeal
+	autoSeal.StartHealthCheck()
+	defer autoSeal.StopHealthCheck()
+	setErr(errors.New("disconnected"))
+
+	asu := strings.Join(autoSealUnavailableDuration, ".") + ";cluster=" + core.clusterName
+	tries := 10
+	for tries = 10; tries > 0; tries-- {
+		intervals := inmemSink.Data()
+		if len(intervals) == 1 {
+			interval := inmemSink.Data()[0]
+
+			if _, ok := interval.Gauges[asu]; ok {
+				if interval.Gauges[asu].Value > 0 {
+					break
+				}
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if tries == 0 {
+		t.Fatalf("Expected value metric %s to be non-zero", asu)
+	}
+
+	setErr(nil)
+	time.Sleep(50 * time.Millisecond)
+	intervals := inmemSink.Data()
+	if len(intervals) == 1 {
+		interval := inmemSink.Data()[0]
+
+		if _, ok := interval.Gauges[asu]; !ok {
+			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
+		}
+		if interval.Gauges[asu].Value != 0 {
+			t.Fatalf("Expected value metric %s to be zero", asu)
+		}
+	}
 }

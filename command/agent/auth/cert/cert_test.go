@@ -79,7 +79,6 @@ func TestCertAuthMethod_AuthClient_withoutCerts(t *testing.T) {
 }
 
 func TestCertAuthMethod_AuthClient_withCerts(t *testing.T) {
-
 	clientCert, err := os.Open("./test-fixtures/keys/cert.pem")
 	if err != nil {
 		t.Fatal(err)

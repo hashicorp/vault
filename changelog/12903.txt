@@ -1,0 +1,3 @@
+```release-note:improvement
+db/cassandra: make the connect_timeout config option actually apply to connection timeouts, in addition to non-connection operations
+```

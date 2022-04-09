@@ -1,7 +1,11 @@
 package logical
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
@@ -20,13 +24,24 @@ const (
 	// TokenTypeBatch is a batch token
 	TokenTypeBatch
 
-	// TokenTypeDefaultService, configured on a mount, means that if
+	// TokenTypeDefaultService configured on a mount, means that if
 	// TokenTypeDefault is sent back by the mount, create Service tokens
 	TokenTypeDefaultService
 
-	// TokenTypeDefaultBatch, configured on a mount, means that if
+	// TokenTypeDefaultBatch configured on a mount, means that if
 	// TokenTypeDefault is sent back by the mount, create Batch tokens
 	TokenTypeDefaultBatch
+
+	// ClientIDTWEDelimiter Delimiter between the string fields used to generate a client
+	// ID for tokens without entities. This is the 0 character, which
+	// is a non-printable string. Please see unicode.IsPrint for details.
+	ClientIDTWEDelimiter = rune('\x00')
+
+	// SortedPoliciesTWEDelimiter Delimiter between each policy in the sorted policies used to
+	// generate a client ID for tokens without entities. This is the 127
+	// character, which is a non-printable string. Please see unicode.IsPrint
+	// for details.
+	SortedPoliciesTWEDelimiter = rune('\x7F')
 )
 
 func (t *TokenType) UnmarshalJSON(b []byte) error {
@@ -78,6 +93,10 @@ type TokenEntry struct {
 	// ID of this entry, generally a random UUID
 	ID string `json:"id" mapstructure:"id" structs:"id" sentinel:""`
 
+	// ExternalID is the ID of a newly created service
+	// token that will be returned to a user
+	ExternalID string `json:"-"`
+
 	// Accessor for this token, a random UUID
 	Accessor string `json:"accessor" mapstructure:"accessor" structs:"accessor" sentinel:""`
 
@@ -87,11 +106,17 @@ type TokenEntry struct {
 	// Which named policies should be used
 	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
 
+	// InlinePolicy specifies ACL rules to be applied to this token entry.
+	InlinePolicy string `json:"inline_policy" mapstructure:"inline_policy" structs:"inline_policy"`
+
 	// Used for audit trails, this is something like "auth/user/login"
 	Path string `json:"path" mapstructure:"path" structs:"path"`
 
 	// Used for auditing. This could include things like "source", "user", "ip"
 	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta" sentinel:"meta"`
+
+	// InternalMeta is used to store internal metadata. This metadata will not be audit logged or returned from lookup APIs.
+	InternalMeta map[string]string `json:"internal_meta" mapstructure:"internal_meta" structs:"internal_meta"`
 
 	// Used for operators to be able to associate with the source
 	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`
@@ -128,7 +153,12 @@ type TokenEntry struct {
 	CreationTimeDeprecated   int64         `json:"CreationTime" mapstructure:"CreationTime" structs:"CreationTime" sentinel:""`
 	ExplicitMaxTTLDeprecated time.Duration `json:"ExplicitMaxTTL" mapstructure:"ExplicitMaxTTL" structs:"ExplicitMaxTTL" sentinel:""`
 
+	// EntityID is the ID of the entity associated with this token.
 	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
+
+	// If NoIdentityPolicies is true, the token will not inherit
+	// identity policies from the associated EntityID.
+	NoIdentityPolicies bool `json:"no_identity_policies" mapstructure:"no_identity_policies" structs:"no_identity_policies"`
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs" sentinel:""`
@@ -141,6 +171,46 @@ type TokenEntry struct {
 	// CubbyholeID is the identifier of the cubbyhole storage belonging to this
 	// token
 	CubbyholeID string `json:"cubbyhole_id" mapstructure:"cubbyhole_id" structs:"cubbyhole_id" sentinel:""`
+}
+
+// CreateClientID returns the client ID, and a boolean which is false if the clientID
+// has an entity, and true otherwise
+func (te *TokenEntry) CreateClientID() (string, bool) {
+	var clientIDInputBuilder strings.Builder
+
+	// if entry has an associated entity ID, return it
+	if te.EntityID != "" {
+		return te.EntityID, false
+	}
+
+	// The entry is associated with a TWE (token without entity). In this case
+	// we must create a client ID by calculating the following formula:
+	// clientID = SHA256(sorted policies + namespace)
+
+	// Step 1: Copy entry policies to a new struct
+	sortedPolicies := make([]string, len(te.Policies))
+	copy(sortedPolicies, te.Policies)
+
+	// Step 2: Sort and join copied policies
+	sort.Strings(sortedPolicies)
+	for _, pol := range sortedPolicies {
+		clientIDInputBuilder.WriteRune(SortedPoliciesTWEDelimiter)
+		clientIDInputBuilder.WriteString(pol)
+	}
+
+	// Step 3: Add namespace ID
+	clientIDInputBuilder.WriteRune(ClientIDTWEDelimiter)
+	clientIDInputBuilder.WriteString(te.NamespaceID)
+
+	if clientIDInputBuilder.Len() == 0 {
+		return "", true
+	}
+	// Step 4: Remove the first character in the string, as it's an unnecessary delimiter
+	clientIDInput := clientIDInputBuilder.String()[1:]
+
+	// Step 5: Hash the sum
+	hashed := sha256.Sum256([]byte(clientIDInput))
+	return base64.StdEncoding.EncodeToString(hashed[:]), true
 }
 
 func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
@@ -222,4 +292,13 @@ func (te *TokenEntry) SentinelKeys() []string {
 		"metadata",
 		"type",
 	}
+}
+
+// IsRoot returns false if the token is not root (or doesn't exist)
+func (te *TokenEntry) IsRoot() bool {
+	if te == nil {
+		return false
+	}
+
+	return len(te.Policies) == 1 && te.Policies[0] == "root"
 }

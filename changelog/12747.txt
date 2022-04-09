@@ -1,0 +1,3 @@
+```release-note:bug
+core/identity: Disallow entity alias creation/update if a conflicting alias exists for the target entity and mount combination
+```

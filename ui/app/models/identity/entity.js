@@ -6,7 +6,7 @@ import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
 let Model = IdentityModel.extend({
-  formFields: computed(function() {
+  formFields: computed(function () {
     return ['name', 'disabled', 'policies', 'metadata'];
   }),
   name: attr('string'),

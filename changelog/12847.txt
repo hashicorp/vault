@@ -1,0 +1,5 @@
+```release-note:breaking-change
+secrets/ssh: Roles with empty allowed_extensions will now forbid end-users
+specifying extensions when requesting ssh key signing. Update roles setting
+allowed_extensions to '*' to permit any extension to be specified by an end-user.
+```

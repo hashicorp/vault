@@ -59,7 +59,7 @@ const SEAL_STATUS_RESPONSE = {
   initialized: false,
 };
 
-module('Acceptance | init', function(hooks) {
+module('Acceptance | init', function (hooks) {
   setupApplicationTest(hooks);
 
   let setInitResponse = (server, resp) => {
@@ -72,7 +72,7 @@ module('Acceptance | init', function(hooks) {
       return [200, { 'Content-Type': 'application/json' }, JSON.stringify(resp)];
     });
   };
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = new Pretender();
     this.server.get('/v1/sys/health', () => {
       return [200, { 'Content-Type': 'application/json' }, JSON.stringify(HEALTH_RESPONSE)];
@@ -80,11 +80,11 @@ module('Acceptance | init', function(hooks) {
     this.server.get('/v1/sys/internal/ui/feature-flags', this.server.passthrough);
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
-  test('cloud seal init', async function(assert) {
+  test('cloud seal init', async function (assert) {
     setInitResponse(this.server, CLOUD_SEAL_RESPONSE);
     setStatusResponse(this.server, CLOUD_SEAL_STATUS_RESPONSE);
     await initPage.init(5, 3);
@@ -101,7 +101,7 @@ module('Acceptance | init', function(hooks) {
     }
   });
 
-  test('shamir seal init', async function(assert) {
+  test('shamir seal init', async function (assert) {
     setInitResponse(this.server, SEAL_RESPONSE);
     setStatusResponse(this.server, SEAL_STATUS_RESPONSE);
 

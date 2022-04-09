@@ -12,6 +12,6 @@
 **See**
 
 - [Uses of VaultLogoSpinner](https://github.com/hashicorp/vault/search?l=Handlebars&q=VaultLogoSpinner)
-- [VaultLogoSpinner Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/vault-logo-spinner.js)
+- [VaultLogoSpinner Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/vault-logo-spinner.js)
 
 ---

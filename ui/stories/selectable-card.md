@@ -21,6 +21,6 @@ They are designed to be used in containers that act as flexbox or css grid conta
 **See**
 
 - [Uses of SelectableCard](https://github.com/hashicorp/vault/search?l=Handlebars&q=SelectableCard+OR+selectable-card)
-- [SelectableCard Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/selectable-card.js)
+- [SelectableCard Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/selectable-card.js)
 
 ---

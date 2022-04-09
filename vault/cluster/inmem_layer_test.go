@@ -256,6 +256,6 @@ func TestInmemCluster_ConnectCluster(t *testing.T) {
 	wg.Wait()
 
 	if accepted.Load() != 18 {
-		t.Fatalf("expected 18 connections to be accepted, got %d", accepted)
+		t.Fatalf("expected 18 connections to be accepted, got %d", accepted.Load())
 	}
 }

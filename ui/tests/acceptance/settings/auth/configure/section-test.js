@@ -10,19 +10,19 @@ import authPage from 'vault/tests/pages/auth';
 
 const cli = create(consolePanel);
 
-module('Acceptance | settings/auth/configure/section', function(hooks) {
+module('Acceptance | settings/auth/configure/section', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
-  test('it can save options', async function(assert) {
+  test('it can save options', async function (assert) {
     const path = `approle-${new Date().getTime()}`;
     const type = 'approle';
     const section = 'options';
@@ -42,7 +42,7 @@ module('Acceptance | settings/auth/configure/section', function(hooks) {
   });
 
   for (let type of ['aws', 'azure', 'gcp', 'github', 'kubernetes']) {
-    test(`it shows tabs for auth method: ${type}`, async assert => {
+    test(`it shows tabs for auth method: ${type}`, async (assert) => {
       let path = `${type}-${Date.now()}`;
       await cli.consoleInput(`write sys/auth/${path} type=${type}`);
       await cli.enter();

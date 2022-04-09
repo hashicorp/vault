@@ -8,4 +8,8 @@ export default class SecretListHeader extends Component {
   backendCrumb = null;
   model = null;
   options = null;
+
+  get isKV() {
+    return ['kv', 'generic'].includes(this.args.model.engineType);
+  }
 }

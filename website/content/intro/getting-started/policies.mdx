@@ -163,7 +163,7 @@ version          1
 $ vault kv put secret/foo robot=beepboop
 Error writing data to secret/data/foo: Error making API request.
 
-URL: PUT http://127.0.0.1:8200/v1/secret/data/foo
+URL: POST http://127.0.0.1:8200/v1/secret/data/foo
 Code: 403. Errors:
 
 * permission denied
@@ -178,7 +178,7 @@ Success! Data written to: secret/bar
 $ vault kv put secret/foo robot=beepboop
 Error writing data to secret/foo: Error making API request.
 
-URL: PUT http://127.0.0.1:8200/v1/secret/foo
+URL: POST http://127.0.0.1:8200/v1/secret/foo
 Code: 403. Errors:
 
 * permission denied

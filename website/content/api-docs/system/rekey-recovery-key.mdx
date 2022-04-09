@@ -62,7 +62,7 @@ nonce.
 
 | Method | Path                           |
 | :----- | :----------------------------- |
-| `PUT`  | `/sys/rekey-recovery-key/init` |
+| `POST` | `/sys/rekey-recovery-key/init` |
 
 ### Parameters
 
@@ -108,7 +108,7 @@ nonce.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey-recovery-key/init
 ```
@@ -197,7 +197,7 @@ for the verification operation.
 
 | Method | Path                             |
 | :----- | :------------------------------- |
-| `PUT`  | `/sys/rekey-recovery-key/update` |
+| `POST` | `/sys/rekey-recovery-key/update` |
 
 ### Parameters
 
@@ -219,7 +219,7 @@ for the verification operation.
 ```shell-session
 $ curl \
     --header "X-Vault-Token" \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey-recovery-key/update
 ```
@@ -322,7 +322,7 @@ below; otherwise the response will be the same as the `GET` method against
 
 | Method | Path                             |
 | :----- | :------------------------------- |
-| `PUT`  | `/sys/rekey-recovery-key/verify` |
+| `POST` | `/sys/rekey-recovery-key/verify` |
 
 ### Parameters
 
@@ -346,7 +346,7 @@ below; otherwise the response will be the same as the `GET` method against
 ```shell-session
 $ curl \
     --header "X-Vault-Token" \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey-recovery-key/verify
 ```

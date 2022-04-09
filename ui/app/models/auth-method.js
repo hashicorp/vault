@@ -4,11 +4,19 @@ import { computed } from '@ember/object';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
+import { validator, buildValidations } from 'ember-cp-validations';
 
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-let ModelExport = Model.extend({
+const Validations = buildValidations({
+  path: validator('presence', {
+    presence: true,
+    message: "Path can't be blank.",
+  }),
+});
+
+let ModelExport = Model.extend(Validations, {
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -16,7 +24,7 @@ let ModelExport = Model.extend({
   type: attr('string'),
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
-  methodType: computed('type', function() {
+  methodType: computed('type', function () {
     return this.type.replace(/^ns_/, '');
   }),
   description: attr('string', {
@@ -34,28 +42,39 @@ let ModelExport = Model.extend({
 
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
-  apiPath: computed('path', function() {
+  apiPath: computed('path', function () {
     return `auth/${this.path}`;
   }),
-  localDisplay: computed('local', function() {
+  localDisplay: computed('local', function () {
     return this.local ? 'local' : 'replicated';
   }),
 
-  tuneAttrs: computed(function() {
-    return expandAttributeMeta(this, [
-      'description',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-    ]);
+  tuneAttrs: computed('path', function () {
+    let { methodType } = this;
+    let tuneAttrs;
+    // token_type should not be tuneable for the token auth method
+    if (methodType === 'token') {
+      tuneAttrs = [
+        'description',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ];
+    } else {
+      tuneAttrs = [
+        'description',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ];
+    }
+    return expandAttributeMeta(this, tuneAttrs);
   }),
 
-  //sys/mounts/auth/[auth-path]/tune.
+  // sys/mounts/auth/[auth-path]/tune.
   tune: memberAction({
     path: 'tune',
     type: 'post',
     urlType: 'updateRecord',
   }),
 
-  formFields: computed(function() {
+  formFields: computed(function () {
     return [
       'type',
       'path',
@@ -67,7 +86,7 @@ let ModelExport = Model.extend({
     ];
   }),
 
-  formFieldGroups: computed(function() {
+  formFieldGroups: computed(function () {
     return [
       { default: ['path'] },
       {
@@ -82,11 +101,11 @@ let ModelExport = Model.extend({
     ];
   }),
 
-  attrs: computed('formFields', function() {
+  attrs: computed('formFields', function () {
     return expandAttributeMeta(this, this.formFields);
   }),
 
-  fieldGroups: computed('formFieldGroups', function() {
+  fieldGroups: computed('formFieldGroups', function () {
     return fieldToAttrs(this, this.formFieldGroups);
   }),
   canDisable: alias('deletePath.canDelete'),
@@ -95,7 +114,7 @@ let ModelExport = Model.extend({
 
 export default attachCapabilities(ModelExport, {
   deletePath: apiPath`sys/auth/${'id'}`,
-  configPath: function(context) {
+  configPath: function (context) {
     if (context.type === 'aws') {
       return apiPath`auth/${'id'}/config/client`;
     } else {

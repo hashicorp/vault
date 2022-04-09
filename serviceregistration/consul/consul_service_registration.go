@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -15,12 +16,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault/diagnose"
 	atomicB "go.uber.org/atomic"
@@ -49,6 +49,10 @@ const (
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
 	reconcileTimeout = 60 * time.Second
+
+	// metaExternalSource is a metadata value for external-source that can be
+	// used by the Consul UI.
+	metaExternalSource = "vault"
 )
 
 var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
@@ -120,7 +124,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		serviceAddr = &serviceAddrStr
 	}
 	if logger.IsDebug() {
-		logger.Debug("config service_address set", "service_address", serviceAddr)
+		logger.Debug("config service_address set", "service_address", serviceAddrStr)
 	}
 
 	checkTimeout := defaultCheckTimeout
@@ -147,12 +151,12 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	SetupSecureTLS(consulConf, conf, logger, false)
+	SetupSecureTLS(context.Background(), consulConf, conf, logger, false)
 
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)
 	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+		return nil, fmt.Errorf("client setup failed: %w", err)
 	}
 
 	// Setup the backend
@@ -179,7 +183,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	return c, nil
 }
 
-func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
+func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -217,13 +221,16 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 			certPath, okCert := conf["tls_cert_file"]
 			keyPath, okKey := conf["tls_key_file"]
 			if okCert && okKey {
-				err := diagnose.TLSFileChecks(certPath, keyPath)
+				warnings, err := diagnose.TLSFileChecks(certPath, keyPath)
+				for _, warning := range warnings {
+					diagnose.Warn(ctx, warning)
+				}
 				if err != nil {
 					return err
 				}
-			} else {
-				return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+				return nil
 			}
+			return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
 		}
 
 		// Use the parsed Address instead of the raw conf['address']
@@ -237,6 +244,10 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 			return err
 		}
 		logger.Debug("configured TLS")
+	} else {
+		if isDiagnose {
+			diagnose.Skipped(ctx, "HTTPS is not used, Skipping TLS verification.")
+		}
 	}
 	return nil
 }
@@ -496,6 +507,9 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		Port:              int(c.redirectPort),
 		Address:           serviceAddress,
 		EnableTagOverride: false,
+		Meta: map[string]string{
+			"external-source": metaExternalSource,
+		},
 	}
 
 	checkStatus := api.HealthCritical

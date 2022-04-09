@@ -1,0 +1,3 @@
+```release-note:feature
+pki: Support ed25519 as a key for the pki backend
+```

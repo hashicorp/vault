@@ -5,7 +5,7 @@ import layout from '../templates/components/upgrade-page';
 export default Component.extend({
   layout,
   title: 'Vault Enterprise',
-  featureName: computed('title', function() {
+  featureName: computed('title', function () {
     let title = this.title;
     return title === 'Vault Enterprise' ? 'this feature' : title;
   }),

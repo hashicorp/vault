@@ -18,6 +18,6 @@ The `AuthConfigForm/Config` is the base form to configure auth methods.
 **See**
 
 - [Uses of AuthConfigForm/config](https://github.com/hashicorp/vault/search?l=Handlebars&q=AuthConfigForm/config)
-- [AuthConfigForm/config Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-config-form/config.js)
+- [AuthConfigForm/config Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/auth-config-form/config.js)
 
 ---

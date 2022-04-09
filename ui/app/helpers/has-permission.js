@@ -9,7 +9,7 @@ export default Helper.extend({
     'permissions.exactPaths',
     'permissions.globPaths',
     'permissions.canViewAll',
-    function() {
+    function () {
       this.recompute();
     }
   ),

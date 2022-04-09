@@ -18,6 +18,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -607,7 +608,7 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Derived != derived {
@@ -989,6 +990,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               false,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -1009,6 +1011,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               true,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err = b.HandleRequest(context.Background(), req)
@@ -1515,5 +1518,192 @@ func TestBadInput(t *testing.T) {
 	_, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestTransit_AutoRotateKeys(t *testing.T) {
+	tests := map[string]struct {
+		isDRSecondary   bool
+		isPerfSecondary bool
+		isStandby       bool
+		isLocal         bool
+		shouldRotate    bool
+	}{
+		"primary, no local mount": {
+			shouldRotate: true,
+		},
+		"DR secondary, no local mount": {
+			isDRSecondary: true,
+			shouldRotate:  false,
+		},
+		"perf standby, no local mount": {
+			isStandby:    true,
+			shouldRotate: false,
+		},
+		"perf secondary, no local mount": {
+			isPerfSecondary: true,
+			shouldRotate:    false,
+		},
+		"perf secondary, local mount": {
+			isPerfSecondary: true,
+			isLocal:         true,
+			shouldRotate:    true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(
+			name,
+			func(t *testing.T) {
+				var repState consts.ReplicationState
+				if test.isDRSecondary {
+					repState.AddState(consts.ReplicationDRSecondary)
+				}
+				if test.isPerfSecondary {
+					repState.AddState(consts.ReplicationPerformanceSecondary)
+				}
+				if test.isStandby {
+					repState.AddState(consts.ReplicationPerformanceStandby)
+				}
+
+				sysView := logical.TestSystemView()
+				sysView.ReplicationStateVal = repState
+				sysView.LocalMountVal = test.isLocal
+
+				storage := &logical.InmemStorage{}
+
+				conf := &logical.BackendConfig{
+					StorageView: storage,
+					System:      sysView,
+				}
+
+				b, _ := Backend(context.Background(), conf)
+				if b == nil {
+					t.Fatal("failed to create backend")
+				}
+
+				err := b.Backend.Setup(context.Background(), conf)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Write a key with the default auto rotate value (0/disabled)
+				req := &logical.Request{
+					Storage:   storage,
+					Operation: logical.UpdateOperation,
+					Path:      "keys/test1",
+				}
+				resp, err := b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp != nil {
+					t.Fatal("expected nil response")
+				}
+
+				// Write a key with an auto rotate value one day in the future
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.UpdateOperation,
+					Path:      "keys/test2",
+					Data: map[string]interface{}{
+						"auto_rotate_period": 24 * time.Hour,
+					},
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp != nil {
+					t.Fatal("expected nil response")
+				}
+
+				// Run the rotation check and ensure none of the keys have rotated
+				b.checkAutoRotateAfter = time.Now()
+				if err = b.autoRotateKeys(context.Background(), &logical.Request{Storage: storage}); err != nil {
+					t.Fatal(err)
+				}
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.ReadOperation,
+					Path:      "keys/test1",
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+
+				req.Path = "keys/test2"
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+
+				// Update auto rotate period on one key to be one nanosecond
+				p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
+					Storage: storage,
+					Name:    "test2",
+				}, b.GetRandomReader())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if p == nil {
+					t.Fatal("expected non-nil policy")
+				}
+				p.AutoRotatePeriod = time.Nanosecond
+				err = p.Persist(context.Background(), storage)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Run the rotation check and validate the state of key rotations
+				b.checkAutoRotateAfter = time.Now()
+				if err = b.autoRotateKeys(context.Background(), &logical.Request{Storage: storage}); err != nil {
+					t.Fatal(err)
+				}
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.ReadOperation,
+					Path:      "keys/test1",
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+				req.Path = "keys/test2"
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				expectedVersion := 1
+				if test.shouldRotate {
+					expectedVersion = 2
+				}
+				if resp.Data["latest_version"] != expectedVersion {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], expectedVersion)
+				}
+			},
+		)
 	}
 }

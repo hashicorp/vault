@@ -20,7 +20,7 @@ export default Component.extend({
     return str[str.length - 1] === '/' ? str.slice(0, -1) : str;
   },
 
-  currentPath: computed('mode', 'path', 'showCurrent', function() {
+  currentPath: computed('mode', 'path', 'showCurrent', function () {
     const mode = this.mode;
     const path = this.path;
     const showCurrent = this.showCurrent;
@@ -36,7 +36,7 @@ export default Component.extend({
     'path',
     'root',
     'showCurrent',
-    function() {
+    function () {
       let crumbs = [];
       const root = this.root;
       const baseKey = this.baseKey?.display || this.baseKey?.id;

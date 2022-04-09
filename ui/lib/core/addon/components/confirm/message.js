@@ -42,7 +42,7 @@ export default Component.extend({
   triggerText: 'Delete',
   confirmButtonText: 'Delete',
   cancelButtonText: 'Cancel',
-  showConfirm: computed('id', 'renderedTrigger', function() {
+  showConfirm: computed('id', 'renderedTrigger', function () {
     return this.renderedTrigger === this.id;
   }),
   actions: {

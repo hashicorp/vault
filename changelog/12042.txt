@@ -1,0 +1,3 @@
+```release-note:changes
+api: A request that fails field validation will now be responded to with a 400 rather than 500.
+```

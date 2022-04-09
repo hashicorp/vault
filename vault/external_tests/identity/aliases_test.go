@@ -4,63 +4,12 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/credential/github"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/vault/builtin/credential/github"
-	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 )
-
-func TestIdentityStore_EntityAliasLocalMount(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"ldap": credLdap.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
-	client := cluster.Cores[0].Client
-
-	// Create a local auth mount
-	err := client.Sys().EnableAuthWithOptions("ldap", &api.EnableAuthOptions{
-		Type:  "ldap",
-		Local: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Extract out the mount accessor for LDAP auth
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ldapMountAccessor := auths["ldap/"].Accessor
-
-	// Create an entity
-	secret, err := client.Logical().Write("identity/entity", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entityID := secret.Data["id"].(string)
-
-	// Attempt to create an entity alias against a local mount should fail
-	secret, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "testuser",
-		"mount_accessor": ldapMountAccessor,
-		"canonical_id":   entityID,
-	})
-	if err == nil {
-		t.Fatalf("expected error since mount is local")
-	}
-}
 
 func TestIdentityStore_ListAlias(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
@@ -217,5 +166,87 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 				t.Fatalf("bad mount type: %v", curr["mount_type"])
 			}
 		}
+	}
+}
+
+// TestIdentityStore_RenameAlias_CannotMergeEntity verifies that an error is
+// returned on an attempt to rename an alias to match another alias with the
+// same mount accessor.  This used to result in a merge entity.
+func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	// Now create a new unrelated entity and alias
+	entityResp, err := client.Logical().Write("identity/entity", map[string]interface{}{
+		"name": "bob-smith",
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, entityResp)
+	}
+	if entityResp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+
+	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+		"name":           "bob",
+		"mount_accessor": mountAccessor,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, aliasResp)
+	}
+	aliasID2 := aliasResp.Data["id"].(string)
+
+	// Rename this new alias to have the same name as the one implicitly created by our login as bsmith
+	_, err = client.Logical().Write("identity/entity-alias/id/"+aliasID2, map[string]interface{}{
+		"name": "bsmith",
+	})
+	if err == nil {
+		t.Fatal("expected rename over existing entity to fail")
 	}
 }

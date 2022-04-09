@@ -101,8 +101,6 @@
   }
 
   @media (--medium-up) {
-    height: unset;
-
     & div {
       height: unset;
     }

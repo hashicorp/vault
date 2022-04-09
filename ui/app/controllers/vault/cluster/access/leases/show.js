@@ -6,7 +6,7 @@ import Controller, { inject as controller } from '@ember/controller';
 export default Controller.extend({
   clusterController: controller('vault.cluster'),
 
-  backendCrumb: computed('clusterController.model.name', function() {
+  backendCrumb: computed('clusterController.model.name', function () {
     return {
       label: 'leases',
       text: 'leases',
@@ -36,7 +36,7 @@ export default Controller.extend({
             flash.success(`The lease ${model.id} was successfully renewed.`);
           });
         })
-        .catch(e => {
+        .catch((e) => {
           const errString = e.errors.join('.');
           flash.danger(`There was an error renewing the lease: ${errString}`);
         });

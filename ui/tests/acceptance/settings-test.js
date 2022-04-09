@@ -6,25 +6,25 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 
-module('Acceptance | settings', function(hooks) {
+module('Acceptance | settings', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     return logout.visit();
   });
 
-  test('settings', async function(assert) {
+  test('settings', async function (assert) {
     const now = new Date().getTime();
     const type = 'consul';
     const path = `path-${now}`;
 
     // mount unsupported backend
     await visit('/vault/settings/mount-secret-backend');
-    await settled();
+
     assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
 
     await mountSecrets.selectType(type);

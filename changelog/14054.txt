@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Swap browser localStorage in favor of sessionStorage
+```

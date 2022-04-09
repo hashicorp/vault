@@ -238,6 +238,12 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.UpdateOperation, "foo/bar", false, true},
 		{logical.CreateOperation, "foo/bar", true, true},
 
+		{logical.ReadOperation, "baz/quux", true, false},
+		{logical.CreateOperation, "baz/quux", true, false},
+		{logical.PatchOperation, "baz/quux", true, false},
+		{logical.ListOperation, "baz/quux", false, false},
+		{logical.UpdateOperation, "baz/quux", false, false},
+
 		// Path segment wildcards
 		{logical.ReadOperation, "test/foo/bar/segment", false, false},
 		{logical.ReadOperation, "test/foo/segment", true, false},
@@ -341,6 +347,12 @@ func testLayeredACL(t *testing.T, acl *ACL, ns *namespace.Namespace) {
 		{logical.ListOperation, "foo/bar", false, false},
 		{logical.UpdateOperation, "foo/bar", false, false},
 		{logical.CreateOperation, "foo/bar", false, false},
+
+		{logical.ReadOperation, "baz/quux", false, false},
+		{logical.ListOperation, "baz/quux", false, false},
+		{logical.UpdateOperation, "baz/quux", false, false},
+		{logical.CreateOperation, "baz/quux", false, false},
+		{logical.PatchOperation, "baz/quux", false, false},
 	}
 
 	for _, tc := range tcases {
@@ -621,7 +633,6 @@ func TestACL_SegmentWildcardPriority(t *testing.T) {
 	// These test cases should each have a read rule and an update rule, where
 	// the update rule wins out due to being more specific.
 	poltests := []poltest{
-
 		{
 			// Verify edge conditions.  Here '*' is more specific both because
 			// of first wildcard position (0 vs -1/infinity) and #wildcards.
@@ -864,6 +875,9 @@ path "sys/*" {
 path "foo/bar" {
 	capabilities = ["read", "create", "sudo"]
 }
+path "baz/quux" {
+	capabilities = ["read", "create", "patch"]
+}
 path "test/+/segment" {
 	capabilities = ["read"]
 }
@@ -910,6 +924,9 @@ path "sys/seal" {
 	policy = "sudo"
 }
 path "foo/bar" {
+	capabilities = ["deny"]
+}
+path "baz/quux" {
 	capabilities = ["deny"]
 }
 `

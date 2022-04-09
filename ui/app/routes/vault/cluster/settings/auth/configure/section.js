@@ -63,14 +63,14 @@ export default Route.extend(UnloadModelRoute, {
     }
     return this.store
       .findRecord(modelType, backend.id)
-      .then(config => {
+      .then((config) => {
         config.set('backend', backend);
         return RSVP.hash({
           model: config,
           section,
         });
       })
-      .catch(e => {
+      .catch((e) => {
         let config;
         // if you haven't saved a config, the API 404s, so create one here to edit and return it
         if (e.httpStatus === 404) {

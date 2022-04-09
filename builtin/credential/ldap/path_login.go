@@ -73,7 +73,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
-	policies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	effectiveUsername, policies, resp, groupNames, err := b.Login(ctx, req, username, password)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -96,8 +96,15 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		},
 		DisplayName: username,
 		Alias: &logical.Alias{
-			Name: username,
+			Name: effectiveUsername,
+			Metadata: map[string]string{
+				"name": username,
+			},
 		},
+	}
+
+	if cfg.UsernameAsAlias {
+		auth.Alias.Name = username
 	}
 
 	cfg.PopulateTokenAuth(auth)
@@ -132,7 +139,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	_, loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}

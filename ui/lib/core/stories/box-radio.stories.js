@@ -41,7 +41,7 @@ storiesOf('BoxRadio', module)
         displayName: text('displayName', 'HashiCorp'),
         type: select('glyph', GLYPHS, 'hashicorp'),
         disabled: boolean('disabled', false),
-        onRadioChange: e => {
+        onRadioChange: (e) => {
           console.log('Radio changed!', e);
         },
       },

@@ -1,27 +1,21 @@
 <div class="box is-fullwidth is-shadowless is-marginless">
   <h4 class="title is-5 is-marginless">
-    Create a path filter config for <code>{{model.config.id}}</code>
+    Create a path filter config for
+    <code>{{this.model.config.id}}</code>
   </h4>
 </div>
-<form {{action "saveConfig" model.config on="submit"}}>
-  {{path-filter-config-list
-    paths=model.paths
-    config=model.config
-  }}
+<form {{action "saveConfig" this.model.config on="submit"}}>
+  <PathFilterConfigList @paths={{this.model.paths}} @config={{this.model.config}} />
   <div class="field is-grouped box is-fullwidth is-shadowless">
     <div class="control">
-      <button type="submit" class="button is-primary" >
+      <button type="submit" class="button is-primary">
         Create
       </button>
     </div>
     <div class="control">
-      {{#link-to
-        "mode.secondaries.config-show"
-        model.config.id
-        class="button"
-        }}
+      <LinkTo @route="mode.secondaries.config-show" @model={{this.model.config.id}} class="button">
         Cancel
-      {{/link-to}}
+      </LinkTo>
     </div>
   </div>
 </form>

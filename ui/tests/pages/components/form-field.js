@@ -15,7 +15,8 @@ export default {
   hasSearchSelect: isPresent('[data-test-component=search-select]'),
   hasTextFile: isPresent('[data-test-component=text-file]'),
   hasTTLPicker: isPresent('[data-test-toggle-input="Foo"]'),
-  hasJSONEditor: isPresent('[data-test-component=json-editor]'),
+  hasJSONEditor: isPresent('[data-test-component="code-mirror-modifier"]'),
+  hasJSONClearButton: isPresent('[data-test-json-clear-button]'),
   hasSelect: isPresent('select'),
   hasInput: isPresent('input'),
   hasCheckbox: isPresent('input[type=checkbox]'),
@@ -40,16 +41,16 @@ export default {
     inputChecked: attribute('checked', 'input[type=checkbox]'),
     selectValue: value('select'),
   }),
-  fillInTextarea: async function(name, value) {
+  fillInTextarea: async function (name, value) {
     return this.fields
-      .filter(field => {
+      .filter((field) => {
         return field.for.includes(name);
       })[0]
       .textarea(value);
   },
-  fillIn: async function(name, value) {
+  fillIn: async function (name, value) {
     return this.fields
-      .filter(field => {
+      .filter((field) => {
         return field.for.includes(name);
       })[0]
       .input(value);

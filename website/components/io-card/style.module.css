@@ -1,0 +1,148 @@
+.card {
+  /* Radii */
+  --token-radius: 6px;
+
+  /* Spacing */
+  --token-spacing-03: 8px;
+  --token-spacing-04: 16px;
+  --token-spacing-05: 24px;
+  --token-spacing-06: 32px;
+
+  /* Elevations */
+  --token-elevation-mid: 0 2px 3px rgba(101, 106, 118, 0.1),
+    0 8px 16px -10px rgba(101, 106, 118, 0.2);
+  --token-elevation-high: 0 2px 3px rgba(101, 106, 118, 0.15),
+    0 16px 16px -10px rgba(101, 106, 118, 0.2);
+
+  /* Transition */
+  --token-transition: ease-in-out 0.2s;
+
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 300px;
+
+  & a {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    border-radius: var(--token-radius);
+    box-shadow: 0 0 0 1px rgba(38, 53, 61, 0.1), var(--token-elevation-mid);
+    transition: var(--token-transition);
+    transition-property: background-color, box-shadow;
+
+    &:hover {
+      box-shadow: 0 0 0 2px rgba(38, 53, 61, 0.15), var(--token-elevation-high);
+      cursor: pointer;
+    }
+
+    /* Variants */
+    &.dark {
+      background-color: var(--gray-1);
+
+      &:hover {
+        background-color: var(--gray-2);
+      }
+    }
+
+    &.gray {
+      background-color: #f9f9fa;
+    }
+
+    &.light {
+      background-color: var(--white);
+    }
+
+    /* Spacing */
+    &.none {
+      padding: 0;
+    }
+
+    &.sm {
+      padding: var(--token-spacing-05);
+    }
+
+    &.md {
+      padding: var(--token-spacing-06);
+    }
+  }
+}
+
+.eyebrow {
+  margin: 0;
+  composes: g-type-label-small from global;
+  color: var(--gray-3);
+
+  @nest .dark & {
+    color: var(--gray-5);
+  }
+}
+
+.heading {
+  margin: 0;
+  composes: g-type-display-5 from global;
+  color: var(--black);
+
+  @nest * + & {
+    margin-top: var(--token-spacing-05);
+  }
+
+  @nest .dark & {
+    color: var(--white);
+  }
+}
+
+.description {
+  margin: 0;
+  composes: g-type-body-small from global;
+  color: var(--gray-3);
+
+  @nest * + & {
+    margin-top: var(--token-spacing-03);
+  }
+
+  @nest .dark & {
+    color: var(--gray-5);
+  }
+}
+
+.footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 32px;
+}
+
+.products {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+
+  & > li {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+  }
+
+  & .logo {
+    display: flex;
+
+    & svg {
+      width: 32px;
+      height: 32px;
+    }
+  }
+}
+
+.linkType {
+  margin-left: auto;
+  display: flex;
+  color: var(--black);
+
+  @nest .dark & {
+    color: var(--white);
+  }
+}

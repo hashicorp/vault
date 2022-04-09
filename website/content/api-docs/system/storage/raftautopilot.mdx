@@ -3,10 +3,16 @@ layout: api
 page_title: /sys/storage/raft/autopilot - HTTP API
 description: |-
 
-  The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot with Vault's Raft storage backend.
+  The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot with Vault's Integrated Storage backend.
 
   These endpoints are inactive on DR secondaries currently.
 ---
+
+# `/sys/storage/raft/autopilot`
+
+The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot
+with Vault's [Integrated Storage backend](/docs/internals/integrated-storage).
+Refer to the [Integrated Storage Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot?in=vault/raft) tutorial to learn how to manage raft clusters using autopilot.
 
 ## Get Cluster State
 
@@ -79,7 +85,7 @@ $ curl \
 
 ## Get Configuration
 
-This endpoint is used to get the configuration of the autopilot subsystem of integrated storage.
+This endpoint is used to get the configuration of the autopilot subsystem of Integrated Storage.
 
 | Method | Path                                        |
 | :----- | :------------------------------------------ |
@@ -108,7 +114,7 @@ $ curl \
 
 ## Set Configuration
 
-This endpoint is used to modify the configuration of the autopilot subsystem of integrated storage.
+This endpoint is used to modify the configuration of the autopilot subsystem of Integrated Storage.
 
 | Method | Path                                        |
 | :----- | :------------------------------------------ |

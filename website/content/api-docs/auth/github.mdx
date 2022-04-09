@@ -27,6 +27,8 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 - `organization` `(string: <required>)` - The organization users must be part
   of.
+- `organization_id` `(int: 0)` - The ID of the organization users must be part
+  of. Vault will attempt to fetch and set this value if it is not provided.
 - `base_url` `(string: "")` - The API endpoint to use. Useful if you are running
   GitHub Enterprise or an API-compatible authentication server.
 

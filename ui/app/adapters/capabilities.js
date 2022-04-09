@@ -8,7 +8,7 @@ export default ApplicationAdapter.extend({
   },
 
   findRecord(store, type, id) {
-    return this.ajax(this.buildURL(type), 'POST', { data: { paths: [id] } }).catch(e => {
+    return this.ajax(this.buildURL(type), 'POST', { data: { paths: [id] } }).catch((e) => {
       if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/capabilities-self');
       }
@@ -21,7 +21,7 @@ export default ApplicationAdapter.extend({
     if (!id) {
       return;
     }
-    return this.findRecord(store, type, id).then(resp => {
+    return this.findRecord(store, type, id).then((resp) => {
       resp.path = id;
       return resp;
     });

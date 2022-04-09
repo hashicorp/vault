@@ -1,0 +1,3 @@
+```release-note:bug
+auth/ldap: Fix a bug where the LDAP auth method does not return the request_timeout configuration parameter on config read.
+```

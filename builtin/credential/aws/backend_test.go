@@ -1129,6 +1129,22 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 			}
 		}
 
+		// Configure additional metadata to be returned for ec2 logins.
+		identity := map[string]interface{}{
+			"ec2_metadata": []string{"instance_id", "region", "ami_id"},
+		}
+
+		// store the identity
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Path:      "config/identity",
+			Data:      identity,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		loginInput := map[string]interface{}{
 			"pkcs7": pkcs7,
 			"nonce": "vault-client-nonce",
@@ -1241,6 +1257,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 		delete(loginInput, "pkcs7")
 		loginInput["identity"] = identityDoc
 		loginInput["signature"] = identityDocSig
+
 		resp, err = b.HandleRequest(context.Background(), loginRequest)
 		if err != nil {
 			t.Fatal(err)

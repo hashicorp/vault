@@ -3,7 +3,7 @@ import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default RESTSerializer.extend(EmbeddedRecordsMixin, {
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
@@ -28,7 +28,7 @@ export default RESTSerializer.extend(EmbeddedRecordsMixin, {
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nodes = payload.nodes
-      ? Object.keys(payload.nodes).map(name => this.nodeFromObject(name, payload))
+      ? Object.keys(payload.nodes).map((name) => this.nodeFromObject(name, payload))
       : [assign(payload, { id: '1' })];
 
     const transformedPayload = { nodes: nodes };

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database: Fixed an issue that prevented external database plugin processes from restarting after a shutdown.
+```
