@@ -51,7 +51,7 @@ func TestDefaultConfig_envvar(t *testing.T) {
 	}
 }
 
-func TestReturnErrorOnMissing(t *testing.T) {
+func TestConfigEnvVarReturnErrorOnMissing(t *testing.T) {
 	os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "True")
 	defer os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "")
 
