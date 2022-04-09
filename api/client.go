@@ -607,7 +607,6 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CheckRetry = c.config.CheckRetry
 	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
-	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
@@ -1050,7 +1049,6 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 		CheckRetry:           config.CheckRetry,
 		Logger:               config.Logger,
 		Limiter:              config.Limiter,
-		OutputCurlString:     config.OutputCurlString,
 		AgentAddress:         config.AgentAddress,
 		SRVLookup:            config.SRVLookup,
 		CloneHeaders:         config.CloneHeaders,
