@@ -47,7 +47,7 @@ func testBackendConfigAccess(t *testing.T, version string, bootstrap bool) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, bootsbootstrap)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, bootstrap)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -721,7 +721,7 @@ func TestBackend_Roles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -850,7 +850,7 @@ func testBackendEntNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -970,7 +970,7 @@ func testBackendEntPartition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
