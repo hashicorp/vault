@@ -18,20 +18,20 @@ const BACKENDS = supportedAuthBackends();
  *
  * @example ```js
  * // All properties are passed in via query params.
- * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}} />```
+ * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}} @customPath={{mountPath}} />```
  *
  * @param {string} wrappedToken - The auth method that is currently selected in the dropdown.
  * @param {object} cluster - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
  * @param {string} namespace- The currently active namespace.
  * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
  * @param {function} onSuccess - Fired on auth success
+ * @param {string} customPath - The mount path that is currently set.
  */
 
 const DEFAULTS = {
   token: null,
   username: null,
   password: null,
-  customPath: null,
 };
 
 export default Component.extend(DEFAULTS, {
@@ -47,6 +47,7 @@ export default Component.extend(DEFAULTS, {
   cluster: null,
   namespace: null,
   wrappedToken: null,
+  customPath: null,
   // internal
   oldNamespace: null,
   authMethods: BACKENDS,

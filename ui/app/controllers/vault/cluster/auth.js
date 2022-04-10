@@ -11,7 +11,7 @@ export default Controller.extend({
   auth: service(),
   router: service(),
 
-  queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
+  queryParams: [{ authMethod: 'with', oidcProvider: 'o', mountPath: 'path' }],
 
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
@@ -20,6 +20,7 @@ export default Controller.extend({
 
   authMethod: '',
   oidcProvider: '',
+  mountPath: '',
 
   get managedNamespaceChild() {
     let fullParam = this.namespaceQueryParam;
