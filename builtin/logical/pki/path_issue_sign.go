@@ -20,7 +20,7 @@ func pathIssue(b *backend) *framework.Path {
 }
 
 func pathIssuerIssue(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex("ref") + "/issue/" + framework.GenericNameRegex("role")
+	pattern := "issuer/" + framework.GenericNameRegex("issuer_ref") + "/issue/" + framework.GenericNameRegex("role")
 	return buildPathIssue(b, pattern)
 }
 
@@ -46,7 +46,7 @@ func pathSign(b *backend) *framework.Path {
 }
 
 func pathIssuerSign(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex("ref") + "/sign/" + framework.GenericNameRegex("role")
+	pattern := "issuer/" + framework.GenericNameRegex("issuer_ref") + "/sign/" + framework.GenericNameRegex("role")
 	return buildPathSign(b, pattern)
 }
 
@@ -74,7 +74,7 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 }
 
 func pathIssuerSignVerbatim(b *backend) *framework.Path {
-	pattern := "issuers/" + framework.GenericNameRegex("ref") + "/sign-verbatim"
+	pattern := "issuers/" + framework.GenericNameRegex("issuer_ref") + "/sign-verbatim"
 	return buildPathIssuerSignVerbatim(b, pattern)
 }
 
@@ -218,7 +218,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, logical.ErrReadOnly
 	}
 
-	issuerName := data.Get("ref").(string)
+	issuerName := data.Get("issuer_ref").(string)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}

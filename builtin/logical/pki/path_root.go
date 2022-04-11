@@ -153,7 +153,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
-	resp.Data["id"] = myIssuer.ID
+	resp.Data["issuer_id"] = myIssuer.ID
 	resp.Data["key_id"] = myKey.ID
 
 	// Also store it as just the certificate identified by serial number, so it
@@ -192,7 +192,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	issuerName := data.Get("ref").(string)
+	issuerName := data.Get("issuer_ref").(string)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -341,7 +341,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	issuerName := data.Get("ref").(string)
+	issuerName := data.Get("issuer_ref").(string)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
