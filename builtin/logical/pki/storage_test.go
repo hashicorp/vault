@@ -3,6 +3,8 @@ package pki
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -155,6 +157,136 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, key2.PrivateKey, key2_ref.PrivateKey)
 	require.Equal(t, key2.ID, key2_ref.ID)
 	require.Equal(t, "", key2_ref.Name)
+}
+
+func Test_CAChainBuilding(t *testing.T) {
+	// Each step of the process we import a CA and (its key) and validate
+	// the CA Chain at that stage. Each Cert import should be unique, but
+	// duplicating keys is expected. We map PEM->PEM to ensure things line up
+	// nicely. If the import errors, the chain isn't checked.
+	//
+	// For ease of reading, these test cases are defined in a separate file,
+	// constants_for_test.go.
+	for testCaseIndex, test := range chainBuildingTestCases {
+		// We want to guarantee that the results are stable. This is costly
+		// to do at each step, so instead do it at the end. But, use the step
+		// iteration to build the validation data.
+		var mapIssuersChain map[issuerId]string
+
+		_, s := createBackendWithStorage(t)
+		for testStepIndex, step := range test.Steps {
+			logPrefix := fmt.Sprintf("[test case %v / test step %v] ", testCaseIndex, testStepIndex)
+
+			var err error
+			var existing bool
+			var k *key
+			var i *issuer
+
+			// We've gotta import keys before certs sometimes for testing,
+			// so let's do it deterministically on the index of the cert.
+			if testStepIndex%2 == 0 {
+				if step.Key != "" {
+					k, existing, err = importKey(ctx, s, step.Key, "")
+					require.NoError(t, err, logPrefix+"expected importing key to always work without error")
+					require.Equal(t, existing, step.KeyIsExisting, logPrefix+"expecting equal results from import, key existing values")
+				}
+
+				_, _, err = importIssuer(ctx, s, step.Cert, "")
+				if err != nil != step.CertImportErrors {
+					t.Fatalf(logPrefix+"expected cert import to error: %v -- actual err: %v", step.CertImportErrors, err)
+				}
+
+				// Can validate the key/issuer link when the key is imported
+				// first.
+				if i != nil && k != nil {
+					require.Equal(t, k.ID, i.KeyID, logPrefix+"expecting imported key, issuer to match k.ID == i.KeyID")
+				}
+			} else {
+				// As above, in opposite order.
+				i, existing, err = importIssuer(ctx, s, step.Cert, "")
+				if (err != nil) != step.CertImportErrors {
+					t.Fatalf(logPrefix+"expected cert import to error: %v -- actual err: %v", step.CertImportErrors, err)
+				}
+
+				if step.Key != "" {
+					k, existing, err = importKey(ctx, s, step.Key, "")
+					require.NoError(t, err, logPrefix+"expected importing key to always work without error")
+					require.Equal(t, existing, step.KeyIsExisting, logPrefix+"expecting equal results from import, key existing values")
+				}
+
+				// Can validate the key/issuer link when the key is existing.
+				if existing && i != nil && k != nil {
+					require.Equal(t, k.ID, i.KeyID, logPrefix+"expecting imported key, issuer to match k.ID == i.KeyID")
+				}
+			}
+
+			if step.CertImportErrors {
+				// Skip chain validation.
+				continue
+			}
+
+			// Now validate all certs' CAChain fields. Set ourselves up to
+			// guarantee a stable ordering too.
+			issuers, err := listIssuers(ctx, s)
+			require.NoError(t, err, logPrefix+"unable to list issuers")
+			mapIssuersChain = make(map[issuerId]string)
+
+			for _, identifier := range issuers {
+				issuer, err := fetchIssuerById(ctx, s, identifier)
+				require.NoError(t, err)
+
+				for cert, chain := range step.CAChain {
+					if issuer.Certificate != cert {
+						continue
+					}
+
+					if len(issuer.CAChain) != len(chain) {
+						t.Fatalf(logPrefix+"validating certificate %v / issuer %v: different length of chains: got %v / expected %v", cert, issuer, len(issuer.CAChain), len(chain))
+					}
+
+					for index, chainCert := range issuer.CAChain {
+						mapIssuersChain[identifier] += chainCert
+
+						if strings.Count(chainCert, "BEGIN CERTIFICATE") != 1 {
+							t.Fatalf(logPrefix+"validating certificate %v / issuer %v: concat'd cert in chain field at index %v: got %v", cert, issuer, index, chainCert)
+						}
+
+						if !strings.Contains(chain[index], chainCert) {
+							t.Fatalf(logPrefix+"validating certificate %v / issuer %v: different entry in chain at index %v: got %v / expected %v", cert, issuer, index, chainCert, chain[index])
+						}
+					}
+				}
+			}
+		}
+
+		// Finally, rebuild the full chain a few more times and ensure
+		// the order is the same.
+		for count := 0; count < 100; count++ {
+			logPrefixStable := fmt.Sprintf("[test case %v / stability iteration: %v] ", testCaseIndex, count)
+			err := rebuildIssuersChains(ctx, s, nil)
+			require.NoError(t, err, logPrefixStable+"error building chain")
+
+			if len(mapIssuersChain) == 0 {
+				t.Fatal(logPrefixStable + "expected non-empty mapIssuersChain")
+			}
+
+			for identifier, originalChain := range mapIssuersChain {
+				if len(originalChain) == 0 {
+					t.Fatalf(logPrefixStable+"expected non-empty chain for issuer: %v", identifier)
+				}
+
+				issuer, err := fetchIssuerById(ctx, s, identifier)
+				require.NoError(t, err, logPrefixStable+"unable to fetch issuer")
+
+				var newChain string
+				for _, chainCert := range issuer.CAChain {
+					newChain += chainCert
+				}
+
+				require.Equal(t, originalChain, newChain, logPrefixStable+"expected stable sort order")
+			}
+		}
+	}
 }
 
 func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
