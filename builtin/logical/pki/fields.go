@@ -2,6 +2,10 @@ package pki
 
 import "github.com/hashicorp/vault/sdk/framework"
 
+const (
+	issuerRefParam = "issuer_ref"
+)
+
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
 // and signing
 func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
@@ -338,26 +342,9 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 	return fields
 }
 
-func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields = addKeyNameField(fields)
-	fields = addKeyRefField(fields)
-	return fields
-}
-
 func addIssuerRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields = addIssuerNameField(fields)
 	fields = addIssuerRefField(fields)
-	return fields
-}
-
-func addIssuerRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields["issuer_ref"] = &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Reference to a existing issuer; either "default"
-for the configured default issuer, an identifier or the name assigned
-to the issuer.`,
-		Default: "default",
-	}
 	return fields
 }
 
@@ -367,6 +354,23 @@ func addIssuerNameField(fields map[string]*framework.FieldSchema) map[string]*fr
 		Description: `Provide a name to the generated issuer, the name
 must be unique across all issuers and not be the reserved value 'default'`,
 	}
+	return fields
+}
+
+func addIssuerRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[issuerRefParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing issuer; either "default"
+for the configured default issuer, an identifier or the name assigned
+to the issuer.`,
+		Default: "default",
+	}
+	return fields
+}
+
+func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addKeyNameField(fields)
+	fields = addKeyRefField(fields)
 	return fields
 }
 
