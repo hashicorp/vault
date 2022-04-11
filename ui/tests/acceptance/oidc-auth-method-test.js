@@ -53,7 +53,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
     assert.expect(3); // request is fired more than once -- so three assertions instead of two
-
+    
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
         auth: {
@@ -61,6 +61,7 @@ module('Acceptance | oidc auth method', function (hooks) {
         },
       },
     }));
+
     this.server.post('/auth/test-path/oidc/auth_url', () => {
       assert.ok(true, 'auth_url request made to correct non-standard mount path');
       return { data: { auth_url: 'http://example.com' } };
