@@ -12,7 +12,7 @@ import (
 )
 
 func pathGenerateIntermediate(b *backend) *framework.Path {
-	return commonGenerateIntermediate(b, "intermediate/generate/"+framework.GenericNameRegex("exported"))
+	return buildPathGenerateIntermediate(b, "intermediate/generate/"+framework.GenericNameRegex("exported"))
 }
 
 func pathSetSignedIntermediate(b *backend) *framework.Path {
