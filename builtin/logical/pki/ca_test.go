@@ -257,13 +257,13 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	//  Load CA cert/key in and ensure we can fetch it back in various formats,
 	//  unauthenticated
 	{
-		// Attempt import but only provide one the cert
+		// Attempt import but only provide one the cert; this should work.
 		{
 			_, err := client.Logical().WriteWithContext(context.Background(), rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": caCert,
 			})
-			if err == nil {
-				t.Fatal("expected error")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
@@ -272,18 +272,18 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			_, err := client.Logical().WriteWithContext(context.Background(), rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": caKey,
 			})
-			if err == nil {
-				t.Fatal("expected error")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
-		// Import CA bundle
+		// Import entire CA bundle; this should work as well
 		{
 			_, err := client.Logical().WriteWithContext(context.Background(), rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": strings.Join([]string{caKey, caCert}, "\n"),
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
@@ -464,8 +464,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if resp != nil {
-				t.Fatal("expected nil response")
+			if resp == nil {
+				t.Fatal("nil response")
 			}
 		}
 
