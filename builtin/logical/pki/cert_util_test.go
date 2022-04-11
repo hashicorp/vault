@@ -92,13 +92,6 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 		Prefix string
 		Serial string
 	}{
-		"ca": {
-			&logical.Request{
-				Storage: storage,
-			},
-			"",
-			"ca",
-		},
 		"crl": {
 			&logical.Request{
 				Storage: storage,
