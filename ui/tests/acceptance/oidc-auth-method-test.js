@@ -52,7 +52,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   });
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
-    assert.expect(2);
+    assert.expect(3); // request is fired more than once -- so three assertions instead of two
 
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
@@ -61,13 +61,8 @@ module('Acceptance | oidc auth method', function (hooks) {
         },
       },
     }));
-    let didAssert;
     this.server.post('/auth/test-path/oidc/auth_url', () => {
-      // request may be fired more than once -- we are only concerned if the endpoint is hit, not how many times
-      if (!didAssert) {
-        assert.ok(true, 'auth_url request made to correct non-standard mount path');
-        didAssert = true;
-      }
+      assert.ok(true, 'auth_url request made to correct non-standard mount path');
       return { data: { auth_url: 'http://example.com' } };
     });
     // there was a bug that would result in the /auth/:path/login endpoint hit with an empty payload rather than lookup-self
