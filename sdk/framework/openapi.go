@@ -325,7 +325,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 			op.Summary = props.Summary
 			op.Description = props.Description
-			op.Deprecated = props.Deprecated
+			op.Deprecated = props.Deprecated || isDeprecatedPlugin(requestResponsePrefix)
 
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
@@ -759,4 +759,16 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 			oasOperation.OperationID = opID
 		}
 	}
+}
+
+func isDeprecatedPlugin(plugin string) bool {
+	deprecatedPlugins := []string{"pcf", "cassandra", "mongodb", "mssql", "mysql", "postgresql"}
+
+	for _, v := range deprecatedPlugins {
+		if v == plugin {
+			return true
+		}
+	}
+
+	return false
 }
