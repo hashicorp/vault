@@ -65,6 +65,13 @@ behavior. Autopilot gets initialized with the following default values.
 
 - `server_stabilization_time` - `10s`
 
+~> **Note**: Autopilot in Vault does similar things to what autopilot does in
+[Consul](https://www.consul.io/). However, the configuration in these 2 systems
+differ in terms of default values and thresholds; some additional parameters
+might also show up in Vault in comparison to Consul as well. Autopilot in Vault
+and Consul use different technical underpinnings requiring these differences, to
+provide the autopilot functionality.
+
 ## Replication
 
 Performance secondary clusters have their own Autopilot configuration, managed
