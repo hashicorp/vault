@@ -1,27 +1,21 @@
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
-import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object'; // eslint-disable-line
+import { alias } from '@ember/object/computed'; // eslint-disable-line
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import KeyMixin from 'vault/mixins/key-mixin';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { validator, buildValidations } from 'ember-cp-validations';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
-const Validations = buildValidations({
+const validations = {
   maxVersions: [
-    validator('number', {
-      allowString: true,
-      integer: true,
-      message: 'Maximum versions must be a number.',
-    }),
-    validator('length', {
-      min: 1,
-      max: 16,
-      message: 'You cannot go over 16 characters.',
-    }),
+    { type: 'number', options: { asString: true }, message: 'Maximum versions must be a number.' },
+    { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
   ],
-});
+};
 
-export default Model.extend(KeyMixin, Validations, {
+@withModelValidations(validations)
+class SecretV2Model extends Model {}
+export default SecretV2Model.extend(KeyMixin, {
   failedServerRead: attr('boolean'),
   engine: belongsTo('secret-engine', { async: false }),
   engineId: attr('string'),

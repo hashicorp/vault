@@ -213,16 +213,11 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
     await editPage.toggleMetadata();
     await settled();
-    /* TODO
-     * commenting out for now until ember-cp-validations is updated or removed
-     * throws an error when attempting to use isHTMLSafe which is imported from @ember/string in the cp-validations code
-     * in ember 3.28 the import changed to @ember/template
-     */
-    // await typeIn('[data-test-input="maxVersions"]', 'abc');
-    // assert
-    //   .dom('[data-test-input="maxVersions"]')
-    //   .hasClass('has-error-border', 'shows border error on input with error');
-    // assert.dom('[data-test-secret-save]').isDisabled('Save button is disabled');
+    await typeIn('[data-test-input="maxVersions"]', 'abc');
+    assert
+      .dom('[data-test-input="maxVersions"]')
+      .hasClass('has-error-border', 'shows border error on input with error');
+    assert.dom('[data-test-secret-save]').isDisabled('Save button is disabled');
     await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
     await editPage.path(secretPath);

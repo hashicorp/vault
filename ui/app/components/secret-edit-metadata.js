@@ -54,6 +54,7 @@ export default class SecretEditMetadata extends Component {
     if (value) {
       if (name === 'customMetadata') {
         // cp validations won't work on an object so performing validations here
+        // JLR TODO: review this and incorporate into model-validations system
         /* eslint-disable no-useless-escape */
         let regex = /^[^\\]+$/g; // looking for a backward slash
         value.match(regex)
@@ -62,9 +63,12 @@ export default class SecretEditMetadata extends Component {
       }
       if (name === 'maxVersions') {
         this.args.model.maxVersions = value;
-        this.args.model.validations.attrs.maxVersions.isValid
+        const {
+          state: { maxVersions },
+        } = this.args.model.validate();
+        maxVersions.isValid
           ? set(this.validationMessages, name, '')
-          : set(this.validationMessages, name, this.args.model.validations.attrs.maxVersions.message);
+          : set(this.validationMessages, name, maxVersions.errors.join('. '));
       }
     }
 
