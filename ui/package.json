@@ -63,7 +63,7 @@
     "@ember/test-waiters": "^3.0.0",
     "@glimmer/component": "^1.0.3",
     "@glimmer/tracking": "^1.0.3",
-    "@hashicorp/ember-flight-icons": "^1.1.0",
+    "@hashicorp/ember-flight-icons": "2.0.3",
     "@hashicorp/structure-icons": "^1.3.0",
     "@icholy/duration": "^5.1.0",
     "@storybook/cli": "^6.3.10",
@@ -214,7 +214,7 @@
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
     "xmlhttprequest-ssl": "^1.6.2",
-    "@hashicorp/ember-flight-icons": "^1.1.0"
+    "@hashicorp/ember-flight-icons": "2.0.3"
   },
   "engines": {
     "node": "12.* || 14.* || >= 16"

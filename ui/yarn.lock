@@ -3657,19 +3657,19 @@
   resolved "https://registry.yarnpkg.com/@handlebars/parser/-/parser-2.0.0.tgz#5e8b7298f31ff8f7b260e6b7363c7e9ceed7d9c5"
   integrity sha512-EP9uEDZv/L5Qh9IWuMUGJRfwhXJ4h1dqKTT4/3+tY0eu7sPis7xh23j61SYUnNF4vqCQvvUXpDo9Bh/+q1zASA==
 
-"@hashicorp/ember-flight-icons@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@hashicorp/ember-flight-icons/-/ember-flight-icons-1.1.0.tgz#0305cce3e6538d20c1433a900cb448f9eefcf9a7"
-  integrity sha512-qJCpGYmsXqsjMZNA+AJO6xhCWM0lk2uRGrDhJX7qzZ3OjLvp7eFCy/jrMVYYRSt1DT0X/etc2Ta4AbxmkWzduA==
+"@hashicorp/ember-flight-icons@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@hashicorp/ember-flight-icons/-/ember-flight-icons-2.0.3.tgz#a1c70faa4b75838aef280cd032489daf6a6f9954"
+  integrity sha512-S1W8Yecu2zN9sN+HmIITV39/js8JgB/2WRTs0uw0HGMf5dHcRmJc7/5PMkWHQTW71GU7hs5Dna32klwWKkLEFw==
   dependencies:
-    "@hashicorp/flight-icons" "^1.2.0"
-    ember-cli-babel "^7.26.6"
-    ember-cli-htmlbars "^5.7.1"
+    "@hashicorp/flight-icons" "^2.2.0"
+    ember-cli-babel "^7.26.11"
+    ember-cli-htmlbars "^6.0.1"
 
-"@hashicorp/flight-icons@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@hashicorp/flight-icons/-/flight-icons-1.2.0.tgz#b3b61a24f7a7921d20ce4c3c49a2f63956f05f80"
-  integrity sha512-gMsPGbDXSBWe4v7sFjG+ZlQdc8ipNLi5w98muaKU5tUNG027b5XNy5chkiT1/gsygi5ZlKXU0klgC0JHZ44B8A==
+"@hashicorp/flight-icons@^2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@hashicorp/flight-icons/-/flight-icons-2.2.0.tgz#32a9766ed108e01d27167f228ccf589e7afdf30d"
+  integrity sha512-PDGJa4CrF1bmVde049ffoxm5E/sdmBC0tQqVWZGSokQq4YMr4m9ZYW2BEM00JX0gouZBiXBlw3+npWDb0JGXhQ==
 
 "@hashicorp/structure-icons@^1.3.0":
   version "1.8.1"
@@ -10527,7 +10527,7 @@ ember-cli-babel@^6.0.0-beta.4, ember-cli-babel@^6.16.0, ember-cli-babel@^6.6.0, 
     ember-cli-version-checker "^2.1.2"
     semver "^5.5.0"
 
-ember-cli-babel@^7.0.0, ember-cli-babel@^7.1.2, ember-cli-babel@^7.1.3, ember-cli-babel@^7.10.0, ember-cli-babel@^7.13.0, ember-cli-babel@^7.13.2, ember-cli-babel@^7.17.2, ember-cli-babel@^7.18.0, ember-cli-babel@^7.19.0, ember-cli-babel@^7.20.0, ember-cli-babel@^7.21.0, ember-cli-babel@^7.22.1, ember-cli-babel@^7.23.0, ember-cli-babel@^7.23.1, ember-cli-babel@^7.26.0, ember-cli-babel@^7.26.10, ember-cli-babel@^7.26.2, ember-cli-babel@^7.26.3, ember-cli-babel@^7.26.4, ember-cli-babel@^7.26.5, ember-cli-babel@^7.26.6, ember-cli-babel@^7.26.8, ember-cli-babel@^7.5.0, ember-cli-babel@^7.7.3:
+ember-cli-babel@^7.0.0, ember-cli-babel@^7.1.2, ember-cli-babel@^7.1.3, ember-cli-babel@^7.10.0, ember-cli-babel@^7.13.0, ember-cli-babel@^7.13.2, ember-cli-babel@^7.17.2, ember-cli-babel@^7.18.0, ember-cli-babel@^7.19.0, ember-cli-babel@^7.20.0, ember-cli-babel@^7.21.0, ember-cli-babel@^7.22.1, ember-cli-babel@^7.23.0, ember-cli-babel@^7.23.1, ember-cli-babel@^7.26.0, ember-cli-babel@^7.26.10, ember-cli-babel@^7.26.11, ember-cli-babel@^7.26.2, ember-cli-babel@^7.26.3, ember-cli-babel@^7.26.4, ember-cli-babel@^7.26.5, ember-cli-babel@^7.26.6, ember-cli-babel@^7.26.8, ember-cli-babel@^7.5.0, ember-cli-babel@^7.7.3:
   version "7.26.11"
   resolved "https://registry.yarnpkg.com/ember-cli-babel/-/ember-cli-babel-7.26.11.tgz#50da0fe4dcd99aada499843940fec75076249a9f"
   integrity sha512-JJYeYjiz/JTn34q7F5DSOjkkZqy8qwFOOxXfE6pe9yEJqWGu4qErKxlz8I22JoVEQ/aBUO+OcKTpmctvykM9YA==
