@@ -26,7 +26,7 @@ import (
 )
 
 func pathGenerateRoot(b *backend) *framework.Path {
-	return commonGenerateRoot(b, "root/generate/"+framework.GenericNameRegex("exported"))
+	return buildPathGenerateRoot(b, "root/generate/"+framework.GenericNameRegex("exported"))
 }
 
 func pathDeleteRoot(b *backend) *framework.Path {
