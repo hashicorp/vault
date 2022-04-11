@@ -1,8 +1,11 @@
 package pki
 
 import (
+	"context"
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/hashicorp/vault/sdk/framework"
 
@@ -79,17 +82,14 @@ func getManagedKeyId(data *framework.FieldData) (managedKeyId, error) {
 	return keyId, nil
 }
 
-func getExistingKeyRef(data *framework.FieldData) (string, error) {
-	keyRef, ok := data.GetOk("key_ref")
-	if !ok {
-		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_ref for existing type")}
-	}
-	trimmedKeyRef := strings.TrimSpace(keyRef.(string))
-	if len(trimmedKeyRef) == 0 {
+func getKeyRefWithErr(data *framework.FieldData) (string, error) {
+	keyRef := getKeyRef(data)
+
+	if len(keyRef) == 0 {
 		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_ref for existing type")}
 	}
 
-	return trimmedKeyRef, nil
+	return keyRef, nil
 }
 
 func getManagedKeyNameOrUUID(data *framework.FieldData) (name string, UUID string, err error) {
@@ -121,4 +121,76 @@ func getManagedKeyNameOrUUID(data *framework.FieldData) (name string, UUID strin
 	}
 
 	return keyName, keyUUID, nil
+}
+
+func getIssuerName(ctx context.Context, s logical.Storage, data *framework.FieldData) (string, error) {
+	issuerName := ""
+	issuerNameIface, ok := data.GetOk("issuer_name")
+	if ok {
+		issuerName = strings.TrimSpace(issuerNameIface.(string))
+
+		if strings.ToLower(issuerName) == "default" {
+			return "", errutil.UserError{Err: "reserved keyword 'default' can not be used as issuer name"}
+		}
+
+		if !nameMatcher.MatchString(issuerName) {
+			return "", errutil.UserError{Err: "issuer name contained invalid characters"}
+		}
+		issuer_id, err := resolveIssuerReference(ctx, s, issuerName)
+		if err == nil {
+			return "", errutil.UserError{Err: "issuer name already used."}
+		}
+
+		if err != nil && issuer_id != IssuerRefNotFound {
+			return "", errutil.InternalError{Err: err.Error()}
+		}
+	}
+	return issuerName, nil
+}
+
+func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldData) (string, error) {
+	keyName := ""
+	keyNameIface, ok := data.GetOk("key_name")
+	if ok {
+		keyName = strings.TrimSpace(keyNameIface.(string))
+
+		if strings.ToLower(keyName) == "default" {
+			return "", errutil.UserError{Err: "reserved keyword 'default' can not be used as key name"}
+		}
+
+		if !nameMatcher.MatchString(keyName) {
+			return "", errutil.UserError{Err: "key name contained invalid characters"}
+		}
+		key_id, err := resolveKeyReference(ctx, s, keyName)
+		if err == nil {
+			return "", errutil.UserError{Err: "key name already used."}
+		}
+
+		if err != nil && key_id != KeyRefNotFound {
+			return "", errutil.InternalError{Err: err.Error()}
+		}
+	}
+	return keyName, nil
+}
+
+func getIssuerRef(data *framework.FieldData) string {
+	return extractRef(data, "issuer_ref")
+}
+
+func getKeyRef(data *framework.FieldData) string {
+	return extractRef(data, "key_ref")
+}
+
+func extractRef(data *framework.FieldData, paramName string) string {
+	value := ""
+	issuerNameIface, ok := data.GetOk(paramName)
+	if ok {
+		value = strings.TrimSpace(issuerNameIface.(string))
+		if strings.ToLower(value) == "default" {
+			return "default"
+		}
+		return value
+	}
+
+	return value
 }

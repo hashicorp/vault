@@ -138,7 +138,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	for _, keyPem := range keys {
 		// Handle import of private key.
-		key, existing, err := importKey(ctx, req.Storage, keyPem)
+		key, existing, err := importKey(ctx, req.Storage, keyPem, "")
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}

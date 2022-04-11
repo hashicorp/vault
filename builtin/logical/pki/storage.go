@@ -36,6 +36,11 @@ func (p issuerId) String() string {
 	return string(p)
 }
 
+const (
+	IssuerRefNotFound = issuerId("not-found")
+	KeyRefNotFound    = keyId("not-found")
+)
+
 type key struct {
 	ID             keyId                   `json:"id" structs:"id" mapstructure:"id"`
 	Name           string                  `json:"name" structs:"name" mapstructure:"name"`
@@ -112,7 +117,7 @@ func deleteKey(ctx context.Context, s logical.Storage, id keyId) error {
 	return s.Delete(ctx, keyPrefix+id.String())
 }
 
-func importKey(ctx context.Context, s logical.Storage, keyValue string) (*key, bool, error) {
+func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName string) (*key, bool, error) {
 	// importKey imports the specified PEM-format key (from keyValue) into
 	// the new PKI storage format. The first return field is a reference to
 	// the new key; the second is whether or not the key already existed
@@ -154,6 +159,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string) (*key, b
 	// Haven't found a key, so we've gotta create it and write it into storage.
 	var result key
 	result.ID = genKeyId()
+	result.Name = keyName
 	result.PrivateKey = keyValue
 
 	// Extracting the signer is necessary for two reasons: first, to get the
@@ -270,7 +276,7 @@ func resolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 	}
 
 	// Otherwise, we must not have found the key.
-	return keyId("not-found"), errutil.UserError{Err: fmt.Sprintf("unable to find PKI key for reference: %v", reference)}
+	return KeyRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI key for reference: %v", reference)}
 }
 
 func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) (*issuer, error) {
@@ -488,7 +494,7 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 	}
 
 	// Otherwise, we must not have found the issuer.
-	return issuerId("not-found"), errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
+	return IssuerRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
 }
 
 // Builds a certutil.CertBundle from the specified issuer identifier,
@@ -519,7 +525,7 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 	return &bundle, nil
 }
 
-func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string) (*issuer, *key, error) {
+func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuer, *key, error) {
 	allKeyIds, err := listKeys(ctx, s)
 	if err != nil {
 		return nil, nil, err
@@ -530,7 +536,7 @@ func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.Ce
 		return nil, nil, err
 	}
 
-	myKey, _, err := importKey(ctx, s, caBundle.PrivateKey)
+	myKey, _, err := importKey(ctx, s, caBundle.PrivateKey, keyName)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -52,6 +52,10 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		return errorResp, nil
 	}
 
+	keyName, err := getKeyName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 	var resp *logical.Response
 	input := &inputBundle{
 		role:    role,
@@ -110,7 +114,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		}
 	}
 
-	myKey, _, err := importKey(ctx, req.Storage, csrb.PrivateKey)
+	myKey, _, err := importKey(ctx, req.Storage, csrb.PrivateKey, keyName)
 	if err != nil {
 		return nil, err
 	}
