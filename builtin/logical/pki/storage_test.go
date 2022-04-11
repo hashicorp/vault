@@ -102,29 +102,32 @@ func Test_KeysIssuerImport(t *testing.T) {
 	issuer1.ID = ""
 	issuer1.KeyID = ""
 
-	key1_ref1, existing, err := importKey(ctx, s, key1.PrivateKey)
+	key1_ref1, existing, err := importKey(ctx, s, key1.PrivateKey, "key1")
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, key1.PrivateKey, key1_ref1.PrivateKey)
 
-	key1_ref2, existing, err := importKey(ctx, s, key1.PrivateKey)
+	key1_ref2, existing, err := importKey(ctx, s, key1.PrivateKey, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key1.PrivateKey, key1_ref1.PrivateKey)
 	require.Equal(t, key1_ref1.ID, key1_ref2.ID)
+	require.Equal(t, key1_ref1.Name, key1_ref2.Name)
 
-	issuer1_ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate, "")
+	issuer1_ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate, "issuer1")
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, issuer1.Certificate, issuer1_ref1.Certificate)
 	require.Equal(t, key1_ref1.ID, issuer1_ref1.KeyID)
+	require.Equal(t, "issuer1", issuer1_ref1.Name)
 
-	issuer1_ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate, "")
+	issuer1_ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, issuer1.Certificate, issuer1_ref1.Certificate)
 	require.Equal(t, issuer1_ref1.ID, issuer1_ref2.ID)
 	require.Equal(t, key1_ref1.ID, issuer1_ref2.KeyID)
+	require.Equal(t, issuer1_ref1.Name, issuer1_ref2.Name)
 
 	err = writeIssuer(ctx, s, &issuer2)
 	require.NoError(t, err)
@@ -132,18 +135,20 @@ func Test_KeysIssuerImport(t *testing.T) {
 	err = writeKey(ctx, s, key2)
 	require.NoError(t, err)
 
-	issuer2_ref, existing, err := importIssuer(ctx, s, issuer2.Certificate, "")
+	issuer2_ref, existing, err := importIssuer(ctx, s, issuer2.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, issuer2.Certificate, issuer2_ref.Certificate)
-	require.Equal(t, issuer2_ref.ID, issuer2.ID)
-	require.Equal(t, issuer2_ref.KeyID, issuer2.KeyID)
+	require.Equal(t, issuer2.ID, issuer2_ref.ID)
+	require.Equal(t, "", issuer2_ref.Name)
+	require.Equal(t, issuer2.KeyID, issuer2_ref.KeyID)
 
-	key2_ref, existing, err := importKey(ctx, s, key2.PrivateKey)
+	key2_ref, existing, err := importKey(ctx, s, key2.PrivateKey, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key2.PrivateKey, key2_ref.PrivateKey)
-	require.Equal(t, key2_ref.ID, key2.ID)
+	require.Equal(t, key2.ID, key2_ref.ID)
+	require.Equal(t, "", key2_ref.Name)
 }
 
 func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {

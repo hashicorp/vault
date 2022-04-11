@@ -4656,6 +4656,23 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
 
+	// Fail if the specified key name is default.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer1",
+		"key_name":    "Default",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as key name")
+
+	// Fail if the specified issuer name is default.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "DEFAULT",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as issuer name")
+
 	// Create the first CA
 	resp, err := client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
@@ -4669,11 +4686,20 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myIssuerId1)
 	require.NotEmpty(t, myKeyId1)
 
+	// Fail if the specified issuer name is re-used.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer1",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "issuer name already used")
+
 	// Create the second CA
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 		"issuer_name": "my-issuer2",
+		"key_name":    "root-key2",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp.Data["certificate"])
@@ -4681,6 +4707,15 @@ func TestRootWithExistingKey(t *testing.T) {
 	myKeyId2 := resp.Data["key_id"]
 	require.NotEmpty(t, myIssuerId2)
 	require.NotEmpty(t, myKeyId2)
+
+	// Fail if the specified key name is re-used.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer3",
+		"key_name":    "root-key2",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key name already used")
 
 	// Create a third CA re-using key from CA 1
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
@@ -4764,6 +4799,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
+		"key_name":    "interkey1",
 	})
 	require.NoError(t, err)
 	// csr2 := resp.Data["csr"]

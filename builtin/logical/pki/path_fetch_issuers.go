@@ -25,7 +25,7 @@ func pathListIssuers(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
@@ -90,7 +90,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return b.pathGetRawIssuer(ctx, req, data)
 	}
 
-	issuerName := data.Get("issuer_ref").(string)
+	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -119,14 +119,14 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 }
 
 func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	issuerName := data.Get("issuer_ref").(string)
+	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	newName := data.Get("issuer_name").(string)
-	if len(newName) > 0 && !nameMatcher.MatchString(newName) {
-		return logical.ErrorResponse("new issuer name outside of valid character limits"), nil
+	newName, err := getIssuerName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
@@ -162,7 +162,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	issuerName := data.Get("issuer_ref").(string)
+	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -209,7 +209,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	issuerName := data.Get("issuer_ref").(string)
+	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
