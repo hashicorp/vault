@@ -54,7 +54,7 @@ export default class SecretEditMetadata extends Component {
     if (value) {
       if (name === 'customMetadata') {
         // cp validations won't work on an object so performing validations here
-        // TODO: review this and incorporate into model-validations system
+        // JLR TODO: review this and incorporate into model-validations system
         /* eslint-disable no-useless-escape */
         let regex = /^[^\\]+$/g; // looking for a backward slash
         value.match(regex)
