@@ -1,0 +1,3 @@
+```release-note:improvement
+auth:When authenticating via Okta, Vault does not recognize the Google provider TOTP type
+```
