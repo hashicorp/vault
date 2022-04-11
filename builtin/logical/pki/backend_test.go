@@ -4650,8 +4650,8 @@ func TestRootWithExistingKey(t *testing.T) {
 	// Fail if the specified key does not exist.
 	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
-		"id":          "my-issuer1",
-		"key_id":      "my-key1",
+		"issuer_name": "my-issuer1",
+		"key_ref":     "my-key1",
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
@@ -4660,11 +4660,11 @@ func TestRootWithExistingKey(t *testing.T) {
 	resp, err := client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
-		"id":          "my-issuer1",
+		"issuer_name": "my-issuer1",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp.Data["certificate"])
-	myIssuerId1 := resp.Data["id"]
+	myIssuerId1 := resp.Data["issuer_id"]
 	myKeyId1 := resp.Data["key_id"]
 	require.NotEmpty(t, myIssuerId1)
 	require.NotEmpty(t, myKeyId1)
@@ -4673,11 +4673,11 @@ func TestRootWithExistingKey(t *testing.T) {
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
-		"id":          "my-issuer2",
+		"issuer_name": "my-issuer2",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp.Data["certificate"])
-	myIssuerId2 := resp.Data["id"]
+	myIssuerId2 := resp.Data["issuer_id"]
 	myKeyId2 := resp.Data["key_id"]
 	require.NotEmpty(t, myIssuerId2)
 	require.NotEmpty(t, myKeyId2)
@@ -4685,12 +4685,12 @@ func TestRootWithExistingKey(t *testing.T) {
 	// Create a third CA re-using key from CA 1
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
-		"id":          "my-issuer3",
-		"key_id":      myKeyId1,
+		"issuer_name": "my-issuer3",
+		"key_ref":     myKeyId1,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp.Data["certificate"])
-	myIssuerId3 := resp.Data["id"]
+	myIssuerId3 := resp.Data["issuer_id"]
 	myKeyId3 := resp.Data["key_id"]
 	require.NotEmpty(t, myIssuerId3)
 	require.NotEmpty(t, myKeyId3)
@@ -4745,7 +4745,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	// Fail if the specified key does not exist.
 	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
-		"key_id":      "my-key1",
+		"key_ref":     "my-key1",
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
@@ -4773,7 +4773,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	// Create a third intermediate CA re-using key from intermediate CA 1
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
-		"key_id":      myKeyId1,
+		"key_ref":     myKeyId1,
 	})
 	require.NoError(t, err)
 	// csr3 := resp.Data["csr"]
