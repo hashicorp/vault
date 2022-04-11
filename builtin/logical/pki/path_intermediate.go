@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -25,12 +24,13 @@ func pathSetSignedIntermediate(b *backend) *framework.Path {
 				Description: `PEM-format certificate. This must be a CA
 certificate with a public key matching the
 previously-generated key from the generation
-endpoint.`,
+endpoint. Additional parent CAs may be optionally
+appended to the bundle.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathSetSignedIntermediate,
+				Callback: b.pathImportIssuers,
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -121,101 +121,6 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	resp.Data["key_id"] = myKey.ID
 
 	return resp, nil
-}
-
-func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	cert := data.Get("certificate").(string)
-
-	if cert == "" {
-		return logical.ErrorResponse("no certificate provided in the \"certificate\" parameter"), nil
-	}
-
-	inputBundle, err := certutil.ParsePEMBundle(cert)
-	if err != nil {
-		switch err.(type) {
-		case errutil.InternalError:
-			return nil, err
-		default:
-			return logical.ErrorResponse(err.Error()), nil
-		}
-	}
-
-	if inputBundle.Certificate == nil {
-		return logical.ErrorResponse("supplied certificate could not be successfully parsed"), nil
-	}
-
-	cb := &certutil.CertBundle{}
-	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return logical.ErrorResponse("could not find any existing entry with a private key"), nil
-	}
-
-	err = entry.DecodeJSON(cb)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(cb.PrivateKey) == 0 || cb.PrivateKeyType == "" {
-		return logical.ErrorResponse("could not find an existing private key"), nil
-	}
-
-	parsedCB, err := parseCABundle(ctx, b, req, cb)
-	if err != nil {
-		return nil, err
-	}
-	if parsedCB.PrivateKey == nil {
-		return nil, fmt.Errorf("saved key could not be parsed successfully")
-	}
-
-	inputBundle.PrivateKey = parsedCB.PrivateKey
-	inputBundle.PrivateKeyType = parsedCB.PrivateKeyType
-	inputBundle.PrivateKeyBytes = parsedCB.PrivateKeyBytes
-
-	if !inputBundle.Certificate.IsCA {
-		return logical.ErrorResponse("the given certificate is not marked for CA use and cannot be used with this backend"), nil
-	}
-
-	if err := inputBundle.Verify(); err != nil {
-		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
-	}
-
-	cb, err = inputBundle.ToCertBundle()
-	if err != nil {
-		return nil, fmt.Errorf("error converting raw values into cert bundle: %w", err)
-	}
-
-	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
-	if err != nil {
-		return nil, err
-	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	entry.Key = "certs/" + normalizeSerial(cb.SerialNumber)
-	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	// For ease of later use, also store just the certificate at a known
-	// location
-	entry.Key = "ca"
-	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build a fresh CRL
-	err = buildCRL(ctx, b, req, true)
-
-	return nil, err
 }
 
 const pathGenerateIntermediateHelpSyn = `
