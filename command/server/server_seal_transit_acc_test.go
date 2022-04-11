@@ -61,7 +61,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	req := &api.TokenCreateRequest{
 		Period: "5s",
 	}
-	rsp, err := remoteClient.Auth().Token().CreateWithContext(context.Background(), req)
+	rsp, err := remoteClient.Auth().Token().Create(req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

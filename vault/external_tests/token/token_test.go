@@ -1,7 +1,6 @@
 package token
 
 import (
-	"context"
 	"encoding/base64"
 	"reflect"
 	"sort"
@@ -31,7 +30,7 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
-	secret, err := client.Auth().Token().CreateOrphanWithContext(context.Background(), &api.TokenCreateRequest{
+	secret, err := client.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
 		Policies: []string{"default"},
 	})
 	if err != nil {
@@ -67,14 +66,14 @@ func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
 	}
 
 	// Add a user to userpass backend
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/testuser", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -82,7 +81,7 @@ func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
 	}
 	clientToken := secret.Auth.ClientToken
 
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": clientToken,
 	})
 	if err != nil {
@@ -91,14 +90,14 @@ func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
 
 	entityID := secret.Data["entity_id"].(string)
 
-	_, err = client.Logical().DeleteWithContext(context.Background(), "identity/entity/id/"+entityID)
+	_, err = client.Logical().Delete("identity/entity/id/" + entityID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	client.SetToken(clientToken)
 
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup-self", nil)
+	secret, err = client.Logical().Write("auth/token/lookup-self", nil)
 	if err == nil {
 		t.Fatalf("expected error due to token being invalid when its entity is invalid")
 	}
@@ -133,7 +132,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	defer cleanup()
 
 	// Configure LDAP auth
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/ldap/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
 		"url":       cfg.Url,
 		"userattr":  cfg.UserAttr,
 		"userdn":    cfg.UserDN,
@@ -147,7 +146,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Create group in LDAP auth
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/ldap/groups/testgroup1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap/groups/testgroup1", map[string]interface{}{
 		"policies": "testgroup1-policy",
 	})
 	if err != nil {
@@ -156,7 +155,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Create user in LDAP auth. We add two groups, but we should filter out
 	// the ones that don't match aliases later (we will check for this)
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/ldap/users/hermes conrad", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
 		"policies": "default",
 		"groups":   "testgroup1,testgroup2",
 	})
@@ -165,7 +164,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Login using LDAP
-	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -182,7 +181,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// At this point there shouldn't be any identity policy on the token
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": ldapClientToken,
 	})
 	if err != nil {
@@ -195,7 +194,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Extract the entity ID of the token and set some policies on the entity
 	entityID := secret.Data["entity_id"].(string)
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/entity/id/"+entityID, map[string]interface{}{
+	_, err = client.Logical().Write("identity/entity/id/"+entityID, map[string]interface{}{
 		"policies": []string{
 			"entity_policy_1",
 			"entity_policy_2",
@@ -206,7 +205,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Lookup the token and expect entity policies on the token
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": ldapClientToken,
 	})
 	if err != nil {
@@ -229,7 +228,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Create identity group and add entity as its member
-	secret, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"policies": []string{
 			"group_policy_1",
 			"group_policy_2",
@@ -243,7 +242,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Lookup token and expect both entity and group policies on the token
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": ldapClientToken,
 	})
 	if err != nil {
@@ -269,14 +268,14 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Create an external group and renew the token. This should add external
 	// group policies to the token.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
 	ldapMountAccessor1 := auths["ldap/"].Accessor
 
 	// Create an external group
-	secret, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"type": "external",
 		"policies": []string{
 			"external_group_policy_1",
@@ -289,7 +288,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	ldapExtGroupID1 := secret.Data["id"].(string)
 
 	// Associate a group from LDAP auth as a group-alias in the external group
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/group-alias", map[string]interface{}{
+	_, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
 		"name":           "testgroup1",
 		"mount_accessor": ldapMountAccessor1,
 		"canonical_id":   ldapExtGroupID1,
@@ -299,14 +298,14 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Renew token to refresh external group memberships
-	secret, err = client.Auth().Token().RenewWithContext(context.Background(), ldapClientToken, 10)
+	secret, err = client.Auth().Token().Renew(ldapClientToken, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Lookup token and expect entity, group and external group policies on the
 	// token
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": ldapClientToken,
 	})
 	if err != nil {
@@ -334,7 +333,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Log in and get a new token, then renew it. See issue #4829. The logic is
 	// continued after the next block.
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/ldap/login/hermes conrad", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
 		"password": "hermes",
 	})
 	if err != nil {
@@ -345,12 +344,12 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	// Check that the lease for the token contains only the single group; this
 	// should be true for both as one was fresh and the other was a renew
 	// (which is why we do the renew check on the 4839 token after this block)
-	secret, err = client.Logical().ListWithContext(context.Background(), "sys/raw/sys/expire/id/auth/ldap/login/hermes conrad/")
+	secret, err = client.Logical().List("sys/raw/sys/expire/id/auth/ldap/login/hermes conrad/")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, key := range secret.Data["keys"].([]interface{}) {
-		secret, err := client.Logical().ReadWithContext(context.Background(), "sys/raw/sys/expire/id/auth/ldap/login/hermes conrad/"+key.(string))
+		secret, err := client.Logical().Read("sys/raw/sys/expire/id/auth/ldap/login/hermes conrad/" + key.(string))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -364,7 +363,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		}
 	}
 
-	secret, err = client.Auth().Token().RenewWithContext(context.Background(), token4829, 10)
+	secret, err = client.Auth().Token().Renew(token4829, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,7 +390,7 @@ path "auth/token/create" {
 	var err error
 	var secret *api.Secret
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/policies/acl/test", map[string]interface{}{
+	_, err = client.Logical().Write("sys/policies/acl/test", map[string]interface{}{
 		"policy": testPolicy,
 	})
 	if err != nil {
@@ -399,41 +398,41 @@ path "auth/token/create" {
 	}
 
 	// Test normally
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
 		"bound_cidrs": []string{},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
 		Policies: []string{"default"},
 	}, "testrole")
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// CIDR blocks, containing localhost
 	client.SetToken(rootToken)
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
 		"bound_cidrs":      []string{"127.0.0.1/32", "1.2.3.4/8", "5.6.7.8/24"},
 		"allowed_policies": "test",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
 		Policies: []string{"test", "default"},
 	}, "testrole")
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -441,7 +440,7 @@ path "auth/token/create" {
 	// Before moving on, validate that a child token created from this token
 	// inherits the bound cidr blocks
 	client.SetToken(secret.Auth.ClientToken)
-	childSecret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+	childSecret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		Policies: []string{"default"},
 	})
 	if err != nil {
@@ -451,7 +450,7 @@ path "auth/token/create" {
 		t.Fatal(err)
 	}
 	client.SetToken(childSecret.Auth.ClientToken)
-	childInfo, err := client.Auth().Token().LookupSelfWithContext(context.Background())
+	childInfo, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -461,20 +460,20 @@ path "auth/token/create" {
 
 	// CIDR blocks, not containing localhost (should fail)
 	client.SetToken(rootToken)
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
 		"bound_cidrs": []string{"1.2.3.4/8", "5.6.7.8/24"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
 		Policies: []string{"default"},
 	}, "testrole")
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -484,38 +483,38 @@ path "auth/token/create" {
 
 	// Root token, no ttl, should work
 	client.SetToken(rootToken)
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
 		"bound_cidrs":      []string{"1.2.3.4/8", "5.6.7.8/24"},
 		"allowed_policies": "",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{}, "testrole")
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{}, "testrole")
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Root token, ttl, should not work
 	client.SetToken(rootToken)
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/token/roles/testrole", map[string]interface{}{
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
 		"bound_cidrs": []string{"1.2.3.4/8", "5.6.7.8/24"},
 		"period":      3600,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err = client.Auth().Token().CreateWithRoleWithContext(context.Background(), &api.TokenCreateRequest{}, "testrole")
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{}, "testrole")
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+	_, err = client.Auth().Token().LookupSelf()
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -554,7 +553,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	var tokens []string
 	// Create tokens
 	for i := 0; i < 500; i++ {
-		secret, err = client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err = client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -564,7 +563,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	}
 
 	const tokenPath string = "sys/raw/sys/token/id/"
-	secret, err = client.Logical().ListWithContext(context.Background(), tokenPath)
+	secret, err = client.Logical().List(tokenPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -572,7 +571,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 
 	// Get the list of leases
 	const leasePath string = "sys/raw/sys/expire/id/auth/token/create/"
-	secret, err = client.Logical().ListWithContext(context.Background(), leasePath)
+	secret, err = client.Logical().List(leasePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -585,7 +584,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	var validLeases []string
 	// Fake times in the past
 	for _, lease := range leases {
-		secret, err = client.Logical().ReadWithContext(context.Background(), leasePath+lease.(string))
+		secret, err = client.Logical().Read(leasePath + lease.(string))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -603,7 +602,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), leasePath+lease.(string), map[string]interface{}{
+		if _, err := client.Logical().Write(leasePath+lease.(string), map[string]interface{}{
 			"value": string(jsonEntry),
 		}); err != nil {
 			t.Fatal(err)
@@ -616,7 +615,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 
 	var status *api.SealStatusResponse
 	for i := 0; i < len(cluster.BarrierKeys); i++ {
-		status, err = client.Sys().UnsealWithContext(context.Background(), string(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i])))
+		status, err = client.Sys().Unseal(string(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i])))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -633,7 +632,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 
 	for i, token := range tokens {
 		client.SetToken(token)
-		_, err := client.Logical().WriteWithContext(context.Background(), "cubbyhole/foo", map[string]interface{}{
+		_, err := client.Logical().Write("cubbyhole/foo", map[string]interface{}{
 			"value": "bar",
 		})
 		if err == nil {
@@ -644,7 +643,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	expectedLeases := len(leases) - len(validLeases)
 
 	client.SetToken(rootToken)
-	secret, err = client.Logical().ListWithContext(context.Background(), leasePath)
+	secret, err = client.Logical().List(leasePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -668,7 +667,7 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	}
 
 	expectedTokens := totalTokens - len(validLeases)
-	secret, err = client.Logical().ListWithContext(context.Background(), tokenPath)
+	secret, err = client.Logical().List(tokenPath)
 	if err != nil {
 		t.Fatal(err)
 	}

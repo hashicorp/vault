@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -64,7 +63,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			if err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "file", &api.EnableAuditOptions{
+			if err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 				Type: "file",
 				Options: map[string]string{
 					"file_path": "discard",
@@ -94,7 +93,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "integration_audit_disable", &api.EnableAuditOptions{
+		if err := client.Sys().EnableAuditWithOptions("integration_audit_disable", &api.EnableAuditOptions{
 			Type: "file",
 			Options: map[string]string{
 				"file_path": "discard",
@@ -119,7 +118,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		mounts, err := client.Sys().ListMountsWithContext(context.Background())
+		mounts, err := client.Sys().ListMounts()
 		if err != nil {
 			t.Fatal(err)
 		}
