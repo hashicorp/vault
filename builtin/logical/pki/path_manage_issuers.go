@@ -93,16 +93,33 @@ secret-key (optional) and certificates.`,
 }
 
 func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	keysAllowed := strings.HasSuffix(req.Path, "bundle")
+	keysAllowed := strings.HasSuffix(req.Path, "bundle") || req.Path == "config/ca"
 
-	pemBundle := data.Get("pem_bundle").(string)
-	if len(pemBundle) == 0 {
-		return logical.ErrorResponse("'pem_bundle' parameter was empty"), nil
+	var pemBundle string
+	var certificate string
+	rawPemBundle, bundleOk := data.GetOk("pem_bundle")
+	rawCertificate, certOk := data.GetOk("certificate")
+	if bundleOk {
+		pemBundle = rawPemBundle.(string)
+	}
+	if certOk {
+		certificate = rawCertificate.(string)
 	}
 
-	var createdKeys []keyId
-	var createdIssuers []issuerId
-	issuerKeyMap := make(map[issuerId]keyId)
+	if len(pemBundle) == 0 && len(certificate) == 0 {
+		return logical.ErrorResponse("'pem_bundle' and 'certificate' parameters were empty"), nil
+	}
+	if len(pemBundle) > 0 && len(certificate) > 0 {
+		return logical.ErrorResponse("'pem_bundle' and 'certificate' parameters were both provided"), nil
+	}
+	if len(certificate) > 0 {
+		keysAllowed = false
+		pemBundle = certificate
+	}
+
+	var createdKeys []string
+	var createdIssuers []string
+	issuerKeyMap := make(map[string]string)
 
 	// Rather than using certutil.ParsePEMBundle (which restricts the
 	// construction of the PEM bundle), we manually parse the bundle instead.
@@ -144,7 +161,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		}
 
 		if !existing {
-			createdKeys = append(createdKeys, key.ID)
+			createdKeys = append(createdKeys, key.ID.String())
 		}
 	}
 
@@ -154,9 +171,9 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		issuerKeyMap[cert.ID] = cert.KeyID
+		issuerKeyMap[cert.ID.String()] = cert.KeyID.String()
 		if !existing {
-			createdIssuers = append(createdIssuers, cert.ID)
+			createdIssuers = append(createdIssuers, cert.ID.String())
 		}
 	}
 
