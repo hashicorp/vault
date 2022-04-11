@@ -116,7 +116,7 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, data *framework.F
 }
 
 func getExistingPublicKey(ctx context.Context, s logical.Storage, data *framework.FieldData) (crypto.PublicKey, error) {
-	keyRef, err := getExistingKeyRef(data)
+	keyRef, err := getKeyRefWithErr(data)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ func generateCABundle(ctx context.Context, _ *backend, input *inputBundle, data 
 		return nil, errEntOnly
 	}
 	if existingKeyRequested(input) {
-		keyRef, err := getExistingKeyRef(input.apiData)
+		keyRef, err := getKeyRefWithErr(input.apiData)
 		if err != nil {
 			return nil, err
 		}
@@ -33,7 +33,7 @@ func generateCSRBundle(ctx context.Context, _ *backend, input *inputBundle, data
 		return nil, errEntOnly
 	}
 	if existingKeyRequested(input) {
-		keyRef, err := getExistingKeyRef(input.apiData)
+		keyRef, err := getKeyRefWithErr(input.apiData)
 		if err != nil {
 			return nil, err
 		}
