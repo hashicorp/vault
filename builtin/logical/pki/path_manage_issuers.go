@@ -12,10 +12,10 @@ import (
 )
 
 func pathIssuerGenerateRoot(b *backend) *framework.Path {
-	return commonGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
+	return buildPathGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
 }
 
-func commonGenerateRoot(b *backend, pattern string) *framework.Path {
+func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
 
@@ -39,11 +39,11 @@ func commonGenerateRoot(b *backend, pattern string) *framework.Path {
 }
 
 func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
-	return commonGenerateIntermediate(b,
+	return buildPathGenerateIntermediate(b,
 		"issuers/generate/intermediate/"+framework.GenericNameRegex("exported"))
 }
 
-func commonGenerateIntermediate(b *backend, pattern string) *framework.Path {
+func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
 		Operations: map[logical.Operation]framework.OperationHandler{
