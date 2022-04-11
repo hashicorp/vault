@@ -12,8 +12,8 @@ The Remount documentation details the endpoints required to trigger and monitor 
 
 ## Move Backend
 
-The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. This works for both secret engines
-and auth methods.
+The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. This process works for both secret 
+engines and auth methods.
 
 The remount operation returns a migration ID to the user. The user may utlizie the migration ID to look up 
 the status of the mount migration. More details about the remount operation are described in 
@@ -35,7 +35,7 @@ depending on which type of backend is being moved.
 
 - `to` `(string: <required>)` – Specifies the new destination mount point.
 
-### Sample Payload ( Cross Namespace)
+### Sample Payload ( Cross Namespace )
 
 ```json
 {
@@ -44,7 +44,16 @@ depending on which type of backend is being moved.
 }
 ```
 
-### Sample Payload ( Within Namespace)
+### Sample Payload ( Cross Namespace, Auth Mount )
+
+```json
+{
+  "from": "ns1/ns2/auth/approle",
+  "to": "ns1/ns3/auth/new-approle"
+}
+```
+
+### Sample Payload ( Within Namespace )
 
 ```json
 {
@@ -74,8 +83,8 @@ $ curl \
 ## Monitor Migration Status
 
 This endpoint is used to monitor the status of a mount migration operation, using the ID returned in the response
-of the `sys/remount` call. The response contains the passed in ID, the source and target mounts, and a status field
-which can be one of `in-progress`, `success` or `failure`.
+of the `sys/remount` call. The response contains the passed-in ID, the source and target mounts, and a status field
+that displays `in-progress`, `success` or `failure`.
 
 | Method | Path           |
 | :----- | :------------- |
