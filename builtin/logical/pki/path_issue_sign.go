@@ -218,7 +218,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, logical.ErrReadOnly
 	}
 
-	issuerName := data.Get("issuer_ref").(string)
+	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}

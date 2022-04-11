@@ -50,7 +50,7 @@ func migrateStorage(ctx context.Context, req *logical.InitializationRequest, log
 
 	logger.Warn("performing PKI migration to new keys/issuers layout")
 
-	anIssuer, aKey, err := writeCaBundle(ctx, s, legacyBundle, "")
+	anIssuer, aKey, err := writeCaBundle(ctx, s, legacyBundle, "", "")
 	if err != nil {
 		return err
 	}

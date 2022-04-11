@@ -81,7 +81,7 @@ func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data 
 	}
 
 	if existingKeyRequested(input) {
-		keyRef, err := getExistingKeyRef(input.apiData)
+		keyRef, err := getKeyRefWithErr(input.apiData)
 		if err != nil {
 			return nil, err
 		}
@@ -97,12 +97,13 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 	}
 
 	if existingKeyRequested(input) {
-		keyRef, err := getExistingKeyRef(input.apiData)
+		keyRef, err := getKeyRefWithErr(input.apiData)
 		if err != nil {
 			return nil, err
 		}
 		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingGeneratePrivateKey(ctx, input.req.Storage, keyRef))
 	}
+
 	
 	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
 }
@@ -157,7 +158,7 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, data *framework.F
 }
 
 func getExistingPublicKey(ctx context.Context, s logical.Storage, data *framework.FieldData) (crypto.PublicKey, error) {
-	keyRef, err := getExistingKeyRef(data)
+	keyRef, err := getKeyRefWithErr(data)
 	if err != nil {
 		return nil, err
 	}

@@ -77,10 +77,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		role.MaxPathLength = &maxPathLength
 	}
 
-	issuerName := ""
-	issuerNameIface, ok := data.GetOk("id")
-	if ok {
-		issuerName = issuerNameIface.(string)
+	issuerName, err := getIssuerName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	keyName, err := getKeyName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	input := &inputBundle{
@@ -149,7 +152,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Store it as the CA bundle
-	myIssuer, myKey, err := writeCaBundle(ctx, req.Storage, cb, issuerName)
+	myIssuer, myKey, err := writeCaBundle(ctx, req.Storage, cb, issuerName, keyName)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +195,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	issuerName := data.Get("issuer_ref").(string)
+	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -341,7 +344,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	issuerName := data.Get("issuer_ref").(string)
+	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
