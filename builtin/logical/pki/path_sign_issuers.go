@@ -6,7 +6,7 @@ import (
 )
 
 func pathIssuerSignIntermediate(b *backend) *framework.Path {
-	pattern := "issuers/" + framework.GenericNameRegex("issuer_ref") + "/sign-intermediate"
+	pattern := "issuers/" + framework.GenericNameRegex(issuerRefParam) + "/sign-intermediate"
 	return pathIssuerSignIntermediateRaw(b, pattern)
 }
 
@@ -19,7 +19,7 @@ func pathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.Path {
 	path := &framework.Path{
 		Pattern: pattern,
 		Fields: map[string]*framework.FieldSchema{
-			"issuer_ref": {
+			issuerRefParam: {
 				Type:        framework.TypeString,
 				Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
 				Default:     "default",
@@ -79,7 +79,7 @@ See the API documentation for more information about required parameters.
 )
 
 func pathIssuerSignSelfIssued(b *backend) *framework.Path {
-	pattern := "issuers/" + framework.GenericNameRegex("issuer_ref") + "/sign-self-issued"
+	pattern := "issuers/" + framework.GenericNameRegex(issuerRefParam) + "/sign-self-issued"
 	return buildPathIssuerSignSelfIssued(b, pattern)
 }
 
@@ -92,7 +92,7 @@ func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
 	path := &framework.Path{
 		Pattern: pattern,
 		Fields: map[string]*framework.FieldSchema{
-			"issuer_ref": {
+			issuerRefParam: {
 				Type:        framework.TypeString,
 				Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
 				Default:     "default",

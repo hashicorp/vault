@@ -174,7 +174,7 @@ func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldDat
 }
 
 func getIssuerRef(data *framework.FieldData) string {
-	return extractRef(data, "issuer_ref")
+	return extractRef(data, issuerRefParam)
 }
 
 func getKeyRef(data *framework.FieldData) string {

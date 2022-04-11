@@ -55,17 +55,6 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, da
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
-	if err != nil {
-		return nil, err
-	}
-	if entry != nil {
-		resp := &logical.Response{}
-		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. "+
-			"If you really want to destroy the original root certificate, please issue a delete against %s root.", req.MountPoint))
-		return resp, nil
-	}
-
 	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
