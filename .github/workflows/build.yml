@@ -5,8 +5,7 @@ on:
     # Sequence of patterns matched against refs/heads
     branches:    
       # Push events on main branch
-      - main
-      - add-build-date
+      - custom-build-date-1.11.0
 
 env:
   PKG_NAME: "vault"
