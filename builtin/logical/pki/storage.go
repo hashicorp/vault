@@ -213,6 +213,18 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 		}
 	}
 
+	// If there was no prior default value set and/or we had no known
+	// keys when we started, set this key as default.
+	keyDefaultSet, err := isKeyDefaultSet(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(knownKeys) == 0 || !keyDefaultSet {
+		if err = updateDefaultKeyId(ctx, s, result.ID); err != nil {
+			return nil, false, err
+		}
+	}
+
 	// All done; return our new key reference.
 	return &result, false, nil
 }
@@ -399,9 +411,21 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 		}
 	}
 
-	// Finally we can write the issuer to storage.
+	// We can write the issuer to storage.
 	if err := writeIssuer(ctx, s, &result); err != nil {
 		return nil, false, err
+	}
+
+	// If there was no prior default value set and/or we had no known
+	// issuers when we started, set this issuer as default.
+	issuerDefaultSet, err := isIssuerDefaultSet(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(knownIssuers) == 0 || !issuerDefaultSet {
+		if err = updateDefaultIssuerId(ctx, s, result.ID); err != nil {
+			return nil, false, err
+		}
 	}
 
 	// All done; return our new key reference.
@@ -526,16 +550,6 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 }
 
 func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuer, *key, error) {
-	allKeyIds, err := listKeys(ctx, s)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	allIssuerIds, err := listIssuers(ctx, s)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	myKey, _, err := importKey(ctx, s, caBundle.PrivateKey, keyName)
 	if err != nil {
 		return nil, nil, err
@@ -548,26 +562,6 @@ func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.Ce
 
 	for _, cert := range caBundle.CAChain {
 		if _, _, err = importIssuer(ctx, s, cert, ""); err != nil {
-			return nil, nil, err
-		}
-	}
-
-	keyDefaultSet, err := isKeyDefaultSet(ctx, s)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(allKeyIds) == 0 || !keyDefaultSet {
-		if err = updateDefaultKeyId(ctx, s, myKey.ID); err != nil {
-			return nil, nil, err
-		}
-	}
-
-	issuerDefaultSet, err := isIssuerDefaultSet(ctx, s)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(allIssuerIds) == 0 || !issuerDefaultSet {
-		if err = updateDefaultIssuerId(ctx, s, myIssuer.ID); err != nil {
 			return nil, nil, err
 		}
 	}
