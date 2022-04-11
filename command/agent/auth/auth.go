@@ -172,7 +172,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			ah.logger.Debug("lookup-self with preloaded token")
 			clientToUse.SetToken(ah.token)
 
-			secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
+			secret, err = clientToUse.Auth().Token().LookupSelfWithContext(ctx)
 			if err != nil {
 				ah.logger.Error("could not look up token", "err", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
@@ -220,7 +220,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		//  or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
-			secret, err = clientToUse.Logical().Write(path, data)
+			secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
 			// Check errors/sanity
 			if err != nil {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoff)

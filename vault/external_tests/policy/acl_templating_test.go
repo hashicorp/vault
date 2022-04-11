@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -59,7 +58,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
+	resp, err := client.Logical().Write("identity/entity", map[string]interface{}{
 		"name": "entity_name",
 		"policies": []string{
 			"goodPolicy1",
@@ -71,7 +70,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 	entityID := resp.Data["id"].(string)
 
-	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"policies": []string{
 			"goodPolicy2",
 		},
@@ -85,7 +84,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 	groupID := resp.Data["id"]
 
-	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"name": "foobar",
 	})
 	if err != nil {
@@ -103,14 +102,14 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 
 	// Create an external group and renew the token. This should add external
 	// group policies to the token.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Create an alias
-	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "testuser",
 		"mount_accessor": userpassAccessor,
 		"canonical_id":   entityID,
@@ -120,7 +119,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 
 	// Add a user to userpass backend
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/testuser", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -130,17 +129,17 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	// Write in policies
 	goodPolicy1 = fmt.Sprintf(goodPolicy1, userpassAccessor)
 	goodPolicy2 = fmt.Sprintf(goodPolicy2, groupID)
-	err = client.Sys().PutPolicyWithContext(context.Background(), "goodPolicy1", goodPolicy1)
+	err = client.Sys().PutPolicy("goodPolicy1", goodPolicy1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = client.Sys().PutPolicyWithContext(context.Background(), "goodPolicy2", goodPolicy2)
+	err = client.Sys().PutPolicy("goodPolicy2", goodPolicy2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Authenticate
-	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -182,7 +181,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 
 	runTests := func(failGroupName bool) {
 		for _, test := range tests {
-			resp, err := client.Logical().WriteWithContext(context.Background(), test.path, map[string]interface{}{"zip": "zap"})
+			resp, err := client.Logical().Write(test.path, map[string]interface{}{"zip": "zap"})
 			fail := test.fail
 			if test.name == "bad group name" {
 				fail = failGroupName
@@ -205,7 +204,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 
 	client.SetToken(rootToken)
 	// Test that a policy with bad group membership doesn't kill the other paths
-	err = client.Sys().PutPolicyWithContext(context.Background(), "badPolicy1", badPolicy1)
+	err = client.Sys().PutPolicy("badPolicy1", badPolicy1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +213,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 
 	// Test that adding group membership now allows access
 	client.SetToken(rootToken)
-	resp, err = client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"id": foobarGroupID,
 		"member_entity_ids": []string{
 			entityID,

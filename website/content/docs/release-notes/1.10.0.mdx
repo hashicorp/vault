@@ -150,6 +150,21 @@ When a user has a policy that allows creating a secret engine but not reading it
 
 When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `sys/mfa/method/duo` endpoint, a panic gets triggered due to a missing schema field. We will have a fix for this in Vault 1.10.1. Until this issue is fixed, avoid making any changes to your Duo configuration if you are upgrading Vault to v1.10.0.
 
+### Sign in to UI using OIDC auth method results in an error
+
+Signing in to the Vault UI using an OIDC auth mount listed in the "tabs" of the form will result
+in the following error: "Authentication failed: role with oidc role_type is not allowed".
+The auth mounts listed in the "tabs" of the form are those that have [listing_visibility](/api-docs/system/auth#listing_visibility-1)
+set to `unauth`.
+
+There is a workaround for this error that will allow you to sign in to Vault using the OIDC
+auth method. Select the "Other" tab instead of selecting the specific OIDC auth mount tab.
+From there, select "OIDC" from the "Method" select box and proceed to sign in to Vault.
+
+### Error Initializing Raft Storage type with Windows
+
+When trying to start Vault server 1.10.0 on Windows, and there is less than 100GB of free disk space, there is an initialization error with raft DB related to insufficient space on the disk. See this [issue](https://github.com/hashicorp/vault/issues/14895) for details.  Windows users should wait till 1.10.1 to upgrade.
+
 ## Feature Deprecations and EOL
 
 Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.

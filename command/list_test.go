@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -78,7 +77,7 @@ func TestListCommand_Run(t *testing.T) {
 					"secret/list/baz",
 				}
 				for _, k := range keys {
-					if _, err := client.Logical().WriteWithContext(context.Background(), k, map[string]interface{}{
+					if _, err := client.Logical().Write(k, map[string]interface{}{
 						"foo": "bar",
 					}); err != nil {
 						t.Fatal(err)
