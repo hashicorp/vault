@@ -20,7 +20,7 @@ func pathIssue(b *backend) *framework.Path {
 }
 
 func pathIssuerIssue(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex("issuer_ref") + "/issue/" + framework.GenericNameRegex("role")
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/issue/" + framework.GenericNameRegex("role")
 	return buildPathIssue(b, pattern)
 }
 
@@ -46,7 +46,7 @@ func pathSign(b *backend) *framework.Path {
 }
 
 func pathIssuerSign(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex("issuer_ref") + "/sign/" + framework.GenericNameRegex("role")
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign/" + framework.GenericNameRegex("role")
 	return buildPathSign(b, pattern)
 }
 
@@ -74,7 +74,7 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 }
 
 func pathIssuerSignVerbatim(b *backend) *framework.Path {
-	pattern := "issuers/" + framework.GenericNameRegex("issuer_ref") + "/sign-verbatim"
+	pattern := "issuers/" + framework.GenericNameRegex(issuerRefParam) + "/sign-verbatim"
 	return buildPathIssuerSignVerbatim(b, pattern)
 }
 

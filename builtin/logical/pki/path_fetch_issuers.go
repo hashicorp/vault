@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex("issuer_ref") + "$")
+var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
 
 func pathListIssuers(b *backend) *framework.Path {
 	return &framework.Path{
@@ -61,7 +61,7 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex("issuer_ref") + "(/der|/pem)?"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem)?"
 	return buildPathGetIssuer(b, pattern)
 }
 

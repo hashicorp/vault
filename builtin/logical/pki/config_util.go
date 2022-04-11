@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func isKeyDefaultSet(ctx context.Context, s logical.Storage) (bool, error) {
+func isDefaultKeySet(ctx context.Context, s logical.Storage) (bool, error) {
 	config, err := getKeysConfig(ctx, s)
 	if err != nil {
 		return false, err
@@ -16,7 +16,7 @@ func isKeyDefaultSet(ctx context.Context, s logical.Storage) (bool, error) {
 	return strings.TrimSpace(config.DefaultKeyId.String()) != "", nil
 }
 
-func isIssuerDefaultSet(ctx context.Context, s logical.Storage) (bool, error) {
+func isDefaultIssuerSet(ctx context.Context, s logical.Storage) (bool, error) {
 	config, err := getIssuersConfig(ctx, s)
 	if err != nil {
 		return false, err
