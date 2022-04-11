@@ -63,7 +63,7 @@
     "@ember/test-waiters": "^3.0.0",
     "@glimmer/component": "^1.0.3",
     "@glimmer/tracking": "^1.0.3",
-    "@hashicorp/ember-flight-icons": "^1.1.0",
+    "@hashicorp/ember-flight-icons": "2.0.3",
     "@hashicorp/structure-icons": "^1.3.0",
     "@icholy/duration": "^5.1.0",
     "@storybook/cli": "^6.3.10",
@@ -93,7 +93,7 @@
     "doctoc": "^1.4.0",
     "ember-api-actions": "^0.2.8",
     "ember-auto-import": "^1.12.0",
-    "ember-basic-dropdown": "3.0.19",
+    "ember-basic-dropdown": "4.0.3",
     "ember-cli": "~3.28.5",
     "ember-cli-autoprefixer": "^0.8.1",
     "ember-cli-babel": "^7.26.10",
@@ -193,7 +193,7 @@
   "resolutions": {
     "cryptiles": "^4.1.2",
     "eslint-utils": "^1.4.1",
-    "ember-basic-dropdown": "3.0.19",
+    "ember-basic-dropdown": "4.0.3",
     "growl": "^1.10.0",
     "handlebars": "^4.3.0",
     "highlight.js": "^10.4.1",
@@ -213,7 +213,7 @@
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
     "xmlhttprequest-ssl": "^1.6.2",
-    "@hashicorp/ember-flight-icons": "^1.1.0"
+    "@hashicorp/ember-flight-icons": "2.0.3"
   },
   "engines": {
     "node": "12.* || 14.* || >= 16"
