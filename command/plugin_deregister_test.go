@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -89,7 +88,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
 
-		if err := client.Sys().RegisterPluginWithContext(context.Background(), &api.RegisterPluginInput{
+		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
 			Type:    consts.PluginTypeCredential,
 			Command: pluginName,
@@ -112,7 +111,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		resp, err := client.Sys().ListPluginsWithContext(context.Background(), &api.ListPluginsInput{
+		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
 			Type: consts.PluginTypeCredential,
 		})
 		if err != nil {

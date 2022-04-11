@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -84,7 +83,7 @@ func TestOperatorSealCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		sealStatus, err := client.Sys().SealStatusWithContext(context.Background())
+		sealStatus, err := client.Sys().SealStatus()
 		if err != nil {
 			t.Fatal(err)
 		}

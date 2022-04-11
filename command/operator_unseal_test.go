@@ -2,7 +2,6 @@ package command
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -60,7 +59,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 		}
 
 		// Enter an unseal key
-		if _, err := client.Sys().UnsealWithContext(context.Background(), keys[0]); err != nil {
+		if _, err := client.Sys().Unseal(keys[0]); err != nil {
 			t.Fatal(err)
 		}
 
@@ -107,7 +106,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 			}
 		}
 
-		status, err := client.Sys().SealStatusWithContext(context.Background())
+		status, err := client.Sys().SealStatus()
 		if err != nil {
 			t.Fatal(err)
 		}

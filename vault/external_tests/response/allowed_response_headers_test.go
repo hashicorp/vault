@@ -108,7 +108,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	}
 
 	// Tune the mount
-	err = client.Sys().TuneMountWithContext(context.Background(), "auth/headtest", api.MountConfigInput{
+	err = client.Sys().TuneMount("auth/headtest", api.MountConfigInput{
 		AllowedResponseHeaders: []string{"WwW-AuthenTicate"},
 	})
 	if err != nil {
