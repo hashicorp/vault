@@ -85,6 +85,10 @@ func listKeys(ctx context.Context, s logical.Storage) ([]keyId, error) {
 }
 
 func fetchKeyById(ctx context.Context, s logical.Storage, keyId keyId) (*key, error) {
+	if len(keyId) == 0 {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: empty key identifier")}
+	}
+
 	keyEntry, err := s.Get(ctx, keyPrefix+keyId.String())
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
@@ -259,6 +263,9 @@ func resolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 		if err != nil {
 			return keyId("config-error"), err
 		}
+		if len(config.DefaultKeyId) == 0 {
+			return KeyRefNotFound, fmt.Errorf("no default key currently configured")
+		}
 
 		return config.DefaultKeyId, nil
 	}
@@ -292,6 +299,10 @@ func resolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 }
 
 func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) (*issuer, error) {
+	if len(issuerId) == 0 {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: empty issuer identifier")}
+	}
+
 	issuerEntry, err := s.Get(ctx, issuerPrefix+issuerId.String())
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
@@ -488,6 +499,9 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 		config, err := getIssuersConfig(ctx, s)
 		if err != nil {
 			return issuerId("config-error"), err
+		}
+		if len(config.DefaultIssuerId) == 0 {
+			return IssuerRefNotFound, fmt.Errorf("no default issuer currently configured")
 		}
 
 		return config.DefaultIssuerId, nil
