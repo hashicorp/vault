@@ -34,7 +34,7 @@ while read -r line; do
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
         vault auth enable "${plugin}"
@@ -48,13 +48,14 @@ while read -r line; do
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
         vault secrets enable "${plugin}"
     fi
 done <../../vault/helper/builtinplugins/registry.go
 
+vault secrets enable database
 
 # Enable enterprise features
 entRegFile=../../vault/helper/builtinplugins/registry_util_ent.go
@@ -68,7 +69,7 @@ if [ -f $entRegFile ] && [[ -n "$VAULT_LICENSE" ]]; then
         codeLinesStarted=true
     elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
         break
-    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
         vault secrets enable "${plugin}"
