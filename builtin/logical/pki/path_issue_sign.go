@@ -79,7 +79,7 @@ func pathIssuerSignVerbatim(b *backend) *framework.Path {
 }
 
 func pathSignVerbatim(b *backend) *framework.Path {
-	pattern := "root/sign-verbatim"
+	pattern := "sign-verbatim" + framework.OptionalParamRegex("role")
 	return buildPathIssuerSignVerbatim(b, pattern)
 }
 
