@@ -182,15 +182,9 @@ func getKeyRef(data *framework.FieldData) string {
 }
 
 func extractRef(data *framework.FieldData, paramName string) string {
-	value := ""
-	issuerNameIface, ok := data.GetOk(paramName)
-	if ok {
-		value = strings.TrimSpace(issuerNameIface.(string))
-		if strings.ToLower(value) == "default" {
-			return "default"
-		}
-		return value
+	value := strings.TrimSpace(data.Get(paramName).(string))
+	if strings.ToLower(value) == "default" {
+		return "default"
 	}
-
 	return value
 }
