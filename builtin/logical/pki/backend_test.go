@@ -2275,7 +2275,6 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
-
 	client := cluster.Cores[0].Client
 	var err error
 	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
@@ -4817,7 +4816,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myKeyId3)
 
 	require.NotEqual(t, myKeyId1, myKeyId2)
-	require.Equal(t, myKeyId1, myKeyId3)
+	require.Equal(t, myKeyId1, myKeyId3, "our new ca did not seem to reuse the key as we expected.")
 }
 
 var (

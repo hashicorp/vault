@@ -215,7 +215,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 
 	// If there was no prior default value set and/or we had no known
 	// keys when we started, set this key as default.
-	keyDefaultSet, err := isKeyDefaultSet(ctx, s)
+	keyDefaultSet, err := isDefaultKeySet(ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
@@ -418,7 +418,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 
 	// If there was no prior default value set and/or we had no known
 	// issuers when we started, set this issuer as default.
-	issuerDefaultSet, err := isIssuerDefaultSet(ctx, s)
+	issuerDefaultSet, err := isDefaultIssuerSet(ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
