@@ -115,7 +115,6 @@
     "ember-composable-helpers": "^4.3.0",
     "ember-concurrency": "^2.1.2",
     "ember-copy": "2.0.1",
-    "ember-cp-validations": "^4.0.0-beta.12",
     "ember-d3": "^0.5.1",
     "ember-data": "~3.28.6",
     "ember-data-model-fragments": "5.0.0-beta.5",
