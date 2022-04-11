@@ -132,11 +132,7 @@ be larger than the role max TTL.`,
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
-	fields["ref"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
-		Default:     "default",
-	}
+	fields = addIssuerRefField(fields)
 
 	return fields
 }
@@ -315,12 +311,8 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 		},
 	}
 
-	fields["key_id"] = &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Reference to a existing key; either "default"
-for the configured default key, an identifier or the name assigned
-to the key. Note this is only used for the existing generation type.`,
-	}
+	fields = addKeyRefNameFields(fields)
+
 	return fields
 }
 
@@ -341,5 +333,61 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		},
 	}
 
+	fields = addIssuerNameField(fields)
+
+	return fields
+}
+
+func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addKeyNameField(fields)
+	fields = addKeyRefField(fields)
+	return fields
+}
+
+func addIssuerRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addIssuerNameField(fields)
+	fields = addIssuerRefField(fields)
+	return fields
+}
+
+func addIssuerRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["issuer_ref"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing issuer; either "default"
+for the configured default issuer, an identifier or the name assigned
+to the issuer.`,
+		Default: "default",
+	}
+	return fields
+}
+
+func addIssuerNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["issuer_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name to the generated issuer, the name
+must be unique across all issuers and not be the reserved value 'default'`,
+	}
+	return fields
+}
+
+func addKeyNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name for the key that will be generated,
+the name must be unique across all keys and not be the reserved value
+'default'`,
+	}
+
+	return fields
+}
+
+func addKeyRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_ref"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing key; either "default"
+for the configured default key, an identifier or the name assigned
+to the key.`,
+		Default: "default",
+	}
 	return fields
 }
