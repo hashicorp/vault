@@ -53,7 +53,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
     assert.expect(3); // request is fired more than once -- so three assertions instead of two
-    
+
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
         auth: {
