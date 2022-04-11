@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex("ref") + "$")
+var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex("issuer_ref") + "$")
 
 func pathListIssuers(b *backend) *framework.Path {
 	return &framework.Path{
@@ -45,7 +45,7 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 
 		responseKeys = append(responseKeys, string(identifier))
 		responseInfo[string(identifier)] = map[string]interface{}{
-			"name": issuer.Name,
+			"issuer_name": issuer.Name,
 		}
 	}
 
@@ -61,25 +61,17 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex("ref") + "(/der|/pem)?"
+	pattern := "issuer/" + framework.GenericNameRegex("issuer_ref") + "(/der|/pem)?"
 	return buildPathGetIssuer(b, pattern)
 }
 
 func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefNameFields(fields)
 	return &framework.Path{
 		// Returns a JSON entry.
 		Pattern: pattern,
-		Fields: map[string]*framework.FieldSchema{
-			"ref": {
-				Type:        framework.TypeString,
-				Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
-				Default:     "default",
-			},
-			"name": {
-				Type:        framework.TypeString,
-				Description: `Human-readable name for this issuer.`,
-			},
-		},
+		Fields:  fields,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathGetIssuer,
@@ -98,7 +90,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return b.pathGetRawIssuer(ctx, req, data)
 	}
 
-	issuerName := data.Get("ref").(string)
+	issuerName := data.Get("issuer_ref").(string)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -118,8 +110,8 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"id":          issuer.ID,
-			"name":        issuer.Name,
+			"issuer_id":   issuer.ID,
+			"issuer_name": issuer.Name,
 			"key_id":      issuer.KeyID,
 			"certificate": issuer.Certificate,
 		},
@@ -127,12 +119,12 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 }
 
 func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	issuerName := data.Get("ref").(string)
+	issuerName := data.Get("issuer_ref").(string)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	newName := data.Get("name").(string)
+	newName := data.Get("issuer_name").(string)
 	if len(newName) > 0 && !nameMatcher.MatchString(newName) {
 		return logical.ErrorResponse("new issuer name outside of valid character limits"), nil
 	}
@@ -161,8 +153,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"id":          issuer.ID,
-			"name":        issuer.Name,
+			"issuer_id":   issuer.ID,
+			"issuer_name": issuer.Name,
 			"key_id":      issuer.KeyID,
 			"certificate": issuer.Certificate,
 		},
@@ -170,7 +162,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	issuerName := data.Get("ref").(string)
+	issuerName := data.Get("issuer_ref").(string)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -217,7 +209,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	issuerName := data.Get("ref").(string)
+	issuerName := data.Get("issuer_ref").(string)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}

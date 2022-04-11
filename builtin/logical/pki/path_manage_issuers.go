@@ -35,12 +35,6 @@ func commonGenerateRoot(b *backend, pattern string) *framework.Path {
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
-
-	ret.Fields["id"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Description: `Assign a name to the generated issuer.`,
-	}
-
 	return ret
 }
 

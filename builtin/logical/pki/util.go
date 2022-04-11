@@ -80,13 +80,13 @@ func getManagedKeyId(data *framework.FieldData) (managedKeyId, error) {
 }
 
 func getExistingKeyRef(data *framework.FieldData) (string, error) {
-	keyRef, ok := data.GetOk("key_id")
+	keyRef, ok := data.GetOk("key_ref")
 	if !ok {
-		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_id for existing type")}
+		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_ref for existing type")}
 	}
 	trimmedKeyRef := strings.TrimSpace(keyRef.(string))
 	if len(trimmedKeyRef) == 0 {
-		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_id for existing type")}
+		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_ref for existing type")}
 	}
 
 	return trimmedKeyRef, nil
