@@ -131,15 +131,18 @@
         <LayoutLoading />
       {{else}}
         {{#if this.totalUsageCounts}}
-          <Clients::RunningTotal
-            @chartLegend={{this.chartLegend}}
-            @barChartData={{this.byMonthNewClients}}
-            @lineChartData={{this.byMonthTotalClients}}
-            @runningTotals={{this.totalUsageCounts}}
-            @timestamp={{this.responseTimestamp}}
-          />
-          {{! TODO CMB: remove UsageStats component from history tab (and update associated tests) }}
-          <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
+          {{#unless this.byMonthTotalClients}}
+            <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
+          {{/unless}}
+          {{#if this.byMonthTotalClients}}
+            <Clients::RunningTotal
+              @chartLegend={{this.chartLegend}}
+              @lineChartData={{this.byMonthTotalClients}}
+              @barChartData={{this.byMonthNewClients}}
+              @runningTotals={{this.totalUsageCounts}}
+              @timestamp={{this.responseTimestamp}}
+            />
+          {{/if}}
           {{#if this.hasAttributionData}}
             <Clients::Attribution
               @chartLegend={{this.chartLegend}}
@@ -149,6 +152,13 @@
               @startTimeDisplay={{this.startTimeDisplay}}
               @endTimeDisplay={{this.endTimeDisplay}}
               @isDateRange={{this.isDateRange}}
+              @timestamp={{this.responseTimestamp}}
+            />
+          {{/if}}
+          {{#if this.byMonthTotalClients}}
+            <Clients::MonthlyUsage
+              @chartLegend={{this.chartLegend}}
+              @verticalBarChartData={{this.byMonthTotalClients}}
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
