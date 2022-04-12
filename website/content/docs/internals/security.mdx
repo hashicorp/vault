@@ -70,6 +70,11 @@ The following are not parts of the Vault threat model:
   If an attacker can gain code execution or write privileges to the underlying host,
   then the confidentiality or the integrity of data may be compromised.
 
+- Protecting against flaws in clients or systems that access Vault. If an attacker
+  can compromise a Vault client (e.g., system, browser) and obtain this client’s Vault
+  credentials, they can access Vault with the level of privilege associated with this
+  client.
+
 # External Threat Overview
 
 Given the architecture of Vault, there are 3 distinct systems we are concerned

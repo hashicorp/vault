@@ -19,7 +19,7 @@ This endpoint lists all the Managed Keys of a certain type within the namespace.
 
 ### Parameters
 - `type` `(string: <required>)` – The backend type of keys to be listed.
-  Supported options are `pkcs11` and `awskms`.
+Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
 ### Sample Request
 
@@ -78,7 +78,7 @@ $ curl \
   unique throughout all types in the namespace.
 
 - `type` `(string: <required>)` – The backend type that will be leveraged for the managed key.
-  Supported options are `pkcs11` and `awskms`.
+  Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
 - `allow_generate_key` `(string: "false")` - If no existing key can be found in the referenced backend, instructs
   Vault to generate a key within the backend.

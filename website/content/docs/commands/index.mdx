@@ -37,6 +37,11 @@ To get help for a subcommand, run:
 $ vault <subcommand> -h
 ```
 
+To see the equivalent API call required to perform the same operation, use the `-output-curl-string` flag after the subcommand.
+```shell-session
+vault auth enable -output-curl-string approle
+```
+
 ## CLI Command Structure
 
 There are a number of command and subcommand options available: HTTP options,
@@ -59,7 +64,7 @@ vault <command> [options] [path] [args]
 The following `write` command creates a new user (`bob`) in the userpass auth
 method. It passes the `-address` flag to specify the Vault server address which
 precedes the path (`auth/userpass/users/bob`) and its
-[argument](/api/auth/userpass#create-update-user)
+[argument](/api-docs/auth/userpass#create-update-user)
 (`password="long-password"`) at last.
 
 ```shell-session
@@ -67,7 +72,7 @@ $ vault write -address="http://127.0.0.1:8200" auth/userpass/users/bob password=
 ```
 
 If multiple options (`-address` and `-namespace`) and
-[arguments](/api/auth/userpass#create-update-user) (`password` and
+[arguments](/api-docs/auth/userpass#create-update-user) (`password` and
 `policies`) are specified, the command would look like:
 
 ```shell-session
@@ -302,7 +307,7 @@ limiting is off by default.
 _Note:_ The rate is limited for each invocation of the `vault` CLI. Since
 each invocation of the `vault` CLI typically only makes a few requests,
 this environment variable is most useful when using the Go
-[Vault client API](/api/libraries#go).
+[Vault client API](/api-docs/libraries#go).
 
 ### `VAULT_NAMESPACE`
 
