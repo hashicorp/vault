@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/cidrutil: Only check if cidr contains remote address for IP addresses
+```

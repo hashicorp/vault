@@ -14,7 +14,7 @@ import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { dasherize, capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
-import buildValidations from 'vault/utils/build-api-validators';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -36,6 +36,7 @@ export default Service.extend({
   getNewModel(modelType, backend, apiPath, itemType) {
     let owner = getOwner(this);
     const modelName = `model:${modelType}`;
+
     const modelFactory = owner.factoryFor(modelName);
     let newModel, helpUrl;
     // if we have a factory, we need to take the existing model into account
@@ -204,10 +205,18 @@ export default Service.extend({
         };
       }
 
-      // TODO: handle post endpoints without requestBody
-      const props = pathInfo.post
-        ? pathInfo.post.requestBody.content['application/json'].schema.properties
-        : {};
+      let props = {};
+      const schema = pathInfo?.post?.requestBody?.content['application/json'].schema;
+      if (schema.$ref) {
+        // $ref will be shaped like `#/components/schemas/MyResponseType
+        // which maps to the location of the item within the openApi response
+        let loc = schema.$ref.replace('#/', '').split('/');
+        props = loc.reduce((prev, curr) => {
+          return prev[curr] || {};
+        }, help.openapi).properties;
+      } else if (schema.properties) {
+        props = schema.properties;
+      }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
       const newProps = assign({}, paramProp, props);
@@ -290,8 +299,17 @@ export default Service.extend({
           // Build and add validations on model
           // NOTE: For initial phase, initialize validations only for user pass auth
           if (backend === 'userpass') {
-            let validations = buildValidations(fieldGroups);
-            newModel = newModel.extend(validations);
+            const validations = fieldGroups.reduce((obj, element) => {
+              if (element.default) {
+                element.default.forEach((v) => {
+                  obj[v.name] = [{ type: 'presence', message: `${v.name} can't be black` }];
+                });
+              }
+              return obj;
+            }, {});
+            @withModelValidations(validations)
+            class GeneratedItemModel extends newModel {}
+            newModel = GeneratedItemModel;
           }
         }
       } catch (err) {

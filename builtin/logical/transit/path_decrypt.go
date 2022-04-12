@@ -67,7 +67,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	var batchInputItems []BatchRequestItem
 	var err error
 	if batchInputRaw != nil {
-		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
+		err = decodeDecryptBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}

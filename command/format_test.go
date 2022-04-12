@@ -100,8 +100,7 @@ func TestStatusFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedOutputString :=
-		`Key                           Value
+	expectedOutputString := `Key                           Value
 ---                           -----
 Recovery Seal Type            type
 Initialized                   true
@@ -131,8 +130,7 @@ Last WAL                      2`
 		t.Fatal(err)
 	}
 
-	expectedOutputString =
-		`Key                           Value
+	expectedOutputString = `Key                           Value
 ---                           -----
 Recovery Seal Type            type
 Initialized                   true

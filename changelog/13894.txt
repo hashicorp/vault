@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add support for ECDSA and Ed25519 certificate views
+```

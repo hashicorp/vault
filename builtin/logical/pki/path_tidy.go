@@ -48,8 +48,8 @@ Defaults to 72 hours.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathTidyWrite,
-				ForwardPerformanceStandby:   true,
+				Callback:                  b.pathTidyWrite,
+				ForwardPerformanceStandby: true,
 			},
 		},
 
@@ -63,8 +63,8 @@ func pathTidyStatus(b *backend) *framework.Path {
 		Pattern: "tidy-status$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathTidyStatusRead,
-				ForwardPerformanceStandby:   true,
+				Callback:                  b.pathTidyStatusRead,
+				ForwardPerformanceStandby: true,
 			},
 		},
 		HelpSynopsis:    pathTidyStatusHelpSyn,
@@ -284,7 +284,7 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 
-	switch(b.tidyStatus.state) {
+	switch b.tidyStatus.state {
 	case tidyStatusStarted:
 		resp.Data["state"] = "Running"
 	case tidyStatusFinished:

@@ -435,7 +435,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength+2; l != exp {
+		if l, exp := len(token), vault.TokenLength+vault.TokenPrefixLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})
@@ -521,7 +521,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength+2; l != exp {
+		if l, exp := len(token), vault.TokenLength+vault.TokenPrefixLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})

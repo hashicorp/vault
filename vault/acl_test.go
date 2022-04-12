@@ -633,7 +633,6 @@ func TestACL_SegmentWildcardPriority(t *testing.T) {
 	// These test cases should each have a read rule and an update rule, where
 	// the update rule wins out due to being more specific.
 	poltests := []poltest{
-
 		{
 			// Verify edge conditions.  Here '*' is more specific both because
 			// of first wildcard position (0 vs -1/infinity) and #wildcards.

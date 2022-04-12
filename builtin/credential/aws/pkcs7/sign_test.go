@@ -97,7 +97,7 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpContentFile.Name(), content, 0755)
+	ioutil.WriteFile(tmpContentFile.Name(), content, 0o755)
 
 	block, _ := pem.Decode([]byte(dsaPublicCert))
 	if block == nil {
@@ -113,13 +113,15 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0755)
+	ioutil.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0o755)
 
 	priv := dsa.PrivateKey{
-		PublicKey: dsa.PublicKey{Parameters: dsa.Parameters{P: fromHex("fd7f53811d75122952df4a9c2eece4e7f611b7523cef4400c31e3f80b6512669455d402251fb593d8d58fabfc5f5ba30f6cb9b556cd7813b801d346ff26660b76b9950a5a49f9fe8047b1022c24fbba9d7feb7c61bf83b57e7c6a8a6150f04fb83f6d3c51ec3023554135a169132f675f3ae2b61d72aeff22203199dd14801c7"),
-			Q: fromHex("9760508F15230BCCB292B982A2EB840BF0581CF5"),
-			G: fromHex("F7E1A085D69B3DDECBBCAB5C36B857B97994AFBBFA3AEA82F9574C0B3D0782675159578EBAD4594FE67107108180B449167123E84C281613B7CF09328CC8A6E13C167A8B547C8D28E0A3AE1E2BB3A675916EA37F0BFA213562F1FB627A01243BCCA4F1BEA8519089A883DFE15AE59F06928B665E807B552564014C3BFECF492A"),
-		},
+		PublicKey: dsa.PublicKey{
+			Parameters: dsa.Parameters{
+				P: fromHex("fd7f53811d75122952df4a9c2eece4e7f611b7523cef4400c31e3f80b6512669455d402251fb593d8d58fabfc5f5ba30f6cb9b556cd7813b801d346ff26660b76b9950a5a49f9fe8047b1022c24fbba9d7feb7c61bf83b57e7c6a8a6150f04fb83f6d3c51ec3023554135a169132f675f3ae2b61d72aeff22203199dd14801c7"),
+				Q: fromHex("9760508F15230BCCB292B982A2EB840BF0581CF5"),
+				G: fromHex("F7E1A085D69B3DDECBBCAB5C36B857B97994AFBBFA3AEA82F9574C0B3D0782675159578EBAD4594FE67107108180B449167123E84C281613B7CF09328CC8A6E13C167A8B547C8D28E0A3AE1E2BB3A675916EA37F0BFA213562F1FB627A01243BCCA4F1BEA8519089A883DFE15AE59F06928B665E807B552564014C3BFECF492A"),
+			},
 		},
 		X: fromHex("7D6E1A3DD4019FD809669D8AB8DA73807CEF7EC1"),
 	}
@@ -141,7 +143,7 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignatureFile.Name(), pem.EncodeToMemory(&pem.Block{Type: "PKCS7", Bytes: signed}), 0755)
+	ioutil.WriteFile(tmpSignatureFile.Name(), pem.EncodeToMemory(&pem.Block{Type: "PKCS7", Bytes: signed}), 0o755)
 
 	// call openssl to verify the signature on the content using the root
 	opensslCMD := exec.Command("openssl", "smime", "-verify", "-noverify",
@@ -199,7 +201,7 @@ func TestUnmarshalSignedAttribute(t *testing.T) {
 	oidTest := asn1.ObjectIdentifier{2, 3, 4, 5, 6, 7}
 	testValue := "TestValue"
 	if err := toBeSigned.AddSigner(cert.Certificate, *cert.PrivateKey, SignerInfoConfig{
-		ExtraSignedAttributes: []Attribute{Attribute{Type: oidTest, Value: testValue}},
+		ExtraSignedAttributes: []Attribute{{Type: oidTest, Value: testValue}},
 	}); err != nil {
 		t.Fatalf("Cannot add signer: %s", err)
 	}
@@ -255,8 +257,8 @@ func testOpenSSLParse(t *testing.T, certBytes []byte) {
 	if err := tmpCertFile.Close(); err != nil {
 		t.Fatal(err)
 	}
-
 }
+
 func fromHex(s string) *big.Int {
 	result, ok := new(big.Int).SetString(s, 16)
 	if !ok {

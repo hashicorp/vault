@@ -62,15 +62,15 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the request data " +
+			"object. To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the response data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the response data " +
+			"object. To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.DurationVar(&DurationVar{
@@ -112,15 +112,15 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
-		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the plugin",
+		Usage: "Request header value that will be sent to the plugin. To specify " +
+			"multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedResponseHeaders,
 		Target: &c.flagAllowedResponseHeaders,
-		Usage: "Comma-separated string or list of response header values that " +
-			"plugins will be allowed to set",
+		Usage: "Response header value that plugins will be allowed to set. To " +
+			"specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringMapVar(&StringMapVar{
@@ -142,8 +142,7 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 		Name:   flagNameAllowedManagedKeys,
 		Target: &c.flagAllowedManagedKeys,
 		Usage: "Managed key name(s) that the mount in question is allowed to access. " +
-			"Note that multiple keys may be specified either by providing the key names " +
-			"as a comma separated string or by providing this option multiple times, " +
+			"Note that multiple keys may be specified by providing this option multiple times, " +
 			"each time with 1 key.",
 	})
 

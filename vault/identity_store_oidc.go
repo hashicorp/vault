@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
@@ -548,18 +549,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	// generate current and next keys if creating a new key or changing algorithms
 	if key.Algorithm != prevAlgorithm {
-		signingKey, err := generateKeys(key.Algorithm)
+		err = key.generateAndSetKey(ctx, i.Logger(), req.Storage)
 		if err != nil {
 			return nil, err
 		}
-
-		key.SigningKey = signingKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
-
-		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
-			return nil, err
-		}
-		i.Logger().Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 
 		err = key.generateAndSetNextKey(ctx, i.Logger(), req.Storage)
 		if err != nil {
@@ -628,9 +621,11 @@ func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, nam
 	if err := entry.DecodeJSON(&key); err != nil {
 		return keyIDs, err
 	}
+
 	for _, k := range key.KeyRing {
 		keyIDs = append(keyIDs, k.KeyID)
 	}
+
 	return keyIDs, nil
 }
 
@@ -675,7 +670,7 @@ func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, r
 	}
 
 	var names []string
-	for key, _ := range roles {
+	for key := range roles {
 		names = append(names, key)
 	}
 	sort.Strings(names)
@@ -690,6 +685,11 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	}
 
 	targetKeyName := d.Get("name").(string)
+
+	if targetKeyName == defaultKeyName {
+		return logical.ErrorResponse("deletion of key %q not allowed",
+			defaultKeyName), nil
+	}
 
 	i.oidcLock.Lock()
 
@@ -1013,6 +1013,24 @@ func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, temp
 	return nil
 }
 
+// generateAndSetKey will generate new signing and public key pairs and set
+// them as the SigningKey.
+func (k *namedKey) generateAndSetKey(ctx context.Context, logger hclog.Logger, s logical.Storage) error {
+	signingKey, err := generateKeys(k.Algorithm)
+	if err != nil {
+		return err
+	}
+
+	k.SigningKey = signingKey
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
+
+	if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
+		return err
+	}
+	logger.Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
+	return nil
+}
+
 // generateAndSetNextKey will generate new signing and public key pairs and set
 // them as the NextSigningKey.
 func (k *namedKey) generateAndSetNextKey(ctx context.Context, logger hclog.Logger, s logical.Storage) error {
@@ -1032,6 +1050,9 @@ func (k *namedKey) generateAndSetNextKey(ctx context.Context, logger hclog.Logge
 }
 
 func (k *namedKey) signPayload(payload []byte) (string, error) {
+	if k.SigningKey == nil {
+		return "", fmt.Errorf("signing key is nil; rotate the key and try again")
+	}
 	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.Algorithm)}
 	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
 	if err != nil {
@@ -1482,21 +1503,27 @@ func (i *IdentityStore) pathOIDCIntrospect(ctx context.Context, req *logical.Req
 // verification_ttl can be overridden with an overrideVerificationTTL value >= 0
 func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.Storage, overrideVerificationTTL time.Duration) error {
 	verificationTTL := k.VerificationTTL
-
 	if overrideVerificationTTL >= 0 {
 		verificationTTL = overrideVerificationTTL
 	}
 
 	now := time.Now()
-	// set the previous public key's expiry time
-	for _, key := range k.KeyRing {
-		if key.KeyID == k.SigningKey.KeyID {
-			key.ExpireAt = now.Add(verificationTTL)
-			break
+	if k.SigningKey != nil {
+		// set the previous public key's expiry time
+		for _, key := range k.KeyRing {
+			if key.KeyID == k.SigningKey.KeyID {
+				key.ExpireAt = now.Add(verificationTTL)
+				break
+			}
 		}
+	} else {
+		// this can occur for keys generated before vault 1.9.0 but rotated on
+		// vault 1.9.0
+		logger.Debug("nil signing key detected on rotation")
 	}
 
 	if k.NextSigningKey == nil {
+		logger.Debug("nil next signing key detected on rotation")
 		// keys will not have a NextSigningKey if they were generated before
 		// vault 1.9
 		err := k.generateAndSetNextKey(ctx, logger, s)
@@ -1504,6 +1531,7 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 			return err
 		}
 	}
+
 	// do the rotation
 	k.SigningKey = k.NextSigningKey
 	k.NextRotation = now.Add(k.RotationPeriod)
@@ -1634,16 +1662,14 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	jwks := &jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 0),
-	}
-
 	// only return keys that are associated with a role
 	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
 
+	// collect and deduplicate the key IDs for all roles
+	keyIDs := make(map[string]struct{})
 	for _, roleName := range roleNames {
 		role, err := i.getOIDCRole(ctx, s, roleName)
 		if err != nil {
@@ -1653,18 +1679,27 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 			continue
 		}
 
-		keyIDs, err := i.keyIDsByName(ctx, s, role.Key)
+		roleKeyIDs, err := i.keyIDsByName(ctx, s, role.Key)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, s, keyID)
-			if err != nil {
-				return nil, err
-			}
-			jwks.Keys = append(jwks.Keys, *key)
+		for _, keyID := range roleKeyIDs {
+			keyIDs[keyID] = struct{}{}
 		}
+	}
+
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+	}
+
+	// load the JSON web key for each key ID
+	for keyID := range keyIDs {
+		key, err := loadOIDCPublicKey(ctx, s, keyID)
+		if err != nil {
+			return nil, err
+		}
+		jwks.Keys = append(jwks.Keys, *key)
 	}
 
 	if err := i.oidcCache.SetDefault(ns, "jwks", jwks); err != nil {
@@ -1695,21 +1730,21 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 		return now, err
 	}
 
-	namedKeys, err := s.List(ctx, namedKeyConfigPath)
+	keyNames, err := s.List(ctx, namedKeyConfigPath)
 	if err != nil {
 		return now, err
 	}
 
-	usedKeys := make([]string, 0, 2*len(namedKeys))
+	usedKeys := make([]string, 0)
 
-	for _, k := range namedKeys {
-		entry, err := s.Get(ctx, namedKeyConfigPath+k)
+	for _, keyName := range keyNames {
+		entry, err := s.Get(ctx, namedKeyConfigPath+keyName)
 		if err != nil {
 			return now, err
 		}
 
 		if entry == nil {
-			i.Logger().Warn("could not find key to update", "key", k)
+			i.Logger().Warn("could not find key to update", "key", keyName)
 			continue
 		}
 
@@ -1722,14 +1757,14 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 		keyRing := key.KeyRing
 		var keyringUpdated bool
 
-		for i := 0; i < len(keyRing); i++ {
-			k := keyRing[i]
+		for j := 0; j < len(keyRing); j++ {
+			k := keyRing[j]
 			if !k.ExpireAt.IsZero() && k.ExpireAt.Before(now) {
-				keyRing[i] = keyRing[len(keyRing)-1]
+				keyRing[j] = keyRing[len(keyRing)-1]
 				keyRing = keyRing[:len(keyRing)-1]
 
 				keyringUpdated = true
-				i--
+				j--
 				continue
 			}
 
@@ -1748,11 +1783,13 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 			key.KeyRing = keyRing
 			entry, err := logical.StorageEntryJSON(entry.Key, key)
 			if err != nil {
-				i.Logger().Error("error updating key", "key", key.name, "error", err)
+				i.Logger().Error("error creating storage entry", "key", key.name, "error", err)
+				continue
 			}
 
 			if err := s.Put(ctx, entry); err != nil {
-				i.Logger().Error("error saving key", "key", key.name, "error", err)
+				i.Logger().Error("error writing key", "key", key.name, "error", err)
+				continue
 			}
 			didUpdate = true
 		}
@@ -1762,11 +1799,12 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	// use by some role.
 	for _, keyID := range publicKeyIDs {
 		if !strutil.StrListContains(usedKeys, keyID) {
-			didUpdate = true
 			if err := s.Delete(ctx, publicKeysConfigPath+keyID); err != nil {
 				i.Logger().Error("error deleting OIDC public key", "key_id", keyID, "error", err)
 				nextExpiration = now
+				continue
 			}
+			didUpdate = true
 			i.Logger().Debug("deleted OIDC public key", "key_id", keyID)
 		}
 	}
@@ -1849,6 +1887,12 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
+	// Key rotations write to storage, so only run this on the primary cluster.
+	// The periodic func does not run on perf standbys or DR secondaries.
+	if i.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		return
+	}
+
 	var nextRun time.Time
 	now := time.Now()
 

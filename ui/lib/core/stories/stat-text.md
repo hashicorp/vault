@@ -21,6 +21,6 @@ StatText components are used to display a label and associated value beneath, wi
 **See**
 
 - [Uses of StatText](https://github.com/hashicorp/vault/search?l=Handlebars&q=StatText+OR+stat-text)
-- [StatText Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/stat-text.js)
+- [StatText Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/stat-text.js)
 
 ---

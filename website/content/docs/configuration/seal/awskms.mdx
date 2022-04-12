@@ -104,7 +104,7 @@ Vault Seal specific values:
 
 ## Key Rotation
 
-This seal supports rotating the master keys defined in AWS KMS
+This seal supports rotating the root keys defined in AWS KMS
 [doc](https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html). Both automatic
 rotation and manual rotation is supported for KMS since the key information is stored with the
 encrypted data. Old keys must not be disabled or deleted and are used to decrypt older data.
@@ -115,7 +115,7 @@ or set to current under a key alias.
 
 @include 'aws-imds-timeout.mdx'
 
-## Learn
+## Tutorial
 
 Refer to the [Auto-unseal using AWS KMS](https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms)
-guide for a step-by-step tutorial.
+tutorial to learn how to auto-unseal Vault using AWK KMS.

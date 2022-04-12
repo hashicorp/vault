@@ -97,7 +97,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		DisplayName: username,
 		Alias: &logical.Alias{
 			Name: effectiveUsername,
+			Metadata: map[string]string{
+				"name": username,
+			},
 		},
+	}
+
+	if cfg.UsernameAsAlias {
+		auth.Alias.Name = username
 	}
 
 	cfg.PopulateTokenAuth(auth)

@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -76,6 +74,8 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 	publicKey2 = `AAAAB3NzaC1yc2EAAAADAQABAAABAQDArgK0ilRRfk8E7HIsjz5l3BuxmwpDd8DHRCVfOhbZ4gOSVxjEOOqBwWGjygdboBIZwFXmwDlU6sWX0hBJAgpQz0Cjvbjxtq/NjkvATrYPgnrXUhTaEn2eQO0PsqRNSFH46SK/oJfTp0q8/WgojxWJ2L7FUV8PO8uIk49DzqAqPV7WXU63vFsjx+3WQOX/ILeQvHCvaqs3dWjjzEoDudRWCOdUqcHEOshV9azIzPrXlQVzRV3QAKl6u7pC+/Secorpwt6IHpMKoVPGiR0tMMuNOVH8zrAKzIxPGfy2WmNDpJopbXMTvSOGAqNcp49O4SKOQl9Fzfq2HEevJamKLrMB
 `
 
+	publicKey3072 = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDlsMr3K1d0nzE1TjUULPRuVjEGETmOqHtWq4gVPq3HiuNVHE/e/BJnkXc40BoClQ2Z5ZZPJZ6izF9PnlzNDjpq8DrILUrn/6KrzCHvRwnkYMAXbfM/Br09z5QGptbOe1EMLeVe0b/udmUicbYAGPxMruZk+ljyr4vXkO+gOAIrxeSIQSdMVLU4g0pCPQuDCOx5IQpDYSlOB3091frpN8npfMueKPflNYzxnqqYgAVeDKAIqMCGOMOHUeIZJ7A7HuynEAVOsOkJwC9nesy9D6ppdWNduGl42IkzlwVdDMZtUAEznMUT/dnHNG1Krx9SuNZ/S9fGjxGVsT+jzUmizrWB9/6XIEHDxPBzcqlWFuwYTGz1OL8bfZ+HldOGPcnqZn9hKntWwjUc3whcvWt+NCmXpHSVLSxf+WN8pdmfEsCqn8mpvo2MXa+iJrtAVPX4i0u8AQUuqC3NuXHv4Cn0LNwtziBT544UjgbWkAZqzFZJREYA09OHscc3akEIrTnPehk= demo@example.com`
+
 	publicKey4096 = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC54Oj4YCFDYxYv69Q9KfU6rWYtUB1eByQdUW0nXFi/vr98QUIV77sEeUVhaQzZcuCojAi/GrloW7ta0Z2DaEv5jOQMAnGpXBcqLJsz3KdrHbpvl93MPNdmNaGPU0GnUEsjBVuDVn9HdIUa8CNrxShvPu7/VqoaRHKLqphGgzFb37vi4qvnQ+5VYAO/TzyVYMD6qJX6I/9Pw8d74jCfEdOh2yGKkP7rXWOghreyIl8H2zTJKg9KoZuPq9F5M8nNt7Oi3rf+DwQiYvamzIqlDP4s5oFVTZW0E9lwWvYDpyiJnUrkQqksebBK/rcyfiFG3onb4qLo2WVWXeK3si8IhGik/TEzprScyAWIf9RviT8O+l5hTA2/c+ctn3MVCLRNfez2lKpdxCoprv1MbIcySGWblTJEcY6RA+aauVJpu7FMtRxHHtZKtMpep8cLu8GKbiP6Ifq2JXBtXtNxDeIgo2MkNoMh/NHAsACJniE/dqV/+u9HvhvgrTbJ69ell0nE4ivzA7O4kZgbR/4MHlLgLFvaqC8RrWRLY6BdFagPIMxghWha7Qw16zqoIjRnolvRzUWvSXanJVg8Z6ua1VxwgirNaAH1ivmJhUh2+4lNxCX6jmZyR3zjJsWY03gjJTairvI762opjjalF8fH6Xrs15mB14JiAlNbk6+5REQcvXlGqw== dummy@example.com`
 
 	testCAPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
@@ -118,6 +118,9 @@ AAAEBQYa029SP/7AGPFQLmzwOc9eCoOZuwCq3iIf2C6fj9j+1S6g5Bib7vT8eoFnvTl3dZ
 SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 -----END OPENSSH PRIVATE KEY-----
 `
+
+	publicKeyECDSA256 = `ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJsfOouYIjJNI23QJqaDsFTGukm21fRAMeGvKZDB59i5jnX1EubMH1AEjjzz4fgySUlyWKo+TS31rxU8kX3DDM4= demo@example.com`
+	publicKeyECDSA521 = `ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAEg73ORD4J3FV2CrL01gLSKREO2EHrZPlJCOeDL5OKD3M1GCHv3q8O452RW49Aw+8zFFFU5u6d1Ys3Qsj05zdaQwQDt/D3ceWLGVkWiKyLPQStfn0GGOZh3YFKEw5XmeW9jh6xudEHlKs4Pfv2FrroaUKZvM2SlxR/feOK0tCQyq3MN/g== demo@example.com`
 
 	// testPublicKeyInstall is the public key that is installed in the
 	// admin account's authorized_keys
@@ -720,7 +723,23 @@ func TestSSHBackend_CA(t *testing.T) {
 			testCAPublicKey,
 			testCAPrivateKey,
 			"",
-			true,
+			false,
+		},
+		{
+			"RSAKey_DefaultAlgoSigner_ImageSupportsRSA1",
+			dockerImageTagSupportsRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			"default",
+			false,
+		},
+		{
+			"RSAKey_DefaultAlgoSigner_ImageSupportsNoRSA1",
+			dockerImageTagSupportsNoRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			"default",
+			false,
 		},
 		{
 			"RSAKey_RSA1AlgoSigner_ImageSupportsRSA1",
@@ -729,6 +748,14 @@ func TestSSHBackend_CA(t *testing.T) {
 			testCAPrivateKey,
 			ssh.SigAlgoRSA,
 			false,
+		},
+		{
+			"RSAKey_RSA1AlgoSigner_ImageSupportsNoRSA1",
+			dockerImageTagSupportsNoRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			ssh.SigAlgoRSA,
+			true,
 		},
 		{
 			"RSAKey_RSASHA2256AlgoSigner_ImageSupportsRSA1",
@@ -1198,7 +1225,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				"key_type":                "ca",
 				"allow_user_certificates": true,
 				"allowed_user_key_lengths": map[string]interface{}{
-					"rsa": json.Number(strconv.FormatInt(4096, 10)),
+					"rsa": 4096,
 				},
 			}),
 			{
@@ -1219,7 +1246,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				"key_type":                "ca",
 				"allow_user_certificates": true,
 				"allowed_user_key_lengths": map[string]interface{}{
-					"rsa": json.Number(strconv.FormatInt(2048, 10)),
+					"rsa": 2048,
 				},
 			}),
 			// Pass with 2048 key
@@ -1241,6 +1268,98 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Check: func(resp *logical.Response) error {
 					if resp.Data["error"] != "public_key failed to meet the key requirements: key is of an invalid size: 4096" {
 						return errors.New("a larger key (4096) was allowed, when the size was set for 2048")
+					}
+					return nil
+				},
+			},
+			createRoleStep("multikey", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"rsa": []int{2048, 4096},
+				},
+			}),
+			// Pass with 2048-bit key
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/multikey",
+				Data: map[string]interface{}{
+					"public_key": testCAPublicKey,
+				},
+			},
+			// Pass with 4096-bit key
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/multikey",
+				Data: map[string]interface{}{
+					"public_key": publicKey4096,
+				},
+			},
+			// Fail with 3072-bit key
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/multikey",
+				Data: map[string]interface{}{
+					"public_key": publicKey3072,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: key is of an invalid size: 3072" {
+						return errors.New("a larger key (3072) was allowed, when the size was set for 2048")
+					}
+					return nil
+				},
+			},
+			// Fail with ECDSA key
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/multikey",
+				Data: map[string]interface{}{
+					"public_key": publicKeyECDSA256,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: key of type ecdsa is not allowed" {
+						return errors.New("an ECDSA key was allowed under RSA-only policy")
+					}
+					return nil
+				},
+			},
+			createRoleStep("ectypes", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"ec":                  []int{256},
+					"ecdsa-sha2-nistp521": 0,
+				},
+			}),
+			// Pass with ECDSA P-256
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/ectypes",
+				Data: map[string]interface{}{
+					"public_key": publicKeyECDSA256,
+				},
+			},
+			// Pass with ECDSA P-521
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/ectypes",
+				Data: map[string]interface{}{
+					"public_key": publicKeyECDSA521,
+				},
+			},
+			// Fail with RSA key
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/ectypes",
+				Data: map[string]interface{}{
+					"public_key": publicKey3072,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: key of type rsa is not allowed" {
+						return errors.New("an RSA key was allowed under ECDSA-only policy")
 					}
 					return nil
 				},
@@ -1743,8 +1862,8 @@ func signCertificateStep(
 }
 
 func validateSSHCertificate(cert *ssh.Certificate, keyID string, certType int, validPrincipals []string, criticalOptionPermissions, extensionPermissions map[string]string,
-	ttl time.Duration) error {
-
+	ttl time.Duration,
+) error {
 	if cert.KeyId != keyID {
 		return fmt.Errorf("incorrect KeyId: %v, wanted %v", cert.KeyId, keyID)
 	}

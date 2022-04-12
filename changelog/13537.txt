@@ -1,0 +1,3 @@
+```release-note:improvement
+sys/raw: Enhance sys/raw to read and write values that cannot be encoded in json.
+```

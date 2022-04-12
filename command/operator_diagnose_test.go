@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
 )
@@ -478,7 +479,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				t.Parallel()
 				client, closer := testVaultServer(t)
 				defer closer()
-
+				os.Setenv(consts.VaultDisableFilePermissionsCheckEnv, "true")
 				cmd := testOperatorDiagnoseCommand(t)
 				cmd.client = client
 
@@ -521,7 +522,6 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 	if exp.Status != act.Status {
 		if act.Status != diagnose.OkStatus {
 			return fmt.Errorf("section %s, status mismatch: %s vs %s, got error %s", exp.Name, exp.Status, act.Status, act.Message)
-
 		}
 		return fmt.Errorf("section %s, status mismatch: %s vs %s", exp.Name, exp.Status, act.Status)
 	}

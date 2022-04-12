@@ -1,0 +1,3 @@
+```release-note:bug
+sdk: Fixes OpenAPI to distinguish between paths that can do only List, or both List and Read.
+```

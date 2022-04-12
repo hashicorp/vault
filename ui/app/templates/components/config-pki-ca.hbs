@@ -8,7 +8,7 @@
     {{/if}}
   </h2>
   {{#if (or this.model.certificate this.model.csr)}}
-    {{#if (not (eq this.model.canParse true))}}
+    {{#if (eq this.model.canParse false)}}
       <AlertBanner
         @type="info"
         @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the issue and expiration dates. This will not interfere with the certificate's functionality."
@@ -16,7 +16,7 @@
       />
     {{/if}}
     {{#each this.model.attrs as |attr|}}
-      {{#if attr.options.masked}}
+      {{#if (and attr.options.masked (get this.model attr.name))}}
         <InfoTableRow
           data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
@@ -73,7 +73,7 @@
             <button
               data-test-submit
               type="submit"
-              class="button is-primary {{if this.loading "is-loading"}}"
+              class="button is-primary {{if this.loading 'is-loading'}}"
               disabled={{this.loading}}
             >
               Save
@@ -108,7 +108,7 @@
       data-test-warning
     />
     {{#each this.model.attrs as |attr|}}
-      {{#if attr.options.masked}}
+      {{#if (and attr.options.masked (get this.model attr.name))}}
         <InfoTableRow
           data-test-table-row={{this.value}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
@@ -150,7 +150,7 @@
   {{else}}
     <h2 data-test-title class="title is-3">Sign intermediate</h2>
     <NamespaceReminder @mode="save" @noun="PKI change" />
-    <MessageError @model={{this.model}} />
+    <MessageError @model={{this.model}} @errors={{this.errors}} />
     <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
       <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -158,7 +158,7 @@
           <button
             data-test-submit
             type="submit"
-            class="button is-primary {{if this.loading "is-loading"}}"
+            class="button is-primary {{if this.loading 'is-loading'}}"
             disabled={{this.loading}}
           >
             Save
@@ -199,7 +199,7 @@
         <button
           data-test-submit
           type="submit"
-          class="button is-primary {{if this.loading "is-loading"}}"
+          class="button is-primary {{if this.loading 'is-loading'}}"
           disabled={{this.loading}}
         >
           Save

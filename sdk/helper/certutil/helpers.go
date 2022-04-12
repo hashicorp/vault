@@ -36,9 +36,9 @@ import (
 const rsaMinimumSecureKeySize = 2048
 
 // Mapping of key types to default key lengths
-var defaultAlgorithmKeyBits = map[string]int {
+var defaultAlgorithmKeyBits = map[string]int{
 	"rsa": 2048,
-	"ec": 256,
+	"ec":  256,
 }
 
 // Mapping of NIST P-Curve's key length to expected signature bits.
@@ -77,21 +77,42 @@ func ParseHexFormatted(in, sep string) []byte {
 	return ret.Bytes()
 }
 
-// GetSubjKeyID returns the subject key ID, e.g. the SHA1 sum
-// of the marshaled public key
+// GetSubjKeyID returns the subject key ID. The computed ID is the SHA-1 hash of
+// the marshaled public key according to
+// https://tools.ietf.org/html/rfc5280#section-4.2.1.2 (1)
 func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
+	return getSubjectKeyID(privateKey.Public())
+}
 
-	marshaledKey, err := x509.MarshalPKIXPublicKey(privateKey.Public())
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+func getSubjectKeyID(pub interface{}) ([]byte, error) {
+	var publicKeyBytes []byte
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		type pkcs1PublicKey struct {
+			N *big.Int
+			E int
+		}
+
+		var err error
+		publicKeyBytes, err = asn1.Marshal(pkcs1PublicKey{
+			N: pub.N,
+			E: pub.E,
+		})
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+		}
+	case *ecdsa.PublicKey:
+		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	case ed25519.PublicKey:
+		publicKeyBytes = pub
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported public key type: %T", pub)}
 	}
-
-	subjKeyID := sha1.Sum(marshaledKey)
-
-	return subjKeyID[:], nil
+	skid := sha1.Sum(publicKeyBytes)
+	return skid[:], nil
 }
 
 // ParsePKIMap takes a map (for instance, the Secret.Data
@@ -370,6 +391,9 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 	block, data := pem.Decode(data)
 	if block != nil {
+		if len(bytes.TrimSpace(data)) > 0 {
+			return nil, errutil.UserError{Err: "unexpected trailing data after parsed PEM block"}
+		}
 		var rawKey interface{}
 		var err error
 		if rawKey, err = x509.ParsePKIXPublicKey(block.Bytes); err != nil {
@@ -380,17 +404,15 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 			}
 		}
 
-		if rsaPublicKey, ok := rawKey.(*rsa.PublicKey); ok {
-			return rsaPublicKey, nil
-		}
-		if ecPublicKey, ok := rawKey.(*ecdsa.PublicKey); ok {
-			return ecPublicKey, nil
-		}
-		if edPublicKey, ok := rawKey.(ed25519.PublicKey); ok {
-			return edPublicKey, nil
+		switch key := rawKey.(type) {
+		case *rsa.PublicKey:
+			return key, nil
+		case *ecdsa.PublicKey:
+			return key, nil
+		case ed25519.PublicKey:
+			return key, nil
 		}
 	}
-
 	return nil, errors.New("data does not contain any valid public keys")
 }
 
@@ -563,25 +585,17 @@ func DefaultOrValueKeyBits(keyType string, keyBits int) (int, error) {
 // certain internal circumstances.
 func DefaultOrValueHashBits(keyType string, keyBits int, hashBits int) (int, error) {
 	if keyType == "ec" {
-		// To comply with BSI recommendations Section 4.2 and Mozilla root
-		// store policy section 5.1.2, enforce that NIST P-curves use a hash
-		// length corresponding to curve length. Note that ed25519 does not
-		// the "ec" key type.
-		expectedHashBits := expectedNISTPCurveHashBits[keyBits]
-
-		if expectedHashBits != hashBits && hashBits != 0 {
-			return hashBits, fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", hashBits, keyBits)
-		} else if hashBits == 0 {
-			hashBits = expectedHashBits
-		}
+		// Enforcement of curve moved to selectSignatureAlgorithmForECDSA. See
+		// note there about why.
 	} else if keyType == "rsa" && hashBits == 0 {
 		// To match previous behavior (and ignoring NIST's recommendations for
 		// hash size to align with RSA key sizes), default to SHA-2-256.
 		hashBits = 256
-	} else if keyType == "ed25519" || keyType == "ed448" {
+	} else if keyType == "ed25519" || keyType == "ed448" || keyType == "any" {
 		// No-op; ed25519 and ed448 internally specify their own hash and
 		// we do not need to select one. Double hashing isn't supported in
-		// certificate signing and we must
+		// certificate signing. Additionally, the any key type can't know
+		// what hash algorithm to use yet, so default to zero.
 		return 0, nil
 	}
 
@@ -620,7 +634,7 @@ func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, h
 // Validates that the length of the hash (in bits) used in the signature
 // calculation is a known, approved value.
 func ValidateSignatureLength(keyType string, hashBits int) error {
-	if keyType == "ed25519" || keyType == "ed448" {
+	if keyType == "any" || keyType == "ec" || keyType == "ed25519" || keyType == "ed448" {
 		// ed25519 and ed448 include built-in hashing and is not externally
 		// configurable. There are three modes for each of these schemes:
 		//
@@ -632,6 +646,13 @@ func ValidateSignatureLength(keyType string, hashBits int) error {
 		//
 		// In all cases, we won't have a hash algorithm to validate here, so
 		// return nil.
+		//
+		// Additionally, when KeyType is any, we can't yet validate the
+		// signature algorithm size, so it takes the default zero value.
+		//
+		// When KeyType is ec, we also can't validate this value as we're
+		// forcefully ignoring the users' choice and specifying a value based
+		// on issuer type.
 		return nil
 	}
 
@@ -677,16 +698,23 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 // CreateCertificate uses CreationBundle and the default rand.Reader to
 // generate a cert/keypair.
 func CreateCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
-	return createCertificate(data, rand.Reader)
+	return createCertificate(data, rand.Reader, generatePrivateKey)
 }
 
 // CreateCertificateWithRandomSource uses CreationBundle and a custom
 // io.Reader for randomness to generate a cert/keypair.
 func CreateCertificateWithRandomSource(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
-	return createCertificate(data, randReader)
+	return createCertificate(data, randReader, generatePrivateKey)
 }
 
-func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBundle, error) {
+// KeyGenerator Allow us to override how/what generates the private key
+type KeyGenerator func(keyType string, keyBits int, container ParsedPrivateKeyContainer, entropyReader io.Reader) error
+
+func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCertBundle, error) {
+	return createCertificate(data, randReader, keyGenerator)
+}
+
+func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGenerator KeyGenerator) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
 
@@ -695,7 +723,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		return nil, err
 	}
 
-	if err := generatePrivateKey(data.Params.KeyType,
+	if err := privateKeyGenerator(data.Params.KeyType,
 		data.Params.KeyBits,
 		result, randReader); err != nil {
 		return nil, err
@@ -830,16 +858,25 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 }
 
 func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x509.SignatureAlgorithm {
-	// If signature bits are configured, prefer them to the default choice.
-	switch signatureBits {
-	case 256:
-		return x509.ECDSAWithSHA256
-	case 384:
-		return x509.ECDSAWithSHA384
-	case 512:
-		return x509.ECDSAWithSHA512
-	}
-
+	// Previously we preferred the user-specified signature bits for ECDSA
+	// keys. However, this could result in using a longer hash function than
+	// the underlying NIST P-curve will encode (e.g., a SHA-512 hash with a
+	// P-256 key). This isn't ideal: the hash is implicitly truncated
+	// (effectively turning it into SHA-512/256) and we then need to rely
+	// on the prefix security of the hash. Since both NIST and Mozilla guidance
+	// suggest instead using the correct hash function, we should prefer that
+	// over the operator-specified signatureBits.
+	//
+	// Lastly, note that pub above needs to be the _signer's_ public key;
+	// the issue with DefaultOrValueHashBits is that it is called at role
+	// configuration time, which might _precede_ issuer generation. Thus
+	// it only has access to the desired key type and not the actual issuer.
+	// The reference from that function is reproduced below:
+	//
+	// > To comply with BSI recommendations Section 4.2 and Mozilla root
+	// > store policy section 5.1.2, enforce that NIST P-curves use a hash
+	// > length corresponding to curve length. Note that ed25519 does not
+	// > implement the "ec" key type.
 	key, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
 		return x509.ECDSAWithSHA256
@@ -862,20 +899,26 @@ var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 // generate a cert/keypair. This is currently only meant
 // for use when generating an intermediate certificate.
 func CreateCSR(data *CreationBundle, addBasicConstraints bool) (*ParsedCSRBundle, error) {
-	return createCSR(data, addBasicConstraints, rand.Reader)
+	return createCSR(data, addBasicConstraints, rand.Reader, generatePrivateKey)
 }
 
 // CreateCSRWithRandomSource creates a CSR with a custom io.Reader
 // for randomness to generate a cert/keypair.
 func CreateCSRWithRandomSource(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
-	return createCSR(data, addBasicConstraints, randReader)
+	return createCSR(data, addBasicConstraints, randReader, generatePrivateKey)
 }
 
-func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Reader) (*ParsedCSRBundle, error) {
+// CreateCSRWithKeyGenerator creates a CSR with a custom io.Reader
+// for randomness to generate a cert/keypair with the provided private key generator.
+func CreateCSRWithKeyGenerator(data *CreationBundle, addBasicConstraints bool, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCSRBundle, error) {
+	return createCSR(data, addBasicConstraints, randReader, keyGenerator)
+}
+
+func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Reader, keyGenerator KeyGenerator) (*ParsedCSRBundle, error) {
 	var err error
 	result := &ParsedCSRBundle{}
 
-	if err := generatePrivateKey(data.Params.KeyType,
+	if err := keyGenerator(data.Params.KeyType,
 		data.Params.KeyBits,
 		result, randReader); err != nil {
 		return nil, err
@@ -972,11 +1015,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	marshaledKey, err := x509.MarshalPKIXPublicKey(data.CSR.PublicKey)
+	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+		return nil, err
 	}
-	subjKeyID := sha1.Sum(marshaledKey)
 
 	caCert := data.SigningBundle.Certificate
 

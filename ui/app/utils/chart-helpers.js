@@ -11,6 +11,16 @@ export const SVG_DIMENSIONS = { height: 190, width: 500 };
 
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
 export function formatNumbers(number) {
+  if (number < 1000) return number;
+  if (number < 10000) return format('.1s')(number);
   // replace SI prefix of 'G' for billions to 'B'
-  return format('.1s')(number).replace('G', 'B');
+  return format('.2s')(number).replace('G', 'B');
+}
+
+export function formatTooltipNumber(value) {
+  if (typeof value !== 'number') {
+    return value;
+  }
+  // formats a number according to the locale
+  return new Intl.NumberFormat().format(value);
 }

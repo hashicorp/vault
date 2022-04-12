@@ -36,7 +36,7 @@ jobs:
     - run:
         command: |
           case "$CIRCLE_BRANCH" in
-          main|ui/*|release/*|merge*) ;;
+          main|ui/*|backport/ui/*|release/*|merge*) ;;
           *) # If the branch being tested doesn't match one of the above patterns,
              # we don't need to run test-ui and can abort the job.
              circleci-agent step halt
@@ -145,7 +145,8 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.5
+    - GO_VERSION: 1.17.7
+    - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
@@ -165,7 +166,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -298,7 +299,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -360,9 +361,49 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
+  fmt:
+    machine: true
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+    steps:
+    - run:
+        command: |
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/home/circleci/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
+    - checkout
+    - run:
+        command: |
+          go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
+          make fmt
+          if ! git diff --exit-code; then
+            echo "Code has formatting errors. Run 'make fmt' to fix"
+            exit 1
+          fi
+        name: make fmt
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO_VERSION: 1.17.7
+    - GOFUMPT_VERSION: 0.2.1
+    - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -491,7 +532,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -572,7 +613,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -701,7 +742,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -757,6 +798,28 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
+  semgrep:
+    docker:
+    - image: docker.mirror.hashicorp.services/alpine:3.13
+    shell: /bin/sh
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+    steps:
+    - run:
+        command: |
+          apk add --no-cache python3 py3-pip make
+          python3 -m pip install --user semgrep==0.86.5
+          export PATH="$HOME/.local/bin:$PATH"
+
+          echo "$ semgrep --version"
+          semgrep --version
+        name: Setup Semgrep
+        working_directory: ~/
+    - checkout
+    - attach_workspace:
+        at: .
+    - run:
+        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
+        name: Run Semgrep Rules
   pre-flight-checks:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
@@ -840,11 +903,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.5
+    - GO_VERSION: 1.17.7
+    - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -977,7 +1041,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
               tail -f /dev/null
 
             # Run tests
@@ -1043,6 +1107,7 @@ workflows:
   ci:
     jobs:
     - pre-flight-checks
+    - fmt
     - install-ui-dependencies:
         requires:
         - pre-flight-checks
@@ -1084,4 +1149,7 @@ workflows:
             only:
             - stable-website
         context: vault-docs
+    - semgrep:
+        requires:
+        - pre-flight-checks
   version: 2

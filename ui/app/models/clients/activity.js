@@ -1,11 +1,12 @@
 import Model, { attr } from '@ember-data/model';
-
-export default Model.extend({
-  total: attr('object'),
-  byNamespace: attr('array'),
-  endTime: attr('string'),
-  startTime: attr('string'),
-  clients: attr('number'),
-  distinct_entities: attr('number'),
-  non_entity_tokens: attr('number'),
-});
+export default class Activity extends Model {
+  @attr('array') byMonthTotalClients;
+  @attr('array') byMonthNewClients;
+  @attr('array') byNamespace;
+  @attr('object') total;
+  @attr('array') formattedEndTime;
+  @attr('array') formattedStartTime;
+  @attr('string') startTime;
+  @attr('string') endTime;
+  @attr('string') responseTimestamp;
+}

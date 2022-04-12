@@ -59,7 +59,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
       background-color: $color;
       color: $color-invert;
 
-      &:hover,
+      &:hover:not([disabled]),
       &.is-hovered {
         background-color: darken($color, 5%);
         border-color: darken($color, 5%);
@@ -260,4 +260,11 @@ a.button.disabled {
   border-color: transparent;
   box-shadow: none;
   cursor: default;
+}
+.icon-button {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border: none;
+  cursor: pointer;
 }

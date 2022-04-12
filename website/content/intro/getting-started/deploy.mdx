@@ -128,8 +128,8 @@ distribute the key shares printed above. When the Vault is re-sealed,
 restarted, or stopped, you must supply at least 3 of these keys to unseal it
 before it can start servicing requests.
 
-Vault does not store the generated master key. Without at least 3 keys to
-reconstruct the master key, Vault will remain permanently sealed!
+Vault does not store the generated root key. Without at least 3 keys to
+reconstruct the root key, Vault will remain permanently sealed!
 
 It is possible to generate new unseal keys, provided you have a quorum of
 existing unseal keys shares. See "vault operator rekey" for more information.
@@ -165,7 +165,7 @@ the Vault, you need 3 of the 5 keys that were generated.
 -> **Note:** Vault does not store any of the unseal key shards. Vault
 uses an algorithm known as
 [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
-to split the master key into shards. Only with the threshold number of keys
+to split the root key into shards. Only with the threshold number of keys
 can it be reconstructed and your data finally accessed.
 
 Begin unsealing the Vault:

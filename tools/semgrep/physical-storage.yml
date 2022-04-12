@@ -1,0 +1,9 @@
+rules:
+  - id: physical-storage-bypass-encryption 
+    patterns:
+        - pattern-either:
+              - pattern: $CORE.physical.Put(...)
+              - pattern: $CORE.underlyingPhysical.Put(...)
+    message: "Bypassing encryption by accessing physical storage directly"
+    languages: [go]
+    severity: WARNING 

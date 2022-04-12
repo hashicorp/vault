@@ -1,13 +1,13 @@
 <ToolTip as |d|>
   <d.Trigger
-    @tagName="button"
+    @htmlTag="button"
     @type="button"
-    @class="tool-tip-trigger button is-ghost is-compact"
+    class="tool-tip-trigger button is-ghost is-compact"
     data-test-tool-tip-trigger={{true}}
   >
     <Icon @name="info" class="auto-width" aria-label="help" />
   </d.Trigger>
-  <d.Content @class="tool-tip">
+  <d.Content @defaultClass="tool-tip">
     <div class="box">
       {{yield}}
     </div>

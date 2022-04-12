@@ -1,0 +1,3 @@
+```release-note:feature
+**Transit Time-Based Key Autorotation**: Add support for automatic, time-based key rotation to transit secrets engine.
+```

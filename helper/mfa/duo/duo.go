@@ -68,8 +68,8 @@ type duoAuthRequest struct {
 }
 
 func duoHandler(duoConfig *DuoConfig, duoAuthClient AuthClient, request *duoAuthRequest) (
-	*logical.Response, error) {
-
+	*logical.Response, error,
+) {
 	duoUser := fmt.Sprintf(duoConfig.UsernameFormat, request.username)
 
 	preauth, err := duoAuthClient.Preauth(

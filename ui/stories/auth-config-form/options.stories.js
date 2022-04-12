@@ -1,8 +1,8 @@
-
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, select } from '@storybook/addon-knobs';
 import notes from './options.md';
+import { getOwner } from '@ember/application';
 
 // This will need to be replaced with a fake model, since the form fields associated with
 // each model come from OpenApi and Storybook doesn't have a Vault server to call OpenApi from.
@@ -36,9 +36,7 @@ storiesOf('AuthConfigForm/Options', module)
       context: {
         actions: {
           getModel(modelType) {
-            return Ember.getOwner(this)
-              .lookup('service:store')
-              .createRecord(`auth-config/${modelType}`);
+            return getOwner(this).lookup('service:store').createRecord(`auth-config/${modelType}`);
           },
         },
         model: select('model', MODELS, DEFAULT_VALUE),

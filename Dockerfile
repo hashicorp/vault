@@ -1,15 +1,15 @@
-FROM alpine:3.14 as default
+FROM alpine:3.15 as default
 
 ARG BIN_NAME
-# NAME and VERSION are the name of the software in releases.hashicorp.com
-# and the version to download. Example: NAME=vault VERSION=1.2.3.
+# NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
+# and the version to download. Example: NAME=vault PRODUCT_VERSION=1.2.3.
 ARG NAME=vault
-ARG VERSION
+ARG PRODUCT_VERSION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
 
 LABEL maintainer="Vault Team <vault@hashicorp.com>"
-LABEL version=$VERSION
+LABEL version=${PRODUCT_VERSION}
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME

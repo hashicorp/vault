@@ -21,8 +21,10 @@ type Job interface {
 	OnFailure(err error)
 }
 
-type initFn func()
-type cleanupFn func()
+type (
+	initFn    func()
+	cleanupFn func()
+)
 
 type wrappedJob struct {
 	job     Job

@@ -1,5 +1,6 @@
 jobs:
   - pre-flight-checks
+  - fmt
   - install-ui-dependencies:
       requires:
         - pre-flight-checks
@@ -49,3 +50,6 @@ jobs:
         branches:
           only:
             - stable-website
+  - semgrep:
+       requires:
+         - pre-flight-checks

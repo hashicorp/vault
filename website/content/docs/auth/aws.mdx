@@ -658,12 +658,13 @@ The region used defaults to `us-east-1`, but you can specify a custom region lik
 $ vault login -method=aws region=us-west-2 role=dev-role-iam
 ```
 
-When using a custom region, be sure the designated region corresponds to that of the
-STS endpoint you're using.
+If the region is specified as `auto`, the Vault CLI will determine the region based
+on standard AWS credentials precedence as described earlier. Whichever method is used,
+be sure the designated region corresponds to that of the STS endpoint you're using.
 
 An example of how to generate the required request values for the `login` method
 can be found found in the [vault cli
-source code](https://github.com/hashicorp/vault/blob/master/builtin/credential/aws/cli.go).
+source code](https://github.com/hashicorp/vault/blob/main/builtin/credential/aws/cli.go).
 Using an approach such as this, the request parameters can be generated and
 passed to the `login` method:
 
@@ -741,7 +742,7 @@ The response will be in JSON. For example:
 ## API
 
 The AWS auth method has a full HTTP API. Please see the
-[AWS Auth API](/api/auth/aws) for more
+[AWS Auth API](/api-docs/auth/aws) for more
 details.
 
 ## Code Example
@@ -760,7 +761,7 @@ import (
 	"fmt"
 
 	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api/auth/aws"
+	auth "github.com/hashicorp/vault/api-docs/auth/aws"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault via AWS IAM,
@@ -833,9 +834,9 @@ using VaultSharp.V1.SecretsEngines.AWS;
 
 namespace Examples
 {
-    public class AwsAuthExample 
+    public class AwsAuthExample
     {
-        /// <summary> 
+        /// <summary>
         /// Fetches a key-value secret (kv-v2) after authenticating to Vault via AWS IAM,
         /// one of two auth methods used to authenticate with AWS (the other is EC2 auth).
         /// </summary>
@@ -856,12 +857,12 @@ namespace Examples
             var amazonSecurityTokenServiceConfig = new AmazonSecurityTokenServiceConfig();
 
             // Initialize BasicAWS Credentials w/ an accessKey and secretKey
-            Amazon.Runtime.AWSCredentials awsCredentials = new BasicAWSCredentials(accessKey: Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"), 
+            Amazon.Runtime.AWSCredentials awsCredentials = new BasicAWSCredentials(accessKey: Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
                                                                 secretKey: Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"));
-            
+
             // Construct the IAM Request and add necessary headers
             var iamRequest = GetCallerIdentityRequestMarshaller.Instance.Marshall(new GetCallerIdentityRequest());
-            
+
             iamRequest.Endpoint = new Uri(amazonSecurityTokenServiceConfig.DetermineServiceURL());
             iamRequest.ResourcePath = "/";
 
@@ -883,9 +884,9 @@ namespace Examples
             // We can retrieve the secret from the VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-            
+
             var password = kv2Secret.Data.Data["password"];
-            
+
             return password.ToString();
         }
     }

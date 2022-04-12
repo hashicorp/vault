@@ -27,10 +27,12 @@ import layout from '../templates/components/search-select';
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} [subLabel] - a smaller label below the main Label
  * @param {string} [wildcardLabel] - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
+ * @param {string} [placeholder] - text you wish to replace the default "search" with
+ * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
  *
  * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
- * passed value.
+ * passed value. ex: [{ name: 'namespace45', id: 'displayedName' }];
  * @param {function} search - *Advanced usage* - Customizes how the power-select component searches for matches -
  * see the power-select docs for more information.
  *
@@ -38,6 +40,8 @@ import layout from '../templates/components/search-select';
 export default Component.extend({
   layout,
   'data-test-component': 'search-select',
+  attributeBindings: ['data-test-component'],
+  classNameBindings: ['displayInherit:display-inherit'],
   classNames: ['field', 'search-select'],
   store: service(),
 

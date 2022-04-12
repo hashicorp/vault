@@ -91,6 +91,15 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+	if in.Request.InboundSSCToken != "" {
+		if in.Auth != nil {
+			reqAuthToken := in.Auth.ClientToken
+			in.Auth.ClientToken = in.Request.InboundSSCToken
+			defer func() {
+				in.Auth.ClientToken = reqAuthToken
+			}()
+		}
+	}
 
 	var retErr *multierror.Error
 
@@ -153,6 +162,15 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+	if in.Request.InboundSSCToken != "" {
+		if in.Auth != nil {
+			reqAuthToken := in.Auth.ClientToken
+			in.Auth.ClientToken = in.Request.InboundSSCToken
+			defer func() {
+				in.Auth.ClientToken = reqAuthToken
+			}()
+		}
+	}
 
 	var retErr *multierror.Error
 

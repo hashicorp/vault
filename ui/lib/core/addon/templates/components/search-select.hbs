@@ -24,6 +24,7 @@
   {{#unless (gte this.selectedOptions.length this.selectLimit)}}
     <PowerSelect
       @eventType="click"
+      @placeholder={{this.placeholder}}
       @searchEnabled={{true}}
       @search={{action "searchAndSuggest"}}
       @options={{this.options}}

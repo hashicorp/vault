@@ -1,4 +1,14 @@
-import { click, findAll, fillIn, settled, visit, triggerKeyEvent } from '@ember/test-helpers';
+/* eslint qunit/no-conditional-assertions: "warn" */
+import {
+  click,
+  findAll,
+  fillIn,
+  settled,
+  visit,
+  triggerKeyEvent,
+  find,
+  waitUntil,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -31,7 +41,7 @@ module('Acceptance | auth backend list', function (hooks) {
     await click('[data-test-save-config="true"]');
 
     await visit(`/vault/access/${path1}/item/user/create`);
-
+    await waitUntil(() => find('[data-test-input="username"]') && find('[data-test-textarea]'));
     await fillIn('[data-test-input="username"]', user1);
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user1);
@@ -75,6 +85,8 @@ module('Acceptance | auth backend list', function (hooks) {
   });
 
   test('auth methods are linkable and link to correct view', async function (assert) {
+    assert.expect(16);
+
     await visit('/vault/access');
 
     let supportManaged = supportedManagedAuthBackends();

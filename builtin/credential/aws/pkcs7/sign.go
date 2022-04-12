@@ -395,7 +395,7 @@ func marshalCertificates(certs []*x509.Certificate) rawCertificates {
 // RawContent, we have to encode it into the RawContent. If its missing,
 // then `asn1.Marshal()` will strip out the certificate wrapper instead.
 func marshalCertificateBytes(certs []byte) (rawCertificates, error) {
-	var val = asn1.RawValue{Bytes: certs, Class: 2, Tag: 0, IsCompound: true}
+	val := asn1.RawValue{Bytes: certs, Class: 2, Tag: 0, IsCompound: true}
 	b, err := asn1.Marshal(val)
 	if err != nil {
 		return rawCertificates{}, err

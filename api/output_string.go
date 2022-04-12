@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
@@ -15,9 +16,11 @@ var LastOutputStringError *OutputStringError
 
 type OutputStringError struct {
 	*retryablehttp.Request
-	TLSSkipVerify    bool
-	parsingError     error
-	parsedCurlString string
+	TLSSkipVerify              bool
+	ClientCACert, ClientCAPath string
+	ClientCert, ClientKey      string
+	parsingError               error
+	parsedCurlString           string
 }
 
 func (d *OutputStringError) Error() string {
@@ -43,8 +46,24 @@ func (d *OutputStringError) parseRequest() {
 	if d.TLSSkipVerify {
 		d.parsedCurlString += "--insecure "
 	}
-	if d.Request.Method != "GET" {
+	if d.Request.Method != http.MethodGet {
 		d.parsedCurlString = fmt.Sprintf("%s-X %s ", d.parsedCurlString, d.Request.Method)
+	}
+	if d.ClientCACert != "" {
+		clientCACert := strings.Replace(d.ClientCACert, "'", "'\"'\"'", -1)
+		d.parsedCurlString = fmt.Sprintf("%s--cacert '%s' ", d.parsedCurlString, clientCACert)
+	}
+	if d.ClientCAPath != "" {
+		clientCAPath := strings.Replace(d.ClientCAPath, "'", "'\"'\"'", -1)
+		d.parsedCurlString = fmt.Sprintf("%s--capath '%s' ", d.parsedCurlString, clientCAPath)
+	}
+	if d.ClientCert != "" {
+		clientCert := strings.Replace(d.ClientCert, "'", "'\"'\"'", -1)
+		d.parsedCurlString = fmt.Sprintf("%s--cert '%s' ", d.parsedCurlString, clientCert)
+	}
+	if d.ClientKey != "" {
+		clientKey := strings.Replace(d.ClientKey, "'", "'\"'\"'", -1)
+		d.parsedCurlString = fmt.Sprintf("%s--key '%s' ", d.parsedCurlString, clientKey)
 	}
 	for k, v := range d.Request.Header {
 		for _, h := range v {

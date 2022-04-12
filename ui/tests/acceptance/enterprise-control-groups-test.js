@@ -173,7 +173,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await authPage.login(context.userToken);
     await settled();
     if (shouldStoreToken) {
-      localStorage.setItem(
+      sessionStorage.setItem(
         storageKey(accessor, 'kv/foo'),
         JSON.stringify({
           accessor,

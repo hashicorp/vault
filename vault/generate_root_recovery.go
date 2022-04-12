@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"go.uber.org/atomic"
 )
 
@@ -40,11 +41,18 @@ func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combi
 }
 
 func (g *generateRecoveryToken) generate(ctx context.Context, c *Core) (string, func(), error) {
-	id, err := base62.Random(TokenLength)
+	var id string
+	var err error
+	id, err = base62.Random(TokenLength)
 	if err != nil {
 		return "", nil, err
 	}
-	token := "r." + id
+	var token string
+	if c.DisableSSCTokens() {
+		token = consts.LegacyRecoveryTokenPrefix + id
+	} else {
+		token = consts.RecoveryTokenPrefix + id
+	}
 	g.token.Store(token)
 
 	return token, func() { g.token.Store("") }, nil

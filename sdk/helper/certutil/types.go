@@ -58,6 +58,7 @@ const (
 	RSAPrivateKey     PrivateKeyType = "rsa"
 	ECPrivateKey      PrivateKeyType = "ec"
 	Ed25519PrivateKey PrivateKeyType = "ed25519"
+	ManagedPrivateKey PrivateKeyType = "ManagedPrivateKey"
 )
 
 // TLSUsage controls whether the intended usage of a *tls.Config
@@ -158,46 +159,21 @@ func (c *CertBundle) ToPEMBundle() string {
 // ToParsedCertBundle converts a string-based certificate bundle
 // to a byte-based raw certificate bundle
 func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
-	result := &ParsedCertBundle{}
+	return c.ToParsedCertBundleWithExtractor(extractAndSetPrivateKey)
+}
+
+// PrivateKeyExtractor extract out a private key from the passed in
+// CertBundle and set the appropriate bits within the ParsedCertBundle.
+type PrivateKeyExtractor func(c *CertBundle, parsedBundle *ParsedCertBundle) error
+
+func (c *CertBundle) ToParsedCertBundleWithExtractor(privateKeyExtractor PrivateKeyExtractor) (*ParsedCertBundle, error) {
 	var err error
 	var pemBlock *pem.Block
+	result := &ParsedCertBundle{}
 
-	if len(c.PrivateKey) > 0 {
-		pemBlock, _ = pem.Decode([]byte(c.PrivateKey))
-		if pemBlock == nil {
-			return nil, errutil.UserError{Err: "Error decoding private key from cert bundle"}
-		}
-
-		result.PrivateKeyBytes = pemBlock.Bytes
-		result.PrivateKeyFormat = BlockType(strings.TrimSpace(pemBlock.Type))
-
-		switch result.PrivateKeyFormat {
-		case ECBlock:
-			result.PrivateKeyType, c.PrivateKeyType = ECPrivateKey, ECPrivateKey
-		case PKCS1Block:
-			c.PrivateKeyType, result.PrivateKeyType = RSAPrivateKey, RSAPrivateKey
-		case PKCS8Block:
-			t, err := getPKCS8Type(pemBlock.Bytes)
-			if err != nil {
-				return nil, errutil.UserError{Err: fmt.Sprintf("Error getting key type from pkcs#8: %v", err)}
-			}
-			result.PrivateKeyType = t
-			switch t {
-			case ECPrivateKey:
-				c.PrivateKeyType = ECPrivateKey
-			case RSAPrivateKey:
-				c.PrivateKeyType = RSAPrivateKey
-			case Ed25519PrivateKey:
-				c.PrivateKeyType = Ed25519PrivateKey
-			}
-		default:
-			return nil, errutil.UserError{Err: fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
-		}
-
-		result.PrivateKey, err = result.getSigner()
-		if err != nil {
-			return nil, errutil.UserError{Err: fmt.Sprintf("Error getting signer: %s", err)}
-		}
+	err = privateKeyExtractor(c, result)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(c.Certificate) > 0 {
@@ -256,6 +232,52 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 	}
 
 	return result, nil
+}
+
+func extractAndSetPrivateKey(c *CertBundle, parsedBundle *ParsedCertBundle) error {
+	if len(c.PrivateKey) == 0 {
+		return nil
+	}
+
+	pemBlock, _ := pem.Decode([]byte(c.PrivateKey))
+	if pemBlock == nil {
+		return errutil.UserError{Err: "Error decoding private key from cert bundle"}
+	}
+
+	parsedBundle.PrivateKeyBytes = pemBlock.Bytes
+	parsedBundle.PrivateKeyFormat = BlockType(strings.TrimSpace(pemBlock.Type))
+
+	switch parsedBundle.PrivateKeyFormat {
+	case ECBlock:
+		parsedBundle.PrivateKeyType, c.PrivateKeyType = ECPrivateKey, ECPrivateKey
+	case PKCS1Block:
+		c.PrivateKeyType, parsedBundle.PrivateKeyType = RSAPrivateKey, RSAPrivateKey
+	case PKCS8Block:
+		t, err := getPKCS8Type(pemBlock.Bytes)
+		if err != nil {
+			return errutil.UserError{Err: fmt.Sprintf("Error getting key type from pkcs#8: %v", err)}
+		}
+		parsedBundle.PrivateKeyType = t
+		switch t {
+		case ECPrivateKey:
+			c.PrivateKeyType = ECPrivateKey
+		case RSAPrivateKey:
+			c.PrivateKeyType = RSAPrivateKey
+		case Ed25519PrivateKey:
+			c.PrivateKeyType = Ed25519PrivateKey
+		case ManagedPrivateKey:
+			c.PrivateKeyType = ManagedPrivateKey
+		}
+	default:
+		return errutil.UserError{Err: fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
+	}
+
+	var err error
+	parsedBundle.PrivateKey, err = parsedBundle.getSigner()
+	if err != nil {
+		return errutil.UserError{Err: fmt.Sprintf("Error getting signer: %s", err)}
+	}
+	return nil
 }
 
 // ToCertBundle converts a byte-based raw DER certificate bundle
@@ -505,6 +527,9 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 		case Ed25519PrivateKey:
 			result.PrivateKeyType = "ed25519"
 			block.Type = "PRIVATE KEY"
+		case ManagedPrivateKey:
+			result.PrivateKeyType = ManagedPrivateKey
+			block.Type = "PRIVATE KEY"
 		default:
 			return nil, errutil.InternalError{Err: "Could not determine private key type when creating block"}
 		}
@@ -613,7 +638,6 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 
 	if tlsCert.Certificate != nil && len(tlsCert.Certificate) > 0 {
 		tlsConfig.Certificates = []tls.Certificate{tlsCert}
-		tlsConfig.BuildNameToCertificate()
 	}
 
 	return tlsConfig, nil
@@ -658,6 +682,21 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 		if b.CAChain != nil && len(b.CAChain) > 0 {
 			chain = append(chain, b.CAChain...)
 		}
+	}
+
+	return chain
+}
+
+func (b *CAInfoBundle) GetFullChain() []*CertBlock {
+	var chain []*CertBlock
+
+	chain = append(chain, &CertBlock{
+		Certificate: b.Certificate,
+		Bytes:       b.CertificateBytes,
+	})
+
+	if len(b.CAChain) > 0 {
+		chain = append(chain, b.CAChain...)
 	}
 
 	return chain

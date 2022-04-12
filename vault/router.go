@@ -603,7 +603,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 
 		switch {
-		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, "s."):
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, consts.LegacyServiceTokenPrefix) &&
+			!strings.HasPrefix(req.ClientToken, consts.ServiceTokenPrefix):
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			salt, err := r.tokenStoreSaltFunc(ctx)
@@ -642,6 +643,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// Cache the headers
 	headers := req.Headers
 	req.Headers = nil
+
+	// Cache the saved request SSC token
+	inboundToken := req.InboundSSCToken
+
+	// Ensure that the inbound token we cache in the
+	// request during token creation isn't sent to backends
+	req.InboundSSCToken = ""
 
 	// Filter and add passthrough headers to the backend
 	var passthroughRequestHeaders []string
@@ -695,6 +703,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.EntityID = originalEntityID
 
 		req.MFACreds = originalMFACreds
+
+		req.InboundSSCToken = inboundToken
+
+		// Before resetting the tokenEntry, see if an ExternalID was added
+		if req.TokenEntry() != nil && req.TokenEntry().ExternalID != "" {
+			reqTokenEntry.ExternalID = req.TokenEntry().ExternalID
+		}
 
 		req.SetTokenEntry(reqTokenEntry)
 		req.ControlGroup = originalControlGroup

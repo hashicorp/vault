@@ -28,6 +28,6 @@ It should only be used inside of `Toolbar`.
 **See**
 
 - [Uses of ToolbarLink](https://github.com/hashicorp/vault/search?l=Handlebars&q=ToolbarLink+OR+toolbar-link)
-- [ToolbarLink Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/toolbar-link.js)
+- [ToolbarLink Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/toolbar-link.js)
 
 ---

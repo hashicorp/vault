@@ -37,7 +37,6 @@ func TestPathConfigRotateRoot(t *testing.T) {
 	config.StorageView = storage
 
 	b, err := Backend(config)
-
 	if err != nil {
 		t.Fatal(err)
 	}

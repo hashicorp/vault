@@ -225,6 +225,11 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		if config.RetentionMonths < 0 {
 			return logical.ErrorResponse("retention_months must be greater than or equal to 0"), logical.ErrInvalidRequest
 		}
+
+		if config.RetentionMonths > 36 {
+			config.RetentionMonths = 36
+			warnings = append(warnings, "retention_months cannot be greater than 36; capped to 36.")
+		}
 	}
 
 	{

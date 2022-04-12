@@ -1,11 +1,9 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/calendar-widget';
 import { setComponentTemplate } from '@ember/component';
-import { format, formatRFC3339 } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
-// ARG TODO documentation takes start and end for handQuery
 /**
  * @module CalendarWidget
  * CalendarWidget components are used in the client counts metrics. It helps users understand the ranges they can select.
@@ -13,27 +11,17 @@ import { tracked } from '@glimmer/tracking';
  * @example
  * ```js
  * <CalendarWidget
- * @param {function} handleQuery - calls the parent pricing-metrics-dates handleQueryFromCalendar method which sends the data for the network request.
- * @param {object} startDate - The start date is calculated from the parent. This component is only responsible for modifying the end Date. ANd effecting single month.
+ * @param {array} arrayOfMonths - An array of all the months that the calendar widget iterates through.
+ * @param {string} endTimeDisplay - The formatted display value of the endTime. Ex: January 2022.
+ * @param {array} endTimeFromResponse - The value returned on the counters/activity endpoint, which shows the true endTime not the selected one, which can be different. Ex: ['2022', 0]
+ * @param {function} handleClientActivityQuery - a function passed from parent. This component sends the month and year to the parent via this method which then calculates the new data.
+ * @param {function} handleCurrentBillingPeriod - a function passed from parent. This component makes the parent aware that the user selected Current billing period and it handles resetting the data.
+ * @param {string} startTimeDisplay - The formatted display value of the endTime. Ex: January 2022. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.
  * />
  *
  * ```
  */
 class CalendarWidget extends Component {
-  arrayOfMonths = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
   currentDate = new Date();
   currentYear = this.currentDate.getFullYear(); // integer
   currentMonth = parseInt(this.currentDate.getMonth()); // integer and zero index
@@ -42,17 +30,9 @@ class CalendarWidget extends Component {
   @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
-  @tracked endDateDisplay;
   @tracked showCalendar = false;
-  @tracked showSingleMonth = false;
-
-  constructor() {
-    super(...arguments);
-    // ARG TODO we need to return the config's duration if not default to 12 months to calculate, now it's 12 months
-    let date = new Date();
-    date.setMonth(date.getMonth() - 1); // by default you calculate the end month as the month prior to the current month.
-    this.endDateDisplay = format(date, 'MMMM yyyy');
-  }
+  @tracked tooltipTarget = null;
+  @tracked tooltipText = null;
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -64,8 +44,8 @@ class CalendarWidget extends Component {
   }
 
   isObsoleteYear() {
-    // do not allow them to choose a end year before the this.args.startDate
-    let startYear = this.args.startDate.split(' ')[1];
+    // do not allow them to choose a year before the this.args.startTimeDisplay
+    let startYear = this.args.startTimeDisplay.split(' ')[1];
     return this.displayYear.toString() === startYear; // if on startYear then don't let them click back to the year prior
   }
 
@@ -74,6 +54,15 @@ class CalendarWidget extends Component {
   }
 
   // ACTIONS (alphabetically) //
+  @action
+  addTooltip() {
+    if (this.isObsoleteYear()) {
+      let previousYear = Number(this.displayYear) - 1;
+      this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
+      this.tooltipTarget = '#previous-year';
+    }
+  }
+
   @action
   addYear() {
     this.displayYear = this.displayYear + 1;
@@ -91,6 +80,7 @@ class CalendarWidget extends Component {
 
       let elementMonthId = parseInt(e.id.split('-')[0]); // dependent on the shape of the element id
       // for current year
+
       if (this.currentMonth <= elementMonthId) {
         // only disable months when current year is selected
         if (this.isCurrentYear()) {
@@ -98,57 +88,48 @@ class CalendarWidget extends Component {
         }
       }
       // compare for startYear view
-      if (this.displayYear.toString() === this.args.startDate.split(' ')[1]) {
+      if (this.displayYear.toString() === this.args.startTimeDisplay.split(' ')[1]) {
         // if they are on the view where the start year equals the display year, check which months should not show.
-        let startMonth = this.args.startDate.split(' ')[0]; // returns month name e.g. January
+        let startMonth = this.args.startTimeDisplay.split(' ')[0]; // returns month name e.g. January
         // return the index of the startMonth
-        let startMonthIndex = this.arrayOfMonths.indexOf(startMonth);
+        let startMonthIndex = this.args.arrayOfMonths.indexOf(startMonth);
         // then add readOnly class to any month less than the startMonth index.
         if (startMonthIndex > elementMonthId) {
           e.classList.add('is-readOnly');
         }
       }
-    });
-  }
-
-  @action
-  selectCurrentBillingPeriod() {
-    // ARG TOOD send to dashboard the select current billing period. The parent may know this it's just a boolean.
-    // Turn the calendars off if they are showing.
-    this.showCalendar = false;
-    this.showSingleMonth = false;
-  }
-  @action
-  selectEndMonth(month, year, element) {
-    // select month
-    this.addClass(element.target, 'is-selected');
-    // API requires start and end time as EPOCH or RFC3339 timestamp
-    let endMonthSelected = formatRFC3339(new Date(year, month));
-    this.args.handleEndMonth(endMonthSelected);
-    let monthName = this.arrayOfMonths.find((element, index) => {
-      if (index === month) {
-        return element;
+      // Compare values so the user cannot select an endTime after the endTime returned from counters/activity response on page load.
+      let yearEndTimeFromResponse = Number(this.args.endTimeFromResponse[0]);
+      let endMonth = this.args.endTimeFromResponse[1];
+      if (this.displayYear === yearEndTimeFromResponse) {
+        // add readOnly class to any month that is older (higher) than the endMonth index. (e.g. if nov is the endMonth of the endTimeDisplay, then 11 and 12 should not be displayed 10 < 11 and 10 < 12.)
+        if (endMonth < elementMonthId) {
+          e.classList.add('is-readOnly');
+        }
+      }
+      // if the year display higher than the endTime e.g. you're looking at 2022 and the returned endTime is 2021, all months should be disabled.
+      if (this.displayYear > yearEndTimeFromResponse) {
+        // all months should be disabled.
+        e.classList.add('is-readOnly');
       }
     });
-    this.endDateDisplay = `${monthName} ${year}`;
-    this.toggleShowCalendar();
+  }
+
+  @action removeTooltip() {
+    this.tooltipTarget = null;
   }
 
   @action
-  selectSingleMonth(month, year, element) {
-    // select month
-    this.addClass(element.target, 'is-selected');
-    // API requires start and end time as EPOCH or RFC3339 timestamp
-    // let singleMonthSelected = formatRFC3339(new Date(year, month));
-    // ARG TODO unsure on what we're going to do yet with date. Depends on API.
-    // this.args.handleEndMonth(singleMonthSelected);
-    // let monthName = this.arrayOfMonths.find((e, index) => {
-    //   if (index === month) {
-    //     return e;
-    //   }
-    // });
-    // this.endDateDisplay = `${monthName} ${year}`;
-    this.toggleSingleMonth();
+  selectCurrentBillingPeriod(D) {
+    this.args.handleCurrentBillingPeriod(); // resets the billing startTime and endTime to what it is on init via the parent.
+    this.showCalendar = false;
+    D.actions.close(); // close the dropdown.
+  }
+  @action
+  selectEndMonth(month, year, D) {
+    this.toggleShowCalendar();
+    this.args.handleClientActivityQuery(month, year, 'endTime');
+    D.actions.close(); // close the dropdown.
   }
 
   @action
@@ -162,13 +143,6 @@ class CalendarWidget extends Component {
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
-    this.showSingleMonth = false;
-  }
-
-  @action
-  toggleSingleMonth() {
-    this.showSingleMonth = !this.showSingleMonth;
-    this.showCalendar = false;
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);

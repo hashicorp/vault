@@ -11,17 +11,17 @@
           <Icon @name={{@glyph}} @size="24" class="has-text-grey-light" />
           {{@displayName}}
           <RadioButton
+            id={{@type}}
+            name={{@groupName}}
+            class="radio"
+            disabled={{@disabled}}
             @value={{@type}}
-            @radioClass="radio"
             @groupValue={{@groupValue}}
-            @changed={{@onRadioChange}}
-            @name={{@groupName}}
-            @radioId={{@type}}
-            @disabled={{@disabled}}
+            @onChange={{@onRadioChange}}
           />
         </label>
       </T.Trigger>
-      <T.Content class="tool-tip">
+      <T.Content @defaultClass="tool-tip">
         <div class="box">
           {{@tooltipMessage}}
         </div>
@@ -32,20 +32,20 @@
   <div class="box-radio-spacing">
     <label
       for={{@type}}
-      class="box-radio is-marginless {{if (eq @groupValue @type) " is-selected"}}"
+      class="box-radio is-marginless {{if (eq @groupValue @type) ' is-selected'}}"
       data-test-mount-type-radio
       data-test-mount-type={{@type}}
     >
       <Icon @name={{@glyph}} @size="24" class="has-text-grey-light" />
       {{@displayName}}
       <RadioButton
+        id={{@type}}
+        name={{@groupName}}
+        class="radio"
+        disabled={{@disabled}}
         @value={{@type}}
-        @radioClass="radio"
         @groupValue={{@mountType}}
-        @changed={{@onRadioChange}}
-        @name={{@groupName}}
-        @radioId={{@type}}
-        @disabled={{@disabled}}
+        @onChange={{@onRadioChange}}
       />
     </label>
   </div>

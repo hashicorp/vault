@@ -31,6 +31,6 @@ that the value breaks under the label on smaller viewports.
 **See**
 
 - [Uses of InfoTableRow](https://github.com/hashicorp/vault/search?l=Handlebars&q=InfoTableRow+OR+info-table-row)
-- [InfoTableRow Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/info-table-row.js)
+- [InfoTableRow Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/info-table-row.js)
 
 ---
