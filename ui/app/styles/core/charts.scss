@@ -30,10 +30,6 @@
   grid-column-end: span col4-end;
   grid-row-start: 1;
   box-shadow: inset 0 -1px 0 $vault-gray-200;
-
-  > h2 {
-    padding-bottom: $spacing-xxs;
-  }
 }
 
 .has-header-link {
