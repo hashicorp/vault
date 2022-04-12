@@ -33,13 +33,15 @@ import { mean } from 'd3-array';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 export default class MonthlyUsage extends Component {
+  barChartData = this.args.verticalBarChartData;
+
   get averageTotalClients() {
-    let average = mean(this.args.verticalBarChartData?.map((d) => d.total));
+    let average = mean(this.barChartData?.map((d) => d.total));
     return Math.round(average) || null;
   }
 
   get averageNewClients() {
-    let average = mean(this.args.verticalBarChartData?.map((d) => d.new_clients.total));
+    let average = mean(this.barChartData?.map((d) => d.new_clients.total));
     return Math.round(average) || null;
   }
 }
