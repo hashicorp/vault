@@ -82,20 +82,18 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   if (!skipMounts) {
     mountCount = Math.floor((Math.random() + idx) * 20);
     let mounts = [];
-    if (!skipMounts) {
-      Array.from(Array(mountCount)).forEach((v, index) => {
-        mounts.push({
-          mount_path: `auth/authid${index}`,
-          counts: {
-            clients: 5,
-            entity_clients: 3,
-            non_entity_clients: 2,
-            distinct_entities: 3,
-            non_entity_tokens: 2,
-          },
-        });
+    Array.from(Array(mountCount)).forEach((v, index) => {
+      mounts.push({
+        mount_path: `auth/authid${index}`,
+        counts: {
+          clients: 5,
+          entity_clients: 3,
+          non_entity_clients: 2,
+          distinct_entities: 3,
+          non_entity_tokens: 2,
+        },
       });
-    }
+    });
     nsBlock.mounts = mounts;
   }
   return nsBlock;
@@ -124,7 +122,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
             },
           },
         ],
-        // months: [],
+        months: [],
       },
     };
   }
@@ -142,7 +140,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
         non_entity_clients: 333,
       },
       by_namespace: namespaces,
-      // months: [],
+      months: [],
     },
   };
 }

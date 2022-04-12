@@ -90,7 +90,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	certificatePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cluster.CACert.Raw})
 
 	certRoleName := "test"
-	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/cert/certs/%s", certRoleName), map[string]interface{}{
+	_, err = client.Logical().Write(fmt.Sprintf("auth/cert/certs/%s", certRoleName), map[string]interface{}{
 		"certificate": string(certificatePEM),
 		"policies":    "default",
 	})
@@ -327,7 +327,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	// /////////////
 
 	// Mount /pki as a root CA
-	err := client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
+	err := client.Sys().Mount("pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -340,7 +340,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 
 	// Set the cluster's certificate as the root CA in /pki
 	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
-	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/ca", map[string]interface{}{
+	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
 	if err != nil {
@@ -348,7 +348,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Mount /pki2 to operate as an intermediate CA
-	err = client.Sys().MountWithContext(context.Background(), "pki2", &api.MountInput{
+	err = client.Sys().Mount("pki2", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -360,14 +360,14 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Create a CSR for the intermediate CA
-	secret, err := client.Logical().WriteWithContext(context.Background(), "pki2/intermediate/generate/internal", nil)
+	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	intermediateCSR := secret.Data["csr"].(string)
 
 	// Sign the intermediate CSR using /pki
-	secret, err = client.Logical().WriteWithContext(context.Background(), "pki/root/sign-intermediate", map[string]interface{}{
+	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
 		"csr":                   intermediateCSR,
 	})
@@ -377,7 +377,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	intermediateCertPEM := secret.Data["certificate"].(string)
 
 	// Configure the intermediate cert as the CA in /pki2
-	_, err = client.Logical().WriteWithContext(context.Background(), "pki2/intermediate/set-signed", map[string]interface{}{
+	_, err = client.Logical().Write("pki2/intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCertPEM,
 	})
 	if err != nil {
@@ -385,7 +385,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Create a role on the intermediate CA mount
-	_, err = client.Logical().WriteWithContext(context.Background(), "pki2/roles/myvault-dot-com", map[string]interface{}{
+	_, err = client.Logical().Write("pki2/roles/myvault-dot-com", map[string]interface{}{
 		"allowed_domains":  "myvault.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "5m",
@@ -395,7 +395,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Issue a leaf cert using the intermediate CA
-	secret, err = client.Logical().WriteWithContext(context.Background(), "pki2/issue/myvault-dot-com", map[string]interface{}{
+	secret, err = client.Logical().Write("pki2/issue/myvault-dot-com", map[string]interface{}{
 		"common_name": "cert.myvault.com",
 		"format":      "pem",
 		"ip_sans":     "127.0.0.1",
@@ -457,7 +457,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 
 	// Set the intermediate CA cert as a trusted certificate in the backend
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/cert/certs/myvault-dot-com", map[string]interface{}{
+	_, err = client.Logical().Write("auth/cert/certs/myvault-dot-com", map[string]interface{}{
 		"display_name": "myvault.com",
 		"policies":     "default",
 		"certificate":  intermediateCertPEM,

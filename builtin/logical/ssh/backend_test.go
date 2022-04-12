@@ -1464,14 +1464,14 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Write SSH role.
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test", map[string]interface{}{
 		"key_type":                    "ca",
 		"allowed_extensions":          "login@zipzap.com",
 		"allow_user_certificates":     true,
@@ -1490,7 +1490,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 
 	// Issue SSH certificate with default extensions templating enabled, and no user-provided extensions
 	client.SetToken(userpassToken)
-	resp, err := client.Logical().WriteWithContext(context.Background(), "ssh/sign/test", map[string]interface{}{
+	resp, err := client.Logical().Write("ssh/sign/test", map[string]interface{}{
 		"public_key": publicKey4096,
 	})
 	if err != nil {
@@ -1518,7 +1518,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	userProvidedExtensionPermissions := map[string]string{
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": userProvidedExtensionPermissions,
 	})
@@ -1542,7 +1542,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	invalidUserProvidedExtensionPermissions := map[string]string{
 		"login@foobar.com": "{{identity.entity.metadata}}",
 	}
-	resp, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": invalidUserProvidedExtensionPermissions,
 	})
@@ -1557,7 +1557,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1565,7 +1565,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 
 	// Write SSH role to test with no allowed extension. We also provide a templated default extension,
 	// to verify that it's not actually being evaluated
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
 		"key_type":                    "ca",
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
@@ -1585,7 +1585,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	userProvidedAnyExtensionPermissions := map[string]string{
 		"login@foobar.com": "not_userpassname",
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": userProvidedAnyExtensionPermissions,
 	})
@@ -1604,7 +1604,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1612,7 +1612,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 
 	// Write SSH role to test with any extension. We also provide a templated default extension,
 	// to verify that it's not actually being evaluated
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
 		"key_type":                    "ca",
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
@@ -1635,7 +1635,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err := client.Logical().WriteWithContext(context.Background(), "ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	resp, err := client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": defaultExtensionPermissions,
 	})
@@ -1661,7 +1661,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"login@foobar.com": "not_userpassname",
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": userProvidedAnyExtensionPermissions,
 	})
@@ -1698,7 +1698,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
-	err := client.Sys().PutPolicyWithContext(context.Background(), "test", `
+	err := client.Sys().PutPolicy("test", `
    path "ssh/*" {
      capabilities = ["update"]
    }`)
@@ -1712,7 +1712,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Configure test role for userpass.
-	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/"+userIdentity, map[string]interface{}{
+	if _, err := client.Logical().Write("auth/userpass/users/"+userIdentity, map[string]interface{}{
 		"password": "test",
 		"policies": "test",
 	}); err != nil {
@@ -1720,7 +1720,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Login userpass for test role and keep client token.
-	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/"+userIdentity, map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/"+userIdentity, map[string]interface{}{
 		"password": "test",
 	})
 	if err != nil || secret == nil {
@@ -1729,7 +1729,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	userpassToken := secret.Auth.ClientToken
 
 	// Mount SSH.
-	err = client.Sys().MountWithContext(context.Background(), "ssh", &api.MountInput{
+	err = client.Sys().Mount("ssh", &api.MountInput{
 		Type: "ssh",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -1741,7 +1741,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Configure SSH CA.
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/config/ca", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/config/ca", map[string]interface{}{
 		"public_key":  testCAPublicKey,
 		"private_key": testCAPrivateKey,
 	})
@@ -1759,21 +1759,21 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
-	tokenLookupResponse, err := client.Logical().WriteWithContext(context.Background(), "/auth/token/lookup", map[string]interface{}{
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
 		"token": userpassToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	entityID := tokenLookupResponse.Data["entity_id"].(string)
-	_, err = client.Logical().WriteWithContext(context.Background(), "/identity/entity/id/"+entityID, map[string]interface{}{
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
 		"metadata": testEntityMetadata,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/my-role", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
 		"key_type":                testCaKeyType,
 		"allow_user_certificates": true,
 		"allowed_users":           testAllowedUsersTemplate,
@@ -1785,7 +1785,7 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
-	signResponse, err := client.Logical().WriteWithContext(context.Background(), "ssh/sign/my-role", map[string]interface{}{
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
 		"public_key":       testCAPublicKey,
 		"valid_principals": expectedValidPrincipal,
 	})

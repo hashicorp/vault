@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -38,14 +37,14 @@ func TestIdentityStore_GroupAliasLocalMount(t *testing.T) {
 	}
 
 	// Extract out the mount accessor for LDAP auth
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
 	ldapMountAccessor := auths["ldap/"].Accessor
 
 	// Create an external group
-	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/group", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/group", map[string]interface{}{
 		"type": "external",
 	})
 	if err != nil {
@@ -54,7 +53,7 @@ func TestIdentityStore_GroupAliasLocalMount(t *testing.T) {
 	groupID := secret.Data["id"].(string)
 
 	// Attempt to create a group alias against a local mount should fail
-	secret, err = client.Logical().WriteWithContext(context.Background(), "identity/group-alias", map[string]interface{}{
+	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
 		"name":           "testuser",
 		"mount_accessor": ldapMountAccessor,
 		"canonical_id":   groupID,
