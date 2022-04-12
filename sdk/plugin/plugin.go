@@ -66,7 +66,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 			PluginType:      pluginType,
 			HandshakeConfig: HandshakeConfig,
 			Logger:          conf.Logger.Named(pluginName),
-			IsMetadataMode:  false,
+			IsMetadataMode:  isMetadataMode,
 			// AutoMTLS:        true,
 			Wrapper: sys,
 		}
