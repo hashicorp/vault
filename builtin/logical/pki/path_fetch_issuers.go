@@ -4,14 +4,11 @@ import (
 	"context"
 	"encoding/pem"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
 
 func pathListIssuers(b *backend) *framework.Path {
 	return &framework.Path{
