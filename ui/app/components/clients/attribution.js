@@ -27,7 +27,7 @@ import { inject as service } from '@ember/service';
  * @param {string} startTimeDisplay - start date for CSV modal
  * @param {string} endTimeDisplay - end date for CSV modal
  * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month
- * @param {string} timestamp -  string of ISO timestamp created in serializer to timestamp the response
+ * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  */
 
 export default class Attribution extends Component {

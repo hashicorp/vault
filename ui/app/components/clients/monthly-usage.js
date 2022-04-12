@@ -14,7 +14,7 @@ import { mean } from 'd3-array';
   />
  * ```
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
- * @param {string} timestamp -  string of ISO timestamp created in serializer to timestamp the response
+ * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  * @param {array} verticalBarChartData - array of flattened objects
     sample object = 
     {
