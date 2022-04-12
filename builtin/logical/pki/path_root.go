@@ -49,7 +49,39 @@ func pathDeleteRoot(b *backend) *framework.Path {
 }
 
 func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, req.Storage.Delete(ctx, "config/ca_bundle")
+	issuers, err := listIssuers(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	keys, err := listKeys(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	// Delete all issuers and keys. Ignore deleting the default since we're
+	// explicitly deleting everything.
+	for _, issuer := range issuers {
+		if _, err = deleteIssuer(ctx, req.Storage, issuer); err != nil {
+			return nil, err
+		}
+	}
+	for _, key := range keys {
+		if _, err = deleteKey(ctx, req.Storage, key); err != nil {
+			return nil, err
+		}
+	}
+
+	// Delete legacy CA bundle; but don't error if it doesn't exist.
+	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
+	}
+
+	// Return a warning about preferring to delete issuers and keys
+	// explicitly versus deleting everything.
+	resp := &logical.Response{}
+	resp.AddWarning("DELETE /root deletes all keys and issuers; prefer the new DELETE /key/:key_ref and DELETE /issuer/:issuer_ref for finer granularity, unless removal of all keys and issuers is desired.")
+	return resp, nil
 }
 
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
