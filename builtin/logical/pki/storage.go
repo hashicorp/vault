@@ -575,7 +575,6 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 
 	var bundle certutil.CertBundle
 	bundle.Certificate = issuer.Certificate
-	bundle.IssuingCA = issuer.CAChain[0]
 	bundle.CAChain = issuer.CAChain
 	bundle.SerialNumber = issuer.SerialNumber
 

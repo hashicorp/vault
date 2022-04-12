@@ -704,10 +704,14 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 func (b *CAInfoBundle) GetFullChain() []*CertBlock {
 	var chain []*CertBlock
 
-	chain = append(chain, &CertBlock{
-		Certificate: b.Certificate,
-		Bytes:       b.CertificateBytes,
-	})
+	// Some bundles already include the root included in the chain,
+	// so don't include it twice.
+	if len(b.CAChain) == 0 || !bytes.Equal(b.CAChain[0].Bytes, b.CertificateBytes) {
+		chain = append(chain, &CertBlock{
+			Certificate: b.Certificate,
+			Bytes:       b.CertificateBytes,
+		})
+	}
 
 	if len(b.CAChain) > 0 {
 		chain = append(chain, b.CAChain...)
