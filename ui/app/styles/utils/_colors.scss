@@ -20,16 +20,16 @@ $vault-gray-900: #060708; // unused
 
 // UI Gray
 $ui-gray-010: var(--token-color-palette-neutral-50);
-$ui-gray-050: #f7f8fa; // var(--token-color-palette-neutral-50)
+$ui-gray-050: #fafafa; // var(--token-color-palette-neutral-50)
 $ui-gray-100: var(--token-color-palette-neutral-100);
 $ui-gray-200: var(--token-color-palette-neutral-200);
-$ui-gray-300: #bac1cc; // var(--token-color-palette-neutral-300)
+$ui-gray-300: #c2c5cb; // var(--token-color-palette-neutral-300)
 $ui-gray-400: var(--token-color-palette-neutral-400);
-$ui-gray-500: #6f7682; // var(--token-color-palette-neutral-500)
+$ui-gray-500: #656a76; // var(--token-color-palette-neutral-500)
 $ui-gray-600: var(--token-color-palette-neutral-500);
-$ui-gray-700: #525761; // var(--token-color-palette-neutral-500)
+$ui-gray-700: #656a76; // var(--token-color-palette-neutral-500)
 $ui-gray-800: var(--token-color-foreground-primary);
-$ui-gray-900: #1f2124; // var(--token-color-foreground-strong)
+$ui-gray-900: #0c0c0e; // var(--token-color-foreground-strong)
 $vault-gray: $ui-gray-500;
 $vault-gray-dark: $ui-gray-800;
 $grey-lightest: $ui-gray-050;
@@ -43,7 +43,7 @@ $blue-010: var(--token-color-palette-blue-50);
 $blue-050: var(--token-color-palette-blue-50);
 $blue-100: var(--token-color-palette-blue-100);
 $blue-300: var(--token-color-palette-blue-200);
-$blue-500: #1563ff; // var(--token-color-palette-blue-200)
+$blue-500: #1060ff; // var(--token-color-palette-blue-200)
 $blue-700: var(--token-color-palette-blue-400); // unused
 $blue-900: var(--token-color-palette-blue-500); // unused
 $blue-lightest: $blue-050;
@@ -57,7 +57,7 @@ $red-010: var(--token-color-palette-red-50);
 $red-050: var(--token-color-palette-red-50);
 $red-100: var(--token-color-palette-red-100); // unused
 $red-300: var(--token-color-palette-red-100); // unused
-$red-500: #c73445; // var(--token-color-palette-red-200)
+$red-500: #e52228; // var(--token-color-palette-red-200)
 $red-700: var(--token-color-palette-red-400);
 $red-900: var(--token-color-palette-red-500); // unused
 $red-lightest: $red-050;
@@ -71,7 +71,7 @@ $green-010: var(--token-color-palette-green-50);
 $green-050: var(--token-color-palette-green-50);
 $green-100: var(--token-color-palette-green-100);
 $green-300: var(--token-color-palette-green-200);
-$green-500: #2eb039; // var(--token-color-palette-green-200)
+$green-500: #008a22; // var(--token-color-palette-green-200)
 $green-700: var(--token-color-palette-green-300);
 $green-900: var(--token-color-palette-green-500); // unused
 $green-lightest: $green-050;
@@ -99,7 +99,7 @@ $yellow-010: var(--token-color-vault-gradient-faint-start);
 $yellow-050: var(--token-color-palette-amber-50); // unused
 $yellow-100: var(--token-color-palette-amber-100);
 $yellow-300: var(--token-color-vault-brand); // unused
-$yellow-500: #fac402; // var(--token-color-vault-brand);
+$yellow-500: #ffd814; // var(--token-color-vault-brand);
 $yellow-700: var(--token-color-vault-foreground);
 $yellow-900: var(--token-color-palette-amber-500);
 $yellow-lightest: $yellow-050; // unused
@@ -109,5 +109,5 @@ $yellow-dark: $yellow-700;
 $yellow-darkest: $yellow-900;
 
 // Black (for browser CLI console)
-$gradient-darker: var(--token-color-foreground-strong); //  #191a1c
+$gradient-darker: var(--token-color-foreground-strong);
 $gradient-lighter: #1b212d;
