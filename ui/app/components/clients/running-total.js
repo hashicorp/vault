@@ -38,20 +38,17 @@ import { mean } from 'd3-array';
  *   
  */
 export default class RunningTotal extends Component {
-  barChartData = this.args.barChartData;
-  runningTotals = this.args.runningTotals;
-
   get entityClientData() {
     return {
-      runningTotal: this.runningTotals.entity_clients,
-      averageNewClients: Math.round(mean(this.barChartData?.map((d) => d.entity_clients))),
+      runningTotal: this.args.runningTotals.entity_clients,
+      averageNewClients: Math.round(mean(this.args.barChartData?.map((d) => d.entity_clients))),
     };
   }
 
   get nonEntityClientData() {
     return {
-      runningTotal: this.runningTotals.non_entity_clients,
-      averageNewClients: Math.round(mean(this.barChartData?.map((d) => d.non_entity_clients))),
+      runningTotal: this.args.runningTotals.non_entity_clients,
+      averageNewClients: Math.round(mean(this.args.barChartData?.map((d) => d.non_entity_clients))),
     };
   }
 }
