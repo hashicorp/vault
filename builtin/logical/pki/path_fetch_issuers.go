@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"encoding/pem"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -222,7 +223,18 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	return nil, deleteIssuer(ctx, req.Storage, ref)
+	wasDefault, err := deleteIssuer(ctx, req.Storage, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	var response *logical.Response
+	if wasDefault {
+		response = &logical.Response{}
+		response.AddWarning(fmt.Sprintf("Deleted issuer %v (via issuer_ref %v); this was configured as the default issuer. Operations without an explicit issuer will not work until a new default is configured.", ref, issuerName))
+	}
+
+	return response, nil
 }
 
 const (
