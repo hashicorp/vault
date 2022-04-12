@@ -35,18 +35,18 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="credentials"
-          @data-test-backend-credentials={{true}}
+          data-test-backend-credentials={{true}}
           @replace={{true}}
         >
           Generate Credential
         </ToolbarSecretLink>
       {{else}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" @data-test-backend-credentials={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" data-test-backend-credentials={{true}} @replace={{true}}>
           Sign Keys
         </ToolbarSecretLink>
       {{/if}}
       {{#if (or this.model.canUpdate this.model.canDelete)}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
           Edit role
         </ToolbarSecretLink>
       {{/if}}
@@ -70,7 +70,7 @@
             Save
           {{/if}}
         </button>
-        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} @class="button" @secret={{this.model.id}}>
+        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
           Cancel
         </SecretLink>
       </div>

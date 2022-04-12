@@ -25,6 +25,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
   };
 
   test('it creates a role and redirects', async function (assert) {
+    assert.expect(5);
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();
@@ -50,6 +51,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
   });
 
   test('it deletes a role', async function (assert) {
+    assert.expect(2);
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();
@@ -62,6 +64,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
   });
 
   test('it generates an OTP', async function (assert) {
+    assert.expect(6);
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();

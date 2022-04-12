@@ -12,7 +12,7 @@
   {{/if}}
   {{#if this.isSummaryDashboard}}
     <div class="summary-state">
-      <h6 class="title is-5 {{if (not (get (cluster-states this.summaryState) "isOk")) "has-text-danger"}}" data-test-error>
+      <h6 class="title is-5 {{if (not (get (cluster-states this.summaryState) 'isOk')) 'has-text-danger'}}" data-test-error>
         state
       </h6>
       {{#if (get (cluster-states this.summaryState) "isOk")}}
@@ -39,7 +39,7 @@
     </div>
   {{else}}
     <div
-      class="selectable-card-container {{if this.isSecondary "secondary" "primary"}}"
+      class="selectable-card-container {{if this.isSecondary 'secondary' 'primary'}}"
       data-test-selectable-card-container={{if this.isSecondary "secondary" "primary"}}
     >
       {{yield (hash card=(component this.componentToRender replicationDetails=this.replicationDetails))}}

@@ -46,6 +46,6 @@ module('Acceptance | settings', function (hooks) {
     let row = backendListPage.rows.filterBy('path', path + '/')[0];
     await row.menu();
     await backendListPage.configLink();
-    assert.ok(currentURL(), '/vault/secrets/${path}/configuration', 'navigates to the config page');
+    assert.equal(currentURL(), `/vault/secrets/${path}/configuration`, 'navigates to the config page');
   });
 });

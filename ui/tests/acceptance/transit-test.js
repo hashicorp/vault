@@ -298,6 +298,7 @@ module('Acceptance | transit', function (hooks) {
   });
   for (let key of keyTypes) {
     test(`transit backend: ${key.type}`, async function (assert) {
+      assert.expect(key.convergent ? 42 : 6);
       let name = await generateTransitKey(key, now);
       await visit(`vault/secrets/${path}/show/${name}`);
 
@@ -324,9 +325,8 @@ module('Acceptance | transit', function (hooks) {
       const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
       const actionTitle = find(`[data-test-transit-action-title=${keyAction}]`).innerText.toLowerCase();
 
-      assert.equal(
+      assert.true(
         actionTitle.includes(keyAction),
-        true,
         `shows a card with title that links to the ${name} transit action`
       );
 

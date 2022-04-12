@@ -25,7 +25,7 @@
                   {{leftSideSecretVersion.version}}
                   {{#if
                     (and
-                      (eq leftSideSecretVersion.version (or this.leftSideVersionSelected @args.model.currentVersion))
+                      (eq leftSideSecretVersion.version (or this.leftSideVersionSelected @model.currentVersion))
                       (not leftSideSecretVersion.destroyed)
                       (not leftSideSecretVersion.deleted)
                     )
