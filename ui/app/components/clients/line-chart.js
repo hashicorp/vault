@@ -42,34 +42,34 @@ export default class LineChart extends Component {
 
   @action
   renderChart(element, args) {
-    let dataset = args[0];
-    let chartSvg = select(element);
+    const dataset = args[0];
+    const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     // DEFINE AXES SCALES
-    let yScale = scaleLinear()
+    const yScale = scaleLinear()
       .domain([0, max(dataset.map((d) => d[this.yKey]))])
       .range([0, 100])
       .nice();
 
-    let yAxisScale = scaleLinear()
+    const yAxisScale = scaleLinear()
       .domain([0, max(dataset.map((d) => d[this.yKey]))])
       .range([SVG_DIMENSIONS.height, 0])
       .nice();
 
-    let xScale = scalePoint() // use scaleTime()?
+    const xScale = scalePoint() // use scaleTime()?
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width])
       .padding(0.2);
 
     // CUSTOMIZE AND APPEND AXES
-    let yAxis = axisLeft(yAxisScale)
+    const yAxis = axisLeft(yAxisScale)
       .ticks(4)
       .tickPadding(10)
       .tickSizeInner(-SVG_DIMENSIONS.width) // makes grid lines length of svg
       .tickFormat(formatNumbers);
 
-    let xAxis = axisBottom(xScale).tickSize(0);
+    const xAxis = axisBottom(xScale).tickSize(0);
 
     yAxis(chartSvg.append('g'));
     xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
@@ -77,7 +77,7 @@ export default class LineChart extends Component {
     chartSvg.selectAll('.domain').remove();
 
     // PATH BETWEEN PLOT POINTS
-    let lineGenerator = line()
+    const lineGenerator = line()
       .x((d) => xScale(d[this.xKey]))
       .y((d) => yAxisScale(d[this.yKey]));
 
@@ -118,7 +118,7 @@ export default class LineChart extends Component {
       .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 10);
 
-    let hoverCircles = chartSvg.selectAll('.hover-circle');
+    const hoverCircles = chartSvg.selectAll('.hover-circle');
 
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
