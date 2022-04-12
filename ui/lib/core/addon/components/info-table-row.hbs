@@ -1,7 +1,7 @@
 {{#if (or (has-block) this.isVisible)}}
   <div class="info-table-row" data-test-component="info-table-row" ...attributes>
     <div
-      class="column is-one-quarter {{if this.hasLabelOverflow "label-overflow"}}"
+      class="column is-one-quarter {{if this.hasLabelOverflow 'label-overflow'}}"
       data-test-label-div
       {{did-insert this.calculateLabelOverflow}}
     >

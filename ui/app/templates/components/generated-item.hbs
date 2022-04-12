@@ -45,7 +45,7 @@
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @params={{array "vault.cluster.access.method.item.edit" this.itemType this.model.id}}
-        @data-test-configure-link="true"
+        data-test-configure-link="true"
       >
         Edit
         {{singularize this.itemType}}
@@ -72,7 +72,7 @@
         <button
           type="submit"
           data-test-save-config="true"
-          class="button is-primary {{if this.saveModel.isRunning "loading"}}"
+          class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
           disabled={{or this.saveModel.isRunning this.isFormInvalid}}
         >
           Save

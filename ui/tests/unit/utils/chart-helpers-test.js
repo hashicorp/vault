@@ -12,6 +12,7 @@ const LARGE_NUMBERS = {
 
 module('Unit | Utility | chart-helpers', function () {
   test('formatNumbers renders number correctly', function (assert) {
+    assert.expect(11);
     const method = formatNumbers();
     assert.ok(method);
     SMALL_NUMBERS.forEach(function (num) {
