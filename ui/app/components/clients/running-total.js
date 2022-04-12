@@ -34,6 +34,7 @@ import { mean } from 'd3-array';
  * @param {array} barChartData - array of objects, object example: { month: '1/22', entity_clients: 11, non_entity_clients: 36, total: 47, namespaces: [] };
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {object} runningTotals - top level totals from /activity response { clients: 3517, entity_clients: 1593, non_entity_clients: 1924 }
+ * @param {string} timestamp -  string of ISO timestamp created in serializer to timestamp the response
  *   
  */
 export default class RunningTotal extends Component {
