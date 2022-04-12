@@ -33,7 +33,7 @@
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.model.canGenerate}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" @data-test-backend-credentials="iam">
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials="iam">
           Generate credentials
         </ToolbarSecretLink>
       {{/if}}
@@ -54,7 +54,7 @@
       {{#if (gt this.model.credentialTypes.length 1)}}
         <AlertBanner
           @type="warning"
-          @message="This role has more than one credential_type, currently: {{join ", " this.model.credentialTypes}}.
+          @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
             Multiple credential types is deprecated and you must choose one in order to save this role."
         />
       {{/if}}
@@ -71,7 +71,7 @@
             Save
           {{/if}}
         </button>
-        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} @class="button" @secret={{this.model.id}}>
+        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
           Cancel
         </SecretLink>
       </div>
@@ -82,7 +82,7 @@
     {{#if (gt this.model.credentialTypes.length 1)}}
       <AlertBanner
         @type="warning"
-        @message="This role has more than one credential_type, currently: {{join ", " this.model.credentialTypes}}.
+        @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
           When you next edit this role, you will have to choose a single credential type."
       />
     {{/if}}

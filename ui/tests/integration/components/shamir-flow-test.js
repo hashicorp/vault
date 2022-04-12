@@ -74,6 +74,7 @@ module('Integration | Component | shamir flow', function (hooks) {
   });
 
   test('it checks onComplete to call onShamirSuccess', async function (assert) {
+    assert.expect(2);
     this.set('key', 'foo');
     this.set('onSuccess', function () {
       assert.ok(true, 'onShamirSuccess called');

@@ -67,16 +67,16 @@ export default Component.extend({
   actions: {
     onKeyUp(name, value) {
       this.model.set(name, value);
-      if (this.model.validations) {
+      if (this.model.validate) {
         // Set validation error message for updated attribute
-        this.model.validations.attrs[name] && this.model.validations.attrs[name].isValid
-          ? set(this.validationMessages, name, '')
-          : set(this.validationMessages, name, this.model.validations.attrs[name].message);
-
+        const { isValid, state } = this.model.validate();
+        if (state[name]) {
+          state[name].isValid
+            ? set(this.validationMessages, name, '')
+            : set(this.validationMessages, name, state[name].errors.join('. '));
+        }
         // Set form button state
-        this.model.validate().then(({ validations }) => {
-          this.set('isFormInvalid', !validations.isValid);
-        });
+        this.set('isFormInvalid', !isValid);
       } else {
         this.set('isFormInvalid', false);
       }

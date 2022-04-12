@@ -94,7 +94,7 @@
     @value={{get this.model this.valuePath}}
     @onChange={{action "setAndBroadcast" this.valuePath}}
     @label={{this.labelString}}
-    @labelClass="title {{if (eq this.mode "create") "is-5" "is-4"}}"
+    @labelClass="title {{if (eq this.mode 'create') 'is-5' 'is-4'}}"
     @helpText={{this.attr.options.helpText}}
     @subText={{this.attr.options.subText}}
     @onKeyUp={{action "handleKeyUp" this.valuePath}}
@@ -271,7 +271,7 @@
         value={{or (get this.model this.valuePath) this.attr.options.defaultValue}}
         onChange={{action (action "setAndBroadcast" this.valuePath) value="target.value"}}
         onkeyup={{action (action "handleKeyUp" this.attr.name) value="target.value"}}
-        class="input {{if (get this.validationMessages this.attr.name) "has-error-border"}}"
+        class="input {{if (get this.validationMessages this.attr.name) 'has-error-border'}}"
         maxLength={{this.attr.options.characterLimit}}
       />
       {{#if this.attr.options.validationAttr}}
