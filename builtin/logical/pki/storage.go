@@ -117,8 +117,23 @@ func writeKey(ctx context.Context, s logical.Storage, key key) error {
 	return s.Put(ctx, json)
 }
 
-func deleteKey(ctx context.Context, s logical.Storage, id keyId) error {
-	return s.Delete(ctx, keyPrefix+id.String())
+func deleteKey(ctx context.Context, s logical.Storage, id keyId) (bool, error) {
+	wasDefault := false
+
+	config, err := getKeysConfig(ctx, s)
+	if err != nil {
+		return wasDefault, err
+	}
+
+	if config.DefaultKeyId == id {
+		wasDefault = true
+		config.DefaultKeyId = keyId("")
+		if err := setKeysConfig(ctx, s, config); err != nil {
+			return wasDefault, err
+		}
+	}
+
+	return wasDefault, s.Delete(ctx, keyPrefix+id.String())
 }
 
 func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName string) (*key, bool, error) {
@@ -331,8 +346,23 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer *issuer) error {
 	return s.Put(ctx, json)
 }
 
-func deleteIssuer(ctx context.Context, s logical.Storage, id issuerId) error {
-	return s.Delete(ctx, issuerPrefix+id.String())
+func deleteIssuer(ctx context.Context, s logical.Storage, id issuerId) (bool, error) {
+	wasDefault := false
+
+	config, err := getIssuersConfig(ctx, s)
+	if err != nil {
+		return wasDefault, err
+	}
+
+	if config.DefaultIssuerId == id {
+		wasDefault = true
+		config.DefaultIssuerId = issuerId("")
+		if err := setIssuersConfig(ctx, s, config); err != nil {
+			return wasDefault, err
+		}
+	}
+
+	return wasDefault, s.Delete(ctx, issuerPrefix+id.String())
 }
 
 func importIssuer(ctx context.Context, s logical.Storage, certValue string, issuerName string) (*issuer, bool, error) {
