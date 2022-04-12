@@ -19,14 +19,14 @@
     <div class="data-details-top">
       <h3 class="data-details">Entity clients</h3>
       <p class="data-details">
-        {{format-number (get this.getEntityClientData "runningTotal")}}
+        {{format-number this.entityClientData.runningTotal}}
       </p>
     </div>
 
     <div class="data-details-bottom">
       <h3 class="data-details">Non-entity clients</h3>
       <p class="data-details">
-        {{format-number (get this.getNonEntityClientData "runningTotal")}}
+        {{format-number this.nonEntityClientData.runningTotal}}
       </p>
     </div>
 
@@ -51,14 +51,14 @@
     <div class="data-details-top">
       <h3 class="data-details">Average new entity clients per month</h3>
       <p class="data-details">
-        {{format-number (get this.getEntityClientData "averageNewClients")}}
+        {{format-number this.entityClientData.averageNewClients}}
       </p>
     </div>
 
     <div class="data-details-bottom">
       <h3 class="data-details">Average new non-entity clients per month</h3>
       <p class="data-details">
-        {{format-number (get this.getNonEntityClientData "averageNewClients")}}
+        {{format-number this.nonEntityClientData.averageNewClients}}
       </p>
     </div>
 

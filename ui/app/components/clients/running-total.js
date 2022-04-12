@@ -41,14 +41,14 @@ export default class RunningTotal extends Component {
   barChartData = this.args.barChartData;
   runningTotals = this.args.runningTotals;
 
-  get getEntityClientData() {
+  get entityClientData() {
     return {
       runningTotal: this.runningTotals.entity_clients,
       averageNewClients: Math.round(mean(this.barChartData?.map((d) => d.entity_clients))),
     };
   }
 
-  get getNonEntityClientData() {
+  get nonEntityClientData() {
     return {
       runningTotal: this.runningTotals.non_entity_clients,
       averageNewClients: Math.round(mean(this.barChartData?.map((d) => d.non_entity_clients))),
