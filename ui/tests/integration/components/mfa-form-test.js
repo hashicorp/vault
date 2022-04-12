@@ -74,6 +74,7 @@ module('Integration | Component | mfa-form', function (hooks) {
   });
 
   test('it should render method selects and passcode inputs', async function (assert) {
+    assert.expect(2);
     const duoConstraint = this.server.create('mfa-method', { type: 'duo', uses_passcode: true });
     const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
     const pingidConstraint = this.server.create('mfa-method', { type: 'pingid' });
@@ -124,6 +125,7 @@ module('Integration | Component | mfa-form', function (hooks) {
   });
 
   test('it should validate mfa requirement', async function (assert) {
+    assert.expect(5);
     this.server.post('/sys/mfa/validate', (schema, req) => {
       const json = JSON.parse(req.requestBody);
       const payload = {

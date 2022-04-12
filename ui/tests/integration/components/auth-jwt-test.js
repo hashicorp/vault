@@ -1,5 +1,4 @@
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled, waitUntil } from '@ember/test-helpers';
@@ -34,12 +33,6 @@ const OIDC_AUTH_RESPONSE = {
   },
 };
 
-const routerStub = Service.extend({
-  urlFor() {
-    return 'http://example.com';
-  },
-});
-
 const renderIt = async (context, path = 'jwt') => {
   let handler = (data, e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -70,7 +63,11 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   hooks.beforeEach(function () {
     this.openSpy = sinon.spy(fakeWindow.proto(), 'open');
-    this.owner.register('service:router', routerStub);
+    this.owner.lookup('service:router').reopen({
+      urlFor() {
+        return 'http://example.com';
+      },
+    });
     this.server = new Pretender(function () {
       this.get('/v1/auth/:path/oidc/callback', function () {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify(OIDC_AUTH_RESPONSE)];

@@ -12,7 +12,6 @@
       <ul>
         {{! template-lint-configure no-nested-interactive "warn" }}
         <li
-          role="tab"
           aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
           class={{if (eq @unwrapActiveTab "data") "is-active"}}
         >
@@ -26,7 +25,6 @@
           </button>
         </li>
         <li
-          role="tab"
           aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
           class={{if (eq @unwrapActiveTab "details") "is-active"}}
         >

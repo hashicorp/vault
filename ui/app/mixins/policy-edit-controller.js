@@ -36,8 +36,9 @@ export default Mixin.create({
           }
           return this.transitionToRoute('vault.cluster.policy.show', m.get('policyType'), m.get('name'));
         })
-        .catch((e) => {
-          model.set('errors', e.errors);
+        .catch(() => {
+          // swallow error -- model.errors set by Adapter
+          return;
         });
     },
 

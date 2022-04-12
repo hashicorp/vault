@@ -1,28 +1,26 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import Service from '@ember/service';
 import sinon from 'sinon';
 import { STORAGE_KEYS, DEFAULTS } from 'vault/helpers/wizard-constants';
-
-let routerStub = Service.extend({
-  transitionTo: sinon.stub().returns({
-    followRedirects: function () {
-      return {
-        then: function (callback) {
-          callback();
-        },
-      };
-    },
-  }),
-  urlFor: sinon.stub().returns('/ui/vault/foo'),
-});
 
 module('Unit | Service | wizard', function (hooks) {
   setupTest(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.register('service:router', routerStub);
     this.router = this.owner.lookup('service:router');
+    this.router.reopen({
+      transitionTo: sinon.stub().returns({
+        followRedirects: function () {
+          return {
+            then: function (callback) {
+              callback();
+            },
+          };
+        },
+      }),
+      urlFor: sinon.stub().returns('/ui/vault/foo'),
+    });
   });
 
   function storage() {
@@ -54,6 +52,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         storage: [{ key: STORAGE_KEYS.TUTORIAL_STATE, value: 'idle' }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveExtState',
@@ -61,16 +60,19 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         storage: [{ key: STORAGE_KEYS.TUTORIAL_STATE, value: 'test' }],
       },
+      assertCount: 1,
     },
     {
       method: 'storageHasKey',
       args: ['fake-key'],
       expectedResults: { value: false },
+      assertCount: 1,
     },
     {
       method: 'storageHasKey',
       args: [STORAGE_KEYS.TUTORIAL_STATE],
       expectedResults: { value: true },
+      assertCount: 1,
     },
     {
       method: 'handleDismissed',
@@ -82,6 +84,7 @@ module('Unit | Service | wizard', function (hooks) {
           { key: STORAGE_KEYS.COMPONENT_STATE, value: undefined },
         ],
       },
+      assertCount: 3,
     },
     {
       method: 'handlePaused',
@@ -96,6 +99,7 @@ module('Unit | Service | wizard', function (hooks) {
           { key: STORAGE_KEYS.RESUME_ROUTE, value: 'this.is.a.route' },
         ],
       },
+      assertCount: 2,
     },
     {
       method: 'handlePaused',
@@ -106,6 +110,7 @@ module('Unit | Service | wizard', function (hooks) {
           { key: STORAGE_KEYS.RESUME_ROUTE, value: undefined },
         ],
       },
+      assertCount: 2,
     },
     {
       method: 'handleResume',
@@ -124,6 +129,7 @@ module('Unit | Service | wizard', function (hooks) {
           { key: STORAGE_KEYS.RESUME_ROUTE, value: 'this.is.a.route' },
         ],
       },
+      assertCount: 4,
     },
     {
       method: 'handleResume',
@@ -134,6 +140,7 @@ module('Unit | Service | wizard', function (hooks) {
           { key: STORAGE_KEYS.RESUME_ROUTE, value: undefined },
         ],
       },
+      assertCount: 2,
     },
     {
       method: 'restartGuide',
@@ -155,6 +162,7 @@ module('Unit | Service | wizard', function (hooks) {
           { key: STORAGE_KEYS.RESUME_ROUTE, value: undefined },
         ],
       },
+      assertCount: 11,
     },
     {
       method: 'clearFeatureData',
@@ -171,6 +179,7 @@ module('Unit | Service | wizard', function (hooks) {
           { key: STORAGE_KEYS.COMPONENT_STATE, value: undefined },
         ],
       },
+      assertCount: 6,
     },
     {
       method: 'saveState',
@@ -188,6 +197,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         props: [{ prop: 'currentState', value: 'init.active.login' }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveState',
@@ -203,6 +213,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         props: [{ prop: 'currentState', value: 'active.login' }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveState',
@@ -210,6 +221,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         props: [{ prop: 'currentState', value: 'login' }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveFeatureHistory',
@@ -219,6 +231,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         props: [{ prop: 'featureMachineHistory', value: null }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveFeatureHistory',
@@ -228,6 +241,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         props: [{ prop: 'featureMachineHistory', value: ['idle'] }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveFeatureHistory',
@@ -237,6 +251,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         props: [{ prop: 'featureMachineHistory', value: ['idle'] }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveFeatureHistory',
@@ -247,6 +262,7 @@ module('Unit | Service | wizard', function (hooks) {
         props: [{ prop: 'featureMachineHistory', value: ['idle'] }],
         storage: [{ key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: ['idle'] }],
       },
+      assertCount: 2,
     },
     {
       method: 'saveFeatureHistory',
@@ -256,6 +272,7 @@ module('Unit | Service | wizard', function (hooks) {
       expectedResults: {
         props: [{ prop: 'featureMachineHistory', value: null }],
       },
+      assertCount: 1,
     },
     {
       method: 'saveFeatureHistory',
@@ -266,6 +283,7 @@ module('Unit | Service | wizard', function (hooks) {
         props: [{ prop: 'featureMachineHistory', value: ['idle', 'create'] }],
         storage: [{ key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: ['idle', 'create'] }],
       },
+      assertCount: 2,
     },
     {
       method: 'saveFeatureHistory',
@@ -279,6 +297,7 @@ module('Unit | Service | wizard', function (hooks) {
         props: [{ prop: 'featureMachineHistory', value: ['idle', 'create'] }],
         storage: [{ key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: ['idle', 'create'] }],
       },
+      assertCount: 2,
     },
     {
       method: 'startFeature',
@@ -290,6 +309,7 @@ module('Unit | Service | wizard', function (hooks) {
           { prop: 'currentMachine', value: 'secrets' },
         ],
       },
+      assertCount: 2,
     },
     {
       method: 'saveFeatures',
@@ -298,12 +318,14 @@ module('Unit | Service | wizard', function (hooks) {
         props: [{ prop: 'featureList', value: ['secrets', 'tools'] }],
         storage: [{ key: STORAGE_KEYS.FEATURE_LIST, value: ['secrets', 'tools'] }],
       },
+      assertCount: 2,
     },
   ];
 
   testCases.forEach((testCase) => {
     let store = storage();
     test(`${testCase.method}`, function (assert) {
+      assert.expect(testCase.assertCount);
       let wizard = this.owner.factoryFor('service:wizard').create({
         storage() {
           return store;

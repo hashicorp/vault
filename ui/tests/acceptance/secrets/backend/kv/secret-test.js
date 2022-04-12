@@ -214,7 +214,6 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await editPage.toggleMetadata();
     await settled();
     await typeIn('[data-test-input="maxVersions"]', 'abc');
-
     assert
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
@@ -461,6 +460,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
   // the web cli does not handle a quote as part of a path, so we test it here via the UI
   test('creating a secret with a single or double quote works properly', async function (assert) {
+    assert.expect(4);
     await consoleComponent.runCommands('write sys/mounts/kv type=kv');
     let paths = ["'some", '"some'];
     for (let path of paths) {
@@ -550,7 +550,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await settled();
     await click(`[data-test-auth-backend-link=${enginePath}]`);
 
-    await click(`[data-test-secret-link=${secretPath}]`);
+    await click(`[data-test-secret-link="${secretPath}"]`);
 
     assert.dom('[data-test-empty-state-title]').hasText('You do not have permission to read this secret.');
     await editPage.metadataTab();
@@ -737,7 +737,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     let url = `/vault/secrets/${enginePath}/list`;
     await visit(url);
 
-    await click(`[data-test-secret-link=${secretPath}]`);
+    await click(`[data-test-secret-link="${secretPath}"]`);
     await settled(); // eslint-disable-line
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');

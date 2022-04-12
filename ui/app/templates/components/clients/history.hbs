@@ -138,7 +138,7 @@
             @runningTotals={{this.totalUsageCounts}}
             @timestamp={{this.responseTimestamp}}
           />
-          {{!-- TODO CMB: remove UsageStats component from history tab (and update associated tests) --}}
+          {{! TODO CMB: remove UsageStats component from history tab (and update associated tests) }}
           <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
           {{#if this.hasAttributionData}}
             <Clients::Attribution
