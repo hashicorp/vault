@@ -1,6 +1,6 @@
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
-import { parseAPITimestamp, parseRFC3339 } from '../../utils/date-formatters';
+import { parseAPITimestamp, parseRFC3339 } from 'core/utils/date-formatters';
 export default class ActivitySerializer extends ApplicationSerializer {
   flattenDataset(byNamespaceArray) {
     return byNamespaceArray.map((ns) => {
@@ -38,7 +38,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
     const sortedPayload = [...payload];
     sortedPayload.reverse();
     if (isNewClients) {
-      return sortedPayload.map((m) => {
+      return sortedPayload?.map((m) => {
         return {
           month: parseAPITimestamp(m.timestamp, 'M/yy'),
           entity_clients: m.new_clients.counts.entity_clients,
@@ -48,7 +48,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
         };
       });
     } else {
-      return sortedPayload.map((m) => {
+      return sortedPayload?.map((m) => {
         return {
           month: parseAPITimestamp(m.timestamp, 'M/yy'),
           entity_clients: m.counts.entity_clients,

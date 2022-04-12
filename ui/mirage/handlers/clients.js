@@ -1,6 +1,5 @@
-import { formatISO, isBefore, sub } from 'date-fns';
+import { differenceInCalendarMonths, formatISO, formatRFC3339, isBefore, sub } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import isSameMonth from 'date-fns/isSameMonth';
 
 export default function (server) {
   // 1.10 API response
@@ -739,14 +738,39 @@ export default function (server) {
         },
       },
     ];
-    let slicedMonthlyData;
-    // query date is during mock monthly data window
-    // let indexOfQueriedDate = mockMonthlyData.findIndex((e) =>
-    //   isSameMonth(parseAPITimestamp(e.timestamp), parseAPITimestamp(start_time))
-    // );
-    // if (indexOfQueriedDate) {
-    //   slicedMonthlyData = mockMonthlyData.slice(indexOfQueriedDate);
-    // }
+    const addMonthsWithoutData = (queryStartTimestamp, monthlyData) => {
+      const queryDate = parseAPITimestamp(queryStartTimestamp);
+      const startDateByMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
+      const transformedMonthlyArray = [...monthlyData];
+      if (isBefore(queryDate, startDateByMonth)) {
+        // no data for months before (upgraded to 1.10 during billing period)
+        let i = 0;
+        do {
+          i++;
+          let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
+          transformedMonthlyArray.push({
+            timestamp,
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_clients: 0,
+              clients: 0,
+            },
+            namespaces: [],
+            new_clients: {
+              counts: {
+                entity_clients: 0,
+                non_entity_clients: 0,
+                clients: 0,
+              },
+              namespaces: [],
+            },
+          });
+        } while (i < differenceInCalendarMonths(startDateByMonth, queryDate));
+      }
+      return transformedMonthlyArray;
+    };
+    let mockQueriedMonths = addMonthsWithoutData(start_time, mockMonthlyData);
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',
@@ -842,7 +866,7 @@ export default function (server) {
           },
         ],
         end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
-        months: slicedMonthlyData || mockMonthlyData,
+        months: mockQueriedMonths || mockMonthlyData,
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
           distinct_entities: 37389,
