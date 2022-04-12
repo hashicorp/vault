@@ -260,7 +260,7 @@ valid.
 ```shell-session
 $ CURRENT=$(cat /path/to/current-ca.crt)
 $ FUTURE=$(cat /path/to/future-ca.crt)
-$ vault write auth/vault-plugin-auth-cf/config identity_ca_certificates="$CURRENT,$FUTURE"
+$ vault write auth/vault-plugin-auth-cf/config identity_ca_certificates="$CURRENT" identity_ca_certificates="$FUTURE"
 ```
 
 If Vault receives a `CF_INSTANCE_CERT` matching _any_ of the `identity_ca_certificates`,
@@ -295,5 +295,5 @@ match the certificates you're checking.
 
 ## API
 
-The CF auth method has a full HTTP API. Please see the [CF Auth API](/api/auth/cf)
+The CF auth method has a full HTTP API. Please see the [CF Auth API](/api-docs/auth/cf)
 for more details.
