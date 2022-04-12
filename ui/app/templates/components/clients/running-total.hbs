@@ -3,9 +3,7 @@
     <div class="chart-header has-bottom-margin-xl">
       <h2 class="chart-title">Vault client counts</h2>
       <p class="chart-description">
-        A unique active client is any user or service that interacts with Vault. They are made up of direct entities and
-        non-entity tokens. As Vault’s primary billing metric, your total client count is the number for which you will be
-        charged at the end of your billing period.
+        A client is any user or service that interacts with Vault. They are made up of entity clients and non-entity clients. The total client count number is an important consideration for Vault billing.
       </p>
     </div>
 
@@ -20,30 +18,18 @@
 
     <div class="data-details-top">
       {{#let (get this.getTotalClients 0) as |stat|}}
-        <h3 class="data-details">{{capitalize stat.label}}</h3>
+        <h3 class="data-details">Entity clients</h3>
         <p class="data-details">
-          {{#if stat.total}}
-            {{format-number stat.total}}
-          {{else}}
-            <span class="has-text-danger is-size-8">
-              <Icon @name="x-square-fill" />Error getting total
-            </span>
-          {{/if}}
+          {{format-number stat.total}}
         </p>
       {{/let}}
     </div>
 
     <div class="data-details-bottom">
       {{#let (get this.getTotalClients 1) as |stat|}}
-        <h3 class="data-details">{{capitalize stat.label}}</h3>
+        <h3 class="data-details">Non-entity clients</h3>
         <p class="data-details">
-          {{#if stat.total}}
-            {{format-number stat.total}}
-          {{else}}
-            <span class="has-text-danger is-size-8">
-              <Icon @name="x-square-fill" />Error getting total
-            </span>
-          {{/if}}
+          {{format-number stat.total}}
         </p>
       {{/let}}
     </div>
@@ -68,36 +54,27 @@
 
     <div class="data-details-top">
       {{#let (get this.getAverageNewClients 0) as |stat|}}
-        <h3 class="data-details">Average new {{stat.label}} per month</h3>
+        <h3 class="data-details">Average new entity clients per month</h3>
         <p class="data-details">
-          {{#if stat.average}}
-            {{format-number stat.average}}
-          {{else}}
-            <span class="has-text-danger is-size-8">
-              <Icon @name="x-square-fill" />Average cannot be calculated
-            </span>
-          {{/if}}
+          {{format-number stat.average}}
         </p>
       {{/let}}
     </div>
 
     <div class="data-details-bottom">
       {{#let (get this.getAverageNewClients 1) as |stat|}}
-        <h3 class="data-details">Average new {{stat.label}} per month</h3>
+        <h3 class="data-details">Average new non-entity clients per month</h3>
         <p class="data-details">
-          {{#if stat.average}}
-            {{format-number stat.average}}
-          {{else}}
-            <span class="has-text-danger is-size-8">
-              <Icon @name="x-square-fill" />Average cannot be calculated
-            </span>
-          {{/if}}
+          {{format-number stat.average}}
         </p>
       {{/let}}
     </div>
 
     <div class="timestamp">
-      Updated Nov 15 2021, 4:07:32 pm
+      {{#if @timestamp}}
+        Updated
+        {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+      {{/if}}
     </div>
 
     <div class="legend-right">
