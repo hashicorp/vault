@@ -410,7 +410,6 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	result.ID = genIssuerId()
 	result.Name = issuerName
 	result.Certificate = certValue
-	result.CAChain = []string{certValue}
 
 	// Extracting the certificate is necessary for two reasons: first, it lets
 	// us fetch the serial number; second, for the public key comparison with
@@ -418,6 +417,11 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	issuerCert, err := result.GetCertificate()
 	if err != nil {
 		return nil, false, err
+	}
+
+	// Ensure this certificate is a usable as a CA certificate.
+	if !issuerCert.BasicConstraintsValid || !issuerCert.IsCA {
+		return nil, false, errutil.UserError{Err: "Refusing to import non-CA certificate"}
 	}
 
 	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
@@ -452,8 +456,9 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 		}
 	}
 
-	// We can write the issuer to storage.
-	if err := writeIssuer(ctx, s, &result); err != nil {
+	// Finally, rebuild the chains. In this process, because the provided
+	// reference issuer is non-nil, we'll save this issuer to storage.
+	if err := rebuildIssuersChains(ctx, s, &result); err != nil {
 		return nil, false, err
 	}
 
