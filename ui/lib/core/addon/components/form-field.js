@@ -32,7 +32,7 @@ export default Component.extend({
   layout,
   'data-test-field': true,
   attributeBindings: ['data-test-field'],
-  classNames: ['field-foo'],
+  classNames: ['field'],
   disabled: false,
   showHelpText: true,
   subText: '',
