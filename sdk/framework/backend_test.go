@@ -2,14 +2,15 @@ package framework
 
 import (
 	"context"
-	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
