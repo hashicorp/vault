@@ -202,7 +202,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		switch {
 		case totpFactor != nil && totp != "":
 			selectedFactor = totpFactor
-		case pushFactor != nil:
+		case pushFactor != nil && pushFactor.Provider == oktaProvider:
 			selectedFactor = pushFactor
 		case totpFactor != nil && totp == "":
 			return nil, logical.ErrorResponse("'totp' passcode parameter is required to perform MFA"), nil, nil
