@@ -71,6 +71,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   };
 
   test('cert config: generate', async function (assert) {
+    assert.expect(11);
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
@@ -98,6 +99,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   });
 
   test('cert config: upload', async function (assert) {
+    assert.expect(2);
     await mountAndNav(assert);
     await settled();
     assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
@@ -111,6 +113,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   });
 
   test('cert config: sign intermediate and set signed intermediate', async function (assert) {
+    assert.expect(3);
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();

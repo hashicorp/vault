@@ -1,5 +1,6 @@
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
+import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
@@ -24,17 +25,11 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * @param {Boolean} [encode=false] - Encode the path.
  */
 
-let LinkedBlockComponent = Component.extend({
-  router: service(),
+export default class LinkedBlockComponent extends Component {
+  @service router;
 
-  classNames: 'linked-block',
-
-  queryParams: null,
-  linkPrefix: null,
-
-  encode: false,
-
-  click(event) {
+  @action
+  onClick(event) {
     const $target = event.target;
     const isAnchorOrButton =
       $target.tagName === 'A' ||
@@ -42,8 +37,8 @@ let LinkedBlockComponent = Component.extend({
       $target.closest('button') ||
       $target.closest('a');
     if (!isAnchorOrButton) {
-      let params = this.params;
-      if (this.encode) {
+      let params = this.args.params;
+      if (this.args.encode) {
         params = params.map((param, index) => {
           if (index === 0 || typeof param !== 'string') {
             return param;
@@ -51,22 +46,16 @@ let LinkedBlockComponent = Component.extend({
           return encodePath(param);
         });
       }
-      const queryParams = this.queryParams;
+      const queryParams = this.args.queryParams;
       if (queryParams) {
         params.push({ queryParams });
       }
-      if (this.linkPrefix) {
-        let targetRoute = this.params[0];
-        targetRoute = `${this.linkPrefix}.${targetRoute}`;
-        this.params[0] = targetRoute;
+      if (this.args.linkPrefix) {
+        let targetRoute = this.args.params[0];
+        targetRoute = `${this.args.linkPrefix}.${targetRoute}`;
+        this.args.params[0] = targetRoute;
       }
       this.router.transitionTo(...params);
     }
-  },
-});
-
-LinkedBlockComponent.reopenClass({
-  positionalParams: 'params',
-});
-
-export default LinkedBlockComponent;
+  }
+}

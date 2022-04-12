@@ -29,6 +29,7 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 export default Component.extend({
   layout,
   'data-test-info-table-item-array': true,
+  attributeBindings: ['data-test-info-table-item-array'],
   allOptions: null,
   displayArray: null,
   wildcardInDisplayArray: false,

@@ -5,7 +5,7 @@
       @title="License expired"
       @message="Your Vault license expired on {{date-format
         @expiry
-        "MMM d, yyyy"
+        'MMM d, yyyy'
       }}. Add a new license to your configuration and restart Vault."
       @marginless={{true}}
     >
@@ -25,11 +25,11 @@
       @title="Vault license expiring"
       @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format
         @expiry
-        "hh:mm:ss a"
-      }} on {{date-format @expiry "MMM d, yyyy"}}. {{if
+        'hh:mm:ss a'
+      }} on {{date-format @expiry 'MMM d, yyyy'}}. {{if
         @autoloaded
-        "Add a new license to your configuration."
-        "Keep in mind that your next license will need to be autoloaded"
+        'Add a new license to your configuration.'
+        'Keep in mind that your next license will need to be autoloaded'
       }}"
       @marginless={{true}}
     >

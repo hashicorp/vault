@@ -100,6 +100,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
+    assert.expect(26);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);
@@ -164,7 +165,11 @@ module('Acceptance | clients history tab', function (hooks) {
     }
   });
 
+  // flaky test -- does not consistently run the same number of assertions
+  // refactor before using assert.expect
   test('filters correctly on history with full data', async function (assert) {
+    /* eslint qunit/require-expect: "warn" */
+    // assert.expect(44);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);

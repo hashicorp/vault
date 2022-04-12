@@ -1,18 +1,20 @@
-{{#linked-block
-  (concat "vault.cluster.secrets.backend." (if @item.isFolder "list" "show") (unless @item.id "-root"))
-  @item.id
+<LinkedBlock
+  @params={{array
+    (concat "vault.cluster.secrets.backend." (if @item.isFolder "list" "show") (unless @item.id "-root"))
+    @item.id
+  }}
   class="list-item-row"
-  data-test-secret-link=@item.id
-  encode=true
-  queryParams=(secret-query-params @backendModel.type)
-}}
+  data-test-secret-link={{@item.id}}
+  @encode={{true}}
+  @queryParams={{secret-query-params @backendModel.type}}
+>
   <div class="columns is-mobile">
     <div class="column is-10">
       <SecretLink
         @mode={{if @item.isFolder "list" "show"}}
         @secret={{@item.id}}
         @queryParams={{if (eq @backendModel.type "transit") (query-params tab="actions") ""}}
-        @class="has-text-black has-text-weight-semibold"
+        class="has-text-black has-text-weight-semibold"
       >
         {{#if (eq @backendModel.type "transit")}}
           <Icon @name="key" class="has-text-grey-light" />
@@ -28,7 +30,7 @@
           <nav class="menu">
             <ul class="menu-list">
               {{#if @item.isFolder}}
-                <SecretLink @mode="list" @secret={{@item.id}} @class="has-text-black has-text-weight-semibold">
+                <SecretLink @mode="list" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
                   Contents
                 </SecretLink>
               {{else}}
@@ -41,13 +43,13 @@
                 {{else}}
                   {{#if (or @item.canReadSecretData @item.canRead)}}
                     <li class="action">
-                      <SecretLink @mode="show" @secret={{@item.id}} @class="has-text-black has-text-weight-semibold">
+                      <SecretLink @mode="show" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
                         Details
                       </SecretLink>
                     </li>
                     {{#if @backendModel.isV2KV}}
                       <li class="action">
-                        <SecretLink @mode="versions" @secret={{@item.id}} @class="has-text-black has-text-weight-semibold">
+                        <SecretLink @mode="versions" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
                           View version history
                         </SecretLink>
                       </li>
@@ -55,7 +57,7 @@
                   {{/if}}
                   {{#if (or @item.canEditSecretData @item.canEdit)}}
                     <li class="action">
-                      <SecretLink @mode="edit" @secret={{@item.id}} @class="has-text-black has-text-weight-semibold">
+                      <SecretLink @mode="edit" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
                         {{if @backendModel.isV2KV "Create new version" "Edit"}}
                       </SecretLink>
                     </li>
@@ -78,4 +80,4 @@
       </PopupMenu>
     </div>
   </div>
-{{/linked-block}}
+</LinkedBlock>
