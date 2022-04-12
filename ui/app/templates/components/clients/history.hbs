@@ -131,6 +131,14 @@
         <LayoutLoading />
       {{else}}
         {{#if this.totalUsageCounts}}
+          <Clients::RunningTotal
+            @chartLegend={{this.chartLegend}}
+            @barChartData={{this.byMonthNewClients}}
+            @lineChartData={{this.byMonthTotalClients}}
+            @runningTotals={{this.totalUsageCounts}}
+            @timestamp={{this.responseTimestamp}}
+          />
+          {{!-- TODO CMB: remove UsageStats component from history tab (and update associated tests) --}}
           <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
           {{#if this.hasAttributionData}}
             <Clients::Attribution
