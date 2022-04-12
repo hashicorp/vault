@@ -35,8 +35,8 @@ module('Integration | Component | json-editor', function (hooks) {
       />`);
 
     assert.equal(component.title, 'Test title', 'renders the provided title');
-    assert.equal(component.hasToolbar, true, 'renders the toolbar');
-    assert.equal(component.hasJSONEditor, true, 'renders the code mirror modifier');
+    assert.true(component.hasToolbar, 'renders the toolbar');
+    assert.true(component.hasJSONEditor, 'renders the code mirror modifier');
     assert.ok(component.canEdit, 'json editor can be edited');
   });
 

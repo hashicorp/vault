@@ -29,6 +29,7 @@
           {{/if}}
           {{#if constraint.selectedMethod.uses_passcode}}
             <div class="control">
+              {{! template-lint-disable no-autofocus-attribute}}
               <Input
                 id="passcode"
                 name="passcode"
@@ -41,6 +42,7 @@
                 @value={{constraint.passcode}}
                 data-test-mfa-passcode={{index}}
               />
+              {{! template-lint-enable no-autofocus-attribute}}
             </div>
           {{else if (eq constraint.methods.length 1)}}
             <p class="has-text-grey-400">
@@ -62,7 +64,7 @@
         id="validate"
         type="submit"
         disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
-        class="button is-primary {{if this.validate.isRunning "is-loading"}}"
+        class="button is-primary {{if this.validate.isRunning 'is-loading'}}"
         data-test-mfa-validate
       >
         Verify

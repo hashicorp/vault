@@ -48,7 +48,7 @@
             </header>
           </div>
         </div>
-        <div class="namespace-list {{if this.isAnimating "animated-list"}}">
+        <div class="namespace-list {{if this.isAnimating 'animated-list'}}">
           <div class="is-mobile level-left">
             {{#unless this.isUserRootNamespace}}
               <NamespaceLink
@@ -65,7 +65,7 @@
           </div>
           {{#if (contains "" this.lastMenuLeaves)}}
             {{! leaf is '' which is the root namespace, and then we need to iterate the root leaves }}
-            <div class="leaf-panel {{if (eq "" this.currentLeaf) "leaf-panel-current" "leaf-panel-left"}} ">
+            <div class="leaf-panel {{if (eq '' this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}} ">
               {{~#each this.rootLeaves as |rootLeaf|}}
                 <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
               {{/each~}}
@@ -74,9 +74,9 @@
           {{#each this.lastMenuLeaves as |leaf|}}
             <div
               class="leaf-panel
-                {{if (eq leaf this.currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
-                {{if (and this.isAdding (eq leaf this.changedLeaf)) "leaf-panel-adding"}}
-                {{if (and (not this.isAdding) (eq leaf this.changedLeaf)) "leaf-panel-exiting"}}
+                {{if (eq leaf this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}}
+                {{if (and this.isAdding (eq leaf this.changedLeaf)) 'leaf-panel-adding'}}
+                {{if (and (not this.isAdding) (eq leaf this.changedLeaf)) 'leaf-panel-exiting'}}
                 "
             >
               {{~#each-in (get this.namespaceTree leaf) as |leafName|}}
