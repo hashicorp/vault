@@ -39,14 +39,14 @@
       <ToolbarLink
         @type="add"
         @params={{array "vault.cluster.access.identity.aliases.add" (pluralize this.model.identityType) this.model.id}}
-        @data-test-entity-create-link={{true}}
+        data-test-entity-create-link={{true}}
       >
         Add alias
       </ToolbarLink>
     {{/unless}}
     <ToolbarLink
       @params={{array "vault.cluster.access.identity.edit" (pluralize this.model.identityType) this.model.id}}
-      @data-test-entity-edit-link={{true}}
+      data-test-entity-edit-link={{true}}
     >
       Edit
       {{this.model.identityType}}

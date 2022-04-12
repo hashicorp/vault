@@ -85,6 +85,7 @@ module('Acceptance | init', function (hooks) {
   });
 
   test('cloud seal init', async function (assert) {
+    assert.expect(4);
     setInitResponse(this.server, CLOUD_SEAL_RESPONSE);
     setStatusResponse(this.server, CLOUD_SEAL_STATUS_RESPONSE);
     await initPage.init(5, 3);
@@ -102,6 +103,7 @@ module('Acceptance | init', function (hooks) {
   });
 
   test('shamir seal init', async function (assert) {
+    assert.expect(4);
     setInitResponse(this.server, SEAL_RESPONSE);
     setStatusResponse(this.server, SEAL_STATUS_RESPONSE);
 

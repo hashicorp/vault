@@ -45,7 +45,7 @@ export default Component.extend({
 
   showEnable: false,
 
-  // cp-validation related properties
+  // validation related properties
   validationMessages: null,
   isFormInvalid: false,
 
@@ -166,27 +166,24 @@ export default Component.extend({
 
   actions: {
     onKeyUp(name, value) {
+      this.mountModel.set(name, value);
+      const {
+        isValid,
+        state: { path, maxVersions },
+      } = this.mountModel.validate();
       // validate path
       if (name === 'path') {
-        this.mountModel.set('path', value);
-        this.mountModel.validations.attrs.path.isValid
+        path.isValid
           ? set(this.validationMessages, 'path', '')
-          : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
+          : set(this.validationMessages, 'path', path.errors.join('. '));
       }
       // check maxVersions is a number
       if (name === 'maxVersions') {
-        this.mountModel.set('maxVersions', value);
-        this.mountModel.validations.attrs.maxVersions.isValid
+        maxVersions.isValid
           ? set(this.validationMessages, 'maxVersions', '')
-          : set(
-              this.validationMessages,
-              'maxVersions',
-              this.mountModel.validations.attrs.maxVersions.message
-            );
+          : set(this.validationMessages, 'maxVersions', maxVersions.errors.join('. '));
       }
-      this.mountModel.validate().then(({ validations }) => {
-        this.set('isFormInvalid', !validations.isValid);
-      });
+      this.set('isFormInvalid', !isValid);
     },
     onTypeChange(path, value) {
       if (path === 'type') {

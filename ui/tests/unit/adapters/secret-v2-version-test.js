@@ -1,3 +1,4 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
@@ -28,6 +29,8 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       [null, {}, JSON.stringify(['secret', 'foo', '2']), {}],
       'GET',
       '/v1/secret/data/foo?version=2',
+      null,
+      2,
     ],
     [
       'v2DeleteOperation with delete',
@@ -36,6 +39,7 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       'POST',
       '/v1/secret/delete/foo',
       { versions: ['2'] },
+      3,
     ],
     [
       'v2DeleteOperation with destroy',
@@ -44,6 +48,7 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       'POST',
       '/v1/secret/destroy/foo',
       { versions: ['2'] },
+      3,
     ],
     [
       'v2DeleteOperation with destroy',
@@ -52,6 +57,7 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       'POST',
       '/v1/secret/undelete/foo',
       { versions: ['2'] },
+      3,
     ],
     [
       'updateRecord makes calls to correct url',
@@ -67,21 +73,26 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       ],
       'PUT',
       '/v1/secret/data/foo',
+      null,
+      2,
     ],
-  ].forEach(([testName, adapterMethod, args, expectedHttpVerb, expectedURL, exptectedRequestBody]) => {
-    test(`${testName}`, function (assert) {
-      let adapter = this.owner.lookup('adapter:secret-v2-version');
-      adapter[adapterMethod](...args);
-      let { url, method, requestBody } = this.server.handledRequests[0];
-      assert.equal(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
-      assert.equal(
-        method,
-        expectedHttpVerb,
-        `${adapterMethod} uses the correct http verb: ${expectedHttpVerb}`
-      );
-      if (exptectedRequestBody) {
-        assert.deepEqual(JSON.parse(requestBody), exptectedRequestBody);
-      }
-    });
-  });
+  ].forEach(
+    ([testName, adapterMethod, args, expectedHttpVerb, expectedURL, exptectedRequestBody, assertCount]) => {
+      test(`${testName}`, function (assert) {
+        assert.expect(assertCount);
+        let adapter = this.owner.lookup('adapter:secret-v2-version');
+        adapter[adapterMethod](...args);
+        let { url, method, requestBody } = this.server.handledRequests[0];
+        assert.equal(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
+        assert.equal(
+          method,
+          expectedHttpVerb,
+          `${adapterMethod} uses the correct http verb: ${expectedHttpVerb}`
+        );
+        if (exptectedRequestBody) {
+          assert.deepEqual(JSON.parse(requestBody), exptectedRequestBody);
+        }
+      });
+    }
+  );
 });

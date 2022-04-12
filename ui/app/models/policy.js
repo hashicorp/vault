@@ -4,7 +4,6 @@ import { computed } from '@ember/object';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default Model.extend({
-  errors: attr('array'),
   name: attr('string'),
   policy: attr('string'),
   policyType: computed('constructor.modelName', function () {

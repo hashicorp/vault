@@ -1,19 +1,8 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, find, click } from '@ember/test-helpers';
-import Service from '@ember/service';
 import { resolve } from 'rsvp';
 import hbs from 'htmlbars-inline-precompile';
-
-const routerService = Service.extend({
-  transitionTo() {
-    return {
-      followRedirects() {
-        return resolve();
-      },
-    };
-  },
-});
 
 module('Integration | Component | client count config', function (hooks) {
   setupRenderingTest(hooks);
@@ -42,8 +31,16 @@ module('Integration | Component | client count config', function (hooks) {
   };
 
   hooks.beforeEach(function () {
-    this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
+    this.router.reopen({
+      transitionTo() {
+        return {
+          followRedirects() {
+            return resolve();
+          },
+        };
+      },
+    });
     let model = generateModel();
     this.model = model;
   });

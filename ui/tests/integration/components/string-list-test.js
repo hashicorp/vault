@@ -25,6 +25,7 @@ module('Integration | Component | string list', function (hooks) {
   };
 
   test('it renders the label', async function (assert) {
+    assert.expect(4);
     await render(hbs`{{string-list label="foo"}}`);
     assert.dom('[data-test-string-list-label]').hasText('foo', 'renders the label when provided');
 
@@ -34,39 +35,46 @@ module('Integration | Component | string list', function (hooks) {
   });
 
   test('it renders inputValue from empty string', async function (assert) {
+    assert.expect(2);
     await render(hbs`{{string-list inputValue=""}}`);
     assertBlank(assert);
   });
 
   test('it renders inputValue from string with one value', async function (assert) {
+    assert.expect(3);
     await render(hbs`{{string-list inputValue="foo"}}`);
     assertFoo(assert);
   });
 
   test('it renders inputValue from comma-separated string', async function (assert) {
+    assert.expect(4);
     await render(hbs`{{string-list inputValue="foo,bar"}}`);
     assertFooBar(assert);
   });
 
   test('it renders inputValue from a blank array', async function (assert) {
+    assert.expect(2);
     this.set('inputValue', []);
     await render(hbs`{{string-list inputValue=inputValue}}`);
     assertBlank(assert);
   });
 
   test('it renders inputValue array with a single item', async function (assert) {
+    assert.expect(3);
     this.set('inputValue', ['foo']);
     await render(hbs`{{string-list inputValue=inputValue}}`);
     assertFoo(assert);
   });
 
   test('it renders inputValue array with a multiple items', async function (assert) {
+    assert.expect(4);
     this.set('inputValue', ['foo', 'bar']);
     await render(hbs`{{string-list inputValue=inputValue}}`);
     assertFooBar(assert);
   });
 
   test('it adds a new row only when the last row is not blank', async function (assert) {
+    assert.expect(5);
     await render(hbs`{{string-list inputValue=""}}`);
     await click('[data-test-string-list-button="add"]');
     assertBlank(assert);
@@ -84,6 +92,7 @@ module('Integration | Component | string list', function (hooks) {
   });
 
   test('it calls onChange with array when editing', async function (assert) {
+    assert.expect(2);
     this.set('inputValue', ['foo']);
     this.set('onChange', function (val) {
       assert.deepEqual(val, ['foo', 'bar'], 'calls onChange with expected value');
@@ -94,6 +103,7 @@ module('Integration | Component | string list', function (hooks) {
   });
 
   test('it calls onChange with string when editing', async function (assert) {
+    assert.expect(2);
     this.set('inputValue', 'foo');
     this.set('onChange', function (val) {
       assert.equal(val, 'foo,bar', 'calls onChange with expected value');
@@ -104,6 +114,7 @@ module('Integration | Component | string list', function (hooks) {
   });
 
   test('it removes a row', async function (assert) {
+    assert.expect(4);
     this.set('inputValue', ['foo', 'bar']);
     this.set('onChange', function (val) {
       assert.equal(val, 'bar', 'calls onChange with expected value');

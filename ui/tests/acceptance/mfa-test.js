@@ -41,6 +41,7 @@ module('Acceptance | mfa', function (hooks) {
   };
 
   test('it should handle single mfa constraint with passcode method', async function (assert) {
+    assert.expect(4);
     await login('mfa-a');
     assert
       .dom('[data-test-mfa-description]')
@@ -55,11 +56,13 @@ module('Acceptance | mfa', function (hooks) {
   });
 
   test('it should handle single mfa constraint with push method', async function (assert) {
+    assert.expect(1);
     await login('mfa-b');
     didLogin(assert);
   });
 
   test('it should handle single mfa constraint with 2 passcode methods', async function (assert) {
+    assert.expect(4);
     await login('mfa-c');
     assert
       .dom('[data-test-mfa-description]')
@@ -74,6 +77,7 @@ module('Acceptance | mfa', function (hooks) {
   });
 
   test('it should handle single mfa constraint with 2 push methods', async function (assert) {
+    assert.expect(1);
     await login('mfa-d');
     await this.select();
     await click('[data-test-mfa-validate]');
@@ -81,6 +85,7 @@ module('Acceptance | mfa', function (hooks) {
   });
 
   test('it should handle single mfa constraint with 1 passcode and 1 push method', async function (assert) {
+    assert.expect(3);
     await login('mfa-e');
     await this.select(0, 2);
     assert.dom('[data-test-mfa-passcode]').exists('Passcode input renders');
@@ -91,6 +96,7 @@ module('Acceptance | mfa', function (hooks) {
   });
 
   test('it should handle multiple mfa constraints with 1 passcode method each', async function (assert) {
+    assert.expect(3);
     await login('mfa-f');
     assert
       .dom('[data-test-mfa-description]')
@@ -104,11 +110,13 @@ module('Acceptance | mfa', function (hooks) {
   });
 
   test('it should handle multi mfa constraint with 1 push method each', async function (assert) {
+    assert.expect(1);
     await login('mfa-g');
     didLogin(assert);
   });
 
   test('it should handle multiple mfa constraints with 1 passcode and 1 push method', async function (assert) {
+    assert.expect(4);
     await login('mfa-h');
     assert
       .dom('[data-test-mfa-description]')
@@ -123,6 +131,7 @@ module('Acceptance | mfa', function (hooks) {
   });
 
   test('it should handle multiple mfa constraints with multiple mixed methods', async function (assert) {
+    assert.expect(2);
     await login('mfa-i');
     assert
       .dom('[data-test-mfa-description]')
