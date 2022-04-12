@@ -74,7 +74,7 @@ func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, d
 
 func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	newDefault := data.Get("default").(string)
-	if len(newDefault) == 0 || newDefault == "default" {
+	if len(newDefault) == 0 || newDefault == defaultRef {
 		return logical.ErrorResponse("Invalid issuer specification; must be non-empty and can't be 'default'."), nil
 	}
 

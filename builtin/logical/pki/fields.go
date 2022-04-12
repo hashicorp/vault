@@ -363,7 +363,7 @@ func addIssuerRefField(fields map[string]*framework.FieldSchema) map[string]*fra
 		Description: `Reference to a existing issuer; either "default"
 for the configured default issuer, an identifier or the name assigned
 to the issuer.`,
-		Default: "default",
+		Default: defaultRef,
 	}
 	return fields
 }
@@ -391,7 +391,7 @@ func addKeyRefField(fields map[string]*framework.FieldSchema) map[string]*framew
 		Description: `Reference to a existing key; either "default"
 for the configured default key, an identifier or the name assigned
 to the key.`,
-		Default: "default",
+		Default: defaultRef,
 	}
 	return fields
 }

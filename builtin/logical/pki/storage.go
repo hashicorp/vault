@@ -272,7 +272,7 @@ func listIssuers(ctx context.Context, s logical.Storage) ([]issuerId, error) {
 }
 
 func resolveKeyReference(ctx context.Context, s logical.Storage, reference string) (keyId, error) {
-	if reference == "default" {
+	if reference == defaultRef {
 		// Handle fetching the default key.
 		config, err := getKeysConfig(ctx, s)
 		if err != nil {
@@ -524,7 +524,7 @@ func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfig, er
 }
 
 func resolveIssuerReference(ctx context.Context, s logical.Storage, reference string) (issuerId, error) {
-	if reference == "default" {
+	if reference == defaultRef {
 		// Handle fetching the default issuer.
 		config, err := getIssuersConfig(ctx, s)
 		if err != nil {

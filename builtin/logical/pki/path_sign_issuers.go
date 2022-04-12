@@ -16,16 +16,10 @@ func pathSignIntermediate(b *backend) *framework.Path {
 }
 
 func pathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.Path {
+	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
 	path := &framework.Path{
 		Pattern: pattern,
-		Fields: map[string]*framework.FieldSchema{
-			issuerRefParam: {
-				Type:        framework.TypeString,
-				Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
-				Default:     "default",
-			},
-		},
-
+		Fields:  fields,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathIssuerSignIntermediate,
 		},
@@ -89,25 +83,21 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 }
 
 func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{
+		"certificate": {
+			Type:        framework.TypeString,
+			Description: `PEM-format self-issued certificate to be signed.`,
+		},
+		"require_matching_certificate_algorithms": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
+		},
+	}
+	fields = addIssuerRefField(fields)
 	path := &framework.Path{
 		Pattern: pattern,
-		Fields: map[string]*framework.FieldSchema{
-			issuerRefParam: {
-				Type:        framework.TypeString,
-				Description: `Reference to issuer; either "default" for the configured default issuer, an identifier of an issuer, or the name assigned to the issuer.`,
-				Default:     "default",
-			},
-			"certificate": {
-				Type:        framework.TypeString,
-				Description: `PEM-format self-issued certificate to be signed.`,
-			},
-			"require_matching_certificate_algorithms": {
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
-			},
-		},
-
+		Fields:  fields,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathIssuerSignSelfIssued,
 		},

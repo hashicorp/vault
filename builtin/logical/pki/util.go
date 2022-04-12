@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -15,7 +16,10 @@ import (
 const (
 	managedKeyNameArg = "managed_key_name"
 	managedKeyIdArg   = "managed_key_id"
+	defaultRef        = "default"
 )
+
+var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
 
 func normalizeSerial(serial string) string {
 	return strings.Replace(strings.ToLower(serial), ":", "-", -1)
@@ -129,7 +133,7 @@ func getIssuerName(ctx context.Context, s logical.Storage, data *framework.Field
 	if ok {
 		issuerName = strings.TrimSpace(issuerNameIface.(string))
 
-		if strings.ToLower(issuerName) == "default" {
+		if strings.ToLower(issuerName) == defaultRef {
 			return "", errutil.UserError{Err: "reserved keyword 'default' can not be used as issuer name"}
 		}
 
@@ -154,7 +158,7 @@ func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldDat
 	if ok {
 		keyName = strings.TrimSpace(keyNameIface.(string))
 
-		if strings.ToLower(keyName) == "default" {
+		if strings.ToLower(keyName) == defaultRef {
 			return "", errutil.UserError{Err: "reserved keyword 'default' can not be used as key name"}
 		}
 
@@ -183,8 +187,8 @@ func getKeyRef(data *framework.FieldData) string {
 
 func extractRef(data *framework.FieldData, paramName string) string {
 	value := strings.TrimSpace(data.Get(paramName).(string))
-	if strings.ToLower(value) == "default" {
-		return "default"
+	if strings.ToLower(value) == defaultRef {
+		return defaultRef
 	}
 	return value
 }
