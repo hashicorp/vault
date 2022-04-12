@@ -38,27 +38,20 @@ import { mean } from 'd3-array';
  *   
  */
 export default class RunningTotal extends Component {
-  get getTotalClients() {
-    return (
-      this.args.chartLegend?.map((legend) => {
-        return {
-          label: legend.label,
-          total: this.args.runningTotals[legend.key],
-        };
-      }) || null
-    );
+  barChartData = this.args.barChartData;
+  runningTotals = this.args.runningTotals;
+
+  get getEntityClientData() {
+    return {
+      runningTotal: this.runningTotals.entity_clients,
+      averageNewClients: Math.round(mean(this.barChartData?.map((d) => d.entity_clients))),
+    };
   }
 
-  get getAverageNewClients() {
-    // maps through legend and creates array of objects
-    // e.g. {label: 'unique entities', average: 43}
-    return (
-      this.args.chartLegend?.map((legend) => {
-        return {
-          label: legend.label,
-          average: Math.round(mean(this.args.barChartData?.map((d) => d[legend.key]))),
-        };
-      }) || null
-    );
+  get getNonEntityClientData() {
+    return {
+      runningTotal: this.runningTotals.non_entity_clients,
+      averageNewClients: Math.round(mean(this.barChartData?.map((d) => d.non_entity_clients))),
+    };
   }
 }

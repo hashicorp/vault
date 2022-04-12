@@ -91,7 +91,7 @@ export default class VerticalBarChart extends Component {
       .nice();
 
     let yAxis = axisLeft(yAxisScale)
-      .ticks(6)
+      .ticks(4)
       .tickPadding(10)
       .tickSizeInner(-SVG_DIMENSIONS.width)
       .tickFormat(formatNumbers);
