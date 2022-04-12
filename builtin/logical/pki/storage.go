@@ -217,7 +217,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 			return nil, false, err
 		}
 
-		equal, err := certutil.ComparePublicKeys(cert.PublicKey, keyPublic)
+		equal, err := certutil.ComparePublicKeysAndType(cert.PublicKey, keyPublic)
 		if err != nil {
 			return nil, false, err
 		}
@@ -437,7 +437,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 			return nil, false, err
 		}
 
-		equal, err := certutil.ComparePublicKeys(issuerCert.PublicKey, signer.Public())
+		equal, err := certutil.ComparePublicKeysAndType(issuerCert.PublicKey, signer.Public())
 		if err != nil {
 			return nil, false, err
 		}

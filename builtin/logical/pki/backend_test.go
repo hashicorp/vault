@@ -2276,90 +2276,107 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
+	mountPKIEndpoint(t, client, "pki")
+
+	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("expected ca info")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	keyId1 := resp.Data["key_id"]
+	issuerId1 := resp.Data["issuer_id"]
+
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
-	if err != nil {
-		t.Fatalf("error reading ca_chain: %v", err)
-	}
+	require.NoError(t, err, "error reading ca_chain: %v", err)
 
 	r1Data := resp.Data
 
-	// Try again, make sure it's a 204 and same CA
+	// Calling generate/internal should generate a new CA as well.
 	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("expected a warning")
-	}
-	if resp.Data != nil || len(resp.Warnings) == 0 {
-		t.Fatalf("bad response: %#v", *resp)
-	}
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	keyId2 := resp.Data["key_id"]
+	issuerId2 := resp.Data["issuer_id"]
+
+	// Make sure that we actually generated different issuer and key values
+	require.NotEqual(t, keyId1, keyId2)
+	require.NotEqual(t, issuerId1, issuerId2)
+
+	// Now because the issued CA's have no links, the call to ca_chain should return the same data (ca chain from default)
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
-	if err != nil {
-		t.Fatalf("error reading ca_chain: %v", err)
-	}
+	require.NoError(t, err, "error reading ca_chain: %v", err)
+
 	r2Data := resp.Data
 	if !reflect.DeepEqual(r1Data, r2Data) {
 		t.Fatal("got different ca certs")
 	}
 
-	resp, err = client.Logical().Delete("pki/root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatal("expected nil response")
-	}
-	// Make sure it behaves the same
-	resp, err = client.Logical().Delete("pki/root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatal("expected nil response")
-	}
-
-	_, err = client.Logical().Read("pki/cert/ca_chain")
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
-		"common_name": "myvault.com",
+	// Now let's validate that the import bundle is idempotent.
+	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
+	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("expected ca info")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	firstImportedKeys := resp.Data["imported_keys"].([]interface{})
+	firstImportedIssuers := resp.Data["imported_issuers"].([]interface{})
+
+	require.NotContains(t, firstImportedKeys, keyId1)
+	require.NotContains(t, firstImportedKeys, keyId2)
+	require.NotContains(t, firstImportedIssuers, issuerId1)
+	require.NotContains(t, firstImportedIssuers, issuerId2)
+
+	// Performing this again should result in no key/issuer ids being imported/generated.
+	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	secondImportedKeys := resp.Data["imported_keys"]
+	secondImportedIssuers := resp.Data["imported_issuers"]
+
+	require.Nil(t, secondImportedKeys)
+	require.Nil(t, secondImportedIssuers)
+
+	resp, err = client.Logical().Delete("pki/root")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, 1, len(resp.Warnings))
+
+	// Make sure we can delete twice...
+	resp, err = client.Logical().Delete("pki/root")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, 1, len(resp.Warnings))
 
 	_, err = client.Logical().Read("pki/cert/ca_chain")
-	if err != nil {
-		t.Fatal(err)
+	require.Error(t, err, "expected an error fetching deleted ca_chain")
+
+	// We should be able to import the same ca bundle as before and get a different key/issuer ids
+	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	postDeleteImportedKeys := resp.Data["imported_keys"]
+	postDeleteImportedIssuers := resp.Data["imported_issuers"]
+
+	// Make sure that we actually generated different issuer and key values, then the previous import
+	require.NotNil(t, postDeleteImportedKeys)
+	require.NotNil(t, postDeleteImportedIssuers)
+	require.NotEqual(t, postDeleteImportedKeys, firstImportedKeys)
+	require.NotEqual(t, postDeleteImportedIssuers, firstImportedIssuers)
+
+	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	require.NoError(t, err)
+
+	caChainPostDelete := resp.Data
+	if reflect.DeepEqual(r1Data, caChainPostDelete) {
+		t.Fatal("ca certs from ca_chain were the same post delete, should have changed.")
 	}
 }
 

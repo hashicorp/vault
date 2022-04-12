@@ -352,7 +352,21 @@ func generateSerialNumber(randReader io.Reader) (*big.Int, error) {
 	return serial, nil
 }
 
-// ComparePublicKeys compares two public keys and returns true if they match
+// ComparePublicKeysAndType compares two public keys and returns true if they match,
+// false if their types or contents differ, and an error on unsupported key types.
+func ComparePublicKeysAndType(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
+	equal, err := ComparePublicKeys(key1Iface, key2Iface)
+	if err != nil {
+		if strings.Contains(err.Error(), "key types do not match:") {
+			return false, nil
+		}
+	}
+
+	return equal, err
+}
+
+// ComparePublicKeys compares two public keys and returns true if they match,
+// returns an error if public key types are mismatched, or they are an unsupported key type.
 func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 	switch key1Iface.(type) {
 	case *rsa.PublicKey:
