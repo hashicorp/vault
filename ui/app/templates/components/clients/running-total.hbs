@@ -16,23 +16,18 @@
       <h2 class="chart-title">Running client total</h2>
       <p class="chart-subtext">The number of clients which interacted with Vault during this date range. </p>
     </div>
-
     <div class="data-details-top">
-      {{#let (get this.getTotalClients 0) as |stat|}}
-        <h3 class="data-details">Entity clients</h3>
-        <p class="data-details">
-          {{format-number stat.total}}
-        </p>
-      {{/let}}
+      <h3 class="data-details">Entity clients</h3>
+      <p class="data-details">
+        {{format-number this.entityClientData.runningTotal}}
+      </p>
     </div>
 
     <div class="data-details-bottom">
-      {{#let (get this.getTotalClients 1) as |stat|}}
-        <h3 class="data-details">Non-entity clients</h3>
-        <p class="data-details">
-          {{format-number stat.total}}
-        </p>
-      {{/let}}
+      <h3 class="data-details">Non-entity clients</h3>
+      <p class="data-details">
+        {{format-number this.nonEntityClientData.runningTotal}}
+      </p>
     </div>
 
     <div class="legend-right">
@@ -54,21 +49,17 @@
     </div>
 
     <div class="data-details-top">
-      {{#let (get this.getAverageNewClients 0) as |stat|}}
-        <h3 class="data-details">Average new entity clients per month</h3>
-        <p class="data-details">
-          {{format-number stat.average}}
-        </p>
-      {{/let}}
+      <h3 class="data-details">Average new entity clients per month</h3>
+      <p class="data-details">
+        {{format-number this.entityClientData.averageNewClients}}
+      </p>
     </div>
 
     <div class="data-details-bottom">
-      {{#let (get this.getAverageNewClients 1) as |stat|}}
-        <h3 class="data-details">Average new non-entity clients per month</h3>
-        <p class="data-details">
-          {{format-number stat.average}}
-        </p>
-      {{/let}}
+      <h3 class="data-details">Average new non-entity clients per month</h3>
+      <p class="data-details">
+        {{format-number this.nonEntityClientData.averageNewClients}}
+      </p>
     </div>
 
     <div class="timestamp">
