@@ -4066,8 +4066,8 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	fullChain := resp.Data["ca_chain"].(string)
-	if !strings.Contains(fullChain, rootCert) {
-		t.Fatal("expected full chain to contain root certificate")
+	if strings.Count(fullChain, rootCert) != 1 {
+		t.Fatalf("expected full chain to contain root certificate; got %v occurrences", strings.Count(fullChain, rootCert))
 	}
 
 	// Now generate an intermediate at /pki-intermediate, signed by the root.
@@ -4134,11 +4134,11 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	require.Equal(t, 0, len(crl.TBSCertList.RevokedCertificates))
 
 	fullChain = resp.Data["ca_chain"].(string)
-	if !strings.Contains(fullChain, intermediateCert) {
-		t.Fatal("expected full chain to contain intermediate certificate")
+	if strings.Count(fullChain, intermediateCert) != 1 {
+		t.Fatalf("expected full chain to contain intermediate certificate; got %v occurrences", strings.Count(fullChain, intermediateCert))
 	}
-	if !strings.Contains(fullChain, rootCert) {
-		t.Fatal("expected full chain to contain root certificate")
+	if strings.Count(fullChain, rootCert) != 1 {
+		t.Fatalf("expected full chain to contain root certificate; got %v occurrences", strings.Count(fullChain, rootCert))
 	}
 
 	// Finally, import this signing cert chain into a new mount to ensure
@@ -4171,11 +4171,11 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	fullChain = resp.Data["ca_chain"].(string)
-	if !strings.Contains(fullChain, intermediateCert) {
-		t.Fatal("expected full chain to contain intermediate certificate")
+	if strings.Count(fullChain, intermediateCert) != 1 {
+		t.Fatalf("expected full chain to contain intermediate certificate; got %v occurrences", strings.Count(fullChain, intermediateCert))
 	}
-	if !strings.Contains(fullChain, rootCert) {
-		t.Fatal("expected full chain to contain root certificate")
+	if strings.Count(fullChain, rootCert) != 1 {
+		t.Fatalf("expected full chain to contain root certificate; got %v occurrences", strings.Count(fullChain, rootCert))
 	}
 
 	// Now issue a short-lived certificate from our pki-external.
