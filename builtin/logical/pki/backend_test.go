@@ -281,18 +281,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 
 func TestBackend_CSRValues(t *testing.T) {
 	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
+	b, _ := createBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -308,18 +297,7 @@ func TestBackend_CSRValues(t *testing.T) {
 
 func TestBackend_URLsCRUD(t *testing.T) {
 	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
+	b, _ := createBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -354,18 +332,8 @@ func TestBackend_Roles(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			initTest.Do(setCerts)
-			defaultLeaseTTLVal := time.Hour * 24
-			maxLeaseTTLVal := time.Hour * 24 * 32
-			b, err := Factory(context.Background(), &logical.BackendConfig{
-				Logger: nil,
-				System: &logical.StaticSystemView{
-					DefaultLeaseTTLVal: defaultLeaseTTLVal,
-					MaxLeaseTTLVal:     maxLeaseTTLVal,
-				},
-			})
-			if err != nil {
-				t.Fatalf("Unable to create backend: %s", err)
-			}
+			b, _ := createBackendWithStorage(t)
+
 			testCase := logicaltest.TestCase{
 				LogicalBackend: b,
 				Steps: []logicaltest.TestStep{
@@ -1749,13 +1717,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	require.NoError(t, err)
+	b, storage := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1884,15 +1846,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 
 func TestBackend_PathFetchCertList(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2034,15 +1988,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 
 func runTestSignVerbatim(t *testing.T, keyType string) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2479,15 +2425,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 func TestBackend_SignSelfIssued(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2626,15 +2564,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // require_matching_certificate_algorithms flag.
 func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
