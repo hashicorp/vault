@@ -112,6 +112,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 			"issuer_name": issuer.Name,
 			"key_id":      issuer.KeyID,
 			"certificate": issuer.Certificate,
+			"ca_chain":    issuer.CAChain,
 		},
 	}, nil
 }
@@ -155,6 +156,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 			"issuer_name": issuer.Name,
 			"key_id":      issuer.KeyID,
 			"certificate": issuer.Certificate,
+			"ca_chain":    issuer.CAChain,
 		},
 	}, nil
 }
