@@ -45,6 +45,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render show view', async function (assert) {
+    assert.expect(13);
+
     this.server.get('/keymgmt/kms/foo-bar/key', () => {
       return {
         data: {
@@ -107,6 +109,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render create view', async function (assert) {
+    assert.expect(10);
+
     this.server.put('/keymgmt/kms/foo', (schema, req) => {
       const params = {
         name: 'foo',
@@ -163,6 +167,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render edit view', async function (assert) {
+    assert.expect(3);
+
     this.server.put('/keymgmt/kms/foo', (schema, req) => {
       const params = {
         name: 'foo-bar',

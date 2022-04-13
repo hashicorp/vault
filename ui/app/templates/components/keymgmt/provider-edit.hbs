@@ -83,7 +83,7 @@
               </h2>
             </div>
           {{/if}}
-          <FormField @attr={{attr}} @model={{@model}} @validationMessages={{this.modelValidations}} />
+          <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
         {{/each}}
       {{/if}}
       {{#unless this.isCreating}}
@@ -95,7 +95,7 @@
         </p>
       {{/unless}}
       {{#each @model.credentialFields as |cred|}}
-        <FormField @attr={{cred}} @model={{@model}} @validationMessages={{this.modelValidations}} />
+        <FormField @attr={{cred}} @model={{@model}} @modelValidations={{this.modelValidations}} />
       {{/each}}
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">

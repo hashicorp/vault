@@ -24,6 +24,8 @@ module('Integration | Component | pagination-controls', function (hooks) {
   });
 
   test('it changes pages', async function (assert) {
+    assert.expect(10);
+
     let expectedPage = 2;
     this.onChange = (page) => {
       assert.equal(page, expectedPage, 'onChange callback is fired with correct page number');

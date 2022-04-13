@@ -18,7 +18,7 @@
     {{#each this.pages as |page|}}
       <button
         type="button"
-        class="button is-flat has-left-margin-xxs {{if (eq this.page page) "is-primary is-underlined is-active"}}"
+        class="button is-flat has-left-margin-xxs {{if (eq this.page page) 'is-primary is-underlined is-active'}}"
         data-test-page={{page}}
         {{on "click" (fn this.changePage page)}}
       >

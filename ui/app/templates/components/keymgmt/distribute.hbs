@@ -117,21 +117,23 @@
       <p class="sub-text">Specifies the protection of the key.</p>
       <div>
         <RadioButton
+          id="protection-hsm"
+          name="hsm"
+          class="radio"
           @value="hsm"
-          @radioClass="radio"
           @groupValue={{this.formData.protection}}
-          @name="hsm"
-          @radioId="protection-hsm"
+          @onChange={{fn (mut this.formData.protection)}}
         />
         <label for="protection-hsm">HSM</label>
       </div>
       <div>
         <RadioButton
+          id="protection-software"
+          name="software"
+          class="radio"
           @value="software"
-          @radioClass="radio"
           @groupValue={{this.formData.protection}}
-          @name="software"
-          @radioId="protection-software"
+          @onChange={{fn (mut this.formData.protection)}}
         />
         <label for="protection-software">Software</label>
       </div>
