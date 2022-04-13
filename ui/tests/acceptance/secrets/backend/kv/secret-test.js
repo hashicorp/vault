@@ -251,7 +251,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'renders a single version');
 
     await click('.linked-block');
-
+    await click('button.button.masked-input-toggle');
     assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
