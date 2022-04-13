@@ -4,11 +4,11 @@
   data-test-field
 >
   {{#if this.displayOnly}}
-    <pre class="masked-value display-only is-word-break {{unless this.showValue 'masked-font'}}">{{unless
-        this.showValue
-        (truncate this.value 20)
-        this.value
-      }}</pre>
+    {{#if this.showValue}}
+      <pre class="masked-value display-only is-word-break">{{this.value}}</pre>
+    {{else}}
+      <pre class="masked-value display-only masked-font">***********</pre>
+    {{/if}}
   {{else if this.inputField}}
     <input
       autocomplete="off"
