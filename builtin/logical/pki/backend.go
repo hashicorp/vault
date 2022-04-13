@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -139,12 +140,15 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 		BackendType:    logical.TypeLogical,
 		InitializeFunc: b.initialize,
+		Invalidate:     b.invalidate,
 	}
 
 	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
+
+	b.pkiStorageVersion.Store(0)
 
 	return &b
 }
@@ -159,6 +163,8 @@ type backend struct {
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
+
+	pkiStorageVersion atomic.Value
 }
 
 type (
@@ -255,19 +261,52 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 
 // initialize is used to perform a possible PKI storage migration if needed
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
-	logger := b.Logger().Named("initialize")
-
 	// Early exit if not a primary cluster or performance secondary with a local mount.
 	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		logger.Debug("skipping pki migration as we are not on primary or secondary with a local mount")
+		b.Logger().Debug("skipping pki migration as we are not on primary or secondary with a local mount")
 		return nil
 	}
 
-	if err := migrateStorage(ctx, req, logger); err != nil {
-		logger.Error("Error during migration of PKI mount: " + err.Error())
+	if err := migrateStorage(ctx, req, b.Logger()); err != nil {
+		b.Logger().Error("Error during migration of PKI mount: " + err.Error())
 		return err
 	}
 
+	b.updatePkiStorageVersion(ctx)
+
 	return nil
+}
+
+func (b *backend) useLegacyBundleCaStorage() bool {
+	version := b.pkiStorageVersion.Load()
+	return version == nil || version == 0
+}
+
+func (b *backend) updatePkiStorageVersion(ctx context.Context) {
+	info, err := getMigrationInfo(ctx, b.storage)
+	if err != nil {
+		b.Logger().Error(fmt.Sprintf("Failed loading PKI migration status, staying in legacy mode: %v", err))
+		return
+	}
+
+	if info.isRequired {
+		b.Logger().Info("PKI migration status is required, reading cert bundle from legacy ca location")
+		b.pkiStorageVersion.Store(0)
+	}
+
+	if !info.isRequired {
+		b.Logger().Debug("PKI migration completed, reading cert bundle from key/issuer storage")
+		b.pkiStorageVersion.Store(1)
+	}
+}
+
+func (b *backend) invalidate(ctx context.Context, key string) {
+	switch {
+	case strings.HasPrefix(key, legacyMigrationBundleLogKey):
+		// This is for a secondary cluster to pick up that the migration has completed
+		// and reset its compatibility mode.
+		b.updatePkiStorageVersion(ctx)
+	}
+	// FIXME: We need to hook into CRL generation here for issuer/bundle updates.
 }

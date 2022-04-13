@@ -96,6 +96,10 @@ secret-key (optional) and certificates.`,
 func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	keysAllowed := strings.HasSuffix(req.Path, "bundle") || req.Path == "config/ca"
 
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not import issuers until migration has completed"), nil
+	}
+
 	var pemBundle string
 	var certificate string
 	rawPemBundle, bundleOk := data.GetOk("pem_bundle")

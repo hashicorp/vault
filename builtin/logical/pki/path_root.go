@@ -87,6 +87,10 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, da
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
+	}
+
 	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
