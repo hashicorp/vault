@@ -190,16 +190,6 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
 
-	// For ease of later use, also store just the certificate at a known
-	// location
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   "ca",
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	// Build a fresh CRL
 	err = buildCRL(ctx, b, req, true)
 	if err != nil {

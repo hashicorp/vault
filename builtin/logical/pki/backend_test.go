@@ -3855,25 +3855,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Get CRL and ensure the tidied cert is still in the list after the tidy
 	// operation since it's not past the NotAfter (ttl) value yet.
-	req := client.NewRequest("GET", "/v1/pki/crl")
-	resp, err := client.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	crlBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if len(crlBytes) == 0 {
-		t.Fatalf("expected CRL in response body")
-	}
-
-	crl, err := x509.ParseDERCRL(crlBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	crl := getParsedCrl(t, client, "pki")
 
 	revokedCerts := crl.TBSCertList.RevokedCertificates
 	if len(revokedCerts) == 0 {
@@ -3986,14 +3968,24 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		}
 	}
 
-	req = client.NewRequest("GET", "/v1/pki/crl")
-	resp, err = client.RawRequest(req)
+	crl = getParsedCrl(t, client, "pki")
+
+	revokedCerts = crl.TBSCertList.RevokedCertificates
+	if len(revokedCerts) != 0 {
+		t.Fatal("expected CRL to be empty")
+	}
+}
+
+func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.CertificateList {
+	path := fmt.Sprintf("/v1/%s/crl", mountPoint)
+	req := client.NewRequest("GET", path)
+	resp, err := client.RawRequest(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 
-	crlBytes, err = ioutil.ReadAll(resp.Body)
+	crlBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -4001,15 +3993,11 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		t.Fatalf("expected CRL in response body")
 	}
 
-	crl, err = x509.ParseDERCRL(crlBytes)
+	crl, err := x509.ParseDERCRL(crlBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	revokedCerts = crl.TBSCertList.RevokedCertificates
-	if len(revokedCerts) != 0 {
-		t.Fatal("expected CRL to be empty")
-	}
+	return crl
 }
 
 func TestBackend_Root_FullCAChain(t *testing.T) {
@@ -4140,6 +4128,10 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	if resp == nil {
 		t.Fatal("expected intermediate chain information")
 	}
+
+	// Verify we have a proper CRL now
+	crl := getParsedCrl(t, client, "pki-intermediate")
+	require.Equal(t, 0, len(crl.TBSCertList.RevokedCertificates))
 
 	fullChain = resp.Data["ca_chain"].(string)
 	if !strings.Contains(fullChain, intermediateCert) {
