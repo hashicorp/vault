@@ -4,9 +4,9 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { generateFormFieldErrors } from 'vault/utils/model-validations-helper';
+
 /**
- * @module KeymgmtKeyEdit
+ * @module KeymgmtProviderEdit
  * ProviderKeyEdit components are used to display KeyMgmt Secrets engine UI for Key items
  *
  * @example
@@ -18,7 +18,7 @@ import { generateFormFieldErrors } from 'vault/utils/model-validations-helper';
  * @param {string} [tab] - Options are "details" or "keys" for the show mode only
  */
 
-export default class KeymgmtKeyEdit extends Component {
+export default class KeymgmtProviderEdit extends Component {
   @service router;
   @service flashMessages;
 
@@ -68,11 +68,11 @@ export default class KeymgmtKeyEdit extends Component {
   @action
   async onSave(event) {
     event.preventDefault();
-    const { validations } = await this.args.model.validate();
-    if (validations.isValid) {
+    const { isValid, state } = await this.args.model.validate();
+    if (isValid) {
       this.saveTask.perform();
     } else {
-      this.modelValidations = generateFormFieldErrors(validations);
+      this.modelValidations = state;
     }
   }
   @action

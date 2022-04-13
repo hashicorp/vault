@@ -1,7 +1,7 @@
 import Model, { attr } from '@ember-data/model';
 import { tracked } from '@glimmer/tracking';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { validator, buildValidations } from 'ember-cp-validations';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
 const CRED_PROPS = {
   azurekeyvault: ['client_id', 'client_secret', 'tenant_id'],
@@ -14,24 +14,25 @@ const OPTIONAL_CRED_PROPS = ['session_token', 'endpoint'];
 const credValidators = Object.keys(CRED_PROPS).reduce((obj, providerKey) => {
   CRED_PROPS[providerKey].forEach((prop) => {
     if (!OPTIONAL_CRED_PROPS.includes(prop)) {
-      obj[`credentials.${prop}`] = validator('presence', {
-        presence: true,
-        value(model) {
-          return model.credentialProps.includes(prop) ? model.credentials[prop] : true;
+      obj[`credentials.${prop}`] = [
+        {
+          message: `${prop} is required`,
+          validator(model) {
+            return model.credentialProps.includes(prop) ? model.credentials[prop] : true;
+          },
         },
-      });
+      ];
     }
   });
   return obj;
 }, {});
-const Validations = buildValidations({
-  name: validator('presence', true),
-  keyCollection: validator('presence', true),
+const validations = {
+  name: [{ type: 'presence', message: 'Provider name is required' }],
+  keyCollection: [{ type: 'presence', message: 'Key Vault instance name' }],
   ...credValidators,
-});
-const ValidationsModel = Model.extend(Validations);
-
-export default class KeymgmtProviderModel extends ValidationsModel {
+};
+@withModelValidations(validations)
+export default class KeymgmtProviderModel extends Model {
   @attr('string') backend;
   @attr('string', {
     label: 'Provider name',
