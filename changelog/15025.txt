@@ -1,0 +1,3 @@
+```release-note:bug
+ui: masked values no longer give away length or location of special characters
+```
