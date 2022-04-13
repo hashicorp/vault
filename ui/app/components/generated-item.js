@@ -1,7 +1,7 @@
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import { computed, set } from '@ember/object';
+import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
@@ -25,7 +25,7 @@ export default Component.extend({
   itemType: null,
   flashMessages: service(),
   router: service(),
-  validationMessages: null,
+  modelValidations: null,
   isFormInvalid: false,
   props: computed('model', function () {
     return this.model.serialize();
@@ -48,7 +48,6 @@ export default Component.extend({
   ),
   init() {
     this._super(...arguments);
-    this.set('validationMessages', {});
     if (this.mode === 'edit') {
       // For validation to work in edit mode,
       // reconstruct the model values from field group
@@ -70,13 +69,10 @@ export default Component.extend({
       if (this.model.validate) {
         // Set validation error message for updated attribute
         const { isValid, state } = this.model.validate();
-        if (state[name]) {
-          state[name].isValid
-            ? set(this.validationMessages, name, '')
-            : set(this.validationMessages, name, state[name].errors.join('. '));
-        }
-        // Set form button state
-        this.set('isFormInvalid', !isValid);
+        this.setProperties({
+          modelValidations: state,
+          isFormInvalid: !isValid,
+        });
       } else {
         this.set('isFormInvalid', false);
       }
