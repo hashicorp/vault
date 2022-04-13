@@ -60,9 +60,11 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	keyId := keyIds[0]
 	issuer, err := fetchIssuerById(ctx, s, issuerId)
 	require.NoError(t, err)
+	require.Equal(t, "current", issuer.Name) // RFC says we should import with Name=current
 
 	key, err := fetchKeyById(ctx, s, keyId)
 	require.NoError(t, err)
+	require.Equal(t, "current", key.Name) // RFC says we should import with Name=current
 
 	require.Equal(t, issuerId, issuer.ID)
 	require.Equal(t, bundle.SerialNumber, issuer.SerialNumber)
