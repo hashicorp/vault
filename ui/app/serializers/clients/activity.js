@@ -33,7 +33,6 @@ export default class ActivitySerializer extends ApplicationSerializer {
     });
   }
 
-  // for vault usage - vertical bar chart
   flattenByMonths(payload, isNewClients = false) {
     const sortedPayload = [...payload];
     sortedPayload.reverse();
@@ -43,7 +42,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
           month: parseAPITimestamp(m.timestamp, 'M/yy'),
           entity_clients: m.new_clients.counts.entity_clients,
           non_entity_clients: m.new_clients.counts.non_entity_clients,
-          total: m.new_clients.counts.clients,
+          clients: m.new_clients.counts.clients,
           namespaces: this.flattenDataset(m.new_clients.namespaces),
         };
       });
@@ -53,12 +52,12 @@ export default class ActivitySerializer extends ApplicationSerializer {
           month: parseAPITimestamp(m.timestamp, 'M/yy'),
           entity_clients: m.counts.entity_clients,
           non_entity_clients: m.counts.non_entity_clients,
-          total: m.counts.clients,
+          clients: m.counts.clients,
           namespaces: this.flattenDataset(m.namespaces),
           new_clients: {
             entity_clients: m.new_clients.counts.entity_clients,
             non_entity_clients: m.new_clients.counts.non_entity_clients,
-            total: m.new_clients.counts.clients,
+            clients: m.new_clients.counts.clients,
             namespaces: this.flattenDataset(m.new_clients.namespaces),
           },
         };
