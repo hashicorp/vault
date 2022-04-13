@@ -1325,8 +1325,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 			}
 		}
 		// explicitly set the namespace header to current client
-		ns := c.headers.Get(consts.NamespaceHeaderName)
-		if ns != "" {
+		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
 			r.Headers.Set(consts.NamespaceHeaderName, ns)
 		}
 	}
