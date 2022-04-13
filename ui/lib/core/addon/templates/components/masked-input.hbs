@@ -7,7 +7,6 @@
     {{else}}
       <pre class="masked-value display-only masked-font">***********</pre>
     {{/if}}
-    <pre class="masked-value display-only is-word-break {{unless showValue "masked-font"}}">{{unless showValue (truncate value 20) value}}</pre>
   {{else if inputField}}
     <input
       autocomplete="off"
