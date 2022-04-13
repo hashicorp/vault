@@ -1,6 +1,6 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
-import { computed, set } from '@ember/object';
+import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
@@ -46,7 +46,7 @@ export default Component.extend({
   showEnable: false,
 
   // validation related properties
-  validationMessages: null,
+  modelValidations: null,
   isFormInvalid: false,
 
   mountIssue: false,
@@ -57,10 +57,6 @@ export default Component.extend({
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
     this.set('mountModel', model);
-
-    this.set('validationMessages', {
-      path: '',
-    });
   },
 
   mountTypes: computed('engines', 'mountType', function () {
@@ -167,23 +163,11 @@ export default Component.extend({
   actions: {
     onKeyUp(name, value) {
       this.mountModel.set(name, value);
-      const {
-        isValid,
-        state: { path, maxVersions },
-      } = this.mountModel.validate();
-      // validate path
-      if (name === 'path') {
-        path.isValid
-          ? set(this.validationMessages, 'path', '')
-          : set(this.validationMessages, 'path', path.errors.join('. '));
-      }
-      // check maxVersions is a number
-      if (name === 'maxVersions') {
-        maxVersions.isValid
-          ? set(this.validationMessages, 'maxVersions', '')
-          : set(this.validationMessages, 'maxVersions', maxVersions.errors.join('. '));
-      }
-      this.set('isFormInvalid', !isValid);
+      const { isValid, state } = this.mountModel.validate();
+      this.setProperties({
+        modelValidations: state,
+        isFormInvalid: !isValid,
+      });
     },
     onTypeChange(path, value) {
       if (path === 'type') {
