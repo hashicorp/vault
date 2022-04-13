@@ -89,18 +89,10 @@ func getFormat(data *framework.FieldData) string {
 	return format
 }
 
-// Fetches the CA info. Unlike other certificates, the CA info is stored
-// in the backend as a CertBundle, because we are storing its private key
+// Fetches the CA info.
 func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string) (*certutil.CAInfoBundle, error) {
-	id, err := resolveIssuerReference(ctx, req.Storage, issuerRef)
+	bundle, err := fetchCertBundle(ctx, b, req.Storage, issuerRef)
 	if err != nil {
-		// Usually a bad label from the user or misconfigured default.
-		return nil, errutil.UserError{Err: err.Error()}
-	}
-
-	bundle, err := fetchCertBundleByIssuerId(ctx, req.Storage, id, true)
-	if err != nil {
-		// Once we have an issuer id, usually a bug on our side if it isn't there.
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
 
@@ -132,6 +124,25 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 	caInfo.URLs = entries
 
 	return caInfo, nil
+}
+
+// fetchCertBundle is our flex point to load either the legacy ca bundle if migration has yet to be
+// performed or load the bundle from the new key/issuer storage. Any function that needs a bundle
+// should load it using this method to maintain compatibility on secondary nodes for which their
+// primary's have not upgraded yet.
+func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerRef string) (*certutil.CertBundle, error) {
+	if b.useLegacyBundleCaStorage() {
+		// We have not completed the migration so attempt to load the bundle from the legacy location
+		return getLegacyCertBundle(ctx, s)
+	}
+
+	id, err := resolveIssuerReference(ctx, s, issuerRef)
+	if err != nil {
+		// Usually a bad label from the user or misconfigured default.
+		return nil, err
+	}
+
+	return fetchCertBundleByIssuerId(ctx, s, id, true)
 }
 
 // Allows fetching certificates from the backend; it handles the slightly

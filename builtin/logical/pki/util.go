@@ -191,7 +191,7 @@ func getKeyRef(data *framework.FieldData) string {
 
 func extractRef(data *framework.FieldData, paramName string) string {
 	value := strings.TrimSpace(data.Get(paramName).(string))
-	if strings.ToLower(value) == defaultRef {
+	if strings.EqualFold(value, defaultRef) {
 		return defaultRef
 	}
 	return value
