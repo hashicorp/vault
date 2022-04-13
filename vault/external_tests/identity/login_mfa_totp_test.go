@@ -26,7 +26,7 @@ func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasNa
 
 	userClient, err := client.Clone()
 	if err != nil {
-		t.Fatalf("failed to clone the client")
+		t.Fatalf("failed to clone the client:%v", err)
 	}
 	userClient.SetToken(client.Token())
 
@@ -34,7 +34,7 @@ func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasNa
 		"name": entityName,
 	})
 	if err != nil {
-		t.Fatalf("failed to create an entity")
+		t.Fatalf("failed to create an entity:%v", err)
 	}
 	entityID := resp.Data["id"].(string)
 
@@ -44,7 +44,7 @@ func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasNa
 		"mount_accessor": mountAccessor,
 	})
 	if err != nil {
-		t.Fatalf("failed to create an entity alias")
+		t.Fatalf("failed to create an entity alias:%v", err)
 	}
 	return userClient, entityID
 }
@@ -257,7 +257,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		t.Fatalf("failed to find the mfaConstrains")
 	}
 	if mfaConstraints.Any == nil || len(mfaConstraints.Any) == 0 {
-		t.Fatalf("")
+		t.Fatalf("expected to see the methodID is enforced in MFAConstaint.Any")
 	}
 	for _, mfaAny := range mfaConstraints.Any {
 		if mfaAny.ID != methodID || mfaAny.Type != "totp" || !mfaAny.UsesPasscode {

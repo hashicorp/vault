@@ -2087,8 +2087,8 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		return fmt.Errorf("error adding code to used cache: %w", err)
 	}
 
-	// resetting the number of attempts to 0 after a successful validation
-	usedCodes.Set(rateLimitID, uint32(0), passcodeTTL)
+	// deleting the cache entry after a successful MFA validation
+	usedCodes.Delete(rateLimitID)
 
 	return nil
 }
