@@ -163,13 +163,14 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	{
 		// create a config
 		resp1, err := client.Logical().Write("identity/mfa/method/totp", map[string]interface{}{
-			"issuer":    "yCorp",
-			"period":    5,
-			"algorithm": "SHA1",
-			"digits":    6,
-			"skew":      1,
-			"key_size":  10,
-			"qr_size":   100,
+			"issuer":                  "yCorp",
+			"period":                  5,
+			"algorithm":               "SHA1",
+			"digits":                  6,
+			"skew":                    1,
+			"key_size":                10,
+			"qr_size":                 100,
+			"max_validation_attempts": 3,
 		})
 
 		if err != nil || (resp1 == nil) {
@@ -336,7 +337,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	var maxErr error
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 4; i++ {
 		_, maxErr = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
 			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 			"mfa_payload": map[string][]string{
@@ -347,7 +348,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			t.Fatalf("MFA succeeded with an invalid passcode")
 		}
 	}
-	if !strings.Contains(maxErr.Error(), "maximum TOTP validation attempts 6 exceeded the allowed attempts 5") {
+	if !strings.Contains(maxErr.Error(), "maximum TOTP validation attempts 4 exceeded the allowed attempts 3") {
 		t.Fatalf("unexpected error message when exceeding max failed validation attempts")
 	}
 

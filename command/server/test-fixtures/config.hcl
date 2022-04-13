@@ -2,7 +2,6 @@ disable_cache = true
 disable_mlock = true
 
 ui = true
-max_totp_validation_attempts = 10
 
 listener "tcp" {
     address = "127.0.0.1:443"

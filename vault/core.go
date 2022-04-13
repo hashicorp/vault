@@ -1028,11 +1028,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.ha = conf.HAPhysical
 	}
 
-	maxTOTPValidationAttempts := conf.RawConfig.MaximumTOTPValidationAttempts
-	if maxTOTPValidationAttempts == 0 {
-		maxTOTPValidationAttempts = defaultMaxTOTPValidateAttempts
-	}
-	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger, maxTOTPValidationAttempts)
+	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
@@ -1050,9 +1046,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		b := NewSystemBackend(c, sysBackendLogger)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
-		}
-		if b.mfaBackend != nil {
-			b.mfaBackend.maximumTOTPValidationAttempts = maxTOTPValidationAttempts
 		}
 		return b, nil
 	}

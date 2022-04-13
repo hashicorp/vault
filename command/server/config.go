@@ -87,9 +87,6 @@ type Config struct {
 	LogRequestsLevel    string      `hcl:"-"`
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
-	MaximumTOTPValidationAttempts    int64       `hcl:"-"`
-	MaximumTOTPValidationAttemptsRaw interface{} `hcl:"max_totp_validation_attempts"`
-
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
@@ -321,11 +318,6 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.LogRequestsLevel = c2.LogRequestsLevel
 	}
 
-	result.MaximumTOTPValidationAttempts = c.MaximumTOTPValidationAttempts
-	if c2.MaximumTOTPValidationAttempts != 0 {
-		result.MaximumTOTPValidationAttempts = c2.MaximumTOTPValidationAttempts
-	}
-
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -551,14 +543,6 @@ func ParseConfig(d, source string) (*Config, error) {
 	if result.LogRequestsLevelRaw != nil {
 		result.LogRequestsLevel = strings.ToLower(strings.TrimSpace(result.LogRequestsLevelRaw.(string)))
 		result.LogRequestsLevelRaw = ""
-	}
-
-	if result.MaximumTOTPValidationAttemptsRaw != nil {
-		if result.MaximumTOTPValidationAttempts, err = parseutil.ParseInt(result.MaximumTOTPValidationAttemptsRaw); err != nil {
-			return nil, err
-		}
-
-		result.MaximumTOTPValidationAttemptsRaw = nil
 	}
 
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
