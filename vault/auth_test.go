@@ -161,11 +161,6 @@ func TestCore_BuiltinRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-
-	match := c.router.MatchingMount(namespace.RootContext(nil), "auth/approle/bar")
-	if match != "auth/approle/" {
-		t.Fatalf("missing mount, match: %q", match)
-	}
 }
 
 func TestCore_EnableCredential(t *testing.T) {

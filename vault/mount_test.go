@@ -189,8 +189,8 @@ func TestCore_Mount(t *testing.T) {
 
 func TestCore_BuiltinRegistrySecrets(t *testing.T) {
 	conf := &CoreConfig{
-		// set PluginDirectory and ensure that vault doesn't expect ssh to
-		// be there when we are mounting the builtin ssh
+		// set PluginDirectory and ensure that vault doesn't expect totp to
+		// be there when we are mounting the builtin totp
 		PluginDirectory: "/Users/foo",
 
 		DisableMlock:    true,
@@ -200,17 +200,12 @@ func TestCore_BuiltinRegistrySecrets(t *testing.T) {
 
 	me := &MountEntry{
 		Table: mountTableType,
-		Path:  "ssh/",
-		Type:  "ssh",
+		Path:  "totp/",
+		Type:  "totp",
 	}
 	err := c.mount(namespace.RootContext(nil), me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
-	}
-
-	match := c.router.MatchingMount(namespace.RootContext(nil), "ssh/bar")
-	if match != "ssh/" {
-		t.Fatalf("missing mount, match: %q", match)
 	}
 }
 
