@@ -2270,7 +2270,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
-	if c.systemBackend.mfaBackend != nil {
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
 	}
 	c.logger.Info("post-unseal setup complete")
@@ -2349,7 +2349,7 @@ func (c *Core) preSeal() error {
 	}
 
 	c.loginMFABackend.usedCodes = nil
-	if c.systemBackend.mfaBackend != nil {
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = nil
 	}
 	preSealPhysical(c)
