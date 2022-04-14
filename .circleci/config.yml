@@ -145,7 +145,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.7
+    - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
@@ -166,7 +166,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -299,7 +299,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests
@@ -398,12 +398,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.7
+    - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -532,7 +532,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests
@@ -613,7 +613,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -742,7 +742,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests
@@ -903,12 +903,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.7
+    - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1041,7 +1041,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests
