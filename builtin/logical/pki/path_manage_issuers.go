@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/pem"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -153,11 +154,11 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("private keys found in the PEM bundle but not allowed by the path; use /issuers/import/bundle"), nil
 	}
 
-	for _, keyPem := range keys {
+	for keyIndex, keyPem := range keys {
 		// Handle import of private key.
 		key, existing, err := importKey(ctx, req.Storage, keyPem, "")
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+			return logical.ErrorResponse(fmt.Sprintf("Error parsing key %v: %v", keyIndex, err)), nil
 		}
 
 		if !existing {
@@ -165,10 +166,10 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	for _, certPem := range issuers {
+	for certIndex, certPem := range issuers {
 		cert, existing, err := importIssuer(ctx, req.Storage, certPem, "")
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+		  return logical.ErrorResponse(fmt.Sprintf("Error parsing issuer %v: %v\n%v", certIndex, err, certPem)), nil
 		}
 
 		issuerKeyMap[cert.ID.String()] = cert.KeyID.String()
