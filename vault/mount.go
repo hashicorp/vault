@@ -1396,7 +1396,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	f, ok := c.logicalBackends[t]
 	if !ok {
 
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential)
+		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets)
 		if err != nil {
 			return nil, err
 		}
