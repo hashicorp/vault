@@ -819,10 +819,39 @@ func (c *Client) setNamespace(namespace string) {
 	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
+// ClearNamespace removes the namespace header if set.
 func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-	c.headers.Del(consts.NamespaceHeaderName)
+	if c.headers != nil {
+		c.headers.Del(consts.NamespaceHeaderName)
+	}
+}
+
+// Namespace returns the namespace currently set in this client. It will
+// return an empty string if there is no namespace set.
+func (c *Client) Namespace() string {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	if c.headers == nil {
+		return ""
+	}
+	return c.headers.Get(consts.NamespaceHeaderName)
+}
+
+// WithNamespace makes a shallow copy of Client, modifies it to use
+// the given namespace, and returns it. Passing an empty string will
+// temporarily unset the namespace.
+func (c *Client) WithNamespace(namespace string) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.headers = c.Headers()
+	if namespace == "" {
+		c2.ClearNamespace()
+	} else {
+		c2.SetNamespace(namespace)
+	}
+	return &c2
 }
 
 // Token returns the access token being used by this client. It will
@@ -1141,11 +1170,21 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
+	ns := c.headers.Get(consts.NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
+
+	// ensure that the most current namespace setting is used at the time of the call
+	// e.g. calls using (*Client).WithNamespace
+	switch ns {
+	case "":
+		r.Headers.Del(consts.NamespaceHeaderName)
+	default:
+		r.Headers.Set(consts.NamespaceHeaderName, ns)
+	}
 
 	for _, cb := range c.requestCallbacks {
 		cb(r)
@@ -1278,13 +1317,19 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	// add headers
 	if c.headers != nil {
 		for header, vals := range c.headers {
 			for _, val := range vals {
 				req.Header.Add(header, val)
 			}
 		}
+		// explicitly set the namespace header to current client
+		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
+			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		}
 	}
+
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 
