@@ -2,8 +2,9 @@ package api
 
 import (
 	"context"
-	"github.com/hashicorp/vault/sdk/logical"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type mockAuthMethod struct {
@@ -95,7 +96,8 @@ func TestAuth_MFALoginTwoPhase(t *testing.T) {
 							MFAConstraints: nil,
 						},
 					},
-				}},
+				},
+			},
 			wantErr: false,
 		},
 		{
@@ -106,7 +108,8 @@ func TestAuth_MFALoginTwoPhase(t *testing.T) {
 			m: &mockAuthMethod{
 				mockedSecret: &Secret{
 					Auth: &SecretAuth{},
-				}},
+				},
+			},
 			wantErr: true,
 		},
 	}

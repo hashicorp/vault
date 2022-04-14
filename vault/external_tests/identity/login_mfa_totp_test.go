@@ -3,10 +3,11 @@ package identity
 import (
 	"context"
 	"fmt"
-	upAuth "github.com/hashicorp/vault/api/auth/userpass"
 	"strings"
 	"testing"
 	"time"
+
+	upAuth "github.com/hashicorp/vault/api/auth/userpass"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
@@ -90,7 +91,6 @@ func doTwoPhaseLogin(client *api.Client, totpCodePath, methodID, username string
 		map[string]interface{}{
 			methodID: []string{totpPasscode},
 		})
-
 	if err != nil {
 		t.Fatalf("MFA validation failed: %v", err)
 	}
