@@ -676,6 +676,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	// scheduler.
 	config.BatchApplyCh = true
 
+	b.logger.Trace("using raft config", "inputs", b.conf, "raftconfig", config)
 	return nil
 }
 
@@ -758,6 +759,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return false
 	}
 
+	var initialTimeoutMultiplier time.Duration
 	switch {
 	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
@@ -769,6 +771,19 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
+		initialTimeoutMultiplier = 1
+		if !opts.StartAsLeader {
+			electionTimeout, heartbeatTimeout := raftConfig.ElectionTimeout, raftConfig.HeartbeatTimeout
+			// Use bigger values for first election
+			raftConfig.ElectionTimeout *= initialTimeoutMultiplier
+			raftConfig.HeartbeatTimeout *= initialTimeoutMultiplier
+			b.logger.Trace("using larger timeouts for raft at startup",
+				"initial_election_timeout", raftConfig.ElectionTimeout,
+				"initial_heartbeat_timeout", raftConfig.HeartbeatTimeout,
+				"normal_election_timeout", electionTimeout,
+				"normal_heartbeat_timeout", heartbeatTimeout)
+		}
+
 		// Set the local address and localID in the streaming layer and the raft config.
 		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener)
 		if err != nil {
@@ -901,6 +916,54 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Close the init channel to signal setup has been completed
 	close(b.raftInitCh)
+
+	reloadConfig := func() {
+		newCfg := raft.ReloadableConfig{
+			TrailingLogs:      raftConfig.TrailingLogs,
+			SnapshotInterval:  raftConfig.SnapshotInterval,
+			SnapshotThreshold: raftConfig.SnapshotThreshold,
+			// HeartbeatTimeout:  raftConfig.HeartbeatTimeout / initialTimeoutMultiplier,
+			// ElectionTimeout:   raftConfig.ElectionTimeout / initialTimeoutMultiplier,
+		}
+		err := raftObj.ReloadConfig(newCfg)
+		if err != nil {
+			b.logger.Error("failed to reload raft config to set lower timeouts", "error", err)
+		} else {
+			b.logger.Trace("reloaded raft config to set lower timeouts", "config", fmt.Sprintf("%#v", newCfg))
+		}
+	}
+	confFuture := raftObj.GetConfiguration()
+	if err := confFuture.Error(); err != nil {
+		b.logger.Error("get config")
+	}
+	clusterConf := confFuture.Configuration()
+	if initialTimeoutMultiplier != 0 {
+		if len(clusterConf.Servers) == 1 {
+			reloadConfig()
+		} else {
+			go func() {
+				ticker := time.NewTicker(50 * time.Millisecond)
+				timeout := time.NewTimer(raftConfig.HeartbeatTimeout)
+				for {
+					select {
+					case <-ticker.C:
+						switch raftObj.State() {
+						case raft.Candidate, raft.Leader:
+							b.logger.Trace("notifying due to being candidate or leader")
+							reloadConfig()
+							return
+						case raft.Shutdown:
+							return
+						}
+					case <-timeout.C:
+						b.logger.Trace("notifying due to timeout")
+						reloadConfig()
+						return
+					}
+				}
+			}()
+		}
+	}
 
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
