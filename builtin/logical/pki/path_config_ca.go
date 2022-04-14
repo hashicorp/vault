@@ -105,6 +105,70 @@ accessible by the existing signing paths (/root/sign-intermediate,
 /root/sign-self-issued, /sign-verbatim, /sign/:role, and /issue/:role).
 `
 
+func pathConfigKeys(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "config/keys",
+		Fields: map[string]*framework.FieldSchema{
+			"default": {
+				Type:        framework.TypeString,
+				Description: `Reference (name or identifier) of the default key.`,
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathKeyDefaultWrite,
+			logical.ReadOperation:   b.pathKeyDefaultRead,
+		},
+
+		HelpSynopsis:    pathConfigKeysHelpSyn,
+		HelpDescription: pathConfigKeysHelpDesc,
+	}
+}
+
+func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := getKeysConfig(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("Error loading keys configuration: " + err.Error()), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"default": config.DefaultKeyId,
+		},
+	}, nil
+}
+
+func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	newDefault := data.Get("default").(string)
+	if len(newDefault) == 0 || newDefault == "default" {
+		return logical.ErrorResponse("Invalid key specification; must be non-empty and can't be 'default'."), nil
+	}
+
+	parsedKey, err := resolveKeyReference(ctx, req.Storage, newDefault)
+	if err != nil {
+		return logical.ErrorResponse("Error resolving issuer reference: " + err.Error()), nil
+	}
+
+	err = updateDefaultKeyId(ctx, req.Storage, parsedKey)
+	if err != nil {
+		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"default": parsedKey,
+		},
+	}, nil
+}
+
+const pathConfigKeysHelpSyn = `Read and set the default key used for signing`
+
+const pathConfigKeysHelpDesc = `
+This path allows configuration of key parameters.
+
+The "default" parameter controls which key is the default used by signing paths.
+`
+
 const pathConfigCAGenerateHelpSyn = `
 Generate a new CA certificate and private key used for signing.
 `

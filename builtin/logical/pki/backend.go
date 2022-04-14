@@ -123,6 +123,13 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathIssuerGenerateIntermediate(&b),
 			pathConfigIssuers(&b),
 
+			// Key APIs
+			pathListKeys(&b),
+			pathKey(&b),
+			pathGenerateKey(&b),
+			pathImportKey(&b),
+			pathConfigKeys(&b),
+
 			// Fetch APIs have been lowered to favor the newer issuer API endpoints
 			pathFetchCA(&b),
 			pathFetchCAChain(&b),
