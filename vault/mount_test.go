@@ -187,6 +187,33 @@ func TestCore_Mount(t *testing.T) {
 	}
 }
 
+func TestCore_BuiltinRegistrySecrets(t *testing.T) {
+	conf := &CoreConfig{
+		// set PluginDirectory and ensure that vault doesn't expect ssh to
+		// be there when we are mounting the builtin ssh
+		PluginDirectory: "/Users/foo",
+
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
+
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "ssh/",
+		Type:  "ssh",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "ssh/bar")
+	if match != "ssh/" {
+		t.Fatalf("missing mount, match: %q", match)
+	}
+}
+
 // Test that the local table actually gets populated as expected with local
 // entries, and that upon reading the entries from both are recombined
 // correctly

@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
+	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -2152,6 +2153,7 @@ func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 			"mysql-database-plugin":      consts.PluginTypeDatabase,
 			"postgresql-database-plugin": consts.PluginTypeDatabase,
 			"approle":                    consts.PluginTypeCredential,
+			"ssh":                        consts.PluginTypeSecrets,
 		},
 	}
 }
@@ -2160,7 +2162,7 @@ type mockBuiltinRegistry struct {
 	forTesting map[string]consts.PluginType
 }
 
-// Get only supports getting database plugins and approle credential backend
+// Get only supports getting database plugins, ssh and approle
 func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
 	testPluginType, ok := m.forTesting[name]
 	if !ok {
@@ -2174,14 +2176,18 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 		return toFunc(approle.Factory), true
 	}
 
+	if name == "ssh" {
+		return toFunc(ssh.Factory), true
+	}
+
 	if name == "postgresql-database-plugin" {
 		return dbPostgres.New, true
 	}
 	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
 
-// Keys only supports getting a realistic list of the keys for database plugins
-// and approle credential backend
+// Keys only supports getting a realistic list of the keys for database plugins,
+// ssh and approle
 func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 	switch pluginType {
 	case consts.PluginTypeDatabase:
@@ -2209,6 +2215,10 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 	case consts.PluginTypeCredential:
 		return []string{
 			"approle",
+		}
+	case consts.PluginTypeSecrets:
+		return []string{
+			"ssh",
 		}
 	}
 	return []string{}
