@@ -187,28 +187,6 @@ func TestCore_Mount(t *testing.T) {
 	}
 }
 
-func TestCore_BuiltinRegistrySecrets(t *testing.T) {
-	conf := &CoreConfig{
-		// set PluginDirectory and ensure that vault doesn't expect nomad to
-		// be there when we are mounting the builtin nomad
-		PluginDirectory: "/Users/foo",
-
-		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
-	}
-	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
-
-	me := &MountEntry{
-		Table: mountTableType,
-		Path:  "nomad/",
-		Type:  "nomad",
-	}
-	err := c.mount(namespace.RootContext(nil), me)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-}
-
 // Test that the local table actually gets populated as expected with local
 // entries, and that upon reading the entries from both are recombined
 // correctly
