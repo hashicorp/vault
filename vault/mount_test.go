@@ -189,8 +189,8 @@ func TestCore_Mount(t *testing.T) {
 
 func TestCore_BuiltinRegistrySecrets(t *testing.T) {
 	conf := &CoreConfig{
-		// set PluginDirectory and ensure that vault doesn't expect totp to
-		// be there when we are mounting the builtin totp
+		// set PluginDirectory and ensure that vault doesn't expect nomad to
+		// be there when we are mounting the builtin nomad
 		PluginDirectory: "/Users/foo",
 
 		DisableMlock:    true,
@@ -200,8 +200,8 @@ func TestCore_BuiltinRegistrySecrets(t *testing.T) {
 
 	me := &MountEntry{
 		Table: mountTableType,
-		Path:  "totp/",
-		Type:  "totp",
+		Path:  "nomad/",
+		Type:  "nomad",
 	}
 	err := c.mount(namespace.RootContext(nil), me)
 	if err != nil {

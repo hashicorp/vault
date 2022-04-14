@@ -34,7 +34,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
-	"github.com/hashicorp/vault/builtin/logical/totp"
+	"github.com/hashicorp/vault/builtin/logical/nomad"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -2153,7 +2153,7 @@ func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 			"mysql-database-plugin":      consts.PluginTypeDatabase,
 			"postgresql-database-plugin": consts.PluginTypeDatabase,
 			"approle":                    consts.PluginTypeCredential,
-			"totp":                       consts.PluginTypeSecrets,
+			"nomad":                      consts.PluginTypeSecrets,
 		},
 	}
 }
@@ -2162,7 +2162,7 @@ type mockBuiltinRegistry struct {
 	forTesting map[string]consts.PluginType
 }
 
-// Get only supports getting database plugins, totp and approle
+// Get only supports getting database plugins, nomad and approle
 func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
 	testPluginType, ok := m.forTesting[name]
 	if !ok {
@@ -2176,8 +2176,8 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 		return toFunc(approle.Factory), true
 	}
 
-	if name == "totp" {
-		return toFunc(totp.Factory), true
+	if name == "nomad" {
+		return toFunc(nomad.Factory), true
 	}
 
 	if name == "postgresql-database-plugin" {
@@ -2187,7 +2187,7 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 }
 
 // Keys only supports getting a realistic list of the keys for database plugins,
-// totp and approle
+// nomad and approle
 func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 	switch pluginType {
 	case consts.PluginTypeDatabase:
@@ -2218,7 +2218,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		}
 	case consts.PluginTypeSecrets:
 		return []string{
-			"totp",
+			"nomad",
 		}
 	}
 	return []string{}
