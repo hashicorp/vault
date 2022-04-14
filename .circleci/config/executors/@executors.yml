@@ -3,7 +3,7 @@ go-machine:
   shell: /usr/bin/env bash -euo pipefail -c
   environment:
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-    GO_VERSION: 1.17.7  # Pin Go to patch version (ex: 1.2.3)
+    GO_VERSION: 1.17.9  # Pin Go to patch version (ex: 1.2.3)
     GOTESTSUM_VERSION: 0.5.2  # Pin gotestsum to patch version (ex: 1.2.3)
     GOFUMPT_VERSION: 0.2.1  # Pin gofumpt to patch version (ex: 1.2.3)
     GO_TAGS: ""
@@ -26,7 +26,7 @@ alpine:
 docker-env-go-test-remote-docker:
   resource_class: medium
   docker:
-    - image: "docker.mirror.hashicorp.services/cimg/go:1.17.7"
+    - image: "docker.mirror.hashicorp.services/cimg/go:1.17.9"
   environment:
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
     GO_TAGS: ""
@@ -34,7 +34,7 @@ docker-env-go-test-remote-docker:
 docker-env-go-test:
   resource_class: large
   docker:
-    - image: "docker.mirror.hashicorp.services/cimg/go:1.17.7"
+    - image: "docker.mirror.hashicorp.services/cimg/go:1.17.9"
   environment:
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
     GO_TAGS: ""
@@ -42,7 +42,7 @@ docker-env-go-test:
 docker-env-go-test-race:
   resource_class: xlarge
   docker:
-    - image: "docker.mirror.hashicorp.services/cimg/go:1.17.7"
+    - image: "docker.mirror.hashicorp.services/cimg/go:1.17.9"
   environment:
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
     GO_TAGS: ""
