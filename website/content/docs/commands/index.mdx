@@ -10,36 +10,84 @@ description: |-
 
 # Vault Commands (CLI)
 
-~> **Note:** The Vault CLI interface was changed substantially in 0.9.2+ and may cause
-confusion while using older versions of Vault with this documentation. Read our
-[upgrade guide](/docs/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for more information.
+~> **Note:** The Vault command-line interface (CLI) changed substantially in
+0.9.2+ and may cause confusion while using older versions of Vault with this
+documentation. Read our [upgrade
+guide](/docs/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for
+more information.
 
-In addition to a verbose [HTTP API](/api), Vault features a
-command-line interface that wraps common functionality and formats output. The
-Vault CLI is a single static binary. It is a thin wrapper around the HTTP API.
-Every CLI command maps directly to the HTTP API internally.
+In addition to a verbose [HTTP API](/api-docs), Vault features a command-line
+interface (CLI) that wraps common functionality and formats output. The Vault
+CLI is a single static binary. It is a thin wrapper around the HTTP API. Every
+CLI command maps directly to the HTTP API internally.
 
 Each command is represented as a command or subcommand. Please see the sidebar
 for more information about a particular command. This documentation corresponds
 to the latest version of Vault. If you are running an older version, commands
-may behave differently. Run `vault -h` or `vault <command> -h` to see the help
-output which corresponds to your version.
+may behave differently.
 
-To get help, run:
+## Command Help
+
+There are two primary ways to get help in Vault: [CLI help](#cli-help) and [API
+help](#api-help).
+
+### CLI Help
+
+Use `help` (or `-h` for shorthand) to see the help output which corresponds to
+your Vault version.
+
+To get CLI help:
 
 ```shell-session
-$ vault -h
+$ vault help
 ```
 
-To get help for a subcommand, run:
+**Example:** To get help on the `kv` subcommand.
 
 ```shell-session
-$ vault <subcommand> -h
+$ vault kv help
 ```
 
-To see the equivalent API call required to perform the same operation, use the `-output-curl-string` flag after the subcommand.
+The help output displays available subcommands, parameters, and command flags.
+
+### API Help
+
+Use `path-help` to see the help output for Vault API paths.
+
+To get API help:
+
 ```shell-session
-vault auth enable -output-curl-string approle
+$ vault path-help -h
+```
+
+Use `path-help` to retrieve API help on any paths. Vault API endpoints provide
+built-in help in markdown format. This includes system paths, secret engines,
+and auth methods.
+
+**Example:** To get API help on the [`auth/token/`](/api-docs/auth/token) path.
+
+```shell-session
+$ vault path-help auth/token
+```
+
+The help output displays supported child-paths and available parameters.
+
+-> **CLI and API:** The [read](/docs/commands/read),
+[write](/docs/commands/write), [delete](/docs/commands/delete), and
+[list](/docs/commands/list) operations are available for most paths in Vault,
+and those CLI commands are equivalent to HTTP verbs, `GET`, `POST` (or `PUT`),
+`DELETE`, and `LIST`.
+
+### Print cURL Command
+
+CLI provides convenient wrapper for the Vault API. To see the equivalent API
+call to perform the same operation, use the `-output-curl-string` flag after the
+subcommand.
+
+```shell-session
+$ vault policy list -output-curl-string
+
+curl -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" http://127.0.0.1:8200/v1/sys/policies/acl?list=true
 ```
 
 ## CLI Command Structure
@@ -50,9 +98,13 @@ output options, and command specific options.
 Construct your Vault CLI command such that the command options precede its path
 and arguments if any:
 
+<CodeBlockConfig hideClipboard>
+
 ```text
 vault <command> [options] [path] [args]
 ```
+
+</CodeBlockConfig>
 
 - `options` - [Flags](/docs/commands#flags) to specify additional settings
 - `args` - API arguments specific to the operation
@@ -257,7 +309,7 @@ Provide Vault output (read/status/write) in the specified format. Valid formats 
 
 ### `VAULT_LICENSE`
 
-[Enterprise, Server only] Specify a license to use for this node.  This takes
+[Enterprise, Server only] Specify a license to use for this node. This takes
 precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
 [license_path in config](/docs/configuration#license_path).
 
