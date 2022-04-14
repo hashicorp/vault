@@ -771,7 +771,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
-		initialTimeoutMultiplier = 1
+		initialTimeoutMultiplier = 3
 		if !opts.StartAsLeader {
 			electionTimeout, heartbeatTimeout := raftConfig.ElectionTimeout, raftConfig.HeartbeatTimeout
 			// Use bigger values for first election
@@ -922,8 +922,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			TrailingLogs:      raftConfig.TrailingLogs,
 			SnapshotInterval:  raftConfig.SnapshotInterval,
 			SnapshotThreshold: raftConfig.SnapshotThreshold,
-			// HeartbeatTimeout:  raftConfig.HeartbeatTimeout / initialTimeoutMultiplier,
-			// ElectionTimeout:   raftConfig.ElectionTimeout / initialTimeoutMultiplier,
+			HeartbeatTimeout:  raftConfig.HeartbeatTimeout / initialTimeoutMultiplier,
+			ElectionTimeout:   raftConfig.ElectionTimeout / initialTimeoutMultiplier,
 		}
 		err := raftObj.ReloadConfig(newCfg)
 		if err != nil {
