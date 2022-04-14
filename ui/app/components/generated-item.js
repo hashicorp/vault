@@ -55,7 +55,8 @@ export default Component.extend({
       if (element.Tokens) {
         element.Tokens.forEach((attr) => {
           if (attr.name === 'tokenPolicies') {
-            attr.options.helpText = `Add policies that will apply to the generated token for this user. One policy per row.`;
+            attr.options.helpText =
+              'Add policies that will apply to the generated token for this user. One policy per row.';
           }
         });
       }
