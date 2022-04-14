@@ -5,6 +5,7 @@ import {
   fillIn,
   settled,
   visit,
+  triggerEvent,
   triggerKeyEvent,
   find,
   waitUntil,
@@ -69,6 +70,18 @@ module('Acceptance | auth backend list', function (hooks) {
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user2);
     await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
+    // test for modified helpText on generated token policies
+    await click('[data-test-toggle-group="Tokens"]');
+    let policyFormField = document.querySelector('[data-test-input="tokenPolicies"]');
+    let tooltipTrigger = policyFormField.querySelector('[data-test-tool-tip-trigger]');
+    await triggerEvent(tooltipTrigger, 'mouseenter');
+    assert
+      .dom('[data-test-info-tooltip-content]')
+      .hasText(
+        'Add policies that will apply to the generated token for this user. One policy per row.',
+        'Overwritten tooltip text displays in token form field.'
+      );
+
     await click('[data-test-save-config="true"]');
 
     //confirming that the user was created.  There was a bug where the apiPath was not being updated when toggling between auth routes
