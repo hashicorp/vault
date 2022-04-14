@@ -60,6 +60,7 @@ export default Component.extend({
         });
       }
     });
+
     if (this.mode === 'edit') {
       // For validation to work in edit mode,
       // reconstruct the model values from field group
