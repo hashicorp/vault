@@ -3,7 +3,7 @@ import { formatISO } from 'date-fns';
 
 export default class MonthlySerializer extends ApplicationSerializer {
   flattenDataset(namespaceArray) {
-    return namespaceArray.map((ns) => {
+    return namespaceArray?.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
       let label = ns['namespace_path'];
@@ -62,17 +62,26 @@ export default class MonthlySerializer extends ApplicationSerializer {
     if (payload.id === 'no-data') {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
     }
-    // TODO CMB will there always be a months key on this response?
-    let newClientsData = payload.data.months[0]?.new_clients;
     let response_timestamp = formatISO(new Date());
+    // TODO CMB: the following is assumed, need to confirm
+    // the months array will always include a single object: a timestamp of the current month and new/total count data, if available
+    let newClientsData = payload.data.months[0]?.new_clients || null;
+    let by_namespace_new_clients, new_clients;
+    if (newClientsData) {
+      by_namespace_new_clients = this.flattenDataset(newClientsData.namespaces);
+      new_clients = this.homogenizeClientNaming(newClientsData.counts);
+    } else {
+      by_namespace_new_clients = [];
+      new_clients = [];
+    }
     let transformedPayload = {
       ...payload,
       response_timestamp,
       by_namespace_total_clients: this.flattenDataset(payload.data.by_namespace),
-      by_namespace_new_clients: this.flattenDataset(newClientsData.namespaces),
+      by_namespace_new_clients,
       // nest within 'total' object to mimic /activity response shape
       total: this.homogenizeClientNaming(payload.data),
-      new: this.homogenizeClientNaming(newClientsData.counts),
+      new: new_clients,
     };
     delete payload.data.by_namespace;
     delete payload.data.months;

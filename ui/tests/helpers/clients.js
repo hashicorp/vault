@@ -58,7 +58,7 @@ export function generateConfigResponse(overrides = {}) {
     request_id: 'some-config-id',
     data: {
       default_report_months: 12,
-      enabled: 'default-enable',
+      enabled: 'enable',
       queries_available: true,
       retention_months: 24,
       ...overrides,
@@ -158,15 +158,23 @@ export function generateLicenseResponse(startDate, endDate) {
   };
 }
 
-export function generateCurrentMonthResponse(namespaceCount, skipMounts = false) {
+export function generateCurrentMonthResponse(namespaceCount, skipMounts = false, configEnabled = true) {
+  if (!configEnabled) {
+    return {
+      data: { id: 'no-data' },
+    };
+  }
   if (!namespaceCount) {
     return {
       request_id: 'monthly-response-id',
       data: {
         by_namespace: [],
         clients: 0,
+        distinct_entities: 0,
         entity_clients: 0,
         non_entity_clients: 0,
+        non_entity_tokens: 0,
+        months: [],
       },
     };
   }
@@ -189,6 +197,7 @@ export function generateCurrentMonthResponse(namespaceCount, skipMounts = false)
     data: {
       by_namespace,
       ...counts,
+      months: [],
     },
   };
 }

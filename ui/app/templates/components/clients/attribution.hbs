@@ -9,7 +9,7 @@
       <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
-      {{#if (or this.totalClientsData this.newClientsData)}}
+      {{#if this.totalClientsData}}
         <button
           data-test-attribution-export-button
           type="button"
@@ -24,7 +24,7 @@
 
   {{#if this.barChartTotalClients}}
     {{#if (eq @isDateRange true)}}
-      <div class="chart-container-wide">
+      <div class="chart-container-wide" data-test-chart-container="total-clients">
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
           @chartLegend={{@chartLegend}}
@@ -45,7 +45,7 @@
         <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
       </div>
     {{else}}
-      <div class="chart-container-left">
+      <div class="chart-container-left" data-test-chart-container="new-clients">
         <h2 class="chart-title">New clients</h2>
         <p class="chart-description">{{this.chartText.newCopy}}</p>
         <Clients::HorizontalBarChart
@@ -56,7 +56,7 @@
         />
       </div>
 
-      <div class="chart-container-right">
+      <div class="chart-container-right" data-test-chart-container="total-clients">
         <h2 class="chart-title">Total clients</h2>
         <p class="chart-description">{{this.chartText.totalCopy}}</p>
         <Clients::HorizontalBarChart

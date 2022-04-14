@@ -30,7 +30,11 @@ export default class Current extends Component {
 
   get isGatheringData() {
     // return true if tracking IS enabled but no data collected yet
-    return this.args.model.config?.enabled === 'On' && this.byNamespaceTotalClients.length === 0;
+    return (
+      this.args.model.config?.enabled === 'On' &&
+      this.byNamespaceTotalClients.length === 0 &&
+      this.byNamespaceNewClients.length === 0
+    );
   }
 
   get hasAttributionData() {
@@ -97,7 +101,6 @@ export default class Current extends Component {
     }
   }
 
-  // TODO CMB empty state for if no new data for selected namespace
   // new client data for horizontal bar chart in attribution component
   get newClientsData() {
     if (this.selectedNamespace) {
@@ -111,7 +114,6 @@ export default class Current extends Component {
     return this.args.model.monthly?.responseTimestamp;
   }
 
-  // TODO CMB filter new data too?
   // ACTIONS
   @action
   selectNamespace([value]) {
