@@ -783,7 +783,7 @@ func TestIdentityStore_GroupsCreateUpdateDuplicatePolicy(t *testing.T) {
 
 	// Create a group with the above created 2 entities as its members
 	groupData := map[string]interface{}{
-		"policies": "testpolicy1,testpolicy2",
+		"policies": []string{"testpolicy1", "testpolicy2"},
 		"metadata": []string{"testkey1=testvalue1", "testkey2=testvalue2"},
 	}
 
@@ -841,7 +841,7 @@ func TestIdentityStore_GroupsCreateUpdateDuplicatePolicy(t *testing.T) {
 
 	// Update by setting ID in the param
 	groupData["id"] = groupID
-	groupData["policies"] = "updatedpolicy1,updatedpolicy2,updatedpolicy2"
+	groupData["policies"] = []string{"updatedpolicy1", "updatedpolicy2", "updatedpolicy2"}
 	resp, err = is.HandleRequest(ctx, groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
