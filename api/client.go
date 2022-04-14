@@ -1179,6 +1179,8 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	c.modifyLock.RUnlock()
 
+	// ensure that the most current namespace setting is used at the time of the call
+	// e.g. calls using (*Client).WithNamespace
 	switch ns {
 	case "":
 		r.Headers.Del(consts.NamespaceHeaderName)
