@@ -2,9 +2,8 @@ package api
 
 import (
 	"context"
-	"testing"
-
 	"github.com/hashicorp/vault/sdk/logical"
+	"testing"
 )
 
 type mockAuthMethod struct {
@@ -48,13 +47,12 @@ func TestAuth_Login(t *testing.T) {
 	})
 }
 
-func TestAuth_MFALogin(t *testing.T) {
-	t.Parallel()
-
+func TestAuth_MFALoginSinglePhase(t *testing.T) {
 	t.Run("MFALogin() should succeed if credentials are passed in", func(t *testing.T) {
 		a := &Auth{
 			c: &Client{},
 		}
+
 		m := mockAuthMethod{
 			mockedSecret: &Secret{
 				Auth: &SecretAuth{
@@ -74,47 +72,56 @@ func TestAuth_MFALogin(t *testing.T) {
 			return
 		}
 	})
+}
 
-	t.Run("MFALogin() should return requirements if no creds are provided", func(t *testing.T) {
-		a := &Auth{
-			c: &Client{},
-		}
-		m := mockAuthMethod{
-			mockedSecret: &Secret{
-				Auth: &SecretAuth{
-					MFARequirement: &logical.MFARequirement{
-						MFARequestID:   "a-req-id",
-						MFAConstraints: nil,
+func TestAuth_MFALoginTwoPhase(t *testing.T) {
+	tests := []struct {
+		name    string
+		a       *Auth
+		m       *mockAuthMethod
+		creds   *string
+		wantErr bool
+	}{
+		{
+			name: "return MFARequirements",
+			a: &Auth{
+				c: &Client{},
+			},
+			m: &mockAuthMethod{
+				mockedSecret: &Secret{
+					Auth: &SecretAuth{
+						MFARequirement: &logical.MFARequirement{
+							MFARequestID:   "a-req-id",
+							MFAConstraints: nil,
+						},
 					},
-				},
+				}},
+			wantErr: false,
+		},
+		{
+			name: "error if no MFARequirements",
+			a: &Auth{
+				c: &Client{},
 			},
-			mockedError: nil,
-		}
+			m: &mockAuthMethod{
+				mockedSecret: &Secret{
+					Auth: &SecretAuth{},
+				}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := tt.a.MFALogin(context.Background(), tt.m)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MFALogin() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 
-		secret, err := a.MFALogin(context.Background(), &m)
-		if err != nil {
-			t.Errorf("MFALogin() returned an error: %v", err)
-			return
-		}
-		if secret.Auth.MFARequirement != m.mockedSecret.Auth.MFARequirement {
-			t.Errorf("MFALogin() returned %v, expected %v", secret.Auth.MFARequirement, m.mockedSecret.Auth.MFARequirement)
-			return
-		}
-	})
-
-	t.Run("MFALogin() should error if no creds provided and no requirements returned", func(t *testing.T) {
-		a := &Auth{
-			c: &Client{},
-		}
-		m := mockAuthMethod{
-			mockedSecret: &Secret{
-				Auth: &SecretAuth{},
-			},
-			mockedError: nil,
-		}
-		if _, err := a.MFALogin(context.Background(), &m); err == nil {
-			t.Errorf("MFALogin() should error if no credentials are set and no MFARequirements are returned")
-			return
-		}
-	})
+			if secret.Auth.MFARequirement != tt.m.mockedSecret.Auth.MFARequirement {
+				t.Errorf("MFALogin() returned %v, expected %v", secret.Auth.MFARequirement, tt.m.mockedSecret.Auth.MFARequirement)
+				return
+			}
+		})
+	}
 }
