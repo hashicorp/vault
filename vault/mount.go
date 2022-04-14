@@ -1395,16 +1395,8 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets)
-		if err != nil {
-			return nil, err
-		}
-		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
-		}
-
 		f = plugin.Factory
-		if !plug.Builtin {
+		if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
