@@ -163,13 +163,16 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 	}
-	region := os.Getenv("AWS_REGION")
+	region := os.Getenv("AWS_DYNAMODB_REGION")
 	if region == "" {
-		region = os.Getenv("AWS_DEFAULT_REGION")
+		region := os.Getenv("AWS_REGION")
 		if region == "" {
-			region = conf["region"]
+			region = os.Getenv("AWS_DEFAULT_REGION")
 			if region == "" {
-				region = DefaultDynamoDBRegion
+				region = conf["region"]
+				if region == "" {
+					region = DefaultDynamoDBRegion
+				}
 			}
 		}
 	}
