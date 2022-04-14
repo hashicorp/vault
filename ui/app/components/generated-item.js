@@ -48,7 +48,6 @@ export default Component.extend({
   ),
   init() {
     this._super(...arguments);
-    this.set('validationMessages', {});
     this.model.fieldGroups.forEach((element) => {
       // overwriting the helpText for Token Polices.
       // HelpText from the backend says add a comma separated list, which works on the CLI but not here on the UI.
