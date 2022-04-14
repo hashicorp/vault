@@ -915,8 +915,16 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		f = plugin.Factory
-		if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeCredential) {
+
+		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential)
+		if err != nil {
+			return nil, err
+		}
+		if plug == nil {
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+		}
+
+		if !plug.Builtin {
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
