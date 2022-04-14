@@ -53,12 +53,8 @@ export default Component.extend({
       // HelpText from the backend says add a comma separated list, which works on the CLI but not here on the UI.
       // This effects TLS Certificates, Userpass, and Kubernetes. https://github.com/hashicorp/vault/issues/10346
       if (element.Tokens) {
-        element.Tokens.forEach((attr) => {
-          if (attr.name === 'tokenPolicies') {
-            attr.options.helpText =
-              'Add policies that will apply to the generated token for this user. One policy per row.';
-          }
-        });
+        element.Tokens.find((attr) => attr.name === 'tokenPolicies').options.helpText =
+          'Add policies that will apply to the generated token for this user. One policy per row.';
       }
     });
 
