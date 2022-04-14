@@ -52,7 +52,7 @@ export default Component.extend({
     this.model.fieldGroups.forEach((element) => {
       // overwriting the helpText for Token Polices.
       // HelpText from the backend says add a comma separated list, which works on the CLI but not here on the UI.
-      // This affects the TLS Certificates, Userpass, Kubernetes. These are the ones the bug had been reported about. https://github.com/hashicorp/vault/issues/10346
+      // This effects TLS Certificates, Userpass, and Kubernetes. These are the ones the bug had been reported about. https://github.com/hashicorp/vault/issues/10346
       if (element.Tokens) {
         element.Tokens.forEach((attr) => {
           if (attr.name === 'tokenPolicies') {
