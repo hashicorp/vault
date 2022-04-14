@@ -32,6 +32,8 @@ This endpoint defines a MFA method of type TOTP.
 
 - `skew` `(int: 1)` - The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1.
 
+- `max_validation_attempts` `(int: 5)` - The maximum number of consecutive TOTP code failed validation.
+
 ### Sample Payload
 
 ```json
@@ -88,6 +90,7 @@ $ curl \
     "qr_size": 200,
     "skew": 1,
     "type": "totp"
+    "max_validation_attempts": 5
   }
 }
 ```
