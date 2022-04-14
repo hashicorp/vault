@@ -2,7 +2,11 @@
 <div class="masked-input {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}"
   data-test-masked-input data-test-field>
   {{#if displayOnly}}
-    <pre class="masked-value display-only is-word-break {{unless showValue "masked-font"}}">{{unless showValue (truncate value 20) value}}</pre>
+    {{#if showValue}}
+      <pre class="masked-value display-only is-word-break">{{value}}</pre>
+    {{else}}
+      <pre class="masked-value display-only masked-font">***********</pre>
+    {{/if}}
   {{else if inputField}}
     <input
       autocomplete="off"
@@ -13,7 +17,7 @@
       data-test-input
     />
   {{else}}
-    <textarea 
+    <textarea
       class="input masked-value {{unless showValue "masked-font"}}"
       rows=1 wrap="off"
       onkeydown={{action onKeyDown}}
@@ -23,7 +27,7 @@
         value="target.value"
       }}
       value={{value}}
-      data-test-textarea 
+      data-test-textarea
     />
   {{/if}}
   {{#if allowCopy}}
@@ -35,7 +39,7 @@
       <Icon @glyph="copy-action" aria-hidden="Copy value" />
     </CopyButton>
   {{/if}}
-  <button 
+  <button
     onclick={{action "toggleMask"}}
     type="button"
     class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button"
