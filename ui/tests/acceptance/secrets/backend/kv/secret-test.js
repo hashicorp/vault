@@ -253,6 +253,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
     await click('.linked-block');
 
+    await click('button.button.masked-input-toggle');
     assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
