@@ -12,13 +12,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mholt/archiver"
@@ -903,7 +903,7 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 
 func (c *DebugCommand) compress(dst string) error {
 	if runtime.GOOS != "windows" {
-		defer syscall.Umask(syscall.Umask(0o077))
+		defer osutil.Umask(osutil.Umask(0o077))
 	}
 
 	tgz := archiver.NewTarGz()
