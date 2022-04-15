@@ -67,9 +67,6 @@ export default Component.extend({
       // this is the first time they've been set, so we need to format them
       this.formatOptions(options);
     }
-    if (this.id === 'memberEntityIds') {
-      // console.log('setting options to', options);
-    }
     this.set('oldOptions', options);
   },
   formatOptions: function (options) {
@@ -78,9 +75,6 @@ export default Component.extend({
       return;
     }
     options = options.toArray().map((option) => {
-      if (this.id === 'memberEntityIds') {
-        // console.log('format option:', option);
-      }
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
@@ -97,13 +91,9 @@ export default Component.extend({
         searchText: matchingOption ? matchingOption.searchText : option,
       };
     });
-    if (this.id === 'memberEntityIds') {
-      // console.log({ formattedOptions });
-    }
 
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
-      // console.log(this.options, 'OPTIONS CONCAT', this.id);
       options = this.options.concat(options).uniq();
     }
     this.set('options', options);
@@ -127,18 +117,12 @@ export default Component.extend({
         let options = yield this.store.query(modelType, queryOptions);
         this.formatOptions(options);
       } catch (err) {
-        console.log('error for ', this.id, err.httpStatus);
         if (err.httpStatus === 404) {
-          // return passed options in case the array has items
-          // but no items in the current namespace
-
-          // This works fine for policies but not entities
-          // this.set('options', this.options);
-
-          // this works fine for entities but not policies
-          // console.log(this.options, 'FORMATTING');
-          if (this.id === 'memberEntityIds') {
-            this.formatOptions(this.options);
+          if (!this.options) {
+            // If the call failed but the resource has items
+            // from a different namespace, this allows the
+            // selected items to display
+            this.set('options', []);
           }
 
           return;
