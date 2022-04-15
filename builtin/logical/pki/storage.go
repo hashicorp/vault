@@ -49,12 +49,13 @@ type key struct {
 }
 
 type issuer struct {
-	ID           issuerId `json:"id" structs:"id" mapstructure:"id"`
-	Name         string   `json:"name" structs:"name" mapstructure:"name"`
-	KeyID        keyId    `json:"key_id" structs:"key_id" mapstructure:"key_id"`
-	Certificate  string   `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-	CAChain      []string `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
-	SerialNumber string   `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
+	ID           issuerId   `json:"id" structs:"id" mapstructure:"id"`
+	Name         string     `json:"name" structs:"name" mapstructure:"name"`
+	KeyID        keyId      `json:"key_id" structs:"key_id" mapstructure:"key_id"`
+	Certificate  string     `json:"certificate" structs:"certificate" mapstructure:"certificate"`
+	CAChain      []string   `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
+	ManualChain  []issuerId `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
+	SerialNumber string     `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
 
 type keyConfig struct {
