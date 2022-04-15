@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -265,6 +266,40 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 	}
 
 	return backup, nil
+}
+
+func (lm *LockManager) GetWrappingKey(ctx context.Context, storage logical.Storage, keyName string, rand io.Reader) (*Policy, error) {
+	// This ensures that any other process writing the actual storage will be
+	// finished before we load from storage.
+	lock := locksutil.LockForKey(lm.keyLocks, keyName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Load it from storage
+	p, err := LoadPolicy(ctx, storage, path.Join("import", "policy", keyName))
+	if err != nil {
+		return nil, err
+	}
+
+	if p == nil {
+		p = &Policy{
+			l:                    new(sync.RWMutex),
+			Name:                 keyName,
+			Type:                 KeyType_RSA4096,
+			Derived:              false,
+			Exportable:           false,
+			AllowPlaintextBackup: false,
+			AutoRotatePeriod:     0,
+			StoragePrefix:        "import/",
+		}
+
+		err = p.Rotate(ctx, storage, rand)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return p, nil
 }
 
 // When the function returns, if caching was disabled, the Policy's lock must

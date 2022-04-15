@@ -6,12 +6,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"strconv"
 )
 
-const WrappingKeyName = "import-wrapping-key"
+const WrappingKeyName = "wrapping-key"
 
 func (b *backend) pathWrappingKey() *framework.Path {
 	return &framework.Path{
@@ -25,14 +24,7 @@ func (b *backend) pathWrappingKey() *framework.Path {
 }
 
 func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	polReq := keysutil.PolicyRequest{
-		Upsert:  true,
-		Storage: req.Storage,
-		Name:    WrappingKeyName,
-		KeyType: keysutil.KeyType_RSA4096,
-	}
-
-	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
+	p, err := b.lm.GetWrappingKey(ctx, req.Storage, WrappingKeyName, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
