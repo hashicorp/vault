@@ -217,6 +217,10 @@ export default Service.extend({
       } else if (schema.properties) {
         props = schema.properties;
       }
+      console.log({ props });
+      props['hosted_ui_location'] = {
+        type: 'string',
+      };
       // put url params (e.g. {name}, {role})
       // at the front of the props list
       const newProps = assign({}, paramProp, props);

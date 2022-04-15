@@ -1,0 +1,29 @@
+{{page-title "Plugins"}}
+<PageHeader as |p|>
+  {{!-- <p.top>
+    <KeyValueHeader @baseKey={{@baseKey}} @path="vault.cluster.secrets.backend.list" @root={{@backendCrumb}}>
+      <li>
+        <span class="sep">
+          /
+        </span>
+        <LinkTo @route="vault.cluster.secrets">
+          secrets
+        </LinkTo>
+      </li>
+    </KeyValueHeader>
+  </p.top> --}}
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon @name="box" @size="24" class="has-text-grey-light" />
+      My Plugins
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#each this.model.keys as |key|}}
+  <LinkedBlock @params={{array "vault.cluster.plugin.show" key}} class="list-item-row">
+    {{key}}
+  </LinkedBlock>
+{{/each}}
+
+{{outlet}}

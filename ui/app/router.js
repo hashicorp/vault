@@ -143,6 +143,10 @@ Router.map(function () {
         config.addRootMounts.call(this);
       }
 
+      this.route('plugins');
+      this.route('plugin', function () {
+        this.route('show', { path: '/*plugin' });
+      });
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });

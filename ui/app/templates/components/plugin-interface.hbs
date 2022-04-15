@@ -1,0 +1,26 @@
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs">
+    <ul>
+      {{#each @tabs as |tab|}}
+        <div
+          class="tab {{if (eq this.activeTab.tabName tab.tabName) "active"}}"
+          {{on "click" (fn this.selectTab tab)}}
+        >
+          {{tab.tabName}}
+        </div>
+      {{/each}}
+    </ul>
+  </nav>
+</div>
+{{#if this.activeTab.description}}
+<p>{{this.activeTab.description}}</p>
+{{/if}}
+
+{{#if this.activeTab.url}}
+  <iframe
+    id="inlineFrameExample"
+    title="Inline Frame Example"
+    style="width:100%; height: 100vh"
+    src={{this.activeTab.url}}>
+  </iframe>
+{{/if}}

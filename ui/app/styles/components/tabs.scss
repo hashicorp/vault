@@ -2,6 +2,11 @@
   box-shadow: none;
 }
 
+button.tab {
+  background-color: inherit;
+  border-top: 0;
+}
+
 .tabs {
   box-shadow: inset 0 -1px 0 $grey-light;
 
@@ -48,8 +53,10 @@
     transition: background-color $speed, border-color $speed;
 
     &:hover,
-    &:active {
-      border-color: $grey-light;
+    &:active,
+    &.active {
+      border-color: $blue;
+      color: $blue;
     }
 
     &:hover {

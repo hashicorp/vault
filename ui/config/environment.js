@@ -71,11 +71,15 @@ module.exports = function (environment) {
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
     ENV.contentSecurityPolicyMeta = true;
     ENV.contentSecurityPolicy = {
+      // TODO: instruct users to set custom frame-src header with url of each plugin being used
+      // https://csp-evaluator.withgoogle.com/
+      'frame-src': ['*'], // EXPERIMENT
       'connect-src': ["'self'"],
+      'base-uri': ["'self'"],
       'img-src': ["'self'", 'data:'],
       'font-src': ["'self'"],
       'form-action': ["'none'"],
-      'script-src': ["'self'"],
+      'script-src': ["'self'", "'localhost:3000'"],
       'style-src': ["'unsafe-inline'", "'self'"],
     };
   }

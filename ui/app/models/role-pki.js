@@ -34,7 +34,7 @@ export default Model.extend({
 
   fieldGroups: computed('newFields', function () {
     let groups = [
-      { default: ['name', 'keyType'] },
+      { default: ['name', 'keyType', 'hostedUiLocation'] },
       {
         Options: [
           'keyBits',

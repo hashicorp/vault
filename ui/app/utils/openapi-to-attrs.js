@@ -65,6 +65,7 @@ export const expandOpenApiProps = function (props) {
     }
     attrs[camelize(propName)] = attrDefn;
   }
+  console.log({ attrs });
   return attrs;
 };
 
