@@ -54,7 +54,6 @@ export default class MonthlySerializer extends ApplicationSerializer {
         non_entity_clients: non_entity_tokens,
       };
     }
-    // TODO CMB: test what to return if neither key exists
     return object;
   }
 

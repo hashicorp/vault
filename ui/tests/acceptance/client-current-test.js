@@ -28,7 +28,7 @@ module('Acceptance | clients current', function (hooks) {
   });
 
   test('shows empty state when config disabled, no data', async function (assert) {
-    const config = generateConfigResponse({ enabled: 'disable' });
+    const config = generateConfigResponse({ enabled: 'default-disable' });
     const monthly = generateCurrentMonthResponse({ configEnabled: false });
     this.server = new Pretender(function () {
       this.get('/v1/sys/internal/counters/activity/monthly', () => sendResponse(monthly));

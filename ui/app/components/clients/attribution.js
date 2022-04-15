@@ -37,6 +37,9 @@ export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
   @service downloadCsv;
 
+  get hasCsvData() {
+    return this.args.totalClientsData.length > 0;
+  }
   get isDateRange() {
     return this.args.isDateRange;
   }

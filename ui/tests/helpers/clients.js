@@ -58,7 +58,7 @@ export function generateConfigResponse(overrides = {}) {
     request_id: 'some-config-id',
     data: {
       default_report_months: 12,
-      enabled: 'enable',
+      enabled: 'default-enable',
       queries_available: true,
       retention_months: 24,
       ...overrides,

@@ -664,6 +664,7 @@ const handleMockQuery = (queryStartTimestamp, monthlyData) => {
     do {
       i++;
       let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
+      // TODO CMB update this when we confirm what combined data looks like
       // this is probably not what the empty object looks like but waiting to hear back from backend
       transformedMonthlyArray.push({
         timestamp,
