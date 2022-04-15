@@ -6,6 +6,7 @@ import {
   isBefore,
   sub,
   isSameMonth,
+  startOfMonth,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 const MOCK_MONTHLY_DATA = [
@@ -663,6 +664,8 @@ const handleMockQuery = (queryStartTimestamp, monthlyData) => {
     do {
       i++;
       let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
+      // TODO CMB update this when we confirm what combined data looks like
+      // this is probably not what the empty object looks like but waiting to hear back from backend
       transformedMonthlyArray.push({
         timestamp,
         counts: {
@@ -893,6 +896,7 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity/monthly', function () {
+    const timestamp = new Date();
     return {
       request_id: '26be5ab9-dcac-9237-ec12-269a8ca64742',
       lease_id: '',
@@ -982,8 +986,127 @@ export default function (server) {
             ],
           },
         ],
+        months: [
+          {
+            timestamp: startOfMonth(timestamp).toISOString(),
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 4,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 4,
+            },
+            namespaces: [
+              {
+                namespace_id: 'lHmap',
+                namespace_path: 'education/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 2,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 2,
+                },
+                mounts: [
+                  {
+                    mount_path: 'auth_userpass_a36c8125',
+                    counts: {
+                      distinct_entities: 0,
+                      entity_clients: 2,
+                      non_entity_tokens: 0,
+                      non_entity_clients: 0,
+                      clients: 2,
+                    },
+                  },
+                ],
+              },
+              {
+                namespace_id: 'root',
+                namespace_path: '',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 2,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 2,
+                },
+                mounts: [
+                  {
+                    mount_path: 'auth_userpass_3158c012',
+                    counts: {
+                      distinct_entities: 0,
+                      entity_clients: 2,
+                      non_entity_tokens: 0,
+                      non_entity_clients: 0,
+                      clients: 2,
+                    },
+                  },
+                ],
+              },
+            ],
+            new_clients: {
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 4,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 4,
+              },
+              namespaces: [
+                {
+                  namespace_id: 'root',
+                  namespace_path: '',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 2,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 2,
+                  },
+                  mounts: [
+                    {
+                      mount_path: 'auth_userpass_3158c012',
+                      counts: {
+                        distinct_entities: 0,
+                        entity_clients: 2,
+                        non_entity_tokens: 0,
+                        non_entity_clients: 0,
+                        clients: 2,
+                      },
+                    },
+                  ],
+                },
+                {
+                  namespace_id: 'lHmap',
+                  namespace_path: 'education/',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 2,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 2,
+                  },
+                  mounts: [
+                    {
+                      mount_path: 'auth_userpass_a36c8125',
+                      counts: {
+                        distinct_entities: 0,
+                        entity_clients: 2,
+                        non_entity_tokens: 0,
+                        non_entity_clients: 0,
+                        clients: 2,
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
         distinct_entities: 132,
+        entity_clients: 132,
         non_entity_tokens: 43,
+        non_entity_clients: 43,
         clients: 175,
       },
       wrap_info: null,

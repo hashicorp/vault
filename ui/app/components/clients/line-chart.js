@@ -28,7 +28,7 @@ export default class LineChart extends Component {
   @tracked tooltipNew = '';
 
   get yKey() {
-    return this.args.yKey || 'total';
+    return this.args.yKey || 'clients';
   }
 
   get xKey() {
