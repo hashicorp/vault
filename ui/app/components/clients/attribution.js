@@ -11,21 +11,24 @@ import { inject as service } from '@ember/service';
  * ```js
  *  <Clients::Attribution
  *    @chartLegend={{this.chartLegend}}
- *    @totalClientsData={{this.totalClientsData}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
+ *    @newUsageCounts={{this.newUsageCounts}}
+ *    @totalClientsData={{this.totalClientsData}}
+ *    @newClientsData={{this.newClientsData}}
  *    @selectedNamespace={{this.selectedNamespace}}
- *    @startTimeDisplay={{this.startTimeDisplay}}
- *    @endTimeDisplay={{this.endTimeDisplay}}
+ *    @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
  *    @isDateRange={{this.isDateRange}}
  *    @timestamp={{this.responseTimestamp}}
  *  />
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
- * @param {array} totalClientsData - array of objects containing a label and breakdown of total, entity and non-entity clients
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
+ * @param {object} newUsageCounts - object with new client counts for chart tooltip text
+ * @param {array} totalClientsData - array of objects containing a label and breakdown of client counts for total clients
+ * @param {array} newClientsData - array of objects containing a label and breakdown of client counts for new clients
  * @param {string} selectedNamespace - namespace selected from filter bar
- * @param {string} startTimeDisplay - start date for CSV modal
- * @param {string} endTimeDisplay - end date for CSV modal
+ * @param {string} startTimeDisplay - string that displays as start date for CSV modal
+ * @param {string} endTimeDisplay - string that displays as end date for CSV modal
  * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  */
@@ -34,6 +37,9 @@ export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
   @service downloadCsv;
 
+  get hasCsvData() {
+    return this.args.totalClientsData ? this.args.totalClientsData.length > 0 : false;
+  }
   get isDateRange() {
     return this.args.isDateRange;
   }
@@ -50,6 +56,10 @@ export default class Attribution extends Component {
   // move truncating to serializer when we add separate request to fetch and export ALL namespace data
   get barChartTotalClients() {
     return this.args.totalClientsData?.slice(0, 10);
+  }
+
+  get barChartNewClients() {
+    return this.args.newClientsData?.slice(0, 10);
   }
 
   get topClientCounts() {
@@ -69,8 +79,9 @@ export default class Attribution extends Component {
         return {
           description:
             'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.',
-          newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients
-          ${dateText === 'date range' ? ' over time.' : '.'}`,
+          newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients${
+            dateText === 'date range' ? ' over time.' : '.'
+          }`,
           totalCopy: `The total clients used by the auth method for this ${dateText}. This number is useful for identifying overall usage volume. `,
         };
       case false:
@@ -78,8 +89,9 @@ export default class Attribution extends Component {
           description:
             'This data shows the top ten namespaces by client count and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, export this data.',
           newCopy: `The new clients in the namespace for this ${dateText}.
-          This aids in understanding which namespaces create and use new clients
-          ${dateText === 'date range' ? ' over time.' : '.'}`,
+          This aids in understanding which namespaces create and use new clients${
+            dateText === 'date range' ? ' over time.' : '.'
+          }`,
           totalCopy: `The total clients in the namespace for this ${dateText}. This number is useful for identifying overall usage volume.`,
         };
       case 'no data':
@@ -95,7 +107,7 @@ export default class Attribution extends Component {
     let csvData = [],
       graphData = this.args.totalClientsData,
       csvHeader = [
-        `Namespace path`,
+        'Namespace path',
         'Authentication method',
         'Total clients',
         'Entity clients',
