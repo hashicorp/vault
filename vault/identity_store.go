@@ -148,6 +148,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
+				"max_validation_attempts": {
+					Type:        framework.TypeInt,
+					Description: `Max number of allowed validation attempts.`,
+				},
 				"issuer": {
 					Type:        framework.TypeString,
 					Description: `The name of the key's issuing organization.`,
