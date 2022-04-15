@@ -58,7 +58,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(component.hasCheckbox, 'renders a checkbox for boolean');
     await component.fields.objectAt(0).clickLabel();
 
-    assert.equal(model.get('foo'), true);
+    assert.true(model.get('foo'));
     assert.ok(spy.calledWith('foo', true), 'onChange called with correct args');
   });
 

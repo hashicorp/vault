@@ -61,8 +61,11 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
   });
-
+  // flaky test -- assertion count is not consistent
+  // eslint-disable-next-line
   test('filters correctly on current with full data', async function (assert) {
+    // uncomment once assertion count is consistent
+    // assert.expect(65);
     const config = generateConfigResponse();
     const monthly = generateCurrentMonthResponse(3);
     this.server = new Pretender(function () {
@@ -151,10 +154,11 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
     // Delete auth filter goes back to filtered only on namespace
     await click('#auth-method-search-select [data-test-selected-list-button="delete"]');
-    await waitUntil(() => find('[data-test-horizontal-bar-chart]'));
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
+    await settled();
+    await waitUntil(() => find('[data-test-horizontal-bar-chart]'));
     assert.dom('[data-test-horizontal-bar-chart]').exists('Still shows attribution bar chart');
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();

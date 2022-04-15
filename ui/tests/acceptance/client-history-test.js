@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, settled, waitUntil, find } from '@ember/test-helpers';
+import { visit, currentURL, click, settled, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
@@ -100,6 +100,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
+    assert.expect(26);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);
@@ -164,7 +165,11 @@ module('Acceptance | clients history tab', function (hooks) {
     }
   });
 
+  // flaky test -- does not consistently run the same number of assertions
+  // refactor before using assert.expect
   test('filters correctly on history with full data', async function (assert) {
+    /* eslint qunit/require-expect: "warn" */
+    // assert.expect(44);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);
@@ -191,13 +196,12 @@ module('Acceptance | clients history tab', function (hooks) {
     // FILTER BY NAMESPACE
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    await waitUntil(() => {
-      return find('[data-test-horizontal-bar-chart]');
-    });
+    await settled();
     assert.ok(true, 'Filter by first namespace');
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
+    await settled();
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
 

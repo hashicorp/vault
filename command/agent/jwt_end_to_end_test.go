@@ -53,7 +53,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/jwt/config", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
 		"bound_issuer":           "https://team-vault.auth0.com/",
 		"jwt_validation_pubkeys": TestECDSAPubKey,
 		"jwt_supported_algs":     "ES256",
@@ -62,7 +62,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/jwt/role/test", map[string]interface{}{
+	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
 		"role_type":       "jwt",
 		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
 		"bound_audiences": "https://vault.plugin.auth.jwt.test",

@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/version"
@@ -356,7 +358,7 @@ func (c *DebugCommand) generateIndex() error {
 	}
 
 	// Write out file
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0o644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, "index.json"), bytes, 0o600); err != nil {
 		return fmt.Errorf("error generating index file; %s", err)
 	}
 
@@ -453,7 +455,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	_, err = os.Stat(c.flagOutput)
 	switch {
 	case os.IsNotExist(err):
-		err := os.MkdirAll(c.flagOutput, 0o755)
+		err := os.MkdirAll(c.flagOutput, 0o700)
 		if err != nil {
 			return "", fmt.Errorf("unable to create output directory: %s", err)
 		}
@@ -741,7 +743,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 		// Create a sub-directory for pprof data
 		currentDir := currentTimestamp.Format(fileFriendlyTimeFormat)
 		dirName := filepath.Join(c.flagOutput, currentDir)
-		if err := os.MkdirAll(dirName, 0o755); err != nil {
+		if err := os.MkdirAll(dirName, 0o700); err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating sub-directory for time interval: %s", err))
 			continue
 		}
@@ -758,7 +760,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 					return
 				}
 
-				err = ioutil.WriteFile(filepath.Join(dirName, target+".prof"), data, 0o644)
+				err = ioutil.WriteFile(filepath.Join(dirName, target+".prof"), data, 0o600)
 				if err != nil {
 					c.captureError("pprof."+target, err)
 				}
@@ -776,7 +778,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "goroutines.txt"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "goroutines.txt"), data, 0o600)
 			if err != nil {
 				c.captureError("pprof.goroutines-text", err)
 			}
@@ -800,7 +802,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "profile.prof"), data, 0o600)
 			if err != nil {
 				c.captureError("pprof.profile", err)
 			}
@@ -816,7 +818,7 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 				return
 			}
 
-			err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0o644)
+			err = ioutil.WriteFile(filepath.Join(dirName, "trace.out"), data, 0o600)
 			if err != nil {
 				c.captureError("pprof.trace", err)
 			}
@@ -952,7 +954,7 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0o644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(c.flagOutput, outFile), bytes, 0o600); err != nil {
 		return err
 	}
 
@@ -960,6 +962,10 @@ func (c *DebugCommand) persistCollection(collection []map[string]interface{}, ou
 }
 
 func (c *DebugCommand) compress(dst string) error {
+	if runtime.GOOS != "windows" {
+		defer osutil.Umask(osutil.Umask(0o077))
+	}
+
 	tgz := archiver.NewTarGz()
 	if err := tgz.Archive([]string{c.flagOutput}, dst); err != nil {
 		return fmt.Errorf("failed to compress data: %s", err)
@@ -1044,7 +1050,7 @@ func (c *DebugCommand) captureError(target string, err error) {
 }
 
 func (c *DebugCommand) writeLogs(ctx context.Context) {
-	out, err := os.Create(filepath.Join(c.flagOutput, "vault.log"))
+	out, err := os.OpenFile(filepath.Join(c.flagOutput, "vault.log"), os.O_CREATE, 0o600)
 	if err != nil {
 		c.captureError("log", err)
 		return

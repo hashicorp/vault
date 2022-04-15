@@ -52,7 +52,7 @@
           @mode="edit"
           @replace={{true}}
           @queryParams={{query-params itemType="role"}}
-          @data-test-edit-link={{true}}
+          data-test-edit-link={{true}}
         >
           Edit role
         </ToolbarSecretLink>
@@ -119,7 +119,7 @@
                 data-test-secret-save
                 type="submit"
                 disabled={{this.loading}}
-                class="button is-primary {{if this.loading "is-loading"}}"
+                class="button is-primary {{if this.loading 'is-loading'}}"
               >
                 {{#if (eq @mode "create")}}
                   Create role
@@ -145,7 +145,7 @@
             {{/if}}
           </div>
           <div class="control">
-            <SecretLink @mode="list" @class="button">
+            <SecretLink @mode="list" class="button">
               Cancel
             </SecretLink>
           </div>

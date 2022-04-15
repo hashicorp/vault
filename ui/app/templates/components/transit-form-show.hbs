@@ -7,7 +7,7 @@
           @mode="show"
           @replace={{true}}
           @queryParams={{query-params tab="actions"}}
-          @data-test-transit-key-actions-link={{true}}
+          data-test-transit-key-actions-link={{true}}
         >
           Key Actions
         </SecretLink>
@@ -19,7 +19,7 @@
           @mode="show"
           @replace={{true}}
           @queryParams={{query-params tab="details"}}
-          @data-test-transit-link="details"
+          data-test-transit-link="details"
         >
           Details
         </SecretLink>
@@ -31,7 +31,7 @@
           @mode="show"
           @replace={{true}}
           @queryParams={{query-params tab="versions"}}
-          @data-test-transit-link="versions"
+          data-test-transit-link="versions"
         >
           Versions
         </SecretLink>
@@ -59,13 +59,12 @@
 {{#if (eq @tab "actions")}}
   <div class="transit-card-container">
     {{#each @model.supportedActions as |supportedAction|}}
-      {{#linked-block
-        "vault.cluster.secrets.backend.actions"
-        @model.id
-        queryParams=(hash action=supportedAction.name)
+      <LinkedBlock
+        @params={{array "vault.cluster.secrets.backend.actions" @model.id}}
+        @queryParams={{hash action=supportedAction.name}}
         class="transit-card"
-        data-test-transit-card=supportedAction.name
-      }}
+        data-test-transit-card={{supportedAction.name}}
+      >
         <div class="transit-icon">
           <Icon
             @name={{supportedAction.glyph}}
@@ -85,7 +84,7 @@
           </h2>
           <p class="transit-action-description">{{supportedAction.description}}</p>
         </div>
-      {{/linked-block}}
+      </LinkedBlock>
     {{/each}}
   </div>
 {{else if (eq @tab "versions")}}

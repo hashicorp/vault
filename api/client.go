@@ -36,6 +36,7 @@ const (
 	EnvVaultAddress       = "VAULT_ADDR"
 	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
 	EnvVaultCACert        = "VAULT_CACERT"
+	EnvVaultCACertBytes   = "VAULT_CACERT_BYTES"
 	EnvVaultCAPath        = "VAULT_CAPATH"
 	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
 	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
@@ -172,8 +173,13 @@ type Config struct {
 // used to communicate with Vault.
 type TLSConfig struct {
 	// CACert is the path to a PEM-encoded CA cert file to use to verify the
-	// Vault server SSL certificate.
+	// Vault server SSL certificate. It takes precedence over CACertBytes
+	// and CAPath.
 	CACert string
+
+	// CACertBytes is a PEM-encoded certificate or bundle. It takes precedence
+	// over CAPath.
+	CACertBytes []byte
 
 	// CAPath is the path to a directory of PEM-encoded CA cert files to verify
 	// the Vault server SSL certificate.
@@ -266,12 +272,13 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
-	if t.CACert != "" || t.CAPath != "" {
+	if t.CACert != "" || len(t.CACertBytes) != 0 || t.CAPath != "" {
 		c.curlCACert = t.CACert
 		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
-			CAFile: t.CACert,
-			CAPath: t.CAPath,
+			CAFile:        t.CACert,
+			CACertificate: t.CACertBytes,
+			CAPath:        t.CAPath,
 		}
 		if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
 			return err
@@ -313,6 +320,7 @@ func (c *Config) ReadEnvironment() error {
 	var envAddress string
 	var envAgentAddress string
 	var envCACert string
+	var envCACertBytes []byte
 	var envCAPath string
 	var envClientCert string
 	var envClientKey string
@@ -342,6 +350,9 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultCACert); v != "" {
 		envCACert = v
+	}
+	if v := os.Getenv(EnvVaultCACertBytes); v != "" {
+		envCACertBytes = []byte(v)
 	}
 	if v := os.Getenv(EnvVaultCAPath); v != "" {
 		envCAPath = v
@@ -398,6 +409,7 @@ func (c *Config) ReadEnvironment() error {
 	// Configure the HTTP clients TLS configuration.
 	t := &TLSConfig{
 		CACert:        envCACert,
+		CACertBytes:   envCACertBytes,
 		CAPath:        envCAPath,
 		ClientCert:    envClientCert,
 		ClientKey:     envClientKey,
@@ -576,7 +588,6 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CheckRetry = c.config.CheckRetry
 	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
-	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
@@ -808,10 +819,39 @@ func (c *Client) setNamespace(namespace string) {
 	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
+// ClearNamespace removes the namespace header if set.
 func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-	c.headers.Del(consts.NamespaceHeaderName)
+	if c.headers != nil {
+		c.headers.Del(consts.NamespaceHeaderName)
+	}
+}
+
+// Namespace returns the namespace currently set in this client. It will
+// return an empty string if there is no namespace set.
+func (c *Client) Namespace() string {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	if c.headers == nil {
+		return ""
+	}
+	return c.headers.Get(consts.NamespaceHeaderName)
+}
+
+// WithNamespace makes a shallow copy of Client, modifies it to use
+// the given namespace, and returns it. Passing an empty string will
+// temporarily unset the namespace.
+func (c *Client) WithNamespace(namespace string) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.headers = c.Headers()
+	if namespace == "" {
+		c2.ClearNamespace()
+	} else {
+		c2.SetNamespace(namespace)
+	}
+	return &c2
 }
 
 // Token returns the access token being used by this client. It will
@@ -990,22 +1030,21 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:          config.Address,
-		HttpClient:       config.HttpClient,
-		MinRetryWait:     config.MinRetryWait,
-		MaxRetryWait:     config.MaxRetryWait,
-		MaxRetries:       config.MaxRetries,
-		Timeout:          config.Timeout,
-		Backoff:          config.Backoff,
-		CheckRetry:       config.CheckRetry,
-		Logger:           config.Logger,
-		Limiter:          config.Limiter,
-		OutputCurlString: config.OutputCurlString,
-		AgentAddress:     config.AgentAddress,
-		SRVLookup:        config.SRVLookup,
-		CloneHeaders:     config.CloneHeaders,
-		CloneToken:       config.CloneToken,
-		ReadYourWrites:   config.ReadYourWrites,
+		Address:        config.Address,
+		HttpClient:     config.HttpClient,
+		MinRetryWait:   config.MinRetryWait,
+		MaxRetryWait:   config.MaxRetryWait,
+		MaxRetries:     config.MaxRetries,
+		Timeout:        config.Timeout,
+		Backoff:        config.Backoff,
+		CheckRetry:     config.CheckRetry,
+		Logger:         config.Logger,
+		Limiter:        config.Limiter,
+		AgentAddress:   config.AgentAddress,
+		SRVLookup:      config.SRVLookup,
+		CloneHeaders:   config.CloneHeaders,
+		CloneToken:     config.CloneToken,
+		ReadYourWrites: config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {
@@ -1131,11 +1170,21 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
+	ns := c.headers.Get(consts.NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
+
+	// ensure that the most current namespace setting is used at the time of the call
+	// e.g. calls using (*Client).WithNamespace
+	switch ns {
+	case "":
+		r.Headers.Del(consts.NamespaceHeaderName)
+	default:
+		r.Headers.Set(consts.NamespaceHeaderName, ns)
+	}
 
 	for _, cb := range c.requestCallbacks {
 		cb(r)
@@ -1268,13 +1317,19 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	// add headers
 	if c.headers != nil {
 		for header, vals := range c.headers {
 			for _, val := range vals {
 				req.Header.Add(header, val)
 			}
 		}
+		// explicitly set the namespace header to current client
+		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
+			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		}
 	}
+
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 

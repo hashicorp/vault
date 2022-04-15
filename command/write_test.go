@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"io"
 	"strings"
 	"testing"
@@ -122,7 +121,7 @@ func TestWriteCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if err := client.Sys().MountWithContext(context.Background(), "transit/", &api.MountInput{
+		if err := client.Sys().Mount("transit/", &api.MountInput{
 			Type: "transit",
 		}); err != nil {
 			t.Fatal(err)
@@ -139,7 +138,7 @@ func TestWriteCommand_Run(t *testing.T) {
 			t.Fatalf("expected %d to be %d: %q", code, exp, ui.ErrorWriter.String())
 		}
 
-		secret, err := client.Logical().ReadWithContext(context.Background(), "transit/keys/my-key")
+		secret, err := client.Logical().Read("transit/keys/my-key")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,7 +170,7 @@ func TestWriteCommand_Run(t *testing.T) {
 			t.Fatalf("expected 0 to be %d", code)
 		}
 
-		secret, err := client.Logical().ReadWithContext(context.Background(), "secret/write/stdin_full")
+		secret, err := client.Logical().Read("secret/write/stdin_full")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -206,7 +205,7 @@ func TestWriteCommand_Run(t *testing.T) {
 			t.Fatalf("expected 0 to be %d", code)
 		}
 
-		secret, err := client.Logical().ReadWithContext(context.Background(), "secret/write/stdin_value")
+		secret, err := client.Logical().Read("secret/write/stdin_value")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -234,7 +233,7 @@ func TestWriteCommand_Run(t *testing.T) {
 			t.Fatalf("expected 0 to be %d", code)
 		}
 
-		secret, err := client.Logical().ReadWithContext(context.Background(), "secret/write/integration")
+		secret, err := client.Logical().Read("secret/write/integration")
 		if err != nil {
 			t.Fatal(err)
 		}

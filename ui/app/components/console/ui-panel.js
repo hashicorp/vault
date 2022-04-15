@@ -20,6 +20,7 @@ export default Component.extend({
   controlGroup: service(),
   store: service(),
   'data-test-component': 'console/ui-panel',
+  attributeBindings: ['data-test-component'],
 
   classNames: 'console-ui-panel',
   classNameBindings: ['isFullscreen:fullscreen'],

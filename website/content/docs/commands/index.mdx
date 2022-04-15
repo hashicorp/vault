@@ -37,6 +37,11 @@ To get help for a subcommand, run:
 $ vault <subcommand> -h
 ```
 
+To see the equivalent API call required to perform the same operation, use the `-output-curl-string` flag after the subcommand.
+```shell-session
+vault auth enable -output-curl-string approle
+```
+
 ## CLI Command Structure
 
 There are a number of command and subcommand options available: HTTP options,

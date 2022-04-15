@@ -8,7 +8,7 @@ const B64 = 'base64';
 const UTF8 = 'utf-8';
 export default Component.extend({
   tagName: 'button',
-  attributeBindings: ['type'],
+  attributeBindings: ['type', 'data-test-transit-b64-toggle'],
   type: 'button',
   classNames: ['button', 'b64-toggle'],
   classNameBindings: ['isInput:is-input:is-textarea'],

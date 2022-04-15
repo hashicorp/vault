@@ -69,7 +69,7 @@
         </p>
         <div class="columns">
           <div class="column is-flex">
-            <label for="dr" class="box-label is-column {{if (eq this.replicationMode "dr") "is-selected"}}">
+            <label for="dr" class="box-label is-column {{if (eq this.replicationMode 'dr') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
                   <Icon @size="24" @name="replication-direct" />
@@ -94,7 +94,7 @@
           <div class="column is-flex">
             <label
               for="performance"
-              class="box-label is-column {{if (eq this.replicationMode "performance") "is-selected"}}"
+              class="box-label is-column {{if (eq this.replicationMode 'performance') 'is-selected'}}"
             >
               <div>
                 <h3 class="box-label-header title is-6">
@@ -188,11 +188,11 @@
           }}
             <div class="has-text-danger">
               <ToggleButton
-                @toggleTarget={{this}}
-                @toggleAttr="showExplanation"
+                @isOpen={{this.showExplanation}}
                 @openLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
                 @closedLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
-                @class="has-text-danger"
+                @onClick={{fn (mut this.showExplanation)}}
+                class="has-text-danger"
               />
               {{#if this.showExplanation}}
                 <p>
@@ -221,7 +221,7 @@
               <div class="control">
                 <Input @value={{this.primary_api_addr}} id="primary_api_addr" name="primary_api_addr" class="input" />
               </div>
-              <p class="help {{if (and this.token (not this.tokenIncludesAPIAddr)) "is-danger" "has-text-grey"}}">
+              <p class="help {{if (and this.token (not this.tokenIncludesAPIAddr)) 'is-danger' 'has-text-grey'}}">
                 {{#if (and this.token (not this.tokenIncludesAPIAddr))}}
                   The supplied token does not contain an embedded address for the primary cluster. Please enter the primary
                   cluster's API address (normal Vault address).
