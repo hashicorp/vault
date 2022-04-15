@@ -69,10 +69,6 @@ export default Component.extend({
     this.set('oldOptions', options);
   },
   formatOptions: function (options) {
-    if (!options) {
-      this.set('options', []);
-      return;
-    }
     options = options.toArray().map((option) => {
       option.searchText = `${option.name} ${option.id}`;
       return option;
