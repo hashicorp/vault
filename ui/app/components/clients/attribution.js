@@ -38,7 +38,7 @@ export default class Attribution extends Component {
   @service downloadCsv;
 
   get hasCsvData() {
-    return this.args.totalClientsData.length > 0;
+    return this.args.totalClientsData ? this.args.totalClientsData.length > 0 : false;
   }
   get isDateRange() {
     return this.args.isDateRange;
@@ -79,8 +79,9 @@ export default class Attribution extends Component {
         return {
           description:
             'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.',
-          newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients
-          ${dateText === 'date range' ? ' over time.' : '.'}`,
+          newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients${
+            dateText === 'date range' ? ' over time.' : '.'
+          }`,
           totalCopy: `The total clients used by the auth method for this ${dateText}. This number is useful for identifying overall usage volume. `,
         };
       case false:
@@ -88,8 +89,9 @@ export default class Attribution extends Component {
           description:
             'This data shows the top ten namespaces by client count and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, export this data.',
           newCopy: `The new clients in the namespace for this ${dateText}.
-          This aids in understanding which namespaces create and use new clients
-          ${dateText === 'date range' ? ' over time.' : '.'}`,
+          This aids in understanding which namespaces create and use new clients${
+            dateText === 'date range' ? ' over time.' : '.'
+          }`,
           totalCopy: `The total clients in the namespace for this ${dateText}. This number is useful for identifying overall usage volume.`,
         };
       case 'no data':
