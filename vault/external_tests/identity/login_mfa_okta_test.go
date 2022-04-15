@@ -327,7 +327,8 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 		secret.Auth.MFARequirement.MFARequestID,
 		map[string]interface{}{
 			methodID: []string{},
-		})
+		},
+	)
 	if err != nil {
 		return fmt.Errorf("MFA failed: %v", err)
 	}
