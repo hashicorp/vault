@@ -158,7 +158,7 @@ This path responds to the following HTTP methods.
 The help output displays supported child-paths and available parameters if there
 are any.
 
-### Command Input
+## Command Input
 
 To write data to Vault, the input can be a part of the command in key-value
 format.
@@ -170,7 +170,7 @@ $ vault kv put secret/password value=itsasecret
 However, some Vault API requires more advanced structures such as maps. You can
 use stdin or file input instead.
 
-#### stdin
+### stdin
 
 Some commands in Vault can read data from stdin using `-` as the value. If `-`
 is the entire argument, Vault expects to read a JSON object from stdin:
@@ -186,7 +186,7 @@ stdin:
 $ echo -n "itsasecret" | vault kv put secret/password value=-
 ```
 
-#### Files
+### Files
 
 Some commands can also read data from a file on disk. The usage is similar to
 stdin as documented above. If an argument starts with `@`, Vault will read it as
