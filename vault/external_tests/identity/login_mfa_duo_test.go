@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -241,7 +242,6 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 			return fmt.Errorf("failed to configure MFAEnforcementConfig: %v", err)
 		}
 	}
-
 	secret, err = client.Logical().Write("auth/userpass/login/vaultmfa", map[string]interface{}{
 		"password": "testpassword",
 	})
@@ -272,12 +272,11 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	}
 
 	// validation
-	secret, err = client.Logical().Write("sys/mfa/validate", map[string]interface{}{
-		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-		"mfa_payload": map[string][]string{
-			methodID: {},
-		},
-	})
+	secret, err = client.Sys().MFAValidateWithContext(context.Background(),
+		secret.Auth.MFARequirement.MFARequestID,
+		map[string]interface{}{
+			methodID: []string{},
+		})
 	if err != nil {
 		return fmt.Errorf("MFA failed: %v", err)
 	}

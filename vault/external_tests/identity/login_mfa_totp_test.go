@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	upAuth "github.com/hashicorp/vault/api/auth/userpass"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
@@ -76,20 +78,26 @@ func doTwoPhaseLogin(client *api.Client, totpCodePath, methodID, username string
 	}
 	totpPasscode := totpResp.Data["code"].(string)
 
-	secret, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/login/%s", username), map[string]interface{}{
-		"password": "testpassword",
-	})
+	upMethod, err := upAuth.NewUserpassAuth(username, &upAuth.Password{FromString: "testpassword"})
+
+	mfaSecret, err := client.Auth().MFALogin(context.Background(), upMethod)
 	if err != nil {
-		t.Fatalf("first phase of login MFA failed: %v", err)
+		t.Fatalf("failed to login with userpass auth method: %v", err)
 	}
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
-		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-		"mfa_payload": map[string][]string{
-			methodID: {totpPasscode},
+
+	secret, err := client.Auth().MFAValidate(
+		context.Background(),
+		mfaSecret,
+		map[string]interface{}{
+			methodID: []string{totpPasscode},
 		},
-	})
+	)
 	if err != nil {
 		t.Fatalf("MFA validation failed: %v", err)
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("MFA validation failed to return a ClientToken in secret: %v", secret)
 	}
 }
 
