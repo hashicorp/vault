@@ -240,6 +240,39 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	processedIssuers := make(map[issuerId]bool, len(issuers))
 	toVisit := make([]issuerId, 0, len(issuers))
 
+	// Handle any explicitly constructed certificate chains. Here, we don't
+	// validate much what the user provides; if they provide since-deleted
+	// refs, skip them; if they duplicate entries, add them multiple times.
+	// The other chain building logic will be able to deduplicate them when
+	// used as parents to other certificates.
+	for _, candidate := range issuers {
+		entry := issuerIdEntryMap[candidate]
+		if len(entry.ManualChain) == 0 {
+			continue
+		}
+
+		entry.CAChain = nil
+		for _, parentId := range entry.ManualChain {
+			parentEntry := issuerIdEntryMap[parentId]
+			if parentEntry == nil {
+				continue
+			}
+
+			entry.CAChain = append(entry.CAChain, parentEntry.Certificate)
+		}
+
+		// Mark this node as processed and add its children.
+		processedIssuers[candidate] = true
+		children, ok := issuerIdChildrenMap[candidate]
+		if !ok {
+			continue
+		}
+
+		for _, child := range children {
+			toVisit = append(toVisit, child)
+		}
+	}
+
 	// Setup the toVisit queue.
 	for _, candidate := range issuers {
 		parentCerts, ok := issuerIdParentsMap[candidate]
@@ -431,13 +464,18 @@ func processAnyCliqueOrCycle(
 	// entries afterwards).
 
 	// To begin, cache all cliques that we know about.
-	allCliques, issuerIdCliqueMap, allCliqueNodes, err := findAllCliques(issuerIdCertMap, subjectIssuerIdsMap, issuers)
+	allCliques, issuerIdCliqueMap, allCliqueNodes, err := findAllCliques(processedIssuers, issuerIdCertMap, subjectIssuerIdsMap, issuers)
 	if err != nil {
 		// Found a clique that is too large; exit with an error.
 		return nil, err
 	}
 
 	for _, issuer := range issuers {
+		// Skip anything that's already been processed.
+		if processed, ok := processedIssuers[issuer]; ok && processed {
+			continue
+		}
+
 		// This first branch is finding cliques. However, finding a clique is
 		// not sufficient as discussed above -- we also need to find any
 		// incident cycle as this cycle is a parent and child to the clique,
@@ -448,7 +486,6 @@ func processAnyCliqueOrCycle(
 		// Finally -- it isn't enough to consider this chain in isolation
 		// either. We need to consider _all_ parents and ensure they've been
 		// processed before processing this closure.
-
 		var cliques [][]issuerId
 		var cycles [][]issuerId
 		closure := make(map[issuerId]bool)
@@ -542,6 +579,11 @@ func processAnyCliqueOrCycle(
 		// everything as processed, growing the toVisit queue in the process.
 		// For every node we've found...
 		for node := range closure {
+			// Skip anything that's already been processed.
+			if processed, ok := processedIssuers[node]; ok && processed {
+				continue
+			}
+
 			// Before we begin, mark this node as processed (so we can continue
 			// later) and add children to toVisit.
 			processedIssuers[node] = true
@@ -707,6 +749,7 @@ func processAnyCliqueOrCycle(
 }
 
 func findAllCliques(
+	processedIssuers map[issuerId]bool,
 	issuerIdCertMap map[issuerId]*x509.Certificate,
 	subjectIssuerIdsMap map[string][]issuerId,
 	issuers []issuerId,
@@ -717,6 +760,11 @@ func findAllCliques(
 
 	for _, node := range issuers {
 		// Check if the node has already been visited...
+		if processed, ok := processedIssuers[node]; ok && processed {
+			// ...if so it might have had a manually constructed chain; skip
+			// it for clique detection.
+			continue
+		}
 		if _, ok := issuerIdCliqueMap[node]; ok {
 			// ...if so it must be on another clique; skip the clique finding
 			// so we don't get duplicated cliques.
@@ -724,7 +772,7 @@ func findAllCliques(
 		}
 
 		// See if this is a node on a clique and find that clique.
-		cliqueNodes, err := isOnReissuedClique(issuerIdCertMap, subjectIssuerIdsMap, node)
+		cliqueNodes, err := isOnReissuedClique(processedIssuers, issuerIdCertMap, subjectIssuerIdsMap, node)
 		if err != nil {
 			// Clique is too large.
 			return nil, nil, nil, err
@@ -749,6 +797,7 @@ func findAllCliques(
 }
 
 func isOnReissuedClique(
+	processedIssuers map[issuerId]bool,
 	issuerIdCertMap map[issuerId]*x509.Certificate,
 	subjectIssuerIdsMap map[string][]issuerId,
 	node issuerId,
@@ -816,6 +865,13 @@ func isOnReissuedClique(
 	// included in candidates), the condition should vacuously hold.
 	var clique []issuerId
 	for _, candidate := range candidates {
+		// Skip already processed nodes, even if they could be clique
+		// candidates. We'll treat them as any other (already processed)
+		// external parent in that scenario.
+		if processed, ok := processedIssuers[candidate]; ok && processed {
+			continue
+		}
+
 		candidateCert := issuerIdCertMap[candidate]
 		hasRightKey := bytes.Equal(candidateCert.RawSubjectPublicKeyInfo, spki)
 		hasMatchingIssuer := string(candidateCert.RawIssuer) == issuer
