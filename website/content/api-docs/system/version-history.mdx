@@ -28,7 +28,7 @@ This endpoint returns the version history of the Vault. The response will contai
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token: ..." \
+    -X LIST --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/version-history
 ```
 
