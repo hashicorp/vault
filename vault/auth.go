@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -835,6 +835,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
+			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
+			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
+			path = entry.Namespace().Path + path
 			c.router.Taint(ctx, path)
 		}
 
