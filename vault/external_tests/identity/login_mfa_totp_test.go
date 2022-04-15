@@ -90,7 +90,8 @@ func doTwoPhaseLogin(client *api.Client, totpCodePath, methodID, username string
 		mfaSecret,
 		map[string]interface{}{
 			methodID: []string{totpPasscode},
-		})
+		},
+	)
 	if err != nil {
 		t.Fatalf("MFA validation failed: %v", err)
 	}
