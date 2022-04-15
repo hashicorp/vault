@@ -9,12 +9,13 @@ description: |-
 
 # write
 
-The `write` command writes data to Vault at the given path. The data can be
-credentials, secrets, configuration, or arbitrary data. The specific behavior of
-this command is determined at the thing mounted at the path.
+The `write` command writes data to Vault at the given path (wrapper command for
+HTTP PUT or POST). The data can be credentials, secrets, configuration, or
+arbitrary data. The specific behavior of this command is determined at the thing
+mounted at the path.
 
-Data is specified as "key=value" pairs on the command line. If the value begins
-with an "@", then it is loaded from a file. If the value for a key is "-", Vault
+Data is specified as "**key=value**" pairs on the command line. If the value begins
+with an "**@**", then it is loaded from a file. If the value for a key is "**-**", Vault
 will read the value from stdin rather than the command line.
 
 Some API fields require more advanced structures such as maps. These cannot
@@ -29,17 +30,14 @@ corresponds to the secrets engines in use.
 
 ## Examples
 
-Persist data in the KV secrets engine:
-
-```shell-session
-$ vault write secret/my-secret foo=bar
-```
-
 Create a new encryption key in the transit secrets engine:
 
 ```shell-session
-$ vault write -f transit/keys/my-key
+$ vault write -force transit/keys/my-key
 ```
+
+The `-force` flag allows the write operation without input data. (See [command
+options](#command-options).)
 
 Upload an AWS IAM policy from a file on disk:
 
@@ -52,6 +50,23 @@ Configure access to Consul by providing an access token:
 ```shell-session
 $ echo $MY_TOKEN | vault write consul/config/access token=-
 ```
+
+### API versus CLI
+
+To create an ACL policy, you invoke the `sys/policies/acl/` API endpoint.
+
+```shell-session
+$ vault write sys/policies/acl/admin policy=@admin-policy.hcl
+```
+
+Since policy management is a common task, the CLI provides a [`policy write`](/docs/commands/policy/write) command which simplify the policy creation.
+
+```shell-session
+$ vault policy write admin admin-policy.hcl
+```
+
+The two commands perform the same operation. The difference is the `policy` CLI
+command simplifies the policy management by providing subcommands.
 
 ## Usage
 
@@ -72,4 +87,4 @@ flags](/docs/commands) included on all commands.
 
 - `-force` `(bool: false)` - Allow the operation to continue with no key=value
   pairs. This allows writing to keys that do not need or expect data. This is
-  aliased as "-f".
+  aliased as `-f`.

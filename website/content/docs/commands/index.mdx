@@ -21,79 +21,11 @@ interface (CLI) that wraps common functionality and formats output. The Vault
 CLI is a single static binary. It is a thin wrapper around the HTTP API. Every
 CLI command maps directly to the HTTP API internally.
 
-Each command is represented as a command or subcommand. Please see the sidebar
-for more information about a particular command. This documentation corresponds
-to the latest version of Vault. If you are running an older version, commands
-may behave differently.
-
-## Command Help
-
-There are two primary ways to get help in Vault: [CLI help](#cli-help) and [API
-help](#api-help).
-
-### CLI Help
-
-Use `help` (or `-h` for shorthand) to see the help output which corresponds to
-your Vault version.
-
-To get CLI help:
-
-```shell-session
-$ vault help
-```
-
-**Example:** To get help on the `kv` subcommand.
-
-```shell-session
-$ vault kv help
-```
-
-The help output displays available subcommands, parameters, and command flags.
-
-### API Help
-
-Use `path-help` to see the help output for Vault API paths.
-
-To get API help:
-
-```shell-session
-$ vault path-help -h
-```
-
-Use `path-help` to retrieve API help on any paths. Vault API endpoints provide
-built-in help in markdown format. This includes system paths, secret engines,
-and auth methods.
-
-**Example:** To get API help on the [`auth/token/`](/api-docs/auth/token) path.
-
-```shell-session
-$ vault path-help auth/token
-```
-
-The help output displays supported child-paths and available parameters.
-
--> **CLI and API:** The [read](/docs/commands/read),
-[write](/docs/commands/write), [delete](/docs/commands/delete), and
-[list](/docs/commands/list) operations are available for most paths in Vault,
-and those CLI commands are equivalent to HTTP verbs, `GET`, `POST` (or `PUT`),
-`DELETE`, and `LIST`.
-
-### Print cURL Command
-
-CLI provides convenient wrapper for the Vault API. To see the equivalent API
-call to perform the same operation, use the `-output-curl-string` flag after the
-subcommand.
-
-```shell-session
-$ vault policy list -output-curl-string
-
-curl -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" http://127.0.0.1:8200/v1/sys/policies/acl?list=true
-```
-
 ## CLI Command Structure
 
-There are a number of command and subcommand options available: HTTP options,
-output options, and command specific options.
+Each command is represented as a command or subcommand, and there are a number
+of command and subcommand options available: HTTP options, output options, and
+command specific options.
 
 Construct your Vault CLI command such that the command options precede its path
 and arguments if any:
@@ -109,7 +41,8 @@ vault <command> [options] [path] [args]
 - `options` - [Flags](/docs/commands#flags) to specify additional settings
 - `args` - API arguments specific to the operation
 
-  -> **NOTE:** Run `vault path-help <path>` to see the list of args (parameters).
+-> **NOTE:** Use the [command help](#command-help) to display available options
+and arguments.
 
 #### Examples:
 
@@ -135,67 +68,107 @@ $ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
 The options (flags) come after the command (or subcommand) preceding the path,
 and the args always follow the path to set API parameter values.
 
-## Exit Codes
+The four most common operations in Vault are [read](/docs/commands/read),
+[write](/docs/commands/write), [delete](/docs/commands/delete), and
+[list](/docs/commands/list). These operations work on most paths in Vault. Some
+paths will contain secrets, other paths might contain configuration. Whatever it
+is, the primary interface for reading and writing data to Vault is similar.
 
-The Vault CLI aims to be consistent and well-behaved unless documented
-otherwise.
+### Print cURL Command
 
-- Local errors such as incorrect flags, failed validations, or wrong numbers
-  of arguments return an exit code of 1.
-
-- Any remote errors such as API failures, bad TLS, or incorrect API parameters
-  return an exit status of 2
-
-Some commands override this default where it makes sense. These commands
-document this anomaly.
-
-## Autocompletion
-
-The `vault` command features opt-in autocompletion for flags, subcommands, and
-arguments (where supported).
-
-Enable autocompletion by running:
+To see the equivalent API call to perform the same operation, use the
+`-output-curl-string` flag after the subcommand.
 
 ```shell-session
-$ vault -autocomplete-install
+$ vault write -output-curl-string  auth/userpass/users/bob password="long-password"
+
+curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" -d '{"password":"long-password"}' http://127.0.0.1:8200/v1/auth/userpass/users/bob
 ```
 
-~> Be sure to **restart your shell** after installing autocompletion!
+## Command Help
 
-When you start typing a Vault command, press the `<tab>` character to show a
-list of available completions. Type `-<tab>` to show available flag completions.
+There are two primary ways to get help in Vault: [CLI help](#cli-help) and [API
+help](#api-help).
 
-If the `VAULT_*` environment variables are set, the autocompletion will
-automatically query the Vault server and return helpful argument suggestions.
+### CLI Help
 
-## Reading and Writing Data
+Use `help` (or `-h` for shorthand) to see the CLI help output which corresponds
+to your Vault version.
 
-The four most common operations in Vault are `read`, `write`, `delete`, and
-`list`. These operations work on most paths in Vault. Some paths will
-contain secrets, other paths might contain configuration. Whatever it is, the
-primary interface for reading and writing data to Vault is similar.
+To get CLI help:
 
-To demonstrate basic read and write operations, the built-in key/value (K/V)
-secrets engine will be used. This engine is automatically mounted and has no
-external dependencies, making it practical for this introduction. Note that
-K/V uses slightly different commands for reading and writing: `kv get`
-and `kv put`, respectively.
+```shell-session
+$ vault help
+```
 
-~> The original version of K/V used the common `read` and `write` operations.
-A more advanced K/V Version 2 engine was released in Vault 0.10 and introduced
-the `kv get` and `kv put` commands.
+**Example:** To get help on the `kv` command.
 
-### Writing Data
+```shell-session
+$ vault kv help
+```
 
-To write data to Vault, use the `vault kv put` command:
+The help output displays available subcommands, parameters, and command flags.
+
+### API Help
+
+To invoke the Vault API paths, you can use the [read](/docs/commands/read) (for
+HTTP GET), [write](/docs/commands/write) (for HTTP PUT or POST),
+[delete](/docs/commands/delete) (for HTTP DELETE), and
+[list](/docs/commands/list) (for HTTP LIST) commands.
+
+To get Vault API help:
+
+```shell-session
+$ vault path-help -h
+```
+
+Use `path-help` to retrieve API help on any API paths. Vault API paths provide
+built-in help in markdown format. This includes system paths, secret engines,
+and auth methods.
+
+**Example:** API help on the [`sys/mounts/`](/api-docs/system/mounts) path.
+
+```shell-session
+$ vault path-help sys/mounts
+Request:        mounts
+Matching Route: ^mounts$
+
+List the currently mounted backends.
+
+## DESCRIPTION
+
+This path responds to the following HTTP methods.
+
+    GET /
+        Lists all the mounted secret backends.
+
+    GET /<mount point>
+        Get information about the mount at the specified path.
+
+    POST /<mount point>
+        Mount a new secret backend to the mount point in the URL.
+
+    POST /<mount point>/tune
+        Tune configuration parameters for the given mount point.
+
+    DELETE /<mount point>
+        Unmount the specified mount point.
+```
+
+The help output displays supported child-paths and available parameters if there
+are any.
+
+### Command Input
+
+To write data to Vault, the input can be a part of the command in key-value
+format.
 
 ```shell-session
 $ vault kv put secret/password value=itsasecret
 ```
 
-For some secrets engines, the key/value pairs are arbitrary. For others, they
-are generally more strict. Vault's built-in help will guide you to these
-restrictions where appropriate.
+However, some Vault API requires more advanced structures such as maps. You can
+use stdin or file input instead.
 
 #### stdin
 
@@ -233,17 +206,38 @@ Note that if an argument is supplied in a @key=value format, Vault will treat th
 kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
 does not support filenames with `=` in them.
 
-### Reading Data
+## Exit Codes
 
-After data is persisted, read it back using `vault kv get`:
+The Vault CLI aims to be consistent and well-behaved unless documented
+otherwise.
+
+- Local errors such as incorrect flags, failed validations, or wrong numbers
+  of arguments return an exit code of 1.
+
+- Any remote errors such as API failures, bad TLS, or incorrect API parameters
+  return an exit status of 2
+
+Some commands override this default where it makes sense. These commands
+document this anomaly.
+
+## Autocompletion
+
+The `vault` command features opt-in autocompletion for flags, subcommands, and
+arguments (where supported).
+
+Enable autocompletion by running:
 
 ```shell-session
-$ vault kv get secret/password
-Key                 Value
----                 -----
-refresh_interval    768h0m0s
-value               itsasecret
+$ vault -autocomplete-install
 ```
+
+~> Be sure to **restart your shell** after installing autocompletion!
+
+When you start typing a Vault command, press the `<tab>` character to show a
+list of available completions. Type `-<tab>` to show available flag completions.
+
+If the `VAULT_*` environment variables are set, the autocompletion will
+automatically query the Vault server and return helpful argument suggestions.
 
 ## Token Helper
 
