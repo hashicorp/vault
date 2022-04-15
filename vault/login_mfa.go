@@ -1184,6 +1184,7 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 		respData["key_size"] = totpConfig.KeySize
 		respData["qr_size"] = totpConfig.QRSize
 		respData["algorithm"] = otplib.Algorithm(totpConfig.Algorithm).String()
+		respData["max_validation_attempts"] = totpConfig.MaxValidationAttempts
 	case *mfa.Config_OktaConfig:
 		oktaConfig := mConfig.GetOktaConfig()
 		respData["org_name"] = oktaConfig.OrgName
@@ -1276,14 +1277,23 @@ func parseTOTPConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 		return fmt.Errorf("issuer must be set")
 	}
 
+	maxValidationAttempt := d.Get("max_validation_attempts").(int)
+	if maxValidationAttempt < 0 {
+		return fmt.Errorf("max_validation_attempts must be greater than zero")
+	}
+	if maxValidationAttempt == 0 {
+		maxValidationAttempt = defaultMaxTOTPValidateAttempts
+	}
+
 	config := &mfa.TOTPConfig{
-		Issuer:    issuer,
-		Period:    uint32(period),
-		Algorithm: int32(keyAlgorithm),
-		Digits:    int32(keyDigits),
-		Skew:      uint32(skew),
-		KeySize:   uint32(keySize),
-		QRSize:    int32(d.Get("qr_size").(int)),
+		Issuer:                issuer,
+		Period:                uint32(period),
+		Algorithm:             int32(keyAlgorithm),
+		Digits:                int32(keyDigits),
+		Skew:                  uint32(skew),
+		KeySize:               uint32(keySize),
+		QRSize:                int32(d.Get("qr_size").(int)),
+		MaxValidationAttempts: uint32(maxValidationAttempt),
 	}
 	mConfig.Config = &mfa.Config_TOTPConfig{
 		TOTPConfig: config,
@@ -1425,7 +1435,7 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA credentials not supplied")
 		}
 
-		return c.validateTOTP(ctx, mfaCreds, entityMFASecret, mConfig.ID, entity.ID)
+		return c.validateTOTP(ctx, mfaCreds, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
@@ -1997,7 +2007,7 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSecret *mfa.Secret, configID, entityID string) error {
+func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
 	if len(creds) == 0 {
 		return fmt.Errorf("missing TOTP passcode")
 	}
@@ -2013,9 +2023,33 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 
 	usedName := fmt.Sprintf("%s_%s", configID, creds[0])
 
-	_, ok := c.loginMFABackend.usedCodes.Get(usedName)
+	_, ok := usedCodes.Get(usedName)
 	if ok {
 		return fmt.Errorf("code already used; new code is available in %v seconds", totpSecret.Period)
+	}
+
+	// The duration in which a passcode is stored in cache to enforce
+	// rate limit on failed totp passcode validation
+	passcodeTTL := time.Duration(int64(time.Second) * int64(totpSecret.Period))
+
+	// Enforcing rate limit per MethodID per EntityID
+	rateLimitID := fmt.Sprintf("%s_%s", configID, entityID)
+
+	numAttempts, _ := usedCodes.Get(rateLimitID)
+	if numAttempts == nil {
+		usedCodes.Set(rateLimitID, uint32(1), passcodeTTL)
+	} else {
+		num, ok := numAttempts.(uint32)
+		if !ok {
+			return fmt.Errorf("invalid counter type returned in TOTP usedCode cache")
+		}
+		if num == maximumValidationAttempts {
+			return fmt.Errorf("maximum TOTP validation attempts %d exceeded the allowed attempts %d. Please try again in %v seconds", num+1, maximumValidationAttempts, passcodeTTL)
+		}
+		err := usedCodes.Increment(rateLimitID, 1)
+		if err != nil {
+			return fmt.Errorf("failed to increment the TOTP code counter")
+		}
 	}
 
 	key, err := c.fetchTOTPKey(ctx, configID, entityID)
@@ -2048,10 +2082,13 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 	validityPeriod := time.Duration(int64(time.Second) * int64(totpSecret.Period) * int64(2+totpSecret.Skew))
 
 	// Adding the used code to the cache
-	err = c.loginMFABackend.usedCodes.Add(usedName, nil, validityPeriod)
+	err = usedCodes.Add(usedName, nil, validityPeriod)
 	if err != nil {
 		return fmt.Errorf("error adding code to used cache: %w", err)
 	}
+
+	// deleting the cache entry after a successful MFA validation
+	usedCodes.Delete(rateLimitID)
 
 	return nil
 }
