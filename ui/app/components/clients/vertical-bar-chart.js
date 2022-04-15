@@ -44,7 +44,7 @@ export default class VerticalBarChart extends Component {
   }
 
   get yKey() {
-    return this.args.yKey || 'total';
+    return this.args.yKey || 'clients';
   }
 
   @action
