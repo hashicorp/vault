@@ -87,8 +87,8 @@ curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" 
 
 ## Command Help
 
-There are two primary ways to get help in Vault: [CLI help](#cli-help) and [API
-help](#api-help).
+There are two primary ways to get help in Vault: [CLI help (`help`)](#cli-help)
+and [API help (`path-help`)](#api-help).
 
 ### CLI Help
 
@@ -116,13 +116,13 @@ HTTP GET), [write](/docs/commands/write) (for HTTP PUT or POST),
 [delete](/docs/commands/delete) (for HTTP DELETE), and
 [list](/docs/commands/list) (for HTTP LIST) commands.
 
-To get Vault API help:
+Use `path-help` to get Vault API help:
 
 ```shell-session
 $ vault path-help -h
 ```
 
-Use `path-help` to retrieve API help on any API paths. Vault API paths provide
+The `path-help` retrieves API help on any API paths. Vault API paths provide
 built-in help in markdown format. This includes system paths, secret engines,
 and auth methods.
 
