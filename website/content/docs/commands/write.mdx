@@ -30,6 +30,12 @@ corresponds to the secrets engines in use.
 
 ## Examples
 
+Store an arbitrary secrets in the token's cubbyhole.
+
+```shell-session
+$ vault write cubbyhole/git-credentials username="student01" password="p@$$w0rd"
+```
+
 Create a new encryption key in the transit secrets engine:
 
 ```shell-session
@@ -53,20 +59,45 @@ $ echo $MY_TOKEN | vault write consul/config/access token=-
 
 ### API versus CLI
 
-To create an ACL policy, you invoke the `sys/policies/acl/` API endpoint.
+Create a token with TTL set to 8 hours, limited to 3 uses, and attach `admin`
+and `secops` policies.
 
 ```shell-session
-$ vault write sys/policies/acl/admin policy=@admin-policy.hcl
+$ vault write auth/token/create policies="admin" policies="secops" ttl=8h num_uses=3
 ```
 
-Since policy management is a common task, the CLI provides a [`policy write`](/docs/commands/policy/write) command which simplify the policy creation.
+Equivalent cURL command for this operation:
 
 ```shell-session
-$ vault policy write admin admin-policy.hcl
+$ tee request_payload.json -<<EOF
+{
+   "policies": ["admin", "secops"],
+   "ttl": "8h",
+   "num_uses": 3
+}
+EOF
+
+$ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data @request_payload.json \
+    $VAULT_ADDR/v1/auth/token/create
 ```
 
-The two commands perform the same operation. The difference is the `policy` CLI
-command simplifies the policy management by providing subcommands.
+The `vault write` command simplifies the API call.
+
+Since token management is a common task, Vault CLI provides a
+[`token`](/docs/commands/token) command with
+[`create`](/docs/commands/token/create) subcommand. The CLI command simplifies
+the token creation. Use the `vault create` command with options to set the token
+TTL, policies, and use limit.
+
+```shell-session
+$ vault token create -policy=admin -policy=secops -ttl=8h -use-limit=3
+```
+
+-> **Syntax:** The command options start with `-` (e.g. `-ttl`) while API path
+parameters do not (e.g. `ttl`). You always set the API parameters after the path
+you are invoking.
 
 ## Usage
 
