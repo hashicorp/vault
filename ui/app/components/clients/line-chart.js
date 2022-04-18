@@ -42,21 +42,23 @@ export default class LineChart extends Component {
   @action
   renderChart(element, args) {
     const dataset = args[0];
+    const filteredData = dataset.filter((e) => Object.keys(e).includes('clients')); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     // DEFINE AXES SCALES
     const yScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
       .range([0, 100])
       .nice();
 
     const yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
       .range([SVG_DIMENSIONS.height, 0])
       .nice();
 
-    const xScale = scalePoint() // use scaleTime()?
+    // use full dataset (instead of filteredData) so x-axis spans months with and without data
+    const xScale = scalePoint()
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width])
       .padding(0.2);
@@ -86,13 +88,13 @@ export default class LineChart extends Component {
       .attr('fill', 'none')
       .attr('stroke', LIGHT_AND_DARK_BLUE[1])
       .attr('stroke-width', 0.5)
-      .attr('d', lineGenerator(dataset));
+      .attr('d', lineGenerator(filteredData));
 
     // LINE PLOTS (CIRCLES)
     chartSvg
       .append('g')
       .selectAll('circle')
-      .data(dataset)
+      .data(filteredData)
       .enter()
       .append('circle')
       .attr('class', 'data-plot')
@@ -107,7 +109,7 @@ export default class LineChart extends Component {
     chartSvg
       .append('g')
       .selectAll('circle')
-      .data(dataset)
+      .data(filteredData)
       .enter()
       .append('circle')
       .attr('class', 'hover-circle')

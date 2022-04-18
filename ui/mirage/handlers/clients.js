@@ -665,25 +665,7 @@ const handleMockQuery = (queryStartTimestamp, monthlyData) => {
       i++;
       let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
       // TODO CMB update this when we confirm what combined data looks like
-      // this is probably not what the empty object looks like but waiting to hear back from backend
-      transformedMonthlyArray.push({
-        timestamp,
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          clients: 0,
-        },
-        namespaces: [],
-        new_clients: {
-          counts: {
-            entity_clients: 0,
-            non_entity_clients: 0,
-            clients: 0,
-          },
-          namespaces: [],
-        },
-      });
+      transformedMonthlyArray.push({ timestamp });
     } while (i < differenceInCalendarMonths(startDateByMonth, queryDate));
   }
   if (isAfter(queryDate, startDateByMonth)) {
