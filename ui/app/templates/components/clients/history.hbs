@@ -112,9 +112,9 @@
               <li>
                 {{concat
                   "You upgraded to Vault "
-                  this.firstUpgradeVersion
+                  this.latestUpgradeData.id
                   " on "
-                  (date-format this.upgradeDate "MMMM d, yyyy.")
+                  (date-format this.latestUpgradeData.timestampInstalled "MMMM d, yyyy.")
                 }}
                 How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
                 <DocLink
