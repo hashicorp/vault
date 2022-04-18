@@ -172,11 +172,11 @@
             </p>
           </div>
           <ToggleButton
+            @isOpen={{this.use_pgp}}
             @openLabel="Encrypt output with PGP"
             @closedLabel="Encrypt output with PGP"
-            @toggleTarget={{this}}
-            @toggleAttr="use_pgp"
-            @class="is-block"
+            @onClick={{fn (mut this.use_pgp)}}
+            class="is-block"
           />
           {{#if this.use_pgp}}
             <div class="box init-box">
@@ -187,11 +187,11 @@
             </div>
           {{/if}}
           <ToggleButton
+            @isOpen={{this.use_pgp_for_root}}
             @openLabel="Encrypt root token with PGP"
             @closedLabel="Encrypt root token with PGP"
-            @toggleTarget={{this}}
-            @toggleAttr="use_pgp_for_root"
-            @class="is-block"
+            @onClick={{fn (mut this.use_pgp_for_root)}}
+            class="is-block"
           />
           {{#if this.use_pgp_for_root}}
             <div class="box init-box">
@@ -206,7 +206,7 @@
           <button
             data-test-init-submit
             type="submit"
-            class="button is-primary {{if this.loading "is-loading"}}"
+            class="button is-primary {{if this.loading 'is-loading'}}"
             disabled={{this.loading}}
           >
             Initialize

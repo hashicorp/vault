@@ -3,6 +3,7 @@
   class="chart has-grid"
   {{on "mouseleave" this.removeTooltip}}
   {{did-insert this.registerListener @dataset}}
+  {{did-update this.renderChart @dataset}}
 >
 </svg>
 
@@ -21,8 +22,8 @@
   }}
     <div class="chart-tooltip vertical-chart">
       <p>{{this.tooltipTotal}}</p>
-      <p>{{this.uniqueEntities}}</p>
-      <p>{{this.nonEntityTokens}}</p>
+      <p>{{this.entityClients}}</p>
+      <p>{{this.nonEntityClients}}</p>
     </div>
     <div class="chart-tooltip-arrow"></div>
   {{/modal-dialog}}

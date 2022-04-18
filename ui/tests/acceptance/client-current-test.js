@@ -29,7 +29,7 @@ module('Acceptance | clients current', function (hooks) {
 
   test('shows empty state when config disabled, no data', async function (assert) {
     const config = generateConfigResponse({ enabled: 'default-disable' });
-    const monthly = generateCurrentMonthResponse();
+    const monthly = generateCurrentMonthResponse({ configEnabled: false });
     this.server = new Pretender(function () {
       this.get('/v1/sys/internal/counters/activity/monthly', () => sendResponse(monthly));
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
@@ -61,8 +61,11 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
   });
-
+  // flaky test -- assertion count is not consistent
+  // eslint-disable-next-line
   test('filters correctly on current with full data', async function (assert) {
+    // uncomment once assertion count is consistent
+    // assert.expect(65);
     const config = generateConfigResponse();
     const monthly = generateCurrentMonthResponse(3);
     this.server = new Pretender(function () {
@@ -86,8 +89,20 @@ module('Acceptance | clients current', function (hooks) {
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText(non_entity_clients.toString());
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
-    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
+    assert.dom('[data-test-chart-container="new-clients"] .chart-title').includesText('New clients');
+    assert.dom('[data-test-chart-container="total-clients"] .chart-title').includesText('Total clients');
+    assert
+      .dom('[data-test-chart-container="total-clients"] [data-test-horizontal-bar-chart]')
+      .exists('Shows totals attribution bar chart');
+
+    assert
+      // TODO CMB - this assertion should be updated so the response includes new client counts
+      // TODO then move somewhere to assert empty state shows when filtering a namespace with no new clients
+      .dom('[data-test-chart-container="new-clients"] [data-test-empty-state-subtext]')
+      .includesText(
+        'There are no new clients for this namespace during this time period.',
+        'Shows empty state if no new client counts'
+      );
 
     // check chart displays correct elements and values
     for (const key in CHART_ELEMENTS) {
@@ -117,8 +132,17 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Still shows attribution bar chart');
-    assert.dom('[data-test-top-attribution]').includesText('Top auth method');
+    assert.dom('[data-test-chart-container="new-clients"] .chart-title').includesText('New clients');
+    assert.dom('[data-test-chart-container="total-clients"] .chart-title').includesText('Total clients');
+    assert
+      .dom('[data-test-chart-container="total-clients"] [data-test-horizontal-bar-chart]')
+      .exists('Still shows totals attribution bar chart');
+    assert
+      .dom('[data-test-chart-container="total-clients"] .chart-description')
+      .includesText('The total clients used by the auth method for this month.');
+    assert
+      .dom('[data-test-chart-container="new-clients"] .chart-description')
+      .includesText('The new clients used by the auth method for this month.');
 
     // check chart displays correct elements and values
     for (const key in CHART_ELEMENTS) {
@@ -155,8 +179,9 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
     await settled();
-    await waitUntil(() => find('[data-test-horizontal-bar-chart]'));
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Still shows attribution bar chart');
+    assert.dom('[data-test-chart-container="new-clients"] .chart-title').includesText('New clients');
+    assert.dom('[data-test-chart-container="total-clients"] .chart-title').includesText('Total clients');
+    assert.dom(SELECTORS.attributionBlock).exists('Still shows attribution block');
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     await settled();
@@ -168,7 +193,11 @@ module('Acceptance | clients current', function (hooks) {
     assert
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText(non_entity_clients.toString());
-    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
+    assert.dom('[data-test-chart-container="new-clients"] .chart-title').includesText('New clients');
+    assert.dom('[data-test-chart-container="total-clients"] .chart-title').includesText('Total clients');
+    assert
+      .dom('[data-test-chart-container="new-clients"] [data-test-empty-state-subtext]')
+      .includesText('There are no new clients', 'Shows empty state if no new client counts');
   });
 
   test('filters correctly on current with no auth mounts', async function (assert) {
@@ -195,8 +224,15 @@ module('Acceptance | clients current', function (hooks) {
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText(non_entity_clients.toString());
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
-    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
+    assert.dom('[data-test-chart-container="new-clients"] .chart-title').includesText('New clients');
+    assert.dom('[data-test-chart-container="total-clients"] .chart-title').includesText('Total clients');
+    assert
+      .dom('[data-test-chart-container="total-clients"] [data-test-horizontal-bar-chart]')
+      .exists('Shows totals attribution bar chart');
+    assert
+      .dom('[data-test-chart-container="total-clients"] .chart-description')
+      .includesText('The total clients in the namespace for this month.');
+
     // Filter by namespace
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
@@ -214,7 +250,8 @@ module('Acceptance | clients current', function (hooks) {
     assert
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText(non_entity_clients.toString());
-    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
+    assert.dom('[data-test-chart-container="new-clients"] .chart-title').includesText('New clients');
+    assert.dom('[data-test-chart-container="total-clients"] .chart-title').includesText('Total clients');
   });
 
   test('shows correct empty state when config off but no read on config', async function (assert) {

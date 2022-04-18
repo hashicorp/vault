@@ -81,6 +81,12 @@ const (
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
 
+	// defaultMaxTOTPValidateAttempts is the default value for the number
+	// of failed attempts to validate a request subject to TOTP MFA. If the
+	// number of failed totp passcode validations exceeds this max value, the
+	// user needs to wait until a fresh totp passcode is generated.
+	defaultMaxTOTPValidateAttempts = 5
+
 	// ForwardSSCTokenToActive is the value that must be set in the
 	// forwardToActive to trigger forwarding if a perf standby encounters
 	// an SSC Token that it does not have the WAL state for.
@@ -2264,6 +2270,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2340,6 +2349,9 @@ func (c *Core) preSeal() error {
 	}
 
 	c.loginMFABackend.usedCodes = nil
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = nil
+	}
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")

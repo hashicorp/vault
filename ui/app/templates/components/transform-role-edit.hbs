@@ -42,7 +42,7 @@
         <ToolbarSecretLink
           @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"
-          @data-test-edit-link={{true}}
+          data-test-edit-link={{true}}
           @replace={{true}}
         >
           Edit role
@@ -77,7 +77,7 @@
         </button>
         <SecretLink
           @mode={{if (eq this.mode "create") "list" "show"}}
-          @class="button"
+          class="button"
           @secret={{concat "role/" this.model.id}}
         >
           Cancel

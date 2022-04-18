@@ -11,21 +11,30 @@ export default class Current extends Component {
   @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
 
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.byNamespaceCurrent.map((namespace) => {
+  @tracked namespaceArray = this.byNamespaceTotalClients.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
 
   @tracked selectedAuthMethod = null;
   @tracked authMethodOptions = [];
 
-  // Response client count data by namespace for current/partial month
-  get byNamespaceCurrent() {
-    return this.args.model.monthly?.byNamespace || [];
+  // Response total client count data by namespace for current/partial month
+  get byNamespaceTotalClients() {
+    return this.args.model.monthly?.byNamespaceTotalClients || [];
+  }
+
+  // Response new client count data by namespace for current/partial month
+  get byNamespaceNewClients() {
+    return this.args.model.monthly?.byNamespaceNewClients || [];
   }
 
   get isGatheringData() {
     // return true if tracking IS enabled but no data collected yet
-    return this.args.model.config?.enabled === 'On' && this.byNamespaceCurrent.length === 0;
+    return (
+      this.args.model.config?.enabled === 'On' &&
+      this.byNamespaceTotalClients.length === 0 &&
+      this.byNamespaceNewClients.length === 0
+    );
   }
 
   get hasAttributionData() {
@@ -36,16 +45,30 @@ export default class Current extends Component {
     return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData;
   }
 
-  get filteredActivity() {
+  get filteredTotalData() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
     if (!namespace && !auth) {
-      return this.getActivityResponse;
+      return this.byNamespaceTotalClients;
     }
     if (!auth) {
-      return this.byNamespaceCurrent.find((ns) => ns.label === namespace);
+      return this.byNamespaceTotalClients.find((ns) => ns.label === namespace);
     }
-    return this.byNamespaceCurrent
+    return this.byNamespaceTotalClients
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
+  }
+
+  get filteredNewData() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.byNamespaceNewClients;
+    }
+    if (!auth) {
+      return this.byNamespaceNewClients.find((ns) => ns.label === namespace);
+    }
+    return this.byNamespaceNewClients
       .find((ns) => ns.label === namespace)
       .mounts?.find((mount) => mount.label === auth);
   }
@@ -62,15 +85,28 @@ export default class Current extends Component {
 
   // top level TOTAL client counts for current/partial month
   get totalUsageCounts() {
-    return this.selectedNamespace ? this.filteredActivity : this.args.model.monthly?.total;
+    return this.selectedNamespace ? this.filteredTotalData : this.args.model.monthly?.total;
+  }
+
+  get newUsageCounts() {
+    return this.selectedNamespace ? this.filteredNewData : this.args.model.monthly?.new;
   }
 
   // total client data for horizontal bar chart in attribution component
   get totalClientsData() {
     if (this.selectedNamespace) {
-      return this.filteredActivity?.mounts || null;
+      return this.filteredTotalData?.mounts || null;
     } else {
-      return this.byNamespaceCurrent;
+      return this.byNamespaceTotalClients;
+    }
+  }
+
+  // new client data for horizontal bar chart in attribution component
+  get newClientsData() {
+    if (this.selectedNamespace) {
+      return this.filteredNewData?.mounts || null;
+    } else {
+      return this.byNamespaceNewClients;
     }
   }
 
@@ -89,7 +125,7 @@ export default class Current extends Component {
       this.selectedAuthMethod = null;
     } else {
       // Side effect: set auth namespaces
-      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+      const mounts = this.filteredTotalData.mounts?.map((mount) => ({
         id: mount.label,
         name: mount.label,
       }));

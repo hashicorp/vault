@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/okta: Add support for Google provider TOTP type in the Okta auth method
+```

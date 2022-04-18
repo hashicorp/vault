@@ -259,8 +259,8 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 	}
 
 	// passcode could be an empty string
-	mfaPayload := map[string][]string{
-		methodInfo.methodID: {passcode},
+	mfaPayload := map[string]interface{}{
+		methodInfo.methodID: []string{passcode},
 	}
 
 	client, err := c.Client()
@@ -269,12 +269,7 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 		return 2
 	}
 
-	path := "sys/mfa/validate"
-
-	secret, err := client.Logical().Write(path, map[string]interface{}{
-		"mfa_request_id": reqID,
-		"mfa_payload":    mfaPayload,
-	})
+	secret, err := client.Sys().MFAValidate(reqID, mfaPayload)
 	if err != nil {
 		c.UI.Error(err.Error())
 		if secret != nil {
@@ -285,7 +280,7 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info("Success! Data written to: sys/mfa/validate")
 		}
 		return 0
 	}
