@@ -9,7 +9,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
   }
 
   formatByNamespace(namespaceArray) {
-    return namespaceArray.map((ns) => {
+    return namespaceArray?.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
       let label = ns['namespace_path'];
