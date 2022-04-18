@@ -1,11 +1,15 @@
-<div class="chart-wrapper single-chart-grid" data-test-clients-attribution>
+{{! show single chart if data is from a range, show two charts if from a single month}}
+<div
+  class={{concat "chart-wrapper" (if @isDateRange " single-chart-grid") (unless @isDateRange " dual-chart-grid")}}
+  data-test-clients-attribution
+>
   <div class="chart-header has-header-link has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">Attribution</h2>
       <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
-      {{#if @totalClientsData}}
+      {{#if this.hasCsvData}}
         <button
           data-test-attribution-export-button
           type="button"
@@ -17,28 +21,51 @@
       {{/if}}
     </div>
   </div>
+
   {{#if this.barChartTotalClients}}
-    <div class="chart-container-wide">
-      <Clients::HorizontalBarChart
-        @dataset={{this.barChartTotalClients}}
-        @chartLegend={{@chartLegend}}
-        @totalUsageCounts={{@totalUsageCounts}}
-      />
-    </div>
-    <div class="chart-subTitle">
-      <p class="chart-subtext" data-test-attribution-subtext>{{this.chartText.totalCopy}}</p>
-    </div>
+    {{#if (eq @isDateRange true)}}
+      <div class="chart-container-wide" data-test-chart-container="total-clients">
+        <Clients::HorizontalBarChart
+          @dataset={{this.barChartTotalClients}}
+          @chartLegend={{@chartLegend}}
+          @totalUsageCounts={{@totalUsageCounts}}
+        />
+      </div>
+      <div class="chart-subTitle">
+        <p class="chart-subtext" data-test-attribution-subtext>{{this.chartText.totalCopy}}</p>
+      </div>
 
-    <div class="data-details-top" data-test-top-attribution>
-      <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
-      <p class="data-details">{{this.topClientCounts.label}}</p>
-    </div>
+      <div class="data-details-top" data-test-top-attribution>
+        <h3 class="data-details">Top {{this.attributionBreakdown}}</h3>
+        <p class="data-details">{{this.topClientCounts.label}}</p>
+      </div>
 
-    <div class="data-details-bottom" data-test-top-counts>
-      <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
-      <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
-    </div>
+      <div class="data-details-bottom" data-test-top-counts>
+        <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
+        <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
+      </div>
+    {{else}}
+      <div class="chart-container-left" data-test-chart-container="new-clients">
+        <h2 class="chart-title">New clients</h2>
+        <p class="chart-description">{{this.chartText.newCopy}}</p>
+        <Clients::HorizontalBarChart
+          @dataset={{this.barChartNewClients}}
+          @chartLegend={{@chartLegend}}
+          @totalUsageCounts={{@newUsageCounts}}
+          @noDataMessage={{"There are no new clients for this namespace during this time period."}}
+        />
+      </div>
 
+      <div class="chart-container-right" data-test-chart-container="total-clients">
+        <h2 class="chart-title">Total clients</h2>
+        <p class="chart-description">{{this.chartText.totalCopy}}</p>
+        <Clients::HorizontalBarChart
+          @dataset={{this.barChartTotalClients}}
+          @chartLegend={{@chartLegend}}
+          @totalUsageCounts={{@totalUsageCounts}}
+        />
+      </div>
+    {{/if}}
     <div class="legend-center">
       <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
       <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>

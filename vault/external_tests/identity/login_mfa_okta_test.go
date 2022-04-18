@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -322,12 +323,12 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 	}
 
 	// validation
-	secret, err = client.Logical().Write("sys/mfa/validate", map[string]interface{}{
-		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-		"mfa_payload": map[string][]string{
-			methodID: {},
+	secret, err = client.Sys().MFAValidateWithContext(context.Background(),
+		secret.Auth.MFARequirement.MFARequestID,
+		map[string]interface{}{
+			methodID: []string{},
 		},
-	})
+	)
 	if err != nil {
 		return fmt.Errorf("MFA failed: %v", err)
 	}

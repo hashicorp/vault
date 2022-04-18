@@ -24,6 +24,7 @@ module('Unit | Model | transit key', function (hooks) {
   });
 
   test('encryption key versions', function (assert) {
+    assert.expect(2);
     let done = assert.async();
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {
@@ -45,6 +46,7 @@ module('Unit | Model | transit key', function (hooks) {
   });
 
   test('keys for encryption', function (assert) {
+    assert.expect(2);
     let done = assert.async();
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {

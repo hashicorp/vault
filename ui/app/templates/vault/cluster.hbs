@@ -6,7 +6,7 @@
       </HomeLink>
     </Nav.home>
     <Nav.main>
-      <ul class="navbar-sections {{if (has-feature "Namespaces") "with-ns-picker"}}">
+      <ul class="navbar-sections {{if (has-feature 'Namespaces') 'with-ns-picker'}}">
         {{#if (has-feature "Namespaces")}}
           <li>
             <NamespacePicker @class="navbar-item" @namespace={{this.namespaceQueryParam}} />
@@ -88,7 +88,7 @@
       <div class="navbar-item">
         <button
           type="button"
-          class="button is-transparent nav-console-button{{if this.consoleOpen " popup-open"}}"
+          class="button is-transparent nav-console-button{{if this.consoleOpen ' popup-open'}}"
           {{action (queue (action "toggleConsole") (action Nav.closeDrawer))}}
           data-test-console-toggle
         >
@@ -100,7 +100,7 @@
         </button>
       </div>
       <div
-        class="navbar-item nav-user-button {{if this.auth.allowExpiration "may-expire"}}"
+        class="navbar-item nav-user-button {{if this.auth.allowExpiration 'may-expire'}}"
         data-test-allow-expiration={{this.auth.allowExpiration}}
       >
         <StatusMenu @type="user" @label="User" @onLinkClick={{action Nav.closeDrawer}} />

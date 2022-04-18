@@ -175,7 +175,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit matches what is passed in');
   });
 
-  test('it calls onChange on init when rendered if changeOnInit is true', async function (assert) {
+  test('it calls onChange', async function (assert) {
     await render(hbs`
       <TtlPicker2
         @label="clicktest"

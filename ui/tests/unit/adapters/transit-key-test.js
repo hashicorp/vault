@@ -16,12 +16,12 @@ module('Unit | Adapter | transit key', function (hooks) {
 
     adapter.query({}, 'transit-key', { id: '', backend: 'transit' });
     assert.equal(url, '/v1/transit/keys/', 'query list url OK');
-    assert.equal('GET', method, 'query list method OK');
+    assert.equal(method, 'GET', 'query list method OK');
     assert.deepEqual(options, { data: { list: true } }, 'query generic url OK');
 
     adapter.queryRecord({}, 'transit-key', { id: 'foo', backend: 'transit' });
     assert.equal(url, '/v1/transit/keys/foo', 'queryRecord generic url OK');
-    assert.equal('GET', method, 'queryRecord generic method OK');
+    assert.equal(method, 'GET', 'queryRecord generic method OK');
 
     adapter.keyAction('rotate', { backend: 'transit', id: 'foo', payload: {} });
     assert.equal(url, '/v1/transit/keys/foo/rotate', 'keyAction:rotate url OK');

@@ -71,8 +71,10 @@
       {{#if this.hasAttributionData}}
         <Clients::Attribution
           @chartLegend={{this.chartLegend}}
-          @totalClientsData={{this.totalClientsData}}
           @totalUsageCounts={{this.totalUsageCounts}}
+          @newUsageCounts={{this.newUsageCounts}}
+          @totalClientsData={{this.totalClientsData}}
+          @newClientsData={{this.newClientsData}}
           @selectedNamespace={{this.selectedNamespace}}
           @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
           @isDateRange={{false}}

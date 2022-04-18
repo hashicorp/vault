@@ -54,11 +54,18 @@ The response will contain a token at `auth.client_token`:
 
 ### MFA
 
-Okta Verify Push and TOTP MFA methods are supported during login. For TOTP, the current
+Okta Verify Push and TOTP MFA methods, and Google TOTP are supported during login. For TOTP, the current
 passcode may be provided via the `totp` parameter:
 
 ```shell-session
 $ vault login -method=okta username=my-username totp=123456
+```
+
+If both Okta TOTP and Google TOTP are enabled in your Okta account, make sure to pass in
+the `provider` name to which the `totp` code belong.
+
+```shell-session
+$ vault login -method=okta username=my-username totp=123456 provider=GOOGLE
 ```
 
 If `totp` is not set and MFA Push is configured in Okta, a Push will be sent during login.

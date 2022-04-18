@@ -141,6 +141,28 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	}
 }
 
+func TestCore_BuiltinRegistry(t *testing.T) {
+	conf := &CoreConfig{
+		// set PluginDirectory and ensure that vault doesn't expect approle to
+		// be there when we are mounting the builtin approle
+		PluginDirectory: "/Users/foo",
+
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
+
+	me := &MountEntry{
+		Table: credentialTableType,
+		Path:  "approle/",
+		Type:  "approle",
+	}
+	err := c.enableCredential(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestCore_EnableCredential(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
