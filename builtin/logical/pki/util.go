@@ -20,6 +20,8 @@ const (
 )
 
 var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
+var errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
+var errKeyNameInUse = errutil.UserError{Err: "key name already in use"}
 
 func normalizeSerial(serial string) string {
 	return strings.Replace(strings.ToLower(serial), ":", "-", -1)
@@ -134,19 +136,19 @@ func getIssuerName(ctx context.Context, s logical.Storage, data *framework.Field
 		issuerName = strings.TrimSpace(issuerNameIface.(string))
 
 		if strings.ToLower(issuerName) == defaultRef {
-			return "", errutil.UserError{Err: "reserved keyword 'default' can not be used as issuer name"}
+			return issuerName, errutil.UserError{Err: "reserved keyword 'default' can not be used as issuer name"}
 		}
 
 		if !nameMatcher.MatchString(issuerName) {
-			return "", errutil.UserError{Err: "issuer name contained invalid characters"}
+			return issuerName, errutil.UserError{Err: "issuer name contained invalid characters"}
 		}
 		issuer_id, err := resolveIssuerReference(ctx, s, issuerName)
 		if err == nil {
-			return "", errutil.UserError{Err: "issuer name already used."}
+			return issuerName, errIssuerNameInUse
 		}
 
 		if err != nil && issuer_id != IssuerRefNotFound {
-			return "", errutil.InternalError{Err: err.Error()}
+			return issuerName, errutil.InternalError{Err: err.Error()}
 		}
 	}
 	return issuerName, nil
@@ -167,7 +169,7 @@ func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldDat
 		}
 		key_id, err := resolveKeyReference(ctx, s, keyName)
 		if err == nil {
-			return "", errutil.UserError{Err: "key name already used."}
+			return "", errKeyNameInUse
 		}
 
 		if err != nil && key_id != KeyRefNotFound {

@@ -135,13 +135,6 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	newName, err := getIssuerName(ctx, req.Storage, data)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	newPath := data.Get("manual_chain").([]string)
-
 	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
 	if err != nil {
 		return nil, err
@@ -154,6 +147,17 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if err != nil {
 		return nil, err
 	}
+
+	newName, err := getIssuerName(ctx, req.Storage, data)
+	if err != nil && err != errIssuerNameInUse {
+		// If the error is name already in use, and the new name is the
+		// old name for this issuer, we're not actually updating the
+		// issuer name (or causing a conflict) -- so don't err out. Other
+		// errs should still be surfaced, however.
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	newPath := data.Get("manual_chain").([]string)
 
 	modified := false
 

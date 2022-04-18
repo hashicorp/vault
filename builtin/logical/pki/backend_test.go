@@ -4724,7 +4724,7 @@ func TestRootWithExistingKey(t *testing.T) {
 		"issuer_name": "my-issuer1",
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "issuer name already used")
+	require.Contains(t, err.Error(), "issuer name already in use")
 
 	// Create the second CA
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
@@ -4747,7 +4747,7 @@ func TestRootWithExistingKey(t *testing.T) {
 		"key_name":    "root-key2",
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "key name already used")
+	require.Contains(t, err.Error(), "key name already in use")
 
 	// Create a third CA re-using key from CA 1
 	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
