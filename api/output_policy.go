@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ErrOutputPolicyRequest = "output policy request"
+	ErrOutputPolicyRequest = "output a policy, please"
 )
 
 var LastOutputPolicyError *OutputPolicyError

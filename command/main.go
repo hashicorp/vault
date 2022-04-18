@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -133,7 +132,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 
 	uiErrWriter := runOpts.Stderr
 	if outputCurlString || outputPolicy {
-		uiErrWriter = ioutil.Discard
+		uiErrWriter = &bytes.Buffer{}
 	}
 
 	ui := &VaultUI{
@@ -185,9 +184,9 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 
 	exitCode, err := cli.Run()
 	if outputCurlString {
-		return generateCurlString(exitCode, runOpts)
+		return generateCurlString(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
 	} else if outputPolicy {
-		return generatePolicy(exitCode, runOpts)
+		return generatePolicy(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
 	} else if err != nil {
 		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
 		return 1
@@ -255,7 +254,7 @@ func printCommand(w io.Writer, name string, cmdFn cli.CommandFactory) {
 	fmt.Fprintf(w, "    %s\t%s\n", name, cmd.Synopsis())
 }
 
-func generateCurlString(exitCode int, runOpts *RunOptions) int {
+func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrCatcher *bytes.Buffer) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
 		return 1
@@ -266,7 +265,8 @@ func generateCurlString(exitCode int, runOpts *RunOptions) int {
 			// Usage, just pass it through
 			return exitCode
 		}
-		fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -output-curl-string to see the generated error\n")
+		fmt.Fprint(preParsingErrCatcher, "cURL command not set by API operation\n")
+		preParsingErrCatcher.WriteTo(runOpts.Stderr)
 		return exitCode
 	}
 
@@ -279,7 +279,7 @@ func generateCurlString(exitCode int, runOpts *RunOptions) int {
 	return 0
 }
 
-func generatePolicy(exitCode int, runOpts *RunOptions) int {
+func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrCatcher *bytes.Buffer) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate policy")
 		return 1
@@ -290,7 +290,8 @@ func generatePolicy(exitCode int, runOpts *RunOptions) int {
 			// Usage, just pass it through
 			return exitCode
 		}
-		fmt.Fprint(runOpts.Stderr, "Unable to generate policy from command\n")
+		fmt.Fprint(preParsingErrCatcher, "Unable to generate policy from command\n")
+		preParsingErrCatcher.WriteTo(runOpts.Stderr)
 		return exitCode
 	}
 
