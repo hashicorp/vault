@@ -169,11 +169,11 @@ export default class History extends Component {
   }
 
   get byMonthTotalClients() {
-    return this.getActivityResponse?.byMonthTotalClients;
+    return this.getActivityResponse?.byMonth;
   }
 
   get byMonthNewClients() {
-    return this.getActivityResponse?.byMonthNewClients;
+    return this.byMonthTotalClients.map((m) => m.new_clients);
   }
 
   get countsIncludeOlderData() {
