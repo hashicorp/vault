@@ -295,6 +295,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		// If fields supplied in the request are not present in the field schema
 		// of the path, add a warning to the response indicating that those
 		// parameters will be ignored.
+		sort.Strings(ignored)
+
 		if len(ignored) != 0 {
 			resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
 		}
