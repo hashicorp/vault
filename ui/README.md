@@ -26,6 +26,13 @@
 
 This README outlines the details of collaborating on this Ember application.
 
+## Ember CLI Version Matrix
+
+| Vault Version | Ember Version |
+| ------------- | ------------- |
+| 1.8.x         | 3.22.0        |
+| 1.7.x         | 3.11          |
+
 ## Prerequisites
 
 You will need the following things properly installed on your computer.
@@ -46,8 +53,8 @@ in the `.yarn/releases` folder. To update to a different version of `yarn`, use 
 
 ## Running a Vault Server
 
-Before running Vault UI locally, a Vault server must be running.  First, ensure
-Vault dev is built according the the instructions in `../README.md`.  To start a
+Before running Vault UI locally, a Vault server must be running. First, ensure
+Vault dev is built according the the instructions in `../README.md`. To start a
 single local Vault server:
 
 - `yarn vault`
