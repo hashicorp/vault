@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -51,10 +52,13 @@ func (d *OutputPolicyError) parseRequest() {
 		capabilities = append(capabilities, "list")
 	}
 
-	// trim the Vault address and v1 from the front of the path
-	url := d.Request.URL.String()
+	// sanitize, then trim the Vault address and v1 from the front of the path
+	url, err := url.PathUnescape(d.Request.URL.String())
+	if err != nil {
+		d.parsingError = fmt.Errorf("failed to unescape request URL characters: %v", err)
+	}
 	apiAddrPrefix := fmt.Sprintf("%sv1/", d.VaultClient.config.Address)
-	path := strings.Trim(url, apiAddrPrefix)
+	path := strings.TrimLeft(url, apiAddrPrefix)
 
 	// determine whether to add sudo capability
 	needsSudo, err := isSudoPath(d.VaultClient, path)
