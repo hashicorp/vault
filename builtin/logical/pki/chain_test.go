@@ -324,6 +324,24 @@ func (c CBValidateChain) Run(t *testing.T, client *api.Client, mount string, kno
 	}
 }
 
+// Update an issuer
+type CBUpdateIssuer struct {
+	Name    string
+	CAChain []string
+}
+
+func (c CBUpdateIssuer) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
+	url := mount + "/issuer/" + c.Name
+	data := make(map[string]interface{})
+	data["issuer_name"] = c.Name
+	data["manual_chain"] = c.CAChain
+
+	_, err := client.Logical().Write(url, data)
+	if err != nil {
+		t.Fatalf("failed to update issuer (%v): %v / body: %v", c.Name, err, data)
+	}
+}
+
 type CBTestStep interface {
 	Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string)
 }
@@ -510,6 +528,74 @@ func Test_CAChainBuilding(t *testing.T) {
 					// Which new issuer is used here doesn't matter as they have
 					// the same CN and key.
 					Parent: "root-new-a",
+				},
+				CBValidateChain{
+					Chains: map[string][]string{
+						"root-old-a":       {"self", "root-old-bc", "root-old-bc", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+						"root-old-b":       {"self", "root-old-ac", "root-old-ac", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+						"root-old-c":       {"self", "root-old-ab", "root-old-ab", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+						"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+						"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+						"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+						"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+						"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
+					},
+					Aliases: map[string]string{
+						"root-old-ac":        "root-old-a,root-old-c",
+						"root-old-ab":        "root-old-a,root-old-b",
+						"root-old-bc":        "root-old-b,root-old-c",
+						"root-old-abc":       "root-old-a,root-old-b,root-old-c",
+						"root-new-ab":        "root-new-a,root-new-b",
+						"both-cross-old-new": "cross-old-new,cross-new-old",
+						"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
+						"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
+					},
+				},
+				// Update each old root to only include itself.
+				CBUpdateIssuer{
+					Name:    "root-old-a",
+					CAChain: []string{"root-old-a"},
+				},
+				CBUpdateIssuer{
+					Name:    "root-old-b",
+					CAChain: []string{"root-old-b"},
+				},
+				CBUpdateIssuer{
+					Name:    "root-old-c",
+					CAChain: []string{"root-old-c"},
+				},
+				// Step 19
+				CBValidateChain{
+					Chains: map[string][]string{
+						"root-old-a":       {"self"},
+						"root-old-b":       {"self"},
+						"root-old-c":       {"self"},
+						"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+						"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+						"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+						"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+						"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
+					},
+					Aliases: map[string]string{
+						"root-old-ac":        "root-old-a,root-old-c",
+						"root-old-ab":        "root-old-a,root-old-b",
+						"root-old-bc":        "root-old-b,root-old-c",
+						"root-old-abc":       "root-old-a,root-old-b,root-old-c",
+						"root-new-ab":        "root-new-a,root-new-b",
+						"both-cross-old-new": "cross-old-new,cross-new-old",
+						"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
+						"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
+					},
+				},
+				// Reset the old roots; should get the original chains back.
+				CBUpdateIssuer{
+					Name: "root-old-a",
+				},
+				CBUpdateIssuer{
+					Name: "root-old-b",
+				},
+				CBUpdateIssuer{
+					Name: "root-old-c",
 				},
 				CBValidateChain{
 					Chains: map[string][]string{
