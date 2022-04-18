@@ -1,0 +1,5 @@
+
+   
+```release-note:feature
+storage/dynamodb: Added `AWS_DYNAMODB_REGION` environment variable.
+```
