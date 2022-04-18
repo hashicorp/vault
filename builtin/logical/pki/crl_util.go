@@ -33,12 +33,15 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	signingBundle, caErr := fetchCAInfo(ctx, b, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return logical.ErrorResponse(fmt.Sprintf("could not fetch the CA certificate: %s", caErr)), nil
-	case errutil.InternalError:
-		return nil, fmt.Errorf("error fetching CA certificate: %s", caErr)
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(fmt.Sprintf("could not fetch the CA certificate: %s", caErr)), nil
+		default:
+			return nil, fmt.Errorf("error fetching CA certificate: %s", caErr)
+		}
 	}
+
 	if signingBundle == nil {
 		return nil, errors.New("CA info not found")
 	}
@@ -55,7 +58,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
+		default:
 			return nil, err
 		}
 	}
@@ -74,7 +77,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			switch err.(type) {
 			case errutil.UserError:
 				return logical.ErrorResponse(err.Error()), nil
-			case errutil.InternalError:
+			default:
 				return nil, err
 			}
 		}
@@ -123,15 +126,16 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		if err != nil {
 			return nil, fmt.Errorf("error saving revoked certificate to new location")
 		}
-
 	}
 
 	crlErr := buildCRL(ctx, b, req, false)
-	switch crlErr.(type) {
-	case errutil.UserError:
-		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
-	case errutil.InternalError:
-		return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
+	if crlErr != nil {
+		switch crlErr.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+		default:
+			return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
+		}
 	}
 
 	resp := &logical.Response{
@@ -220,11 +224,13 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 
 WRITE:
 	signingBundle, caErr := fetchCAInfo(ctx, b, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
-	case errutil.InternalError:
-		return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
+		default:
+			return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	crlBytes, err := signingBundle.Certificate.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))

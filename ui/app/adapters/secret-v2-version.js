@@ -149,6 +149,7 @@ export default ApplicationAdapter.extend({
     } else if (deleteType === 'soft-delete') {
       return this.softDelete(backend, path, version);
     } else {
+      version = version || currentVersionForNoReadMetadata;
       return this.deleteByDeleteType(backend, path, deleteType, version);
     }
   },

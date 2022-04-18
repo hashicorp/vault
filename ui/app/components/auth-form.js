@@ -49,6 +49,7 @@ export default Component.extend(DEFAULTS, {
   wrappedToken: null,
   // internal
   oldNamespace: null,
+  authMethods: BACKENDS,
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -110,6 +111,19 @@ export default Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
+  getAuthBackend(type) {
+    const { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
+    const selected = type || selectedAuth;
+    if (!methods && !wrappedToken) {
+      return {};
+    }
+    // if type is provided we can ignore path since we are attempting to lookup a specific backend by type
+    if (keyIsPath && !type) {
+      return methods.findBy('path', selected);
+    }
+    return BACKENDS.findBy('type', selected);
+  },
+
   selectedAuthIsPath: match('selectedAuth', /\/$/),
   selectedAuthBackend: computed(
     'wrappedToken',
@@ -118,14 +132,7 @@ export default Component.extend(DEFAULTS, {
     'selectedAuth',
     'selectedAuthIsPath',
     function () {
-      let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
-      if (!methods && !wrappedToken) {
-        return {};
-      }
-      if (keyIsPath) {
-        return methods.findBy('path', selectedAuth);
-      }
-      return BACKENDS.findBy('type', selectedAuth);
+      return this.getAuthBackend();
     }
   ),
 
@@ -207,13 +214,21 @@ export default Component.extend(DEFAULTS, {
 
   authenticate: task(
     waitFor(function* (backendType, data) {
-      let clusterId = this.cluster.id;
+      const {
+        selectedAuth,
+        cluster: { id: clusterId },
+      } = this;
       try {
         this.delayAuthMessageReminder.perform();
-        const authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
+        const authResponse = yield this.auth.authenticate({
+          clusterId,
+          backend: backendType,
+          data,
+          selectedAuth,
+        });
         this.onSuccess(authResponse, backendType, data);
       } catch (e) {
-        this.set('loading', false);
+        this.set('isLoading', false);
         if (!this.auth.mfaError) {
           this.set('error', `Authentication failed: ${this.auth.handleError(e)}`);
         }
@@ -245,7 +260,10 @@ export default Component.extend(DEFAULTS, {
       this.setProperties({
         error: null,
       });
-      let backend = this.selectedAuthBackend || {};
+      // if callback from oidc or jwt we have a token at this point
+      let backend = ['oidc', 'jwt'].includes(this.providerName)
+        ? this.getAuthBackend('token')
+        : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
@@ -262,7 +280,7 @@ export default Component.extend(DEFAULTS, {
     },
     handleError(e) {
       this.setProperties({
-        loading: false,
+        isLoading: false,
         error: e ? this.auth.handleError(e) : null,
       });
     },

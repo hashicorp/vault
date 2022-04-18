@@ -168,6 +168,14 @@ export default class History extends Component {
     return this.getActivityResponse.responseTimestamp;
   }
 
+  get byMonthTotalClients() {
+    return this.getActivityResponse?.byMonthTotalClients;
+  }
+
+  get byMonthNewClients() {
+    return this.getActivityResponse?.byMonthNewClients;
+  }
+
   get countsIncludeOlderData() {
     let firstUpgrade = this.args.model.versionHistory[0];
     if (!firstUpgrade) {

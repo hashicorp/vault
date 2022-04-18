@@ -6,6 +6,7 @@ import (
 	"net/textproto"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -63,7 +64,7 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp string) ([]string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp, preferredProvider string) ([]string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, nil, err
@@ -179,7 +180,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		for _, v := range result.Embedded.Factors {
 			v := v // create a new copy since we'll be taking the address later
 
-			if v.Provider != "OKTA" {
+			if preferredProvider != "" && preferredProvider != v.Provider {
+				continue
+			}
+
+			if !strutil.StrListContains(b.getSupportedProviders(), v.Provider) {
 				continue
 			}
 
@@ -191,17 +196,18 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 			}
 		}
 
-		// Okta push and totp are currently supported. If a totp passcode is provided during
-		// login and is supported, that will be the preferred method.
+		// Okta push and totp, and Google totp are currently supported.
+		// If a totp passcode is provided during login and is supported,
+		// that will be the preferred method.
 		switch {
 		case totpFactor != nil && totp != "":
 			selectedFactor = totpFactor
-		case pushFactor != nil:
+		case pushFactor != nil && pushFactor.Provider == oktaProvider:
 			selectedFactor = pushFactor
 		case totpFactor != nil && totp == "":
 			return nil, logical.ErrorResponse("'totp' passcode parameter is required to perform MFA"), nil, nil
 		default:
-			return nil, logical.ErrorResponse("Okta Verify Push or TOTP factor is required in order to perform MFA"), nil, nil
+			return nil, logical.ErrorResponse("Okta Verify Push or TOTP or Google TOTP factor is required in order to perform MFA"), nil, nil
 		}
 
 		requestPath := fmt.Sprintf("authn/factors/%s/verify", selectedFactor.Id)

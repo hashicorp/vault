@@ -26,6 +26,15 @@
 
 This README outlines the details of collaborating on this Ember application.
 
+## Ember CLI Version Matrix
+
+| Vault Version | Ember Version |
+| ------------- | ------------- |
+| 1.10.x        | 3.28.5        |
+| 1.9.x         | 3.22.0        |
+| 1.8.x         | 3.22.0        |
+| 1.7.x         | 3.11          |
+
 ## Prerequisites
 
 You will need the following things properly installed on your computer.
@@ -46,8 +55,8 @@ in the `.yarn/releases` folder. To update to a different version of `yarn`, use 
 
 ## Running a Vault Server
 
-Before running Vault UI locally, a Vault server must be running.  First, ensure
-Vault dev is built according the the instructions in `../README.md`.  To start a
+Before running Vault UI locally, a Vault server must be running. First, ensure
+Vault dev is built according the the instructions in `../README.md`. To start a
 single local Vault server:
 
 - `yarn vault`
@@ -117,8 +126,8 @@ To run the tests locally in a browser other than IE11, swap out `launch_in_ci: [
 
 ### Linting
 
-* `yarn lint`
-* `yarn lint:fix`
+- `yarn lint`
+- `yarn lint:fix`
 
 ### Building Vault UI into a Vault Binary
 
@@ -185,7 +194,8 @@ Note that placing a param inside brackets (e.g. `[closedLabel=More options]` ind
 3. Inside the newly generated `stories` file, add at least one example of the component. If the component should be interactive, enable the [Storybook Knobs addon](https://github.com/storybooks/storybook/tree/master/addons/knobs).
 4. Generate the `notes` file for the component with `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]` (e.g. `yarn gen-md alert-banner core`). This will generate markdown documentation of the component and place it at `vault/ui/stories/[name-of-component].md`. If your component is a template-only component, you will need to manually create the markdown file. The markdown file will need to be imported in your `[component-name].stories.js` file (e.g. `import notes from './[name-of-component].md'`).
 5. The completed `[component-name].stories.js` file should look something like this (with knobs):
-````js
+
+```js
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { text, withKnobs } from '@storybook/addon-knobs';
@@ -203,12 +213,12 @@ storiesOf('MyComponent', module)
     `,
       context: {
         param: text('param', 'My parameter'),
-        anotherParam: boolean('anotherParam', true)
+        anotherParam: boolean('anotherParam', true),
       },
     }),
     { notes }
   );
-````
+```
 
 See the [Storybook Docs](https://storybook.js.org/docs/basics/introduction/) for more information on writing stories.
 

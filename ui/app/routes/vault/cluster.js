@@ -10,6 +10,16 @@ import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
 const POLL_INTERVAL_MS = 10000;
 
+export const getManagedNamespace = (nsParam, root) => {
+  if (!nsParam || nsParam.replaceAll('/', '') === root) return root;
+  // Check if param starts with root and /
+  if (nsParam.startsWith(`${root}/`)) {
+    return nsParam;
+  }
+  // Otherwise prepend the given param with the root
+  return `${root}/${nsParam}`;
+};
+
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   namespaceService: service('namespace'),
   version: service(),
@@ -38,20 +48,25 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.get('currentTokenName');
-    // if no namespace queryParam and user authenticated,
-    // use user's root namespace to redirect to properly param'd url
-    if (this.featureFlagService.managedNamespaceRoot && this.version.isOSS) {
+    const managedRoot = this.featureFlagService.managedNamespaceRoot;
+    if (managedRoot && this.version.isOSS) {
+      // eslint-disable-next-line no-console
       console.error('Cannot use Cloud Admin Namespace flag with OSS Vault');
     }
     if (!namespace && currentTokenName && !Ember.testing) {
+      // if no namespace queryParam and user authenticated,
+      // use user's root namespace to redirect to properly param'd url
       const storage = getStorage().getItem(currentTokenName);
       namespace = storage?.userRootNamespace;
       // only redirect if something other than nothing
       if (namespace) {
         this.transitionTo({ queryParams: { namespace } });
       }
-    } else if (!namespace && !!this.featureFlagService.managedNamespaceRoot) {
-      this.transitionTo({ queryParams: { namespace: this.featureFlagService.managedNamespaceRoot } });
+    } else if (managedRoot !== null) {
+      let managed = getManagedNamespace(namespace, managedRoot);
+      if (managed !== namespace) {
+        this.transitionTo({ queryParams: { namespace: managed } });
+      }
     }
     this.namespaceService.setNamespace(namespace);
     const id = this.getClusterId(params);

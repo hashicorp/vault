@@ -33,7 +33,7 @@
           id="time-{{this.elementId}}"
           type="text"
           name="time"
-          class="input{{if this.errorMessage " has-error"}}"
+          class="input{{if this.errorMessage ' has-error'}}"
           oninput={{perform this.updateTime value="target.value"}}
           pattern="[0-9]*"
         />

@@ -1407,6 +1407,11 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			Name: identityAlias,
 		},
 	}
+
+	if entity.Type == "assumed-role" {
+		auth.DisplayName = strings.Join([]string{entity.FriendlyName, entity.SessionInfo}, "/")
+	}
+
 	roleEntry.PopulateTokenAuth(auth)
 	if err := identityConfigEntry.IAMAuthMetadataHandler.PopulateDesiredMetadata(auth, map[string]string{
 		"client_arn":           callerID.Arn,

@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
@@ -45,7 +46,7 @@ func (d *OutputStringError) parseRequest() {
 	if d.TLSSkipVerify {
 		d.parsedCurlString += "--insecure "
 	}
-	if d.Request.Method != "GET" {
+	if d.Request.Method != http.MethodGet {
 		d.parsedCurlString = fmt.Sprintf("%s-X %s ", d.parsedCurlString, d.Request.Method)
 	}
 	if d.ClientCACert != "" {

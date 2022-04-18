@@ -1,0 +1,14 @@
+rules:
+  - id: bad-multierror-append
+    patterns:
+      - pattern-either:
+          - pattern: $ERR = multierror.Append($ERRORS, $ERR) 
+          - pattern: $ERR = multierror.Append($ERR, $ERR) 
+          - pattern: $ERRORS = multierror.Append($ERR, $ERR) 
+          - pattern: $ERRORS = multierror.Append($ERR, $ERRORS) 
+    message: Bad Multierror Append
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      license: MIT

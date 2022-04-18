@@ -42,13 +42,13 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 	switch config.Behavior {
 	case "use_always":
 		newLn = &proxyproto.Listener{
-			Listener:           listener,
+			Listener:          listener,
 			ReadHeaderTimeout: 10 * time.Second,
 		}
 
 	case "allow_authorized", "deny_unauthorized":
 		newLn = &proxyproto.Listener{
-			Listener:           listener,
+			Listener:          listener,
 			ReadHeaderTimeout: 10 * time.Second,
 			Policy: func(addr net.Addr) (proxyproto.Policy, error) {
 				config.RLock()

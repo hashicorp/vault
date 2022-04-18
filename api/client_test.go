@@ -125,7 +125,7 @@ func TestClientHostHeader(t *testing.T) {
 	// Set the token manually
 	client.SetToken("foo")
 
-	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,13 +152,13 @@ func TestClientBadToken(t *testing.T) {
 	}
 
 	client.SetToken("foo")
-	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	client.SetToken("foo\u007f")
-	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err == nil || !strings.Contains(err.Error(), "printable") {
 		t.Fatalf("expected error due to bad token")
 	}
@@ -187,7 +187,7 @@ func TestClientRedirect(t *testing.T) {
 	client.SetToken("foo")
 
 	// Do a raw "/" request
-	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -262,24 +262,37 @@ func TestDefaulRetryPolicy(t *testing.T) {
 
 func TestClientEnvSettings(t *testing.T) {
 	cwd, _ := os.Getwd()
+
+	caCertBytes, err := os.ReadFile(cwd + "/test-fixtures/keys/cert.pem")
+	if err != nil {
+		t.Fatalf("error reading %q cert file: %v", cwd+"/test-fixtures/keys/cert.pem", err)
+	}
+
 	oldCACert := os.Getenv(EnvVaultCACert)
+	oldCACertBytes := os.Getenv(EnvVaultCACertBytes)
 	oldCAPath := os.Getenv(EnvVaultCAPath)
 	oldClientCert := os.Getenv(EnvVaultClientCert)
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
+
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
+	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
 	os.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
 	os.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
-	defer os.Setenv(EnvVaultCACert, oldCACert)
-	defer os.Setenv(EnvVaultCAPath, oldCAPath)
-	defer os.Setenv(EnvVaultClientCert, oldClientCert)
-	defer os.Setenv(EnvVaultClientKey, oldClientKey)
-	defer os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
-	defer os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+
+	defer func() {
+		os.Setenv(EnvVaultCACert, oldCACert)
+		os.Setenv(EnvVaultCACertBytes, oldCACertBytes)
+		os.Setenv(EnvVaultCAPath, oldCAPath)
+		os.Setenv(EnvVaultClientCert, oldClientCert)
+		os.Setenv(EnvVaultClientKey, oldClientKey)
+		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
+		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+	}()
 
 	config := DefaultConfig()
 	if err := config.ReadEnvironment(); err != nil {
@@ -331,7 +344,7 @@ func TestClientEnvNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	_, err = client.RawRequest(client.NewRequest("GET", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodGet, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -513,8 +526,8 @@ func TestClone(t *testing.T) {
 			if parent.MaxRetries() != clone.MaxRetries() {
 				t.Fatalf("maxRetries don't match: %v vs %v", parent.MaxRetries(), clone.MaxRetries())
 			}
-			if parent.OutputCurlString() != clone.OutputCurlString() {
-				t.Fatalf("outputCurlString doesn't match: %v vs %v", parent.OutputCurlString(), clone.OutputCurlString())
+			if parent.OutputCurlString() == clone.OutputCurlString() {
+				t.Fatalf("outputCurlString was copied over when it shouldn't have been: %v and %v", parent.OutputCurlString(), clone.OutputCurlString())
 			}
 			if parent.SRVLookup() != clone.SRVLookup() {
 				t.Fatalf("SRVLookup doesn't match: %v vs %v", parent.SRVLookup(), clone.SRVLookup())
@@ -962,7 +975,7 @@ func TestClient_ReadYourWrites(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testRequest := func(client *Client, val string) {
-				req := client.NewRequest("GET", "/"+val)
+				req := client.NewRequest(http.MethodGet, "/"+val)
 				req.Headers.Set(HeaderIndex, val)
 				resp, err := client.RawRequestWithContext(context.Background(), req)
 				if err != nil {
@@ -1121,5 +1134,69 @@ func TestClient_SetCloneToken(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestClientWithNamespace(t *testing.T) {
+	var ns string
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		ns = req.Header.Get(consts.NamespaceHeaderName)
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	// set up a client with a namespace
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	ogNS := "test"
+	client.SetNamespace(ogNS)
+	_, err = client.rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != ogNS {
+		t.Fatalf("Expected namespace: \"%s\", got \"%s\"", ogNS, ns)
+	}
+
+	// make a call with a temporary namespace
+	newNS := "new-namespace"
+	_, err = client.WithNamespace(newNS).rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != newNS {
+		t.Fatalf("Expected new namespace: \"%s\", got \"%s\"", newNS, ns)
+	}
+	// ensure client has not been modified
+	_, err = client.rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != ogNS {
+		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
+	}
+
+	// make call with empty ns
+	_, err = client.WithNamespace("").rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != "" {
+		t.Fatalf("Expected no namespace, got \"%s\"", ns)
+	}
+
+	// ensure client has not been modified
+	if client.Namespace() != ogNS {
+		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, client.Namespace())
 	}
 }

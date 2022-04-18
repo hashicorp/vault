@@ -165,7 +165,6 @@ export default Component.extend({
       return this.handleOIDCError(e);
     }
     let token = resp.auth.client_token;
-    this.onSelectedAuth('token');
     this.onToken(token);
     yield this.onSubmit();
   }),
@@ -179,8 +178,14 @@ export default Component.extend({
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
         return;
       }
-
-      await this.fetchRole.perform(this.roleName, { debounce: false });
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
+      }
       let win = this.getWindow();
 
       const POPUP_WIDTH = 500;

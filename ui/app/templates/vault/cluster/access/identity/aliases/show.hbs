@@ -32,7 +32,7 @@
   <ToolbarActions>
     <ToolbarLink
       @params={{array "vault.cluster.access.identity.aliases.edit" this.model.id}}
-      @data-test-alias-edit-link={{true}}
+      data-test-alias-edit-link={{true}}
     >
       Edit
       {{lowercase (humanize this.model.identityType)}}

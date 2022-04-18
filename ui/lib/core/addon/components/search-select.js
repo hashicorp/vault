@@ -39,6 +39,7 @@ import layout from '../templates/components/search-select';
 export default Component.extend({
   layout,
   'data-test-component': 'search-select',
+  attributeBindings: ['data-test-component'],
   classNameBindings: ['displayInherit:display-inherit'],
   classNames: ['field', 'search-select'],
   store: service(),
@@ -86,6 +87,7 @@ export default Component.extend({
         searchText: matchingOption ? matchingOption.searchText : option,
       };
     });
+
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
       options = this.options.concat(options).uniq();
@@ -112,7 +114,13 @@ export default Component.extend({
         this.formatOptions(options);
       } catch (err) {
         if (err.httpStatus === 404) {
-          //leave options alone, it's okay
+          if (!this.options) {
+            // If the call failed but the resource has items
+            // from a different namespace, this allows the
+            // selected items to display
+            this.set('options', []);
+          }
+
           return;
         }
         if (err.httpStatus === 403) {

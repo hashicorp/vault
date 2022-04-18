@@ -222,6 +222,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
+	default:
+		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
 	if data.Get("private_key_format").(string) == "pkcs8" {
@@ -399,6 +401,8 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		if caChain != nil && len(caChain) > 0 {
 			resp.Data["ca_chain"] = cb.CAChain
 		}
+	default:
+		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
 	err = req.Storage.Put(ctx, &logical.StorageEntry{

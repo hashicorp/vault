@@ -65,7 +65,7 @@ set, defaults to the system maximum lease TTL.`,
 			"allow_localhost": {
 				Type:    framework.TypeBool,
 				Default: true,
-				Description: `Whether to allow "localhost" and "localdoamin"
+				Description: `Whether to allow "localhost" and "localdomain"
 as a valid common name in a request, independent of allowed_domains value.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: true,

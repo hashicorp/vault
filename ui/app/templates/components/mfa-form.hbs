@@ -22,24 +22,32 @@
               @onChange={{fn this.onSelect constraint}}
               data-test-mfa-select={{index}}
             />
-          {{/if}}
-          {{#if constraint.selectedMethod.uses_passcode}}
-            <label for="passcode" class="is-label" data-test-mfa-passcode-label>
+          {{else}}
+            <label for="passcode" class="is-label" data-test-mfa-label>
               {{constraint.selectedMethod.label}}
             </label>
+          {{/if}}
+          {{#if constraint.selectedMethod.uses_passcode}}
             <div class="control">
+              {{! template-lint-disable no-autofocus-attribute}}
               <Input
                 id="passcode"
                 name="passcode"
                 class="input"
                 autocomplete="off"
+                placeholder={{if (gt constraint.methods.length 1) "Enter passcode"}}
                 spellcheck="false"
                 autofocus="true"
                 disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
                 @value={{constraint.passcode}}
                 data-test-mfa-passcode={{index}}
               />
+              {{! template-lint-enable no-autofocus-attribute}}
             </div>
+          {{else if (eq constraint.methods.length 1)}}
+            <p class="has-text-grey-400">
+              Check device for push notification
+            </p>
           {{/if}}
         {{/each}}
       </div>
@@ -56,7 +64,7 @@
         id="validate"
         type="submit"
         disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
-        class="button is-primary {{if this.validate.isRunning "is-loading"}}"
+        class="button is-primary {{if this.validate.isRunning 'is-loading'}}"
         data-test-mfa-validate
       >
         Verify
