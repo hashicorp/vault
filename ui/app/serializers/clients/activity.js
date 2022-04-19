@@ -16,7 +16,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       let flattenedNs = this.flattenDataset(ns);
       // if no mounts, mounts will be an empty array
       flattenedNs.mounts = [];
-      if (ns.mounts.length > 0) {
+      if (ns?.mounts && ns.mounts.length > 0) {
         flattenedNs.mounts = ns.mounts.map((mount) => {
           return {
             label: mount['mount_path'],

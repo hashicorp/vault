@@ -49,10 +49,13 @@ export default class LineChart extends Component {
   @action
   renderChart(element, args) {
     const dataset = args[0];
-    const upgradeMonth = parseAPITimestamp(args[1].timestampInstalled, 'M/yy');
-    const currentVersion = args[1].id;
-    const { previousVersion } = args[1];
-    const filteredData = dataset.filter((e) => Object.keys(e).includes('clients')); // months with data will contain a 'clients' key (otherwise only a timestamp)
+    let upgradeMonth, currentVersion, previousVersion;
+    if (args[1]) {
+      upgradeMonth = parseAPITimestamp(args[1].timestampInstalled, 'M/yy');
+      currentVersion = args[1].id;
+      previousVersion = args[1].previousVersion;
+    }
+    const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
@@ -96,7 +99,7 @@ export default class LineChart extends Component {
       .append('circle')
       .attr('class', 'upgrade-circle')
       .attr('fill', UPGRADE_WARNING)
-      .style('opacity', (d) => (d.month === upgradeMonth ? '1' : '0'))
+      .style('opacity', (d) => (d[this.xKey] === upgradeMonth ? '1' : '0'))
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
       .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 10);
@@ -152,7 +155,7 @@ export default class LineChart extends Component {
       this.tooltipTotal = data[this.yKey] + ' total clients';
       this.tooltipNew = data?.new_clients[this.yKey] + ' new clients';
       this.tooltipUpgradeText =
-        data.month === upgradeMonth
+        data[this.xKey] === upgradeMonth
           ? `Vault was upgraded ${previousVersion ? 'from ' + previousVersion : ''} to ${currentVersion}`
           : '';
       let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
