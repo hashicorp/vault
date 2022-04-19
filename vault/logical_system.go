@@ -4159,6 +4159,7 @@ type SealStatusResponse struct {
 	Progress     int    `json:"progress"`
 	Nonce        string `json:"nonce"`
 	Version      string `json:"version"`
+	BuildDate    string `json:"build_date"`
 	Migration    bool   `json:"migration"`
 	ClusterName  string `json:"cluster_name,omitempty"`
 	ClusterID    string `json:"cluster_id,omitempty"`
@@ -4192,6 +4193,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
+			BuildDate:    version.BuildDate,
 		}, nil
 	}
 
@@ -4220,6 +4222,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		Progress:     progress,
 		Nonce:        nonce,
 		Version:      version.GetVersion().VersionNumber(),
+		BuildDate:    version.BuildDate,
 		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
@@ -4401,11 +4404,8 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	versions := make([]VaultVersion, 0)
 	respKeys := make([]string, 0)
 
-	for versionString, ts := range b.Core.versionTimestamps {
-		versions = append(versions, VaultVersion{
-			Version:            versionString,
-			TimestampInstalled: ts,
-		})
+	for _, versionEntry := range b.Core.versionHistory {
+		versions = append(versions, versionEntry)
 	}
 
 	sort.Slice(versions, func(i, j int) bool {
@@ -4419,6 +4419,7 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 
 		entry := map[string]interface{}{
 			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"build_date":          v.BuildDate,
 			"previous_version":    nil,
 		}
 

@@ -13,6 +13,7 @@ md bin 2>nul
 :: Get the git commit
 set _GIT_COMMIT_FILE=%TEMP%\vault-git_commit.txt
 set _GIT_DIRTY_FILE=%TEMP%\vault-git_dirty.txt
+set _GIT_COMMIT_DATE_FILE=%TEMP%\vault-git_commit_date.txt
 
 set _NUL_CMP_FILE=%TEMP%\vault-nul_cmp.txt
 type nul >%_NUL_CMP_FILE%
@@ -20,6 +21,10 @@ type nul >%_NUL_CMP_FILE%
 git rev-parse HEAD >"%_GIT_COMMIT_FILE%"
 set /p _GIT_COMMIT=<"%_GIT_COMMIT_FILE%"
 del /f "%_GIT_COMMIT_FILE%" 2>nul
+
+git show -s --format=%cd --date=format:"%Y-%m-%dT%H:%M:%SZ" HEAD >"%_GIT_COMMIT__DATE_FILE%"
+set /p _BUILD_DATE=<"%_GIT_COMMIT_DATE_FILE%"
+del /f "%_GIT_COMMIT_DATE_FILE%" 2>nul
 
 set _GIT_DIRTY=
 git status --porcelain >"%_GIT_DIRTY_FILE%"
@@ -60,7 +65,7 @@ echo ==^> Building...
 gox^
  -os="%_XC_OS%"^
  -arch="%_XC_ARCH%"^
- -ldflags "-X github.com/hashicorp/vault/sdk/version.GitCommit=%_GIT_COMMIT%%_GIT_DIRTY%"^
+ -ldflags "-X github.com/hashicorp/vault/sdk/version.GitCommit=%_GIT_COMMIT%%_GIT_DIRTY% -X github.com/hashicorp/vault/sdk/version.BuildDate=%_BUILD_DATE%"^
  -output "pkg/{{.OS}}_{{.Arch}}/vault"^
  .
 
