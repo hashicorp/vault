@@ -2,8 +2,9 @@ package pki
 
 import (
 	"context"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -43,8 +44,10 @@ func pathGenerateKey(b *backend) *framework.Path {
 	}
 }
 
-const pathGenerateKeyHelpSyn = ``
-const pathGenerateKeyHelpDesc = ``
+const (
+	pathGenerateKeyHelpSyn  = ``
+	pathGenerateKeyHelpDesc = ``
+)
 
 func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	keyName := data.Get("name").(string)
@@ -100,8 +103,10 @@ func pathImportKey(b *backend) *framework.Path {
 	}
 }
 
-const pathImportKeyHelpSyn = ``
-const pathImportKeyHelpDesc = ``
+const (
+	pathImportKeyHelpSyn  = ``
+	pathImportKeyHelpDesc = ``
+)
 
 func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	keyValueInterface, isOk := data.GetOk("pem_bundle")
@@ -130,5 +135,4 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	}
 
 	return &resp, nil
-
 }
