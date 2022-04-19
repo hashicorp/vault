@@ -129,8 +129,6 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		conf.ClientKey = clientKey.(string)
 	}
 
-	fmt.Printf("[WARN] Token is %v", conf.Token)
-
 	if conf.Token == "" {
 		client, err := clientFromConfig(conf)
 		if err != nil {
