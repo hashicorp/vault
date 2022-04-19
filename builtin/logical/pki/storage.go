@@ -191,7 +191,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	keyPublic := keySigner.Public()
 	result.PrivateKeyType = certutil.GetPrivateKeyTypeFromSigner(keySigner)
 
-	// Finally we can write the key to storage.
+	// Finally, we can write the key to storage.
 	if err := writeKey(ctx, s, result); err != nil {
 		return nil, false, err
 	}

@@ -1214,3 +1214,17 @@ func GetPublicKeySize(key crypto.PublicKey) int {
 
 	return -1
 }
+
+func GetKeyBundleFromKeyGenerator(keyType string, keyBits int, keyGenerator KeyGenerator) (KeyBundle, error) {
+	result := KeyBundle{}
+
+	if keyGenerator == nil {
+		keyGenerator = generatePrivateKey
+	}
+
+	if err := keyGenerator(keyType, keyBits, &result, nil); err != nil {
+		return result, err
+	}
+
+	return result, nil
+}

@@ -138,6 +138,13 @@ type ParsedCSRBundle struct {
 	CSR             *x509.CertificateRequest
 }
 
+type KeyBundle struct {
+	PrivateKeyType   PrivateKeyType
+	PrivateKeyBytes  []byte
+	PrivateKeyString string
+	PrivateKey       crypto.Signer
+}
+
 func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
 	switch signer.(type) {
 	case *rsa.PrivateKey:
@@ -838,4 +845,11 @@ func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.ExtKeyUsage&MicrosoftKernelCodeSigningExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
 	}
+}
+
+// SetParsedPrivateKey sets the private key parameters on the bundle
+func (p *KeyBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateKeyType PrivateKeyType, privateKeyBytes []byte) {
+	p.PrivateKey = privateKey
+	p.PrivateKeyType = privateKeyType
+	p.PrivateKeyBytes = privateKeyBytes
 }
