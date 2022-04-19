@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/lib/pq"
@@ -724,6 +725,8 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
+	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
+	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
 	// To get the project ID, connect to cloud.mongodb.com, go to the vault-test project and
 	// look at Project Settings.
 	projID := os.Getenv("VAULT_MONGODBATLAS_PROJECT_ID")
@@ -751,7 +754,7 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 	uc := userCreator(func(t *testing.T, username, password string) {
 		// Delete the user in case it's still there from an earlier run, ignore
 		// errors in case it's not.
-		_, _ = api.DatabaseUsers.Delete(context.Background(), projID, "admin", username)
+		_, _ = api.DatabaseUsers.Delete(context.Background(), "admin", projID, username)
 
 		req := &mongodbatlasapi.DatabaseUser{
 			Username:     username,
