@@ -25,8 +25,10 @@ func pathListKeys(b *backend) *framework.Path {
 	}
 }
 
-const pathListKeysHelpSyn = ``
-const pathListKeysHelpDesc = ``
+const (
+	pathListKeysHelpSyn  = ``
+	pathListKeysHelpDesc = ``
+)
 
 func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var responseKeys []string
@@ -50,7 +52,6 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 
 	}
 	return logical.ListResponseWithInfo(responseKeys, responseInfo), nil
-
 }
 
 func pathKey(b *backend) *framework.Path {
@@ -97,8 +98,10 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 	}
 }
 
-const pathKeysHelpSyn = ``
-const pathKeysHelpDesc = ``
+const (
+	pathKeysHelpSyn  = ``
+	pathKeysHelpDesc = ``
+)
 
 func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	keyRef := data.Get("ref").(string)
@@ -127,7 +130,6 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 			"backing": "", // This would show up as "Managed" in "type"
 		},
 	}, nil
-
 }
 
 func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -158,7 +160,6 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		key.Name = newName
 
 		err := writeKey(ctx, req.Storage, *key)
-
 		if err != nil {
 			return nil, err
 		}
@@ -206,5 +207,4 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 	}
 
 	return response, nil
-
 }
