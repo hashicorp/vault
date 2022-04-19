@@ -2,7 +2,9 @@ package pki
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -30,6 +32,7 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 }
 
 func Test_migrateStorageSimpleBundle(t *testing.T) {
+	startTime := time.Now()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 
@@ -55,6 +58,11 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	logEntry, err := getLegacyBundleMigrationLog(ctx, s)
 	require.NoError(t, err)
 	require.NotNil(t, logEntry)
+	require.Equal(t, latestMigrationVersion, logEntry.MigrationVersion)
+	require.True(t, len(strings.TrimSpace(logEntry.Hash)) > 0,
+		"Hash value (%s) should not have been empty", logEntry.Hash)
+	require.True(t, startTime.Before(logEntry.Created),
+		"created log entry time (%v) was before our start time(%v)?", logEntry.Created, startTime)
 
 	issuerId := issuerIds[0]
 	keyId := keyIds[0]
@@ -89,4 +97,14 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	issuersConfig, err := getIssuersConfig(ctx, s)
 	require.NoError(t, err)
 	require.Equal(t, &issuerConfig{DefaultIssuerId: issuerId}, issuersConfig)
+
+	// Make sure if we attempt to re-run the migration nothing happens...
+	err = migrateStorage(ctx, request, b.Logger())
+	require.NoError(t, err)
+	logEntry2, err := getLegacyBundleMigrationLog(ctx, s)
+	require.NoError(t, err)
+	require.NotNil(t, logEntry2)
+
+	require.Equal(t, logEntry.Created, logEntry2.Created)
+	require.Equal(t, logEntry.Hash, logEntry2.Hash)
 }
