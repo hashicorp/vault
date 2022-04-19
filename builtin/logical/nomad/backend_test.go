@@ -34,7 +34,7 @@ func (c *Config) Client() (*nomadapi.Client, error) {
 	return nomadapi.NewClient(apiConfig)
 }
 
-func prepareTestContainer(t *testing.T, manuallyBootstrap bool) (func(), *Config) {
+func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
 	if retAddress := os.Getenv("NOMAD_ADDR"); retAddress != "" {
 		s, err := docker.NewServiceURLParse(retAddress)
 		if err != nil {
@@ -64,7 +64,8 @@ func prepareTestContainer(t *testing.T, manuallyBootstrap bool) (func(), *Config
 		if err != nil {
 			return nil, err
 		}
-		if manuallyBootstrap {
+
+		if bootstrap {
 			aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
 			if err != nil {
 				return nil, err
@@ -75,7 +76,8 @@ func prepareTestContainer(t *testing.T, manuallyBootstrap bool) (func(), *Config
 
 		nomadAuthConfig := nomadapi.DefaultConfig()
 		nomadAuthConfig.Address = nomad.Address()
-		if manuallyBootstrap {
+
+		if bootstrap {
 			nomadAuthConfig.SecretID = nomadToken
 
 			nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
