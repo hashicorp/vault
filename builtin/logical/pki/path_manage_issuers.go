@@ -130,6 +130,11 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	var issuers []string
 	var keys []string
 
+	// By decoding and re-encoding PEM blobs, we can pass strict PEM blobs
+	// to the import functionality (importKeys, importIssuers). This allows
+	// them to validate no duplicate issuers exist (and place greater
+	// restrictions during parsing) but allows this code to accept OpenSSL
+	// parsed chains (with full textual output between PEM entries).
 	for len(bytes.TrimSpace(pemBytes)) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {

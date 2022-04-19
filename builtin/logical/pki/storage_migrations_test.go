@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -68,7 +69,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 
 	require.Equal(t, issuerId, issuer.ID)
 	require.Equal(t, bundle.SerialNumber, issuer.SerialNumber)
-	require.Equal(t, bundle.Certificate, issuer.Certificate)
+	require.Equal(t, strings.TrimSpace(bundle.Certificate), strings.TrimSpace(issuer.Certificate))
 	require.Equal(t, keyId, issuer.KeyID)
 	// FIXME: Add tests for CAChain...
 
