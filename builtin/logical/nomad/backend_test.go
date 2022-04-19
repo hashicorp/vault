@@ -65,6 +65,12 @@ func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
 			return nil, err
 		}
 
+		_, err = nomad.Status().Leader()
+		if err != nil {
+			t.Logf("[DEBUG] Nomad is not ready yet: %s", err)
+			return nil, err
+		}
+
 		if bootstrap {
 			aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
 			if err != nil {
@@ -97,12 +103,10 @@ func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
 			Token:      nomadToken,
 		}, nil
 	})
+
 	if err != nil {
 		t.Fatalf("Could not start docker Nomad: %s", err)
 	}
-
-	// the container may not be ready yet ... wait a bit
-	time.Sleep(time.Second * 15)
 
 	return svc.Cleanup, svc.Config.(*Config)
 }
