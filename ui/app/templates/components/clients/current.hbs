@@ -54,6 +54,7 @@
         </ToolbarFilters>
       </Toolbar>
     </div>
+    {{! TODO CMB this warning should only show if an upgrade to 1.9 or 1.10 happened in current month }}
     {{#if this.countsIncludeOlderData}}
       <AlertBanner @type="warning" @title="Warning">
         {{concat

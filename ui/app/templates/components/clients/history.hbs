@@ -108,6 +108,7 @@
             {{#if this.responseRangeDiffMessage}}
               <li>{{this.responseRangeDiffMessage}}</li>
             {{/if}}
+            {{! TODO this warning should only show if data spans an upgrade to 1.9 or 1.10 }}
             {{#if this.countsIncludeOlderData}}
               <li>
                 {{concat
