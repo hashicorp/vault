@@ -725,8 +725,6 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
-	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
-	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
 	// To get the project ID, connect to cloud.mongodb.com, go to the vault-test project and
 	// look at Project Settings.
 	projID := os.Getenv("VAULT_MONGODBATLAS_PROJECT_ID")
@@ -776,6 +774,17 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 }
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
+	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
+	oldToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
+	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
+	defer func() {
+		if oldToken != "" {
+			os.Setenv(pluginutil.PluginUnwrapTokenEnv, oldToken)
+		} else {
+			os.Unsetenv(pluginutil.PluginUnwrapTokenEnv)
+		}
+	}()
+
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
