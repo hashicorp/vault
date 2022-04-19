@@ -87,7 +87,6 @@ func prepareTestContainer(t *testing.T, manuallyBootstrap bool) (func(), *Config
 			if err != nil {
 				return nil, err
 			}
-		} else {
 		}
 
 		u, _ := docker.NewServiceURLParse(nomadapiConfig.Address)
