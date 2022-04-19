@@ -16,7 +16,7 @@ export default class Current extends Component {
   @tracked authMethodOptions = [];
 
   get latestUpgradeData() {
-    // e.g. {id: '1.9.0', perviousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
+    // e.g. {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
     // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
     return this.args.model.versionHistory[0] || null;
   }
