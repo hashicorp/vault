@@ -140,6 +140,7 @@
               @lineChartData={{this.byMonthTotalClients}}
               @barChartData={{this.byMonthNewClients}}
               @runningTotals={{this.totalUsageCounts}}
+              @upgradeData={{if this.countsIncludeOlderData this.latestUpgradeData}}
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
