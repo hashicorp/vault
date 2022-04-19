@@ -250,9 +250,12 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 }
 
 func (i issuer) GetCertificate() (*x509.Certificate, error) {
-	block, _ := pem.Decode([]byte(i.Certificate))
+	block, extra := pem.Decode([]byte(i.Certificate))
 	if block == nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: invalid PEM: %v", i.ID)}
+	}
+	if len(strings.TrimSpace(string(extra))) > 0 {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate for issuer (%v): trailing PEM data: %v", i.ID, string(extra))}
 	}
 
 	return x509.ParseCertificate(block.Bytes)
@@ -373,7 +376,21 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	// already existed during import (in which case, *issuer points to the
 	// existing issuer reference and identifier); the last return field is
 	// whether or not an error occurred.
+
+	// Before we begin, we need to ensure the PEM formatted certificate looks
+	// good. Restricting to "just" `CERTIFICATE` entries is a little
+	// restrictive, as it could be a `X509 CERTIFICATE` entry or a custom
+	// value wrapping an actual DER cert. So validating the contents of the
+	// PEM header is out of the question (and validating the contents of the
+	// PEM block is left to our GetCertificate call below).
 	//
+	// However, we should trim all leading and trailing spaces and add a
+	// single new line. This allows callers to blindly concatenate PEM
+	// blobs from the API and get roughly what they'd expect.
+	//
+	// Discussed further in #11960 and RFC 7468.
+	certValue = strings.TrimSpace(certValue) + "\n"
+
 	// Before we can import a known issuer, we first need to know if the issuer
 	// exists in storage already. This means iterating through all known
 	// issuers and comparing their private value against this value.
@@ -411,6 +428,12 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	result.ID = genIssuerId()
 	result.Name = issuerName
 	result.Certificate = certValue
+
+	// We shouldn't add CSRs or multiple certificates in this
+	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
+	if countCertificates != 1 {
+		return nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
+	}
 
 	// Extracting the certificate is necessary for two reasons: first, it lets
 	// us fetch the serial number; second, for the public key comparison with
