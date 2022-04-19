@@ -16,6 +16,12 @@ import (
 // and we need to perform it again...
 const latestMigrationVersion = 1
 
+type legacyBundleMigration struct {
+	Hash             string    `json:"hash" structs:"hash" mapstructure:"hash"`
+	Created          time.Time `json:"created" structs:"created" mapstructure:"created"`
+	MigrationVersion int       `json:"migrationVersion" structs:"migrationVersion" mapstructure:"migrationVersion"`
+}
+
 func migrateStorage(ctx context.Context, req *logical.InitializationRequest, logger log.Logger) error {
 	s := req.Storage
 	legacyBundle, err := getLegacyCertBundle(ctx, s)
@@ -40,27 +46,27 @@ func migrateStorage(ctx context.Context, req *logical.InitializationRequest, log
 
 	if migrationEntry != nil {
 		// At this point we have already migrated something previously.
-		if migrationEntry.hash == hash &&
-			migrationEntry.migrationVersion == latestMigrationVersion {
+		if migrationEntry.Hash == hash &&
+			migrationEntry.MigrationVersion == latestMigrationVersion {
 			// The hashes are the same, no need to try and re-import...
 			logger.Debug("existing migration hash found and matched legacy bundle, skipping migration.")
 			return nil
 		}
 	}
 
-	logger.Warn("performing PKI migration to new keys/issuers layout")
+	logger.Info("performing PKI migration to new keys/issuers layout")
 
 	anIssuer, aKey, err := writeCaBundle(ctx, s, legacyBundle, "current", "current")
 	if err != nil {
 		return err
 	}
-	logger.Info("Migration generated the following ids and set them as defaults",
+	logger.Debug("Migration generated the following ids and set them as defaults",
 		"issuer id", anIssuer.ID, "key id", aKey.ID)
 
 	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigration{
-		hash:             hash,
-		created:          time.Now(),
-		migrationVersion: latestMigrationVersion,
+		Hash:             hash,
+		Created:          time.Now(),
+		MigrationVersion: latestMigrationVersion,
 	})
 	if err != nil {
 		return err
@@ -82,12 +88,6 @@ func computeHashOfLegacyBundle(bundle *certutil.CertBundle) (string, error) {
 		}
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), nil
-}
-
-type legacyBundleMigration struct {
-	hash             string
-	created          time.Time
-	migrationVersion int
 }
 
 func getLegacyBundleMigrationLog(ctx context.Context, s logical.Storage) (*legacyBundleMigration, error) {
