@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/url"
@@ -46,6 +47,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 
+	os.Setenv(pluginutil.PluginUnwrapTokenEnv, base64.StdEncoding.EncodeToString(cluster.BarrierKeys[0]))
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
