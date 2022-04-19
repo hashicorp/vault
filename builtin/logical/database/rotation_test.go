@@ -22,8 +22,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/lib/pq"
-	mongodbatlasapi "github.com/mongodb/go-client-mongodb-atlas/mongodbatlas"
 	"github.com/stretchr/testify/mock"
+	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -31,8 +31,6 @@ import (
 const (
 	dbUser                = "vaultstatictest"
 	dbUserDefaultPassword = "password"
-
-	testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 )
 
 func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
@@ -753,7 +751,7 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 	uc := userCreator(func(t *testing.T, username, password string) {
 		// Delete the user in case it's still there from an earlier run, ignore
 		// errors in case it's not.
-		_, _ = api.DatabaseUsers.Delete(context.Background(), projID, username)
+		_, _ = api.DatabaseUsers.Delete(context.Background(), projID, "admin", username)
 
 		req := &mongodbatlasapi.DatabaseUser{
 			Username:     username,
