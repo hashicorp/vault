@@ -127,12 +127,6 @@ export default Component.extend({
           this.set('shouldUseFallback', true);
           return;
         }
-        //special case for storybook
-        if (this.staticOptions) {
-          let options = this.staticOptions;
-          this.formatOptions(options);
-          return;
-        }
         throw err;
       }
     }
