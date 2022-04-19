@@ -1,5 +1,20 @@
 import { format, parseISO } from 'date-fns';
 
+export const ARRAY_OF_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 // convert RFC3339 timestamp ( '2021-03-21T00:00:00Z' ) to date object, optionally format
 export const parseAPITimestamp = (timestamp, style) => {
   if (!timestamp) return;
@@ -18,3 +33,11 @@ export const parseRFC3339 = (timestamp) => {
   let date = parseAPITimestamp(timestamp);
   return date ? [`${date.getFullYear()}`, date.getMonth()] : null;
 };
+
+// convert MM/yy (format of dates in charts) to 'Month yyyy' (format in tooltip)
+export function formatChartDate(date) {
+  let array = date.split('/');
+  array.splice(1, 0, '01');
+  let dateString = array.join('/');
+  return format(new Date(dateString), 'MMMM yyyy');
+}

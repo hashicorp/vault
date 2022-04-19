@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
+import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
@@ -11,20 +12,7 @@ export default class History extends Component {
   @service store;
   @service version;
 
-  arrayOfMonths = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
+  arrayOfMonths = ARRAY_OF_MONTHS;
 
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
@@ -102,7 +90,7 @@ export default class History extends Component {
   }
 
   get latestUpgradeData() {
-    // {id: '1.9.0', perviousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
+    // {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
     // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
     return this.args.model.versionHistory[0] || null;
   }

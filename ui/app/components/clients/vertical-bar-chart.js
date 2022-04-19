@@ -13,7 +13,7 @@ import {
   SVG_DIMENSIONS,
   TRANSLATE,
   formatNumbers,
-} from '../../utils/chart-helpers';
+} from 'vault/utils/chart-helpers';
 
 /**
  * @module VerticalBarChart
