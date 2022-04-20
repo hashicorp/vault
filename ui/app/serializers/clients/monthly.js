@@ -2,30 +2,28 @@ import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 
 export default class MonthlySerializer extends ApplicationSerializer {
-  flattenDataset(namespaceArray) {
+  flattenDataset(object) {
+    let flattenedObject = {};
+    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
+    return this.homogenizeClientNaming(flattenedObject);
+  }
+
+  formatByNamespace(namespaceArray) {
     return namespaceArray?.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
       let label = ns['namespace_path'];
-      let flattenedNs = {};
-      // we don't want client counts nested within the 'counts' object for stacked charts
-      Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
-      flattenedNs = this.homogenizeClientNaming(flattenedNs);
-
+      let flattenedNs = this.flattenDataset(ns);
       // if no mounts, mounts will be an empty array
-      flattenedNs.mounts = ns.mounts
-        ? ns.mounts.map((mount) => {
-            let flattenedMount = {};
-            let label = mount['mount_path'];
-            Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
-            flattenedMount = this.homogenizeClientNaming(flattenedMount);
-            return {
-              label,
-              ...flattenedMount,
-            };
-          })
-        : [];
-
+      flattenedNs.mounts = [];
+      if (ns?.mounts && ns.mounts.length > 0) {
+        flattenedNs.mounts = ns.mounts.map((mount) => {
+          return {
+            label: mount['mount_path'],
+            ...this.flattenDataset(mount),
+          };
+        });
+      }
       return {
         label,
         ...flattenedNs,
@@ -67,7 +65,7 @@ export default class MonthlySerializer extends ApplicationSerializer {
     let newClientsData = payload.data.months[0]?.new_clients || null;
     let by_namespace_new_clients, new_clients;
     if (newClientsData) {
-      by_namespace_new_clients = this.flattenDataset(newClientsData.namespaces);
+      by_namespace_new_clients = this.formatByNamespace(newClientsData.namespaces);
       new_clients = this.homogenizeClientNaming(newClientsData.counts);
     } else {
       by_namespace_new_clients = [];
@@ -76,7 +74,7 @@ export default class MonthlySerializer extends ApplicationSerializer {
     let transformedPayload = {
       ...payload,
       response_timestamp,
-      by_namespace_total_clients: this.flattenDataset(payload.data.by_namespace),
+      by_namespace_total_clients: this.formatByNamespace(payload.data.by_namespace),
       by_namespace_new_clients,
       // nest within 'total' object to mimic /activity response shape
       total: this.homogenizeClientNaming(payload.data),

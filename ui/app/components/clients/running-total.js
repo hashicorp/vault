@@ -14,6 +14,7 @@ import { mean } from 'd3-array';
         @barChartData={{this.byMonthNewClients}}
         @lineChartData={{this.byMonth}}
         @runningTotals={{this.runningTotals}}
+        @upgradeData={{if this.countsIncludeOlderData this.latestUpgradeData}}
       />
  * ```
 
@@ -35,6 +36,7 @@ import { mean } from 'd3-array';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {object} runningTotals - top level totals from /activity response { clients: 3517, entity_clients: 1593, non_entity_clients: 1924 }
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
+ * @param {object} upgradeData -  object containing version upgrade data e.g.: {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
  *   
  */
 export default class RunningTotal extends Component {

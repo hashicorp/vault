@@ -7,9 +7,6 @@ export default class Current extends Component {
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
-  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
-
   @tracked selectedNamespace = null;
   @tracked namespaceArray = this.byNamespaceTotalClients.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
@@ -17,6 +14,12 @@ export default class Current extends Component {
 
   @tracked selectedAuthMethod = null;
   @tracked authMethodOptions = [];
+
+  get latestUpgradeData() {
+    // e.g. {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
+    // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
+    return this.args.model.versionHistory[0] || null;
+  }
 
   // Response total client count data by namespace for current/partial month
   get byNamespaceTotalClients() {
@@ -74,11 +77,10 @@ export default class Current extends Component {
   }
 
   get countsIncludeOlderData() {
-    let firstUpgrade = this.args.model.versionHistory[0];
-    if (!firstUpgrade) {
+    if (!this.latestUpgradeData) {
       return false;
     }
-    let versionDate = new Date(firstUpgrade.timestampInstalled);
+    let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
     // compare against this month and this year to show message or not.
     return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
   }
