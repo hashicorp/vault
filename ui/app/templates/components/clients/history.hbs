@@ -102,21 +102,15 @@
           </ToolbarFilters>
         </Toolbar>
       </div>
-      {{#if (or this.countsIncludeOlderData this.responseRangeDiffMessage)}}
+      {{#if (or this.versionUpdateText this.responseRangeDiffMessage)}}
         <AlertBanner @type="warning" @title="Warning">
-          <ul class={{if (and this.countsIncludeOlderData this.responseRangeDiffMessage) "bullet"}}>
+          <ul class={{if (and this.versionUpdateText this.responseRangeDiffMessage) "bullet"}}>
             {{#if this.responseRangeDiffMessage}}
               <li>{{this.responseRangeDiffMessage}}</li>
             {{/if}}
-            {{! TODO this warning should only show if data spans an upgrade to 1.9 or 1.10 }}
-            {{#if this.countsIncludeOlderData}}
+            {{#if this.versionUpdateText}}
               <li>
-                {{concat
-                  "Vault was upgraded to "
-                  this.latestUpgradeData.id
-                  " during this time range. How we count clients changed in 1.9, so keep that in mind when looking at the data below. "
-                }}
-                How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
+                {{this.versionUpdateText}}
                 <DocLink
                   @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
                 >
