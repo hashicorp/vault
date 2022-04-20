@@ -83,6 +83,7 @@ export default class Current extends Component {
     }
 
     let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
+    // compare against this month and this year and then look at specific version upgraded from
     if (isAfter(versionDate, startOfMonth(new Date()))) {
       if (this.minorReleaseNumber === 9) {
         return `Vault was upgraded to 

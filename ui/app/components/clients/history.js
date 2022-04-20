@@ -115,6 +115,7 @@ export default class History extends Component {
 
   get versionUpdateText() {
     // count how many times a minor number occurs inside the array of minors within the API range.
+    // occurrences returns: {9: 2, 10: 1}. key is the minor version and value is the count.
     let occurrences = this.allMinorVersionsInRange.reduce(function (acc, curr) {
       return acc[curr] ? ++acc[curr] : (acc[curr] = 1), acc;
     }, {});
