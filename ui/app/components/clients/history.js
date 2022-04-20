@@ -128,8 +128,8 @@ export default class History extends Component {
       // you have both 9 and 10 as minors. Show generic warning.
       return `Vault was upgraded to 1.9 and 1.10 during this time range. How we count clients changed in 1.9 and we added monthly breakdowns for 1.10 data only. Keep this in mind when looking at the data below. `;
     }
-    // false if there are no 9 or 10 minor versions within the range returned by the API
-    return false;
+    // null if there are no 9 or 10 minor versions within the range returned by the API
+    return null;
   }
 
   get startTimeDisplay() {

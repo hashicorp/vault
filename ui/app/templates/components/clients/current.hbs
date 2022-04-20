@@ -54,18 +54,9 @@
         </ToolbarFilters>
       </Toolbar>
     </div>
-    {{#if this.currentMonthIncludesOldDataStructure}}
-      {{! show two different warnings depending on if old data is 1.10 or 1.9 }}
+    {{#if this.versionUpdateText}}
       <AlertBanner @type="warning" @title="Warning">
-        {{concat
-          "Vault was upgraded to "
-          this.latestUpgradeData.id
-          (if
-            (eq this.minorReleaseNumber 9)
-            " this month. How we count clients changed in 1.9, so keep that in mind when looking at the data below. "
-            " We added new client breakdowns for 1.10 attribution data only, so keep that in mind when looking at the data below. "
-          )
-        }}
+        {{this.versionUpdateText}}
         <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
           Learn more here.
         </DocLink>

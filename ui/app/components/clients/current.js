@@ -77,18 +77,25 @@ export default class Current extends Component {
       .mounts?.find((mount) => mount.label === auth);
   }
 
-  get currentMonthIncludesOldDataStructure() {
+  get versionUpdateText() {
     if (!this.latestUpgradeData) {
       return false;
     }
-    // the upgrade must be either 1.10 or 1.9
-    // if upgrade major to 2, will need to amend.
-    if (this.minorReleaseNumber === 9 || this.minorReleaseNumber === 10) {
-      let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
-      // compare against this month and this year to show message or not.
-      return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
+
+    let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
+    if (isAfter(versionDate, startOfMonth(new Date()))) {
+      if (this.minorReleaseNumber === 9) {
+        return `Vault was upgraded to 
+        ${this.latestUpgradeData.id} this month. How we count clients changed in 1.9, so keep that in mind when looking at the data below. `;
+      } else if (this.minorReleaseNumber === 10) {
+        return `Vault was upgraded to 
+        ${this.latestUpgradeData.id} this month. We added new client breakdowns for 1.10 attribution data only, so keep that in mind when looking at the data below. `;
+      } else {
+        return null;
+      }
+    } else {
+      return null;
     }
-    return false;
   }
 
   get minorReleaseNumber() {
