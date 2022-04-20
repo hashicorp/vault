@@ -21,27 +21,25 @@ import { mean } from 'd3-array';
       month: '1/22',
       entity_clients: 23,
       non_entity_clients: 45,
-      total: 68,
+      clients: 68,
       namespaces: [],
       new_clients: {
         entity_clients: 11,
         non_entity_clients: 36,
-        total: 47,
+        clients: 47,
         namespaces: [],
       },
     }
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  */
 export default class MonthlyUsage extends Component {
-  barChartData = this.args.verticalBarChartData;
-
   get averageTotalClients() {
-    let average = mean(this.barChartData?.map((d) => d.total));
+    let average = mean(this.args.verticalBarChartData?.map((d) => d.clients));
     return Math.round(average) || null;
   }
 
   get averageNewClients() {
-    let average = mean(this.barChartData?.map((d) => d.new_clients.total));
+    let average = mean(this.args.verticalBarChartData?.map((d) => d.new_clients.clients));
     return Math.round(average) || null;
   }
 }
