@@ -338,7 +338,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 		HandshakeConfig: backendplugin.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  true,
-		AutoMTLS:        false,
+		AutoMTLS:        true,
 	}
 
 	c.logger.Debug("attempting to load credential backend plugin", "name", plugin.Name)

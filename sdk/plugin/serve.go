@@ -128,7 +128,6 @@ func ServeMultiplex(opts *ServeOpts) error {
 	serveOpts := &plugin.ServeConfig{
 		HandshakeConfig:  HandshakeConfig,
 		VersionedPlugins: pluginSets,
-		TLSProvider:      opts.TLSProviderFunc,
 		Logger:           logger,
 
 		// A non-nil value here enables gRPC serving for this plugin...
