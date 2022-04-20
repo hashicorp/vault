@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue setting username field when creating a user for userpass auth method
+```
