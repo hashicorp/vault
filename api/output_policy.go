@@ -19,16 +19,16 @@ var LastOutputPolicyError *OutputPolicyError
 
 type OutputPolicyError struct {
 	*retryablehttp.Request
-	VaultClient     *Client
-	parsingError    error
-	parsedHCLString string
+	VaultClient         *Client
+	policyBuildingError error
+	finalHCLString      string
 }
 
 func (d *OutputPolicyError) Error() string {
-	if d.parsedHCLString == "" {
-		d.parseRequest()
-		if d.parsingError != nil {
-			return d.parsingError.Error()
+	if d.finalHCLString == "" {
+		d.buildSamplePolicy()
+		if d.policyBuildingError != nil {
+			return d.policyBuildingError.Error()
 		}
 	}
 
@@ -36,7 +36,7 @@ func (d *OutputPolicyError) Error() string {
 }
 
 // Builds a sample policy document from the request
-func (d *OutputPolicyError) parseRequest() {
+func (d *OutputPolicyError) buildSamplePolicy() {
 	var capabilities []string
 	switch d.Request.Method {
 	case http.MethodGet, "":
@@ -55,7 +55,7 @@ func (d *OutputPolicyError) parseRequest() {
 	// sanitize, then trim the Vault address and v1 from the front of the path
 	url, err := url.PathUnescape(d.Request.URL.String())
 	if err != nil {
-		d.parsingError = fmt.Errorf("failed to unescape request URL characters: %v", err)
+		d.policyBuildingError = fmt.Errorf("failed to unescape request URL characters: %v", err)
 	}
 	apiAddrPrefix := fmt.Sprintf("%sv1/", d.VaultClient.config.Address)
 	path := strings.TrimLeft(url, apiAddrPrefix)
@@ -63,7 +63,7 @@ func (d *OutputPolicyError) parseRequest() {
 	// determine whether to add sudo capability
 	needsSudo, err := isSudoPath(d.VaultClient, path)
 	if err != nil {
-		d.parsingError = err
+		d.policyBuildingError = err
 		return
 	}
 	if needsSudo {
@@ -71,17 +71,17 @@ func (d *OutputPolicyError) parseRequest() {
 	}
 
 	capStr := strings.Join(capabilities, `", "`)
-	d.parsedHCLString = fmt.Sprintf(
+	d.finalHCLString = fmt.Sprintf(
 		`path "%s" {
   capabilities = ["%s"]
 }`, path, capStr)
 }
 
 func (d *OutputPolicyError) HCLString() string {
-	if d.parsedHCLString == "" {
-		d.parseRequest()
+	if d.finalHCLString == "" {
+		d.buildSamplePolicy()
 	}
-	return d.parsedHCLString
+	return d.finalHCLString
 }
 
 // Determine whether the given path requires the sudo capability
