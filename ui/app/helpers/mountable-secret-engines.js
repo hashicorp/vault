@@ -16,6 +16,15 @@ export const TRANSFORM = {
   requiredFeature: 'Transform Secrets Engine',
 };
 
+export const KEYMGMT = {
+  displayName: 'Key Management',
+  value: 'keymgmt',
+  type: 'keymgmt',
+  glyph: 'key',
+  category: 'generic',
+  requiredFeature: 'Key Management Secrets Engine',
+};
+
 const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Active Directory',

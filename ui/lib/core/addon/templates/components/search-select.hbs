@@ -80,4 +80,7 @@
       </li>
     {{/each}}
   </ul>
+  {{#if (has-block)}}
+    {{yield}}
+  {{/if}}
 {{/if}}

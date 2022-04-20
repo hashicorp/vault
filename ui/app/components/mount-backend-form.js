@@ -4,7 +4,7 @@ import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
+import { engines, KMIP, TRANSFORM, KEYMGMT } from 'vault/helpers/mountable-secret-engines';
 import { waitFor } from '@ember/test-waiters';
 
 const METHODS = methods();
@@ -65,7 +65,7 @@ export default Component.extend({
 
   engines: computed('version.{features[],isEnterprise}', function () {
     if (this.version.isEnterprise) {
-      return ENGINES.concat([KMIP, TRANSFORM]);
+      return ENGINES.concat([KMIP, TRANSFORM, KEYMGMT]);
     }
     return ENGINES;
   }),

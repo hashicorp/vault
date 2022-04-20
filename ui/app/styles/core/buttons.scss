@@ -41,6 +41,11 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     min-width: auto;
     padding: 0;
   }
+  &.is-flat {
+    min-width: auto;
+    border: none;
+    box-shadow: none;
+  }
 
   @each $name, $pair in $colors {
     $color: nth($pair, 1);
@@ -96,6 +101,16 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
         &.is-active {
           background-color: transparent;
           border-color: darken($color, 10%);
+          color: darken($color, 10%);
+        }
+      }
+
+      &.is-underlined {
+        &:active,
+        &.is-active {
+          background-color: transparent;
+          border-bottom: 2px solid darken($color, 10%);
+          border-radius: unset;
           color: darken($color, 10%);
         }
       }
@@ -238,6 +253,14 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   width: 100%;
 }
 
+a.button.disabled {
+  color: $white;
+  background-color: $grey-dark;
+  opacity: 0.5;
+  border-color: transparent;
+  box-shadow: none;
+  cursor: default;
+}
 .icon-button {
   background: transparent;
   padding: 0;
