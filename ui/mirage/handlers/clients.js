@@ -678,7 +678,7 @@ export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
     return {
-      keys: ['1.10.0', '1.9.0', '1.9.1', '1.9.2'],
+      keys: ['1.9.0', '1.9.1', '1.9.2'],
       key_info: {
         '1.9.0': {
           previous_version: null,
@@ -688,9 +688,9 @@ export default function (server) {
           previous_version: '1.9.0',
           timestamp_installed: '2021-09-03T10:23:16Z',
         },
-        '1.10.0': {
+        '1.9.2': {
           previous_version: '1.9.1',
-          timestamp_installed: '2021-10-03T10:23:16Z',
+          timestamp_installed: '2022-04-03T10:23:16Z',
         },
       },
     };

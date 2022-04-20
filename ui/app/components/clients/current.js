@@ -18,7 +18,8 @@ export default class Current extends Component {
   get latestUpgradeData() {
     // e.g. {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
     // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
-    return this.args.model.versionHistory[0] || null;
+    // need to return the last in the array as the data is in ascending order
+    return this.args.model.versionHistory.at(-1) || null;
   }
 
   // Response total client count data by namespace for current/partial month
@@ -76,13 +77,24 @@ export default class Current extends Component {
       .mounts?.find((mount) => mount.label === auth);
   }
 
-  get countsIncludeOlderData() {
+  get currentMonthIncludesOldDataStructure() {
     if (!this.latestUpgradeData) {
       return false;
     }
-    let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
-    // compare against this month and this year to show message or not.
-    return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
+    // the upgrade must be either 1.10 or 1.9
+    // if upgrade major to 2, will need to amend.
+    if (this.minorReleaseNumber === 9 || this.minorReleaseNumber === 10) {
+      let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
+      // compare against this month and this year to show message or not.
+      return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
+    }
+    return false;
+  }
+
+  get minorReleaseNumber() {
+    let upgradeVersion = this.latestUpgradeData.id;
+    let upgradeVersionArray = upgradeVersion.split('.');
+    return Number(upgradeVersionArray[1]);
   }
 
   // top level TOTAL client counts for current/partial month
