@@ -167,7 +167,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	var updateChain bool
-	var constructedChain []issuerId
+	var constructedChain []issuerID
 	for index, newPathRef := range newPath {
 		// Allow self for the first entry.
 		if index == 0 && newPathRef == "self" {

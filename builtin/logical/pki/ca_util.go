@@ -104,7 +104,6 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingGeneratePrivateKey(ctx, input.req.Storage, keyRef))
 	}
 
-	
 	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
 }
 
@@ -239,4 +238,3 @@ func existingGeneratePrivateKey(ctx context.Context, s logical.Storage, keyRef s
 		return nil
 	}
 }
-
