@@ -1,0 +1,4 @@
+```release-note:improvement
+ui: The mount path used when logging in Vault can now be specified with the
+`path` query param, e.g. https://vault.com/ui/vault/auth?with=jwt&path=my_custom_method.
+```
