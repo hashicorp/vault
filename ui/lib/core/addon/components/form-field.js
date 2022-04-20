@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { action, get } from '@ember/object';
+import { action } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
@@ -84,7 +84,7 @@ export default class FormFieldComponent extends Component {
   }
   get validationError() {
     const validations = this.args.modelValidations || {};
-    const state = get(validations, this.valuePath);
+    const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join('. ') : null;
   }
 
