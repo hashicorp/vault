@@ -72,7 +72,7 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 			// we provide a more helpful error for the user,
 			// who may not understand why the flag isn't working.
 			err = fmt.Errorf(
-				`This output flag requires the success of a 
+				`For KV commands, this output flag requires the success of a 
 preflight request to determine the version of a KV secrets engine. 
 Please re-run this command with a token with read access to %s`, path)
 		}
