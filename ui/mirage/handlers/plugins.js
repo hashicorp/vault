@@ -10,6 +10,7 @@ export default function (server) {
     return {
       data: {
         name,
+        type: 'my-custom-plugin-type',
         pages: [
           {
             url: 'http://localhost:3000/teams/linkedin/recruiting',
