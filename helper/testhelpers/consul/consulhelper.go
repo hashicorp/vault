@@ -134,8 +134,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, boots
 
 				service_prefix "" {
 					policy = "read"
-				}
-		`,
+				}`,
 			}
 			q := &consulapi.WriteOptions{
 				Token: consulToken,

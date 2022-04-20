@@ -20,6 +20,7 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 		return nil, nil, fmt.Errorf("no error received but no configuration found")
 	}
 
-	client, err := conf.Client()
+	consulConf := conf.NewConfig()
+	client, err := api.NewClient(consulConf)
 	return client, nil, err
 }

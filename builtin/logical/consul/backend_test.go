@@ -30,7 +30,7 @@ func TestBackend_Config_Access(t *testing.T) {
 		})
 		t.Run("pre-1.4.0 automatic-bootstrap", func(t *testing.T) {
 			t.Parallel()
-			testBackendConfigAccess(t, "1.3.0", false)
+			testBackendConfigAccess(t, "1.3.1", false)
 		})
 		t.Run("post-1.4.0 automatic-bootstrap", func(t *testing.T) {
 			t.Parallel()

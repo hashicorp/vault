@@ -109,7 +109,8 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	// If a token has not been given by the user, we try to boostrap the ACL
 	// support
 	if config.Token == "" {
-		client, err := config.Client()
+		consulConf := config.NewConfig()
+		client, err := api.NewClient(consulConf)
 		if err != nil {
 			return nil, err
 		}
@@ -141,7 +142,7 @@ type accessConfig struct {
 	ClientKey  string `json:"client_key"`
 }
 
-func (conf *accessConfig) Client() (*api.Client, error) {
+func (conf *accessConfig) NewConfig() *api.Config {
 	consulConf := api.DefaultNonPooledConfig()
 	consulConf.Address = conf.Address
 	consulConf.Scheme = conf.Scheme
@@ -150,5 +151,5 @@ func (conf *accessConfig) Client() (*api.Client, error) {
 	consulConf.TLSConfig.CertPEM = []byte(conf.ClientCert)
 	consulConf.TLSConfig.KeyPEM = []byte(conf.ClientKey)
 
-	return api.NewClient(consulConf)
+	return consulConf
 }
