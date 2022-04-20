@@ -24,90 +24,90 @@ const (
 	legacyCertBundlePath        = "config/ca_bundle"
 )
 
-type keyId string
+type keyID string
 
-func (p keyId) String() string {
+func (p keyID) String() string {
 	return string(p)
 }
 
-type issuerId string
+type issuerID string
 
-func (p issuerId) String() string {
+func (p issuerID) String() string {
 	return string(p)
 }
 
 const (
-	IssuerRefNotFound = issuerId("not-found")
-	KeyRefNotFound    = keyId("not-found")
+	IssuerRefNotFound = issuerID("not-found")
+	KeyRefNotFound    = keyID("not-found")
 )
 
-type key struct {
-	ID             keyId                   `json:"id" structs:"id" mapstructure:"id"`
+type keyEntry struct {
+	ID             keyID                   `json:"id" structs:"id" mapstructure:"id"`
 	Name           string                  `json:"name" structs:"name" mapstructure:"name"`
 	PrivateKeyType certutil.PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
 	PrivateKey     string                  `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 }
 
-type issuer struct {
-	ID           issuerId   `json:"id" structs:"id" mapstructure:"id"`
+type issuerEntry struct {
+	ID           issuerID   `json:"id" structs:"id" mapstructure:"id"`
 	Name         string     `json:"name" structs:"name" mapstructure:"name"`
-	KeyID        keyId      `json:"key_id" structs:"key_id" mapstructure:"key_id"`
+	KeyID        keyID      `json:"key_id" structs:"key_id" mapstructure:"key_id"`
 	Certificate  string     `json:"certificate" structs:"certificate" mapstructure:"certificate"`
 	CAChain      []string   `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
-	ManualChain  []issuerId `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
+	ManualChain  []issuerID `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
 	SerialNumber string     `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
 
-type keyConfig struct {
-	DefaultKeyId keyId `json:"default" structs:"default" mapstructure:"default"`
+type keyConfigEntry struct {
+	DefaultKeyId keyID `json:"default" structs:"default" mapstructure:"default"`
 }
 
-type issuerConfig struct {
-	DefaultIssuerId issuerId `json:"default" structs:"default" mapstructure:"default"`
+type issuerConfigEntry struct {
+	DefaultIssuerId issuerID `json:"default" structs:"default" mapstructure:"default"`
 }
 
-func (k key) GetSigner() (crypto.Signer, error) {
+func (k keyEntry) GetSigner() (crypto.Signer, error) {
 	signer, _, err := certutil.ParsePEMKey(k.PrivateKey)
 	return signer, err
 }
 
-func listKeys(ctx context.Context, s logical.Storage) ([]keyId, error) {
+func listKeys(ctx context.Context, s logical.Storage) ([]keyID, error) {
 	strList, err := s.List(ctx, keyPrefix)
 	if err != nil {
 		return nil, err
 	}
 
-	keyIds := make([]keyId, 0, len(strList))
+	keyIds := make([]keyID, 0, len(strList))
 	for _, entry := range strList {
-		keyIds = append(keyIds, keyId(entry))
+		keyIds = append(keyIds, keyID(entry))
 	}
 
 	return keyIds, nil
 }
 
-func fetchKeyById(ctx context.Context, s logical.Storage, keyId keyId) (*key, error) {
+func fetchKeyById(ctx context.Context, s logical.Storage, keyId keyID) (*keyEntry, error) {
 	if len(keyId) == 0 {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: empty key identifier")}
 	}
 
-	keyEntry, err := s.Get(ctx, keyPrefix+keyId.String())
+	entry, err := s.Get(ctx, keyPrefix+keyId.String())
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
 	}
-	if keyEntry == nil {
+	if entry == nil {
 		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
 	}
 
-	var key key
-	if err := keyEntry.DecodeJSON(&key); err != nil {
+	var key keyEntry
+	if err := entry.DecodeJSON(&key); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki key with id %s: %v", keyId.String(), err)}
 	}
 
 	return &key, nil
 }
 
-func writeKey(ctx context.Context, s logical.Storage, key key) error {
+func writeKey(ctx context.Context, s logical.Storage, key keyEntry) error {
 	keyId := key.ID
 
 	json, err := logical.StorageEntryJSON(keyPrefix+keyId.String(), key)
@@ -118,7 +118,7 @@ func writeKey(ctx context.Context, s logical.Storage, key key) error {
 	return s.Put(ctx, json)
 }
 
-func deleteKey(ctx context.Context, s logical.Storage, id keyId) (bool, error) {
+func deleteKey(ctx context.Context, s logical.Storage, id keyID) (bool, error) {
 	wasDefault := false
 
 	config, err := getKeysConfig(ctx, s)
@@ -128,7 +128,7 @@ func deleteKey(ctx context.Context, s logical.Storage, id keyId) (bool, error) {
 
 	if config.DefaultKeyId == id {
 		wasDefault = true
-		config.DefaultKeyId = keyId("")
+		config.DefaultKeyId = keyID("")
 		if err := setKeysConfig(ctx, s, config); err != nil {
 			return wasDefault, err
 		}
@@ -137,7 +137,7 @@ func deleteKey(ctx context.Context, s logical.Storage, id keyId) (bool, error) {
 	return wasDefault, s.Delete(ctx, keyPrefix+id.String())
 }
 
-func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName string) (*key, bool, error) {
+func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName string) (*keyEntry, bool, error) {
 	// importKey imports the specified PEM-format key (from keyValue) into
 	// the new PKI storage format. The first return field is a reference to
 	// the new key; the second is whether or not the key already existed
@@ -177,7 +177,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	}
 
 	// Haven't found a key, so we've gotta create it and write it into storage.
-	var result key
+	var result keyEntry
 	result.ID = genKeyId()
 	result.Name = keyName
 	result.PrivateKey = keyValue
@@ -249,7 +249,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	return &result, false, nil
 }
 
-func (i issuer) GetCertificate() (*x509.Certificate, error) {
+func (i issuerEntry) GetCertificate() (*x509.Certificate, error) {
 	block, extra := pem.Decode([]byte(i.Certificate))
 	if block == nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: invalid PEM: %v", i.ID)}
@@ -261,26 +261,26 @@ func (i issuer) GetCertificate() (*x509.Certificate, error) {
 	return x509.ParseCertificate(block.Bytes)
 }
 
-func listIssuers(ctx context.Context, s logical.Storage) ([]issuerId, error) {
+func listIssuers(ctx context.Context, s logical.Storage) ([]issuerID, error) {
 	strList, err := s.List(ctx, issuerPrefix)
 	if err != nil {
 		return nil, err
 	}
 
-	issuerIds := make([]issuerId, 0, len(strList))
+	issuerIds := make([]issuerID, 0, len(strList))
 	for _, entry := range strList {
-		issuerIds = append(issuerIds, issuerId(entry))
+		issuerIds = append(issuerIds, issuerID(entry))
 	}
 
 	return issuerIds, nil
 }
 
-func resolveKeyReference(ctx context.Context, s logical.Storage, reference string) (keyId, error) {
+func resolveKeyReference(ctx context.Context, s logical.Storage, reference string) (keyID, error) {
 	if reference == defaultRef {
 		// Handle fetching the default key.
 		config, err := getKeysConfig(ctx, s)
 		if err != nil {
-			return keyId("config-error"), err
+			return keyID("config-error"), err
 		}
 		if len(config.DefaultKeyId) == 0 {
 			return KeyRefNotFound, fmt.Errorf("no default key currently configured")
@@ -291,21 +291,21 @@ func resolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 
 	keys, err := listKeys(ctx, s)
 	if err != nil {
-		return keyId("list-error"), err
+		return keyID("list-error"), err
 	}
 
 	// Cheaper to list keys and check if an id is a match...
-	for _, key_id := range keys {
-		if key_id == keyId(reference) {
-			return key_id, nil
+	for _, keyId := range keys {
+		if keyId == keyID(reference) {
+			return keyId, nil
 		}
 	}
 
 	// ... than to pull all keys from storage.
-	for _, key_id := range keys {
-		key, err := fetchKeyById(ctx, s, key_id)
+	for _, keyId := range keys {
+		key, err := fetchKeyById(ctx, s, keyId)
 		if err != nil {
-			return keyId("key-read"), err
+			return keyID("key-read"), err
 		}
 
 		if key.Name == reference {
@@ -317,29 +317,29 @@ func resolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 	return KeyRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI key for reference: %v", reference)}
 }
 
-func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerId) (*issuer, error) {
+func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerID) (*issuerEntry, error) {
 	if len(issuerId) == 0 {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: empty issuer identifier")}
 	}
 
-	issuerEntry, err := s.Get(ctx, issuerPrefix+issuerId.String())
+	entry, err := s.Get(ctx, issuerPrefix+issuerId.String())
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
 	}
-	if issuerEntry == nil {
+	if entry == nil {
 		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
 	}
 
-	var issuer issuer
-	if err := issuerEntry.DecodeJSON(&issuer); err != nil {
+	var issuer issuerEntry
+	if err := entry.DecodeJSON(&issuer); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
 	}
 
 	return &issuer, nil
 }
 
-func writeIssuer(ctx context.Context, s logical.Storage, issuer *issuer) error {
+func writeIssuer(ctx context.Context, s logical.Storage, issuer *issuerEntry) error {
 	issuerId := issuer.ID
 
 	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)
@@ -350,7 +350,7 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer *issuer) error {
 	return s.Put(ctx, json)
 }
 
-func deleteIssuer(ctx context.Context, s logical.Storage, id issuerId) (bool, error) {
+func deleteIssuer(ctx context.Context, s logical.Storage, id issuerID) (bool, error) {
 	wasDefault := false
 
 	config, err := getIssuersConfig(ctx, s)
@@ -360,7 +360,7 @@ func deleteIssuer(ctx context.Context, s logical.Storage, id issuerId) (bool, er
 
 	if config.DefaultIssuerId == id {
 		wasDefault = true
-		config.DefaultIssuerId = issuerId("")
+		config.DefaultIssuerId = issuerID("")
 		if err := setIssuersConfig(ctx, s, config); err != nil {
 			return wasDefault, err
 		}
@@ -369,7 +369,7 @@ func deleteIssuer(ctx context.Context, s logical.Storage, id issuerId) (bool, er
 	return wasDefault, s.Delete(ctx, issuerPrefix+id.String())
 }
 
-func importIssuer(ctx context.Context, s logical.Storage, certValue string, issuerName string) (*issuer, bool, error) {
+func importIssuer(ctx context.Context, s logical.Storage, certValue string, issuerName string) (*issuerEntry, bool, error) {
 	// importIssuers imports the specified PEM-format certificate (from
 	// certValue) into the new PKI storage format. The first return field is a
 	// reference to the new issuer; the second is whether or not the issuer
@@ -424,7 +424,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 
 	// Haven't found an issuer, so we've gotta create it and write it into
 	// storage.
-	var result issuer
+	var result issuerEntry
 	result.ID = genIssuerId()
 	result.Name = issuerName
 	result.Certificate = certValue
@@ -502,7 +502,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	return &result, false, nil
 }
 
-func setKeysConfig(ctx context.Context, s logical.Storage, config *keyConfig) error {
+func setKeysConfig(ctx context.Context, s logical.Storage, config *keyConfigEntry) error {
 	json, err := logical.StorageEntryJSON(storageKeyConfig, config)
 	if err != nil {
 		return err
@@ -511,15 +511,15 @@ func setKeysConfig(ctx context.Context, s logical.Storage, config *keyConfig) er
 	return s.Put(ctx, json)
 }
 
-func getKeysConfig(ctx context.Context, s logical.Storage) (*keyConfig, error) {
-	keyConfigEntry, err := s.Get(ctx, storageKeyConfig)
+func getKeysConfig(ctx context.Context, s logical.Storage) (*keyConfigEntry, error) {
+	entry, err := s.Get(ctx, storageKeyConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	keyConfig := &keyConfig{}
-	if keyConfigEntry != nil {
-		if err := keyConfigEntry.DecodeJSON(keyConfig); err != nil {
+	keyConfig := &keyConfigEntry{}
+	if entry != nil {
+		if err := entry.DecodeJSON(keyConfig); err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode key configuration: %v", err)}
 		}
 	}
@@ -527,7 +527,7 @@ func getKeysConfig(ctx context.Context, s logical.Storage) (*keyConfig, error) {
 	return keyConfig, nil
 }
 
-func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConfig) error {
+func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConfigEntry) error {
 	json, err := logical.StorageEntryJSON(storageIssuerConfig, config)
 	if err != nil {
 		return err
@@ -536,15 +536,15 @@ func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConf
 	return s.Put(ctx, json)
 }
 
-func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfig, error) {
-	issuerConfigEntry, err := s.Get(ctx, storageIssuerConfig)
+func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfigEntry, error) {
+	entry, err := s.Get(ctx, storageIssuerConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	issuerConfig := &issuerConfig{}
-	if issuerConfigEntry != nil {
-		if err := issuerConfigEntry.DecodeJSON(issuerConfig); err != nil {
+	issuerConfig := &issuerConfigEntry{}
+	if entry != nil {
+		if err := entry.DecodeJSON(issuerConfig); err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
 		}
 	}
@@ -552,12 +552,12 @@ func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfig, er
 	return issuerConfig, nil
 }
 
-func resolveIssuerReference(ctx context.Context, s logical.Storage, reference string) (issuerId, error) {
+func resolveIssuerReference(ctx context.Context, s logical.Storage, reference string) (issuerID, error) {
 	if reference == defaultRef {
 		// Handle fetching the default issuer.
 		config, err := getIssuersConfig(ctx, s)
 		if err != nil {
-			return issuerId("config-error"), err
+			return issuerID("config-error"), err
 		}
 		if len(config.DefaultIssuerId) == 0 {
 			return IssuerRefNotFound, fmt.Errorf("no default issuer currently configured")
@@ -568,21 +568,21 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 
 	issuers, err := listIssuers(ctx, s)
 	if err != nil {
-		return issuerId("list-error"), err
+		return issuerID("list-error"), err
 	}
 
 	// Cheaper to list issuers and check if an id is a match...
-	for _, issuer_id := range issuers {
-		if issuer_id == issuerId(reference) {
-			return issuer_id, nil
+	for _, issuerId := range issuers {
+		if issuerId == issuerID(reference) {
+			return issuerId, nil
 		}
 	}
 
 	// ... than to pull all issuers from storage.
-	for _, issuer_id := range issuers {
-		issuer, err := fetchIssuerById(ctx, s, issuer_id)
+	for _, issuerId := range issuers {
+		issuer, err := fetchIssuerById(ctx, s, issuerId)
 		if err != nil {
-			return issuerId("issuer-read"), err
+			return issuerID("issuer-read"), err
 		}
 
 		if issuer.Name == reference {
@@ -596,7 +596,7 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 
 // Builds a certutil.CertBundle from the specified issuer identifier,
 // optionally loading the key or not.
-func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuerId, loadKey bool) (*certutil.CertBundle, error) {
+func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuerID, loadKey bool) (*certutil.CertBundle, error) {
 	issuer, err := fetchIssuerById(ctx, s, id)
 	if err != nil {
 		return nil, err
@@ -608,7 +608,7 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 	bundle.SerialNumber = issuer.SerialNumber
 
 	// Fetch the key if it exists. Sometimes we don't need the key immediately.
-	if loadKey && issuer.KeyID != keyId("") {
+	if loadKey && issuer.KeyID != keyID("") {
 		key, err := fetchKeyById(ctx, s, issuer.KeyID)
 		if err != nil {
 			return nil, err
@@ -621,7 +621,7 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 	return &bundle, nil
 }
 
-func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuer, *key, error) {
+func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {
 	myKey, _, err := importKey(ctx, s, caBundle.PrivateKey, keyName)
 	if err != nil {
 		return nil, nil, err
@@ -641,12 +641,12 @@ func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.Ce
 	return myIssuer, myKey, nil
 }
 
-func genIssuerId() issuerId {
-	return issuerId(genUuid())
+func genIssuerId() issuerID {
+	return issuerID(genUuid())
 }
 
-func genKeyId() keyId {
-	return keyId(genUuid())
+func genKeyId() keyID {
+	return keyID(genUuid())
 }
 
 func genUuid() string {

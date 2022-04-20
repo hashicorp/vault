@@ -25,14 +25,14 @@ func isDefaultIssuerSet(ctx context.Context, s logical.Storage) (bool, error) {
 	return strings.TrimSpace(config.DefaultIssuerId.String()) != "", nil
 }
 
-func updateDefaultKeyId(ctx context.Context, s logical.Storage, id keyId) error {
+func updateDefaultKeyId(ctx context.Context, s logical.Storage, id keyID) error {
 	config, err := getKeysConfig(ctx, s)
 	if err != nil {
 		return err
 	}
 
 	if config.DefaultKeyId != id {
-		return setKeysConfig(ctx, s, &keyConfig{
+		return setKeysConfig(ctx, s, &keyConfigEntry{
 			DefaultKeyId: id,
 		})
 	}
@@ -40,14 +40,14 @@ func updateDefaultKeyId(ctx context.Context, s logical.Storage, id keyId) error 
 	return nil
 }
 
-func updateDefaultIssuerId(ctx context.Context, s logical.Storage, id issuerId) error {
+func updateDefaultIssuerId(ctx context.Context, s logical.Storage, id issuerID) error {
 	config, err := getIssuersConfig(ctx, s)
 	if err != nil {
 		return err
 	}
 
 	if config.DefaultIssuerId != id {
-		return setIssuersConfig(ctx, s, &issuerConfig{
+		return setIssuersConfig(ctx, s, &issuerConfigEntry{
 			DefaultIssuerId: id,
 		})
 	}

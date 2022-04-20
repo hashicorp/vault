@@ -20,17 +20,17 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 	// Verify we handle nothing stored properly
 	keyConfigEmpty, err := getKeysConfig(ctx, s)
 	require.NoError(t, err)
-	require.Equal(t, &keyConfig{}, keyConfigEmpty)
+	require.Equal(t, &keyConfigEntry{}, keyConfigEmpty)
 
 	issuerConfigEmpty, err := getIssuersConfig(ctx, s)
 	require.NoError(t, err)
-	require.Equal(t, &issuerConfig{}, issuerConfigEmpty)
+	require.Equal(t, &issuerConfigEntry{}, issuerConfigEmpty)
 
 	// Now attempt to store and reload properly
-	origKeyConfig := &keyConfig{
+	origKeyConfig := &keyConfigEntry{
 		DefaultKeyId: genKeyId(),
 	}
-	origIssuerConfig := &issuerConfig{
+	origIssuerConfig := &issuerConfigEntry{
 		DefaultIssuerId: genIssuerId(),
 	}
 
@@ -84,12 +84,12 @@ func Test_IssuerRoundTrip(t *testing.T) {
 	keys, err := listKeys(ctx, s)
 	require.NoError(t, err)
 
-	require.ElementsMatch(t, []keyId{key1.ID, key2.ID}, keys)
+	require.ElementsMatch(t, []keyID{key1.ID, key2.ID}, keys)
 
 	issuers, err := listIssuers(ctx, s)
 	require.NoError(t, err)
 
-	require.ElementsMatch(t, []issuerId{issuer1.ID, issuer2.ID}, issuers)
+	require.ElementsMatch(t, []issuerID{issuer1.ID, issuer2.ID}, issuers)
 }
 
 func Test_KeysIssuerImport(t *testing.T) {
@@ -158,12 +158,12 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, "", key2_ref.Name)
 }
 
-func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
+func genIssuerAndKey(t *testing.T, b *backend) (issuerEntry, keyEntry) {
 	certBundle := genCertBundle(t, b)
 
 	keyId := genKeyId()
 
-	pkiKey := key{
+	pkiKey := keyEntry{
 		ID:             keyId,
 		PrivateKeyType: certBundle.PrivateKeyType,
 		PrivateKey:     certBundle.PrivateKey,
@@ -171,7 +171,7 @@ func genIssuerAndKey(t *testing.T, b *backend) (issuer, key) {
 
 	issuerId := genIssuerId()
 
-	pkiIssuer := issuer{
+	pkiIssuer := issuerEntry{
 		ID:           issuerId,
 		KeyID:        keyId,
 		Certificate:  strings.TrimSpace(certBundle.Certificate) + "\n",
