@@ -19,9 +19,11 @@ const (
 	defaultRef        = "default"
 )
 
-var nameMatcher = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
-var errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
-var errKeyNameInUse = errutil.UserError{Err: "key name already in use"}
+var (
+	nameMatcher        = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
+	errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
+	errKeyNameInUse    = errutil.UserError{Err: "key name already in use"}
+)
 
 func normalizeSerial(serial string) string {
 	return strings.Replace(strings.ToLower(serial), ":", "-", -1)
@@ -142,12 +144,12 @@ func getIssuerName(ctx context.Context, s logical.Storage, data *framework.Field
 		if !nameMatcher.MatchString(issuerName) {
 			return issuerName, errutil.UserError{Err: "issuer name contained invalid characters"}
 		}
-		issuer_id, err := resolveIssuerReference(ctx, s, issuerName)
+		issuerId, err := resolveIssuerReference(ctx, s, issuerName)
 		if err == nil {
 			return issuerName, errIssuerNameInUse
 		}
 
-		if err != nil && issuer_id != IssuerRefNotFound {
+		if err != nil && issuerId != IssuerRefNotFound {
 			return issuerName, errutil.InternalError{Err: err.Error()}
 		}
 	}

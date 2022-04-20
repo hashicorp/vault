@@ -92,11 +92,11 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	// Make sure we setup the default values
 	keysConfig, err := getKeysConfig(ctx, s)
 	require.NoError(t, err)
-	require.Equal(t, &keyConfig{DefaultKeyId: keyId}, keysConfig)
+	require.Equal(t, &keyConfigEntry{DefaultKeyId: keyId}, keysConfig)
 
 	issuersConfig, err := getIssuersConfig(ctx, s)
 	require.NoError(t, err)
-	require.Equal(t, &issuerConfig{DefaultIssuerId: issuerId}, issuersConfig)
+	require.Equal(t, &issuerConfigEntry{DefaultIssuerId: issuerId}, issuersConfig)
 
 	// Make sure if we attempt to re-run the migration nothing happens...
 	err = migrateStorage(ctx, request, b.Logger())
