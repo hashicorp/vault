@@ -270,12 +270,13 @@ func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrCatcher 
 		return exitCode
 	}
 
-	if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
-		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", api.LastOutputStringError.Error())))
+	cs, err := api.LastOutputStringError.CurlString()
+	if err != nil {
+		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", err)))
 		return 1
 	}
 
-	runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputStringError.CurlString())))
+	runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", cs)))
 	return 0
 }
 
@@ -295,11 +296,12 @@ func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrCatcher *byt
 		return exitCode
 	}
 
-	if api.LastOutputPolicyError.Error() != api.ErrOutputPolicyRequest {
-		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error assembling policy HCL: %s\n", api.LastOutputPolicyError.Error())))
+	hcl, err := api.LastOutputPolicyError.HCLString()
+	if err != nil {
+		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error assembling policy HCL: %s\n", err)))
 		return 1
 	}
 
-	runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputPolicyError.HCLString())))
+	runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", hcl)))
 	return 0
 }

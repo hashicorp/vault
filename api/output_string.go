@@ -19,58 +19,68 @@ type OutputStringError struct {
 	TLSSkipVerify              bool
 	ClientCACert, ClientCAPath string
 	ClientCert, ClientKey      string
-	parsingError               error
 	finalCurlString            string
 }
 
 func (d *OutputStringError) Error() string {
 	if d.finalCurlString == "" {
-		d.buildCurlString()
-		if d.parsingError != nil {
-			return d.parsingError.Error()
+		cs, err := d.buildCurlString()
+		if err != nil {
+			return err.Error()
 		}
+		d.finalCurlString = cs
 	}
 
 	return ErrOutputStringRequest
 }
 
-func (d *OutputStringError) buildCurlString() {
+func (d *OutputStringError) CurlString() (string, error) {
+	if d.finalCurlString == "" {
+		cs, err := d.buildCurlString()
+		if err != nil {
+			return "", err
+		}
+		d.finalCurlString = cs
+	}
+	return d.finalCurlString, nil
+}
+
+func (d *OutputStringError) buildCurlString() (string, error) {
 	body, err := d.Request.BodyBytes()
 	if err != nil {
-		d.parsingError = err
-		return
+		return "", err
 	}
 
 	// Build cURL string
-	d.finalCurlString = "curl "
+	finalCurlString := "curl "
 	if d.TLSSkipVerify {
-		d.finalCurlString += "--insecure "
+		finalCurlString += "--insecure "
 	}
 	if d.Request.Method != http.MethodGet {
-		d.finalCurlString = fmt.Sprintf("%s-X %s ", d.finalCurlString, d.Request.Method)
+		finalCurlString = fmt.Sprintf("%s-X %s ", finalCurlString, d.Request.Method)
 	}
 	if d.ClientCACert != "" {
 		clientCACert := strings.Replace(d.ClientCACert, "'", "'\"'\"'", -1)
-		d.finalCurlString = fmt.Sprintf("%s--cacert '%s' ", d.finalCurlString, clientCACert)
+		finalCurlString = fmt.Sprintf("%s--cacert '%s' ", finalCurlString, clientCACert)
 	}
 	if d.ClientCAPath != "" {
 		clientCAPath := strings.Replace(d.ClientCAPath, "'", "'\"'\"'", -1)
-		d.finalCurlString = fmt.Sprintf("%s--capath '%s' ", d.finalCurlString, clientCAPath)
+		finalCurlString = fmt.Sprintf("%s--capath '%s' ", finalCurlString, clientCAPath)
 	}
 	if d.ClientCert != "" {
 		clientCert := strings.Replace(d.ClientCert, "'", "'\"'\"'", -1)
-		d.finalCurlString = fmt.Sprintf("%s--cert '%s' ", d.finalCurlString, clientCert)
+		finalCurlString = fmt.Sprintf("%s--cert '%s' ", finalCurlString, clientCert)
 	}
 	if d.ClientKey != "" {
 		clientKey := strings.Replace(d.ClientKey, "'", "'\"'\"'", -1)
-		d.finalCurlString = fmt.Sprintf("%s--key '%s' ", d.finalCurlString, clientKey)
+		finalCurlString = fmt.Sprintf("%s--key '%s' ", finalCurlString, clientKey)
 	}
 	for k, v := range d.Request.Header {
 		for _, h := range v {
 			if strings.ToLower(k) == "x-vault-token" {
 				h = `$(vault print token)`
 			}
-			d.finalCurlString = fmt.Sprintf("%s-H \"%s: %s\" ", d.finalCurlString, k, h)
+			finalCurlString = fmt.Sprintf("%s-H \"%s: %s\" ", finalCurlString, k, h)
 		}
 	}
 
@@ -78,15 +88,8 @@ func (d *OutputStringError) buildCurlString() {
 		// We need to escape single quotes since that's what we're using to
 		// quote the body
 		escapedBody := strings.Replace(string(body), "'", "'\"'\"'", -1)
-		d.finalCurlString = fmt.Sprintf("%s-d '%s' ", d.finalCurlString, escapedBody)
+		finalCurlString = fmt.Sprintf("%s-d '%s' ", finalCurlString, escapedBody)
 	}
 
-	d.finalCurlString = fmt.Sprintf("%s%s", d.finalCurlString, d.Request.URL.String())
-}
-
-func (d *OutputStringError) CurlString() string {
-	if d.finalCurlString == "" {
-		d.buildCurlString()
-	}
-	return d.finalCurlString
+	return fmt.Sprintf("%s%s", finalCurlString, d.Request.URL.String()), nil
 }

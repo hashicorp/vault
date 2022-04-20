@@ -19,24 +19,35 @@ var LastOutputPolicyError *OutputPolicyError
 
 type OutputPolicyError struct {
 	*retryablehttp.Request
-	VaultClient         *Client
-	policyBuildingError error
-	finalHCLString      string
+	VaultClient    *Client
+	finalHCLString string
 }
 
 func (d *OutputPolicyError) Error() string {
 	if d.finalHCLString == "" {
-		d.buildSamplePolicy()
-		if d.policyBuildingError != nil {
-			return d.policyBuildingError.Error()
+		p, err := d.buildSamplePolicy()
+		if err != nil {
+			return err.Error()
 		}
+		d.finalHCLString = p
 	}
 
 	return ErrOutputPolicyRequest
 }
 
+func (d *OutputPolicyError) HCLString() (string, error) {
+	if d.finalHCLString == "" {
+		p, err := d.buildSamplePolicy()
+		if err != nil {
+			return "", err
+		}
+		d.finalHCLString = p
+	}
+	return d.finalHCLString, nil
+}
+
 // Builds a sample policy document from the request
-func (d *OutputPolicyError) buildSamplePolicy() {
+func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	var capabilities []string
 	switch d.Request.Method {
 	case http.MethodGet, "":
@@ -55,7 +66,7 @@ func (d *OutputPolicyError) buildSamplePolicy() {
 	// sanitize, then trim the Vault address and v1 from the front of the path
 	url, err := url.PathUnescape(d.Request.URL.String())
 	if err != nil {
-		d.policyBuildingError = fmt.Errorf("failed to unescape request URL characters: %v", err)
+		return "", fmt.Errorf("failed to unescape request URL characters: %v", err)
 	}
 	apiAddrPrefix := fmt.Sprintf("%sv1/", d.VaultClient.config.Address)
 	path := strings.TrimLeft(url, apiAddrPrefix)
@@ -63,25 +74,17 @@ func (d *OutputPolicyError) buildSamplePolicy() {
 	// determine whether to add sudo capability
 	needsSudo, err := isSudoPath(d.VaultClient, path)
 	if err != nil {
-		d.policyBuildingError = err
-		return
+		return "", fmt.Errorf("unable to determine if path needs sudo capability: %v", err)
 	}
 	if needsSudo {
 		capabilities = append(capabilities, "sudo")
 	}
 
 	capStr := strings.Join(capabilities, `", "`)
-	d.finalHCLString = fmt.Sprintf(
+	return fmt.Sprintf(
 		`path "%s" {
   capabilities = ["%s"]
-}`, path, capStr)
-}
-
-func (d *OutputPolicyError) HCLString() string {
-	if d.finalHCLString == "" {
-		d.buildSamplePolicy()
-	}
-	return d.finalHCLString
+}`, path, capStr), nil
 }
 
 // Determine whether the given path requires the sudo capability
