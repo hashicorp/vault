@@ -3,7 +3,6 @@ package userpass
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -22,21 +21,18 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: mfa.MFARootPaths(),
-
 			Unauthenticated: []string{
 				"login/*",
 			},
 		},
 
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathUsers(&b),
 			pathUsersList(&b),
 			pathUserPolicies(&b),
 			pathUserPassword(&b),
+			pathLogin(&b),
 		},
-			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
-		),
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
