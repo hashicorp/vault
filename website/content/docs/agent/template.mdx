@@ -149,31 +149,6 @@ The following demonstrates configuring Vault Agent to template secrets using the
 AppRole Auth method:
 
 ```python
-pid_file = "./pidfile"
-
-vault {
-  address = "https://127.0.0.1:8200"
-}
-
-auto_auth {
-  method {
-    type = "approle"
-
-    config = {
-      role_id_file_path = "/etc/vault/roleid"
-      secret_id_file_path = "/etc/vault/secretid"
-    }
-  }
-
-  sink {
-    type = "file"
-
-    config = {
-      path = "/tmp/file-foo"
-    }
-  }
-}
-
 template {
   source      = "/tmp/agent/template.ctmpl"
   destination = "/tmp/agent/render.txt"
@@ -221,3 +196,45 @@ using the certificates `validTo` field.
 
 This does not apply to certificates generated with `generate_lease: true`. If set
 Vault Agent template will apply the non-renewable, leased secret rules.
+
+## Example
+
+The following demonstrates configuring Vault Agent to template secrets using the
+AppRole Auth method:
+
+```python
+pid_file = "./pidfile"
+
+vault {
+  address = "https://127.0.0.1:8200"
+}
+
+auto_auth {
+  method {
+    type = "approle"
+
+    config = {
+      role_id_file_path = "/etc/vault/roleid"
+      secret_id_file_path = "/etc/vault/secretid"
+    }
+  }
+
+  sink {
+    type = "file"
+
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
+}
+
+template_config {
+  static_secret_render_interval = "10m"
+  exit_on_retry_failure = true
+}
+
+template {
+  source      = "/tmp/agent/template.ctmpl"
+  destination = "/tmp/agent/render.txt"
+}
+```
