@@ -11,8 +11,8 @@ description: |-
 
 The `write` command writes data to Vault at the given path (wrapper command for
 HTTP PUT or POST). The data can be credentials, secrets, configuration, or
-arbitrary data. The specific behavior of this command is determined at the thing
-mounted at the path.
+arbitrary data. The specific behavior of the `write` command is determined at
+the thing mounted at the path.
 
 Data is specified as "**key=value**" pairs on the command line. If the value begins
 with an "**@**", then it is loaded from a file. If the value for a key is "**-**", Vault
