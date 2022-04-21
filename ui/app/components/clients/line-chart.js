@@ -51,11 +51,8 @@ export default class LineChart extends Component {
     const dataset = args[0];
     const upgradeData = [];
     if (args[1]) {
-      args[1].forEach((d) =>
-        upgradeData.push({
-          month: parseAPITimestamp(d.timestampInstalled, 'M/yy'),
-          ...d,
-        })
+      args[1].forEach((versionData) =>
+        upgradeData.push({ month: parseAPITimestamp(versionData.timestampInstalled, 'M/yy'), ...versionData })
       );
     }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
