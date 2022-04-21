@@ -678,7 +678,15 @@ export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
     return {
-      keys: ['1.9.0', '1.9.1', '1.9.2'],
+      // keys: ['1.11.2'],
+      // key_info: {
+      //   '1.11.2': {
+      //     previous_version: null,
+      //     timestamp_installed: '2022-02-03T10:23:16Z',
+      //   },
+      // },
+      keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1', '1.11.1'],
+      // keys: ['1.9.0', '1.9.1', '1.9.2'],
       key_info: {
         '1.9.0': {
           previous_version: null,
@@ -690,7 +698,15 @@ export default function (server) {
         },
         '1.9.2': {
           previous_version: '1.9.1',
-          timestamp_installed: '2022-04-03T10:23:16Z',
+          timestamp_installed: '2022-03-03T10:23:16Z',
+        },
+        '1.10.1': {
+          previous_version: '1.9.2',
+          timestamp_installed: '2021-9-03T10:23:16Z',
+        },
+        '1.11.1': {
+          previous_version: '1.10.1',
+          timestamp_installed: '2021-10-03T10:23:16Z',
         },
       },
     };
