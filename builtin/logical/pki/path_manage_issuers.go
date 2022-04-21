@@ -184,7 +184,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	if len(createdIssuers) > 0 {
-		err := buildCRL(ctx, b, req, true)
+		err := buildCRLs(ctx, b, req, true)
 		if err != nil {
 			return nil, err
 		}

@@ -191,7 +191,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(ctx, b, req, true)
+	err = buildCRLs(ctx, b, req, true)
 	if err != nil {
 		return nil, err
 	}
