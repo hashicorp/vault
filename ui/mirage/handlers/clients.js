@@ -678,7 +678,7 @@ export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
     return {
-      keys: ['1.9.0', '1.9.1', '1.9.2'],
+      keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1'],
       key_info: {
         '1.9.0': {
           previous_version: null,
