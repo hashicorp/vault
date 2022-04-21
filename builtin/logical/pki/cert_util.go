@@ -154,7 +154,10 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == "crl":
-		path = "crl"
+		path, err = resolveIssuerCRLPath(ctx, req.Storage, defaultRef)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		legacyPath = "certs/" + colonSerial
 		path = "certs/" + hyphenSerial

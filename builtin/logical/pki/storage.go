@@ -634,6 +634,24 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 	return IssuerRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
 }
 
+func resolveIssuerCRLPath(ctx context.Context, s logical.Storage, reference string) (string, error) {
+	issuer, err := resolveIssuerReference(ctx, s, reference)
+	if err != nil {
+		return "crl", err
+	}
+
+	crlConfig, err := getLocalCRLConfig(ctx, s)
+	if err != nil {
+		return "crl", err
+	}
+
+	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
+		return fmt.Sprintf("crls/%v", crlId), nil
+	}
+
+	return "crl", fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
+}
+
 // Builds a certutil.CertBundle from the specified issuer identifier,
 // optionally loading the key or not.
 func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuerID, loadKey bool) (*certutil.CertBundle, error) {
