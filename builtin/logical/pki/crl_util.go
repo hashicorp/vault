@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -276,6 +277,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			if len(crlIdentifier) == 0 {
 				// Create a new random UUID for this CRL if none exists.
 				crlIdentifier = genCRLId()
+				crlConfig.CRLNumberMap[crlIdentifier] = 1
 			}
 
 			// Update all issuers in this group to set the CRL Issuer
@@ -283,7 +285,13 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 				crlConfig.IssuerIDCRLMap[issuerId] = crlIdentifier
 			}
 
-			if err := buildCRL(ctx, b, req, forceNew, representative, revokedCerts, crlIdentifier); err != nil {
+			// We always update the CRL Number since we never want to
+			// duplicate numbers and missing numbers is fine.
+			crlNumber := crlConfig.CRLNumberMap[crlIdentifier]
+			crlConfig.CRLNumberMap[crlIdentifier] += 1
+
+			// Lastly, build the CRL.
+			if err := buildCRL(ctx, b, req, forceNew, representative, revokedCerts, crlIdentifier, crlNumber); err != nil {
 				return fmt.Errorf("error building CRLs: unable to build CRL for issuer (%v): %v", representative, err)
 			}
 		}
@@ -396,7 +404,7 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID) error {
+func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) error {
 	crlInfo, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
@@ -445,7 +453,14 @@ WRITE:
 		}
 	}
 
-	crlBytes, err := signingBundle.Certificate.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
+	revocationListTemplate := &x509.RevocationList{
+		RevokedCertificates: revokedCerts,
+		Number:              big.NewInt(crlNumber),
+		ThisUpdate:          time.Now(),
+		NextUpdate:          time.Now().Add(crlLifetime),
+	}
+
+	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
 	}
