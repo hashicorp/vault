@@ -11,6 +11,8 @@ import (
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -92,8 +94,13 @@ func fieldsForType(roleType string) map[string]*framework.FieldSchema {
 		"credential_type": {
 			Type: framework.TypeString,
 			Description: "The type of credential to manage. Options include: 'password', " +
-				"'keypair_rsa_2048'. Defaults to 'password'",
+				"'rsa_2048_private_key', 'client_certificate'. Defaults to 'password'",
 			Default: "password",
+		},
+		"pem_bundle": {
+			Type: framework.TypeString,
+			Description: "The concatenated certificate and private key (unencrypted) in " +
+				"PEM format.",
 		},
 	}
 
@@ -259,6 +266,7 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 	data := map[string]interface{}{
 		"db_name":             role.DBName,
 		"rotation_statements": role.Statements.Rotation,
+		"credential_type":     role.CredentialType.String(),
 	}
 
 	// guard against nil StaticAccount; shouldn't happen but we'll be safe
@@ -371,11 +379,52 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 			switch credentialType {
 			case v5.CredentialTypePassword.String():
 				role.CredentialType = v5.CredentialTypePassword
-			case v5.CredentialTypeRSA2048Keypair.String():
-				role.CredentialType = v5.CredentialTypeRSA2048Keypair
+			case v5.CredentialTypeRSA2048PrivateKey.String():
+				role.CredentialType = v5.CredentialTypeRSA2048PrivateKey
+			case v5.CredentialTypeClientCertificate.String():
+				role.CredentialType = v5.CredentialTypeClientCertificate
 			default:
 				return logical.ErrorResponse("invalid credential_type %q", credentialType), nil
 			}
+		}
+
+		// TODO(austin): move to separate function
+		if role.CredentialType == v5.CredentialTypeClientCertificate {
+			pemBundle := data.Get("pem_bundle").(string)
+			if pemBundle == "" {
+				return logical.ErrorResponse("pem_bundle required for credential_type %q",
+					role.CredentialType), nil
+			}
+
+			parsedBundle, err := certutil.ParsePEMBundle(pemBundle)
+			if err != nil {
+				switch err.(type) {
+				case errutil.InternalError:
+					return nil, err
+				default:
+					return logical.ErrorResponse(err.Error()), nil
+				}
+			}
+			if parsedBundle.PrivateKey == nil {
+				return logical.ErrorResponse("private key not found in the PEM bundle"), nil
+			}
+			if parsedBundle.PrivateKeyType == certutil.UnknownPrivateKey {
+				return logical.ErrorResponse("unknown private key found in the PEM bundle"), nil
+			}
+			if parsedBundle.Certificate == nil {
+				return logical.ErrorResponse("no certificate found in the PEM bundle"), nil
+			}
+			if !parsedBundle.Certificate.IsCA {
+				return logical.ErrorResponse("the given certificate is not marked for CA " +
+					"use and cannot be used with this backend"), nil
+			}
+
+			cb, err := parsedBundle.ToCertBundle()
+			if err != nil {
+				return nil, fmt.Errorf("error converting raw values into cert bundle: %w", err)
+			}
+
+			role.CertBundle = cb
 		}
 	}
 
@@ -520,6 +569,19 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.Statements.Rotation = data.Get("rotation_statements").([]string)
 	}
 
+	if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
+		credentialType := credentialTypeRaw.(string)
+
+		switch credentialType {
+		case v5.CredentialTypePassword.String():
+			role.CredentialType = v5.CredentialTypePassword
+		case v5.CredentialTypeRSA2048PrivateKey.String():
+			role.CredentialType = v5.CredentialTypeRSA2048PrivateKey
+		default:
+			return logical.ErrorResponse("invalid credential_type %q", credentialType), nil
+		}
+	}
+
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation
 
@@ -579,12 +641,13 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
-	DBName         string            `json:"db_name"`
-	Statements     v4.Statements     `json:"statements"`
-	DefaultTTL     time.Duration     `json:"default_ttl"`
-	MaxTTL         time.Duration     `json:"max_ttl"`
-	CredentialType v5.CredentialType `json:"credential_type"`
-	StaticAccount  *staticAccount    `json:"static_account" mapstructure:"static_account"`
+	DBName         string               `json:"db_name"`
+	Statements     v4.Statements        `json:"statements"`
+	DefaultTTL     time.Duration        `json:"default_ttl"`
+	MaxTTL         time.Duration        `json:"max_ttl"`
+	CredentialType v5.CredentialType    `json:"credential_type"`
+	CertBundle     *certutil.CertBundle `json:"cert_bundle"`
+	StaticAccount  *staticAccount       `json:"static_account" mapstructure:"static_account"`
 }
 
 type staticAccount struct {

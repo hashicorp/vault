@@ -99,7 +99,7 @@ type NewUserRequest struct {
 	Password string
 
 	// PublicKey credentials to use when creating the user
-	// Value is set when the credential type is 'keypair_rsa_2048'.
+	// Value is set when the credential type is 'rsa_2048_private_key'.
 	PublicKey string
 
 	// Expiration of the user. Not all database plugins will support this.
@@ -124,20 +124,18 @@ type CredentialType int
 
 const (
 	CredentialTypePassword CredentialType = iota
-	CredentialTypeRSA2048Keypair
+	CredentialTypeRSA2048PrivateKey
+	CredentialTypeClientCertificate
 )
 
 func (k CredentialType) String() string {
 	switch k {
 	case CredentialTypePassword:
 		return "password"
-	case CredentialTypeRSA2048Keypair:
-		// TODO: Alternative idea is 'rsa_2048_private_key' for the name.
-		//       This could be better because it implies which part of the key,
-		//       public or private, is returned from Vault as the credential.
-		//       It would also allow us to have a future model where the private
-		//       key goes to the plugin by reversing the order (e.g., rsa_2048_public_key).
-		return "keypair_rsa_2048"
+	case CredentialTypeRSA2048PrivateKey:
+		return "rsa_2048_private_key"
+	case CredentialTypeClientCertificate:
+		return "client_certificate"
 	default:
 		return "unknown"
 	}
@@ -151,13 +149,31 @@ type UpdateUserRequest struct {
 	// Username to make changes to.
 	Username string
 
+	// CredentialType is the type of credential to use when creating a new user.
+	// Respective fields for the credential type will contain the credential value.
+	CredentialType CredentialType
+
 	// Password indicates the new password to change to.
 	// If nil, no change is requested.
 	Password *ChangePassword
 
+	// PublicKey indicates the new public key to change to.
+	// If nil, no change is requested.
+	PublicKey *ChangePublicKey
+
 	// Expiration indicates the new expiration date to change to.
 	// If nil, no change is requested.
 	Expiration *ChangeExpiration
+}
+
+// ChangePublicKey of a given user
+type ChangePublicKey struct {
+	// NewPublicKey is the new public key credential for the user
+	NewPublicKey string
+
+	// Statements is an ordered list of commands to run within the database
+	// when changing the user's public key credential.
+	Statements Statements
 }
 
 // ChangePassword of a given user

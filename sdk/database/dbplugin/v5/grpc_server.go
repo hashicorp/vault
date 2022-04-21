@@ -169,8 +169,8 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 	switch req.GetCredentialType() {
 	case CredentialTypePassword.String():
 		dbReq.CredentialType = CredentialTypePassword
-	case CredentialTypeRSA2048Keypair.String():
-		dbReq.CredentialType = CredentialTypeRSA2048Keypair
+	case CredentialTypeRSA2048PrivateKey.String():
+		dbReq.CredentialType = CredentialTypeRSA2048PrivateKey
 	}
 
 	dbResp, err := impl.NewUser(ctx, dbReq)
