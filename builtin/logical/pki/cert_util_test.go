@@ -86,36 +86,6 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			t.Fatalf("error on %s for hyphen-based storage path: err: %v, entry: %v", name, err, certEntry)
 		}
 	}
-
-	noConvCases := map[string]struct {
-		Req    *logical.Request
-		Prefix string
-		Serial string
-	}{
-		"crl": {
-			&logical.Request{
-				Storage: storage,
-			},
-			"",
-			"crl",
-		},
-	}
-
-	// Test for ca and crl case
-	for name, tc := range noConvCases {
-		err := storage.Put(context.Background(), &logical.StorageEntry{
-			Key:   tc.Serial,
-			Value: []byte("some data"),
-		})
-		if err != nil {
-			t.Fatalf("error writing to storage on %s: %s", name, err)
-		}
-
-		certEntry, err := fetchCertBySerial(context.Background(), tc.Req, tc.Prefix, tc.Serial)
-		if err != nil || certEntry == nil {
-			t.Fatalf("error on %s: err: %v, entry: %v", name, err, certEntry)
-		}
-	}
 }
 
 // Demonstrate that multiple OUs in the name are handled in an
