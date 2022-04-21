@@ -145,9 +145,6 @@ The top level `template` block has multiple configurations entries:
 
 ### Example
 
-The following demonstrates configuring Vault Agent to template secrets using the
-AppRole Auth method:
-
 ```python
 template {
   source      = "/tmp/agent/template.ctmpl"
@@ -197,7 +194,7 @@ using the certificates `validTo` field.
 This does not apply to certificates generated with `generate_lease: true`. If set
 Vault Agent template will apply the non-renewable, leased secret rules.
 
-## Example
+## Auto Auth and Templating Example
 
 The following demonstrates configuring Vault Agent to template secrets using the
 AppRole Auth method:
