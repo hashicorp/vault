@@ -686,15 +686,15 @@ export default function (server) {
         },
         '1.9.1': {
           previous_version: '1.9.0',
-          timestamp_installed: '2021-09-03T10:23:16Z',
+          timestamp_installed: '2021-08-03T10:23:16Z',
         },
         '1.9.2': {
           previous_version: '1.9.1',
-          timestamp_installed: '2022-03-03T10:23:16Z',
+          timestamp_installed: '2021-09-03T10:23:16Z',
         },
         '1.10.1': {
           previous_version: '1.9.2',
-          timestamp_installed: '2021-9-03T10:23:16Z',
+          timestamp_installed: '2021-10-03T10:23:16Z',
         },
       },
     };
