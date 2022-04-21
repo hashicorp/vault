@@ -111,7 +111,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	if oldDisable != config.Disable {
 		// It wasn't disabled but now it is, rotate
-		crlErr := buildCRL(ctx, b, req, true)
+		crlErr := buildCRLs(ctx, b, req, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:

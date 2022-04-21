@@ -76,6 +76,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			LocalStorage: []string{
 				"revoked/",
 				"crl",
+				"crls/",
 				"certs/",
 			},
 

@@ -15,10 +15,11 @@ import (
 )
 
 const (
-	storageKeyConfig    = "config/keys"
-	storageIssuerConfig = "config/issuers"
-	keyPrefix           = "config/key/"
-	issuerPrefix        = "config/issuer/"
+	storageKeyConfig      = "config/keys"
+	storageIssuerConfig   = "config/issuers"
+	keyPrefix             = "config/key/"
+	issuerPrefix          = "config/issuer/"
+	storageLocalCRLConfig = "crls/config"
 
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
@@ -33,6 +34,12 @@ func (p keyID) String() string {
 type issuerID string
 
 func (p issuerID) String() string {
+	return string(p)
+}
+
+type crlID string
+
+func (p crlID) String() string {
 	return string(p)
 }
 
@@ -56,6 +63,10 @@ type issuerEntry struct {
 	CAChain      []string   `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
 	ManualChain  []issuerID `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
 	SerialNumber string     `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
+}
+
+type localCRLConfigEntry struct {
+	IssuerIDCRLMap map[issuerID]crlID `json:"issuer_id_crl_map" structs:"issuer_id_crl_map" mapstructure:"issuer_id_crl_map"`
 }
 
 type keyConfigEntry struct {
@@ -502,6 +513,35 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	return &result, false, nil
 }
 
+func setLocalCRLConfig(ctx context.Context, s logical.Storage, mapping *localCRLConfigEntry) error {
+	json, err := logical.StorageEntryJSON(storageLocalCRLConfig, mapping)
+	if err != nil {
+		return err
+	}
+
+	return s.Put(ctx, json)
+}
+
+func getLocalCRLConfig(ctx context.Context, s logical.Storage) (*localCRLConfigEntry, error) {
+	entry, err := s.Get(ctx, storageLocalCRLConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mapping := &localCRLConfigEntry{}
+	if entry != nil {
+		if err := entry.DecodeJSON(mapping); err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode cluster-local CRL configuration: %v", err)}
+		}
+	}
+
+	if len(mapping.IssuerIDCRLMap) == 0 {
+		mapping.IssuerIDCRLMap = make(map[issuerID]crlID)
+	}
+
+	return mapping, nil
+}
+
 func setKeysConfig(ctx context.Context, s logical.Storage, config *keyConfigEntry) error {
 	json, err := logical.StorageEntryJSON(storageKeyConfig, config)
 	if err != nil {
@@ -647,6 +687,10 @@ func genIssuerId() issuerID {
 
 func genKeyId() keyID {
 	return keyID(genUuid())
+}
+
+func genCRLId() crlID {
+	return crlID(genUuid())
 }
 
 func genUuid() string {
