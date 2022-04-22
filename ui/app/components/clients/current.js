@@ -30,8 +30,8 @@ export default class Current extends Component {
       if (findUpgrade) relevantUpgrades.push(findUpgrade);
     });
 
-    // if no history for 1.9 or 1.10, get first upgrade available
-    if (Object.entries(relevantUpgrades).length === 0) {
+    // if no history for 1.9 or 1.10, customer skipped these releases so get first upgrade available
+    if (relevantUpgrades.length === 0) {
       relevantUpgrades.push({
         id: versionHistory[0].id,
         previousVersion: versionHistory[0].previousVersion,
@@ -115,10 +115,11 @@ export default class Current extends Component {
       return null;
     }
     if (this.upgradeDuringCurrentMonth.length === 2) {
-      return 'Vault was upgraded to 1.9 and 1.10 during this month.';
+      let versions = this.upgradeDuringCurrentMonth.map((upgrade) => upgrade.id).join(' and ');
+      return `Vault was upgraded to ${versions} during this month`;
     } else {
-      let upgrade = this.upgradeDuringCurrentMonth[0];
-      return `Vault was upgraded to ${upgrade.id} on this month`;
+      let version = this.upgradeDuringCurrentMonth[0];
+      return `Vault was upgraded to ${version.id} on this month`;
     }
   }
 

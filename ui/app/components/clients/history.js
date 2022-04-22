@@ -104,8 +104,8 @@ export default class History extends Component {
       if (findUpgrade) relevantUpgrades.push(findUpgrade);
     });
 
-    // if no history for 1.9 or 1.10, get first upgrade available
-    if (Object.entries(relevantUpgrades).length === 0) {
+    // if no history for 1.9 or 1.10, customer skipped these releases so get first upgrade available
+    if (relevantUpgrades.length === 0) {
       relevantUpgrades.push({
         id: versionHistory[0].id,
         previousVersion: versionHistory[0].previousVersion,
