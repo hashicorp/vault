@@ -130,7 +130,11 @@ export default class History extends Component {
 
   get upgradeVersionAndDate() {
     if (this.upgradeDuringActivity.length === 2) {
-      return 'Vault was upgraded to 1.9 and 1.10 during this time range.';
+      let firstUpgrade = this.upgradeDuringActivity[0];
+      let secondUpgrade = this.upgradeDuringActivity[1];
+      let firstDate = dateFormat([firstUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
+      let secondDate = dateFormat([secondUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
+      return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
     } else {
       let upgrade = this.upgradeDuringActivity[0];
       return `Vault was upgrade to ${upgrade.id} on ${dateFormat(
