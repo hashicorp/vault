@@ -654,11 +654,13 @@ const MOCK_MONTHLY_DATA = [
     },
   },
 ];
-const handleMockQuery = (queryStartTimestamp, monthlyData) => {
-  const queryDate = parseAPITimestamp(queryStartTimestamp);
+const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) => {
+  const queryStartDate = parseAPITimestamp(queryStartTimestamp);
+  const queryEndDate = parseAPITimestamp(queryEndTimestamp);
   const startDateByMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
+  const endDateByMonth = parseAPITimestamp(monthlyData[0].timestamp);
   let transformedMonthlyArray = [...monthlyData];
-  if (isBefore(queryDate, startDateByMonth)) {
+  if (isBefore(queryStartDate, startDateByMonth)) {
     // no data for months before (upgraded to 1.10 during billing period)
     let i = 0;
     do {
@@ -666,19 +668,24 @@ const handleMockQuery = (queryStartTimestamp, monthlyData) => {
       let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
       // TODO CMB update this when we confirm what combined data looks like
       transformedMonthlyArray.push({ timestamp });
-    } while (i < differenceInCalendarMonths(startDateByMonth, queryDate));
+    } while (i < differenceInCalendarMonths(startDateByMonth, queryStartDate));
   }
-  if (isAfter(queryDate, startDateByMonth)) {
-    let index = monthlyData.findIndex((e) => isSameMonth(queryDate, parseAPITimestamp(e.timestamp)));
+  if (isAfter(queryStartDate, startDateByMonth)) {
+    let index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
     transformedMonthlyArray = transformedMonthlyArray.slice(0, index + 1);
+  }
+  if (isBefore(queryEndDate, endDateByMonth)) {
+    let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
+    transformedMonthlyArray = transformedMonthlyArray.slice(index);
   }
   return transformedMonthlyArray;
 };
+
 export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
     return {
-      keys: ['1.9.0', '1.9.1', '1.9.2'],
+      keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1'],
       key_info: {
         '1.9.0': {
           previous_version: null,
@@ -686,11 +693,15 @@ export default function (server) {
         },
         '1.9.1': {
           previous_version: '1.9.0',
-          timestamp_installed: '2021-09-03T10:23:16Z',
+          timestamp_installed: '2021-08-03T10:23:16Z',
         },
         '1.9.2': {
           previous_version: '1.9.1',
-          timestamp_installed: '2022-04-03T10:23:16Z',
+          timestamp_installed: '2021-09-03T10:23:16Z',
+        },
+        '1.10.1': {
+          previous_version: '1.9.2',
+          timestamp_installed: '2021-10-03T10:23:16Z',
         },
       },
     };
@@ -861,7 +872,7 @@ export default function (server) {
           },
         ],
         end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
-        months: handleMockQuery(start_time, MOCK_MONTHLY_DATA),
+        months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
           distinct_entities: 37389,

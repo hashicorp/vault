@@ -54,9 +54,10 @@
         </ToolbarFilters>
       </Toolbar>
     </div>
-    {{#if this.versionUpdateText}}
+    {{#if this.upgradeDuringCurrentMonth}}
       <AlertBanner @type="warning" @title="Warning">
-        {{this.versionUpdateText}}
+        {{this.upgradeVersionAndDate}}
+        {{this.versionSpecificText}}
         <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
           Learn more here.
         </DocLink>

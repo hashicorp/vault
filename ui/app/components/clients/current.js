@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { isAfter, startOfMonth } from 'date-fns';
 import { action } from '@ember/object';
+import { dateFormat } from 'core/helpers/date-format';
+
 export default class Current extends Component {
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
@@ -15,11 +17,30 @@ export default class Current extends Component {
   @tracked selectedAuthMethod = null;
   @tracked authMethodOptions = [];
 
-  get latestUpgradeData() {
-    // e.g. {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
-    // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
-    // need to return the last in the array as the data is in ascending order
-    return this.args.model.versionHistory.at(-1) || null;
+  get upgradeVersionHistory() {
+    const versionHistory = this.args.model.versionHistory;
+    if (!versionHistory || versionHistory.length === 0) {
+      return null;
+    }
+
+    // get upgrade data for initial upgrade to 1.9 and/or 1.10
+    let relevantUpgrades = [];
+    const importantUpgrades = ['1.9', '1.10'];
+    importantUpgrades.forEach((version) => {
+      let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
+      if (findUpgrade) relevantUpgrades.push(findUpgrade);
+    });
+
+    // if no history for 1.9 or 1.10, get first upgrade available
+    if (Object.entries(relevantUpgrades).length === 0) {
+      relevantUpgrades.push({
+        id: versionHistory[0].id,
+        previousVersion: versionHistory[0].previousVersion,
+        timestampInstalled: versionHistory[0].timestampInstalled,
+      });
+    }
+    // array of upgrade data objects for noteworthy upgrades
+    return relevantUpgrades;
   }
 
   // Response total client count data by namespace for current/partial month
@@ -77,32 +98,40 @@ export default class Current extends Component {
       .mounts?.find((mount) => mount.label === auth);
   }
 
-  get versionUpdateText() {
-    if (!this.latestUpgradeData) {
-      return false;
-    }
+  get upgradeDuringCurrentMonth() {
+    const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
+      // TODO how do timezones affect this?
+      let upgradeDate = new Date(upgrade.timestampInstalled);
+      return isAfter(upgradeDate, startOfMonth(new Date()));
+    });
+    // return all upgrades that happened within date range of queried activity
+    return upgradesWithinData.length === 0 ? null : upgradesWithinData;
+  }
 
-    let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
-    // compare against this month and this year and then look at specific version upgraded from
-    if (isAfter(versionDate, startOfMonth(new Date()))) {
-      if (this.minorReleaseNumber === 9) {
-        return `Vault was upgraded to 
-        ${this.latestUpgradeData.id} this month. How we count clients changed in 1.9, so keep that in mind when looking at the data below. `;
-      } else if (this.minorReleaseNumber === 10) {
-        return `Vault was upgraded to 
-        ${this.latestUpgradeData.id} this month. We added new client breakdowns for 1.10 attribution data only, so keep that in mind when looking at the data below. `;
-      } else {
-        return null;
-      }
+  get upgradeVersionAndDate() {
+    if (this.upgradeDuringCurrentMonth.length === 2) {
+      return 'Vault was upgraded to 1.9 and 1.10 during this month.';
     } else {
-      return null;
+      let upgrade = this.upgradeDuringCurrentMonth[0];
+      return `Vault was upgrade to ${upgrade.id} on ${dateFormat(
+        [upgrade.timestampInstalled, 'MMM d, yyyy'],
+        { isFormatted: true }
+      )}.`;
     }
   }
 
-  get minorReleaseNumber() {
-    let upgradeVersion = this.latestUpgradeData.id;
-    let upgradeVersionArray = upgradeVersion.split('.');
-    return Number(upgradeVersionArray[1]);
+  get versionSpecificText() {
+    if (this.upgradeDuringCurrentMonth.length === 1) {
+      let version = this.upgradeDuringCurrentMonth[0].id;
+      if (version.match('1.9')) {
+        return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
+      }
+      if (version.match('1.10')) {
+        return ' We added new client breakdowns starting in 1.10, so keep that in mind when looking at the data below.';
+      }
+    }
+    // return combined explanation if spans multiple upgrades, or customer skipped 1.9 and 1.10
+    return ' How we count clients changed in 1.9 and we added new client breakdowns starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
   // top level TOTAL client counts for current/partial month

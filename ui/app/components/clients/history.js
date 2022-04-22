@@ -5,6 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter, isBefore } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+import { dateFormat } from 'core/helpers/date-format';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
@@ -89,48 +90,68 @@ export default class History extends Component {
     );
   }
 
-  get latestUpgradeData() {
-    // {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
-    // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
-    // need to return the last in the array as the data is in ascending order
-    return this.args.model.versionHistory.at(-1) || null;
-  }
-
-  get allMinorVersionsInRange() {
-    let newArray = [];
-    // ARG TODO testing unsure if the getActivityResponse is the correct one here.
-    let startTime = new Date(this.getActivityResponse.startTime);
-    let endTime = new Date(this.getActivityResponse.endTime);
-    this.args.model.versionHistory.forEach((object) => {
-      let versionDate = new Date(object.timestampInstalled);
-      // compare against the API response to see if date is within the range of returned response.
-      if (isAfter(versionDate, startTime) && isBefore(versionDate, endTime)) {
-        // push the minor version number e.g. 9
-        let upgradeVersionArray = object.id.split('.');
-        newArray.push(upgradeVersionArray[1]);
-      }
-    });
-    return newArray; // return [9,9,10] shows all the minor numbers that fall within the range of the returned API response.
-  }
-
-  get versionUpdateText() {
-    // count how many times a minor number occurs inside the array of minors within the API range.
-    // occurrences returns: {9: 2, 10: 1}. key is the minor version and value is the count.
-    let occurrences = this.allMinorVersionsInRange.reduce(function (acc, curr) {
-      return acc[curr] ? ++acc[curr] : (acc[curr] = 1), acc;
-    }, {});
-    // if count of minor 9 is greater than one and there are no occurrences of minor 10, show the minor 9 specific warning
-    if (occurrences[9] >= 1 && !occurrences[10]) {
-      return `Vault was upgraded to ${this.latestUpgradeData.id} during this time range. How we count clients changed in 1.9, so keep that in mind when looking at the data below. `;
-    } else if (occurrences[10] >= 1 && !occurrences[9]) {
-      // show the minor 10 specific warning
-      return `Vault was upgraded to ${this.latestUpgradeData.id} during this time range. We added monthly breakdowns for 1.10 data only, so keep that in mind when looking at the data below. `;
-    } else if (occurrences[10] >= 1 && occurrences[9] >= 1) {
-      // you have both 9 and 10 as minors. Show generic warning.
-      return `Vault was upgraded to 1.9 and 1.10 during this time range. How we count clients changed in 1.9 and we added monthly breakdowns for 1.10 data only. Keep this in mind when looking at the data below. `;
+  get upgradeVersionHistory() {
+    const versionHistory = this.args.model.versionHistory;
+    if (!versionHistory || versionHistory.length === 0) {
+      return null;
     }
-    // null if there are no 9 or 10 minor versions within the range returned by the API
-    return null;
+
+    // get upgrade data for initial upgrade to 1.9 and/or 1.10
+    let relevantUpgrades = [];
+    const importantUpgrades = ['1.9', '1.10'];
+    importantUpgrades.forEach((version) => {
+      let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
+      if (findUpgrade) relevantUpgrades.push(findUpgrade);
+    });
+
+    // if no history for 1.9 or 1.10, get first upgrade available
+    if (Object.entries(relevantUpgrades).length === 0) {
+      relevantUpgrades.push({
+        id: versionHistory[0].id,
+        previousVersion: versionHistory[0].previousVersion,
+        timestampInstalled: versionHistory[0].timestampInstalled,
+      });
+    }
+    // array of upgrade data objects for noteworthy upgrades
+    return relevantUpgrades;
+  }
+
+  get upgradeDuringActivity() {
+    const activityStart = new Date(this.getActivityResponse.startTime);
+    const activityEnd = new Date(this.getActivityResponse.endTime);
+    const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
+      // TODO how do timezones affect this?
+      let upgradeDate = new Date(upgrade.timestampInstalled);
+      return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
+    });
+    // return all upgrades that happened within date range of queried activity
+    return upgradesWithinData.length === 0 ? null : upgradesWithinData;
+  }
+
+  get upgradeVersionAndDate() {
+    if (this.upgradeDuringActivity.length === 2) {
+      return 'Vault was upgraded to 1.9 and 1.10 during this time range.';
+    } else {
+      let upgrade = this.upgradeDuringActivity[0];
+      return `Vault was upgrade to ${upgrade.id} on ${dateFormat(
+        [upgrade.timestampInstalled, 'MMM d, yyyy'],
+        { isFormatted: true }
+      )}.`;
+    }
+  }
+
+  get versionSpecificText() {
+    if (this.upgradeDuringActivity.length === 1) {
+      let version = this.upgradeDuringActivity[0].id;
+      if (version.match('1.9')) {
+        return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
+      }
+      if (version.match('1.10')) {
+        return ' We added monthly breakdowns starting in 1.10, so keep that in mind when looking at the data below.';
+      }
+    }
+    // return combined explanation if spans multiple upgrades, or customer skipped 1.9 and 1.10
+    return ' How we count clients changed in 1.9 and we added monthly breakdowns starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
   get startTimeDisplay() {
