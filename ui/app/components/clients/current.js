@@ -31,6 +31,7 @@ export default class Current extends Component {
     });
 
     // if no history for 1.9 or 1.10, customer skipped these releases so get first stored upgrade
+    // TODO account for customer STARTING on 1.11
     if (relevantUpgrades.length === 0) {
       relevantUpgrades.push({
         id: versionHistory[0].id,
