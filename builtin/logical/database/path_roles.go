@@ -647,6 +647,7 @@ type roleEntry struct {
 	MaxTTL         time.Duration        `json:"max_ttl"`
 	CredentialType v5.CredentialType    `json:"credential_type"`
 	CertBundle     *certutil.CertBundle `json:"cert_bundle"`
+	CommonName     string               `json:"common_name"`
 	StaticAccount  *staticAccount       `json:"static_account" mapstructure:"static_account"`
 }
 

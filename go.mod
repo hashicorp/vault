@@ -12,6 +12,10 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
+replace github.com/hashicorp/vault-plugin-database-mongodbatlas => /Users/austingebauer/Workspace/hashicorp/vault-plugin-database-mongodbatlas
+
+replace github.com/hashicorp/vault-plugin-database-snowflake => /Users/austingebauer/Workspace/hashicorp/vault-plugin-database-snowflake
+
 require (
 	cloud.google.com/go v0.65.0
 	cloud.google.com/go/spanner v1.5.1
@@ -118,7 +122,7 @@ require (
 	github.com/hashicorp/vault/api v1.5.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.4.1
+	github.com/hashicorp/vault/sdk v0.4.2-0.20220421210002-80c29235fcf4
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

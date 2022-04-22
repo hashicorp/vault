@@ -6,8 +6,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -111,7 +111,8 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		}
 
 		// Set the credential based on the role's credential type.
-		var credential string
+		// TODO: can we move this into a credential library? credsutil is unused now.
+		var credential interface{}
 		switch role.CredentialType {
 		case v5.CredentialTypePassword:
 			password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
@@ -121,10 +122,10 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			}
 
 			credential = password
-			newUserReq.Password = credential
+			newUserReq.Password = password
 			newUserReq.CredentialType = v5.CredentialTypePassword
 		case v5.CredentialTypeRSA2048PrivateKey:
-			public, private, err := b.generateRSAKeypair(b.GetRandomReader(), 2048)
+			public, private, err := b.generateRSAKeypair()
 			if err != nil {
 				b.CloseIfShutdown(dbi, err)
 				return nil, fmt.Errorf("unable to generate keypair: %w", err)
@@ -133,6 +134,16 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			credential = string(private)
 			newUserReq.PublicKey = string(public)
 			newUserReq.CredentialType = v5.CredentialTypeRSA2048PrivateKey
+		case v5.CredentialTypeClientCertificate:
+			cb, subject, err := b.generateClientCertificate(role, expiration)
+			if err != nil {
+				b.CloseIfShutdown(dbi, err)
+				return nil, fmt.Errorf("unable to generate client certificate: %w", err)
+			}
+
+			credential = cb
+			newUserReq.UsernameConfig.Subject = subject
+			newUserReq.CredentialType = v5.CredentialTypeClientCertificate
 		}
 
 		// Overwriting the password in the event this is a legacy database
@@ -154,81 +165,16 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"username": newUserResp.Username,
 		}
 
+		// TODO: another type for client certificate w/ password?
 		switch role.CredentialType {
 		case v5.CredentialTypePassword:
 			respData["password"] = credential
 		case v5.CredentialTypeRSA2048PrivateKey:
 			respData["private_key"] = credential
 		case v5.CredentialTypeClientCertificate:
-			// Client certificate is not actually sent to the database
-			// In most cases, the username needs to be the common name in the
-			// client certificate subject field. The database plugin generates
-			// the username using a username template, so we don't know the
-			parsedCABundle, err := role.CertBundle.ToParsedCertBundle()
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return nil, fmt.Errorf("unable to generate client certificate: %w", err)
-			}
-
-			caSign := &certutil.CAInfoBundle{
-				ParsedCertBundle: *parsedCABundle,
-				URLs: &certutil.URLEntries{
-					IssuingCertificates:   []string{},
-					CRLDistributionPoints: []string{},
-					OCSPServers:           []string{},
-				},
-			}
-
-			subject := pkix.Name{
-				CommonName: newUserResp.Username,
-
-				// Additional subject options below:
-				//SerialNumber:       ridSerialNumber,
-				//Country:            strutil.RemoveDuplicatesStable(data.role.Country, false),
-				//Organization:       strutil.RemoveDuplicatesStable(data.role.Organization, false),
-				//OrganizationalUnit: strutil.RemoveDuplicatesStable(data.role.OU, false),
-				//Locality:           strutil.RemoveDuplicatesStable(data.role.Locality, false),
-				//Province:           strutil.RemoveDuplicatesStable(data.role.Province, false),
-				//StreetAddress:      strutil.RemoveDuplicatesStable(data.role.StreetAddress, false),
-				//PostalCode:         strutil.RemoveDuplicatesStable(data.role.PostalCode, false),
-			}
-
-			creation := &certutil.CreationBundle{
-				Params: &certutil.CreationParameters{
-					Subject: subject,
-
-					// SANs below:
-					// DNSNames:                      strutil.RemoveDuplicates(dnsNames, false),
-					// EmailAddresses:                strutil.RemoveDuplicates(emailAddresses, false),
-					// IPAddresses:                   ipAddresses,
-					// URIs:                          URIs,
-					// OtherSANs:                     otherSANs,
-
-					KeyType:       "rsa",
-					KeyBits:       2048,
-					SignatureBits: 256,
-					NotAfter:      expiration,
-					KeyUsage:      x509.KeyUsageDigitalSignature,
-					ExtKeyUsage:   certutil.ClientAuthExtKeyUsage,
-					// ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
-					// PolicyIdentifiers:             data.role.PolicyIdentifiers,
-					BasicConstraintsValidForNonCA: true,
-					NotBeforeDuration:             0,
-				},
-				SigningBundle: caSign,
-				// CSR:           nil,
-			}
-
-			parsedClientBundle, err := certutil.CreateCertificateWithRandomSource(creation, b.GetRandomReader())
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return nil, fmt.Errorf("unable to generate client certificate: %w", err)
-			}
-
-			cb, err := parsedClientBundle.ToCertBundle()
-			if err != nil {
-				b.CloseIfShutdown(dbi, err)
-				return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
+			cb, ok := credential.(*certutil.CertBundle)
+			if !ok {
+				return nil, errors.New("type assertion failed on client cert bundle")
 			}
 
 			respData["certificate"] = cb.Certificate
@@ -287,8 +233,9 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 // generateRSAKeypair returns PEM encodings of an RSA public and private key pair.
 // The first return value is the PEM encoding of the PKIX marshalled public key.
 // The second return value is the PEM encoding of the PKCS #8 marshalled private key.
-func (b *databaseBackend) generateRSAKeypair(rand io.Reader, bits int) ([]byte, []byte, error) {
-	key, err := rsa.GenerateKey(rand, bits)
+func (b *databaseBackend) generateRSAKeypair() ([]byte, []byte, error) {
+	// TODO: parameterize bits on role
+	key, err := rsa.GenerateKey(b.GetRandomReader(), 2048)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -319,6 +266,68 @@ func (b *databaseBackend) generateRSAKeypair(rand io.Reader, bits int) ([]byte, 
 	//       password encrypted private keys quite yet.
 
 	return pem.EncodeToMemory(publicBlock), pem.EncodeToMemory(privateBlock), nil
+}
+
+func (b *databaseBackend) generateClientCertificate(role *roleEntry, expiration time.Time) (*certutil.CertBundle, string, error) {
+	parsedCABundle, err := role.CertBundle.ToParsedCertBundle()
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to generate client certificate: %w", err)
+	}
+
+	caSign := &certutil.CAInfoBundle{
+		ParsedCertBundle: *parsedCABundle,
+		URLs: &certutil.URLEntries{
+			IssuingCertificates:   []string{},
+			CRLDistributionPoints: []string{},
+			OCSPServers:           []string{},
+		},
+	}
+
+	subject := pkix.Name{
+		CommonName: role.CommonName,
+		// Additional subject DN options intentionally omitted for now
+	}
+
+	creation := &certutil.CreationBundle{
+		Params: &certutil.CreationParameters{
+			Subject: subject,
+			// Additional SAN-related fields intentionally omitted for now
+			// SANs below:
+			// DNSNames:                      strutil.RemoveDuplicates(dnsNames, false),
+			// EmailAddresses:                strutil.RemoveDuplicates(emailAddresses, false),
+			// IPAddresses:                   ipAddresses,
+			// URIs:                          URIs,
+			// OtherSANs:                     otherSANs,
+			KeyType:       "rsa", // TODO: parameterize on role
+			KeyBits:       2048,  // TODO: parameterize on role
+			SignatureBits: 256,   // TODO: parameterize on role
+			NotAfter:      expiration,
+			KeyUsage:      x509.KeyUsageDigitalSignature,
+			ExtKeyUsage:   certutil.ClientAuthExtKeyUsage,
+			// ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
+			// PolicyIdentifiers:             data.role.PolicyIdentifiers,
+			BasicConstraintsValidForNonCA: true,
+			NotBeforeDuration:             0,
+			URLs: &certutil.URLEntries{
+				IssuingCertificates:   []string{},
+				CRLDistributionPoints: []string{},
+				OCSPServers:           []string{},
+			},
+		},
+		SigningBundle: caSign,
+	}
+
+	parsedClientBundle, err := certutil.CreateCertificateWithRandomSource(creation, b.GetRandomReader())
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to generate client certificate: %w", err)
+	}
+
+	cb, err := parsedClientBundle.ToCertBundle()
+	if err != nil {
+		return nil, "", fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
+	}
+
+	return cb, subject.String(), nil
 }
 
 const pathCredsCreateReadHelpSyn = `

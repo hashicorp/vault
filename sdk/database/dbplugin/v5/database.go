@@ -102,14 +102,25 @@ type NewUserRequest struct {
 	// Value is set when the credential type is 'rsa_2048_private_key'.
 	PublicKey string
 
+	// TODO: could we put the DN here? or even the certificate?
+
 	// Expiration of the user. Not all database plugins will support this.
 	Expiration time.Time
 }
 
 // UsernameMetadata is metadata the database plugin can use to generate a username
 type UsernameMetadata struct {
+	// DisplayName is the display name for the user.
+	// This is set for all CredentialType values.
 	DisplayName string
-	RoleName    string
+
+	// RoleName is the name of the role used to create the user.
+	// This is set for all CredentialType values.
+	RoleName string
+
+	// Subject is the distinguished name for the client certificate credential.
+	// This is set when the CredentialType is 'client_certificate'.
+	Subject string
 }
 
 // NewUserResponse returns any information Vault needs to know after creating a new user.
