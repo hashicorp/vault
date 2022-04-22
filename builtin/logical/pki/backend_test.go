@@ -4908,6 +4908,17 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.Equal(t, myKeyId1, myKeyId3, "our new ca did not seem to reuse the key as we expected.")
 }
 
+func TestSealWrappedStorageConfigured(t *testing.T) {
+	b, _ := createBackendWithStorage(t)
+	wrappedEntries := b.Backend.PathsSpecial.SealWrapStorage
+
+	// Make sure our legacy bundle is within the list
+	// NOTE: do not convert these test values to constants, we should always have these paths within seal wrap config
+	require.Contains(t, wrappedEntries, "config/ca_bundle", "Legacy bundle missing from seal wrap")
+	// The trailing / is important as it treats the entire folder requiring seal wrapping, not just config/key
+	require.Contains(t, wrappedEntries, "config/key/", "key prefix with trailing / missing from seal wrap.")
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string
