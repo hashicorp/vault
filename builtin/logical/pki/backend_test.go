@@ -3978,6 +3978,46 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.CertificateList {
 	path := fmt.Sprintf("/v1/%s/crl", mountPoint)
+	return getParsedCrlAtPath(t, client, path)
+}
+
+func getParsedCrlForIssuer(t *testing.T, client *api.Client, mountPoint string, issuer string) *pkix.CertificateList {
+	path := fmt.Sprintf("/v1/%v/issuer/%v/crl", mountPoint, issuer)
+	crl := getParsedCrlAtPath(t, client, path)
+
+	// Now fetch the issuer as well and verify the certificate
+	path = fmt.Sprintf("/v1/%v/issuer/%v/der", mountPoint, issuer)
+	req := client.NewRequest("GET", path)
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	certBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(certBytes) == 0 {
+		t.Fatalf("expected certificate in response body")
+	}
+
+	cert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert == nil {
+		t.Fatalf("expected parsed certificate")
+	}
+
+	if err := cert.CheckCRLSignature(crl); err != nil {
+		t.Fatalf("expected valid signature on CRL for issuer %v: %v", issuer, crl)
+	}
+
+	return crl
+}
+
+func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.CertificateList {
 	req := client.NewRequest("GET", path)
 	resp, err := client.RawRequest(req)
 	if err != nil {
@@ -4718,6 +4758,10 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myIssuerId1)
 	require.NotEmpty(t, myKeyId1)
 
+	// Fetch the parsed CRL; it should be empty as we've not revoked anything
+	parsedCrl := getParsedCrlForIssuer(t, client, "pki-root", "my-issuer1")
+	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
+
 	// Fail if the specified issuer name is re-used.
 	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
@@ -4740,6 +4784,10 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myIssuerId2)
 	require.NotEmpty(t, myKeyId2)
 
+	// Fetch the parsed CRL; it should be empty as we've not revoked anything
+	parsedCrl = getParsedCrlForIssuer(t, client, "pki-root", "my-issuer2")
+	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
+
 	// Fail if the specified key name is re-used.
 	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
@@ -4761,6 +4809,14 @@ func TestRootWithExistingKey(t *testing.T) {
 	myKeyId3 := resp.Data["key_id"]
 	require.NotEmpty(t, myIssuerId3)
 	require.NotEmpty(t, myKeyId3)
+
+	// Fetch the parsed CRL; it should be empty as we've not revoking anything.
+	parsedCrl = getParsedCrlForIssuer(t, client, "pki-root", "my-issuer3")
+	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
+	// Signatures should be the same since this is just a reissued cert. We
+	// use signature as a proxy for "these two CRLs are equal".
+	firstCrl := getParsedCrlForIssuer(t, client, "pki-root", "my-issuer1")
+	require.Equal(t, parsedCrl.SignatureValue, firstCrl.SignatureValue)
 
 	require.NotEqual(t, myIssuerId1, myIssuerId2)
 	require.NotEqual(t, myIssuerId1, myIssuerId3)

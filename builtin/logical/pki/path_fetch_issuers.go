@@ -321,3 +321,97 @@ Writing to /issuer/:ref allows updating of the name field associated with
 the certificate.
 `
 )
+
+func pathGetIssuerCRL(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/crl(/pem)?"
+	return buildPathGetIssuerCRL(b, pattern)
+}
+
+func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefNameFields(fields)
+
+	return &framework.Path{
+		// Returns raw values.
+		Pattern: pattern,
+		Fields:  fields,
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathGetIssuerCRL,
+		},
+
+		HelpSynopsis:    pathGetIssuerCRLHelpSyn,
+		HelpDescription: pathGetIssuerCRLHelpDesc,
+	}
+}
+
+func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	issuerName := getIssuerRef(data)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
+
+	crlPath, err := resolveIssuerCRLPath(ctx, req.Storage, issuerName)
+	if err != nil {
+		return nil, err
+	}
+
+	crlEntry, err := req.Storage.Get(ctx, crlPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var certificate []byte
+	if crlEntry != nil && len(crlEntry.Value) > 0 {
+		certificate = []byte(crlEntry.Value)
+	}
+
+	contentType := "application/pkix-crl"
+
+	if strings.HasSuffix(req.Path, "/pem") {
+		contentType = "application/x-pem-file"
+
+		// Rather return an empty response rather than an empty
+		// PEM blob.
+		if len(certificate) > 0 {
+			pemBlock := pem.Block{
+				Type:  "X509 CRL",
+				Bytes: certificate,
+			}
+
+			certificate = pem.EncodeToMemory(&pemBlock)
+		}
+	}
+
+	statusCode := 200
+	if len(certificate) == 0 {
+		statusCode = 204
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: contentType,
+			logical.HTTPRawBody:     certificate,
+			logical.HTTPStatusCode:  statusCode,
+		},
+	}, nil
+}
+
+const (
+	pathGetIssuerCRLHelpSyn  = `Fetch an issuer's Certificate Revocation Log (CRL).`
+	pathGetIssuerCRLHelpDesc = `
+This allows fetching the specified issuer's CRL. Note that this is different
+than the legacy path (/crl and /certs/crl) in that this is per-issuer and not
+just the default issuer's CRL.
+
+Two issuers will have the same CRL if they have the same key material and if
+they have the same Subject value.
+
+:ref can be either the literal value "default", in which case /config/issuers
+will be consulted for the present default issuer, an identifier of an issuer,
+or its assigned name value.
+
+Use /issuer/:ref/crl/pem to return just the certificate in PEM form; the raw
+/issuer/:ref/crl is in DER form.
+`
+)
