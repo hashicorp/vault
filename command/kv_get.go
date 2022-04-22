@@ -134,7 +134,13 @@ func (c *KVGetCommand) Run(args []string) int {
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
+		origPath := args[0]
 		partialPath = sanitizePath(args[0])
+
+		if hasTrailingSpace(origPath) {
+			partialPath = partialPath + " "
+		}
+
 		mountPath, v2, err = isKVv2(partialPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
