@@ -47,6 +47,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   test('it should render show view', async function (assert) {
     assert.expect(13);
 
+    // override capability getters
+    Object.defineProperties(this.model, {
+      canDelete: { value: true },
+      canListKeys: { value: true },
+    });
+
     this.server.get('/keymgmt/kms/foo-bar/key', () => {
       return {
         data: {

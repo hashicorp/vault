@@ -181,7 +181,7 @@ export default class KeymgmtDistribute extends Component {
       .distribute(backend, kms, key, data)
       .then(() => {
         this.flashMessages.success(`Successfully distributed key ${key} to ${kms}`);
-        this.router.transitionTo('vault.cluster.secrets.backend.show', key);
+        this.args.onClose();
       })
       .catch((e) => {
         this.flashMessages.danger(`Error distributing key: ${e.errors}`);
