@@ -44,26 +44,32 @@
   </div>
   <Toolbar>
     <ToolbarActions>
-      <button
-        type="button"
-        class="toolbar-link"
-        disabled={{not @model.deletionAllowed}}
-        {{on "click" (fn (mut this.isDeleteModalOpen) true)}}
-        data-test-keymgmt-key-destroy
-      >
-        Destroy key
-      </button>
-      <ConfirmAction
-        @buttonClasses="toolbar-link"
-        @onConfirmAction={{this.removeKey}}
-        @confirmTitle="Remove this key?"
-        @confirmMessage="This will remove all versions of the key from the KMS provider. The key will stay in Vault."
-        @confirmButtonText="Remove"
-        data-test-keymgmt-key-remove
-      >
-        Remove key
-      </ConfirmAction>
-      <div class="toolbar-separator"></div>
+      {{#if @model.canDelete}}
+        <button
+          type="button"
+          class="toolbar-link"
+          disabled={{not @model.deletionAllowed}}
+          {{on "click" (fn (mut this.isDeleteModalOpen) true)}}
+          data-test-keymgmt-key-destroy
+        >
+          Destroy key
+        </button>
+      {{/if}}
+      {{#if @model.provider}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{this.removeKey}}
+          @confirmTitle="Remove this key?"
+          @confirmMessage="This will remove all versions of the key from the KMS provider. The key will stay in Vault."
+          @confirmButtonText="Remove"
+          data-test-keymgmt-key-remove
+        >
+          Remove key
+        </ConfirmAction>
+      {{/if}}
+      {{#if (or @model.canDelete @model.provider)}}
+        <div class="toolbar-separator"></div>
+      {{/if}}
       <ConfirmAction
         @buttonClasses="toolbar-link"
         @onConfirmAction={{fn this.rotateKey @model.id}}
@@ -74,15 +80,17 @@
       >
         Rotate key
       </ConfirmAction>
-      <ToolbarSecretLink
-        @secret={{@model.id}}
-        @mode="edit"
-        @replace={{true}}
-        @queryParams={{query-params itemType="key"}}
-        @data-test-edit-link={{true}}
-      >
-        Edit key
-      </ToolbarSecretLink>
+      {{#if @model.canEdit}}
+        <ToolbarSecretLink
+          @secret={{@model.id}}
+          @mode="edit"
+          @replace={{true}}
+          @queryParams={{query-params itemType="key"}}
+          @data-test-edit-link={{true}}
+        >
+          Edit key
+        </ToolbarSecretLink>
+      {{/if}}
     </ToolbarActions>
   </Toolbar>
 {{/if}}

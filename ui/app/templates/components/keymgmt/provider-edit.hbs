@@ -23,51 +23,63 @@
             Details
           </LinkTo>
         </li>
-        <li class={{if this.viewingKeys "is-active"}} data-test-kms-provider-tab="keys">
-          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
-            Keys
-          </LinkTo>
-        </li>
+        {{#if @model.canListKeys}}
+          <li class={{if this.viewingKeys "is-active"}} data-test-kms-provider-tab="keys">
+            <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
+              Keys
+            </LinkTo>
+          </li>
+        {{/if}}
       </ul>
     </nav>
   </div>
   {{#unless this.viewingKeys}}
     <Toolbar data-test-kms-provider-details-actions>
       <ToolbarActions>
-        <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
-          <T.Trigger data-test-tooltip-trigger>
-            <ConfirmAction
-              @buttonClasses="toolbar-link"
-              @onConfirmAction={{this.onDelete}}
-              @disabled={{@model.keys.length}}
-              data-test-kms-provider-delete={{true}}
-            >
-              Delete provider
-            </ConfirmAction>
-          </T.Trigger>
-          {{#if @model.keys.length}}
-            <T.Content class="tool-tip">
-              <div class="box" data-test-kms-provider-delete-tooltip>
-                This provider cannot be deleted until all 20 keys distributed to it are revoked. This can be done from the
-                Keys tab.
-              </div>
-            </T.Content>
-          {{/if}}
-        </ToolTip>
-        <div class="toolbar-separator"></div>
-        {{! Update once distribute route has been created }}
-        {{! <LinkTo @route="vault.cluster.secrets.backend.kms-distribute">
-          Distribute key
-          <Icon @name="chevron-right" />
-        </LinkTo> }}
-        <ToolbarSecretLink
-          @secret={{@model.id}}
-          @mode="edit"
-          @replace={{true}}
-          @queryParams={{query-params itemType="provider"}}
-        >
-          Update credentials
-        </ToolbarSecretLink>
+        {{#if @model.canDelete}}
+          <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+            <T.Trigger data-test-tooltip-trigger>
+              <ConfirmAction
+                @buttonClasses="toolbar-link"
+                @onConfirmAction={{this.onDelete}}
+                @disabled={{@model.keys.length}}
+                data-test-kms-provider-delete={{true}}
+              >
+                Delete provider
+              </ConfirmAction>
+            </T.Trigger>
+            {{#if @model.keys.length}}
+              <T.Content class="tool-tip">
+                <div class="box" data-test-kms-provider-delete-tooltip>
+                  This provider cannot be deleted until all
+                  {{@model.keys.length}}
+                  key(s) distributed to it are revoked. This can be done from the Keys tab.
+                </div>
+              </T.Content>
+            {{/if}}
+          </ToolTip>
+        {{/if}}
+        {{#if (and @model.canDelete (or @model.canListKeys @model.canEdit))}}
+          <div class="toolbar-separator"></div>
+        {{/if}}
+        {{#if (or @model.canListKeys @model.canCreateKeys)}}
+          {{! JR-TODO: Update link once distribute route has been created }}
+          {{! <LinkTo @route="vault.cluster.secrets.backend.kms-distribute">
+            Distribute key
+            <Icon @name="chevron-right" />
+          </LinkTo> }}
+        {{/if}}
+        {{#if @model.canEdit}}
+          <ToolbarSecretLink
+            @secret={{@model.id}}
+            @mode="edit"
+            @replace={{true}}
+            @queryParams={{query-params itemType="provider"}}
+            disabled={{(not @model.canEdit)}}
+          >
+            Update credentials
+          </ToolbarSecretLink>
+        {{/if}}
       </ToolbarActions>
     </Toolbar>
   {{/unless}}
