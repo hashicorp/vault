@@ -260,7 +260,7 @@ module('Acceptance | clients history tab', function (hooks) {
           keys: ['1.9.0'],
           key_info: {
             '1.9.0': {
-              previous_version: '1.8.3',
+              previous_version: null,
               timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
             },
           },
