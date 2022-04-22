@@ -8,10 +8,11 @@ export default class VaultClusterPluginsRoute extends Route {
     // get token from localstorage,
     // wrap it (endpoint),
     // pass to component so it can provide it in the url
+    const wrappedToken = 's.qMktRJnvcosL9T8EPApDqsHL';
     const response = await this.auth.ajax('/v1/plugins', 'GET', {});
     return {
       ...response.data,
-      wrappedToken: 's.qMktRJnvcosL9T8EPApDqsHL',
+      wrappedToken,
     };
   }
 }

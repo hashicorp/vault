@@ -13,14 +13,14 @@ export default function (server) {
         type: 'my-custom-plugin-type',
         pages: [
           {
+            url: 'http://localhost:3000/teams/angrycat/dominate',
+            tabName: 'Cats',
+            description: 'User-provided description of this page',
+          },
+          {
             url: 'http://localhost:3000/teams/linkedin/recruiting',
             tabName: 'LinkedIn',
             description: 'Any content goes here, but it cannot be html',
-          },
-          {
-            url: 'http://localhost:3000/teams/ms/tbt',
-            tabName: 'Microsoft',
-            description: 'This is where you can do things related to Microsoft',
           },
           {
             url: 'http://localhost:3000/example/overview',

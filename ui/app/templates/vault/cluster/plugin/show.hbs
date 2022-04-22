@@ -11,6 +11,9 @@
     <h1 class="title is-3">
       <Icon @name="box" @size="24" class="has-text-grey-light" />
       {{model.name}}
+      <span class="tag" data-test-kv-version-badge>
+        {{model.type}}
+      </span>
     </h1>
   </p.levelLeft>
 </PageHeader>

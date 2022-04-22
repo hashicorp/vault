@@ -11,7 +11,11 @@ export default class VaultClusterPluginShowRoute extends Route {
   async model(params) {
     console.log('vault session', window.sessionStorage);
     console.log('vault local', window.localStorage);
-    const response = await this.auth.ajax(`/v1/plugin/${params.plugin}`, 'GET', {});
+    const response = await this.auth.ajax(
+      `/v1/plugin/${params.plugin}?token=${params.wrappedToken}`,
+      'GET',
+      {}
+    );
     return response.data;
   }
 }

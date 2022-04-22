@@ -59,6 +59,11 @@
             </LinkTo>
           </li>
         {{/if}}
+        <li class={{if (is-active-route "vault.cluster.plugins") "is-active"}}>
+          <LinkTo @route="vault.cluster.plugins" {{on "click" Nav.closeDrawer}}>
+            Plugins
+          </LinkTo>
+        </li>
       </ul>
     </Nav.main>
     <Nav.items>
