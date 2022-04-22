@@ -30,7 +30,7 @@ export default class Current extends Component {
       if (findUpgrade) relevantUpgrades.push(findUpgrade);
     });
 
-    // if no history for 1.9 or 1.10, customer skipped these releases so get first upgrade available
+    // if no history for 1.9 or 1.10, customer skipped these releases so get first stored upgrade
     if (relevantUpgrades.length === 0) {
       relevantUpgrades.push({
         id: versionHistory[0].id,
