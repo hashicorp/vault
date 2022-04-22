@@ -89,11 +89,22 @@ func getFormat(data *framework.FieldData) string {
 	return format
 }
 
-// Fetches the CA info.
+// fetchCAInfo will fetch the CA info, will return an error if no ca info exists.
 func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string) (*certutil.CAInfoBundle, error) {
 	bundle, err := fetchCertBundle(ctx, b, req.Storage, issuerRef)
 	if err != nil {
-		return nil, errutil.InternalError{Err: err.Error()}
+		switch err.(type) {
+		case errutil.UserError:
+			return nil, err
+		case errutil.InternalError:
+			return nil, err
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+		}
+	}
+
+	if bundle == nil {
+		return nil, errutil.UserError{Err: "no CA information is present"}
 	}
 
 	parsedBundle, err := parseCABundle(ctx, b, req, bundle)
@@ -130,6 +141,7 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 // performed or load the bundle from the new key/issuer storage. Any function that needs a bundle
 // should load it using this method to maintain compatibility on secondary nodes for which their
 // primary's have not upgraded yet.
+// NOTE: This function can return a nil, nil response.
 func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerRef string) (*certutil.CertBundle, error) {
 	if b.useLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
@@ -139,7 +151,7 @@ func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerR
 	id, err := resolveIssuerReference(ctx, s, issuerRef)
 	if err != nil {
 		// Usually a bad label from the user or misconfigured default.
-		return nil, err
+		return nil, errutil.UserError{Err: err.Error()}
 	}
 
 	return fetchCertBundleByIssuerId(ctx, s, id, true)
