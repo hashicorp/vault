@@ -108,14 +108,16 @@ type AutoAuth struct {
 
 // Method represents the configuration for the authentication backend
 type Method struct {
-	Type          string
-	MountPath     string        `hcl:"mount_path"`
-	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
-	WrapTTL       time.Duration `hcl:"-"`
-	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
-	MaxBackoff    time.Duration `hcl:"-"`
-	Namespace     string        `hcl:"namespace"`
-	Config        map[string]interface{}
+	Type              string
+	MountPath         string        `hcl:"mount_path"`
+	WrapTTLRaw        interface{}   `hcl:"wrap_ttl"`
+	WrapTTL           time.Duration `hcl:"-"`
+	InitialBackoffRaw interface{}   `hcl:"initial_backoff"`
+	InitialBackoff    time.Duration `hcl:"-"`
+	MaxBackoffRaw     interface{}   `hcl:"max_backoff"`
+	MaxBackoff        time.Duration `hcl:"-"`
+	Namespace         string        `hcl:"namespace"`
+	Config            map[string]interface{}
 }
 
 // Sink defines a location to write the authenticated token
@@ -468,6 +470,14 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 			return err
 		}
 		result.AutoAuth.Method.MaxBackoffRaw = nil
+	}
+
+	if result.AutoAuth.Method.InitialBackoffRaw != nil {
+		var err error
+		if result.AutoAuth.Method.InitialBackoff, err = parseutil.ParseDurationSecond(result.AutoAuth.Method.InitialBackoffRaw); err != nil {
+			return err
+		}
+		result.AutoAuth.Method.InitialBackoffRaw = nil
 	}
 
 	return nil
