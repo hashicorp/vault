@@ -86,7 +86,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			},
 
 			SealWrapStorage: []string{
-				"config/ca_bundle",
+				legacyCertBundlePath,
+				keyPrefix,
 			},
 		},
 
