@@ -297,4 +297,36 @@ module('Integration | Component | search select', function (hooks) {
     let err = await promise;
     assert.ok(err.message.includes('internal server error'), 'it throws an internal server error');
   });
+
+  test('it returns array with objects instead of strings if passObject=true', async function (assert) {
+    const models = ['identity/entity'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    this.set('passObject', true);
+    await render(hbs`{{search-select label="foo" models=models onChange=onChange passObject=passObject}}`);
+
+    await clickTrigger();
+    await settled();
+    // First select existing option
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert.ok(this.onChange.calledOnce);
+    assert.ok(
+      this.onChange.calledWith([{ id: '7', isNew: false }]),
+      'onClick is called with array of single object with isNew false'
+    );
+    // Then create a new item and select it
+    await clickTrigger();
+    await settled();
+    await typeInSearch('newItem');
+    await component.selectOption();
+    await settled();
+    assert.ok(
+      this.onChange.calledWith([
+        { id: '7', isNew: false },
+        { id: 'newItem', isNew: true },
+      ]),
+      'onClick is called with array of objects with isNew true on new item'
+    );
+  });
 });

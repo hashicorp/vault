@@ -21,6 +21,7 @@ import layout from '../templates/components/search-select';
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
+ * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
  * @param {string} [subText] - Text to be displayed below the label
@@ -54,6 +55,7 @@ export default Component.extend({
   shouldUseFallback: false,
   shouldRenderName: false,
   disallowNewItems: false,
+  passObject: false,
 
   init() {
     this._super(...arguments);
@@ -133,7 +135,11 @@ export default Component.extend({
   }).on('didInsertElement'),
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      this.onChange(Array.from(this.selectedOptions, (option) => option.id));
+      if (this.passObject) {
+        this.onChange(Array.from(this.selectedOptions, (option) => ({ id: option.id, isNew: !!option.new })));
+      } else {
+        this.onChange(Array.from(this.selectedOptions, (option) => option.id));
+      }
     } else {
       this.onChange(this.selectedOptions);
     }

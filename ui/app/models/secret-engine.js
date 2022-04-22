@@ -75,15 +75,10 @@ export default SecretEngineModel.extend({
   formFields: computed('engineType', 'options.version', function () {
     let type = this.engineType;
     let version = this.options?.version;
-    let fields = [
-      'type',
-      'path',
-      'description',
-      'accessor',
-      'local',
-      'sealWrap',
-      'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-    ];
+    let fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
+    // no ttl options for keymgmt
+    const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
+    fields.push(`config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`);
     if (type === 'kv' || type === 'generic') {
       fields.push('options.{version}');
     }
@@ -104,14 +99,14 @@ export default SecretEngineModel.extend({
       defaultGroup = { default: ['path'] };
     }
     let optionsGroup = {
-      'Method Options': [
-        'description',
-        'config.listingVisibility',
-        'local',
-        'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-      ],
+      'Method Options': ['description', 'config.listingVisibility', 'local', 'sealWrap'],
     };
+    // no ttl options for keymgmt
+    const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
+    optionsGroup['Method Options'].push(
+      `config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}`
+    );
+
     if (type === 'kv' || type === 'generic') {
       optionsGroup['Method Options'].unshift('options.{version}');
     }
@@ -140,6 +135,16 @@ export default SecretEngineModel.extend({
 
   fieldGroups: computed('formFieldGroups', function () {
     return fieldToAttrs(this, this.formFieldGroups);
+  }),
+
+  icon: computed('engineType', function () {
+    if (!this.engineType || this.engineType === 'kmip') {
+      return 'secrets';
+    }
+    if (this.engineType === 'keymgmt') {
+      return 'key';
+    }
+    return this.engineType;
   }),
 
   // namespaces introduced types with a `ns_` prefix for built-in engines

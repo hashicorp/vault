@@ -475,7 +475,7 @@
         "path": "system/leases"
       },
       {
-        "title": "<code>/sys/license</code>",
+        "title": "<code>/sys/license/status</code>",
         "path": "system/license"
       },
       {

@@ -6,14 +6,15 @@ description: Audit devices are mountable devices that log requests and responses
 
 # Audit Devices
 
-Audit devices are the components in Vault that keep a detailed log of all
+Audit devices are the components in Vault that collectively keep a detailed log of all
 requests and response to Vault. Because every operation with Vault is an API
-request/response, the audit log contains _every authenticated_ interaction with
+request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
 Vault, including errors.
 
-Multiple audit devices can be enabled and Vault will send the audit logs to
-all of them. This allows you to not only have a redundant copy, but also a second copy
-in case the first is tampered with.
+Multiple audit devices can be enabled and Vault will attempt to send the audit logs to
+all of them. This allows you to not only have redundant copies, but also a way to check for data tampering in the logs themselves.
+
+~> Note: When using multiple audit devices, Vault considers a request to be successful if it can log to *at least* one configured audit device (see: [Blocked Audit Devices](/docs/audit#blocked-audit-devices) section below). Therefore in order to build a complete picture of all audited actions, use the aggregate/union of the logs from each audit device.
 
 ## Format
 
