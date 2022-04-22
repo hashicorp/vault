@@ -120,7 +120,7 @@ export default class History extends Component {
     const activityStart = new Date(this.getActivityResponse.startTime);
     const activityEnd = new Date(this.getActivityResponse.endTime);
     const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
-      // will timezones be an issue because new Date defaults to current timezone?
+      // TODO how do timezones affect this?
       let upgradeDate = new Date(upgrade.timestampInstalled);
       return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
     });
