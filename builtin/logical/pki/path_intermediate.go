@@ -48,7 +48,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	var err error
 
 	if b.useLegacyBundleCaStorage() {
-		return logical.ErrorResponse("Can not create intermediary until migration has completed"), nil
+		return logical.ErrorResponse("Can not create intermediate until migration has completed"), nil
 	}
 
 	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)

@@ -34,16 +34,13 @@ func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, er
 		isRequired:       false,
 		legacyBundle:     nil,
 		legacyBundleHash: "",
+		migrationLog:     nil,
 	}
-	var err error
 
+	var err error
 	migrationInfo.legacyBundle, err = getLegacyCertBundle(ctx, s)
 	if err != nil {
 		return migrationInfo, err
-	}
-
-	if migrationInfo.legacyBundle == nil {
-		return migrationInfo, nil
 	}
 
 	migrationInfo.migrationLog, err = getLegacyBundleMigrationLog(ctx, s)
@@ -56,46 +53,43 @@ func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, er
 		return migrationInfo, err
 	}
 
-	if migrationInfo.migrationLog != nil {
-		// At this point we have already migrated something previously.
-		if migrationInfo.migrationLog.Hash == migrationInfo.legacyBundleHash &&
-			migrationInfo.migrationLog.MigrationVersion == latestMigrationVersion {
-			return migrationInfo, nil
-		}
+	// Even if there isn't anything to migrate, we always want to write out the log entry
+	// as that will trigger the secondary clusters to toggle/wake up
+	if (migrationInfo.migrationLog == nil) ||
+		(migrationInfo.migrationLog.Hash != migrationInfo.legacyBundleHash) ||
+		(migrationInfo.migrationLog.MigrationVersion != latestMigrationVersion) {
+		migrationInfo.isRequired = true
 	}
 
-	migrationInfo.isRequired = true
 	return migrationInfo, nil
 }
 
-func migrateStorage(ctx context.Context, req *logical.InitializationRequest, logger log.Logger) error {
-	s := req.Storage
-	migrationInfo, err := getMigrationInfo(ctx, req.Storage)
+func migrateStorage(ctx context.Context, s logical.Storage, logger log.Logger) error {
+	migrationInfo, err := getMigrationInfo(ctx, s)
 	if err != nil {
 		return err
 	}
 
 	if !migrationInfo.isRequired {
-		if migrationInfo.legacyBundle == nil {
-			// No legacy certs to migrate, we are done...
-			logger.Debug("No legacy certs found, no migration required.")
-		}
-		if migrationInfo.migrationLog != nil {
-			// The hashes are the same, no need to try and re-import...
-			logger.Debug("existing migration hash found and matched legacy bundle, skipping migration.")
-		}
+		// No migration was deemed to be required.
+		logger.Debug("existing migration found and was considered valid, skipping migration.")
 		return nil
 	}
 
 	logger.Info("performing PKI migration to new keys/issuers layout")
-
-	anIssuer, aKey, err := writeCaBundle(ctx, s, migrationInfo.legacyBundle, "current", "current")
-	if err != nil {
-		return err
+	if migrationInfo.legacyBundle != nil {
+		anIssuer, aKey, err := writeCaBundle(ctx, s, migrationInfo.legacyBundle, "current", "current")
+		if err != nil {
+			return err
+		}
+		logger.Debug("Migration generated the following ids and set them as defaults",
+			"issuer id", anIssuer.ID, "key id", aKey.ID)
+	} else {
+		logger.Debug("No legacy CA certs found, no migration required.")
 	}
-	logger.Debug("Migration generated the following ids and set them as defaults",
-		"issuer id", anIssuer.ID, "key id", aKey.ID)
 
+	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
+	// if they were upgraded prior to the primary cluster's migration occurred.
 	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigrationLog{
 		Hash:             migrationInfo.legacyBundleHash,
 		Created:          time.Now(),
@@ -104,20 +98,24 @@ func migrateStorage(ctx context.Context, req *logical.InitializationRequest, log
 	if err != nil {
 		return err
 	}
+
 	logger.Info("successfully completed migration to new keys/issuers layout")
 	return nil
 }
 
 func computeHashOfLegacyBundle(bundle *certutil.CertBundle) (string, error) {
-	// We only hash the main certificate and the certs within the CAChain,
-	// assuming that any sort of change that occurred would have influenced one of those two fields.
 	hasher := sha256.New()
-	if _, err := hasher.Write([]byte(bundle.Certificate)); err != nil {
-		return "", err
-	}
-	for _, cert := range bundle.CAChain {
-		if _, err := hasher.Write([]byte(cert)); err != nil {
+	// Generate an empty hash if the bundle does not exist.
+	if bundle != nil {
+		// We only hash the main certificate and the certs within the CAChain,
+		// assuming that any sort of change that occurred would have influenced one of those two fields.
+		if _, err := hasher.Write([]byte(bundle.Certificate)); err != nil {
 			return "", err
+		}
+		for _, cert := range bundle.CAChain {
+			if _, err := hasher.Write([]byte(cert)); err != nil {
+				return "", err
+			}
 		}
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), nil

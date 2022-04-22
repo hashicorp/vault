@@ -260,15 +260,15 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 }
 
 // initialize is used to perform a possible PKI storage migration if needed
-func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
 	// Early exit if not a primary cluster or performance secondary with a local mount.
 	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		b.Logger().Debug("skipping pki migration as we are not on primary or secondary with a local mount")
+		b.Logger().Debug("skipping PKI migration as we are not on primary or secondary with a local mount")
 		return nil
 	}
 
-	if err := migrateStorage(ctx, req, b.Logger()); err != nil {
+	if err := migrateStorage(ctx, b.storage, b.Logger()); err != nil {
 		b.Logger().Error("Error during migration of PKI mount: " + err.Error())
 		return err
 	}
@@ -291,11 +291,9 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context) {
 	}
 
 	if info.isRequired {
-		b.Logger().Info("PKI migration status is required, reading cert bundle from legacy ca location")
+		b.Logger().Info("PKI migration is required, reading cert bundle from legacy ca location")
 		b.pkiStorageVersion.Store(0)
-	}
-
-	if !info.isRequired {
+	} else {
 		b.Logger().Debug("PKI migration completed, reading cert bundle from key/issuer storage")
 		b.pkiStorageVersion.Store(1)
 	}
