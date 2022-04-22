@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { isAfter, startOfMonth } from 'date-fns';
 import { action } from '@ember/object';
-import { dateFormat } from 'core/helpers/date-format';
 
 export default class Current extends Component {
   chartLegend = [
@@ -113,10 +112,7 @@ export default class Current extends Component {
       return 'Vault was upgraded to 1.9 and 1.10 during this month.';
     } else {
       let upgrade = this.upgradeDuringCurrentMonth[0];
-      return `Vault was upgrade to ${upgrade.id} on ${dateFormat(
-        [upgrade.timestampInstalled, 'MMM d, yyyy'],
-        { isFormatted: true }
-      )}.`;
+      return `Vault was upgrade to ${upgrade.id} on this month`;
     }
   }
 
