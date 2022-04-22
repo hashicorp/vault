@@ -98,6 +98,9 @@ export default class Current extends Component {
   }
 
   get upgradeDuringCurrentMonth() {
+    if (!this.upgradeVersionHistory) {
+      return null;
+    }
     const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
       // TODO how do timezones affect this?
       let upgradeDate = new Date(upgrade.timestampInstalled);
@@ -108,15 +111,21 @@ export default class Current extends Component {
   }
 
   get upgradeVersionAndDate() {
+    if (!this.upgradeDuringCurrentMonth) {
+      return null;
+    }
     if (this.upgradeDuringCurrentMonth.length === 2) {
       return 'Vault was upgraded to 1.9 and 1.10 during this month.';
     } else {
       let upgrade = this.upgradeDuringCurrentMonth[0];
-      return `Vault was upgrade to ${upgrade.id} on this month`;
+      return `Vault was upgraded to ${upgrade.id} on this month`;
     }
   }
 
   get versionSpecificText() {
+    if (!this.upgradeDuringCurrentMonth) {
+      return null;
+    }
     if (this.upgradeDuringCurrentMonth.length === 1) {
       let version = this.upgradeDuringCurrentMonth[0].id;
       if (version.match('1.9')) {

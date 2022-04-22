@@ -117,6 +117,9 @@ export default class History extends Component {
   }
 
   get upgradeDuringActivity() {
+    if (!this.upgradeVersionHistory) {
+      return null;
+    }
     const activityStart = new Date(this.getActivityResponse.startTime);
     const activityEnd = new Date(this.getActivityResponse.endTime);
     const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
@@ -129,6 +132,9 @@ export default class History extends Component {
   }
 
   get upgradeVersionAndDate() {
+    if (!this.upgradeDuringActivity) {
+      return null;
+    }
     if (this.upgradeDuringActivity.length === 2) {
       let firstUpgrade = this.upgradeDuringActivity[0];
       let secondUpgrade = this.upgradeDuringActivity[1];
@@ -137,7 +143,7 @@ export default class History extends Component {
       return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
     } else {
       let upgrade = this.upgradeDuringActivity[0];
-      return `Vault was upgrade to ${upgrade.id} on ${dateFormat(
+      return `Vault was upgraded to ${upgrade.id} on ${dateFormat(
         [upgrade.timestampInstalled, 'MMM d, yyyy'],
         { isFormatted: true }
       )}.`;
@@ -145,6 +151,9 @@ export default class History extends Component {
   }
 
   get versionSpecificText() {
+    if (!this.upgradeDuringActivity) {
+      return null;
+    }
     if (this.upgradeDuringActivity.length === 1) {
       let version = this.upgradeDuringActivity[0].id;
       if (version.match('1.9')) {
