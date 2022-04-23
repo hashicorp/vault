@@ -752,6 +752,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_extensions_template": role.DefaultExtensionsTemplate,
 			"allowed_user_key_lengths":    role.AllowedUserKeyTypesLengths,
 			"algorithm_signer":            role.AlgorithmSigner,
+			"not_before_duration":         role.NotBeforeDuration,
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{
