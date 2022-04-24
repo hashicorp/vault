@@ -1,0 +1,3 @@
+```release-note:feature
+builtin/logical/transit: added functionality for bcrypt hash generation and verification
+```
