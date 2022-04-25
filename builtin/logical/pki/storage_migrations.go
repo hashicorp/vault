@@ -64,7 +64,7 @@ func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, er
 	return migrationInfo, nil
 }
 
-func migrateStorage(ctx context.Context, s logical.Storage, logger log.Logger) error {
+func migrateStorage(ctx context.Context, cb *crlBuilder, s logical.Storage, logger log.Logger) error {
 	migrationInfo, err := getMigrationInfo(ctx, s)
 	if err != nil {
 		return err
@@ -87,6 +87,8 @@ func migrateStorage(ctx context.Context, s logical.Storage, logger log.Logger) e
 	} else {
 		logger.Debug("No legacy CA certs found, no migration required.")
 	}
+
+	cb.requestRebuild()
 
 	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
 	// if they were upgraded prior to the primary cluster's migration occurred.

@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -24,6 +26,57 @@ type revocationInfo struct {
 	RevocationTime    int64     `json:"revocation_time"`
 	RevocationTimeUTC time.Time `json:"revocation_time_utc"`
 	CertificateIssuer issuerID  `json:"issuer_id"`
+}
+
+// crlBuilder is gatekeeper for controlling various read/write operations to the storage of the CRL.
+// The extra complexity arises from secondary performance clusters seeing various writes to its storage
+// without the actual API calls. During the storage invalidation process, we do not have the required state
+// to actually rebuild the CRLs, so we need to schedule it in a deferred fashion. This allows either
+// read or write calls to perform the operation if required, or have the flag reset upon a write operation
+type crlBuilder struct {
+	m            sync.Mutex
+	forceRebuild uint32
+}
+
+const (
+	_ignoreForceFlag  = true
+	_enforceForceFlag = false
+)
+
+// rebuildIfForced is to be called by readers or periodic functions that might need to trigger
+// a refresh of the CRL before the read occurs.
+func (cb *crlBuilder) rebuildIfForced(ctx context.Context, b *backend, request *logical.Request) error {
+	if atomic.LoadUint32(&cb.forceRebuild) == 1 {
+		return cb._doRebuild(ctx, b, request, true, _enforceForceFlag)
+	}
+
+	return nil
+}
+
+// rebuild is to be called by various write apis that know the CRL is to be updated and can be now.
+func (cb *crlBuilder) rebuild(ctx context.Context, b *backend, request *logical.Request, forceNew bool) error {
+	return cb._doRebuild(ctx, b, request, forceNew, _ignoreForceFlag)
+}
+
+// requestRebuild will schedule a rebuild of the CRL from the next reader or writer.
+func (cb *crlBuilder) requestRebuild() {
+	cb.m.Lock()
+	defer cb.m.Unlock()
+	atomic.StoreUint32(&cb.forceRebuild, 1)
+}
+
+func (cb *crlBuilder) _doRebuild(ctx context.Context, b *backend, request *logical.Request, forceNew bool, ignoreForceFlag bool) error {
+	cb.m.Lock()
+	defer cb.m.Unlock()
+	if cb.forceRebuild == 1 || ignoreForceFlag {
+		defer atomic.StoreUint32(&cb.forceRebuild, 0)
+
+		// if forceRebuild was requested, that should force a complete rebuild even if requested not too by forceNew
+		myForceNew := cb.forceRebuild == 1 || forceNew
+		return buildCRLs(ctx, b, request, myForceNew)
+	}
+
+	return nil
 }
 
 // Revokes a cert, and tries to be smart about error recovery
@@ -58,7 +111,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	alreadyRevoked := false
 	var revInfo revocationInfo
 
-	revEntry, err := fetchCertBySerial(ctx, req, revokedPath, serial)
+	revEntry, err := fetchCertBySerial(ctx, b, req, revokedPath, serial)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -77,7 +130,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	if !alreadyRevoked {
-		certEntry, err := fetchCertBySerial(ctx, req, "certs/", serial)
+		certEntry, err := fetchCertBySerial(ctx, b, req, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -133,7 +186,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		}
 	}
 
-	crlErr := buildCRLs(ctx, b, req, false)
+	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:

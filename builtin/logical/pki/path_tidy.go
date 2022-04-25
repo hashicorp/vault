@@ -225,7 +225,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 
 				if rebuildCRL {
-					if err := buildCRLs(ctx, b, req, false); err != nil {
+					if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
 						return err
 					}
 				}

@@ -156,7 +156,7 @@ func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerR
 //
 // Support for fetching CA certificates was removed, due to the new issuers
 // changes.
-func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
+func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
 	var path, legacyPath string
 	var err error
 	var certEntry *logical.StorageEntry
@@ -171,6 +171,9 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == "crl":
+		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
+			return nil, err
+		}
 		path, err = resolveIssuerCRLPath(ctx, req.Storage, defaultRef)
 		if err != nil {
 			return nil, err
