@@ -896,6 +896,20 @@ func TestComparePublicKeysAndType(t *testing.T) {
 	}
 }
 
+func TestNotAfterValues(t *testing.T) {
+	if ErrNotAfterBehavior != 0 {
+		t.Fatalf("Expected ErrNotAfterBehavior=%v to have value 0", ErrNotAfterBehavior)
+	}
+
+	if TruncateNotAfterBehavior != 1 {
+		t.Fatalf("Expected TruncateNotAfterBehavior=%v to have value 1", TruncateNotAfterBehavior)
+	}
+
+	if PermitNotAfterBehavior != 2 {
+		t.Fatalf("Expected PermitNotAfterBehavior=%v to have value 2", PermitNotAfterBehavior)
+	}
+}
+
 func genRsaKey(t *testing.T) *rsa.PrivateKey {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

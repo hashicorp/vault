@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
@@ -96,6 +97,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	issuer, err := fetchIssuerById(ctx, s, issuerId)
 	require.NoError(t, err)
 	require.Equal(t, "current", issuer.Name) // RFC says we should import with Name=current
+	require.Equal(t, certutil.ErrNotAfterBehavior, issuer.LeafNotAfterBehavior)
 
 	key, err := fetchKeyById(ctx, s, keyId)
 	require.NoError(t, err)
