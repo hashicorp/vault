@@ -112,7 +112,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, bundle.PrivateKeyType, key.PrivateKeyType)
 
 	// Make sure we kept the old bundle
-	certBundle, err := getLegacyCertBundle(ctx, s)
+	_, certBundle, err := getLegacyCertBundle(ctx, s)
 	require.NoError(t, err)
 	require.Equal(t, bundle, certBundle)
 

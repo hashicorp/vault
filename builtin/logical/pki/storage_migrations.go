@@ -38,7 +38,7 @@ func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, er
 	}
 
 	var err error
-	migrationInfo.legacyBundle, err = getLegacyCertBundle(ctx, s)
+	_, migrationInfo.legacyBundle, err = getLegacyCertBundle(ctx, s)
 	if err != nil {
 		return migrationInfo, err
 	}
@@ -150,21 +150,27 @@ func setLegacyBundleMigrationLog(ctx context.Context, s logical.Storage, lbm *le
 	return s.Put(ctx, json)
 }
 
-func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*certutil.CertBundle, error) {
+func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, *certutil.CertBundle, error) {
 	entry, err := s.Get(ctx, legacyCertBundlePath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if entry == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	cb := &certutil.CertBundle{}
 	err = entry.DecodeJSON(cb)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return cb, nil
+	// Fake a storage entry with backwards compatibility in mind. We only need
+	// the fields in the CAInfoBundle; everything else doesn't matter.
+	issuer := &issuerEntry{
+		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
+	}
+
+	return issuer, cb, nil
 }

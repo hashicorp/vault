@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -66,10 +67,23 @@ func pathGetIssuer(b *backend) *framework.Path {
 func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
+
+	// Fields for updating issuer.
 	fields["manual_chain"] = &framework.FieldSchema{
 		Type: framework.TypeCommaStringSlice,
 		Description: `Chain of issuer references to use to build this
 issuer's computed CAChain field, when non-empty.`,
+	}
+	fields["leaf_not_after_behavior"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Behavior of leaf's NotAfter fields: "err" to error
+if the computed NotAfter date exceeds that of this issuer; "truncate" to
+silently truncate to that of this issuer; or "permit" to allow this
+issuance to succeed (with NotAfter exceeding that of an issuer). Note that
+not all values will results in certificates that can be validated through
+the entire validity period. It is suggested to use "truncate" for
+intermediate CAs and "permit" only for root CAs.`,
+		Default: "err",
 	}
 
 	return &framework.Path{
@@ -119,12 +133,13 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"issuer_id":    issuer.ID,
-			"issuer_name":  issuer.Name,
-			"key_id":       issuer.KeyID,
-			"certificate":  issuer.Certificate,
-			"manual_chain": respManualChain,
-			"ca_chain":     issuer.CAChain,
+			"issuer_id":               issuer.ID,
+			"issuer_name":             issuer.Name,
+			"key_id":                  issuer.KeyID,
+			"certificate":             issuer.Certificate,
+			"manual_chain":            respManualChain,
+			"ca_chain":                issuer.CAChain,
+			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior,
 		},
 	}, nil
 }
@@ -158,11 +173,28 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	newPath := data.Get("manual_chain").([]string)
+	rawLeafBehavior := data.Get("leaf_not_after_behavior").(string)
+	var newLeafBehavior certutil.NotAfterBehavior
+	switch rawLeafBehavior {
+	case "err":
+		newLeafBehavior = certutil.ErrNotAfterBehavior
+	case "truncate":
+		newLeafBehavior = certutil.TruncateNotAfterBehavior
+	case "permit":
+		newLeafBehavior = certutil.PermitNotAfterBehavior
+	default:
+		return logical.ErrorResponse("Unknown value for field `leaf_not_after_behavior`. Possible values are `err`, `truncate`, and `permit`."), nil
+	}
 
 	modified := false
 
 	if newName != issuer.Name {
 		issuer.Name = newName
+		modified = true
+	}
+
+	if newLeafBehavior != issuer.LeafNotAfterBehavior {
+		issuer.LeafNotAfterBehavior = newLeafBehavior
 		modified = true
 	}
 
@@ -219,12 +251,13 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"issuer_id":    issuer.ID,
-			"issuer_name":  issuer.Name,
-			"key_id":       issuer.KeyID,
-			"certificate":  issuer.Certificate,
-			"manual_chain": respManualChain,
-			"ca_chain":     issuer.CAChain,
+			"issuer_id":               issuer.ID,
+			"issuer_name":             issuer.Name,
+			"key_id":                  issuer.KeyID,
+			"certificate":             issuer.Certificate,
+			"manual_chain":            respManualChain,
+			"ca_chain":                issuer.CAChain,
+			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior,
 		},
 	}, nil
 }

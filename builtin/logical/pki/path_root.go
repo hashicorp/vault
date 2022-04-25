@@ -240,7 +240,6 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
-		AllowExpirationPastCA:     true,
 		NotAfter:                  data.Get("not_after").(string),
 	}
 	*role.AllowWildcardCertificates = true
@@ -261,6 +260,11 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 				"error fetching CA certificate: %s", caErr)}
 		}
 	}
+
+	// Since we are signing an intermediate, we explicitly want to override
+	// the leaf NotAfterBehavior to permit issuing intermediates longer than
+	// the life of this issuer.
+	signingBundle.LeafNotAfterBehavior = certutil.PermitNotAfterBehavior
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
