@@ -524,27 +524,18 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	r.l.RLock()
 	adjustedPath := req.Path
 	mount, raw, ok := r.root.LongestPrefix(ns.Path + adjustedPath)
-	if r.logger.IsTrace() {
-		r.logger.Trace("trying to route to mount using adjusted path", "namespace", ns, "adjustedPath", adjustedPath)
-		if !ok {
-			r.logger.Trace("prefix search returned", "mount", mount, "raw", raw)
-		}
-	}
+	r.logger.Trace("trying to route to mount using adjusted path", "namespace", ns, "adjustedPath", adjustedPath, "mount", mount, "raw", raw, "ok", ok)
 	if !ok && !strings.HasSuffix(adjustedPath, "/") {
 		// Re-check for a backend by appending a slash. This lets "foo" mean
 		// "foo/" at the root level which is almost always what we want.
 		adjustedPath += "/"
 		mount, raw, ok = r.root.LongestPrefix(ns.Path + adjustedPath)
-		if r.logger.IsTrace() {
-			r.logger.Trace("after appending / to adjustedPath, trying again to route to mount using adjusted path", "namespace", ns, "adjustedPath", adjustedPath)
-			if !ok {
-				r.logger.Trace("after appending / to adjustedPath, prefix search returned", "mount", mount, "raw", raw)
-			}
-		}
+		r.logger.Trace("after appending / to adjustedPath, trying again to route to mount using adjusted path", "namespace", ns, "adjustedPath", adjustedPath, "mount", mount, "raw", raw, "ok", ok)
 	}
 	r.l.RUnlock()
 	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s', route entry not found", req.Path)), false, false, logical.ErrUnsupportedPath
+		r.logger.Trace("route entry not found", "path", req.Path)
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
 	defer metrics.MeasureSince([]string{
@@ -565,9 +556,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
-		if r.logger.IsTrace() {
-			r.logger.Trace("route entry found, but backend is nil")
-		}
+		r.logger.Trace("route entry found, but backend is nil")
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s', nil backend", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 
@@ -577,9 +566,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			if r.logger.IsTrace() {
-				r.logger.Trace("route entry is tainted, rejecting operations to it that aren't revoke or rollback")
-			}
+			r.logger.Trace("route entry is tainted, rejecting operations to it that aren't revoke or rollback")
 			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s', entry tainted", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
