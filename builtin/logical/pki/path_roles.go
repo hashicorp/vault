@@ -405,6 +405,12 @@ for "generate_lease".`,
 				Description: `Set the not after field of the certificate with specified date value.
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ.`,
 			},
+			"issuer_ref": {
+				Type: framework.TypeString,
+				Description: `Reference to the issuer used to sign requests
+serviced by this role.`,
+				Default: defaultRef,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -527,6 +533,14 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		modified = true
 	}
 
+	// Set the issuer field to default if not set. We want to do this
+	// unconditionally as we should probably never have an empty issuer
+	// on a stored roles.
+	if len(result.Issuer) == 0 {
+		result.Issuer = defaultRef
+		modified = true
+	}
+
 	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -628,6 +642,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		NotAfter:                      data.Get("not_after").(string),
+		Issuer:                        data.Get("issuer_ref").(string),
 	}
 
 	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
@@ -689,6 +704,14 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		allow_wildcard_certificates = true
 	}
 	*entry.AllowWildcardCertificates = allow_wildcard_certificates.(bool)
+
+	// Ensure issuers ref is set to to a non-empty value. Note that we never
+	// resolve the reference (to an issuerId) at role creation time; instead,
+	// resolve it at use time. This allows values such as `default` or other
+	// user-assigned names to "float" and change over time.
+	if len(entry.Issuer) == 0 {
+		entry.Issuer = defaultRef
+	}
 
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
@@ -836,6 +859,7 @@ type roleEntry struct {
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 	NotAfter                      string        `json:"not_after" mapstructure:"not_after"`
+	Issuer                        string        `json:"issuer" mapstructure:"issuer"`
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
 }
@@ -884,6 +908,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 		"not_after":                          r.NotAfter,
+		"issuer_ref":                         r.Issuer,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
