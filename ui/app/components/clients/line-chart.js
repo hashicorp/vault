@@ -49,11 +49,11 @@ export default class LineChart extends Component {
   @action
   renderChart(element, args) {
     const dataset = args[0];
-    let upgradeMonth, currentVersion, previousVersion;
+    const upgradeData = [];
     if (args[1]) {
-      upgradeMonth = parseAPITimestamp(args[1].timestampInstalled, 'M/yy');
-      currentVersion = args[1].id;
-      previousVersion = args[1].previousVersion;
+      args[1].forEach((versionData) =>
+        upgradeData.push({ month: parseAPITimestamp(versionData.timestampInstalled, 'M/yy'), ...versionData })
+      );
     }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const chartSvg = select(element);
@@ -90,6 +90,10 @@ export default class LineChart extends Component {
 
     chartSvg.selectAll('.domain').remove();
 
+    const findUpgradeData = (datum) => {
+      return upgradeData.find((upgrade) => upgrade[this.xKey] === datum[this.xKey]);
+    };
+
     // VERSION UPGRADE INDICATOR
     chartSvg
       .append('g')
@@ -99,7 +103,7 @@ export default class LineChart extends Component {
       .append('circle')
       .attr('class', 'upgrade-circle')
       .attr('fill', UPGRADE_WARNING)
-      .style('opacity', (d) => (d[this.xKey] === upgradeMonth ? '1' : '0'))
+      .style('opacity', (d) => (findUpgradeData(d) ? '1' : '0'))
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
       .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 10);
@@ -154,10 +158,14 @@ export default class LineChart extends Component {
       this.tooltipMonth = formatChartDate(data[this.xKey]);
       this.tooltipTotal = data[this.yKey] + ' total clients';
       this.tooltipNew = data?.new_clients[this.yKey] + ' new clients';
-      this.tooltipUpgradeText =
-        data[this.xKey] === upgradeMonth
-          ? `Vault was upgraded ${previousVersion ? 'from ' + previousVersion : ''} to ${currentVersion}`
-          : '';
+      this.tooltipUpgradeText = '';
+      let upgradeInfo = findUpgradeData(data);
+      if (upgradeInfo) {
+        let { id, previousVersion } = upgradeInfo;
+        this.tooltipUpgradeText = `Vault was upgraded 
+        ${previousVersion ? 'from ' + previousVersion : ''} to ${id}`;
+      }
+
       let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
       this.tooltipTarget = node;
     });
