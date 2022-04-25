@@ -860,8 +860,6 @@ type roleEntry struct {
 	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 	NotAfter                      string        `json:"not_after" mapstructure:"not_after"`
 	Issuer                        string        `json:"issuer" mapstructure:"issuer"`
-	// Used internally for signing intermediates
-	AllowExpirationPastCA bool
 }
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
