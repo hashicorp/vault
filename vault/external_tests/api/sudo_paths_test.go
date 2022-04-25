@@ -8,10 +8,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	credGithub "github.com/hashicorp/vault/builtin/credential/github"
-	credLDAP "github.com/hashicorp/vault/builtin/credential/ldap"
-	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
-	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -35,10 +31,6 @@ func TestSudoPaths(t *testing.T) {
 		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
-			"github":   credGithub.Factory,
-			"ldap":     credLDAP.Factory,
-			"okta":     credOkta.Factory,
-			"radius":   credRadius.Factory,
 		},
 		AuditBackends: map[string]audit.Factory{
 			"file": auditFile.Factory,
@@ -72,35 +64,12 @@ func TestSudoPaths(t *testing.T) {
 		}
 	}
 
-	// authMounts, err := client.Sys().ListAuth()
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Logf("\nauth mounts are: \n")
-	// for mountName, mountOutput := range authMounts {
-	// 	t.Logf("auth mount name: %s", mountName)
-	// 	t.Logf("auth mount output: %#v", mountOutput)
-	// }
-
-	// logicalMounts, err := client.Sys().ListMounts()
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Logf("\nlogical mounts are: \n")
-	// for mountName, mountOutput := range logicalMounts {
-	// 	t.Logf("logical mount name: %s", mountName)
-	// 	t.Logf("logical mount output: %#v", mountOutput)
-	// }
-
 	sudoPathsFromSpec, err := getSudoPathsFromSpec(client)
 	if err != nil {
 		t.Fatalf("error getting list of paths that require sudo from OpenAPI endpoint: %v", err)
 	}
 
 	sudoPathsInCode := api.GetSudoPaths()
-
-	t.Logf("\n\nsudoPaths from spec are: %#v\n length %d \n", sudoPathsFromSpec, len(sudoPathsFromSpec))
-	t.Logf("\n\nsudoPaths in code are: %#v\n length %d \n", sudoPathsInCode, len(sudoPathsInCode))
 
 	// check for missing or superfluous paths
 	for path := range sudoPathsInCode {

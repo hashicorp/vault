@@ -121,13 +121,7 @@ func GetSudoPaths() map[string]*regexp.Regexp {
 
 func setSudoPathRegexps() {
 	sudoPathsWithRegexps = map[string]*regexp.Regexp{
-		"/auth/radius/duo/access":                       regexp.MustCompile("^/auth/radius/duo/access$"),
-		"/auth/radius/duo/config":                       regexp.MustCompile("^/auth/radius/duo/config$"),
-		"/auth/radius/mfa_config":                       regexp.MustCompile("^/auth/radius/mfa_config$"),
 		"/auth/token/accessors/":                        regexp.MustCompile("^/auth/token/accessors/$"),
-		"/auth/userpass/duo/access":                     regexp.MustCompile("^/auth/userpass/duo/access$"),
-		"/auth/userpass/duo/config":                     regexp.MustCompile("^/auth/userpass/duo/config$"),
-		"/auth/userpass/mfa_config":                     regexp.MustCompile("^/auth/userpass/mfa_config$"),
 		"/pki/root":                                     regexp.MustCompile("^/pki/root$"),
 		"/pki/root/sign-self-issued":                    regexp.MustCompile("^/pki/root/sign-self-issued$"),
 		"/sys/audit":                                    regexp.MustCompile("^/sys/audit$"),
