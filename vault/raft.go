@@ -495,19 +495,11 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		keyCheckInterval := time.NewTicker(1 * time.Minute)
 		defer keyCheckInterval.Stop()
 
-		var backoff bool
 		// ticker is used to prevent memory leak of using time.After in
 		// for - select pattern.
 		ticker := time.NewTicker(time.Until(nextRotationTime))
 		defer ticker.Stop()
 		for {
-			// If we encountered and error we should try to create the key
-			// again.
-			if backoff {
-				nextRotationTime = time.Now().Add(10 * time.Second)
-				backoff = false
-			}
-
 			ticker.Reset(time.Until(nextRotationTime))
 			select {
 			case <-keyCheckInterval.C:
@@ -520,11 +512,10 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 				next, err := rotateKeyring()
 				if err != nil {
 					logger.Error("failed to rotate TLS key", "error", err)
-					backoff = true
-					continue
+					nextRotationTime = time.Now().Add(10 * time.Second)
+				} else {
+					nextRotationTime = getNextRotationTime(next)
 				}
-
-				nextRotationTime = getNextRotationTime(next)
 
 			case <-stopCh:
 				return
