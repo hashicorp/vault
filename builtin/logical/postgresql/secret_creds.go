@@ -211,7 +211,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		// many permissions as possible right now
 		var lastStmtError error
 		for _, query := range revocationStmts {
-			if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+			if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 				lastStmtError = err
 			}
 		}
@@ -254,7 +254,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 			m := map[string]string{
 				"name": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}
