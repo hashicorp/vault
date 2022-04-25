@@ -90,7 +90,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.selectType('kv');
     await page.next().path(path).submit();
     assert
-      .dom('[data-test-flash-message] .alert-banner-message-body')
+      .dom('[data-test-alert-banner] .alert-banner-message-body')
       .containsText(`path is already in use at ${path}`);
     assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
