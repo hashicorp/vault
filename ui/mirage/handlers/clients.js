@@ -665,25 +665,7 @@ const handleMockQuery = (queryStartTimestamp, monthlyData) => {
       i++;
       let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
       // TODO CMB update this when we confirm what combined data looks like
-      // this is probably not what the empty object looks like but waiting to hear back from backend
-      transformedMonthlyArray.push({
-        timestamp,
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          clients: 0,
-        },
-        namespaces: [],
-        new_clients: {
-          counts: {
-            entity_clients: 0,
-            non_entity_clients: 0,
-            clients: 0,
-          },
-          namespaces: [],
-        },
-      });
+      transformedMonthlyArray.push({ timestamp });
     } while (i < differenceInCalendarMonths(startDateByMonth, queryDate));
   }
   if (isAfter(queryDate, startDateByMonth)) {
@@ -696,19 +678,19 @@ export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
     return {
-      keys: ['1.9.0', '1.9.1', '1.9.2'],
+      keys: ['1.10.0', '1.9.0', '1.9.1', '1.9.2'],
       key_info: {
         '1.9.0': {
           previous_version: null,
-          timestamp_installed: '2021-11-03T10:23:16Z',
+          timestamp_installed: '2021-07-03T10:23:16Z',
         },
         '1.9.1': {
           previous_version: '1.9.0',
-          timestamp_installed: '2021-12-03T10:23:16Z',
+          timestamp_installed: '2021-09-03T10:23:16Z',
         },
-        '1.9.2': {
+        '1.10.0': {
           previous_version: '1.9.1',
-          timestamp_installed: '2021-01-03T10:23:16Z',
+          timestamp_installed: '2021-10-03T10:23:16Z',
         },
       },
     };

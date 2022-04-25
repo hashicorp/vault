@@ -259,6 +259,7 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	}
 
 	out = append(out, fmt.Sprintf("Version | %s", status.Version))
+	out = append(out, fmt.Sprintf("Build Date | %s", status.BuildDate))
 	out = append(out, fmt.Sprintf("Storage Type | %s", status.StorageType))
 
 	if status.ClusterName != "" && status.ClusterID != "" {

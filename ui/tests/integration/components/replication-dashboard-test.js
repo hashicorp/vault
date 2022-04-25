@@ -44,7 +44,7 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     assert.dom('[data-test-table-rows]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.dom('[data-test-replication-doc-link]').exists();
-    assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
+    assert.dom('[data-test-alert-banner]').doesNotExist('no flash message is displayed on render');
   });
 
   test('it updates the dashboard when the replication mode has changed', async function (assert) {

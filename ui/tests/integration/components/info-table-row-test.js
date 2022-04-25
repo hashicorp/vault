@@ -248,4 +248,16 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     assert.dom('[data-test-foo-bar]').exists();
   });
+
+  test('Formats the value as date when formatDate present', async function (assert) {
+    let yearString = new Date().getFullYear().toString();
+    this.set('value', new Date());
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatDate={{'yyyy'}}
+    />`);
+
+    assert.dom('[data-test-value-div]').hasText(yearString, 'Renders date with passed format');
+  });
 });

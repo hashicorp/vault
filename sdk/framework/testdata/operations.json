@@ -113,6 +113,11 @@
             "type": "string",
             "description": "a header value",
             "enum": ["a", "b", "c"]
+          },
+          "maximum" : {
+            "type": "integer",
+            "description": "a maximum value",
+            "format": "int64"
           }
         }
       }

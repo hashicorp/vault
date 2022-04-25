@@ -119,14 +119,12 @@ is optional but encouraged.
 Bug fixes are welcome in PRs but existing tests must pass and updated logic 
 should be handled in new tests.  You needn't submit an issue first to fix bugs.
 
-Keep in mind that the UI should be consistent with other areas of Vault. Our 
-[README](ui/README.md) [has instructions for launching Storybook](ui/README.md#vault-storybook),
-which showcases how we use components. Beyond that, the UI should be user-centered, 
-informative, and include edge cases and errors— including accommodations for 
-users who may not have permissions to view or interact with your feature. 
-If you are not comfortable with UI design, a Vault designer can take a look at 
-your work— just be aware that this might mean it will add some time to the 
-PR process. 
+Keep in mind that the UI should be consistent with other areas of Vault. 
+The UI should be user-centered, informative, and include edge cases and errors— 
+including accommodations for users who may not have permissions to view or 
+interact with your feature. If you are not comfortable with UI design, a Vault
+designer can take a look at your work— just be aware that this might mean 
+it will add some time to the PR process. 
 
 Finally, in your code, try to avoid logic-heavy templates (when possible, 
 calculate values in the .js file instead of .hbs) and Ember anti-patterns. 

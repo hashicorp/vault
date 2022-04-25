@@ -54,9 +54,15 @@
         </ToolbarFilters>
       </Toolbar>
     </div>
+    {{! TODO CMB this warning should only show if an upgrade to 1.9 or 1.10 happened in current month }}
     {{#if this.countsIncludeOlderData}}
       <AlertBanner @type="warning" @title="Warning">
-        {{concat "You upgraded to Vault " this.firstUpgradeVersion " on " (date-format this.upgradeDate "MMMM d, yyyy.")}}
+        {{concat
+          "You upgraded to Vault "
+          this.latestUpgradeData.id
+          " on "
+          (date-format this.latestUpgradeData.timestampInstalled "MMMM d, yyyy.")
+        }}
         How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
         <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
           read more here.

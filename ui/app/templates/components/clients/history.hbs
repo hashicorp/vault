@@ -108,13 +108,14 @@
             {{#if this.responseRangeDiffMessage}}
               <li>{{this.responseRangeDiffMessage}}</li>
             {{/if}}
+            {{! TODO this warning should only show if data spans an upgrade to 1.9 or 1.10 }}
             {{#if this.countsIncludeOlderData}}
               <li>
                 {{concat
                   "You upgraded to Vault "
-                  this.firstUpgradeVersion
+                  this.latestUpgradeData.id
                   " on "
-                  (date-format this.upgradeDate "MMMM d, yyyy.")
+                  (date-format this.latestUpgradeData.timestampInstalled "MMMM d, yyyy.")
                 }}
                 How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
                 <DocLink
@@ -140,6 +141,7 @@
               @lineChartData={{this.byMonthTotalClients}}
               @barChartData={{this.byMonthNewClients}}
               @runningTotals={{this.totalUsageCounts}}
+              @upgradeData={{if this.countsIncludeOlderData this.latestUpgradeData}}
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}

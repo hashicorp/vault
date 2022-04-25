@@ -611,11 +611,12 @@ type Core struct {
 	// disableSSCTokens is used to disable server side consistent token creation/usage
 	disableSSCTokens bool
 
-	// versionTimestamps is a map of vault versions to timestamps when the version
+	// versionHistory is a map of vault versions to VaultVersion. The
+	// VaultVersion.TimestampInstalled when the version will denote when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
-	versionTimestamps map[string]time.Time
+	versionHistory map[string]VaultVersion
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1112,9 +1113,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	if c.versionTimestamps == nil {
-		c.logger.Info("Initializing versionTimestamps for core")
-		c.versionTimestamps = make(map[string]time.Time)
+	if c.versionHistory == nil {
+		c.logger.Info("Initializing version history cache for core")
+		c.versionHistory = make(map[string]VaultVersion)
 	}
 
 	return c, nil
@@ -1124,15 +1125,22 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now().UTC()
-	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime, false)
+
+	vaultVersion := &VaultVersion{
+		TimestampInstalled: currentTime,
+		Version:            version.Version,
+		BuildDate:          version.BuildDate,
+	}
+
+	isUpdated, err := c.storeVersionEntry(ctx, vaultVersion, false)
 	if err != nil {
 		return fmt.Errorf("error storing vault version: %w", err)
 	}
 	if isUpdated {
-		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime)
+		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
-	// Finally, load the versions into core fields
-	err = c.loadVersionTimestamps(ctx)
+	// Finally, populate the version history cache
+	err = c.loadVersionHistory(ctx)
 	if err != nil {
 		return err
 	}
