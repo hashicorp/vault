@@ -36,6 +36,7 @@ import { inject as service } from '@ember/service';
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
   @service downloadCsv;
+  @service store;
 
   get hasCsvData() {
     return this.args.totalClientsData ? this.args.totalClientsData.length > 0 : false;
@@ -103,36 +104,47 @@ export default class Attribution extends Component {
     }
   }
 
-  get getCsvData() {
-    let csvData = [],
-      graphData = this.args.totalClientsData,
-      csvHeader = [
-        'Namespace path',
-        'Authentication method',
-        'Total clients',
-        'Entity clients',
-        'Non-entity clients',
-      ];
-
-    // each array will be a row in the csv file
-    if (this.isSingleNamespace) {
-      graphData.forEach((mount) => {
-        csvData.push(['', mount.label, mount.clients, mount.entity_clients, mount.non_entity_clients]);
-      });
-      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
-    } else {
-      graphData.forEach((ns) => {
-        csvData.push([ns.label, '', ns.clients, ns.entity_clients, ns.non_entity_clients]);
-        if (ns.mounts) {
-          ns.mounts.forEach((m) => {
-            csvData.push([ns.label, m.label, m.clients, m.entity_clients, m.non_entity_clients]);
-          });
-        }
-      });
+  async fetchAndGenerateCsvData() {
+    try {
+      let graphData;
+      if (this.args.isDateRange) {
+        graphData = await this.store.peekAll('clients/activity').lastObject;
+      } else {
+        graphData = await this.store.peekAll('clients/monthly').lastObject;
+      }
+      // debugger;
+      // Claire, I stopped here. Uncomment the debugger so you could see how the data comes in.
+      // define the string data.
+      let csvData = [],
+        csvHeader = [
+          'Namespace path',
+          'Authentication method',
+          'Total clients',
+          'Entity clients',
+          'Non-entity clients',
+        ];
+      // each array will be a row in the csv file
+      if (this.isSingleNamespace) {
+        graphData.forEach((mount) => {
+          csvData.push(['', mount.label, mount.clients, mount.entity_clients, mount.non_entity_clients]);
+        });
+        csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
+      } else {
+        graphData.forEach((ns) => {
+          csvData.push([ns.label, '', ns.clients, ns.entity_clients, ns.non_entity_clients]);
+          if (ns.mounts) {
+            ns.mounts.forEach((m) => {
+              csvData.push([ns.label, m.label, m.clients, m.entity_clients, m.non_entity_clients]);
+            });
+          }
+        });
+      }
+      csvData.unshift(csvHeader);
+      // make each nested array a comma separated string, join each array in csvData with line break (\n)
+      return csvData.map((d) => d.join()).join('\n');
+    } catch {
+      // TODO something here with error if peekAll fails
     }
-    csvData.unshift(csvHeader);
-    // make each nested array a comma separated string, join each array in csvData with line break (\n)
-    return csvData.map((d) => d.join()).join('\n');
   }
 
   get getCsvFileName() {
@@ -145,8 +157,9 @@ export default class Attribution extends Component {
 
   // ACTIONS
   @action
-  exportChartData(filename, contents) {
+  exportChartData(filename) {
+    let contents = this.fetchAndGenerateCsvData();
     this.downloadCsv.download(filename, contents);
-    this.showCSVDownloadModal = false;
+    // this.showCSVDownloadModal = false;
   }
 }
