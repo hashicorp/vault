@@ -33,6 +33,7 @@ export default class KeymgmtDistribute extends Component {
   @service store;
   @service flashMessages;
   @service router;
+  @service wizard;
 
   @tracked keyModel;
   @tracked isNewKey = false;
@@ -53,6 +54,14 @@ export default class KeymgmtDistribute extends Component {
       this.getKeyInfo(this.args.key);
     }
     this.formData.operations = [];
+    this.updateWizard('nextStep');
+  }
+
+  updateWizard(key) {
+    // wizard will pause unless we manually continue it -- verify that keymgmt tutorial is in progress
+    if (this.wizard[key] === 'distribute') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
+    }
   }
 
   get keyTypes() {
@@ -175,12 +184,15 @@ export default class KeymgmtDistribute extends Component {
     return { key, provider, purpose: operations.join(','), protection };
   }
 
-  distributeKey(backend, kms, key, data) {
-    let adapter = this.store.adapterFor('keymgmt/key');
+  distributeKey(backend, data) {
+    const adapter = this.store.adapterFor('keymgmt/key');
+    const { key, provider, purpose, protection } = data;
     return adapter
-      .distribute(backend, kms, key, data)
+      .distribute(backend, provider, key, { purpose, protection })
       .then(() => {
-        this.flashMessages.success(`Successfully distributed key ${key} to ${kms}`);
+        this.flashMessages.success(`Successfully distributed key ${key} to ${provider}`);
+        // move wizard forward if tutorial is in progress
+        this.updateWizard('featureState');
         this.args.onClose();
       })
       .catch((e) => {
@@ -233,15 +245,13 @@ export default class KeymgmtDistribute extends Component {
       return;
     }
     if (this.isNewKey) {
-      this.keyModel
-        .save()
-        .then(() => {
-          this.flashMessages.success(`Successfully created key ${this.keyModel.name}`);
-        })
-        .catch((e) => {
-          this.flashMessages.danger(`Error creating new key ${this.keyModel.name}: ${e.errors}`);
-        });
+      try {
+        await this.keyModel.save();
+        this.flashMessages.success(`Successfully created key ${this.keyModel.name}`);
+      } catch (e) {
+        this.flashMessages.danger(`Error creating new key ${this.keyModel.name}: ${e.errors}`);
+      }
     }
-    this.distributeKey(backend, 'example-kms', 'example-key', this.formatData(this.formData));
+    this.distributeKey(backend, data);
   }
 }
