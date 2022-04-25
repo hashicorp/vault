@@ -70,11 +70,7 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	path := strings.TrimLeft(url, apiAddrPrefix)
 
 	// determine whether to add sudo capability
-	needsSudo, err := isSudoPath(path)
-	if err != nil {
-		return "", fmt.Errorf("unable to determine if path needs sudo capability: %v", err)
-	}
-	if needsSudo {
+	if isSudoPath(path) {
 		capabilities = append(capabilities, "sudo")
 	}
 
@@ -86,10 +82,10 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 }
 
 // Determine whether the given path requires the sudo capability
-func isSudoPath(path string) (bool, error) {
+func isSudoPath(path string) bool {
 	// Return early if the path is any of the non-templated sudo paths.
 	if _, ok := sudoPaths[path]; ok {
-		return true, nil
+		return true
 	}
 
 	// Some sudo paths have templated fields in them.
@@ -99,9 +95,9 @@ func isSudoPath(path string) (bool, error) {
 	for _, sudoPathRegexp := range sudoPaths {
 		match := sudoPathRegexp.Match([]byte(fmt.Sprintf("/%s", path))) // the OpenAPI response has a / in front of each path
 		if match {
-			return true, nil
+			return true
 		}
 	}
 
-	return false, nil
+	return false
 }
