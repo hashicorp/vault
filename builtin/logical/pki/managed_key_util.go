@@ -13,25 +13,18 @@ import (
 
 var errEntOnly = errors.New("managed keys are supported within enterprise edition only")
 
-func generateCABundle(_ context.Context, _ *backend, input *inputBundle, data *certutil.CreationBundle, randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
-	if kmsRequested(input) {
-		return nil, errEntOnly
-	}
-	return certutil.CreateCertificateWithRandomSource(data, randomSource)
+func generateManagedKeyCABundle(_ context.Context, _ *backend, _ *inputBundle, _ *certutil.CreationBundle, _ io.Reader) (*certutil.ParsedCertBundle, error) {
+	return nil, errEntOnly
 }
 
-func generateCSRBundle(_ context.Context, _ *backend, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
-	if kmsRequested(input) {
-		return nil, errEntOnly
-	}
-
-	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
+func generateManagedKeyCSRBundle(_ context.Context, _ *backend, _ *inputBundle, _ *certutil.CreationBundle, _ bool, _ io.Reader) (*certutil.ParsedCSRBundle, error) {
+	return nil, errEntOnly
 }
 
-func parseCABundle(_ context.Context, _ *backend, _ *logical.Request, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
-	return bundle.ToParsedCertBundle()
+func parseManagedKeyCABundle(_ context.Context, _ *backend, _ *logical.Request, _ *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
+	return nil, errEntOnly
 }
 
-func withManagedPKIKey(_ context.Context, _ *backend, _ keyId, _ string, _ logical.ManagedSigningKeyConsumer) error {
+func withManagedPKIKey(_ context.Context, _ *backend, _ managedKeyId, _ string, _ logical.ManagedSigningKeyConsumer) error {
 	return errEntOnly
 }

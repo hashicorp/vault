@@ -30,7 +30,7 @@ func kmsRequested(input *inputBundle) bool {
 	return exportedStr.(string) == "kms"
 }
 
-type keyId interface {
+type managedKeyId interface {
 	String() string
 }
 
@@ -49,13 +49,13 @@ func (n NameKey) String() string {
 
 // getManagedKeyId returns a NameKey or a UUIDKey, whichever was specified in the
 // request API data.
-func getManagedKeyId(data *framework.FieldData) (keyId, error) {
+func getManagedKeyId(data *framework.FieldData) (managedKeyId, error) {
 	name, UUID, err := getManagedKeyNameOrUUID(data)
 	if err != nil {
 		return nil, err
 	}
 
-	var keyId keyId = NameKey(name)
+	var keyId managedKeyId = NameKey(name)
 	if len(UUID) > 0 {
 		keyId = UUIDKey(UUID)
 	}

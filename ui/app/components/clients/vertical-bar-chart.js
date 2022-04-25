@@ -13,7 +13,7 @@ import {
   SVG_DIMENSIONS,
   TRANSLATE,
   formatNumbers,
-} from '../../utils/chart-helpers';
+} from 'vault/utils/chart-helpers';
 
 /**
  * @module VerticalBarChart
@@ -49,24 +49,25 @@ export default class VerticalBarChart extends Component {
 
   @action
   registerListener(element, args) {
-    let dataset = args[0];
-    let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
-    let stackedData = stackFunction(dataset);
-    let chartSvg = select(element);
+    const dataset = args[0];
+    const filteredData = dataset.filter((e) => Object.keys(e).includes('clients')); // months with data will contain a 'clients' key (otherwise only a timestamp)
+    const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
+    const stackedData = stackFunction(filteredData);
+    const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     // DEFINE DATA BAR SCALES
-    let yScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+    const yScale = scaleLinear()
+      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
       .range([0, 100])
       .nice();
 
-    let xScale = scaleBand()
+    const xScale = scaleBand()
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
 
-    let dataBars = chartSvg
+    const dataBars = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
@@ -85,18 +86,18 @@ export default class VerticalBarChart extends Component {
       .attr('y', (data) => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
 
     // MAKE AXES //
-    let yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+    const yAxisScale = scaleLinear()
+      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
       .range([`${SVG_DIMENSIONS.height}`, 0])
       .nice();
 
-    let yAxis = axisLeft(yAxisScale)
+    const yAxis = axisLeft(yAxisScale)
       .ticks(4)
       .tickPadding(10)
       .tickSizeInner(-SVG_DIMENSIONS.width)
       .tickFormat(formatNumbers);
 
-    let xAxis = axisBottom(xScale).tickSize(0);
+    const xAxis = axisBottom(xScale).tickSize(0);
 
     yAxis(chartSvg.append('g'));
     xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
@@ -104,16 +105,16 @@ export default class VerticalBarChart extends Component {
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
     // WIDER SELECTION AREA FOR TOOLTIP HOVER
-    let greyBars = chartSvg
+    const greyBars = chartSvg
       .append('g')
       .attr('transform', `translate(${TRANSLATE.left})`)
       .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    let tooltipRect = greyBars
+    const tooltipRect = greyBars
       .selectAll('rect')
-      .data(dataset)
+      .data(filteredData)
       .enter()
       .append('rect')
       .style('cursor', 'pointer')

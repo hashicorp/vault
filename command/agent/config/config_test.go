@@ -675,7 +675,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				{
 					Backup:         pointerutil.BoolPtr(true),
-					Command:        pointerutil.StringPtr("restart service foo"),
+					Command:        []string{"restart service foo"},
 					CommandTimeout: pointerutil.TimeDurationPtr("60s"),
 					Contents:       pointerutil.StringPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
 					CreateDestDirs: pointerutil.BoolPtr(true),
@@ -701,7 +701,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 					ErrMissingKey:  pointerutil.BoolPtr(false),
 					CreateDestDirs: pointerutil.BoolPtr(true),
-					Command:        pointerutil.StringPtr("restart service foo"),
+					Command:        []string{"restart service foo"},
 					Perms:          pointerutil.FileModePtr(0o600),
 				},
 				{
@@ -786,7 +786,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 			expectedTemplates: []*ctconfig.TemplateConfig{
 				{
 					Backup:         pointerutil.BoolPtr(true),
-					Command:        pointerutil.StringPtr("restart service foo"),
+					Command:        []string{"restart service foo"},
 					CommandTimeout: pointerutil.TimeDurationPtr("60s"),
 					Contents:       pointerutil.StringPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
 					CreateDestDirs: pointerutil.BoolPtr(true),
@@ -812,7 +812,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
 					ErrMissingKey:  pointerutil.BoolPtr(false),
 					CreateDestDirs: pointerutil.BoolPtr(true),
-					Command:        pointerutil.StringPtr("restart service foo"),
+					Command:        []string{"restart service foo"},
 					Perms:          pointerutil.FileModePtr(0o600),
 				},
 				{

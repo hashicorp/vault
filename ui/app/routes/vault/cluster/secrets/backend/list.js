@@ -84,6 +84,7 @@ export default Route.extend({
       // secret or secret-v2
       cubbyhole: 'secret',
       kv: secretEngine.get('modelTypeForKV'),
+      keymgmt: `keymgmt/${tab || 'key'}`,
       generic: secretEngine.get('modelTypeForKV'),
     };
     return types[type];

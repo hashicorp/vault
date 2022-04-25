@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
+import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
@@ -11,20 +12,7 @@ export default class History extends Component {
   @service store;
   @service version;
 
-  arrayOfMonths = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
+  arrayOfMonths = ARRAY_OF_MONTHS;
 
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
@@ -55,10 +43,6 @@ export default class History extends Component {
   @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
   @tracked startTimeRequested = null;
   @tracked queriedActivityResponse = null;
-
-  // VERSION/UPGRADE INFO
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
-  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
@@ -98,17 +82,17 @@ export default class History extends Component {
         };
   }
 
-  // on init API response uses license start_date, getter updates when user queries dates
-  get getActivityResponse() {
-    return this.queriedActivityResponse || this.args.model.activity;
+  get isDateRange() {
+    return !isSameMonth(
+      new Date(this.getActivityResponse.startTime),
+      new Date(this.getActivityResponse.endTime)
+    );
   }
 
-  get hasAttributionData() {
-    if (this.selectedAuthMethod) return false;
-    if (this.selectedNamespace) {
-      return this.authMethodOptions.length > 0;
-    }
-    return !!this.totalClientsData && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
+  get latestUpgradeData() {
+    // {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
+    // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
+    return this.args.model.versionHistory[0] || null;
   }
 
   get startTimeDisplay() {
@@ -129,25 +113,19 @@ export default class History extends Component {
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
-  get filteredActivity() {
-    const namespace = this.selectedNamespace;
-    const auth = this.selectedAuthMethod;
-    if (!namespace && !auth) {
-      return this.getActivityResponse;
-    }
-    if (!auth) {
-      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
-    }
-    return this.getActivityResponse.byNamespace
-      .find((ns) => ns.label === namespace)
-      .mounts?.find((mount) => mount.label === auth);
+  // GETTERS FOR RESPONSE & DATA
+
+  // on init API response uses license start_date, getter updates when user queries dates
+  get getActivityResponse() {
+    return this.queriedActivityResponse || this.args.model.activity;
   }
 
-  get isDateRange() {
-    return !isSameMonth(
-      new Date(this.getActivityResponse.startTime),
-      new Date(this.getActivityResponse.endTime)
-    );
+  get hasAttributionData() {
+    if (this.selectedAuthMethod) return false;
+    if (this.selectedNamespace) {
+      return this.authMethodOptions.length > 0;
+    }
+    return !!this.totalClientsData && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
   }
 
   // top level TOTAL client counts for given date range
@@ -169,25 +147,35 @@ export default class History extends Component {
   }
 
   get byMonthTotalClients() {
-    return this.getActivityResponse?.byMonthTotalClients;
+    return this.getActivityResponse?.byMonth;
   }
 
   get byMonthNewClients() {
-    return this.getActivityResponse?.byMonthNewClients;
+    return this.byMonthTotalClients.map((m) => m.new_clients);
   }
 
   get countsIncludeOlderData() {
-    let firstUpgrade = this.args.model.versionHistory[0];
-    if (!firstUpgrade) {
+    if (!this.latestUpgradeData) {
       return false;
     }
-    let versionDate = new Date(firstUpgrade.timestampInstalled);
-    let startTimeFromResponseAsDateObject = new Date(
-      Number(this.startTimeFromResponse[0]),
-      this.startTimeFromResponse[1]
-    );
-    // compare against this startTimeFromResponse to show message or not.
-    return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
+    let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
+    let startTimeFromResponse = new Date(this.getActivityResponse.startTime);
+    // compare against this start date returned from API to show message or not.
+    return isAfter(versionDate, startTimeFromResponse) ? versionDate : false;
+  }
+
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
+    }
+    if (!auth) {
+      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    }
+    return this.getActivityResponse.byNamespace
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
   }
 
   @action

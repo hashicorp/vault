@@ -6,20 +6,20 @@
   class="list-item-row"
   data-test-secret-link={{@item.id}}
   @encode={{true}}
-  @queryParams={{secret-query-params @backendModel.type}}
+  @queryParams={{secret-query-params @backendModel.type @item.type}}
 >
   <div class="columns is-mobile">
     <div class="column is-10">
       <SecretLink
         @mode={{if @item.isFolder "list" "show"}}
         @secret={{@item.id}}
-        @queryParams={{if (eq @backendModel.type "transit") (query-params tab="actions") ""}}
+        @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
         class="has-text-black has-text-weight-semibold"
       >
         {{#if (eq @backendModel.type "transit")}}
           <Icon @name="key" class="has-text-grey-light" />
         {{else}}
-          <Icon @name={{if @item.isFolder "folder" "file"}} class="has-text-grey-light" />
+          <Icon @name={{if @item.isFolder "folder" (or @item.icon "file")}} class="has-text-grey-light" />
         {{/if}}
         {{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}
       </SecretLink>

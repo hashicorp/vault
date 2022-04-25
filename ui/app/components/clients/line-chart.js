@@ -7,7 +7,13 @@ import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
 import { scaleLinear, scalePoint } from 'd3-scale';
 import { line } from 'd3-shape';
-import { LIGHT_AND_DARK_BLUE, SVG_DIMENSIONS, formatNumbers } from '../../utils/chart-helpers';
+import {
+  LIGHT_AND_DARK_BLUE,
+  UPGRADE_WARNING,
+  SVG_DIMENSIONS,
+  formatNumbers,
+} from 'vault/utils/chart-helpers';
+import { parseAPITimestamp, formatChartDate } from 'core/utils/date-formatters';
 
 /**
  * @module LineChart
@@ -26,6 +32,7 @@ export default class LineChart extends Component {
   @tracked tooltipMonth = '';
   @tracked tooltipTotal = '';
   @tracked tooltipNew = '';
+  @tracked tooltipUpgradeText = '';
 
   get yKey() {
     return this.args.yKey || 'clients';
@@ -42,21 +49,29 @@ export default class LineChart extends Component {
   @action
   renderChart(element, args) {
     const dataset = args[0];
+    let upgradeMonth, currentVersion, previousVersion;
+    if (args[1]) {
+      upgradeMonth = parseAPITimestamp(args[1].timestampInstalled, 'M/yy');
+      currentVersion = args[1].id;
+      previousVersion = args[1].previousVersion;
+    }
+    const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     // DEFINE AXES SCALES
     const yScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
       .range([0, 100])
       .nice();
 
     const yAxisScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d[this.yKey]))])
+      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
       .range([SVG_DIMENSIONS.height, 0])
       .nice();
 
-    const xScale = scalePoint() // use scaleTime()?
+    // use full dataset (instead of filteredData) so x-axis spans months with and without data
+    const xScale = scalePoint()
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width])
       .padding(0.2);
@@ -75,6 +90,20 @@ export default class LineChart extends Component {
 
     chartSvg.selectAll('.domain').remove();
 
+    // VERSION UPGRADE INDICATOR
+    chartSvg
+      .append('g')
+      .selectAll('circle')
+      .data(filteredData)
+      .enter()
+      .append('circle')
+      .attr('class', 'upgrade-circle')
+      .attr('fill', UPGRADE_WARNING)
+      .style('opacity', (d) => (d[this.xKey] === upgradeMonth ? '1' : '0'))
+      .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
+      .attr('cx', (d) => xScale(d[this.xKey]))
+      .attr('r', 10);
+
     // PATH BETWEEN PLOT POINTS
     const lineGenerator = line()
       .x((d) => xScale(d[this.xKey]))
@@ -86,13 +115,13 @@ export default class LineChart extends Component {
       .attr('fill', 'none')
       .attr('stroke', LIGHT_AND_DARK_BLUE[1])
       .attr('stroke-width', 0.5)
-      .attr('d', lineGenerator(dataset));
+      .attr('d', lineGenerator(filteredData));
 
     // LINE PLOTS (CIRCLES)
     chartSvg
       .append('g')
       .selectAll('circle')
-      .data(dataset)
+      .data(filteredData)
       .enter()
       .append('circle')
       .attr('class', 'data-plot')
@@ -107,7 +136,7 @@ export default class LineChart extends Component {
     chartSvg
       .append('g')
       .selectAll('circle')
-      .data(dataset)
+      .data(filteredData)
       .enter()
       .append('circle')
       .attr('class', 'hover-circle')
@@ -122,9 +151,13 @@ export default class LineChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
       // TODO: how to genericize this?
-      this.tooltipMonth = data[this.xKey];
-      this.tooltipTotal = `${data[this.yKey]} total clients`;
-      this.tooltipNew = `${data?.new_clients[this.yKey]} new clients`;
+      this.tooltipMonth = formatChartDate(data[this.xKey]);
+      this.tooltipTotal = data[this.yKey] + ' total clients';
+      this.tooltipNew = data?.new_clients[this.yKey] + ' new clients';
+      this.tooltipUpgradeText =
+        data[this.xKey] === upgradeMonth
+          ? `Vault was upgraded ${previousVersion ? 'from ' + previousVersion : ''} to ${currentVersion}`
+          : '';
       let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
       this.tooltipTarget = node;
     });
