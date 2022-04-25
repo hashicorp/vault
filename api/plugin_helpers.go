@@ -25,6 +25,12 @@ var (
 	// plugin.
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
 
+	// sudoPaths is a map containing the paths that require a token's policy
+	// to have the "sudo" capability. The keys are the paths as strings, in
+	// the same format as they are returned by the OpenAPI spec. The values
+	// are the regular expressions that can be used to test whether a given
+	// path matches that path or not (useful specifically for the paths that
+	// contain templated fields.)
 	sudoPaths = map[string]*regexp.Regexp{
 		"/auth/token/accessors/":                        regexp.MustCompile("^/auth/token/accessors/$"),
 		"/pki/root":                                     regexp.MustCompile("^/pki/root$"),
