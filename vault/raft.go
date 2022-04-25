@@ -485,7 +485,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		}
 
 		// push out to ensure proposed time does not elapse
-		return next.Add(1 * time.Minute)
+		return next.Add(10 * time.Second)
 	}
 
 	// Start the process in a go routine
