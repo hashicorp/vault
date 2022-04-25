@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
@@ -15,12 +14,6 @@ const (
 )
 
 var LastOutputPolicyError *OutputPolicyError
-
-var sudoPathsWithRegexps map[string]*regexp.Regexp
-
-func init() {
-	setSudoPathRegexps()
-}
 
 type OutputPolicyError struct {
 	*retryablehttp.Request
@@ -94,8 +87,6 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 
 // Determine whether the given path requires the sudo capability
 func isSudoPath(path string) (bool, error) {
-	sudoPaths := GetSudoPaths()
-
 	// Return early if the path is any of the non-templated sudo paths.
 	if _, ok := sudoPaths[path]; ok {
 		return true, nil
@@ -113,39 +104,4 @@ func isSudoPath(path string) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func GetSudoPaths() map[string]*regexp.Regexp {
-	return sudoPathsWithRegexps
-}
-
-func setSudoPathRegexps() {
-	sudoPathsWithRegexps = map[string]*regexp.Regexp{
-		"/auth/token/accessors/":                        regexp.MustCompile("^/auth/token/accessors/$"),
-		"/pki/root":                                     regexp.MustCompile("^/pki/root$"),
-		"/pki/root/sign-self-issued":                    regexp.MustCompile("^/pki/root/sign-self-issued$"),
-		"/sys/audit":                                    regexp.MustCompile("^/sys/audit$"),
-		"/sys/audit/{path}":                             regexp.MustCompile("^/sys/audit/.+$"),
-		"/sys/auth/{path}":                              regexp.MustCompile("^/sys/auth/.+$"),
-		"/sys/auth/{path}/tune":                         regexp.MustCompile("^/sys/auth/.+/tune$"),
-		"/sys/config/auditing/request-headers":          regexp.MustCompile("^/sys/config/auditing/request-headers$"),
-		"/sys/config/auditing/request-headers/{header}": regexp.MustCompile("^/sys/config/auditing/request-headers/.+$"),
-		"/sys/config/cors":                              regexp.MustCompile("^/sys/config/cors$"),
-		"/sys/config/ui/headers/":                       regexp.MustCompile("^/sys/config/ui/headers/$"),
-		"/sys/config/ui/headers/{header}":               regexp.MustCompile("^/sys/config/ui/headers/.+$"),
-		"/sys/leases":                                   regexp.MustCompile("^/sys/leases$"),
-		"/sys/leases/lookup/":                           regexp.MustCompile("^/sys/leases/lookup/$"),
-		"/sys/leases/lookup/{prefix}":                   regexp.MustCompile("^/sys/leases/lookup/.+$"),
-		"/sys/leases/revoke-force/{prefix}":             regexp.MustCompile("^/sys/leases/revoke-force/.+$"),
-		"/sys/leases/revoke-prefix/{prefix}":            regexp.MustCompile("^/sys/leases/revoke-prefix/.+$"),
-		"/sys/plugins/catalog/{name}":                   regexp.MustCompile("^/sys/plugins/catalog/.+$"),
-		"/sys/plugins/catalog/{type}":                   regexp.MustCompile("^/sys/plugins/catalog/.+$"),
-		"/sys/plugins/catalog/{type}/{name}":            regexp.MustCompile("^/sys/plugins/catalog/.+/.+$"),
-		"/sys/raw":                                      regexp.MustCompile("^/sys/raw$"),
-		"/sys/raw/{path}":                               regexp.MustCompile("^/sys/raw/.+$"),
-		"/sys/remount":                                  regexp.MustCompile("^/sys/remount$"),
-		"/sys/revoke-force/{prefix}":                    regexp.MustCompile("^/sys/revoke-force/.+$"),
-		"/sys/revoke-prefix/{prefix}":                   regexp.MustCompile("^/sys/revoke-prefix/.+$"),
-		"/sys/rotate":                                   regexp.MustCompile("^/sys/rotate$"),
-	}
 }
