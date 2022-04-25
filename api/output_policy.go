@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 const (
@@ -16,6 +15,12 @@ const (
 )
 
 var LastOutputPolicyError *OutputPolicyError
+
+var sudoPathsWithRegexps map[string]*regexp.Regexp
+
+func init() {
+	setSudoPathRegexps()
+}
 
 type OutputPolicyError struct {
 	*retryablehttp.Request
@@ -89,32 +94,27 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 
 // Determine whether the given path requires the sudo capability
 func isSudoPath(client *Client, path string) (bool, error) {
-	sudoPaths, err := getSudoPaths(client)
-	if err != nil {
-		return false, fmt.Errorf("unable to retrieve list of paths that require sudo capability: %v", err)
-	}
-	if sudoPaths == nil || len(sudoPaths) < 1 {
-		// OpenAPI spec did not return any paths that require sudo,
-		// but the user probably still shouldn't see an error.
-		return false, nil
-	}
+	sudoPaths := GetSudoPaths()
+	// if err != nil {
+	// 	return false, fmt.Errorf("unable to retrieve list of paths that require sudo capability: %v", err)
+	// }
+	// if sudoPaths == nil || len(sudoPaths) < 1 {
+	// 	// OpenAPI spec did not return any paths that require sudo,
+	// 	// but the user probably still shouldn't see an error.
+	// 	return false, nil
+	// }
 
-	// Return early if the path is clearly one of the sudo paths.
+	// Return early if the path is any of the non-templated sudo paths.
 	if _, ok := sudoPaths[path]; ok {
 		return true, nil
 	}
 
 	// Some sudo paths have templated fields in them.
 	// (e.g. sys/revoke-prefix/{prefix})
-	// The keys in the sudoPaths map are actually regular expressions,
+	// The values in the sudoPaths map are actually regular expressions,
 	// so we can check if our path matches against them.
-	for sudoPath := range sudoPaths {
-		r, err := regexp.Compile(fmt.Sprintf("^%s$", sudoPath))
-		if err != nil {
-			continue
-		}
-
-		match := r.Match([]byte(fmt.Sprintf("/%s", path))) // the OpenAPI response has a / in front of each path
+	for _, sudoPathRegexp := range sudoPaths {
+		match := sudoPathRegexp.Match([]byte(fmt.Sprintf("/%s", path))) // the OpenAPI response has a / in front of each path
 		if match {
 			return true, nil
 		}
@@ -123,61 +123,43 @@ func isSudoPath(client *Client, path string) (bool, error) {
 	return false, nil
 }
 
-func getSudoPaths(client *Client) (map[string]bool, error) {
-	r := client.NewRequest("GET", "/v1/sys/internal/specs/openapi")
-	resp, err := client.RawRequest(r)
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve sudo endpoints: %v", err)
-	}
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-
-	oasInfo := make(map[string]interface{})
-	if err := jsonutil.DecodeJSONFromReader(resp.Body, &oasInfo); err != nil {
-		return nil, fmt.Errorf("unable to decode JSON from OpenAPI response: %v", err)
-	}
-
-	paths, ok := oasInfo["paths"]
-	if !ok {
-		return nil, fmt.Errorf("OpenAPI response did not include paths")
-	}
-
-	pathsMap, ok := paths.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("OpenAPI response did not return valid paths")
-	}
-
-	sudoPaths := make(map[string]bool) // this could be a slice, but we're just making it a map so we can do quick lookups for the paths that don't have any templating
-	for pathName, pathInfo := range pathsMap {
-		pathInfoMap, ok := pathInfo.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		if sudo, ok := pathInfoMap["x-vault-sudo"]; ok {
-			if sudo == true {
-				// Since many paths have templated fields like {name},
-				// our list of sudo paths will actually be a list of
-				// regular expressions that we can match against.
-				pathRegex := buildPathRegexp(pathName)
-				sudoPaths[pathRegex] = true
-			}
-		}
-	}
-
-	return sudoPaths, nil
+func GetSudoPaths() map[string]*regexp.Regexp {
+	return sudoPathsWithRegexps
 }
 
-// Replaces any template fields in a path with the characters ".+" so that
-// we can later allow any characters to match those fields.
-func buildPathRegexp(pathName string) string {
-	templateFields := []string{"{path}", "{header}", "{prefix}", "{name}", "{type}"}
-	pathWithRegexPatterns := pathName
-	for _, field := range templateFields {
-		r, _ := regexp.Compile(field)
-		pathWithRegexPatterns = r.ReplaceAllString(pathWithRegexPatterns, ".+")
+func setSudoPathRegexps() {
+	sudoPathsWithRegexps = map[string]*regexp.Regexp{
+		"/auth/radius/duo/access":                       regexp.MustCompile("^/auth/radius/duo/access$"),
+		"/auth/radius/duo/config":                       regexp.MustCompile("^/auth/radius/duo/config$"),
+		"/auth/radius/mfa_config":                       regexp.MustCompile("^/auth/radius/mfa_config$"),
+		"/auth/token/accessors/":                        regexp.MustCompile("^/auth/token/accessors/$"),
+		"/auth/userpass/duo/access":                     regexp.MustCompile("^/auth/userpass/duo/access$"),
+		"/auth/userpass/duo/config":                     regexp.MustCompile("^/auth/userpass/duo/config$"),
+		"/auth/userpass/mfa_config":                     regexp.MustCompile("^/auth/userpass/mfa_config$"),
+		"/pki/root":                                     regexp.MustCompile("^/pki/root$"),
+		"/pki/root/sign-self-issued":                    regexp.MustCompile("^/pki/root/sign-self-issued$"),
+		"/sys/audit":                                    regexp.MustCompile("^/sys/audit$"),
+		"/sys/audit/{path}":                             regexp.MustCompile("^/sys/audit/.+$"),
+		"/sys/auth/{path}":                              regexp.MustCompile("^/sys/auth/.+$"),
+		"/sys/auth/{path}/tune":                         regexp.MustCompile("^/sys/auth/.+/tune$"),
+		"/sys/config/auditing/request-headers":          regexp.MustCompile("^/sys/config/auditing/request-headers$"),
+		"/sys/config/auditing/request-headers/{header}": regexp.MustCompile("^/sys/config/auditing/request-headers/.+$"),
+		"/sys/config/cors":                              regexp.MustCompile("^/sys/config/cors$"),
+		"/sys/config/ui/headers/":                       regexp.MustCompile("^/sys/config/ui/headers/$"),
+		"/sys/config/ui/headers/{header}":               regexp.MustCompile("^/sys/config/ui/headers/.+$"),
+		"/sys/leases":                                   regexp.MustCompile("^/sys/leases$"),
+		"/sys/leases/lookup/":                           regexp.MustCompile("^/sys/leases/lookup/$"),
+		"/sys/leases/lookup/{prefix}":                   regexp.MustCompile("^/sys/leases/lookup/.+$"),
+		"/sys/leases/revoke-force/{prefix}":             regexp.MustCompile("^/sys/leases/revoke-force/.+$"),
+		"/sys/leases/revoke-prefix/{prefix}":            regexp.MustCompile("^/sys/leases/revoke-prefix/.+$"),
+		"/sys/plugins/catalog/{name}":                   regexp.MustCompile("^/sys/plugins/catalog/.+$"),
+		"/sys/plugins/catalog/{type}":                   regexp.MustCompile("^/sys/plugins/catalog/.+$"),
+		"/sys/plugins/catalog/{type}/{name}":            regexp.MustCompile("^/sys/plugins/catalog/.+/.+$"),
+		"/sys/raw":                                      regexp.MustCompile("^/sys/raw$"),
+		"/sys/raw/{path}":                               regexp.MustCompile("^/sys/raw/.+$"),
+		"/sys/remount":                                  regexp.MustCompile("^/sys/remount$"),
+		"/sys/revoke-force/{prefix}":                    regexp.MustCompile("^/sys/revoke-force/.+$"),
+		"/sys/revoke-prefix/{prefix}":                   regexp.MustCompile("^/sys/revoke-prefix/.+$"),
+		"/sys/rotate":                                   regexp.MustCompile("^/sys/rotate$"),
 	}
-
-	return pathWithRegexPatterns
 }
