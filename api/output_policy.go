@@ -24,8 +24,8 @@ func init() {
 
 type OutputPolicyError struct {
 	*retryablehttp.Request
-	VaultClient    *Client
-	finalHCLString string
+	vaultServerAddress string
+	finalHCLString     string
 }
 
 func (d *OutputPolicyError) Error() string {
@@ -73,11 +73,11 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to unescape request URL characters: %v", err)
 	}
-	apiAddrPrefix := fmt.Sprintf("%sv1/", d.VaultClient.config.Address)
+	apiAddrPrefix := fmt.Sprintf("%sv1/", d.vaultServerAddress)
 	path := strings.TrimLeft(url, apiAddrPrefix)
 
 	// determine whether to add sudo capability
-	needsSudo, err := isSudoPath(d.VaultClient, path)
+	needsSudo, err := isSudoPath(path)
 	if err != nil {
 		return "", fmt.Errorf("unable to determine if path needs sudo capability: %v", err)
 	}
@@ -93,7 +93,7 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 }
 
 // Determine whether the given path requires the sudo capability
-func isSudoPath(client *Client, path string) (bool, error) {
+func isSudoPath(path string) (bool, error) {
 	sudoPaths := GetSudoPaths()
 
 	// Return early if the path is any of the non-templated sudo paths.
