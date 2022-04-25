@@ -336,7 +336,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				}
 
 				for name, field := range bodyFields {
-					if name == "sha_256" {
+					if name == "sha_256" && strings.Contains(path, "plugins/catalog/") {
 						continue
 					}
 
