@@ -1254,8 +1254,7 @@ START:
 
 	if outputPolicy {
 		LastOutputPolicyError = &OutputPolicyError{
-			Request:            req,
-			vaultServerAddress: c.config.Address,
+			Request: req,
 		}
 		return nil, LastOutputPolicyError
 	}

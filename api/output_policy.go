@@ -17,8 +17,7 @@ var LastOutputPolicyError *OutputPolicyError
 
 type OutputPolicyError struct {
 	*retryablehttp.Request
-	vaultServerAddress string
-	finalHCLString     string
+	finalHCLString string
 }
 
 func (d *OutputPolicyError) Error() string {
@@ -62,17 +61,19 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	}
 
 	// sanitize, then trim the Vault address and v1 from the front of the path
-	url, err := url.PathUnescape(d.Request.URL.String())
+	path, err := url.PathUnescape(strings.TrimPrefix(d.URL.Path, "/v1"))
 	if err != nil {
 		return "", fmt.Errorf("failed to unescape request URL characters: %v", err)
 	}
-	apiAddrPrefix := fmt.Sprintf("%sv1/", d.vaultServerAddress)
-	path := strings.TrimLeft(url, apiAddrPrefix)
 
 	// determine whether to add sudo capability
 	if isSudoPath(path) {
 		capabilities = append(capabilities, "sudo")
 	}
+
+	// the OpenAPI response has a / in front of each path,
+	// but policies need the path without that leading slash
+	path = strings.TrimLeft(path, "/")
 
 	capStr := strings.Join(capabilities, `", "`)
 	return fmt.Sprintf(
@@ -93,7 +94,7 @@ func isSudoPath(path string) bool {
 	// The values in the sudoPaths map are actually regular expressions,
 	// so we can check if our path matches against them.
 	for _, sudoPathRegexp := range sudoPaths {
-		match := sudoPathRegexp.Match([]byte(fmt.Sprintf("/%s", path))) // the OpenAPI response has a / in front of each path
+		match := sudoPathRegexp.Match([]byte(path))
 		if match {
 			return true
 		}
