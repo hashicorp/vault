@@ -26,8 +26,9 @@ func pathListKeys(b *backend) *framework.Path {
 }
 
 const (
-	pathListKeysHelpSyn  = ``
-	pathListKeysHelpDesc = ``
+	pathListKeysHelpSyn  = `Fetch a list of all issuer keys`
+	pathListKeysHelpDesc = `This endpoint allows listing of known backing keys, returning
+their identifier and their name (if set).`
 )
 
 func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -99,8 +100,16 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 }
 
 const (
-	pathKeysHelpSyn  = ``
-	pathKeysHelpDesc = ``
+	pathKeysHelpSyn  = `Fetch a single issuer key`
+	pathKeysHelpDesc = `This allows fetching information associated with the underlying key.
+
+:ref can be either the literal value "default", in which case /config/keys
+will be consulted for the present default key, an identifier of a key,
+or its assigned name value.
+
+Writing to /key/:ref allows updating of the name field associated with
+the certificate.
+`
 )
 
 func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -124,10 +133,9 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"id":      key.ID,
-			"name":    key.Name,
-			"type":    key.PrivateKeyType,
-			"backing": "", // This would show up as "Managed" in "type"
+			"id":   key.ID,
+			"name": key.Name,
+			"type": key.PrivateKeyType,
 		},
 	}, nil
 }
@@ -167,10 +175,9 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":      key.ID,
-			"name":    key.Name,
-			"type":    key.PrivateKeyType,
-			"backing": "", // This would show up as "Managed" in "type"
+			"id":   key.ID,
+			"name": key.Name,
+			"type": key.PrivateKeyType,
 		},
 	}
 

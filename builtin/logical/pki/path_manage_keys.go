@@ -4,9 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -45,14 +44,18 @@ func pathGenerateKey(b *backend) *framework.Path {
 }
 
 const (
-	pathGenerateKeyHelpSyn  = ``
-	pathGenerateKeyHelpDesc = ``
+	pathGenerateKeyHelpSyn  = `Generate a new private key used for signing.`
+	pathGenerateKeyHelpDesc = `This endpoint will generate a new key pair of the specified type (internal, exported, or kms).`
 )
 
 func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	keyName := data.Get("name").(string)
+	keyName, err := getKeyName(ctx, req.Storage, data)
+	if err != nil { // Fail Immediately if Key Name is in Use, etc...
+		return nil, err
+	}
 	keyType := data.Get("key_type").(string)
 	keyBits := data.Get("key_bits").(int)
+
 	switch {
 	case strings.HasSuffix(req.Path, "/internal"):
 		// Internal key generation, stored in storage
@@ -60,19 +63,42 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		if err != nil {
 			return nil, err
 		}
-		importKey(ctx, req.Storage, string(keyBundle.PrivateKeyBytes), keyName)
-	case strings.HasSuffix(req.Path, "/exported"):
-		keyRef := data.Get("key_ref").(string)
-		keyBundle, err := certutil.GetKeyBundleFromKeyGenerator(keyType, keyBits, existingGeneratePrivateKey(ctx, req.Storage, keyRef))
+		key, _, err := importKey(ctx, req.Storage, string(keyBundle.PrivateKeyBytes), keyName)
 		if err != nil {
 			return nil, err
 		}
-		importKey(ctx, req.Storage, string(keyBundle.PrivateKeyBytes), keyName)
+		resp := logical.Response{
+			Data: map[string]interface{}{
+				"id":   key.ID,
+				"name": key.Name,
+				"type": key.PrivateKeyType,
+			},
+		}
+		return &resp, nil
+	case strings.HasSuffix(req.Path, "/exported"):
+		// Same as internal key generation but we return the generated key
+		keyBundle, err := certutil.GetKeyBundleFromKeyGenerator(keyType, keyBits, nil)
+		if err != nil {
+			return nil, err
+		}
+		key, _, err := importKey(ctx, req.Storage, string(keyBundle.PrivateKeyBytes), keyName)
+		if err != nil {
+			return nil, err
+		}
+		resp := logical.Response{
+			Data: map[string]interface{}{
+				"id":          key.ID,
+				"name":        key.Name,
+				"type":        key.PrivateKeyType,
+				"private_key": key.PrivateKey,
+			},
+		}
+		return &resp, nil
+	case strings.HasSuffix(req.Path, "/kms"):
+		return nil, errEntOnly
 	default:
 		return logical.ErrorResponse("Unknown type of key to generate"), nil
 	}
-
-	return nil, nil
 }
 
 func pathImportKey(b *backend) *framework.Path {
@@ -104,8 +130,9 @@ func pathImportKey(b *backend) *framework.Path {
 }
 
 const (
-	pathImportKeyHelpSyn  = ``
-	pathImportKeyHelpDesc = ``
+	pathImportKeyHelpSyn  = `Import the specified key.`
+	pathImportKeyHelpDesc = `This endpoint allows importing a specified issuer key from a pem bundle.
+If name is set, that will be set on the key.`
 )
 
 func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
