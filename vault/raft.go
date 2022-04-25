@@ -473,18 +473,19 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		return errors.New("no active raft TLS key found")
 	}
 
-	getNextRotationTime := func(proposedNext time.Time) time.Time {
+	getNextRotationTime := func(next time.Time) time.Time {
 		now := time.Now()
 
 		// active key's CreatedTime + raftTLSRotationPeriod might be in
 		// the past (meaning it is ready to be rotated) which will cause
 		// NewTicker to panic when used with time.Until, prevent this by
 		// pushing out rotation time into very near future
-		if proposedNext.Before(now) {
+		if next.Before(now) {
 			return now.Add(1 * time.Minute)
 		}
 
-		return proposedNext
+		// push out to ensure proposed time does not elapse
+		return next.Add(1 * time.Minute)
 	}
 
 	// Start the process in a go routine
