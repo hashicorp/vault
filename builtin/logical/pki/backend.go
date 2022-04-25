@@ -158,6 +158,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		BackendType:    logical.TypeLogical,
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
+		PeriodicFunc:   b.periodicFunc,
 	}
 
 	b.crlLifetime = time.Hour * 72
@@ -167,6 +168,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.pkiStorageVersion.Store(0)
 
+	b.crlBuilder = &crlBuilder{}
 	return &b
 }
 
@@ -182,6 +184,7 @@ type backend struct {
 	tidyStatus     *tidyStatus
 
 	pkiStorageVersion atomic.Value
+	crlBuilder        *crlBuilder
 }
 
 type (
@@ -285,7 +288,7 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		return nil
 	}
 
-	if err := migrateStorage(ctx, b.storage, b.Logger()); err != nil {
+	if err := migrateStorage(ctx, b.crlBuilder, b.storage, b.Logger()); err != nil {
 		b.Logger().Error("Error during migration of PKI mount: " + err.Error())
 		return err
 	}
@@ -320,8 +323,19 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	switch {
 	case strings.HasPrefix(key, legacyMigrationBundleLogKey):
 		// This is for a secondary cluster to pick up that the migration has completed
-		// and reset its compatibility mode.
+		// and reset its compatibility mode and rebuild the CRL locally.
 		b.updatePkiStorageVersion(ctx)
+		b.crlBuilder.requestRebuild()
+	case strings.HasPrefix(key, issuerPrefix):
+		// If an issuer has changed on the primary, we need to schedule an update of our CRL,
+		// the primary cluster would have done it already, but the CRL is cluster specific so
+		// force a rebuild of ours.
+		if !b.useLegacyBundleCaStorage() {
+			b.crlBuilder.requestRebuild()
+		}
 	}
-	// FIXME: We need to hook into CRL generation here for issuer/bundle updates.
+}
+
+func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
+	return b.crlBuilder.rebuildIfForced(ctx, b, request)
 }

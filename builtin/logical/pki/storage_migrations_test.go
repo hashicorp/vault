@@ -128,7 +128,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, &issuerConfigEntry{DefaultIssuerId: issuerId}, issuersConfig)
 
 	// Make sure if we attempt to re-run the migration nothing happens...
-	err = migrateStorage(ctx, s, b.Logger())
+	err = migrateStorage(ctx, b.crlBuilder, s, b.Logger())
 	require.NoError(t, err)
 	logEntry2, err := getLegacyBundleMigrationLog(ctx, s)
 	require.NoError(t, err)

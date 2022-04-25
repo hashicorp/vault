@@ -400,6 +400,10 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
+	if err := b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
+		return nil, err
+	}
+
 	crlPath, err := resolveIssuerCRLPath(ctx, req.Storage, issuerName)
 	if err != nil {
 		return nil, err
