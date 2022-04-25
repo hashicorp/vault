@@ -205,17 +205,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 
 		if serial == "ca_chain" {
-			caChain := caInfo.GetCAChain()
-			var certStr string
-			for _, ca := range caChain {
-				block := pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: ca.Bytes,
-				}
-				certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
-			}
-			certificate = []byte(strings.TrimSpace(certStr))
-
 			rawChain := caInfo.GetFullChain()
 			var chainStr string
 			for _, ca := range rawChain {
@@ -226,6 +215,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 				chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 			}
 			fullChain = []byte(strings.TrimSpace(chainStr))
+			certificate = fullChain
 		} else if serial == "ca" {
 			certificate = caInfo.Certificate.Raw
 
