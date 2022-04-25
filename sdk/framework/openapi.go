@@ -336,6 +336,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				}
 
 				for name, field := range bodyFields {
+					if name == "sha_256" {
+						continue
+					}
+
 					openapiField := convertType(field.Type)
 					if field.Required {
 						s.Required = append(s.Required, name)
