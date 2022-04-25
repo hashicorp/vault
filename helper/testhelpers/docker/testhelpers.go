@@ -41,6 +41,7 @@ type RunOptions struct {
 	AuthUsername    string
 	AuthPassword    string
 	LogConsumer     func(string)
+	Platform        string
 }
 
 func NewServiceRunner(opts RunOptions) (*Runner, error) {
@@ -51,6 +52,9 @@ func NewServiceRunner(opts RunOptions) (*Runner, error) {
 
 	if opts.NetworkID == "" {
 		opts.NetworkID = os.Getenv("TEST_DOCKER_NETWORK_ID")
+	}
+	if opts.Platform == "" {
+		opts.Platform = os.Getenv("TEST_DOCKER_PLATFORM")
 	}
 	if opts.ContainerName == "" {
 		if strings.Contains(opts.ImageRepo, "/") {
@@ -237,6 +241,9 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 
 	// best-effort pull
 	var opts types.ImageCreateOptions
+	if d.RunOptions.Platform != "" {
+		opts.Platform = d.RunOptions.Platform
+	}
 	if d.RunOptions.AuthUsername != "" && d.RunOptions.AuthPassword != "" {
 		var buf bytes.Buffer
 		auth := map[string]string{
