@@ -7,8 +7,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
-
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
@@ -18,6 +17,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 	backend := new(NoopBackend)
 	mounts := new(MountTable)
 	router := NewRouter()
+	router.logger = log.NewNullLogger()
 	core, _, _ := TestCoreUnsealed(t)
 
 	_, barrier, _ := mockBarrier(t)
