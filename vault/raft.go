@@ -500,7 +500,6 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		ticker := time.NewTicker(time.Until(nextRotationTime))
 		defer ticker.Stop()
 		for {
-			ticker.Reset(time.Until(nextRotationTime))
 			select {
 			case <-keyCheckInterval.C:
 				err := checkCommitted()
@@ -516,6 +515,8 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 				} else {
 					nextRotationTime = getNextRotationTime(next)
 				}
+
+				ticker.Reset(time.Until(nextRotationTime))
 
 			case <-stopCh:
 				return
