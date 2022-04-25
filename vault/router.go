@@ -47,6 +47,8 @@ func NewRouter() *Router {
 		storagePrefix:      radix.New(),
 		mountUUIDCache:     radix.New(),
 		mountAccessorCache: radix.New(),
+		// this will get replaced in production with a real logger but it's useful to have a default in place for tests
+		logger: hclog.NewNullLogger(),
 	}
 	return r
 }
