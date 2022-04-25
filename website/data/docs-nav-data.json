@@ -898,10 +898,6 @@
         "path": "agent/template"
       },
       {
-        "title": "Template Config",
-        "path": "agent/template-config"
-      },
-      {
         "title": "Windows service",
         "path": "agent/winsvc"
       }
@@ -1256,10 +1252,6 @@
       {
         "title": "App ID <sup>DEPRECATED</sup>",
         "path": "auth/app-id"
-      },
-      {
-        "title": "MFA <sup>LEGACY / UNSUPPORTED</sup>",
-        "path": "auth/mfa"
       }
     ]
   },

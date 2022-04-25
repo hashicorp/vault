@@ -54,12 +54,12 @@
         </ToolbarFilters>
       </Toolbar>
     </div>
-    {{#if this.countsIncludeOlderData}}
+    {{#if this.upgradeDuringCurrentMonth}}
       <AlertBanner @type="warning" @title="Warning">
-        {{concat "You upgraded to Vault " this.firstUpgradeVersion " on " (date-format this.upgradeDate "MMMM d, yyyy.")}}
-        How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
+        {{this.upgradeVersionAndDate}}
+        {{this.versionSpecificText}}
         <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
-          read more here.
+          Learn more here.
         </DocLink>
       </AlertBanner>
     {{/if}}

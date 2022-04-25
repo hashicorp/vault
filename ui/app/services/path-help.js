@@ -13,6 +13,7 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { dasherize, capitalize } from '@ember/string';
+import { computed } from '@ember/object'; // eslint-disable-line
 import { singularize } from 'ember-inflector';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
@@ -270,7 +271,7 @@ export default Service.extend({
       },
 
       urlForCreateRecord(modelType, snapshot) {
-        const { id } = snapshot;
+        const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
         const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
@@ -278,6 +279,17 @@ export default Service.extend({
       urlForDeleteRecord(id) {
         const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
+      },
+
+      createRecord(store, type, snapshot) {
+        return this._super(...arguments).then((response) => {
+          // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
+          if (!response?.id && !snapshot.record.id) {
+            snapshot.record.id = snapshot.record.mutableId;
+            snapshot.id = snapshot.record.id;
+          }
+          return response;
+        });
       },
     });
   },
@@ -302,7 +314,8 @@ export default Service.extend({
             const validations = fieldGroups.reduce((obj, element) => {
               if (element.default) {
                 element.default.forEach((v) => {
-                  obj[v.name] = [{ type: 'presence', message: `${v.name} can't be black` }];
+                  const key = v.options.fieldValue || v.name;
+                  obj[key] = [{ type: 'presence', message: `${v.name} can't be blank` }];
                 });
               }
               return obj;
@@ -315,6 +328,18 @@ export default Service.extend({
       } catch (err) {
         // eat the error, fieldGroups is computed in the model definition
       }
+      // attempting to set the id prop on a model will trigger an error
+      // this computed will be used in place of the the id fieldValue -- see openapi-to-attrs
+      newModel.reopen({
+        mutableId: computed('id', '_id', {
+          get() {
+            return this._id || this.id;
+          },
+          set(key, value) {
+            return (this._id = value);
+          },
+        }),
+      });
       newModel.reopenClass({ merged: true });
       owner.unregister(modelName);
       owner.register(modelName, newModel);

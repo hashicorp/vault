@@ -25,41 +25,52 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1.  Bootstrap the Consul ACL system if not already done. To begin configuring the secrets engine, we must give Vault
-    the necessary credentials to manage Consul.
+1. Vault can bootstrap the ACL system of your Consul cluster if it has
+   not already been done. In this case, you only need the address of your
+   Consul cluster to configure the Consul secret engine:
 
-    In Consul versions below 1.4, acquire a [management token][consul-mgmt-token] from Consul using the
-    `acl_master_token` from your Consul configuration file, or another management token:
-
-    ```shell-session
-    $ curl \
-        --header "X-Consul-Token: my-management-token" \
-        --request POST \
-        --data '{"Name": "sample", "Type": "management"}' \
-        https://consul.rocks/v1/acl/create
+    ```text
+    $ vault write consul/config/access \
+        address=127.0.0.1:8500
+    Success! Data written to: consul/config/access
     ```
 
-    Vault must have a "management" type token so that it can create and revoke ACL
-    tokens. The response will return a new token:
+    If you have already bootstrapped the ACL system of your Consul cluster, you
+    will need to give Vault a management token:
 
-    ```json
-    {
-      "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
-    }
-    ```
+     - In Consul versions below 1.4, acquire a [management token][consul-mgmt-token] from Consul, using the
+       `acl_master_token` from your Consul configuration file or another management
+       token:
 
-    For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
+        ```sh
+        $ curl \
+            --header "X-Consul-Token: my-management-token" \
+            --request PUT \
+            --data '{"Name": "sample", "Type": "management"}' \
+            https://consul.rocks/v1/acl/create
+        ```
 
-    ```shell-session
-    $ CONSUL_HTTP_TOKEN="<management-token>" consul acl token create -policy-name="global-management"
-    AccessorID:   865dc5e9-e585-3180-7b49-4ddc0fc45135
-    SecretID:     ef35f0f1-885b-0cab-573c-7c91b65a7a7e
-    Description:
-    Local:        false
-    Create Time:  2018-10-22 17:40:24.128188 -0700 PDT
-    Policies:
-        00000000-0000-0000-0000-000000000001 - global-management
-    ```
+        Vault must have a management type token so that it can create and revoke ACL
+        tokens. The response will return a new token:
+
+        ```json
+        {
+        "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
+        }
+        ```
+
+     - For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
+
+        ```shell-session
+        $ CONSUL_HTTP_TOKEN="<management-token>" consul acl token create -policy-name="global-management"
+        AccessorID:   865dc5e9-e585-3180-7b49-4ddc0fc45135
+        SecretID:     ef35f0f1-885b-0cab-573c-7c91b65a7a7e
+        Description:
+        Local:        false
+        Create Time:  2018-10-22 17:40:24.128188 -0700 PDT
+        Policies:
+            00000000-0000-0000-0000-000000000001 - global-management
+        ```
 
 1.  Configure Vault to connect and authenticate to Consul:
 

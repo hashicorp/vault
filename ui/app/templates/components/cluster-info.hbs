@@ -11,7 +11,7 @@
                   <li>
                     <LinkTo
                       @route="vault.cluster.replication-dr-promote.details"
-                      disabled={{not this.auth.currentToken}}
+                      @disabled={{not this.auth.currentToken}}
                       {{on "click" @onLinkClick}}
                     >
                       <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
@@ -32,7 +32,7 @@
                     <LinkTo
                       @route="vault.cluster.replication.mode.index"
                       @model="dr"
-                      disabled={{not this.auth.currentToken}}
+                      @disabled={{not this.auth.currentToken}}
                       {{on "click" @onLinkClick}}
                     >
                       <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
@@ -43,7 +43,7 @@
                       <LinkTo
                         @route="vault.cluster.replication.mode.index"
                         @model="performance"
-                        disabled={{not this.auth.currentToken}}
+                        @disabled={{not this.auth.currentToken}}
                         {{on "click" @onLinkClick}}
                       >
                         <ReplicationModeSummary @mode="performance" @display="menu" @cluster={{@cluster}} @tagName="span" />

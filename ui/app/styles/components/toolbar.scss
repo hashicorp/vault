@@ -111,6 +111,15 @@
     }
   }
 }
+a.disabled.toolbar-link {
+  color: $black;
+  background-color: $white;
+  cursor: not-allowed;
+  &:hover {
+    background-color: $ui-gray-100;
+    color: $blue;
+  }
+}
 
 .toolbar-separator {
   border-right: $light-border;

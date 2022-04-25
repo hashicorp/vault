@@ -2,8 +2,10 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth, isAfter } from 'date-fns';
+import { isSameMonth, isAfter, isBefore } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
+import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+import { dateFormat } from 'core/helpers/date-format';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
@@ -11,20 +13,7 @@ export default class History extends Component {
   @service store;
   @service version;
 
-  arrayOfMonths = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
+  arrayOfMonths = ARRAY_OF_MONTHS;
 
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
@@ -55,10 +44,6 @@ export default class History extends Component {
   @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
   @tracked startTimeRequested = null;
   @tracked queriedActivityResponse = null;
-
-  // VERSION/UPGRADE INFO
-  @tracked firstUpgradeVersion = this.args.model.versionHistory[0].id || null; // return 1.9.0 or earliest upgrade post 1.9.0
-  @tracked upgradeDate = this.args.model.versionHistory[0].timestampInstalled || null; // returns RFC3339 timestamp
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
@@ -98,17 +83,89 @@ export default class History extends Component {
         };
   }
 
-  // on init API response uses license start_date, getter updates when user queries dates
-  get getActivityResponse() {
-    return this.queriedActivityResponse || this.args.model.activity;
+  get isDateRange() {
+    return !isSameMonth(
+      new Date(this.getActivityResponse.startTime),
+      new Date(this.getActivityResponse.endTime)
+    );
   }
 
-  get hasAttributionData() {
-    if (this.selectedAuthMethod) return false;
-    if (this.selectedNamespace) {
-      return this.authMethodOptions.length > 0;
+  get upgradeVersionHistory() {
+    const versionHistory = this.args.model.versionHistory;
+    if (!versionHistory || versionHistory.length === 0) {
+      return null;
     }
-    return !!this.totalClientsData && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
+
+    // get upgrade data for initial upgrade to 1.9 and/or 1.10
+    let relevantUpgrades = [];
+    const importantUpgrades = ['1.9', '1.10'];
+    importantUpgrades.forEach((version) => {
+      let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
+      if (findUpgrade) relevantUpgrades.push(findUpgrade);
+    });
+
+    // if no history for 1.9 or 1.10, customer skipped these releases so get first stored upgrade
+    // TODO account for customer STARTING on 1.11
+    if (relevantUpgrades.length === 0) {
+      relevantUpgrades.push({
+        id: versionHistory[0].id,
+        previousVersion: versionHistory[0].previousVersion,
+        timestampInstalled: versionHistory[0].timestampInstalled,
+      });
+    }
+    // array of upgrade data objects for noteworthy upgrades
+    return relevantUpgrades;
+  }
+
+  get upgradeDuringActivity() {
+    if (!this.upgradeVersionHistory) {
+      return null;
+    }
+    const activityStart = new Date(this.getActivityResponse.startTime);
+    const activityEnd = new Date(this.getActivityResponse.endTime);
+    const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
+      // TODO how do timezones affect this?
+      let upgradeDate = new Date(upgrade.timestampInstalled);
+      return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
+    });
+    // return all upgrades that happened within date range of queried activity
+    return upgradesWithinData.length === 0 ? null : upgradesWithinData;
+  }
+
+  get upgradeVersionAndDate() {
+    if (!this.upgradeDuringActivity) {
+      return null;
+    }
+    if (this.upgradeDuringActivity.length === 2) {
+      let firstUpgrade = this.upgradeDuringActivity[0];
+      let secondUpgrade = this.upgradeDuringActivity[1];
+      let firstDate = dateFormat([firstUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
+      let secondDate = dateFormat([secondUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
+      return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
+    } else {
+      let upgrade = this.upgradeDuringActivity[0];
+      return `Vault was upgraded to ${upgrade.id} on ${dateFormat(
+        [upgrade.timestampInstalled, 'MMM d, yyyy'],
+        { isFormatted: true }
+      )}.`;
+    }
+  }
+
+  get versionSpecificText() {
+    if (!this.upgradeDuringActivity) {
+      return null;
+    }
+    if (this.upgradeDuringActivity.length === 1) {
+      let version = this.upgradeDuringActivity[0].id;
+      if (version.match('1.9')) {
+        return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
+      }
+      if (version.match('1.10')) {
+        return ' We added monthly breakdowns starting in 1.10, so keep that in mind when looking at the data below.';
+      }
+    }
+    // return combined explanation if spans multiple upgrades, or customer skipped 1.9 and 1.10
+    return ' How we count clients changed in 1.9 and we added monthly breakdowns starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
   get startTimeDisplay() {
@@ -129,25 +186,19 @@ export default class History extends Component {
     return `${this.arrayOfMonths[month]} ${year}`;
   }
 
-  get filteredActivity() {
-    const namespace = this.selectedNamespace;
-    const auth = this.selectedAuthMethod;
-    if (!namespace && !auth) {
-      return this.getActivityResponse;
-    }
-    if (!auth) {
-      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
-    }
-    return this.getActivityResponse.byNamespace
-      .find((ns) => ns.label === namespace)
-      .mounts?.find((mount) => mount.label === auth);
+  // GETTERS FOR RESPONSE & DATA
+
+  // on init API response uses license start_date, getter updates when user queries dates
+  get getActivityResponse() {
+    return this.queriedActivityResponse || this.args.model.activity;
   }
 
-  get isDateRange() {
-    return !isSameMonth(
-      new Date(this.getActivityResponse.startTime),
-      new Date(this.getActivityResponse.endTime)
-    );
+  get hasAttributionData() {
+    if (this.selectedAuthMethod) return false;
+    if (this.selectedNamespace) {
+      return this.authMethodOptions.length > 0;
+    }
+    return !!this.totalClientsData && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
   }
 
   // top level TOTAL client counts for given date range
@@ -169,25 +220,25 @@ export default class History extends Component {
   }
 
   get byMonthTotalClients() {
-    return this.getActivityResponse?.byMonthTotalClients;
+    return this.getActivityResponse?.byMonth;
   }
 
   get byMonthNewClients() {
-    return this.getActivityResponse?.byMonthNewClients;
+    return this.byMonthTotalClients.map((m) => m.new_clients);
   }
 
-  get countsIncludeOlderData() {
-    let firstUpgrade = this.args.model.versionHistory[0];
-    if (!firstUpgrade) {
-      return false;
+  get filteredActivity() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse;
     }
-    let versionDate = new Date(firstUpgrade.timestampInstalled);
-    let startTimeFromResponseAsDateObject = new Date(
-      Number(this.startTimeFromResponse[0]),
-      this.startTimeFromResponse[1]
-    );
-    // compare against this startTimeFromResponse to show message or not.
-    return isAfter(versionDate, startTimeFromResponseAsDateObject) ? versionDate : false;
+    if (!auth) {
+      return this.getActivityResponse.byNamespace.find((ns) => ns.label === namespace);
+    }
+    return this.getActivityResponse.byNamespace
+      .find((ns) => ns.label === namespace)
+      .mounts?.find((mount) => mount.label === auth);
   }
 
   @action

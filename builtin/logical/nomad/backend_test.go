@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,7 +28,13 @@ func (c *Config) APIConfig() *nomadapi.Config {
 	return apiConfig
 }
 
-func prepareTestContainer(t *testing.T) (func(), *Config) {
+func (c *Config) Client() (*nomadapi.Client, error) {
+	apiConfig := c.APIConfig()
+
+	return nomadapi.NewClient(apiConfig)
+}
+
+func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
 	if retAddress := os.Getenv("NOMAD_ADDR"); retAddress != "" {
 		s, err := docker.NewServiceURLParse(retAddress)
 		if err != nil {
@@ -37,8 +44,8 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "catsby/nomad",
-		ImageTag:      "0.8.4",
+		ImageRepo:     "multani/nomad",
+		ImageTag:      "1.1.6",
 		ContainerName: "nomad",
 		Ports:         []string{"4646/tcp"},
 		Cmd:           []string{"agent", "-dev"},
@@ -57,49 +64,39 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 		if err != nil {
 			return nil, err
 		}
-		aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
+
+		_, err = nomad.Status().Leader()
 		if err != nil {
+			t.Logf("[DEBUG] Nomad is not ready yet: %s", err)
 			return nil, err
 		}
-		nomadToken = aclbootstrap.SecretID
-		t.Logf("[WARN] Generated Master token: %s", nomadToken)
-		policy := &nomadapi.ACLPolicy{
-			Name:        "test",
-			Description: "test",
-			Rules: `namespace "default" {
-        policy = "read"
-      }
-      `,
+
+		if bootstrap {
+			aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
+			if err != nil {
+				return nil, err
+			}
+			nomadToken = aclbootstrap.SecretID
+			t.Logf("[WARN] Generated Master token: %s", nomadToken)
 		}
-		anonPolicy := &nomadapi.ACLPolicy{
-			Name:        "anonymous",
-			Description: "Deny all access for anonymous requests",
-			Rules: `namespace "default" {
-            policy = "deny"
-        }
-        agent {
-            policy = "deny"
-        }
-        node {
-            policy = "deny"
-        }
-        `,
-		}
+
 		nomadAuthConfig := nomadapi.DefaultConfig()
 		nomadAuthConfig.Address = nomad.Address()
-		nomadAuthConfig.SecretID = nomadToken
-		nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
-		if err != nil {
-			return nil, err
+
+		if bootstrap {
+			nomadAuthConfig.SecretID = nomadToken
+
+			nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
+			if err != nil {
+				return nil, err
+			}
+
+			err = preprePolicies(nomadAuth)
+			if err != nil {
+				return nil, err
+			}
 		}
-		_, err = nomadAuth.ACLPolicies().Upsert(policy, nil)
-		if err != nil {
-			return nil, err
-		}
-		_, err = nomadAuth.ACLPolicies().Upsert(anonPolicy, nil)
-		if err != nil {
-			return nil, err
-		}
+
 		u, _ := docker.NewServiceURLParse(nomadapiConfig.Address)
 		return &Config{
 			ServiceURL: *u,
@@ -113,6 +110,101 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 	return svc.Cleanup, svc.Config.(*Config)
 }
 
+func preprePolicies(nomadClient *nomadapi.Client) error {
+	policy := &nomadapi.ACLPolicy{
+		Name:        "test",
+		Description: "test",
+		Rules: `namespace "default" {
+        policy = "read"
+      }
+      `,
+	}
+	anonPolicy := &nomadapi.ACLPolicy{
+		Name:        "anonymous",
+		Description: "Deny all access for anonymous requests",
+		Rules: `namespace "default" {
+            policy = "deny"
+        }
+        agent {
+            policy = "deny"
+        }
+        node {
+            policy = "deny"
+        }
+        `,
+	}
+
+	_, err := nomadClient.ACLPolicies().Upsert(policy, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = nomadClient.ACLPolicies().Upsert(anonPolicy, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func TestBackend_config_Bootstrap(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, svccfg := prepareTestContainer(t, false)
+	defer cleanup()
+
+	connData := map[string]interface{}{
+		"address": svccfg.URL().String(),
+		"token":   "",
+	}
+
+	confReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Storage:   config.StorageView,
+		Data:      connData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), confReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+	}
+
+	confReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), confReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+	}
+
+	expected := map[string]interface{}{
+		"address":               connData["address"].(string),
+		"max_token_name_length": 0,
+	}
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
+	}
+
+	nomadClient, err := svccfg.Client()
+	if err != nil {
+		t.Fatalf("failed to construct nomaad client, %v", err)
+	}
+
+	token, _, err := nomadClient.ACLTokens().Bootstrap(nil)
+	if err == nil {
+		t.Fatalf("expected acl system to be bootstrapped already, but was able to get the bootstrap token : %v", token)
+	}
+	// NOTE: fragile test, but it's the only way, AFAIK, to check that nomad is
+	// bootstrapped
+	if !strings.Contains(err.Error(), "bootstrap already done") {
+		t.Fatalf("expected acl system to be bootstrapped already: err: %v", err)
+	}
+}
+
 func TestBackend_config_access(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -121,7 +213,7 @@ func TestBackend_config_access(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, svccfg := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -167,7 +259,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, svccfg := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -280,7 +372,7 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, svccfg := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t, true)
 	defer cleanup()
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "role/test")
@@ -320,7 +412,7 @@ func TestBackend_max_token_name_length(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, svccfg := prepareTestContainer(t)
+	cleanup, svccfg := prepareTestContainer(t, true)
 	defer cleanup()
 
 	testCases := []struct {

@@ -2,30 +2,28 @@ import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 import { parseAPITimestamp, parseRFC3339 } from 'core/utils/date-formatters';
 export default class ActivitySerializer extends ApplicationSerializer {
-  flattenDataset(namespaceArray) {
-    return namespaceArray.map((ns) => {
+  flattenDataset(object) {
+    let flattenedObject = {};
+    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
+    return this.homogenizeClientNaming(flattenedObject);
+  }
+
+  formatByNamespace(namespaceArray) {
+    return namespaceArray?.map((ns) => {
       // 'namespace_path' is an empty string for root
       if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
       let label = ns['namespace_path'];
-      let flattenedNs = {};
-      // we don't want client counts nested within the 'counts' object for stacked charts
-      Object.keys(ns['counts']).forEach((key) => (flattenedNs[key] = ns['counts'][key]));
-      flattenedNs = this.homogenizeClientNaming(flattenedNs);
-
+      let flattenedNs = this.flattenDataset(ns);
       // if no mounts, mounts will be an empty array
-      flattenedNs.mounts = ns.mounts
-        ? ns.mounts.map((mount) => {
-            let flattenedMount = {};
-            let label = mount['mount_path'];
-            Object.keys(mount['counts']).forEach((key) => (flattenedMount[key] = mount['counts'][key]));
-            flattenedMount = this.homogenizeClientNaming(flattenedMount);
-            return {
-              label,
-              ...flattenedMount,
-            };
-          })
-        : [];
-
+      flattenedNs.mounts = [];
+      if (ns?.mounts && ns.mounts.length > 0) {
+        flattenedNs.mounts = ns.mounts.map((mount) => {
+          return {
+            label: mount['mount_path'],
+            ...this.flattenDataset(mount),
+          };
+        });
+      }
       return {
         label,
         ...flattenedNs,
@@ -33,36 +31,34 @@ export default class ActivitySerializer extends ApplicationSerializer {
     });
   }
 
-  flattenByMonths(payload, isNewClients = false) {
-    const sortedPayload = [...payload];
+  formatByMonths(monthsArray) {
+    const sortedPayload = [...monthsArray];
+    // months are always returned from the API: [mostRecent...oldestMonth]
     sortedPayload.reverse();
-    if (isNewClients) {
-      return sortedPayload?.map((m) => {
+    return sortedPayload.map((m) => {
+      if (Object.keys(m).includes('counts')) {
+        let totalClients = this.flattenDataset(m);
+        let newClients = this.flattenDataset(m.new_clients);
         return {
           month: parseAPITimestamp(m.timestamp, 'M/yy'),
-          entity_clients: m.new_clients.counts.entity_clients,
-          non_entity_clients: m.new_clients.counts.non_entity_clients,
-          clients: m.new_clients.counts.clients,
-          namespaces: this.flattenDataset(m.new_clients.namespaces),
-        };
-      });
-    } else {
-      return sortedPayload?.map((m) => {
-        return {
-          month: parseAPITimestamp(m.timestamp, 'M/yy'),
-          entity_clients: m.counts.entity_clients,
-          non_entity_clients: m.counts.non_entity_clients,
-          clients: m.counts.clients,
-          namespaces: this.flattenDataset(m.namespaces),
+          ...totalClients,
+          namespaces: this.formatByNamespace(m.namespaces),
           new_clients: {
-            entity_clients: m.new_clients.counts.entity_clients,
-            non_entity_clients: m.new_clients.counts.non_entity_clients,
-            clients: m.new_clients.counts.clients,
-            namespaces: this.flattenDataset(m.new_clients.namespaces),
+            month: parseAPITimestamp(m.timestamp, 'M/yy'),
+            ...newClients,
+            namespaces: this.formatByNamespace(m.new_clients.namespaces),
           },
         };
-      });
-    }
+      }
+      // TODO CMB below is an assumption, need to test
+      // if no monthly data (no counts key), month object will just contain a timestamp
+      return {
+        month: parseAPITimestamp(m.timestamp, 'M/yy'),
+        new_clients: {
+          month: parseAPITimestamp(m.timestamp, 'M/yy'),
+        },
+      };
+    });
   }
 
   // In 1.10 'distinct_entities' changed to 'entity_clients' and
@@ -86,7 +82,6 @@ export default class ActivitySerializer extends ApplicationSerializer {
         non_entity_clients: non_entity_tokens,
       };
     }
-    // TODO CMB: test what to return if neither key exists
     return object;
   }
 
@@ -98,9 +93,8 @@ export default class ActivitySerializer extends ApplicationSerializer {
     let transformedPayload = {
       ...payload,
       response_timestamp,
-      by_namespace: this.flattenDataset(payload.data.by_namespace),
-      by_month_total_clients: this.flattenByMonths(payload.data.months),
-      by_month_new_clients: this.flattenByMonths(payload.data.months, { isNewClients: true }),
+      by_namespace: this.formatByNamespace(payload.data.by_namespace),
+      by_month: this.formatByMonths(payload.data.months),
       total: this.homogenizeClientNaming(payload.data.total),
       formatted_end_time: parseRFC3339(payload.data.end_time),
       formatted_start_time: parseRFC3339(payload.data.start_time),
