@@ -1735,7 +1735,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 	rootCaAsPem := resp.Data["certificate"].(string)
 
-	// The ca_chain call at least for now does not return the root CA authority
+	// Chain should contain the root.
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.ReadOperation,
 		Path:       "ca_chain",
@@ -1747,7 +1747,9 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed read ca_chain, %#v", resp)
 	}
-	require.Equal(t, []byte{}, resp.Data[logical.HTTPRawBody], "ca_chain response should have been empty")
+	if strings.Count(string(resp.Data[logical.HTTPRawBody].([]byte)), rootCaAsPem) != 1 {
+		t.Fatalf("expected raw chain to contain the root cert")
+	}
 
 	// The ca/pem should return us the actual CA...
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
