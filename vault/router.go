@@ -556,8 +556,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
-		r.logger.Trace("route entry found, but backend is nil")
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s', nil backend", req.Path)), false, false, logical.ErrUnsupportedPath
+		r.logger.Trace("route entry found, but backend is nil", "path", req.Path)
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 
 	// If the path is tainted, we reject any operation except for
@@ -566,8 +566,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			r.logger.Trace("route entry is tainted, rejecting operations to it that aren't revoke or rollback")
-			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s', entry tainted", req.Path)), false, false, logical.ErrUnsupportedPath
+			r.logger.Trace("route entry is tainted, rejecting operations to it that aren't revoke or rollback", "path", req.Path)
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
 
