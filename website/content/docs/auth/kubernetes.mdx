@@ -332,12 +332,12 @@ The Kubernetes Auth Plugin has a full HTTP API. Please see the
 
 ## Code Example
 
-The following code snippet demonstrates the Kubernetes auth method to authenticate
+The following example demonstrates the Kubernetes auth method to authenticate
 with Vault.
 
-<CodeTabs heading="kubernetes auth example">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -408,7 +408,7 @@ func getSecretWithKubernetesAuth() (string, error) {
 ```
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;
@@ -420,7 +420,7 @@ using VaultSharp.V1.Commons;
 
 namespace Examples
 {
-    public class KubernetesAuthExample 
+    public class KubernetesAuthExample
     {
         const string DefaultTokenPath = "path/to/service-account-token";
 
@@ -442,19 +442,19 @@ namespace Examples
 
             // Get the path to service account token or fall back on default path
             string pathToToken = String.IsNullOrEmpty(Environment.GetEnvironmentVariable("SA_TOKEN_PATH")) ? DefaultTokenPath : Environment.GetEnvironmentVariable("SA_TOKEN_PATH");
-            string jwt = File.ReadAllText(pathToToken); 
+            string jwt = File.ReadAllText(pathToToken);
 
             IAuthMethodInfo authMethod = new KubernetesAuthMethodInfo(roleName, jwt);
             var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
 
-            IVaultClient vaultClient = new VaultClient(vaultClientSettings); 
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 
             // We can retrieve the secret after creating our VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-            
+
             var password = kv2Secret.Data.Data["password"];
-            
+
             return password.ToString();
         }
     }
