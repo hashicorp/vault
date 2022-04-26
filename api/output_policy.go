@@ -67,7 +67,7 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	}
 
 	// determine whether to add sudo capability
-	if isSudoPath(path) {
+	if IsSudoPath(path) {
 		capabilities = append(capabilities, "sudo")
 	}
 
@@ -80,25 +80,4 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 		`path "%s" {
   capabilities = ["%s"]
 }`, path, capStr), nil
-}
-
-// Determine whether the given path requires the sudo capability
-func isSudoPath(path string) bool {
-	// Return early if the path is any of the non-templated sudo paths.
-	if _, ok := sudoPaths[path]; ok {
-		return true
-	}
-
-	// Some sudo paths have templated fields in them.
-	// (e.g. sys/revoke-prefix/{prefix})
-	// The values in the sudoPaths map are actually regular expressions,
-	// so we can check if our path matches against them.
-	for _, sudoPathRegexp := range sudoPaths {
-		match := sudoPathRegexp.Match([]byte(path))
-		if match {
-			return true
-		}
-	}
-
-	return false
 }
