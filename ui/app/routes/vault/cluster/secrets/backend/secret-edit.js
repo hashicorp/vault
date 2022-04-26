@@ -9,6 +9,8 @@ import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 
 export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
+  wizard: service(),
+
   secretParam() {
     let { secret } = this.paramsFor(this.routeName);
     return secret ? normalizePath(secret) : '';
@@ -211,8 +213,16 @@ export default Route.extend(UnloadModelRoute, {
     let secretModel = this.store.peekRecord(modelType, secretId);
     return secretModel;
   },
+  // wizard will pause unless we manually continue it
+  updateWizard(params) {
+    // verify that keymgmt tutorial is in progress
+    if (params.itemType === 'provider' && this.wizard.nextStep === 'displayProvider') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
+    }
+  },
 
   async model(params, { to: { queryParams } }) {
+    this.updateWizard(params);
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let modelType = this.modelType(backend, secret, { queryParams });

@@ -17,7 +17,7 @@
 </PageHeader>
 
 {{#if this.isDistributing}}
-  <Keymgmt::Distribute @backend={{@model.backend}} @provider={{@model}} @onClose={{fn (mut this.isDistributing) false}} />
+  <Keymgmt::Distribute @backend={{@model.backend}} @provider={{@model.id}} @onClose={{fn (mut this.isDistributing) false}} />
 {{else}}
   {{#if this.isShowing}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">

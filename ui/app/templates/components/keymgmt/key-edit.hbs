@@ -18,7 +18,7 @@
 </PageHeader>
 
 {{#if this.isDistributing}}
-  <Keymgmt::Distribute @backend={{@model.backend}} @key={{@model}} @onClose={{fn (mut this.isDistributing) false}} />
+  <Keymgmt::Distribute @backend={{@model.backend}} @key={{@model.id}} @onClose={{fn (mut this.isDistributing) false}} />
 {{else}}
   {{#if (eq this.mode "show")}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-keymgmt-key-toolbar>
