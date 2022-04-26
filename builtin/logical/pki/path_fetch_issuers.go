@@ -15,8 +15,10 @@ func pathListIssuers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuers/?$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathListIssuersHandler,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathListIssuersHandler,
+			},
 		},
 
 		HelpSynopsis:    pathListIssuersHelpSyn,
@@ -91,10 +93,22 @@ intermediate CAs and "permit" only for root CAs.`,
 		Pattern: pattern,
 		Fields:  fields,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathGetIssuer,
-			logical.UpdateOperation: b.pathUpdateIssuer,
-			logical.DeleteOperation: b.pathDeleteIssuer,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathGetIssuer,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathUpdateIssuer,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathDeleteIssuer,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathGetIssuerHelpSyn,
@@ -369,8 +383,10 @@ func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 		Pattern: pattern,
 		Fields:  fields,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathGetIssuerCRL,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathGetIssuerCRL,
+			},
 		},
 
 		HelpSynopsis:    pathGetIssuerCRLHelpSyn,

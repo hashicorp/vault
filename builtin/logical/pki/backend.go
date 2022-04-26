@@ -25,22 +25,27 @@ const (
 
 /*
  * PKI requests are a bit special to keep up with the various failure and load issues.
- * The main ca and intermediate requests are always forwarded to the Primary cluster's active
- * node to write and send the key material/config globally across all clusters.
  *
- * CRL/Revocation and Issued certificate apis are handled by the active node within the cluster
- * they originate. Which means if a request comes into a performance secondary cluster the writes
+ * Any requests to write/delete shared data (such as roles, issuers, keys, and configuration)
+ * are always forwarded to the Primary cluster's active node to write and send the key
+ * material/config globally across all clusters. Reads should be handled locally, to give a
+ * sense of where this cluster's replication state is at.
+ *
+ * CRL/Revocation and Fetch Certificate APIs are handled by the active node within the cluster
+ * they originate. This means, if a request comes into a performance secondary cluster, the writes
  * will be forwarded to that cluster's active node and not go all the way up to the performance primary's
  * active node.
  *
- * If a certificate issue request has a role in which no_store is set to true that node itself
- * will issue the certificate and not forward the request to the active node.
+ * If a certificate issue request has a role in which no_store is set to true, that node itself
+ * will issue the certificate and not forward the request to the active node, as this does not
+ * need to write to storage.
  *
- * Following the same pattern if a managed key is involved to sign an issued certificate request
+ * Following the same pattern, if a managed key is involved to sign an issued certificate request
  * and the local node does not have access for some reason to it, the request will be forwarded to
  * the active node within the cluster only.
  *
  * To make sense of what goes where the following bits need to be analyzed within the codebase.
+ *
  * 1. The backend LocalStorage paths determine what storage paths will remain within a
  *    cluster and not be forwarded to a performance primary
  * 2. Within each path's OperationHandler definition, check to see if ForwardPerformanceStandby &
