@@ -18,8 +18,10 @@ func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleList,
+			},
 		},
 
 		HelpSynopsis:    pathListRolesHelpSyn,
@@ -413,10 +415,22 @@ serviced by this role.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleCreate,
-			logical.DeleteOperation: b.pathRoleDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoleRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreate,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoleDelete,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathRoleHelpSyn,

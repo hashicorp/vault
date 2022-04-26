@@ -29,8 +29,10 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("issue", roleRequired, b.pathIssue),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("issue", roleRequired, b.pathIssue),
+			},
 		},
 
 		HelpSynopsis:    pathIssueHelpSyn,
@@ -55,8 +57,10 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("sign", roleRequired, b.pathSign),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("sign", roleRequired, b.pathSign),
+			},
 		},
 
 		HelpSynopsis:    pathSignHelpSyn,
@@ -89,8 +93,10 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
 		Pattern: pattern,
 		Fields:  map[string]*framework.FieldSchema{},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+			},
 		},
 
 		HelpSynopsis:    pathIssuerSignVerbatimHelpSyn,

@@ -18,8 +18,13 @@ secret key and certificate.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathImportIssuers,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathImportIssuers,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigCAHelpSyn,
@@ -49,9 +54,16 @@ func pathConfigIssuers(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCAIssuersRead,
-			logical.UpdateOperation: b.pathCAIssuersWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersWrite,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigIssuersHelpSyn,

@@ -34,9 +34,13 @@ for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathWriteURL,
-			logical.ReadOperation:   b.pathReadURL,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathWriteURL,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadURL,
+			},
 		},
 
 		HelpSynopsis:    pathConfigURLsHelpSyn,
