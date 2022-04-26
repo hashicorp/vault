@@ -37,6 +37,3 @@ jobs:
   - test-go-race-remote-docker:
       requires:
         - pre-flight-checks
-  - semgrep:
-      requires:
-        - pre-flight-checks
