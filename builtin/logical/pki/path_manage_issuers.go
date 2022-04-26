@@ -187,6 +187,14 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	response := &logical.Response{
+		Data: map[string]interface{}{
+			"mapping":          issuerKeyMap,
+			"imported_keys":    createdKeys,
+			"imported_issuers": createdIssuers,
+		},
+	}
+
 	if len(createdIssuers) > 0 {
 		err := buildCRLs(ctx, b, req, true)
 		if err != nil {
@@ -194,13 +202,21 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"mapping":          issuerKeyMap,
-			"imported_keys":    createdKeys,
-			"imported_issuers": createdIssuers,
-		},
-	}, nil
+	// While we're here, check if we should warn about a bad default key. We
+	// do this unconditionally if the issuer or key was modified, so the admin
+	// is always warned. But if unrelated key material was imported, we do
+	// not warn.
+	config, err := getIssuersConfig(ctx, req.Storage)
+	if err == nil && len(config.DefaultIssuerId) > 0 {
+		// We can use the mapping above to check the issuer mapping.
+		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; !ok || len(keyId) == 0 {
+			msg := "The default issuer has no key associated with it. Some operations like issuing certificates and signing CRLs will be unavailable with the requested default issuer until a key is imported or the default issuer is changed."
+			response.AddWarning(msg)
+			b.Logger().Error(msg)
+		}
+	}
+
+	return response, nil
 }
 
 const (
