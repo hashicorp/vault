@@ -1254,7 +1254,8 @@ START:
 
 	if outputPolicy {
 		LastOutputPolicyError = &OutputPolicyError{
-			Request: req,
+			method: req.Method,
+			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
 		}
 		return nil, LastOutputPolicyError
 	}

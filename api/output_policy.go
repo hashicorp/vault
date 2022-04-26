@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
 )
 
 const (
@@ -16,7 +14,8 @@ const (
 var LastOutputPolicyError *OutputPolicyError
 
 type OutputPolicyError struct {
-	*retryablehttp.Request
+	method         string
+	path           string
 	finalHCLString string
 }
 
@@ -46,7 +45,7 @@ func (d *OutputPolicyError) HCLString() (string, error) {
 // Builds a sample policy document from the request
 func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	var capabilities []string
-	switch d.Request.Method {
+	switch d.method {
 	case http.MethodGet, "":
 		capabilities = append(capabilities, "read")
 	case http.MethodPost, http.MethodPut:
@@ -61,7 +60,7 @@ func (d *OutputPolicyError) buildSamplePolicy() (string, error) {
 	}
 
 	// sanitize, then trim the Vault address and v1 from the front of the path
-	path, err := url.PathUnescape(strings.TrimPrefix(d.URL.Path, "/v1"))
+	path, err := url.PathUnescape(d.path)
 	if err != nil {
 		return "", fmt.Errorf("failed to unescape request URL characters: %v", err)
 	}
