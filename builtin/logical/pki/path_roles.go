@@ -211,8 +211,8 @@ protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
-"ec" and "ed25519" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+"ec", "ed25519" and "any" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec", "ed25519", "any"},
 			},
 
 			"key_bits": {
