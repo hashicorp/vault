@@ -229,7 +229,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 	}
 }
 
-func GetSudoPaths() map[string]*regexp.Regexp {
+func SudoPaths() map[string]*regexp.Regexp {
 	return sudoPaths
 }
 
@@ -245,7 +245,7 @@ func IsSudoPath(path string) bool {
 	// The values in the sudoPaths map are actually regular expressions,
 	// so we can check if our path matches against them.
 	for _, sudoPathRegexp := range sudoPaths {
-		match := sudoPathRegexp.Match([]byte(path))
+		match := sudoPathRegexp.MatchString(path)
 		if match {
 			return true
 		}

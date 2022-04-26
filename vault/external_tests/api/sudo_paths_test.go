@@ -69,7 +69,7 @@ func TestSudoPaths(t *testing.T) {
 		t.Fatalf("error getting list of paths that require sudo from OpenAPI endpoint: %v", err)
 	}
 
-	sudoPathsInCode := api.GetSudoPaths()
+	sudoPathsInCode := api.SudoPaths()
 
 	// check for missing or superfluous paths
 	for path := range sudoPathsInCode {
