@@ -104,47 +104,64 @@ export default class Attribution extends Component {
     }
   }
 
+  destructureClientCounts(object) {
+    let { clients, entity_clients, non_entity_clients } = object;
+    return [clients, entity_clients, non_entity_clients];
+  }
+
   async fetchAndGenerateCsvData() {
-    try {
-      let graphData;
-      if (this.args.isDateRange) {
-        graphData = await this.store.peekAll('clients/activity').lastObject;
-      } else {
-        graphData = await this.store.peekAll('clients/monthly').lastObject;
-      }
-      // debugger;
-      // Claire, I stopped here. Uncomment the debugger so you could see how the data comes in.
-      // define the string data.
-      let csvData = [],
-        csvHeader = [
-          'Namespace path',
-          'Authentication method',
-          'Total clients',
-          'Entity clients',
-          'Non-entity clients',
-        ];
-      // each array will be a row in the csv file
-      if (this.isSingleNamespace) {
-        graphData.forEach((mount) => {
-          csvData.push(['', mount.label, mount.clients, mount.entity_clients, mount.non_entity_clients]);
-        });
-        csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
-      } else {
-        graphData.forEach((ns) => {
-          csvData.push([ns.label, '', ns.clients, ns.entity_clients, ns.non_entity_clients]);
-          if (ns.mounts) {
-            ns.mounts.forEach((m) => {
-              csvData.push([ns.label, m.label, m.clients, m.entity_clients, m.non_entity_clients]);
-            });
-          }
-        });
-      }
-      csvData.unshift(csvHeader);
-      // make each nested array a comma separated string, join each array in csvData with line break (\n)
-      return csvData.map((d) => d.join()).join('\n');
-    } catch {
-      // TODO something here with error if peekAll fails
+    const newClients = this.args.newClientsData;
+    let graphData = this.args.totalClientsData;
+    let csvData = [],
+      csvHeader = [
+        'Namespace path',
+        'Authentication method',
+        'Total clients',
+        'Entity clients',
+        'Non-entity clients',
+      ];
+    // only the current month attribution graph displays new clients data
+    if (newClients) {
+      graphData.forEach((clientData) => {
+        let new_clients = newClients.find((n) => n.label === clientData.label) || null;
+        delete new_clients?.label;
+        clientData.new_clients = new_clients;
+      });
+      csvHeader = [...csvHeader, 'Total new clients', 'New entity clients', 'New non-entity clients'];
     }
+    // each array is a row in the csv file
+    // ['ns label', 'mount label', 'total clients', 'entity', 'non entity', 'new total'...etc]
+    if (this.isSingleNamespace) {
+      graphData.forEach((mount) => {
+        let dataRow = ['', mount.label, this.destructureClientCounts(mount)];
+        if (mount.new_clients) {
+          dataRow = [...dataRow, this.destructureClientCounts(mount.new_clients)];
+        }
+        csvData.push(dataRow);
+      });
+      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
+    } else {
+      graphData.forEach((ns) => {
+        let namespaceDataRow = [ns.label, '', this.destructureClientCounts(ns)];
+        if (ns.new_clients) {
+          namespaceDataRow = [...namespaceDataRow, this.destructureClientCounts(ns.new_clients)];
+        }
+        csvData.push(namespaceDataRow);
+        if (ns.mounts) {
+          ns.mounts.forEach((m) => {
+            let mountDataRow = [ns.label, m.label, this.destructureClientCounts(m)];
+            let newMountCounts = ns?.new_clients?.mounts.find((mount) => mount.label === m.label);
+            if (newMountCounts) {
+              mountDataRow = [...mountDataRow, this.destructureClientCounts(newMountCounts)];
+            }
+            csvData.push(mountDataRow);
+          });
+        }
+      });
+    }
+    csvData.unshift(csvHeader);
+    // make each nested array a comma separated string, join each array in csvData with line break (\n)
+    return csvData.map((d) => d.join()).join('\n');
   }
 
   get getCsvFileName() {
@@ -160,6 +177,6 @@ export default class Attribution extends Component {
   exportChartData(filename) {
     let contents = this.fetchAndGenerateCsvData();
     this.downloadCsv.download(filename, contents);
-    // this.showCSVDownloadModal = false;
+    this.showCSVDownloadModal = false;
   }
 }

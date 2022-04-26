@@ -976,6 +976,14 @@ export default function (server) {
                   non_entity_clients: 15,
                 },
               },
+              {
+                mount_path: 'auth_userpass_3158c012',
+                counts: {
+                  clients: 2,
+                  entity_clients: 2,
+                  non_entity_clients: 0,
+                },
+              },
             ],
           },
         ],
