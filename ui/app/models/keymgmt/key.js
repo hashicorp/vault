@@ -1,5 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export const KEY_TYPES = [
   'aes256-gcm96',
@@ -11,15 +12,23 @@ export const KEY_TYPES = [
   'ecdsa-p521',
 ];
 export default class KeymgmtKeyModel extends Model {
-  @attr('string') name;
-  @attr('string') backend;
+  @attr('string', {
+    label: 'Key name',
+    subText: 'This is the name of the key that shows in Vault.',
+  })
+  name;
+
+  @attr('string')
+  backend;
 
   @attr('string', {
+    subText: 'The type of cryptographic key that will be created.',
     possibleValues: KEY_TYPES,
   })
   type;
 
   @attr('boolean', {
+    label: 'Allow deletion',
     defaultValue: false,
   })
   deletionAllowed;
@@ -92,5 +101,28 @@ export default class KeymgmtKeyModel extends Model {
       { name: 'purpose', type: 'string', label: 'Key Purpose' },
       { name: 'protection', type: 'string', subText: 'Where cryptographic operations are performed.' },
     ];
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/key/${'id'}`, 'backend', 'id') keyPath;
+  @lazyCapabilities(apiPath`${'backend'}/key`, 'backend') keysPath;
+  @lazyCapabilities(apiPath`${'backend'}/key/${'id'}/kms`, 'backend', 'id') keyProvidersPath;
+
+  get canCreate() {
+    return this.keyPath.get('canCreate');
+  }
+  get canDelete() {
+    return this.keyPath.get('canDelete');
+  }
+  get canEdit() {
+    return this.keyPath.get('canUpdate');
+  }
+  get canRead() {
+    return this.keyPath.get('canRead');
+  }
+  get canList() {
+    return this.keysPath.get('canList');
+  }
+  get canListProviders() {
+    return this.keyProvidersPath.get('canList');
   }
 }
