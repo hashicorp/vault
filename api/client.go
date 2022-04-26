@@ -1253,16 +1253,9 @@ START:
 	}
 
 	if outputPolicy {
-		// We don't want to use a wrapping function or any special flags
-		outputPolicyClient, err := c.Clone()
-		if err != nil {
-			return nil, fmt.Errorf("unable to clone client for -output-policy: %v", err)
-		}
-		outputPolicyClient.config.OutputCurlString = false
-		outputPolicyClient.config.OutputPolicy = false
 		LastOutputPolicyError = &OutputPolicyError{
-			Request:     req,
-			VaultClient: outputPolicyClient,
+			method: req.Method,
+			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
 		}
 		return nil, LastOutputPolicyError
 	}
