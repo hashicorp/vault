@@ -32,9 +32,16 @@ valid; defaults to 72 hours`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCRLRead,
-			logical.UpdateOperation: b.pathCRLWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCRLRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCRLWrite,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigCRLHelpSyn,
