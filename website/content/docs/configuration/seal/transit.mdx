@@ -8,6 +8,8 @@ description: |-
 
 # `transit` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, seal/HSM must be available throughtout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
+
 The Transit seal configures Vault to use Vault's Transit Secret Engine as the
 autoseal mechanism.
 The Transit seal is activated by one of the following:
