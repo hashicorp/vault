@@ -24,16 +24,14 @@ func (b *backend) pathWrappingKey() *framework.Path {
 }
 
 func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	p, err := b.lm.GetWrappingKey(ctx, req.Storage, WrappingKeyName, b.GetRandomReader())
+	p, err := b.GetWrappingKey(ctx, req.Storage, WrappingKeyName, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return nil, fmt.Errorf("error generating wrapping key: returned policy was nil")
 	}
-	if b.System().CachingDisabled() {
-		p.Unlock()
-	}
+	defer p.Unlock()
 
 	rsaPublicKey := p.Keys[strconv.Itoa(p.LatestVersion)]
 
@@ -50,9 +48,11 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 		return nil, fmt.Errorf("failed to PEM-encode RSA public key")
 	}
 
+	publicKeyString := string(pemBytes)
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"public_key": string(pemBytes),
+			"public_key": publicKeyString,
 		},
 	}
 
