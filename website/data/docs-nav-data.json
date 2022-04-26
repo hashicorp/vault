@@ -1473,8 +1473,8 @@
             "path": "platform/aws"
           },
           {
-            "title": "Vault Lambda Extension Cache",
-            "path": "platform/aws/lambda-extension-cache"
+            "title": "Vault Lambda Extension",
+            "path": "platform/aws/lambda-extension"
           },
           {
             "title": "Running Vault",
