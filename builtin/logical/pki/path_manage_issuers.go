@@ -16,6 +16,10 @@ func pathIssuerGenerateRoot(b *backend) *framework.Path {
 	return buildPathGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
 }
 
+func pathRotateRoot(b *backend) *framework.Path {
+	return buildPathGenerateRoot(b, "root/rotate/"+framework.GenericNameRegex("exported"))
+}
+
 func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,

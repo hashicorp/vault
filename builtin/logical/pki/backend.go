@@ -126,6 +126,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathIssuerSignSelfIssued(&b),
 			pathIssuerSignVerbatim(&b),
 			pathIssuerGenerateRoot(&b),
+			pathRotateRoot(&b),
 			pathIssuerGenerateIntermediate(&b),
 			pathConfigIssuers(&b),
 
