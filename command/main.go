@@ -254,7 +254,7 @@ func printCommand(w io.Writer, name string, cmdFn cli.CommandFactory) {
 	fmt.Fprintf(w, "    %s\t%s\n", name, cmd.Synopsis())
 }
 
-func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrCatcher *bytes.Buffer) int {
+func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.Buffer) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
 		return 1
@@ -265,8 +265,8 @@ func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrCatcher 
 			// Usage, just pass it through
 			return exitCode
 		}
-		fmt.Fprint(preParsingErrCatcher, "cURL command not set by API operation\n")
-		preParsingErrCatcher.WriteTo(runOpts.Stderr)
+		runOpts.Stderr.Write(preParsingErrBuf.Bytes())
+		runOpts.Stderr.Write([]byte("Unable to generate cURL string from command\n"))
 		return exitCode
 	}
 
@@ -280,7 +280,7 @@ func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrCatcher 
 	return 0
 }
 
-func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrCatcher *bytes.Buffer) int {
+func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.Buffer) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate policy")
 		return 1
@@ -291,8 +291,8 @@ func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrCatcher *byt
 			// Usage, just pass it through
 			return exitCode
 		}
-		fmt.Fprint(preParsingErrCatcher, "Unable to generate policy from command\n")
-		preParsingErrCatcher.WriteTo(runOpts.Stderr)
+		runOpts.Stderr.Write(preParsingErrBuf.Bytes())
+		runOpts.Stderr.Write([]byte("Unable to generate policy from command\n"))
 		return exitCode
 	}
 

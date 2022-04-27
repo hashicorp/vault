@@ -63,19 +63,22 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	if err != nil {
 		// If we get a 404 we are using an older version of vault, default to
 		// version 1
-		if resp != nil && resp.StatusCode == 404 {
-			return "", 1, nil
+		if resp != nil {
+			if resp.StatusCode == 404 {
+				return "", 1, nil
+			}
+
+			// if the original request had the -output-curl-string or -output-policy flag,
+			if (currentOutputCurlString || currentOutputPolicy) && resp.StatusCode == 403 {
+				// we provide a more helpful error for the user,
+				// who may not understand why the flag isn't working.
+				err = fmt.Errorf(
+					`This output flag requires the success of a preflight request 
+to determine the version of a KV secrets engine. Please 
+re-run this command with a token with read access to %s`, path)
+			}
 		}
 
-		// if the original request had the -output-curl-string or -output-policy flag,
-		if (currentOutputCurlString || currentOutputPolicy) && resp.StatusCode == 403 {
-			// we provide a more helpful error for the user,
-			// who may not understand why the flag isn't working.
-			err = fmt.Errorf(
-				`This output flag requires the success of a 
-preflight request to determine the version of a KV secrets engine. 
-Please re-run this command with a token with read access to %s`, path)
-		}
 		return "", 0, err
 	}
 
