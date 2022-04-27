@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -47,6 +48,19 @@ func TestTransit_WrappingKey(t *testing.T) {
 		t.Fatal("expected non-nil response")
 	}
 	pubKey := resp.Data["public_key"]
+
+	// Make a decent effor to ensure no private key is returned in the response.
+	for k, v := range resp.Data {
+		if strings.Contains(strings.ToLower(k), "priv") {
+			t.Fatalf("possible private key material returned in wrapping key response! [%s]: %s", k, v)
+		}
+		vStr, ok := v.(string)
+		if ok {
+			if strings.Contains(strings.ToLower(vStr), "priv") {
+				t.Fatalf("possible private key material returned in wrapping key response! [%s]: %s", k, vStr)
+			}
+		}
+	}
 
 	// Request the wrapping key again to ensure it isn't regenerated.
 	req = &logical.Request{
