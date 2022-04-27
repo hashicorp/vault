@@ -202,6 +202,14 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("unable to resolve key id for reference" + keyRef), nil
 	}
 
+	keyInUse, issuerId, err := isKeyInUse(keyId.String(), ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if keyInUse {
+		return logical.ErrorResponse(fmt.Sprintf("Failed to Delete Key.  Key in Use by Issuer: %s", issuerId)), nil
+	}
+
 	wasDefault, err := deleteKey(ctx, req.Storage, keyId)
 	if err != nil {
 		return nil, err

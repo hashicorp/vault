@@ -723,3 +723,29 @@ func genUuid() string {
 	}
 	return aUuid
 }
+
+func isKeyInUse(keyID string, ctx context.Context, s logical.Storage) (inUse bool, issuerId string, err error) {
+	strList, err := s.List(ctx, issuerPrefix)
+	if err != nil {
+		return true, "", err
+	}
+
+	for _, issuerId := range strList {
+		entry, err := s.Get(ctx, issuerPrefix+issuerId)
+		if err != nil {
+			return true, issuerId, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
+		}
+		if entry == nil {
+			return true, issuerId, errutil.InternalError{Err: fmt.Sprintf("Issuer listed: %s does not exist", issuerId)}
+		}
+		var issuer issuerEntry
+		if err := entry.DecodeJSON(&issuer); err != nil {
+			return true, issuerId, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId, err)}
+		}
+		if entry.Key == keyID {
+			return true, issuerId, nil
+		}
+	}
+
+	return false, "", nil
+}
