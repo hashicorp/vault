@@ -745,8 +745,6 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 // setupCredentials is invoked after we've loaded the auth table to
 // initialize the credential backends and setup the router
 func (c *Core) setupCredentials(ctx context.Context) error {
-	var persistNeeded bool
-
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
@@ -875,11 +873,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				}
 			})
 		}
-	}
-
-	if persistNeeded {
-		// persist non-local auth
-		return c.persistAuth(ctx, c.auth, nil)
 	}
 
 	return nil
