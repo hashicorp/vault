@@ -91,7 +91,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
 	}
 
-	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
+	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
 	}

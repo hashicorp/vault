@@ -133,7 +133,7 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
-	bundle := genCertBundle(t, b)
+	bundle := genCertBundle(t, b, s)
 	issuer, _, err := writeCaBundle(ctx, s, bundle, "", "")
 	require.NoError(t, err)
 

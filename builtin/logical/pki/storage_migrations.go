@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -64,7 +63,7 @@ func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, er
 	return migrationInfo, nil
 }
 
-func migrateStorage(ctx context.Context, cb *crlBuilder, s logical.Storage, logger log.Logger) error {
+func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 	migrationInfo, err := getMigrationInfo(ctx, s)
 	if err != nil {
 		return err
@@ -72,23 +71,25 @@ func migrateStorage(ctx context.Context, cb *crlBuilder, s logical.Storage, logg
 
 	if !migrationInfo.isRequired {
 		// No migration was deemed to be required.
-		logger.Debug("existing migration found and was considered valid, skipping migration.")
+		b.Logger().Debug("existing migration found and was considered valid, skipping migration.")
 		return nil
 	}
 
-	logger.Info("performing PKI migration to new keys/issuers layout")
+	b.Logger().Info("performing PKI migration to new keys/issuers layout")
 	if migrationInfo.legacyBundle != nil {
 		anIssuer, aKey, err := writeCaBundle(ctx, s, migrationInfo.legacyBundle, "current", "current")
 		if err != nil {
 			return err
 		}
-		logger.Debug("Migration generated the following ids and set them as defaults",
+		b.Logger().Debug("Migration generated the following ids and set them as defaults",
 			"issuer id", anIssuer.ID, "key id", aKey.ID)
 	} else {
-		logger.Debug("No legacy CA certs found, no migration required.")
+		b.Logger().Debug("No legacy CA certs found, no migration required.")
 	}
 
-	cb.requestRebuild()
+	// Since we do not have all the mount information available we must schedule
+	// the CRL to be rebuilt at a later time.
+	b.crlBuilder.requestRebuildOnActiveNode(b)
 
 	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
 	// if they were upgraded prior to the primary cluster's migration occurred.
@@ -101,7 +102,7 @@ func migrateStorage(ctx context.Context, cb *crlBuilder, s logical.Storage, logg
 		return err
 	}
 
-	logger.Info("successfully completed migration to new keys/issuers layout")
+	b.Logger().Info("successfully completed migration to new keys/issuers layout")
 	return nil
 }
 
