@@ -82,8 +82,8 @@
               <LinkTo
                 @route="vault.cluster.auth"
                 @model={{this.model.name}}
+                @disabled={{this.model.sealed}}
                 class={{concat (if this.model.sealed "is-loading " "") "button is-primary"}}
-                disabled={{this.model.sealed}}
               >
                 Continue to Authenticate
               </LinkTo>

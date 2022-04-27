@@ -10,54 +10,39 @@ description: |-
 
 # Vault Commands (CLI)
 
-~> **Note:** The Vault CLI interface was changed substantially in 0.9.2+ and may cause
-confusion while using older versions of Vault with this documentation. Read our
-[upgrade guide](/docs/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for more information.
+~> **Note:** The Vault command-line interface (CLI) changed substantially in
+0.9.2+ and may cause confusion while using older versions of Vault with this
+documentation. Read our [upgrade
+guide](/docs/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for
+more information.
 
-In addition to a verbose [HTTP API](/api), Vault features a
-command-line interface that wraps common functionality and formats output. The
-Vault CLI is a single static binary. It is a thin wrapper around the HTTP API.
-Every CLI command maps directly to the HTTP API internally.
-
-Each command is represented as a command or subcommand. Please see the sidebar
-for more information about a particular command. This documentation corresponds
-to the latest version of Vault. If you are running an older version, commands
-may behave differently. Run `vault -h` or `vault <command> -h` to see the help
-output which corresponds to your version.
-
-To get help, run:
-
-```shell-session
-$ vault -h
-```
-
-To get help for a subcommand, run:
-
-```shell-session
-$ vault <subcommand> -h
-```
-
-To see the equivalent API call required to perform the same operation, use the `-output-curl-string` flag after the subcommand.
-```shell-session
-vault auth enable -output-curl-string approle
-```
+In addition to a verbose [HTTP API](/api-docs), Vault features a command-line
+interface (CLI) that wraps common functionality and formats output. The Vault
+CLI is a single static binary. It is a thin wrapper around the HTTP API. Every
+CLI command maps directly to the HTTP API internally.
 
 ## CLI Command Structure
 
-There are a number of command and subcommand options available: HTTP options,
-output options, and command specific options.
+Each command is represented as a command or subcommand, and there are a number
+of command and subcommand options available: HTTP options, output options, and
+command-specific options.
 
 Construct your Vault CLI command such that the command options precede its path
 and arguments if any:
+
+<CodeBlockConfig hideClipboard>
 
 ```text
 vault <command> [options] [path] [args]
 ```
 
+</CodeBlockConfig>
+
 - `options` - [Flags](/docs/commands#flags) to specify additional settings
 - `args` - API arguments specific to the operation
 
-  -> **NOTE:** Run `vault path-help <path>` to see the list of args (parameters).
+-> **NOTE:** Use the [command help](#command-help) to display available options
+and arguments.
 
 #### Examples:
 
@@ -82,6 +67,144 @@ $ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
 
 The options (flags) come after the command (or subcommand) preceding the path,
 and the args always follow the path to set API parameter values.
+
+The four most common operations in Vault are [read](/docs/commands/read),
+[write](/docs/commands/write), [delete](/docs/commands/delete), and
+[list](/docs/commands/list). These operations work on most paths in Vault. Some
+paths will contain secrets while other paths may contain configuration. Whatever it
+is, the primary interface for reading and writing data to Vault is similar.
+
+### Print cURL Command
+
+To see the equivalent API call to perform the same operation, use the
+`-output-curl-string` flag after the subcommand.
+
+```shell-session
+$ vault write -output-curl-string  auth/userpass/users/bob password="long-password"
+
+curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" -d '{"password":"long-password"}' http://127.0.0.1:8200/v1/auth/userpass/users/bob
+```
+
+## Command Help
+
+There are two primary ways to get help in Vault: [CLI help (`help`)](#cli-help)
+and [API help (`path-help`)](#api-help).
+
+### CLI Help
+
+Use `help` (or `-h` for shorthand) to see the CLI help output which corresponds
+to your Vault version.
+
+To get CLI help:
+
+```shell-session
+$ vault help
+```
+
+**Example:** To get help on the `kv` command.
+
+```shell-session
+$ vault kv help
+```
+
+The help output displays available subcommands, parameters, and command flags.
+
+### API Help
+
+To invoke the Vault API paths, you can use the [read](/docs/commands/read) (for
+HTTP GET), [write](/docs/commands/write) (for HTTP PUT or POST),
+[delete](/docs/commands/delete) (for HTTP DELETE), and
+[list](/docs/commands/list) (for HTTP LIST) commands.
+
+Use `path-help` to get Vault API help:
+
+```shell-session
+$ vault path-help -h
+```
+
+The `path-help` retrieves API help on any API paths. Vault API paths provide
+built-in help in markdown format. This includes system paths, secret engines,
+and auth methods.
+
+**Example:** API help on the [`sys/mounts/`](/api-docs/system/mounts) path.
+
+```shell-session
+$ vault path-help sys/mounts
+Request:        mounts
+Matching Route: ^mounts$
+
+List the currently mounted backends.
+
+## DESCRIPTION
+
+This path responds to the following HTTP methods.
+
+    GET /
+        Lists all the mounted secret backends.
+
+    GET /<mount point>
+        Get information about the mount at the specified path.
+
+    POST /<mount point>
+        Mount a new secret backend to the mount point in the URL.
+
+    POST /<mount point>/tune
+        Tune configuration parameters for the given mount point.
+
+    DELETE /<mount point>
+        Unmount the specified mount point.
+```
+
+The help output displays supported child-paths and available parameters if there
+are any.
+
+## Command Input
+
+To write data to Vault, the input can be a part of the command in key-value
+format.
+
+```shell-session
+$ vault kv put secret/password value=itsasecret
+```
+
+However, some Vault API require more advanced structures such as maps. You can
+use stdin or file input instead.
+
+### stdin
+
+Some commands in Vault can read data from stdin using `-` as the value. If `-`
+is the entire argument, Vault expects to read a JSON object from stdin:
+
+```shell-session
+$ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
+```
+
+In addition to reading full JSON objects, Vault can read just a value from
+stdin:
+
+```shell-session
+$ echo -n "itsasecret" | vault kv put secret/password value=-
+```
+
+### Files
+
+Some commands can also read data from a file on disk. The usage is similar to
+stdin as documented above. If an argument starts with `@`, Vault will read it as
+a file:
+
+```shell-session
+$ vault kv put secret/password @data.json
+```
+
+Or specify the contents of a file as a value:
+
+```shell-session
+$ vault kv put secret/password value=@data.txt
+```
+
+Note that if an argument is supplied in a @key=value format, Vault will treat that as a
+kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
+does not support filenames with `=` in them.
 
 ## Exit Codes
 
@@ -115,83 +238,6 @@ list of available completions. Type `-<tab>` to show available flag completions.
 
 If the `VAULT_*` environment variables are set, the autocompletion will
 automatically query the Vault server and return helpful argument suggestions.
-
-## Reading and Writing Data
-
-The four most common operations in Vault are `read`, `write`, `delete`, and
-`list`. These operations work on most paths in Vault. Some paths will
-contain secrets, other paths might contain configuration. Whatever it is, the
-primary interface for reading and writing data to Vault is similar.
-
-To demonstrate basic read and write operations, the built-in key/value (K/V)
-secrets engine will be used. This engine is automatically mounted and has no
-external dependencies, making it practical for this introduction. Note that
-K/V uses slightly different commands for reading and writing: `kv get`
-and `kv put`, respectively.
-
-~> The original version of K/V used the common `read` and `write` operations.
-A more advanced K/V Version 2 engine was released in Vault 0.10 and introduced
-the `kv get` and `kv put` commands.
-
-### Writing Data
-
-To write data to Vault, use the `vault kv put` command:
-
-```shell-session
-$ vault kv put secret/password value=itsasecret
-```
-
-For some secrets engines, the key/value pairs are arbitrary. For others, they
-are generally more strict. Vault's built-in help will guide you to these
-restrictions where appropriate.
-
-#### stdin
-
-Some commands in Vault can read data from stdin using `-` as the value. If `-`
-is the entire argument, Vault expects to read a JSON object from stdin:
-
-```shell-session
-$ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
-```
-
-In addition to reading full JSON objects, Vault can read just a value from
-stdin:
-
-```shell-session
-$ echo -n "itsasecret" | vault kv put secret/password value=-
-```
-
-#### Files
-
-Some commands can also read data from a file on disk. The usage is similar to
-stdin as documented above. If an argument starts with `@`, Vault will read it as
-a file:
-
-```shell-session
-$ vault kv put secret/password @data.json
-```
-
-Or specify the contents of a file as a value:
-
-```shell-session
-$ vault kv put secret/password value=@data.txt
-```
-
-Note that if an argument is supplied in a @key=value format, Vault will treat that as a
-kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
-does not support filenames with `=` in them.
-
-### Reading Data
-
-After data is persisted, read it back using `vault kv get`:
-
-```shell-session
-$ vault kv get secret/password
-Key                 Value
----                 -----
-refresh_interval    768h0m0s
-value               itsasecret
-```
 
 ## Token Helper
 
@@ -257,7 +303,7 @@ Provide Vault output (read/status/write) in the specified format. Valid formats 
 
 ### `VAULT_LICENSE`
 
-[Enterprise, Server only] Specify a license to use for this node.  This takes
+[Enterprise, Server only] Specify a license to use for this node. This takes
 precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
 [license_path in config](/docs/configuration#license_path).
 

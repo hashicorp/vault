@@ -243,6 +243,12 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeCommaIntSlice:
 		var result []int
+
+		jsonIn, ok := raw.(json.Number)
+		if ok {
+			raw = jsonIn.String()
+		}
+
 		config := &mapstructure.DecoderConfig{
 			Result:           &result,
 			WeaklyTypedInput: true,

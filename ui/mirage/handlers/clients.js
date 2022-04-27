@@ -6,6 +6,7 @@ import {
   isBefore,
   sub,
   isSameMonth,
+  startOfMonth,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 const MOCK_MONTHLY_DATA = [
@@ -653,59 +654,54 @@ const MOCK_MONTHLY_DATA = [
     },
   },
 ];
-const handleMockQuery = (queryStartTimestamp, monthlyData) => {
-  const queryDate = parseAPITimestamp(queryStartTimestamp);
+const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) => {
+  const queryStartDate = parseAPITimestamp(queryStartTimestamp);
+  const queryEndDate = parseAPITimestamp(queryEndTimestamp);
   const startDateByMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
+  const endDateByMonth = parseAPITimestamp(monthlyData[0].timestamp);
   let transformedMonthlyArray = [...monthlyData];
-  if (isBefore(queryDate, startDateByMonth)) {
+  if (isBefore(queryStartDate, startDateByMonth)) {
     // no data for months before (upgraded to 1.10 during billing period)
     let i = 0;
     do {
       i++;
       let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
-      transformedMonthlyArray.push({
-        timestamp,
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          clients: 0,
-        },
-        namespaces: [],
-        new_clients: {
-          counts: {
-            entity_clients: 0,
-            non_entity_clients: 0,
-            clients: 0,
-          },
-          namespaces: [],
-        },
-      });
-    } while (i < differenceInCalendarMonths(startDateByMonth, queryDate));
+      // TODO CMB update this when we confirm what combined data looks like
+      transformedMonthlyArray.push({ timestamp });
+    } while (i < differenceInCalendarMonths(startDateByMonth, queryStartDate));
   }
-  if (isAfter(queryDate, startDateByMonth)) {
-    let index = monthlyData.findIndex((e) => isSameMonth(queryDate, parseAPITimestamp(e.timestamp)));
+  if (isAfter(queryStartDate, startDateByMonth)) {
+    let index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
     transformedMonthlyArray = transformedMonthlyArray.slice(0, index + 1);
+  }
+  if (isBefore(queryEndDate, endDateByMonth)) {
+    let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
+    transformedMonthlyArray = transformedMonthlyArray.slice(index);
   }
   return transformedMonthlyArray;
 };
+
 export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
     return {
-      keys: ['1.9.0', '1.9.1', '1.9.2'],
+      keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1'],
       key_info: {
         '1.9.0': {
           previous_version: null,
-          timestamp_installed: '2021-11-03T10:23:16Z',
+          timestamp_installed: '2021-07-03T10:23:16Z',
         },
         '1.9.1': {
           previous_version: '1.9.0',
-          timestamp_installed: '2021-12-03T10:23:16Z',
+          timestamp_installed: '2021-08-03T10:23:16Z',
         },
         '1.9.2': {
           previous_version: '1.9.1',
-          timestamp_installed: '2021-01-03T10:23:16Z',
+          timestamp_installed: '2021-09-03T10:23:16Z',
+        },
+        '1.10.1': {
+          previous_version: '1.9.2',
+          timestamp_installed: '2021-10-03T10:23:16Z',
         },
       },
     };
@@ -876,7 +872,7 @@ export default function (server) {
           },
         ],
         end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
-        months: handleMockQuery(start_time, MOCK_MONTHLY_DATA),
+        months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
           distinct_entities: 37389,
@@ -893,6 +889,7 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity/monthly', function () {
+    const timestamp = new Date();
     return {
       request_id: '26be5ab9-dcac-9237-ec12-269a8ca64742',
       lease_id: '',
@@ -982,8 +979,127 @@ export default function (server) {
             ],
           },
         ],
+        months: [
+          {
+            timestamp: startOfMonth(timestamp).toISOString(),
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 4,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 4,
+            },
+            namespaces: [
+              {
+                namespace_id: 'lHmap',
+                namespace_path: 'education/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 2,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 2,
+                },
+                mounts: [
+                  {
+                    mount_path: 'auth_userpass_a36c8125',
+                    counts: {
+                      distinct_entities: 0,
+                      entity_clients: 2,
+                      non_entity_tokens: 0,
+                      non_entity_clients: 0,
+                      clients: 2,
+                    },
+                  },
+                ],
+              },
+              {
+                namespace_id: 'root',
+                namespace_path: '',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 2,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 2,
+                },
+                mounts: [
+                  {
+                    mount_path: 'auth_userpass_3158c012',
+                    counts: {
+                      distinct_entities: 0,
+                      entity_clients: 2,
+                      non_entity_tokens: 0,
+                      non_entity_clients: 0,
+                      clients: 2,
+                    },
+                  },
+                ],
+              },
+            ],
+            new_clients: {
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 4,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 4,
+              },
+              namespaces: [
+                {
+                  namespace_id: 'root',
+                  namespace_path: '',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 2,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 2,
+                  },
+                  mounts: [
+                    {
+                      mount_path: 'auth_userpass_3158c012',
+                      counts: {
+                        distinct_entities: 0,
+                        entity_clients: 2,
+                        non_entity_tokens: 0,
+                        non_entity_clients: 0,
+                        clients: 2,
+                      },
+                    },
+                  ],
+                },
+                {
+                  namespace_id: 'lHmap',
+                  namespace_path: 'education/',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 2,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 2,
+                  },
+                  mounts: [
+                    {
+                      mount_path: 'auth_userpass_a36c8125',
+                      counts: {
+                        distinct_entities: 0,
+                        entity_clients: 2,
+                        non_entity_tokens: 0,
+                        non_entity_clients: 0,
+                        clients: 2,
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
         distinct_entities: 132,
+        entity_clients: 132,
         non_entity_tokens: 43,
+        non_entity_clients: 43,
         clients: 175,
       },
       wrap_info: null,

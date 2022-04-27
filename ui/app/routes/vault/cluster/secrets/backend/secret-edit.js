@@ -66,9 +66,9 @@ export default Route.extend(UnloadModelRoute, {
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
-  beforeModel() {
+  beforeModel({ to: { queryParams } }) {
     let secret = this.secretParam();
-    return this.buildModel(secret).then(() => {
+    return this.buildModel(secret, queryParams).then(() => {
       const parentKey = utils.parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
       if (mode === 'edit' && utils.keyIsFolder(secret)) {
@@ -81,17 +81,16 @@ export default Route.extend(UnloadModelRoute, {
     });
   },
 
-  buildModel(secret) {
+  buildModel(secret, queryParams) {
     const backend = this.enginePathParam();
-
-    let modelType = this.modelType(backend, secret);
+    let modelType = this.modelType(backend, secret, { queryParams });
     if (['secret', 'secret-v2'].includes(modelType)) {
       return resolve();
     }
     return this.pathHelp.getNewModel(modelType, backend);
   },
 
-  modelType(backend, secret) {
+  modelType(backend, secret, options = {}) {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
@@ -103,6 +102,7 @@ export default Route.extend(UnloadModelRoute, {
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
+      keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: backendModel.get('modelTypeForKV'),
     };
     return types[type];
@@ -212,10 +212,10 @@ export default Route.extend(UnloadModelRoute, {
     return secretModel;
   },
 
-  async model(params) {
+  async model(params, { to: { queryParams } }) {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
-    let modelType = this.modelType(backend, secret);
+    let modelType = this.modelType(backend, secret, { queryParams });
     let type = params.type || '';
     if (!secret) {
       secret = '\u0020';
