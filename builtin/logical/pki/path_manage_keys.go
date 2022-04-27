@@ -63,7 +63,11 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		if err != nil {
 			return nil, err
 		}
-		key, _, err := importKey(ctx, req.Storage, string(keyBundle.PrivateKeyBytes), keyName)
+		privateKeyPemString, err := keyBundle.ToPrivateKeyPemString()
+		if err != nil {
+			return nil, err
+		}
+		key, _, err := importKey(ctx, req.Storage, privateKeyPemString, keyName)
 		if err != nil {
 			return nil, err
 		}
@@ -81,7 +85,11 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		if err != nil {
 			return nil, err
 		}
-		key, _, err := importKey(ctx, req.Storage, string(keyBundle.PrivateKeyBytes), keyName)
+		privateKeyPemString, err := keyBundle.ToPrivateKeyPemString()
+		if err != nil {
+			return nil, err
+		}
+		key, _, err := importKey(ctx, req.Storage, privateKeyPemString, keyName)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +98,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 				"id":          key.ID,
 				"name":        key.Name,
 				"type":        key.PrivateKeyType,
-				"private_key": key.PrivateKey,
+				"private_key": privateKeyPemString,
 			},
 		}
 		return &resp, nil
