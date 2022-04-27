@@ -782,14 +782,17 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		return nil
 	}
 
-	wrapper, ok := r.(raft.ReadCloserWrapper)
+	snapshotInstaller, ok := r.(*boltSnapshotInstaller)
 	if !ok {
-		return fmt.Errorf("expected ReadCloserWrapper object, got: %~", r)
-	}
-	snapshotInstallerRaw := wrapper.WrappedReadCloser()
-	snapshotInstaller, ok := snapshotInstallerRaw.(*boltSnapshotInstaller)
-	if !ok {
-		return fmt.Errorf("expected snapshot installer object, got: %~", r)
+		wrapper, ok := r.(raft.ReadCloserWrapper)
+		if !ok {
+			return fmt.Errorf("expected ReadCloserWrapper object, got: %~", r)
+		}
+		snapshotInstallerRaw := wrapper.WrappedReadCloser()
+		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
+		if !ok {
+			return fmt.Errorf("expected snapshot installer object, got: %~", r)
+		}
 	}
 
 	f.l.Lock()
