@@ -332,6 +332,10 @@ cache {
 listener "unix" {
   address = "/path/to/socket"
   tls_disable = true
+
+  agent_api {
+    enable_quit = true
+  }
 }
 
 listener "tcp" {
