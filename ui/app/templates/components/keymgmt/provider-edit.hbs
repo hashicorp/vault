@@ -98,8 +98,15 @@
                   Provider configuration
                 </h2>
               </div>
+              {{#if @model.provider}}
+                {{! Only show last field if provider selected }}
+                <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+              {{else}}
+                <EmptyState @title="No provider selected" @message="Select a provider in order to configure it." />
+              {{/if}}
+            {{else}}
+              <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
             {{/if}}
-            <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
           {{/each}}
         {{/if}}
         {{#unless this.isCreating}}
