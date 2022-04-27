@@ -875,5 +875,4 @@ func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
 	}
 
 	return "", errutil.InternalError{Err: "No Private Key Bytes to Wrap"}
-
 }
