@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
+
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -58,8 +60,16 @@ func (cb *crlBuilder) rebuild(ctx context.Context, b *backend, request *logical.
 	return cb._doRebuild(ctx, b, request, forceNew, _ignoreForceFlag)
 }
 
-// requestRebuild will schedule a rebuild of the CRL from the next reader or writer.
-func (cb *crlBuilder) requestRebuild() {
+// requestRebuildOnActiveNode will schedule a rebuild of the CRL from the next read or write api call assuming we are the active node of a cluster
+func (cb *crlBuilder) requestRebuildOnActiveNode(b *backend) {
+	// Only schedule us on active nodes, ignoring secondary nodes, the active can/should rebuild the CRL.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+		b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+		b.Logger().Debug("Ignoring request to schedule a CRL rebuild, not on active node.")
+		return
+	}
+
+	b.Logger().Info("Scheduling PKI CRL rebuild.")
 	cb.m.Lock()
 	defer cb.m.Unlock()
 	atomic.StoreUint32(&cb.forceRebuild, 1)

@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) getGenerationParams(ctx context.Context, data *framework.FieldData, mountPoint string) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
+func (b *backend) getGenerationParams(ctx context.Context, storage logical.Storage, data *framework.FieldData, mountPoint string) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
@@ -39,7 +39,7 @@ func (b *backend) getGenerationParams(ctx context.Context, data *framework.Field
 		return
 	}
 
-	keyType, keyBits, err := getKeyTypeAndBitsForRole(ctx, b, data, mountPoint)
+	keyType, keyBits, err := getKeyTypeAndBitsForRole(ctx, b, storage, data, mountPoint)
 	if err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 		return
@@ -114,7 +114,7 @@ func parseCABundle(ctx context.Context, b *backend, req *logical.Request, bundle
 	return bundle.ToParsedCertBundle()
 }
 
-func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, data *framework.FieldData, mountPoint string) (string, int, error) {
+func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.Storage, data *framework.FieldData, mountPoint string) (string, int, error) {
 	exportedStr := data.Get("exported").(string)
 	var keyType string
 	var keyBits int
@@ -146,7 +146,7 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, data *framework.F
 	}
 
 	if existingKeyRequestedFromFieldData(data) {
-		existingPubKey, err := getExistingPublicKey(ctx, b.storage, data)
+		existingPubKey, err := getExistingPublicKey(ctx, storage, data)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from existing key: " + err.Error())
 		}

@@ -64,7 +64,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	b.pkiStorageVersion.Store(0)
 	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")
 
-	bundle := genCertBundle(t, b)
+	bundle := genCertBundle(t, b, s)
 	json, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
 	require.NoError(t, err)
 	err = s.Put(ctx, json)
@@ -128,7 +128,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, &issuerConfigEntry{DefaultIssuerId: issuerId}, issuersConfig)
 
 	// Make sure if we attempt to re-run the migration nothing happens...
-	err = migrateStorage(ctx, b.crlBuilder, s, b.Logger())
+	err = migrateStorage(ctx, b, s)
 	require.NoError(t, err)
 	logEntry2, err := getLegacyBundleMigrationLog(ctx, s)
 	require.NoError(t, err)

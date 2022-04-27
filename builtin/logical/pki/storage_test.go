@@ -50,8 +50,8 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 
 func Test_IssuerRoundTrip(t *testing.T) {
 	b, s := createBackendWithStorage(t)
-	issuer1, key1 := genIssuerAndKey(t, b)
-	issuer2, key2 := genIssuerAndKey(t, b)
+	issuer1, key1 := genIssuerAndKey(t, b, s)
+	issuer2, key2 := genIssuerAndKey(t, b, s)
 
 	// We get an error when issuer id not found
 	_, err := fetchIssuerById(ctx, s, issuer1.ID)
@@ -94,8 +94,8 @@ func Test_IssuerRoundTrip(t *testing.T) {
 
 func Test_KeysIssuerImport(t *testing.T) {
 	b, s := createBackendWithStorage(t)
-	issuer1, key1 := genIssuerAndKey(t, b)
-	issuer2, key2 := genIssuerAndKey(t, b)
+	issuer1, key1 := genIssuerAndKey(t, b, s)
+	issuer2, key2 := genIssuerAndKey(t, b, s)
 
 	// Key 1 before Issuer 1; Issuer 2 before Key 2.
 	// Remove KeyIDs from non-written entities before beginning.
@@ -158,8 +158,8 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, "", key2Ref.Name)
 }
 
-func genIssuerAndKey(t *testing.T, b *backend) (issuerEntry, keyEntry) {
-	certBundle := genCertBundle(t, b)
+func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, keyEntry) {
+	certBundle := genCertBundle(t, b, s)
 
 	keyId := genKeyId()
 
@@ -182,7 +182,7 @@ func genIssuerAndKey(t *testing.T, b *backend) (issuerEntry, keyEntry) {
 	return pkiIssuer, pkiKey
 }
 
-func genCertBundle(t *testing.T, b *backend) *certutil.CertBundle {
+func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBundle {
 	// Pretty gross just to generate a cert bundle, but
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 	fields = addCAKeyGenerationFields(fields)
@@ -195,14 +195,14 @@ func genCertBundle(t *testing.T, b *backend) *certutil.CertBundle {
 			"ttl":      3600,
 		},
 	}
-	_, _, role, respErr := b.getGenerationParams(ctx, apiData, "/pki")
+	_, _, role, respErr := b.getGenerationParams(ctx, s, apiData, "/pki")
 	require.Nil(t, respErr)
 
 	input := &inputBundle{
 		req: &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      "issue/testrole",
-			Storage:   b.storage,
+			Storage:   s,
 		},
 		apiData: apiData,
 		role:    role,

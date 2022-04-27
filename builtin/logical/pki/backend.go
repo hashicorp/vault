@@ -281,6 +281,9 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 
 // initialize is used to perform a possible PKI storage migration if needed
 func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+	// Load up our current pki storage state, no matter the host type we are on.
+	b.updatePkiStorageVersion(ctx)
+
 	// Early exit if not a primary cluster or performance secondary with a local mount.
 	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
@@ -288,7 +291,7 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		return nil
 	}
 
-	if err := migrateStorage(ctx, b.crlBuilder, b.storage, b.Logger()); err != nil {
+	if err := migrateStorage(ctx, b, b.storage); err != nil {
 		b.Logger().Error("Error during migration of PKI mount: " + err.Error())
 		return err
 	}
@@ -325,13 +328,15 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		// This is for a secondary cluster to pick up that the migration has completed
 		// and reset its compatibility mode and rebuild the CRL locally.
 		b.updatePkiStorageVersion(ctx)
-		b.crlBuilder.requestRebuild()
+		b.crlBuilder.requestRebuildOnActiveNode(b)
 	case strings.HasPrefix(key, issuerPrefix):
 		// If an issuer has changed on the primary, we need to schedule an update of our CRL,
 		// the primary cluster would have done it already, but the CRL is cluster specific so
 		// force a rebuild of ours.
 		if !b.useLegacyBundleCaStorage() {
-			b.crlBuilder.requestRebuild()
+			b.crlBuilder.requestRebuildOnActiveNode(b)
+		} else {
+			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")
 		}
 	}
 }

@@ -139,6 +139,7 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerRef string) (*issuerEntry, *certutil.CertBundle, error) {
 	if b.useLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
+		b.Logger().Info("Using legacy CA bundle")
 		return getLegacyCertBundle(ctx, s)
 	}
 
