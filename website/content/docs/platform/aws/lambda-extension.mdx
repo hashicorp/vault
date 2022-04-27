@@ -1,23 +1,31 @@
 ---
 layout: docs
-page_title: Vault Lambda Extension Caching
+page_title: Vault Lambda Extension
 description: >-
-  Supports caching to the local proxy server for the Vault Lambda Extension.
+  The Vault Lambda Extension allows a Lambda function to read secrets from a Vault deployment.
 ---
 
 # Vault Lambda Extension
 
 AWS Lambda lets you run code without provisioning and managing servers.
-You can use the [quick-start](https://github.com/hashicorp/vault-lambda-extension/tree/0af1a648bfa4b9f37a04dd4311d8355f5c3902c3/quick-start) directory which has an end-to-end example if you would like to try out the extension from scratch.
+The [Vault Lambda Extension](https://github.com/hashicorp/vault-lambda-extension) utilizes the AWS Lambda Extensions API to help your Lambda function read secrets from your Vault deployment.
+You can use the [quick-start](https://github.com/hashicorp/vault-lambda-extension/tree/main/quick-start) directory which has an end-to-end example if you would like to try out the extension from scratch.
 
 ~> **Note**: If you decide to create one from scratch, be aware that this will create real infrastructure with an associated cost as per AWS' pricing.
 
 ## Usage
 
-To use the extension, include the following ARN as a layer in your Lambda function:
+To use the extension, include one of the following ARNs as a layer in your
+Lambda function, depending on your desired architecture.
 
+amd64 (x86_64):
 ```text
-arn:aws:lambda:us-east-1:634166935893:layer:vault-lambda-extension:11
+arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:13
+```
+
+arm64:
+```text
+arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension-arm64:1
 ```
 
 Where region may be any of `af-south-1`, `ap-east-1`, `ap-northeast-1`,
@@ -45,7 +53,7 @@ to read secrets, which can both be used side-by-side:
 - An instance of Vault accessible from AWS Lambda
 - An authenticated `vault` client
 - A secret in Vault that you want your Lambda to access, and a policy giving read access to it
-- Your Lambda function must use one of the [supported runtimes][lambda-supported-runtimes] for extensions
+- Your Lambda function must use one of the [supported runtimes][https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html] for extensions
 
 #### Step 1. Configure Vault
 
