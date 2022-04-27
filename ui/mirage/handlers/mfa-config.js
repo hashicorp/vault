@@ -1,0 +1,138 @@
+import { Response } from 'miragejs';
+import { dasherize } from '@ember/string';
+
+export default function (server) {
+  const methods = ['totp', 'duo', 'okta', 'pingid'];
+  const required = {
+    totp: ['issuer'],
+    duo: ['secret_key', 'integration_key', 'api_hostname'],
+    okta: ['org_name', 'api_token'],
+    pingid: ['settings_file_base64'],
+  };
+
+  const validate = (type, data, cb) => {
+    if (!methods.includes(type)) {
+      return new Response(400, {}, { errors: [`Method ${type} not found`] });
+    }
+    if (data) {
+      const missing = required[type].reduce((params, key) => {
+        if (!data[key]) {
+          params.push(key);
+        }
+        return params;
+      }, []);
+      if (missing.length) {
+        return new Response(400, {}, { errors: [`Missing required parameters: [${missing.join(', ')}]`] });
+      }
+    }
+    return cb();
+  };
+
+  const dbKeyFromType = (type) => `mfa${type.charAt(0).toUpperCase()}${type.slice(1)}Methods`;
+
+  const generateListResponse = (schema, key) => {
+    let records = schema.db[key].where({});
+    // seed the db with a few records if none exist
+    if (!records.length) {
+      records = server.createList(dasherize(key).slice(0, -1), 3).toArray();
+    }
+    const dataKey = key === 'mfaLoginEnforcements' ? 'name' : 'id';
+    const data = records.reduce(
+      (resp, record) => {
+        resp.key_info[record[dataKey]] = record;
+        resp.keys.push(record[dataKey]);
+        return resp;
+      },
+      {
+        key_info: {},
+        keys: [],
+      }
+    );
+    return { data };
+  };
+
+  // list methods
+  server.get('/identity/mfa/method/:type', (schema, { params: { type } }) => {
+    return validate(type, null, () => generateListResponse(schema, dbKeyFromType(type)));
+  });
+  // fetch method by id
+  server.get('/identity/mfa/method/:type/:id', (schema, { params: { type, id } }) => {
+    return validate(type, null, () => {
+      const record = schema.db[dbKeyFromType(type)].find(id);
+      return !record ? new Response(404, {}, { errors: [] }) : { data: record };
+    });
+  });
+  // create method
+  server.post('/identity/mfa/method/:type', (schema, { params: { type }, requestBody }) => {
+    const data = JSON.parse(requestBody);
+    return validate(type, data, () => {
+      const record = server.create(`mfa-${type}-method`, data);
+      return { data: { method_id: record.id } };
+    });
+  });
+  // update method
+  server.put('/identity/mfa/method/:type/:id', (schema, { params: { type, id }, requestBody }) => {
+    const data = JSON.parse(requestBody);
+    return validate(type, data, () => {
+      schema.db[dbKeyFromType(type)].update(id, data);
+      return {};
+    });
+  });
+  // delete method
+  server.delete('/identity/mfa/method/:type/:id', (schema, { params: { type, id } }) => {
+    return validate(type, null, () => {
+      schema.db[dbKeyFromType(type)].remove(id);
+      return {};
+    });
+  });
+  // list enforcements
+  server.get('/identity/mfa/login-enforcement', (schema) => {
+    return generateListResponse(schema, 'mfaLoginEnforcements');
+  });
+  // fetch enforcement by name
+  server.get('/identity/mfa/login-enforcement/:name', (schema, { params: { name } }) => {
+    const record = schema.db.mfaLoginEnforcements.findBy({ name });
+    return !record ? new Response(404, {}, { errors: [] }) : { data: record };
+  });
+  // create/update enforcement
+  server.post('/identity/mfa/login-enforcement/:name', (schema, { params: { name }, requestBody }) => {
+    const data = JSON.parse(requestBody);
+    // at least one method id is required
+    if (!data.mfa_method_ids?.length) {
+      return new Response(400, {}, { errors: ['missing method ids'] });
+    }
+    // at least one of the following targets is required
+    const required = [
+      'auth_method_accessors',
+      'auth_method_types',
+      'identity_group_ids',
+      'identity_entity_ids',
+    ];
+    let hasRequired = false;
+    for (let key of required) {
+      if (data[key]?.length) {
+        hasRequired = true;
+        break;
+      }
+    }
+    if (!hasRequired) {
+      return new Response(
+        400,
+        {},
+        'One of auth_method_accessors, auth_method_types, identity_group_ids, identity_entity_ids must be specified'
+      );
+    }
+    data.name = name;
+    if (schema.db.mfaLoginEnforcements.findBy({ name })) {
+      schema.db.mfaLoginEnforcements.update({ name }, data);
+    } else {
+      schema.db.mfaLoginEnforcements.insert(data);
+    }
+    return {};
+  });
+  // delete enforcement
+  server.delete('/identity/mfa/login-enforcement/:name', (schema, { params: { name } }) => {
+    schema.db.mfaLoginEnforcements.remove({ name });
+    return {};
+  });
+}
