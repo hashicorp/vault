@@ -1,0 +1,12 @@
+<button
+  type="button"
+  data-test-transit-b64-toggle={{if @dataTestType @dataTestType ""}}
+  class="button b64-toggle {{if this.isInput 'is-input is-textarea'}}"
+  {{on "click" this.encodeDecodeValue}}
+>
+  {{#if this.isBase64}}
+    Decode from base64
+  {{else}}
+    Encode to base64
+  {{/if}}
+</button>

@@ -138,6 +138,10 @@ export default Component.extend(DEFAULTS, {
       this.reset();
     },
 
+    onHash(newValue) {
+      this.input = newValue;
+    },
+
     updateTtl(ttl) {
       set(this, 'wrapTTL', ttl);
     },

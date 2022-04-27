@@ -41,7 +41,8 @@
       </label>
       <div class="control">
         <Textarea id="input-hash" name="input" @value={{@input}} class="textarea" data-test-tools-input="hash-input" />
-        <B64Toggle @value={{@input}} @isInput={{false}} @data-test-transit-b64-toggle="input" />
+        <B64Toggle2 @isInput={{false}} @value={{@input}} @dataTestType="input" @onChange={{@onChange}} />
+        {{!-- <B64Toggle @value={{@input}} @isInput={{false}} @dataTestType="input" /> --}}
       </div>
     </div>
     <div class="field is-horizontal">

@@ -8,6 +8,7 @@
       @errors={{this.errors}}
       @format={{this.format}}
       @input={{input}}
+      @onChange={{action "onHash"}}
     />
     {{! template-lint-enable no-passed-in-event-handlers }}
   {{else if (eq this.selectedAction "random")}}
