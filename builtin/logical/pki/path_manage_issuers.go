@@ -48,6 +48,10 @@ func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
 		"issuers/generate/intermediate/"+framework.GenericNameRegex("exported"))
 }
 
+func pathCrossSignIntermediate(b *backend) *framework.Path {
+	return buildPathGenerateIntermediate(b, "intermediate/cross-sign")
+}
+
 func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
