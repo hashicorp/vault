@@ -1,12 +1,27 @@
-import { match } from '@ember/object/computed';
-import { assign } from '@ember/polyfills';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
-import { setProperties, computed, set } from '@ember/object';
+import { action, setProperties } from '@ember/object';
+import { assign } from '@ember/polyfills';
+/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
+import { match } from '@ember/object/computed';
+import { tracked } from '@glimmer/tracking';
 import { addSeconds, parseISO } from 'date-fns';
 import { A } from '@ember/array';
 
-const DEFAULTS = {
+/**
+ * @module ToolActionsForm2
+ * ToolActionsForm2 components are used to...
+ *
+ * @example
+ * ```js
+ * <ToolActionsForm2 @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * ```
+ * @param {object} requiredParam - requiredParam is...
+ * @param {string} [optionalParam] - optionalParam is...
+ * @param {string} [param1=defaultValue] - param1 is...
+ */
+
+export const DEFAULTS = {
   token: null,
   rewrap_token: null,
   errors: A(),
@@ -22,59 +37,51 @@ const DEFAULTS = {
   input: null,
 };
 
-const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
+export const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
-export default Component.extend(DEFAULTS, {
-  store: service(),
-  wizard: service(),
-  // putting these attrs here so they don't get reset when you click back
-  //random
-  bytes: 32,
-  //hash
-  format: 'base64',
-  algorithm: 'sha2-256',
+export default class ToolActionFormTwo extends Component {
+  @service store;
+  @service wizard;
 
-  tagName: '',
-  unwrapActiveTab: 'data',
+  @tracked bytes = 32;
+  @tracked format = 'base64';
+  @tracked alogrithm = 'sha2-256';
+  @tracked unwrapActiveTab = 'data';
+  @tracked creation_time;
+  @tracked creation_ttl;
 
-  didReceiveAttrs() {
-    this._super(...arguments);
+  constructor() {
+    super(...arguments);
     this.checkAction();
-  },
-
-  selectedAction: null,
+  }
 
   reset() {
     if (this.isDestroyed || this.isDestroying) {
       return;
     }
-    setProperties(this, DEFAULTS);
-  },
+    this.DEFAULTS = setProperties(this, DEFAULTS);
+  }
 
   checkAction() {
-    const currentAction = this.selectedAction;
-    const oldAction = this.oldSelectedAction;
-
-    if (currentAction !== oldAction) {
+    if (this.args.selectedAction !== this.oldSelectedAction) {
       this.reset();
     }
-    set(this, 'oldSelectedAction', currentAction);
-  },
+    this.oldSelectedAction = this.args.selectedAction;
+  }
+  @match('data', new RegExp(DEFAULTS.data)) dataIsEmpty;
 
-  dataIsEmpty: match('data', new RegExp(DEFAULTS.data)),
-
-  expirationDate: computed('creation_time', 'creation_ttl', function () {
+  get expirationDate() {
     const { creation_time, creation_ttl } = this;
     if (!(creation_time && creation_ttl)) {
       return null;
     }
     // returns new Date with seconds added.
     return addSeconds(parseISO(creation_time), creation_ttl);
-  }),
+  }
 
   handleError(e) {
-    set(this, 'errors', e.errors);
-  },
+    this.errors = e.errors;
+  }
 
   handleSuccess(resp, action) {
     let props = {};
@@ -97,10 +104,10 @@ export default Component.extend(DEFAULTS, {
       this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
     }
     setProperties(this, props);
-  },
+  }
 
   getData() {
-    const action = this.selectedAction;
+    const action = this.args.selectedAction;
     if (WRAPPING_ENDPOINTS.includes(action)) {
       return this.dataIsEmpty ? { token: (this.token || '').trim() } : JSON.parse(this.data);
     }
@@ -110,47 +117,50 @@ export default Component.extend(DEFAULTS, {
     if (action === 'hash') {
       return { input: this.input, format: this.format, algorithm: this.algorithm };
     }
-  },
+  }
 
-  actions: {
-    doSubmit(evt) {
-      evt.preventDefault();
-      const action = this.selectedAction;
-      const wrapTTL = action === 'wrap' ? this.wrapTTL : null;
-      const data = this.getData();
-      setProperties(this, {
-        errors: null,
-        wrap_info: null,
-        creation_time: null,
-        creation_ttl: null,
-      });
+  @action
+  doSubmit(evt) {
+    evt.preventDefault();
+    const action = this.selectedAction;
+    const wrapTTL = action === 'wrap' ? this.wrapTTL : null;
+    const data = this.getData();
+    setProperties(this, {
+      errors: null,
+      wrap_info: null,
+      creation_time: null,
+      creation_ttl: null,
+    });
 
-      this.store
-        .adapterFor('tools')
-        .toolAction(action, data, { wrapTTL })
-        .then(
-          (resp) => this.handleSuccess(resp, action),
-          (...errArgs) => this.handleError(...errArgs)
-        );
-    },
+    this.store
+      .adapterFor('tools')
+      .toolAction(action, data, { wrapTTL })
+      .then(
+        (resp) => this.handleSuccess(resp, action),
+        (...errArgs) => this.handleError(...errArgs)
+      );
+  }
 
-    onClear() {
-      this.reset();
-    },
+  @action
+  onClear() {
+    this.reset();
+  }
 
-    onHash(newValue) {
-      this.input = newValue;
-    },
+  @action
+  onHash(newValue) {
+    this.input = newValue;
+  }
 
-    updateTtl(ttl) {
-      set(this, 'wrapTTL', ttl);
-    },
+  @action
+  updateTtl(ttl) {
+    this.wrapTTl = ttl;
+  }
 
-    codemirrorUpdated(val, hasErrors) {
-      setProperties(this, {
-        buttonDisabled: hasErrors,
-        data: val,
-      });
-    },
-  },
-});
+  @action
+  codemirrorUpdated(val, hasErrors) {
+    setProperties(this, {
+      buttonDisabled: hasErrors,
+      data: val,
+    });
+  }
+}
