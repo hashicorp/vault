@@ -78,7 +78,6 @@ export default class KeymgmtProviderModel extends Model {
     }[this.provider];
   }
   get showFields() {
-    // TODO: fields shown depend on type
     const attrs = expandAttributeMeta(this, ['name', 'created', 'keyCollection']);
     attrs.splice(1, 0, { hasBlock: true, label: 'Type', value: this.typeName, icon: this.icon });
     const l = this.keys.length;
