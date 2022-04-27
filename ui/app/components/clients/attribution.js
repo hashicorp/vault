@@ -104,13 +104,22 @@ export default class Attribution extends Component {
     }
   }
 
-  destructureClientCounts(object) {
+  destructureCountsToArray(object) {
     let { clients, entity_clients, non_entity_clients } = object;
     return [clients, entity_clients, non_entity_clients];
   }
 
-  async fetchAndGenerateCsvData() {
-    const newClients = this.args.newClientsData;
+  constructCsvRow(firstColumn, secondColumn = null, otherColumns) {
+    // ['ns label', 'mount label', 'total clients', 'entity', 'non-entity']
+    // if constructing namespace row, mount column will be blank
+    // if firstColumn is a string, then we're at mount level attribution
+    return [
+      `${typeof firstColumn === 'string' ? firstColumn : firstColumn.label}`,
+      `${secondColumn ? secondColumn.label : ''}`,
+      ...otherColumns,
+    ];
+  }
+  generateCsvData() {
     let graphData = this.args.totalClientsData;
     let csvData = [],
       csvHeader = [
@@ -120,47 +129,21 @@ export default class Attribution extends Component {
         'Entity clients',
         'Non-entity clients',
       ];
-    // only the current month attribution graph displays new clients data
-    if (newClients) {
-      graphData.forEach((clientData) => {
-        let new_clients = newClients.find((n) => n.label === clientData.label) || null;
-        delete new_clients?.label;
-        clientData.new_clients = new_clients;
-      });
-      csvHeader = [...csvHeader, 'Total new clients', 'New entity clients', 'New non-entity clients'];
-    }
+
     // each array is a row in the csv file
-    // ['ns label', 'mount label', 'total clients', 'entity', 'non entity', 'new total'...etc]
-    if (this.isSingleNamespace) {
-      graphData.forEach((mount) => {
-        let dataRow = ['', mount.label, this.destructureClientCounts(mount)];
-        if (mount.new_clients) {
-          dataRow = [...dataRow, this.destructureClientCounts(mount.new_clients)];
-        }
-        csvData.push(dataRow);
-      });
-      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
-    } else {
-      graphData.forEach((ns) => {
-        let namespaceDataRow = [ns.label, '', this.destructureClientCounts(ns)];
-        if (ns.new_clients) {
-          namespaceDataRow = [...namespaceDataRow, this.destructureClientCounts(ns.new_clients)];
-        }
-        csvData.push(namespaceDataRow);
-        if (ns.mounts) {
-          ns.mounts.forEach((m) => {
-            let mountDataRow = [ns.label, m.label, this.destructureClientCounts(m)];
-            let newMountCounts = ns?.new_clients?.mounts.find((mount) => mount.label === m.label);
-            if (newMountCounts) {
-              mountDataRow = [...mountDataRow, this.destructureClientCounts(newMountCounts)];
-            }
-            csvData.push(mountDataRow);
-          });
-        }
-      });
-    }
+    graphData.forEach((data) => {
+      let namespace = this.isSingleNamespace ? this.args.selectedNamespace : data;
+      let mount = this.isSingleNamespace ? data : null;
+      let otherColumns = this.destructureCountsToArray(data);
+      csvData.push(this.constructCsvRow(namespace, mount, otherColumns));
+      if (!this.isSingleNamespace && namespace.mounts) {
+        namespace.mounts.forEach((mount) => {
+          csvData.push(this.constructCsvRow(namespace, mount, otherColumns));
+        });
+      }
+    });
     csvData.unshift(csvHeader);
-    // make each nested array a comma separated string, join each array in csvData with line break (\n)
+    // make each nested array a comma separated string, join each array "row" in csvData with line break (\n)
     return csvData.map((d) => d.join()).join('\n');
   }
 
@@ -175,7 +158,8 @@ export default class Attribution extends Component {
   // ACTIONS
   @action
   exportChartData(filename) {
-    let contents = this.fetchAndGenerateCsvData();
+    let contents = this.generateCsvData();
+    console.log(contents);
     this.downloadCsv.download(filename, contents);
     this.showCSVDownloadModal = false;
   }
