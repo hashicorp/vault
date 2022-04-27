@@ -9,7 +9,7 @@ module('Acceptance | mfa', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'mfa';
+    ENV['ember-cli-mirage'].handler = 'mfaLogin';
   });
   hooks.beforeEach(function () {
     this.select = async (select = 0, option = 1) => {
