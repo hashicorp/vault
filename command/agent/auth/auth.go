@@ -396,10 +396,6 @@ func (b *agentBackoff) next() {
 }
 
 func (b *agentBackoff) reset(initialBackoff time.Duration) {
-	if initialBackoff <= 0 {
-		initialBackoff = defaultInitialBackoff
-	}
-
 	b.current = initialBackoff
 }
 
