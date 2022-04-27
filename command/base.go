@@ -57,6 +57,7 @@ type BaseCommand struct {
 	flagFormat           string
 	flagField            string
 	flagOutputCurlString bool
+	flagOutputPolicy     bool
 	flagNonInteractive   bool
 
 	flagMFA []string
@@ -91,6 +92,9 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	if c.flagOutputCurlString {
 		config.OutputCurlString = c.flagOutputCurlString
+	}
+	if c.flagOutputPolicy {
+		config.OutputPolicy = c.flagOutputPolicy
 	}
 
 	// If we need custom TLS configuration, then set it
@@ -456,6 +460,14 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default: false,
 				Usage: "Instead of executing the request, print an equivalent cURL " +
 					"command string and exit.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "output-policy",
+				Target:  &c.flagOutputPolicy,
+				Default: false,
+				Usage: "Instead of executing the request, print an example HCL " +
+					"policy that would be required to run this command, and exit.",
 			})
 
 			f.StringVar(&StringVar{
