@@ -6,6 +6,7 @@ import { isSameMonth, isAfter, isBefore } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { dateFormat } from 'core/helpers/date-format';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
@@ -85,8 +86,8 @@ export default class History extends Component {
 
   get isDateRange() {
     return !isSameMonth(
-      new Date(this.getActivityResponse.startTime),
-      new Date(this.getActivityResponse.endTime)
+      parseAPITimestamp(this.getActivityResponse.startTime),
+      parseAPITimestamp(this.getActivityResponse.endTime)
     );
   }
 
