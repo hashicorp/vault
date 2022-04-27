@@ -77,9 +77,9 @@ naming collisions could result unexpected default behavior. Additionally, we rec
 the corresponding details in the OIDC provider [concepts](/docs/concepts/oidc-provider) document
 to understand how the built-in resources are used in the system.
 
-@include 'raft-panic-old-tls-key.mdx'
-
 ## Known Issues
+
+@include 'raft-panic-old-tls-key.mdx'
 
 ### Single Vault follower restart causes election even with established quorum
 
@@ -109,4 +109,3 @@ set to `unauth`.
 There is a workaround for this error that will allow you to sign in to Vault using the OIDC
 auth method. Select the "Other" tab instead of selecting the specific OIDC auth mount tab.
 From there, select "OIDC" from the "Method" select box and proceed to sign in to Vault.
-
