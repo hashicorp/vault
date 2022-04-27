@@ -43,7 +43,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		PhysicalFactoryConfig: map[string]interface{}{
-			"performance_multiplier": "1",
+			"performance_multiplier": "5",
 		},
 	})
 	defer cluster.Cleanup()
@@ -148,7 +148,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	require.Equal(t, []string{"core-0", "core-1", "core-2"}, state.Voters)
 
 	leader := state.Leader
-	deadline := time.Now().Add(5 * time.Minute)
+	deadline := time.Now().Add(2 * time.Minute)
 	for time.Now().Before(deadline) {
 		testhelpers.EnsureCoreSealed(t, cluster.Cores[1])
 		time.Sleep(10 * time.Second)
