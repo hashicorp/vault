@@ -311,6 +311,12 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		Enabled:  &enabled,
 	}
 
+	if sc.AgentConfig.AutoAuth != nil && sc.AgentConfig.AutoAuth.Method != nil {
+		if sc.AgentConfig.AutoAuth.Method.InitialBackoff > 0 {
+			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.InitialBackoff
+		}
+	}
+
 	conf.Finalize()
 
 	// setup log level from TemplateServer config
