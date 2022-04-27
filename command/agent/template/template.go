@@ -311,6 +311,9 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		Enabled:  &enabled,
 	}
 
+	// Sync Consul Template's retry with user set auto-auth initial backoff value.
+	// This is helpful if Auto Auth cannot get a new token and CT is trying to fetch
+	// secrets.
 	if sc.AgentConfig.AutoAuth != nil && sc.AgentConfig.AutoAuth.Method != nil {
 		if sc.AgentConfig.AutoAuth.Method.InitialBackoff > 0 {
 			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.InitialBackoff
