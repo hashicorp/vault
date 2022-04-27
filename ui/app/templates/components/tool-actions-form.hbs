@@ -2,7 +2,7 @@
   {{#if (eq @selectedAction "hash")}}
     {{! template-lint-disable no-passed-in-event-handlers }}
     <ToolHash
-      @onClear={{action "onClear"}}
+      @onClear={{this.onClear}}
       @sum={{this.sum}}
       @algorithm={{this.algorithm}}
       @errors={{this.errors}}
@@ -13,7 +13,7 @@
     {{! template-lint-enable no-passed-in-event-handlers }}
   {{else if (eq @selectedAction "random")}}
     <ToolRandom
-      @onClear={{action "onClear"}}
+      @onClear={{this.onClear}}
       @random_bytes={{this.random_bytes}}
       @errors={{this.errors}}
       @format={{this.format}}
@@ -21,7 +21,7 @@
     />
   {{else if (eq @selectedAction "rewrap")}}
     <ToolRewrap
-      @onClear={{action "onClear"}}
+      @onClear={{this.onClear}}
       @rewrap_token={{this.rewrap_token}}
       @selectedAction={{@selectedAction}}
       @errors={{this.errors}}
@@ -30,7 +30,7 @@
     />
   {{else if (eq @selectedAction "unwrap")}}
     <ToolUnwrap
-      @onClear={{action "onClear"}}
+      @onClear={{this.onClear}}
       @unwrap_data={{this.unwrap_data}}
       @unwrapActiveTab={{this.unwrapActiveTab}}
       @details={{this.details}}
@@ -45,16 +45,16 @@
       @expirationDate={{this.expirationDate}}
       @selectedAction={{@selectedAction}}
       @token={{this.token}}
-      @onClear={{action "onClear"}}
+      @onClear={{this.onClear}}
       @errors={{this.errors}}
     />
   {{else if (eq @selectedAction "wrap")}}
     <ToolWrap
       @token={{this.token}}
       @selectedAction={{@selectedAction}}
-      @onClear={{action "onClear"}}
-      @codemirrorUpdated={{action "codemirrorUpdated"}}
-      @updateTtl={{action "updateTtl"}}
+      @onClear={{this.onClear}}
+      @codemirrorUpdated={{this.codemirrorUpdated}}
+      @updateTtl={{this.updateTtl}}
       @buttonDisabled={{this.buttonDisabled}}
       @errors={{this.errors}}
     />

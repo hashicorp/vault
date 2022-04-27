@@ -9,12 +9,12 @@ import { addSeconds, parseISO } from 'date-fns';
 import { A } from '@ember/array';
 
 /**
- * @module ToolActionsForm2
+ * @module ToolActionsForm
  * ToolActionsForm2 components are used to...
  *
  * @example
  * ```js
- * <ToolActionsForm2 @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <ToolActionsForm @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
  * ```
  * @param {object} requiredParam - requiredParam is...
  * @param {string} [optionalParam] - optionalParam is...
@@ -39,7 +39,7 @@ export const DEFAULTS = {
 
 export const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
-export default class ToolActionFormTwo extends Component {
+export default class ToolActionForm extends Component {
   @service store;
   @service wizard;
 
@@ -122,7 +122,7 @@ export default class ToolActionFormTwo extends Component {
   @action
   doSubmit(evt) {
     evt.preventDefault();
-    const action = this.selectedAction;
+    const action = this.args.selectedAction;
     const wrapTTL = action === 'wrap' ? this.wrapTTL : null;
     const data = this.getData();
     setProperties(this, {
