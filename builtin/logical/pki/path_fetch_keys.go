@@ -48,7 +48,7 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 
 		responseKeys = append(responseKeys, string(identifier))
 		responseInfo[string(identifier)] = map[string]interface{}{
-			"name": key.Name,
+			keyNameParam: key.Name,
 		}
 
 	}
@@ -56,7 +56,7 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 }
 
 func pathKey(b *backend) *framework.Path {
-	pattern := "key/" + framework.GenericNameRegex("ref")
+	pattern := "key/" + framework.GenericNameRegex(keyRefParam)
 	return buildPathKey(b, pattern)
 }
 
@@ -65,12 +65,12 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 		Pattern: pattern,
 
 		Fields: map[string]*framework.FieldSchema{
-			"ref": {
+			keyRefParam: {
 				Type:        framework.TypeString,
 				Description: `Reference to key; either "default" for the configured default key, an identifier of a key, or the name assigned to the key.`,
 				Default:     "default",
 			},
-			"name": {
+			keyNameParam: {
 				Type:        framework.TypeString,
 				Description: `Human-readable name for this key.`,
 			},
@@ -133,15 +133,15 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"id":   key.ID,
-			"name": key.Name,
-			"type": key.PrivateKeyType,
+			keyIdParam:   key.ID,
+			keyNameParam: key.Name,
+			keyTypeParam: key.PrivateKeyType,
 		},
 	}, nil
 }
 
 func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	keyRef := data.Get("ref").(string)
+	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
 		return logical.ErrorResponse("missing key reference"), nil
 	}
@@ -159,7 +159,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	newName := data.Get("name").(string)
+	newName := data.Get(keyNameParam).(string)
 	if len(newName) > 0 && !nameMatcher.MatchString(newName) {
 		return logical.ErrorResponse("new key name outside of valid character limits"), nil
 	}
@@ -175,9 +175,9 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":   key.ID,
-			"name": key.Name,
-			"type": key.PrivateKeyType,
+			keyIdParam:   key.ID,
+			keyNameParam: key.Name,
+			keyTypeParam: key.PrivateKeyType,
 		},
 	}
 
@@ -189,7 +189,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	keyRef := data.Get("ref").(string)
+	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
 		return logical.ErrorResponse("missing key reference"), nil
 	}

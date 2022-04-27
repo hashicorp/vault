@@ -14,11 +14,11 @@ func pathGenerateKey(b *backend) *framework.Path {
 		Pattern: "keys/generate/(internal|exported)",
 
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
+			keyNameParam: {
 				Type:        framework.TypeString,
 				Description: "Optional name to be used for this key",
 			},
-			"key_type": {
+			keyTypeParam: {
 				Type:        framework.TypeString,
 				Default:     "rsa",
 				Description: `Type of the secret key to generate`,
@@ -53,7 +53,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
 		return nil, err
 	}
-	keyType := data.Get("key_type").(string)
+	keyType := data.Get(keyTypeParam).(string)
 	keyBits := data.Get("key_bits").(int)
 
 	switch {
@@ -73,9 +73,9 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		}
 		resp := logical.Response{
 			Data: map[string]interface{}{
-				"id":   key.ID,
-				"name": key.Name,
-				"type": key.PrivateKeyType,
+				keyIdParam:   key.ID,
+				keyNameParam: key.Name,
+				keyTypeParam: key.PrivateKeyType,
 			},
 		}
 		return &resp, nil
@@ -95,9 +95,9 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		}
 		resp := logical.Response{
 			Data: map[string]interface{}{
-				"id":          key.ID,
-				"name":        key.Name,
-				"type":        key.PrivateKeyType,
+				keyIdParam:    key.ID,
+				keyNameParam:  key.Name,
+				keyTypeParam:  key.PrivateKeyType,
 				"private_key": privateKeyPemString,
 			},
 		}
@@ -114,7 +114,7 @@ func pathImportKey(b *backend) *framework.Path {
 		Pattern: "keys/import",
 
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
+			keyNameParam: {
 				Type:        framework.TypeString,
 				Description: "Optional name to be used for this key",
 			},
@@ -149,7 +149,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("keyValue must be set"), nil
 	}
 	keyValue := keyValueInterface.(string)
-	keyName := data.Get("name").(string)
+	keyName := data.Get(keyNameParam).(string)
 
 	key, existed, err := importKey(ctx, req.Storage, keyValue, keyName)
 	if err != nil {
@@ -158,10 +158,10 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 
 	resp := logical.Response{
 		Data: map[string]interface{}{
-			"id":      key.ID,
-			"name":    key.Name,
-			"type":    key.PrivateKeyType,
-			"backing": "", // This would show up as "Managed" in "type"
+			keyIdParam:   key.ID,
+			keyNameParam: key.Name,
+			keyTypeParam: key.PrivateKeyType,
+			"backing":    "", // This would show up as "Managed" in "type"
 		},
 	}
 
