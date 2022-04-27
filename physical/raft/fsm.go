@@ -786,12 +786,12 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	if !ok {
 		wrapper, ok := r.(raft.ReadCloserWrapper)
 		if !ok {
-			return fmt.Errorf("expected ReadCloserWrapper object, got: %~", r)
+			return fmt.Errorf("expected ReadCloserWrapper object, got: %T", r)
 		}
 		snapshotInstallerRaw := wrapper.WrappedReadCloser()
 		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
 		if !ok {
-			return fmt.Errorf("expected snapshot installer object, got: %~", r)
+			return fmt.Errorf("expected snapshot installer object, got: %T", r)
 		}
 	}
 

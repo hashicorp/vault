@@ -934,7 +934,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	}
 	confFuture := raftObj.GetConfiguration()
 	if err := confFuture.Error(); err != nil {
-		b.logger.Error("get config")
+		b.logger.Error("failed to read raft configuration", "error", err)
 	}
 	clusterConf := confFuture.Configuration()
 	if initialTimeoutMultiplier != 0 {
