@@ -676,7 +676,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	// scheduler.
 	config.BatchApplyCh = true
 
-	b.logger.Trace("using raft config", "inputs", b.conf, "raftconfig", config)
+	b.logger.Trace("applying raft config", "inputs", b.conf)
 	return nil
 }
 
