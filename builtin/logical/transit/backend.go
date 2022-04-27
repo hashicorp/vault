@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,6 +48,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathRotate(),
 			b.pathRewrap(),
 			b.pathWrappingKey(),
+			b.pathImport(),
 			b.pathKeys(),
 			b.pathListKeys(),
 			b.pathExportKeys(),
@@ -155,33 +155,6 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 		return p, false, err
 	}
 	return p, true, nil
-}
-
-func (b *backend) GetWrappingKey(ctx context.Context, storage logical.Storage, keyName string, rand io.Reader) (*keysutil.Policy, error) {
-	// Load it from storage
-	p, err := keysutil.LoadPolicy(ctx, storage, path.Join("import", keyName))
-	if err != nil {
-		return nil, err
-	}
-
-	if p == nil {
-		p = &keysutil.Policy{
-			Name:                 keyName,
-			Type:                 keysutil.KeyType_RSA4096,
-			Derived:              false,
-			Exportable:           false,
-			AllowPlaintextBackup: false,
-			AutoRotatePeriod:     0,
-			StoragePrefix:        "import/",
-		}
-
-		err = p.Rotate(ctx, storage, rand)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return p, nil
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {

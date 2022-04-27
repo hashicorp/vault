@@ -6,7 +6,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"io"
+	"path"
 	"strconv"
 )
 
@@ -24,14 +27,16 @@ func (b *backend) pathWrappingKey() *framework.Path {
 }
 
 func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	p, err := b.GetWrappingKey(ctx, req.Storage, WrappingKeyName, b.GetRandomReader())
+	p, err := getWrappingKey(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
-		return nil, fmt.Errorf("error generating wrapping key: returned policy was nil")
+		p, err = generateWrappingKey(ctx, req.Storage, b.GetRandomReader())
+		if err != nil {
+			return nil, err
+		}
 	}
-	defer p.Unlock()
 
 	rsaPublicKey := p.Keys[strconv.Itoa(p.LatestVersion)]
 
@@ -57,6 +62,34 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 	}
 
 	return resp, nil
+}
+
+func getWrappingKey(ctx context.Context, storage logical.Storage) (*keysutil.Policy, error) {
+	p, err := keysutil.LoadPolicy(ctx, storage, path.Join("import", "policy", WrappingKeyName))
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func generateWrappingKey(ctx context.Context, storage logical.Storage, rand io.Reader) (*keysutil.Policy, error) {
+	p := &keysutil.Policy{
+		Name:                 WrappingKeyName,
+		Type:                 keysutil.KeyType_RSA4096,
+		Derived:              false,
+		Exportable:           false,
+		AllowPlaintextBackup: false,
+		AutoRotatePeriod:     0,
+		StoragePrefix:        "import/",
+	}
+
+	err := p.Rotate(ctx, storage, rand)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
 
 const pathWrappingKeyHelpSyn = "Returns the public key to use for wrapping imported keys"
