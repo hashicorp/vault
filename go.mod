@@ -103,7 +103,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.6.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.10.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.6.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.4.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.4.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1
@@ -118,7 +118,7 @@ require (
 	github.com/hashicorp/vault/api v1.5.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.4.1
+	github.com/hashicorp/vault/sdk v0.4.2-0.20220426194706-f8e907e0deda
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
