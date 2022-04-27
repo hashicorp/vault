@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
@@ -947,4 +949,235 @@ func TestCore_MountInitialize(t *testing.T) {
 			t.Fatal("backend is not initialized")
 		}
 	}
+}
+
+func TestCore_MountVersions(t *testing.T) {
+	cases := map[string]struct {
+		Upgrade bool
+		Path    string
+		Type    string
+		Length  int
+		Chunks  int
+	}{
+		"mounts": {
+			Path:   coreMountConfigPath,
+			Type:   "mounts",
+			Length: 3,
+		},
+		"local-mounts": {
+			Path:   coreLocalMountConfigPath,
+			Type:   "mounts",
+			Length: 1,
+		},
+		"auth": {
+			Path:   coreAuthConfigPath,
+			Type:   "auth",
+			Length: 1,
+		},
+		"local-auth": {
+			Path:   coreLocalAuthConfigPath,
+			Type:   "auth",
+			Length: 0,
+		},
+		"upgraded-mounts": {
+			Upgrade: true,
+			Path:    coreMountConfigPath,
+			Type:    "mounts",
+			Length:  0,
+			Chunks:  1,
+		},
+		"upgraded-local-mounts": {
+			Upgrade: true,
+			Path:    coreLocalMountConfigPath,
+			Type:    "mounts",
+			Length:  0,
+			Chunks:  1,
+		},
+		"upgraded-auth": {
+			Upgrade: true,
+			Path:    coreAuthConfigPath,
+			Type:    "auth",
+			Length:  0,
+			Chunks:  1,
+		},
+		"upgraded-local-auth": {
+			Upgrade: true,
+			Path:    coreLocalAuthConfigPath,
+			Type:    "auth",
+			Length:  0,
+			Chunks:  1,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var expectedVersion int
+			if tc.Upgrade {
+				err := os.Setenv(mountTableDefaultVersionEnv, "1")
+				require.NoError(t, err)
+
+				expectedVersion = 1
+
+				t.Cleanup(func() {
+					os.Unsetenv(mountTableDefaultVersionEnv)
+				})
+			}
+
+			c, _, _ := TestCoreUnsealed(t)
+			raw, err := c.barrier.Get(context.Background(), tc.Path)
+			require.NoError(t, err)
+
+			mounts := &MountTable{}
+			err = jsonutil.DecodeJSON(raw.Value, mounts)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.Type, mounts.Type)
+			require.Equal(t, expectedVersion, mounts.Version)
+			require.Len(t, mounts.Entries, tc.Length)
+			require.Len(t, mounts.Chunks, tc.Chunks)
+
+			keys, err := c.barrier.List(context.Background(), tc.Path+"/")
+			require.NoError(t, err)
+			require.Equal(t, keys, mounts.Chunks)
+		})
+	}
+}
+
+func TestCore_MountUpgradeBadVersion(t *testing.T) {
+	cases := map[string]struct {
+		Value string
+	}{
+		"doesn't exist": {
+			Value: "2",
+		},
+		"no a number": {
+			Value: "hello",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Cleanup(func() {
+				os.Unsetenv(mountTableDefaultVersionEnv)
+			})
+
+			err := os.Setenv(mountTableDefaultVersionEnv, tc.Value)
+			require.NoError(t, err)
+
+			core := TestCore(t)
+
+			_, err = core.Initialize(
+				context.Background(),
+				&InitParams{
+					BarrierConfig: &SealConfig{
+						SecretShares:    1,
+						SecretThreshold: 1,
+					},
+					RecoveryConfig: &SealConfig{
+						SecretShares:    1,
+						SecretThreshold: 1,
+					},
+				},
+			)
+			require.ErrorContains(t, err, "failed to setup mount table")
+		})
+	}
+}
+
+func TestCode_MountVersionUpgrade(t *testing.T) {
+	t.Cleanup(func() {
+		os.Unsetenv(mountTableDefaultVersionEnv)
+	})
+
+	testTable := func(c *Core, version, entries, chunks int) {
+		raw, err := c.barrier.Get(context.Background(), coreAuthConfigPath)
+		require.NoError(t, err)
+
+		mounts := &MountTable{}
+		err = jsonutil.DecodeJSON(raw.Value, mounts)
+		require.NoError(t, err)
+
+		require.Equal(t, "auth", mounts.Type)
+		require.Equal(t, version, mounts.Version)
+		require.Len(t, mounts.Entries, entries)
+		require.Len(t, mounts.Chunks, chunks)
+	}
+
+	// First we initialize the core with mount tables using the v0 format
+	c, keys, _ := TestCoreUnsealed(t)
+
+	// The auth table is using the correct version
+	testTable(c, 0, 1, 0)
+
+	// Set the environment variable to upgrade to the v1 format
+	err := os.Setenv(mountTableDefaultVersionEnv, "1")
+	require.NoError(t, err)
+
+	// We seal and unseal the core to trigger the upgrade of the mount tables
+	sealUnseal := func() {
+		err = c.sealInternal()
+		require.NoError(t, err)
+
+		for i, key := range keys {
+			unseal, err := TestCoreUnseal(c, key)
+			require.NoError(t, err)
+			if i+1 == len(keys) && !unseal {
+				t.Fatalf("should be unsealed")
+			}
+		}
+	}
+	sealUnseal()
+
+	// The auth table is now using the v1 format
+	testTable(c, 1, 0, 1)
+
+	// Removing the environment variable will not downgrade the table
+	err = os.Unsetenv(mountTableDefaultVersionEnv)
+	require.NoError(t, err)
+
+	sealUnseal()
+	testTable(c, 1, 0, 1)
+}
+
+func TestCore_MountOneChunkOptimization(t *testing.T) {
+	t.Cleanup(func() {
+		os.Unsetenv(mountTableDefaultVersionEnv)
+	})
+
+	os.Setenv(mountTableDefaultVersionEnv, "1")
+
+	c, _, _ := TestCoreUnsealed(t)
+
+	raw, err := c.barrier.Get(context.Background(), coreMountConfigPath)
+	require.NoError(t, err)
+
+	mounts := &MountTable{}
+	err = jsonutil.DecodeJSON(raw.Value, mounts)
+	require.NoError(t, err)
+
+	require.Equal(t, "mounts", mounts.Type)
+	require.Equal(t, 1, mounts.Version)
+	require.Len(t, mounts.Entries, 0)
+	require.Len(t, mounts.Chunks, 1)
+
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "kv",
+	}
+	err = c.mount(namespace.RootContext(context.Background()), me)
+	require.NoError(t, err)
+
+	// The new table reuse the previous chunk
+	raw, err = c.barrier.Get(context.Background(), coreMountConfigPath)
+	require.NoError(t, err)
+
+	newMounts := &MountTable{}
+	err = jsonutil.DecodeJSON(raw.Value, newMounts)
+	require.NoError(t, err)
+
+	require.Equal(t, "mounts", newMounts.Type)
+	require.Equal(t, 1, newMounts.Version)
+	require.Len(t, newMounts.Entries, 0)
+	require.Equal(t, mounts.Chunks, newMounts.Chunks)
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -43,6 +43,8 @@ const (
 	// mountTableType is the value we expect to find for the mount table and
 	// corresponding entries
 	mountTableType = "mounts"
+
+	mountTableDefaultVersionEnv = "VAULT_DEFAULT_MOUNT_TABLE_VERSION"
 )
 
 // ListingVisibilityType represents the types for listing visibility
@@ -123,7 +125,20 @@ func (c *Core) generateMountAccessor(entryType string) (string, error) {
 // MountTable is used to represent the internal mount table
 type MountTable struct {
 	Type    string        `json:"type"`
-	Entries []*MountEntry `json:"entries"`
+	Version int           `json:"version"`
+	Entries []*MountEntry `json:"entries,omitempty"`
+	Chunks  []string      `json:"chunks,omitempty"`
+}
+
+// defaultMountTableVersion returns the default version to use when encoding
+// the mount table. It respects the VAULT_DEFAULT_MOUNT_TABLE_VERSION environment
+// variable so it can be used by an operator to upgrade the physical
+// representation of the mount table.
+func defaultMountTableVersion() (int, error) {
+	if version := os.Getenv(mountTableDefaultVersionEnv); version != "" {
+		return strconv.Atoi(version)
+	}
+	return 0, nil
 }
 
 type MountMigrationStatus int
@@ -163,7 +178,7 @@ type MountMigrationInfo struct {
 // preserves plaintext size, adding a constant of 30 bytes of
 // padding, which is negligable and subject to change, and thus
 // not accounted for.
-func (c *Core) tableMetrics(entryCount int, isLocal bool, isAuth bool, compressedTable []byte) {
+func (c *Core) tableMetrics(entryCount int, isLocal bool, isAuth bool, size int) {
 	if c.metricsHelper == nil {
 		// do nothing if metrics are not initialized
 		return
@@ -191,13 +206,13 @@ func (c *Core) tableMetrics(entryCount int, isLocal bool, isAuth bool, compresse
 		})
 
 	c.metricSink.SetGaugeWithLabels(metricsutil.PhysicalTableSizeName,
-		float32(len(compressedTable)), []metrics.Label{
+		float32(size), []metrics.Label{
 			typeAuthLabelMap[isAuth],
 			typeLocalLabelMap[isLocal],
 		})
 
 	c.metricsHelper.AddGaugeLoopMetric(metricsutil.PhysicalTableSizeName,
-		float32(len(compressedTable)), []metrics.Label{
+		float32(size), []metrics.Label{
 			typeAuthLabelMap[isAuth],
 			typeLocalLabelMap[isLocal],
 		})
@@ -424,38 +439,6 @@ func (e *MountEntry) SyncCache() {
 	} else {
 		e.synthesizedConfigCache.Store("allowed_managed_keys", e.Config.AllowedManagedKeys)
 	}
-}
-
-func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
-	// Decode into mount table
-	mountTable := new(MountTable)
-	if err := jsonutil.DecodeJSON(raw, mountTable); err != nil {
-		return nil, err
-	}
-
-	// Populate the namespace in memory
-	var mountEntries []*MountEntry
-	for _, entry := range mountTable.Entries {
-		if entry.NamespaceID == "" {
-			entry.NamespaceID = namespace.RootNamespaceID
-		}
-		ns, err := NamespaceByID(ctx, entry.NamespaceID, c)
-		if err != nil {
-			return nil, err
-		}
-		if ns == nil {
-			c.logger.Error("namespace on mount entry not found", "namespace_id", entry.NamespaceID, "mount_path", entry.Path, "mount_description", entry.Description)
-			continue
-		}
-
-		entry.namespace = ns
-		mountEntries = append(mountEntries, entry)
-	}
-
-	return &MountTable{
-		Type:    mountTable.Type,
-		Entries: mountEntries,
-	}, nil
 }
 
 // Mount is used to mount a new backend to the mount table.
@@ -1008,51 +991,32 @@ func (c *Core) splitNamespaceAndMountFromPath(currNs, path string) namespace.Mou
 
 // loadMounts is invoked as part of postUnseal to load the mount table
 func (c *Core) loadMounts(ctx context.Context) error {
-	// Load the existing mount table
-	raw, err := c.barrier.Get(ctx, coreMountConfigPath)
-	if err != nil {
-		c.logger.Error("failed to read mount table", "error", err)
-		return errLoadMountsFailed
-	}
-	rawLocal, err := c.barrier.Get(ctx, coreLocalMountConfigPath)
-	if err != nil {
-		c.logger.Error("failed to read local mount table", "error", err)
-		return errLoadMountsFailed
-	}
-
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	if raw != nil {
-		// Check if the persisted value has canary in the beginning. If
-		// yes, decompress the table and then JSON decode it. If not,
-		// simply JSON decode it.
-		mountTable, err := c.decodeMountTable(ctx, raw.Value)
-		if err != nil {
-			c.logger.Error("failed to decompress and/or decode the mount table", "error", err)
-			return err
-		}
-		c.tableMetrics(len(mountTable.Entries), false, false, raw.Value)
-		c.mounts = mountTable
+	// Load the existing mount tables
+	mountTable, needPersist, err := c.loadTable(ctx, coreMountConfigPath)
+	if err != nil {
+		return errLoadMountsFailed
 	}
 
-	var needPersist bool
+	localMountTable, needPersistLocal, err := c.loadTable(ctx, coreLocalMountConfigPath)
+	if err != nil {
+		return errLoadMountsFailed
+	}
+
+	needPersist = needPersist || needPersistLocal
+
+	c.mounts = mountTable
+
 	if c.mounts == nil {
 		c.logger.Info("no mounts; adding default mount table")
 		c.mounts = c.defaultMountTable()
 		needPersist = true
 	}
 
-	if rawLocal != nil {
-		localMountTable, err := c.decodeMountTable(ctx, rawLocal.Value)
-		if err != nil {
-			c.logger.Error("failed to decompress and/or decode the local mount table", "error", err)
-			return err
-		}
-		if localMountTable != nil && len(localMountTable.Entries) > 0 {
-			c.tableMetrics(len(localMountTable.Entries), true, false, rawLocal.Value)
-			c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
-		}
+	if localMountTable != nil {
+		c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
 	}
 
 	// If this node is a performance standby we do not want to attempt to
@@ -1197,60 +1161,31 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		}
 	}
 
-	writeTable := func(mt *MountTable, path string) ([]byte, error) {
-		// Encode the mount table into JSON and compress it (lzw).
-		compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
-		if err != nil {
-			c.logger.Error("failed to encode or compress mount table", "error", err)
-			return nil, err
-		}
-
-		// Create an entry
-		entry := &logical.StorageEntry{
-			Key:   path,
-			Value: compressedBytes,
-		}
-
-		// Write to the physical backend
-		if err := c.barrier.Put(ctx, entry); err != nil {
-			c.logger.Error("failed to persist mount table", "error", err)
-			return nil, err
-		}
-		return compressedBytes, nil
+	var saveLocal, saveNonLocal bool
+	if local == nil {
+		saveLocal = true
+		saveNonLocal = true
+	} else {
+		saveLocal = *local
+		saveNonLocal = !*local
 	}
 
-	var err error
-	var compressedBytes []byte
-	switch {
-	case local == nil:
-		// Write non-local mounts
-		compressedBytes, err := writeTable(nonLocalMounts, coreMountConfigPath)
-		if err != nil {
-			return err
-		}
-		c.tableMetrics(len(nonLocalMounts.Entries), false, false, compressedBytes)
-
+	if saveLocal {
 		// Write local mounts
-		compressedBytes, err = writeTable(localMounts, coreLocalMountConfigPath)
+		size, err := c.persistMountTable(ctx, localMounts, coreLocalMountConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(len(localMounts.Entries), true, false, compressedBytes)
+		c.tableMetrics(len(localMounts.Entries), true, false, size)
+	}
 
-	case *local:
-		// Write local mounts
-		compressedBytes, err = writeTable(localMounts, coreLocalMountConfigPath)
-		if err != nil {
-			return err
-		}
-		c.tableMetrics(len(localMounts.Entries), true, false, compressedBytes)
-	default:
+	if saveNonLocal {
 		// Write non-local mounts
-		compressedBytes, err = writeTable(nonLocalMounts, coreMountConfigPath)
+		size, err := c.persistMountTable(ctx, nonLocalMounts, coreMountConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(len(nonLocalMounts.Entries), false, false, compressedBytes)
+		c.tableMetrics(len(nonLocalMounts.Entries), false, false, size)
 	}
 
 	return nil

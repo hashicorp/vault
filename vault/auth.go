@@ -552,50 +552,142 @@ func (c *Core) taintCredEntry(ctx context.Context, nsID, path string, updateStor
 	return nil
 }
 
-// loadCredentials is invoked as part of postUnseal to load the auth table
-func (c *Core) loadCredentials(ctx context.Context) error {
-	// Load the existing mount table
-	raw, err := c.barrier.Get(ctx, coreAuthConfigPath)
+// loadTable reads a mount table header and decodes the mount table according to
+// its physical format version.
+func (c *Core) loadTable(ctx context.Context, path string) (*MountTable, bool, error) {
+	header, err := c.barrier.Get(ctx, path)
 	if err != nil {
-		c.logger.Error("failed to read auth table", "error", err)
-		return errLoadAuthFailed
+		c.logger.Error("failed to read mount table header", "error", err)
+		return nil, false, errLoadAuthFailed
 	}
-	rawLocal, err := c.barrier.Get(ctx, coreLocalAuthConfigPath)
-	if err != nil {
-		c.logger.Error("failed to read local auth table", "error", err)
-		return errLoadAuthFailed
+	if header == nil {
+		return nil, false, nil
+	}
+	size := len(header.Value)
+
+	// Decode the header into mount table
+	mountTable := new(MountTable)
+	if err := jsonutil.DecodeJSON(header.Value, mountTable); err != nil {
+		c.logger.Error("failed to decompress or decode the mount table header", "error", err)
+		return nil, false, err
 	}
 
+	c.logger.Debug("decoding mount table", "version", mountTable.Version)
+	switch mountTable.Version {
+	case 0:
+		// There is nothing special to do, version 0 has all the mount entries
+		// in the table header
+	case 1:
+		extraSize, err := c.decodeMountTableV1(ctx, mountTable, path)
+		if err != nil {
+			c.logger.Error(err.Error())
+			return nil, false, err
+		}
+		size += extraSize
+	default:
+		err := fmt.Errorf("unknown mount table version %d for table %q", mountTable.Version, path)
+		c.logger.Error(err.Error())
+		return nil, false, err
+	}
+
+	// Populate the namespace in memory
+	var mountEntries []*MountEntry
+	for _, entry := range mountTable.Entries {
+		if entry.NamespaceID == "" {
+			entry.NamespaceID = namespace.RootNamespaceID
+		}
+		ns, err := NamespaceByID(ctx, entry.NamespaceID, c)
+		if err != nil {
+			return nil, false, err
+		}
+		if ns == nil {
+			c.logger.Error("namespace on mount entry not found", "namespace_id", entry.NamespaceID, "mount_path", entry.Path, "mount_description", entry.Description)
+			continue
+		}
+
+		entry.namespace = ns
+		mountEntries = append(mountEntries, entry)
+	}
+	mountTable.Entries = mountEntries
+
+	if len(mountTable.Entries) > 0 {
+		isLocal := strings.Contains(path, "local")
+		isAuth := strings.Contains(path, "auth")
+		c.tableMetrics(len(mountTable.Entries), isLocal, isAuth, size)
+	}
+
+	expectedTableVersion, err := defaultMountTableVersion()
+	if err != nil {
+		return nil, false, err
+	}
+
+	return mountTable, mountTable.Version < expectedTableVersion, nil
+}
+
+// decodeMountTableV1 decode a table stored in the v1 physical format where the
+// entries have been split in chunks of 512kb and stored separately.
+// It returns both the decoded mount table and the total physical size used by
+// the header and all the chunks.
+func (c *Core) decodeMountTableV1(ctx context.Context, mountTable *MountTable, path string) (int, error) {
+
+	c.logger.Debug("loading table chunks", "chunks", mountTable.Chunks)
+
+	// Read the chunks
+	var compressedEntries []byte
+	for _, chunk := range mountTable.Chunks {
+		c.logger.Debug("loading mount table chunk", "chunk", chunk)
+
+		p, err := c.barrier.Get(ctx, fmt.Sprintf("%s/%s", path, chunk))
+		if err != nil {
+			c.logger.Error("failed to read mount table chunk", "error", err)
+			return 0, err
+		}
+		if p == nil {
+			err := fmt.Errorf("failed to find chunk")
+			c.logger.Error(err.Error(), "chunk", chunk)
+			return 0, err
+		}
+
+		compressedEntries = append(compressedEntries, p.Value...)
+	}
+
+	if err := jsonutil.DecodeJSON(compressedEntries, &mountTable.Entries); err != nil {
+		c.logger.Error("failed to decode mount table entries", "error", err)
+		return 0, err
+	}
+
+	return len(compressedEntries), nil
+}
+
+// loadCredentials is invoked as part of postUnseal to load the auth table
+func (c *Core) loadCredentials(ctx context.Context) error {
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
-	if raw != nil {
-		authTable, err := c.decodeMountTable(ctx, raw.Value)
-		if err != nil {
-			c.logger.Error("failed to decompress and/or decode the auth table", "error", err)
-			return err
-		}
-		c.auth = authTable
+	c.logger.Debug("loading auth tables")
+
+	// Load the existing mount table
+	authTable, needPersist, err := c.loadTable(ctx, coreAuthConfigPath)
+	if err != nil {
+		return errLoadAuthFailed
 	}
 
-	var needPersist bool
+	localAuthTable, needPersistLocal, err := c.loadTable(ctx, coreLocalAuthConfigPath)
+	if err != nil {
+		return errLoadAuthFailed
+	}
+
+	needPersist = needPersist || needPersistLocal
+
+	c.auth = authTable
+
 	if c.auth == nil {
 		c.auth = c.defaultAuthTable()
 		needPersist = true
-	} else {
-		// only record tableMetrics if we have loaded something from storge
-		c.tableMetrics(len(c.auth.Entries), false, true, raw.Value)
 	}
-	if rawLocal != nil {
-		localAuthTable, err := c.decodeMountTable(ctx, rawLocal.Value)
-		if err != nil {
-			c.logger.Error("failed to decompress and/or decode the local mount table", "error", err)
-			return err
-		}
-		if localAuthTable != nil && len(localAuthTable.Entries) > 0 {
-			c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
-			c.tableMetrics(len(localAuthTable.Entries), true, true, rawLocal.Value)
-		}
+
+	if localAuthTable != nil {
+		c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
 	}
 
 	// Upgrade to typed auth table
@@ -686,60 +778,223 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		}
 	}
 
-	writeTable := func(mt *MountTable, path string) ([]byte, error) {
-		// Encode the mount table into JSON and compress it (lzw).
-		compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
-		if err != nil {
-			c.logger.Error("failed to encode or compress auth mount table", "error", err)
-			return nil, err
-		}
-
-		// Create an entry
-		entry := &logical.StorageEntry{
-			Key:   path,
-			Value: compressedBytes,
-		}
-
-		// Write to the physical backend
-		if err := c.barrier.Put(ctx, entry); err != nil {
-			c.logger.Error("failed to persist auth mount table", "error", err)
-			return nil, err
-		}
-		return compressedBytes, nil
+	var saveLocal, saveNonLocal bool
+	if local == nil {
+		saveLocal = true
+		saveNonLocal = true
+	} else {
+		saveLocal = *local
+		saveNonLocal = !*local
 	}
 
-	var err error
-	var compressedBytes []byte
-	switch {
-	case local == nil:
-		// Write non-local mounts
-		compressedBytes, err := writeTable(nonLocalAuth, coreAuthConfigPath)
-		if err != nil {
-			return err
-		}
-		c.tableMetrics(len(nonLocalAuth.Entries), false, true, compressedBytes)
-
+	if saveLocal {
 		// Write local mounts
-		compressedBytes, err = writeTable(localAuth, coreLocalAuthConfigPath)
+		size, err := c.persistMountTable(ctx, localAuth, coreLocalAuthConfigPath)
 		if err != nil {
 			return err
 		}
-		c.tableMetrics(len(localAuth.Entries), true, true, compressedBytes)
-	case *local:
-		compressedBytes, err = writeTable(localAuth, coreLocalAuthConfigPath)
-		if err != nil {
-			return err
-		}
-		c.tableMetrics(len(localAuth.Entries), true, true, compressedBytes)
-	default:
-		compressedBytes, err = writeTable(nonLocalAuth, coreAuthConfigPath)
-		if err != nil {
-			return err
-		}
-		c.tableMetrics(len(nonLocalAuth.Entries), false, true, compressedBytes)
+		c.tableMetrics(len(localAuth.Entries), true, true, size)
 	}
 
-	return err
+	if saveNonLocal {
+		// Write non-local mounts
+		size, err := c.persistMountTable(ctx, nonLocalAuth, coreAuthConfigPath)
+		if err != nil {
+			return err
+		}
+		c.tableMetrics(len(nonLocalAuth.Entries), false, true, size)
+	}
+
+	return nil
+}
+
+// persistMountTable saves the mount table to the physical backend using the
+// correct physical format version. If needed it will transparently updates a
+// mount table in the v0 format to the v1 format.
+func (c *Core) persistMountTable(ctx context.Context, mt *MountTable, path string) (int, error) {
+	// The table should always be stored in a version greater or equal to what
+	// the default is.
+	defaultVersion, err := defaultMountTableVersion()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get default mount table version: %w", err)
+	}
+	mt.Version = defaultVersion
+
+	// We need to read the current version used from the physical storage to
+	// make sure that we don't downgrade the physical representation of the
+	// table to a previous version.
+	currentTable := new(MountTable)
+	header, err := c.barrier.Get(ctx, path)
+	if err != nil {
+		c.logger.Error("failed to read mount table header", "error", err)
+		return 0, fmt.Errorf("failed to read mount table version from storage")
+	}
+	if header != nil {
+		// Decode the header into mount table
+		if err := jsonutil.DecodeJSON(header.Value, currentTable); err != nil {
+			c.logger.Error("failed to decompress or decode the mount table", "error", err)
+			return 0, err
+		}
+		if currentTable.Version > mt.Version {
+			mt.Version = currentTable.Version
+		}
+	}
+
+	switch mt.Version {
+	case 0:
+		// The v0 format stores everything in the table header
+		return c.persistMountTableHeader(ctx, mt, path)
+	case 1:
+		return c.persistMountTableV1(ctx, mt, currentTable, path)
+	default:
+		return 0, fmt.Errorf("unknown mount table version %d", mt.Version)
+	}
+}
+
+// persistMountTableHeader is a helper function that only encodes and saves the
+// header of the mount table. It is used both by the v0 and v1 formats, the
+// only difference being the fields encoded in the header.
+// It returns the size of the physical representation of the header.
+func (c *Core) persistMountTableHeader(ctx context.Context, mt *MountTable, path string) (int, error) {
+	// Encode the mount table into JSON and compress it (lzw).
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
+	if err != nil {
+		c.logger.Error("failed to encode or compress mount table", "error", err)
+		return 0, err
+	}
+
+	// Create an entry
+	entry := &logical.StorageEntry{
+		Key:   path,
+		Value: compressedBytes,
+	}
+
+	// Write to the physical backend
+	if err := c.barrier.Put(ctx, entry); err != nil {
+		c.logger.Error("failed to persist mount table header", "error", err)
+		return 0, err
+	}
+	return len(compressedBytes), nil
+}
+
+// persistMountTableV1 saves the mount table in the v1 format where the mount
+// entries are split in chunks and saved separately, and the header only contains
+// the type, the version and links to the chunks.
+// The order of operations here matters to make sure when can recover in case of
+// any error, with no data corruption:
+//   - we first save the new chunks without updating the table header or the
+//   already saved chunks
+//   - we update the table header so that it points to the new chunks
+//   - finally we remove the previous chunks which are noz unused
+func (c *Core) persistMountTableV1(ctx context.Context, mt, currentTable *MountTable, path string) (int, error) {
+
+	compressedEntries, err := jsonutil.EncodeJSONAndCompress(mt.Entries, nil)
+	if err != nil {
+		c.logger.Error("failed to encode mount table entries", "error", err)
+		return 0, err
+	}
+
+	size := len(compressedEntries)
+
+	// We are splitting the list of entries in chunks of 512kb so that we are
+	// sure it will fit in the Consul storage if this is what we are using
+	limit := 512_000
+
+	var chunk []byte
+	chunks := make([][]byte, 0, len(compressedEntries)/limit+1)
+	for len(compressedEntries) >= limit {
+		chunk, compressedEntries = compressedEntries[:limit], compressedEntries[limit:]
+		chunks = append(chunks, chunk)
+	}
+	if len(compressedEntries) > 0 {
+		chunks = append(chunks, compressedEntries)
+	}
+
+	// We have an important optimization here that makes the v1 storage only
+	// incurs an extra Get through the barrier when the mount entries only takes
+	// a single chunk: if the current table has only one chunk too then we can
+	// update the current chunk and skip updating the table header or deleting
+	// dangling chunks.
+	// This means that for all table that can fit in the v0 format, using the v1
+	// format will only add one Get, with no List or Delete operations.
+	// Only when the table does not fit in a single chunk we will have additional
+	// Puts (one per chunk), List (one for the whole table) and Delete (one per
+	// chunks in the current table) operations. The persistMountTable() will
+	// therefore have a linear complexity with regard to the number of chunks
+	// which is completely acceptable since the previous behavior was to abort
+	// once the limit is reached and completely stop accepting new mount entries.
+	// Linear degradation of performance is much better.
+	if len(chunks) == 1 && len(currentTable.Chunks) == 1 {
+		entry := &logical.StorageEntry{
+			Key:   fmt.Sprintf("%s/%s", path, currentTable.Chunks[0]),
+			Value: chunks[0],
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			c.logger.Error("failed to persist mount table chunk", "error", err)
+			return 0, err
+		}
+
+		return size + len(chunks[0]), nil
+	}
+
+	for _, chunk := range chunks {
+		// Should we take care of possible collisions here?
+		chunkID, err := uuid.GenerateUUID()
+		if err != nil {
+			c.logger.Error("failed to generate chunk ID", "error", err)
+			return 0, err
+		}
+
+		entry := &logical.StorageEntry{
+			Key:   fmt.Sprintf("%s/%s", path, chunkID),
+			Value: chunk,
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			c.logger.Error("failed to persist mount table chunk", "error", err)
+			return 0, err
+		}
+
+		mt.Chunks = append(mt.Chunks, chunkID)
+	}
+
+	// Write the table header
+	mt.Entries = nil
+	headerSize, err := c.persistMountTableHeader(ctx, mt, path)
+	if err != nil {
+		return 0, err
+	}
+	size += headerSize
+
+	chunkIDs, err := c.barrier.List(ctx, path+"/")
+	if err != nil {
+		c.logger.Error("failed to list chunks to remove dangling ones", "error", err)
+		return 0, err
+	}
+
+	var danglingChunks []string
+	for _, chunk := range chunkIDs {
+		var found bool
+		for _, c := range mt.Chunks {
+			if c == chunk {
+				found = true
+				break
+			}
+		}
+		if !found {
+			danglingChunks = append(danglingChunks, chunk)
+		}
+	}
+
+	for _, chunk := range danglingChunks {
+		c.logger.Debug("removing dangling chunk", "chunk", chunk)
+		if err := c.barrier.Delete(ctx, fmt.Sprintf("%s/%s", path, chunk)); err != nil {
+			c.logger.Error("failed to remove dangling chunk", "chunk", chunk)
+			// We don't return an error here because the chunk should get removed
+			// up on the next save of the table.
+		}
+	}
+
+	return size, nil
 }
 
 // setupCredentials is invoked after we've loaded the auth table to
