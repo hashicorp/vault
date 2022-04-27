@@ -7,10 +7,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// TODO: Replace these with the real values. - schultz
 const (
-	pubKeyStoragePath  = "/path/to/public/wrapping/key"
-	privKeyStoragePath = "/path/to/private/wrapping/key"
+	storagePath = "import/policy/" + WrappingKeyName
 )
 
 func TestTransit_WrappingKey(t *testing.T) {
@@ -27,20 +25,12 @@ func TestTransit_WrappingKey(t *testing.T) {
 	)
 
 	// Ensure the key does not exist before requesting it.
-	pubKeyEntry, err := storage.Get(context.Background(), pubKeyStoragePath)
+	keyEntry, err := storage.Get(context.Background(), storagePath)
 	if err != nil {
-		t.Fatalf("error retrieving public wrapping key from storage: %s", err)
+		t.Fatalf("error retrieving wrapping key from storage: %s", err)
 	}
-	if pubKeyEntry != nil {
-		t.Fatal("public wrapping key unexpectedly exists")
-	}
-
-	privKeyEntry, err := storage.Get(context.Background(), privKeyStoragePath)
-	if err != nil {
-		t.Fatalf("error retrieving private wrapping key from storage: %s", err)
-	}
-	if privKeyEntry != nil {
-		t.Fatal("private wrapping key unexpectedly exists")
+	if keyEntry != nil {
+		t.Fatal("wrapping key unexpectedly exists")
 	}
 
 	// Generate the key pair by requesting the public key.
@@ -53,33 +43,10 @@ func TestTransit_WrappingKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected request error: %s", err)
 	}
-	if resp == nil {
+	if resp == nil || resp.Data == nil || resp.Data["public_key"] == nil {
 		t.Fatal("expected non-nil response")
 	}
-	// TODO: Save public key from response. - schultz
-	pubKey := ""
-
-	// TODO: Ensure only public key is returned in response. - schultz
-
-	// Ensure the key exists in storage and that the public key matches what was returned.
-	pubKeyEntry, err = storage.Get(context.Background(), pubKeyStoragePath)
-	if err != nil {
-		t.Fatalf("error retrieving public wrapping key from storage: %s", err)
-	}
-	if pubKeyEntry == nil {
-		t.Fatal("expected non-nil public wrapping key")
-	}
-	if string(pubKeyEntry.Value) != pubKey {
-		t.Fatal("returned public wrapping key does not match value in storage")
-	}
-
-	privKeyEntry, err = storage.Get(context.Background(), privKeyStoragePath)
-	if err != nil {
-		t.Fatalf("error retrieving private wrapping key from storage: %s", err)
-	}
-	if privKeyEntry == nil {
-		t.Fatal("expected non-nil private wrapping key")
-	}
+	pubKey := resp.Data["public_key"]
 
 	// Request the wrapping key again to ensure it isn't regenerated.
 	req = &logical.Request{
@@ -91,8 +58,10 @@ func TestTransit_WrappingKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected request error: %s", err)
 	}
-	if resp == nil {
+	if resp == nil || resp.Data == nil || resp.Data["public_key"] == nil {
 		t.Fatal("expected non-nil response")
 	}
-	// TODO: Compare response body to previously returned public key. - schultz
+	if resp.Data["public_key"] != pubKey {
+		t.Fatal("wrapping key public component changed between requests")
+	}
 }
