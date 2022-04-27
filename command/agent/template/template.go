@@ -315,8 +315,8 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// This is helpful if Auto Auth cannot get a new token and CT is trying to fetch
 	// secrets.
 	if sc.AgentConfig.AutoAuth != nil && sc.AgentConfig.AutoAuth.Method != nil {
-		if sc.AgentConfig.AutoAuth.Method.InitialBackoff > 0 {
-			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.InitialBackoff
+		if sc.AgentConfig.AutoAuth.Method.MinBackoff > 0 {
+			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.MinBackoff
 		}
 	}
 

@@ -302,11 +302,11 @@ func TestLoadConfigFile_Method_InitialBackoff(t *testing.T) {
 		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
-				Type:           "aws",
-				MountPath:      "auth/aws",
-				WrapTTL:        5 * time.Minute,
-				InitialBackoff: 5 * time.Second,
-				MaxBackoff:     2 * time.Minute,
+				Type:       "aws",
+				MountPath:  "auth/aws",
+				WrapTTL:    5 * time.Minute,
+				MinBackoff: 5 * time.Second,
+				MaxBackoff: 2 * time.Minute,
 				Config: map[string]interface{}{
 					"role": "foobar",
 				},

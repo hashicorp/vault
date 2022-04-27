@@ -802,7 +802,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger:                       c.logger.Named("auth.handler"),
 			Client:                       clonedClient,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-			InitialBackoff:               config.AutoAuth.Method.InitialBackoff,
+			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,

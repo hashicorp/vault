@@ -55,7 +55,7 @@ type AuthHandler struct {
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
 	maxBackoff                   time.Duration
-	initialBackoff               time.Duration
+	minBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
 }
@@ -65,14 +65,14 @@ type AuthHandlerConfig struct {
 	Client                       *api.Client
 	WrapTTL                      time.Duration
 	MaxBackoff                   time.Duration
-	InitialBackoff               time.Duration
+	MinBackoff                   time.Duration
 	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
-	initial := conf.InitialBackoff
+	initial := conf.MinBackoff
 	if initial <= 0 {
 		initial = defaultInitialBackoff
 	}
@@ -87,7 +87,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
-		initialBackoff:               initial,
+		minBackoff:                   initial,
 		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
@@ -112,11 +112,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		return errors.New("auth handler: nil auth method")
 	}
 
-	if ah.initialBackoff <= 0 {
-		ah.initialBackoff = defaultInitialBackoff
+	if ah.minBackoff <= 0 {
+		ah.minBackoff = defaultInitialBackoff
 	}
 
-	backoff := newAgentBackoff(ah.initialBackoff, ah.maxBackoff)
+	backoff := newAgentBackoff(ah.minBackoff, ah.maxBackoff)
 
 	if backoff.current >= backoff.max {
 		return errors.New("auth handler: initial backoff cannot be greater than max backoff")
@@ -278,7 +278,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoff.reset(ah.initialBackoff)
+			backoff.reset(ah.minBackoff)
 
 			select {
 			case <-ctx.Done():
@@ -310,7 +310,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoff.reset(ah.initialBackoff)
+			backoff.reset(ah.minBackoff)
 		}
 
 		if watcher != nil {
