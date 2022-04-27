@@ -976,8 +976,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.10.0 h1:zjgO/peqT419
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.10.0/go.mod h1:OMEQaNXsITksICGgkWW2y9/Nekv/cPKdqGOcMW5uUdI=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.6.0 h1:5ZpDMHF0Im6KjuvxV8P6R1leidfh0rkLBD0VGz4nvd4=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.6.0/go.mod h1:e3HTaMD+aRWHBVctX/M39OaARQA8ux9TvdWDU0dJaoc=
-github.com/hashicorp/vault-plugin-database-snowflake v0.4.0 h1:aU27AiSMaGB5p4u9hHRDZf8asxNGuXCSQVl7tO+1Aak=
-github.com/hashicorp/vault-plugin-database-snowflake v0.4.0/go.mod h1:zWotUiG0/ZcOJ46j+gW3IfZ7R9nMDBHEo6cLte3CPE0=
+github.com/hashicorp/vault-plugin-database-snowflake v0.4.1 h1:xj1w5sODSfoyVjuQdwAwz4duPSCZguiyIHi/8WcMXi0=
+github.com/hashicorp/vault-plugin-database-snowflake v0.4.1/go.mod h1:BgcYquqjHAJ8AufsoBoz3bgsR2qyD2Yx99IaG6eOWzw=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
 github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.12.0 h1:BiqmK2KS5hqcQ9hJYMZaUq/DZoPJneCptyvzxLtyV/A=
@@ -1670,7 +1670,6 @@ golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97/go.mod h1:GvvjBRRGRdwPK5y
 golang.org/x/crypto v0.0.0-20210817164053-32db794688a5/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
-golang.org/x/crypto v0.0.0-20220208050332-20e1d8d225ab h1:lnZ4LoV0UMdibeCUfIB2a4uFwRu491WX/VB2reB8xNc=
 golang.org/x/crypto v0.0.0-20220208050332-20e1d8d225ab/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 h1:kUhD7nTDoI3fVd9G4ORWrbV5NY0liEs/Jg2pv5f+bBA=
 golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
@@ -1920,7 +1919,6 @@ golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20211025112917-711f33c9992c/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20220207234003-57398862261d h1:Bm7BNOQt2Qv7ZqysjeLjgCBanX+88Z/OtdvsrEv1Djc=
 golang.org/x/sys v0.0.0-20220207234003-57398862261d/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 h1:xHms4gcpe1YE7A3yIllJXP16CMAGuqwO2lX1mTyyRRc=
 golang.org/x/sys v0.0.0-20220422013727-9388b58f7150/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
