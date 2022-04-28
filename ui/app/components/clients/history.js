@@ -185,12 +185,20 @@ export default class History extends Component {
     return this.queriedActivityResponse || this.args.model.activity;
   }
 
+  get monthlyClients() {
+    return this.getActivityResponse?.byMonth;
+  }
+
+  get monthlyNewClients() {
+    return this.monthlyClients.map((m) => m.new_clients);
+  }
+
   get hasAttributionData() {
     if (this.selectedAuthMethod) return false;
     if (this.selectedNamespace) {
       return this.authMethodOptions.length > 0;
     }
-    return !!this.totalClientsData && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
+    return !!this.totalClientAttribution && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
   }
 
   // top level TOTAL client counts for given date range
@@ -198,8 +206,12 @@ export default class History extends Component {
     return this.selectedNamespace ? this.filteredActivity : this.getActivityResponse.total;
   }
 
+  get newUsageCounts() {
+    return this.selectedNamespace ? this.filteredNewClientAttribution : this.monthlyClients[0].new_clients;
+  }
+
   // total client data for horizontal bar chart in attribution component
-  get totalClientsData() {
+  get totalClientAttribution() {
     if (this.selectedNamespace) {
       return this.filteredActivity?.mounts || null;
     } else {
@@ -207,16 +219,22 @@ export default class History extends Component {
     }
   }
 
+  // new client data for horizontal bar chart
+  get newClientAttribution() {
+    // new client attribution only available in a single, historical month
+    if (this.isDateRange) {
+      return null;
+    }
+    // only a single month is returned from the api
+    if (this.selectedNamespace) {
+      return this.filteredNewClientAttribution?.mounts || null;
+    } else {
+      return this.monthlyClients[0].new_clients.namespaces;
+    }
+  }
+
   get responseTimestamp() {
     return this.getActivityResponse.responseTimestamp;
-  }
-
-  get byMonthTotalClients() {
-    return this.getActivityResponse?.byMonth;
-  }
-
-  get byMonthNewClients() {
-    return this.byMonthTotalClients.map((m) => m.new_clients);
   }
 
   get filteredActivity() {
@@ -231,6 +249,20 @@ export default class History extends Component {
     return this.getActivityResponse.byNamespace
       .find((ns) => ns.label === namespace)
       .mounts?.find((mount) => mount.label === auth);
+  }
+
+  get filteredNewClientAttribution() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    // new client data is only available by month
+    const newClientsData = this.monthlyClients[0].new_clients;
+    if (this.isDateRange) return null;
+    if (!namespace && !auth) return newClientsData;
+
+    const foundNamespace = newClientsData.namespaces.find((ns) => ns.label === namespace);
+    if (!foundNamespace) return null;
+    if (!auth) return foundNamespace;
+    return foundNamespace.mounts?.find((mount) => mount.label === auth);
   }
 
   @action

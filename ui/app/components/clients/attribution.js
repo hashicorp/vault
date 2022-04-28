@@ -13,8 +13,8 @@ import { inject as service } from '@ember/service';
  *    @chartLegend={{this.chartLegend}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @newUsageCounts={{this.newUsageCounts}}
- *    @totalClientsData={{this.totalClientsData}}
- *    @newClientsData={{this.newClientsData}}
+ *    @totalClientAttribution={{this.totalClientAttribution}}
+ *    @newClientAttribution={{this.newClientAttribution}}
  *    @selectedNamespace={{this.selectedNamespace}}
  *    @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
  *    @isDateRange={{this.isDateRange}}
@@ -25,8 +25,8 @@ import { inject as service } from '@ember/service';
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {object} newUsageCounts - object with new client counts for chart tooltip text
- * @param {array} totalClientsData - array of objects containing a label and breakdown of client counts for total clients
- * @param {array} newClientsData - array of objects containing a label and breakdown of client counts for new clients
+ * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
+ * @param {array} newClientAttribution - array of objects containing a label and breakdown of client counts for new clients
  * @param {string} selectedNamespace - namespace selected from filter bar
  * @param {string} startTimeDisplay - string that displays as start date for CSV modal
  * @param {string} endTimeDisplay - string that displays as end date for CSV modal
@@ -41,14 +41,14 @@ export default class Attribution extends Component {
   @service store;
 
   get hasCsvData() {
-    return this.args.totalClientsData ? this.args.totalClientsData.length > 0 : false;
+    return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
   }
   get isDateRange() {
     return this.args.isDateRange;
   }
 
   get isSingleNamespace() {
-    if (!this.args.totalClientsData) {
+    if (!this.args.totalClientAttribution) {
       return 'no data';
     }
     // if a namespace is selected, then we're viewing top 10 auth methods (mounts)
@@ -57,16 +57,16 @@ export default class Attribution extends Component {
 
   // truncate data before sending to chart component
   get barChartTotalClients() {
-    return this.args.totalClientsData?.slice(0, 10);
+    return this.args.totalClientAttribution?.slice(0, 10);
   }
 
   get barChartNewClients() {
-    return this.args.newClientsData?.slice(0, 10);
+    return this.args.newClientAttribution?.slice(0, 10);
   }
 
   get topClientCounts() {
     // get top namespace or auth method
-    return this.args.totalClientsData ? this.args.totalClientsData[0] : null;
+    return this.args.totalClientAttribution ? this.args.totalClientAttribution[0] : null;
   }
 
   get attributionBreakdown() {
@@ -121,7 +121,7 @@ export default class Attribution extends Component {
     ];
   }
   generateCsvData() {
-    let graphData = this.args.totalClientsData;
+    let graphData = this.args.totalClientAttribution;
     let csvData = [],
       csvHeader = [
         'Namespace path',

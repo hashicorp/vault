@@ -19,11 +19,11 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
       { label: 'first', clients: 2, entity_clients: 1, non_entity_clients: 1 },
     ];
     this.set('totalUsageCounts', totalObject);
-    this.set('totalClientsData', dataArray);
+    this.set('totalClientAttribution', dataArray);
 
     await render(hbs`
     <Clients::HorizontalBarChart
-      @dataset={{this.totalClientsData}}
+      @dataset={{this.totalClientAttribution}}
       @chartLegend={{chartLegend}}
       @totalUsageCounts={{totalUsageCounts}}
     />`);
@@ -59,11 +59,11 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
       { label: 'first', clients: 300, entity_clients: 101, non_entity_clients: 296 },
     ];
     this.set('totalUsageCounts', totalObject);
-    this.set('totalClientsData', dataArray);
+    this.set('totalClientAttribution', dataArray);
 
     await render(hbs`
     <Clients::HorizontalBarChart
-      @dataset={{this.totalClientsData}}
+      @dataset={{this.totalClientAttribution}}
       @chartLegend={{chartLegend}}
       @totalUsageCounts={{totalUsageCounts}}
     />`);

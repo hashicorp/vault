@@ -85,8 +85,8 @@ export const homogenizeClientNaming = (object) => {
 };
 
 export const nestCountsWithinNamespaceKey = (month) => {
-  // create new key of `counts_by_namespace` for month object
-  month.counts_by_namespace = {};
+  // create new key of `by_namespace_key` for month object
+  month.by_namespace_key = {};
   if (month.namespaces) {
     month.namespaces.forEach((namespace) => {
       let { clients, entity_clients, non_entity_clients, mounts } = namespace;
@@ -95,7 +95,7 @@ export const nestCountsWithinNamespaceKey = (month) => {
         new_clients = month.new_clients.namespaces.find((n) => n.label === namespace.label) || {};
       }
       // create counts object with namespace label as key name
-      month.counts_by_namespace[namespace.label] = {
+      month.by_namespace_key[namespace.label] = {
         clients,
         entity_clients,
         non_entity_clients,
@@ -103,7 +103,7 @@ export const nestCountsWithinNamespaceKey = (month) => {
         new_clients,
       };
       // TODO delete or keep new_clients.label within namespace key object?
-      // delete month.counts_by_namespace[namespace.label].new_clients.label
+      // delete month.by_namespace_key[namespace.label].new_clients.label
     });
   }
   return month;

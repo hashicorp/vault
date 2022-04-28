@@ -28,7 +28,7 @@
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
           @chartLegend={{@chartLegend}}
-          @totalUsageCounts={{@totalUsageCounts}}
+          @totalCounts={{@totalUsageCounts}}
         />
       </div>
       <div class="chart-subTitle">
@@ -51,7 +51,7 @@
         <Clients::HorizontalBarChart
           @dataset={{this.barChartNewClients}}
           @chartLegend={{@chartLegend}}
-          @totalUsageCounts={{@newUsageCounts}}
+          @totalCounts={{@newUsageCounts}}
           @noDataMessage={{"There are no new clients for this namespace during this time period."}}
         />
       </div>
@@ -62,7 +62,7 @@
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
           @chartLegend={{@chartLegend}}
-          @totalUsageCounts={{@totalUsageCounts}}
+          @totalCounts={{@totalUsageCounts}}
         />
       </div>
     {{/if}}
