@@ -109,10 +109,10 @@ consumption:
 
 func TestAgentBackoff(t *testing.T) {
 	max := 1024 * time.Second
-	backoff := newAgentBackoff(defaultInitialBackoff, max)
+	backoff := newAgentBackoff(defaultMinBackoff, max)
 
 	// Test initial value
-	if backoff.current != defaultInitialBackoff {
+	if backoff.current != defaultMinBackoff {
 		t.Fatalf("expected 1s initial backoff, got: %v", backoff.current)
 	}
 
@@ -138,28 +138,28 @@ func TestAgentBackoff(t *testing.T) {
 	}
 
 	// Test reset
-	backoff.reset(defaultInitialBackoff)
-	if backoff.current != defaultInitialBackoff {
+	backoff.reset()
+	if backoff.current != defaultMinBackoff {
 		t.Fatalf("expected 1s backoff after reset, got: %v", backoff.current)
 	}
 }
 
-func TestAgentInitialBackoffCustom(t *testing.T) {
+func TestAgentMinBackoffCustom(t *testing.T) {
 	type test struct {
-		initialBackoff time.Duration
-		want           time.Duration
+		minBackoff time.Duration
+		want       time.Duration
 	}
 
 	tests := []test{
-		{initialBackoff: 0 * time.Second, want: 1 * time.Second},
-		{initialBackoff: 1 * time.Second, want: 1 * time.Second},
-		{initialBackoff: 5 * time.Second, want: 5 * time.Second},
-		{initialBackoff: 10 * time.Second, want: 10 * time.Second},
+		{minBackoff: 0 * time.Second, want: 1 * time.Second},
+		{minBackoff: 1 * time.Second, want: 1 * time.Second},
+		{minBackoff: 5 * time.Second, want: 5 * time.Second},
+		{minBackoff: 10 * time.Second, want: 10 * time.Second},
 	}
 
 	for _, test := range tests {
 		max := 1024 * time.Second
-		backoff := newAgentBackoff(test.initialBackoff, max)
+		backoff := newAgentBackoff(test.minBackoff, max)
 
 		// Test initial value
 		if backoff.current != test.want {
@@ -188,7 +188,7 @@ func TestAgentInitialBackoffCustom(t *testing.T) {
 		}
 
 		// Test reset
-		backoff.reset(test.initialBackoff)
+		backoff.reset()
 		if backoff.current != test.want {
 			t.Fatalf("expected %d backoff after reset, got: %v", test.want, backoff.current)
 		}

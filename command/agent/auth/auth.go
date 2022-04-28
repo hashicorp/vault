@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	defaultInitialBackoff = 1 * time.Second
-	defaultMaxBackoff     = 5 * time.Minute
+	defaultMinBackoff = 1 * time.Second
+	defaultMaxBackoff = 5 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent
@@ -72,11 +72,6 @@ type AuthHandlerConfig struct {
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
-	initial := conf.MinBackoff
-	if initial <= 0 {
-		initial = defaultInitialBackoff
-	}
-
 	ah := &AuthHandler{
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
@@ -87,7 +82,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
-		minBackoff:                   initial,
+		minBackoff:                   conf.MinBackoff,
 		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
@@ -113,13 +108,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 
 	if ah.minBackoff <= 0 {
-		ah.minBackoff = defaultInitialBackoff
+		ah.minBackoff = defaultMinBackoff
 	}
 
 	backoff := newAgentBackoff(ah.minBackoff, ah.maxBackoff)
 
-	if backoff.current >= backoff.max {
-		return errors.New("auth handler: initial backoff cannot be greater than max backoff")
+	if backoff.min >= backoff.max {
+		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
 	}
 
 	ah.logger.Info("starting auth handler")
@@ -278,7 +273,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoff.reset(ah.minBackoff)
+			backoff.reset()
 
 			select {
 			case <-ctx.Done():
@@ -310,7 +305,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoff.reset(ah.minBackoff)
+			backoff.reset()
 		}
 
 		if watcher != nil {
@@ -362,22 +357,24 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 // agentBackoff tracks exponential backoff state.
 type agentBackoff struct {
+	min     time.Duration
 	max     time.Duration
 	current time.Duration
 }
 
-func newAgentBackoff(initial, max time.Duration) *agentBackoff {
+func newAgentBackoff(min, max time.Duration) *agentBackoff {
 	if max <= 0 {
 		max = defaultMaxBackoff
 	}
 
-	if initial <= 0 {
-		initial = defaultInitialBackoff
+	if min <= 0 {
+		min = defaultMinBackoff
 	}
 
 	return &agentBackoff{
+		current: min,
 		max:     max,
-		current: initial,
+		min:     min,
 	}
 }
 
@@ -395,8 +392,8 @@ func (b *agentBackoff) next() {
 	b.current = maxBackoff - time.Duration(trim)
 }
 
-func (b *agentBackoff) reset(initialBackoff time.Duration) {
-	b.current = initialBackoff
+func (b *agentBackoff) reset() {
+	b.current = b.min
 }
 
 func (b agentBackoff) String() string {
