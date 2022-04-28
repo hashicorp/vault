@@ -252,39 +252,11 @@ options.
 An example configuration, with very contrived values, follows:
 
 ```python
-auto_auth {
-  method {
-    type = "aws"
-    wrap_ttl = 300
-    config = {
-      role = "foobar"
-    }
-  }
-
-  sink {
-    type = "file"
-    config = {
-      path = "/tmp/file-foo"
-    }
-  }
-}
+# Other Vault Agent configuration blocks
+# ...
 
 cache {
   use_auto_auth_token = true
-}
-
-listener "unix" {
-  address = "/path/to/socket"
-  tls_disable = true
-}
-
-listener "tcp" {
-  address = "127.0.0.1:8200"
-  tls_disable = true
-}
-
-vault {
-  address = "http://127.0.0.1:8200"
 }
 ```
 
