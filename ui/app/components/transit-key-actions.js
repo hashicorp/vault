@@ -84,12 +84,10 @@ export default class TransitKeyActions extends Component {
 
   constructor() {
     super(...arguments);
-
     this.checkAction();
     if (this.args.selectedAction === 'export') {
       this.setExportKeyDefaults();
     }
-
     if (this.args.selectedAction) {
       //requires a key
       return;
@@ -110,6 +108,10 @@ export default class TransitKeyActions extends Component {
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }
 
+  get selectedAction() {
+    return this.args.selectedAction || this.args.key.supportedActions.firstObject;
+  }
+
   getModelInfo() {
     const model = this.args.key || this.args.backend;
     if (!model) {
@@ -125,9 +127,9 @@ export default class TransitKeyActions extends Component {
   }
 
   checkAction() {
-    const currentAction = this.args.selectedAction;
+    const currentAction = this.selectedAction;
     this.resetParams(this.oldSelectedAction, currentAction);
-    this.oldSelectedAction = this.args.selectedAction;
+    this.oldSelectedAction = this.selectedAction;
   }
 
   resetParams(oldAction, action) {
@@ -206,13 +208,14 @@ export default class TransitKeyActions extends Component {
 
   @action
   onActionChange(action) {
-    this.args.selectedAction = action; // ARG TODO not going to work
+    this.selectedAction = action;
+    // this.args.selectedAction = action; // ARG TODO not going to work
     this.checkAction();
   }
 
   @action
   onClear() {
-    this.resetParams(null, this.args.selectedAction); // ARG TODO not going to work.
+    this.resetParams(null, this.selectedAction); // ARG TODO not going to work.
   }
 
   @action
@@ -232,7 +235,7 @@ export default class TransitKeyActions extends Component {
   @action
   doSubmit(data, options = {}) {
     const { backend, id } = this.getModelInfo();
-    const action = this.args.selectedAction;
+    const action = this.selectedAction;
     const { encodedBase64, ...formData } = data || {};
     if (!encodedBase64) {
       if (action === 'encrypt' && !!formData.plaintext) {

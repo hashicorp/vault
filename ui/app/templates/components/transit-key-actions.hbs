@@ -1,4 +1,4 @@
-{{#if (eq @selectedAction "rotate")}}
+{{#if (eq this.selectedAction "rotate")}}
   {{#if @key.canRotate}}
     <ConfirmAction
       @buttonClasses="toolbar-link"
@@ -13,11 +13,11 @@
   {{/if}}
 {{else}}
   <MessageError @errors={{this.errors}} />
-  {{#if @selectedAction}}
-    <div data-test-transit-action={{@selectedAction}}>
+  {{#if this.selectedAction}}
+    <div data-test-transit-action={{this.selectedAction}}>
       {{! template-lint-disable no-passed-in-event-handlers }}
       {{component
-        (concat "transit-key-action/" @selectedAction)
+        (concat "transit-key-action/" this.selectedAction)
         key=@key
         keys=this.keys
         keyIsRSA=this.keyIsRSA
