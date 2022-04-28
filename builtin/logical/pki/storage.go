@@ -643,7 +643,11 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 	return IssuerRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
 }
 
-func resolveIssuerCRLPath(ctx context.Context, s logical.Storage, reference string) (string, error) {
+func resolveIssuerCRLPath(ctx context.Context, b *backend, s logical.Storage, reference string) (string, error) {
+	if b.useLegacyBundleCaStorage() {
+		return "crl", nil
+	}
+
 	issuer, err := resolveIssuerReference(ctx, s, reference)
 	if err != nil {
 		return "crl", err
