@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"hash"
 	"io"
+	"k8s.io/utils/strings/slices"
 	"net/http"
 	"os"
 	"path"
@@ -3615,15 +3616,28 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 
 func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	bytes := 0
+
+	//Parsing is convoluted here, but allows operators to ACL both bytes and entropy source
+	maybeUrlBytes := d.Raw["urlbytes"]
+	maybeSource := d.Raw["source"]
+	source := "platform"
 	var err error
-	strBytes := d.Get("urlbytes").(string)
-	if strBytes != "" {
-		bytes, err = strconv.Atoi(strBytes)
+	if maybeSource == "" {
+		bytes = d.Get("bytes").(int)
+	} else if maybeUrlBytes == "" && slices.Contains([]string{"", "platform", "seal", "all"}, maybeSource.(string)) {
+		source = maybeSource.(string)
+		bytes = d.Get("bytes").(int)
+	} else if maybeUrlBytes == "" {
+		bytes, err = strconv.Atoi(maybeSource.(string))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
 		}
 	} else {
-		bytes = d.Get("bytes").(int)
+		source = maybeSource.(string)
+		bytes, err = strconv.Atoi(maybeUrlBytes.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
+		}
 	}
 	format := d.Get("format").(string)
 
@@ -3644,7 +3658,6 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 
 	var randBytes []byte
 	var warning string
-	source := d.Get("source").(string)
 	switch source {
 	case "", "platform":
 		randBytes, err = uuid.GenerateRandomBytes(bytes)

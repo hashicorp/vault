@@ -855,7 +855,7 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
+			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
 			Fields: map[string]*framework.FieldSchema{
 				"urlbytes": {
 					Type:        framework.TypeString,
