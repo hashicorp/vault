@@ -1160,7 +1160,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != ogNS {
-		t.Fatalf("Expected namespace: \"%s\", got \"%s\"", ogNS, ns)
+		t.Fatalf("Expected namespace: %q, got %q", ogNS, ns)
 	}
 
 	// make a call with a temporary namespace
@@ -1172,7 +1172,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != newNS {
-		t.Fatalf("Expected new namespace: \"%s\", got \"%s\"", newNS, ns)
+		t.Fatalf("Expected new namespace: %q, got %q", newNS, ns)
 	}
 	// ensure client has not been modified
 	_, err = client.rawRequestWithContext(
@@ -1182,7 +1182,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != ogNS {
-		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
+		t.Fatalf("Expected original namespace: %q, got %q", ogNS, ns)
 	}
 
 	// make call with empty ns
@@ -1193,11 +1193,11 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != "" {
-		t.Fatalf("Expected no namespace, got \"%s\"", ns)
+		t.Fatalf("Expected no namespace, got %q", ns)
 	}
 
 	// ensure client has not been modified
 	if client.Namespace() != ogNS {
-		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, client.Namespace())
+		t.Fatalf("Expected original namespace: %q, got %q", ogNS, client.Namespace())
 	}
 }

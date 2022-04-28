@@ -178,7 +178,7 @@ func TestHANA_UpdateUser(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Able to login with new creds when expecting an issue")
 				} else if test.expectedErrMsg != "" && !strings.Contains(err.Error(), test.expectedErrMsg) {
-					t.Fatalf("Expected error message to contain \"%s\", received: %s", test.expectedErrMsg, err)
+					t.Fatalf("Expected error message to contain %q, received: %s", test.expectedErrMsg, err)
 				}
 			}
 			if !test.expectErrOnLogin && err != nil {

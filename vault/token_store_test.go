@@ -3402,7 +3402,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("unexpected number of keys: %d", len(keys))
 	}
 	if keys[0] != "test" {
-		t.Fatalf("expected \"test\", got \"%s\"", keys[0])
+		t.Fatalf("expected \"test\", got %q", keys[0])
 	}
 
 	req.Operation = logical.DeleteOperation

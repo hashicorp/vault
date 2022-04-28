@@ -83,7 +83,7 @@ func TestTransit_Restore(t *testing.T) {
 		return &b
 	}
 
-	keyExitsError := fmt.Errorf("key \"%s\" already exists", keyName)
+	keyExitsError := fmt.Errorf("key %q already exists", keyName)
 
 	testCases := []struct {
 		Name string
