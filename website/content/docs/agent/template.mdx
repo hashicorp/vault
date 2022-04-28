@@ -35,7 +35,7 @@ retrieved from Vault and rendered locally.
 ## Templating Language
 
 The template output content can be provided directly as part of the `contents`
-option on a `template` stanza or as a separate `.ctmpl` file and specified in
+option in a `template` stanza or as a separate `.ctmpl` file and specified in
 the `source` option of a `template` stanza.
 
 The following links contain additional resources for the templating language used by Vault Agent templating.
@@ -136,7 +136,7 @@ can be used here:
   template is rendered. However, the command will only run if the resulting
   template changes. Please note the exec block is optional, and the command
   within the exec block must run within a configurable timeout which defaults
-  to 30s. The command must contain a successful exit code. Additionally,
+  to 30s. The command must have a successful exit code. Additionally,
   the parameters within the exec block just include the `command` string slice
   and the `timeout` string value.
 - `perms` `(string: "")` - This is the permission to render the file. If
@@ -211,9 +211,9 @@ using the certificates `validTo` field.
 This does not apply to certificates generated with `generate_lease: true`. If set
 Vault Agent template will apply the non-renewable, leased secret rules.
 
-When Agent's auto-auth triggers a re-authentication, due to a token expiry for
+-> **Note** When Agent's auto-auth re-authenticates, due to a token expiry for
 example, it generates a new token for Agent's use. This triggers a template
-server restart, which fetched and re-renders a new set of certificates even if
+server restart, which fetches and re-renders a new set of certificates even if
 existing certificates are valid.
 
 ## Templating Configuration Example
@@ -240,4 +240,4 @@ template {
 }
 ```
 
-[consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.27.1/docs/templating-language.md
+[consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
