@@ -23,7 +23,6 @@ export const UTF8 = 'utf-8';
 export default class B64Toggle2 extends Component {
   @tracked _value; // internal tracker of encoded value
   @tracked lastEncoding = ''; // only becomes value once the action has been hit
-  @tracked isBase64 = this.currentEncoding === B64 ? true : false;
 
   constructor() {
     super(...arguments);
@@ -37,6 +36,10 @@ export default class B64Toggle2 extends Component {
     }
     // otherwise in all cases it is UTF8 encoding
     return UTF8;
+  }
+
+  get isBase64() {
+    return this.currentEncoding === B64 ? true : false;
   }
 
   get isInput() {

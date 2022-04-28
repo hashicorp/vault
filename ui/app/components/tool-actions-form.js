@@ -45,6 +45,7 @@ export default class ToolActionForm extends Component {
 
   @tracked bytes = 32;
   @tracked errors;
+  @tracked input;
   @tracked format = 'base64';
   @tracked algorithm = 'sha2-256';
   @tracked unwrapActiveTab = 'data';
