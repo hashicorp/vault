@@ -18,9 +18,9 @@ func TestParseSingleIPTemplate(t *testing.T) {
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
-			name:    "test non-template addr",
-			args:    args{"vaultproject.io"},
-			want:    "vaultproject.io",
+			name:    "test https addr",
+			args:    args{"https://vaultproject.io:8200"},
+			want:    "https://vaultproject.io:8200",
 			wantErr: assert.NoError,
 		},
 		{
