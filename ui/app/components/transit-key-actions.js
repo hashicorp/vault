@@ -1,19 +1,35 @@
-import { assign } from '@ember/polyfills';
-import { copy } from 'ember-copy';
-import { assert } from '@ember/debug';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import { action, setProperties } from '@ember/object';
+import { copy } from 'ember-copy';
+import { assign } from '@ember/polyfills';
 import { encodeString } from 'vault/utils/b64';
 
-const TRANSIT_PARAMS = {
+/**
+ * @module TransitKeyActionsTwo
+ * TransitKeyActionsTwo components are used to...
+ *
+ * @example
+ * ```js
+ * <TransitKeyActionsTwo @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * ```
+ * @param {string} key - requiredParam is...
+ * @param {string} selectedAction - optionalParam is...
+ * @param {string} [key=null] - param1 is...
+ * @param {object} [capabilities] - param1 is...
+ * @param {function} [onRefresh] - param1 is...
+ * @param {string} [backend] - param1 is...
+ */
+
+export const TRANSIT_PARAMS = {
   hash_algorithm: 'sha2-256',
   algorithm: 'sha2-256',
   signature_algorithm: 'pss',
   bits: 256,
   bytes: 32,
   ciphertext: null,
-  context: null,
+  context: null, // ARG TODO probably remove
   format: 'base64',
   hmac: null,
   input: null,
@@ -35,7 +51,7 @@ const TRANSIT_PARAMS = {
   didDecode: false,
   verification: 'Signature',
 };
-const PARAMS_FOR_ACTION = {
+export const PARAMS_FOR_ACTION = {
   sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
   verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
   hmac: ['input', 'algorithm', 'key_version'],
@@ -43,7 +59,7 @@ const PARAMS_FOR_ACTION = {
   decrypt: ['ciphertext', 'context', 'nonce'],
   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
 };
-const SUCCESS_MESSAGE_FOR_ACTION = {
+export const SUCCESS_MESSAGE_FOR_ACTION = {
   sign: 'Signed your data',
   // the verify action doesn't trigger a success message
   hmac: 'Created your hash output',
@@ -53,52 +69,46 @@ const SUCCESS_MESSAGE_FOR_ACTION = {
   datakey: 'Generated your key',
   export: 'Exported your key',
 };
-export default Component.extend(TRANSIT_PARAMS, {
-  store: service(),
-  flashMessages: service(),
+export default class TransitKeyActionsTwo extends Component {
+  @service store;
+  @service flashMessages;
 
-  // public attrs
-  selectedAction: null,
-  key: null,
-  isModalActive: false,
+  @tracked context = null;
+  @tracked exportKeyType;
+  @tracked exportKeyVersion;
+  @tracked errors;
+  @tracked isModalActive = false;
+  @tracked oldSelectedAction;
+  @tracked ciphertext;
+  @tracked plaintext;
+  @tracked key_version;
 
-  onRefresh() {},
-  init() {
-    this._super(...arguments);
-    // TODO figure out why get is needed here Ember Upgrade
-    // eslint-disable-next-line ember/no-get
-    if (this.selectedAction) {
+  constructor() {
+    super(...arguments);
+
+    if (this.args.selectedAction) {
       return;
     }
-    // eslint-disable-next-line ember/no-get
-    set(this, 'selectedAction', get(this, 'key.supportedActions.firstObject'));
-    assert('`key` is required for `' + this.toString() + '`.', this.getModelInfo());
-  },
-
-  didReceiveAttrs() {
-    this._super(...arguments);
-    this.checkAction();
-    if (this.selectedAction === 'export') {
-      this.setExportKeyDefaults();
-    }
-  },
+    console.log('run test suite and see if this ever happens');
+    // debugger;
+  }
 
   setExportKeyDefaults() {
-    const exportKeyType = this.key.exportKeyTypes.firstObject;
-    const exportKeyVersion = this.key.validKeyVersions.lastObject;
-    this.setProperties({
+    const exportKeyType = this.args.key.exportKeyTypes.firstObject;
+    const exportKeyVersion = this.args.key.validKeyVersions.lastObject;
+    setProperties(this, {
       exportKeyType,
       exportKeyVersion,
     });
-  },
+  }
 
-  keyIsRSA: computed('key.type', function () {
-    let type = this.key.type;
+  get keyIsRSA() {
+    let type = this.args.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
-  }),
+  }
 
   getModelInfo() {
-    const model = this.key || this.backend;
+    const model = this.args.key || this.args.backend;
     if (!model) {
       return null;
     }
@@ -109,15 +119,13 @@ export default Component.extend(TRANSIT_PARAMS, {
       backend,
       id,
     };
-  },
+  }
 
   checkAction() {
-    const currentAction = this.selectedAction;
-    const oldAction = this.oldSelectedAction;
-
-    this.resetParams(oldAction, currentAction);
-    set(this, 'oldSelectedAction', currentAction);
-  },
+    const currentAction = this.args.selectedAction;
+    this.resetParams(this.oldSelectedAction, currentAction); // ARG TODO ???
+    this.oldSelectedAction = this.args.selectedAction;
+  }
 
   resetParams(oldAction, action) {
     let params = copy(TRANSIT_PARAMS);
@@ -127,7 +135,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       // don't save values from datakey
       oldAction === 'datakey' ||
       // can rewrap signatures — using that as a ciphertext later would be problematic
-      (oldAction === 'rewrap' && !this.key.supportsEncryption);
+      (oldAction === 'rewrap' && !this.args.key.supportsEncryption);
 
     if (!clearWithoutCheck && action) {
       paramsToKeep = PARAMS_FOR_ACTION[action];
@@ -136,27 +144,28 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (paramsToKeep) {
       paramsToKeep.forEach((param) => delete params[param]);
     }
-    //resets params still left in the object to defaults
+    // resets params still left in the object to defaults
     this.clearErrors();
-    this.setProperties(params);
+    // debugger;
+    setProperties(this, params);
     if (action === 'export') {
       this.setExportKeyDefaults();
     }
-  },
+  }
 
   handleError(e) {
-    this.set('errors', e.errors);
-  },
+    this.errors = e.errors;
+  }
 
   clearErrors() {
-    this.set('errors', null);
-  },
+    this.errors = null;
+  }
 
   triggerSuccessMessage(action) {
     const message = SUCCESS_MESSAGE_FOR_ACTION[action];
     if (!message) return;
     this.flashMessages.success(message);
-  },
+  }
 
   handleSuccess(resp, options, action) {
     let props = {};
@@ -171,17 +180,17 @@ export default Component.extend(TRANSIT_PARAMS, {
       props = assign({}, props, { wrappedToken: resp.wrap_info.token });
     }
     if (!this.isDestroyed && !this.isDestroying) {
-      this.toggleProperty('isModalActive');
-      this.setProperties(props);
+      this.isModalActive = !this.isModalActive; // toggle
+      setProperties(this, props);
     }
     if (action === 'rotate') {
       this.onRefresh();
     }
     this.triggerSuccessMessage(action);
-  },
+  }
 
   compactData(data) {
-    let type = this.key.type;
+    let type = this.args.key.type;
     let isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
       if (key === 'signature_algorithm' && !isRSA) {
@@ -192,58 +201,63 @@ export default Component.extend(TRANSIT_PARAMS, {
       }
       return result;
     }, {});
-  },
+  }
 
-  actions: {
-    onActionChange(action) {
-      set(this, 'selectedAction', action);
-      this.checkAction();
-    },
+  @action
+  onActionChange(action) {
+    this.args.selectedAction = action; // ARG TODO not going to work
+    this.checkAction();
+  }
 
-    onClear() {
-      this.resetParams(null, this.selectedAction);
-    },
+  @action
+  onClear() {
+    this.resetParams(null, this.args.selectedAction); // ARG TODO not going to work.
+  }
 
-    clearParams(params) {
-      const arr = Array.isArray(params) ? params : [params];
-      arr.forEach((param) => this.set(param, null));
-    },
+  @action
+  clearParams(params) {
+    const arr = Array.isArray(params) ? params : [params];
+    arr.forEach((param) => (param ? null : null)); // linting won't let me do param = null
+  }
 
-    toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
+  @action
+  toggleModal(successMessage) {
+    if (!!successMessage && typeof successMessage === 'string') {
+      this.flashMessages.success(successMessage);
+    }
+    this.isModalActive = !this.isModalActive; // toggle
+  }
+
+  @action
+  doSubmit(data, options = {}) {
+    const { backend, id } = this.getModelInfo();
+    const action = this.args.selectedAction;
+    const { encodedBase64, ...formData } = data || {};
+    if (!encodedBase64) {
+      if (action === 'encrypt' && !!formData.plaintext) {
+        formData.plaintext = encodeString(formData.plaintext);
       }
-      this.toggleProperty('isModalActive');
-    },
-
-    doSubmit(data, options = {}) {
-      const { backend, id } = this.getModelInfo();
-      const action = this.selectedAction;
-      const { encodedBase64, ...formData } = data || {};
-      if (!encodedBase64) {
-        if (action === 'encrypt' && !!formData.plaintext) {
-          formData.plaintext = encodeString(formData.plaintext);
-        }
-        if ((action === 'hmac' || action === 'verify' || action === 'sign') && !!formData.input) {
-          formData.input = encodeString(formData.input);
-        }
+      if ((action === 'hmac' || action === 'verify' || action === 'sign') && !!formData.input) {
+        formData.input = encodeString(formData.input);
       }
-      let payload = formData ? this.compactData(formData) : null;
-      this.setProperties({
-        errors: null,
-        result: null,
-      });
-      this.store
-        .adapterFor('transit-key')
-        .keyAction(action, { backend, id, payload }, options)
-        .then(
-          (resp) => this.handleSuccess(resp, options, action),
-          (...errArgs) => this.handleError(...errArgs)
-        );
-    },
+    }
+    let payload = formData ? this.compactData(formData) : null;
+    setProperties(this, {
+      errors: null,
+      result: null,
+    });
 
-    onHash(newValue) {
-      this.context = newValue;
-    },
-  },
-});
+    this.store
+      .adapterFor('transit-key')
+      .keyAction(action, { backend, id, payload }, options)
+      .then(
+        (resp) => this.handleSuccess(resp, options, action),
+        (...errArgs) => this.handleError(...errArgs)
+      );
+  }
+
+  @action
+  onHash(newValue) {
+    this.context = newValue;
+  }
+}
