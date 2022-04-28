@@ -24,6 +24,13 @@ steps:
         . $BASH_ENV
         which circleci
         circleci version
-  - run: make ci-verify
+  - run:
+      name: Verify CircleCI
+      command: |
+        export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
+        echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
+        set -x
+        . $BASH_ENV
+        make ci-verify
   - configure-git
   - refresh_go_mod_cache
