@@ -68,7 +68,7 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 			keyRefParam: {
 				Type:        framework.TypeString,
 				Description: `Reference to key; either "default" for the configured default key, an identifier of a key, or the name assigned to the key.`,
-				Default:     "default",
+				Default:     defaultRef,
 			},
 			keyNameParam: {
 				Type:        framework.TypeString,

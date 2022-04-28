@@ -43,7 +43,7 @@ func pathConfigIssuers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/issuers",
 		Fields: map[string]*framework.FieldSchema{
-			"default": {
+			defaultRef: {
 				Type:        framework.TypeString,
 				Description: `Reference (name or identifier) to the default issuer.`,
 			},
@@ -67,13 +67,13 @@ func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, d
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default": config.DefaultIssuerId,
+			defaultRef: config.DefaultIssuerId,
 		},
 	}, nil
 }
 
 func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	newDefault := data.Get("default").(string)
+	newDefault := data.Get(defaultRef).(string)
 	if len(newDefault) == 0 || newDefault == defaultRef {
 		return logical.ErrorResponse("Invalid issuer specification; must be non-empty and can't be 'default'."), nil
 	}
@@ -90,7 +90,7 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default": parsedIssuer,
+			defaultRef: parsedIssuer,
 		},
 	}, nil
 }
@@ -109,7 +109,7 @@ func pathConfigKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/keys",
 		Fields: map[string]*framework.FieldSchema{
-			"default": {
+			defaultRef: {
 				Type:        framework.TypeString,
 				Description: `Reference (name or identifier) of the default key.`,
 			},
@@ -133,14 +133,14 @@ func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, 
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default": config.DefaultKeyId,
+			defaultRef: config.DefaultKeyId,
 		},
 	}, nil
 }
 
 func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	newDefault := data.Get("default").(string)
-	if len(newDefault) == 0 || newDefault == "default" {
+	newDefault := data.Get(defaultRef).(string)
+	if len(newDefault) == 0 || newDefault == defaultRef {
 		return logical.ErrorResponse("Invalid key specification; must be non-empty and can't be 'default'."), nil
 	}
 
@@ -156,7 +156,7 @@ func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request,
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default": parsedKey,
+			defaultRef: parsedKey,
 		},
 	}, nil
 }
