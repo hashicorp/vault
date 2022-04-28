@@ -12,7 +12,7 @@ includes tuples encrypted by a generated encryption key. The encrypted tuples
 include the Vault token used to retrieve secrets, leases for tokens/secrets, and
 secret values.
 
--> **Note:** Vault Agent Caching persistent cache will only restore _leased_
+-> **Note:** Vault Agent Persistent Caching will only restore _leased_
 secrets. Secrets that are not renewable, such as KV v2, will not be persisted.
 
 In order to use Vault Agent persistent cache, auto-auth must be used. During the
@@ -25,10 +25,8 @@ If Vault Agent templating is enabled alongside of the persistent cache, Vault
 Agent will automatically route templating requests through the cache. This
 ensures template requests are cached and restored properly.
 
-At the time of this writing, Vault Agent persistent cache is only supported in a
-Kubernetes environment. In the future the persistent cache will be expanded to
-include other environments.
-
+-> **Note** Vault Agent persistent cache is currently supported in a Kubernetes
+environment.
 
 ## Vault Agent Persistent Cache Types
 
@@ -36,7 +34,7 @@ Please see the sidebar for available types and their usage/configuration.
 
 ## Persistent Cache Example Configuration
 
-An example configuration, with very contrived values, follows:
+Here is an example of a persistent cache configuration.
 
 ```python
 auto_auth {
