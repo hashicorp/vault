@@ -138,6 +138,12 @@ type ParsedCSRBundle struct {
 	CSR             *x509.CertificateRequest
 }
 
+type KeyBundle struct {
+	PrivateKeyType  PrivateKeyType
+	PrivateKeyBytes []byte
+	PrivateKey      crypto.Signer
+}
+
 func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
 	switch signer.(type) {
 	case *rsa.PrivateKey:
@@ -851,4 +857,31 @@ func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.ExtKeyUsage&MicrosoftKernelCodeSigningExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
 	}
+}
+
+// SetParsedPrivateKey sets the private key parameters on the bundle
+func (p *KeyBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateKeyType PrivateKeyType, privateKeyBytes []byte) {
+	p.PrivateKey = privateKey
+	p.PrivateKeyType = privateKeyType
+	p.PrivateKeyBytes = privateKeyBytes
+}
+
+func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
+	block := pem.Block{}
+
+	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
+		block.Bytes = p.PrivateKeyBytes
+		switch p.PrivateKeyType {
+		case RSAPrivateKey:
+			block.Type = "RSA PRIVATE KEY"
+		case ECPrivateKey:
+			block.Type = "EC PRIVATE KEY"
+		default:
+			block.Type = "PRIVATE KEY"
+		}
+		privateKeyPemString := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		return privateKeyPemString, nil
+	}
+
+	return "", errutil.InternalError{Err: "No Private Key Bytes to Wrap"}
 }
