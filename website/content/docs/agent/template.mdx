@@ -128,11 +128,13 @@ can be used here:
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
   to "true".
-- `exec` `(object: optional)` - This is the optional exec block to give a command
-  to be run when the template is rendered. The command will only run if the
-  resulting template changes. The command must return within 30s (configurable),
-  and it must have a successful exit code. The parameters within this object
-  includes the `command` string slice and the `timeout` string value.
+- `exec` `(object: optional)` - The exec block executes a command when the
+  template is rendered. However, the command will only run if the resulting
+  template changes. Please note the exec block is optional, and the command
+  within the exec block must run within a configurable timeout which defaults
+  to 30s. The command must contain a successful exit code. Additionally,
+  the parameters within the exec block just include the `command` string slice
+  and the `timeout` string value.
 - `perms` `(string: "")` - This is the permission to render the file. If
   this option is left unspecified, Vault Agent will attempt to match the permissions
   of the file that already exists at the destination path. If no file exists at that
@@ -205,10 +207,10 @@ using the certificates `validTo` field.
 This does not apply to certificates generated with `generate_lease: true`. If set
 Vault Agent template will apply the non-renewable, leased secret rules.
 
-When Agent's auto-auth triggers a re-authentication, e.g. due to token expiry,
-it generates a new token for Agent's use. This triggers a template server
-restart, which fetched and re-renders a new set of certificates even if existing
-certificates are valid.
+When Agent's auto-auth triggers a re-authentication, due to a token expiry for
+example, it generates a new token for Agent's use. This triggers a template
+server restart, which fetched and re-renders a new set of certificates even if
+existing certificates are valid.
 
 ## Templating Example
 
