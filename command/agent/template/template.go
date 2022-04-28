@@ -318,6 +318,10 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		if sc.AgentConfig.AutoAuth.Method.MinBackoff > 0 {
 			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.MinBackoff
 		}
+
+		if sc.AgentConfig.AutoAuth.Method.MaxBackoff > 0 {
+			conf.Vault.Retry.MaxBackoff = &sc.AgentConfig.AutoAuth.Method.MaxBackoff
+		}
 	}
 
 	conf.Finalize()
