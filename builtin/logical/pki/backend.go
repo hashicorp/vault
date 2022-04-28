@@ -81,7 +81,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			LocalStorage: []string{
 				"revoked/",
-				"crl",
+				legacyCRLPath,
 				"crls/",
 				"certs/",
 			},

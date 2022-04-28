@@ -23,6 +23,7 @@ const (
 
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
+	legacyCRLPath               = "crl"
 )
 
 type keyID string
@@ -663,19 +664,19 @@ func resolveIssuerCRLPath(ctx context.Context, b *backend, s logical.Storage, re
 
 	issuer, err := resolveIssuerReference(ctx, s, reference)
 	if err != nil {
-		return "crl", err
+		return legacyCRLPath, err
 	}
 
 	crlConfig, err := getLocalCRLConfig(ctx, s)
 	if err != nil {
-		return "crl", err
+		return legacyCRLPath, err
 	}
 
 	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
 		return fmt.Sprintf("crls/%v", crlId), nil
 	}
 
-	return "crl", fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
+	return legacyCRLPath, fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
 }
 
 // Builds a certutil.CertBundle from the specified issuer identifier,

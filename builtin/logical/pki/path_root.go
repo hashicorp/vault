@@ -79,8 +79,13 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 		}
 	}
 
-	// Delete legacy CA bundle; but don't error if it doesn't exist.
+	// Delete legacy CA bundle.
 	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
+	}
+
+	// Delete legacy CRL bundle.
+	if err := req.Storage.Delete(ctx, legacyCRLPath); err != nil {
 		return nil, err
 	}
 

@@ -179,14 +179,14 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			contentType = "application/pkix-cert"
 		}
 	case req.Path == "crl" || req.Path == "crl/pem":
-		serial = "crl"
+		serial = legacyCRLPath
 		contentType = "application/pkix-crl"
 		if req.Path == "crl/pem" {
 			pemType = "X509 CRL"
 			contentType = "application/x-pem-file"
 		}
 	case req.Path == "cert/crl":
-		serial = "crl"
+		serial = legacyCRLPath
 		pemType = "X509 CRL"
 	case strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/raw"):
 		serial = data.Get("serial").(string)
