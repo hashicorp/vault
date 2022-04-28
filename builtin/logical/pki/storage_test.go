@@ -106,7 +106,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 	key1_ref1, existing, err := importKey(ctx, s, key1.PrivateKey, "key1")
 	require.NoError(t, err)
 	require.False(t, existing)
-	require.Equal(t, key1.PrivateKey, key1_ref1.PrivateKey)
+	require.Equal(t, strings.TrimSpace(key1.PrivateKey), strings.TrimSpace(key1_ref1.PrivateKey))
 
 	// Make sure if we attempt to re-import the same private key, no import/updates occur.
 	// So the existing flag should be set to true and we do not update the existing Name field.
@@ -166,7 +166,7 @@ func genIssuerAndKey(t *testing.T, b *backend) (issuerEntry, keyEntry) {
 	pkiKey := keyEntry{
 		ID:             keyId,
 		PrivateKeyType: certBundle.PrivateKeyType,
-		PrivateKey:     certBundle.PrivateKey,
+		PrivateKey:     strings.TrimSpace(certBundle.PrivateKey) + "\n",
 	}
 
 	issuerId := genIssuerId()
