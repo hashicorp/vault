@@ -12,9 +12,9 @@ The `/sys/tools` endpoints are a general set of tools.
 
 This endpoint returns high-quality random bytes of the specified length.
 
-| Method | Path                         |
-| :----- | :--------------------------- |
-| `POST` | `/sys/tools/random(/:bytes)` |
+| Method | Path                                   |
+| :----- | :------------------------------------- |
+| `POST` | `/sys/tools/random(/:source)(/:bytes)` |
 
 ### Parameters
 
@@ -23,6 +23,11 @@ This endpoint returns high-quality random bytes of the specified length.
 
 - `format` `(string: "base64")` – Specifies the output encoding. Valid options
   are `hex` or `base64`.
+
+- `source` `(string: "platform")` - Specifies the source of the requested entropy.
+  `platform`, the default, sources entropy from the platform's entropy source. 
+  `seal` sources from entropy augmentation (enterprise only).
+  `all` mixes entropy from all available sources.
 
 ### Sample Payload
 
