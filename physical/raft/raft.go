@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -943,20 +944,24 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		} else {
 			go func() {
 				ticker := time.NewTicker(50 * time.Millisecond)
-				timeout := time.NewTimer(raftConfig.HeartbeatTimeout)
+				// Emulate the random timeout used in Raft lib, to ensure that
+				// if all nodes are brought up simultaneously, they don't all
+				// call for an election at once.
+				extra := time.Duration(rand.Int63()) % raftConfig.HeartbeatTimeout
+				timeout := time.NewTimer(raftConfig.HeartbeatTimeout + extra)
 				for {
 					select {
 					case <-ticker.C:
 						switch raftObj.State() {
 						case raft.Candidate, raft.Leader:
-							b.logger.Trace("notifying due to being candidate or leader")
+							b.logger.Trace("triggering raft config reload due to being candidate or leader")
 							reloadConfig()
 							return
 						case raft.Shutdown:
 							return
 						}
 					case <-timeout.C:
-						b.logger.Trace("notifying due to timeout")
+						b.logger.Trace("triggering raft config reload due to initial timeout")
 						reloadConfig()
 						return
 					}
