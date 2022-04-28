@@ -115,9 +115,17 @@ func pathConfigKeys(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathKeyDefaultWrite,
-			logical.ReadOperation:   b.pathKeyDefaultRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.pathKeyDefaultWrite,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.pathKeyDefaultRead,
+				ForwardPerformanceStandby:   false,
+				ForwardPerformanceSecondary: false,
+			},
 		},
 
 		HelpSynopsis:    pathConfigKeysHelpSyn,
