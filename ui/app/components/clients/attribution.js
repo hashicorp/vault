@@ -18,6 +18,7 @@ import { inject as service } from '@ember/service';
  *    @selectedNamespace={{this.selectedNamespace}}
  *    @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
  *    @isDateRange={{this.isDateRange}}
+ *    @isCurrentMonth={{false}}
  *    @timestamp={{this.responseTimestamp}}
  *  />
  * ```
@@ -29,7 +30,8 @@ import { inject as service } from '@ember/service';
  * @param {string} selectedNamespace - namespace selected from filter bar
  * @param {string} startTimeDisplay - string that displays as start date for CSV modal
  * @param {string} endTimeDisplay - string that displays as end date for CSV modal
- * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month
+ * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month and display text accordingly
+ * @param {boolean} isCurrentMonth - boolean to determine if rendered in current month tab or not
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  */
 
@@ -54,7 +56,6 @@ export default class Attribution extends Component {
   }
 
   // truncate data before sending to chart component
-  // move truncating to serializer when we add separate request to fetch and export ALL namespace data
   get barChartTotalClients() {
     return this.args.totalClientsData?.slice(0, 10);
   }
@@ -159,7 +160,6 @@ export default class Attribution extends Component {
   @action
   exportChartData(filename) {
     let contents = this.generateCsvData();
-    console.log(contents);
     this.downloadCsv.download(filename, contents);
     this.showCSVDownloadModal = false;
   }

@@ -1,6 +1,6 @@
-{{! show single chart if data is from a range, show two charts if from a single month}}
+{{! show single horizontal bar chart unless data is from a single, historical month (isDateRange = false) }}
 <div
-  class={{concat "chart-wrapper" (if @isDateRange " single-chart-grid") (unless @isDateRange " dual-chart-grid")}}
+  class={{concat "chart-wrapper" (if (or @isCurrentMonth @isDateRange) " single-chart-grid" " dual-chart-grid")}}
   data-test-clients-attribution
 >
   <div class="chart-header has-header-link has-bottom-margin-m">
@@ -23,7 +23,7 @@
   </div>
 
   {{#if this.barChartTotalClients}}
-    {{#if (eq @isDateRange true)}}
+    {{#if (or @isDateRange @isCurrentMonth)}}
       <div class="chart-container-wide" data-test-chart-container="total-clients">
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
