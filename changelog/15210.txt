@@ -1,0 +1,4 @@
+```release-note:bug
+core/config: Handle case where config contains a non-template format value, only parse when it follows the format:
+{{ ... }}
+```
