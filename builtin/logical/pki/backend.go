@@ -130,6 +130,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathIssuerGenerateIntermediate(&b),
 			pathCrossSignIntermediate(&b),
 			pathConfigIssuers(&b),
+			pathReplaceRoot(&b),
 
 			// Key APIs
 			pathListKeys(&b),
