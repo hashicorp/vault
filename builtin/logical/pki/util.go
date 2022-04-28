@@ -158,7 +158,7 @@ func getIssuerName(ctx context.Context, s logical.Storage, data *framework.Field
 
 func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldData) (string, error) {
 	keyName := ""
-	keyNameIface, ok := data.GetOk("key_name")
+	keyNameIface, ok := data.GetOk(keyNameParam)
 	if ok {
 		keyName = strings.TrimSpace(keyNameIface.(string))
 
@@ -186,7 +186,7 @@ func getIssuerRef(data *framework.FieldData) string {
 }
 
 func getKeyRef(data *framework.FieldData) string {
-	return extractRef(data, "key_ref")
+	return extractRef(data, keyRefParam)
 }
 
 func extractRef(data *framework.FieldData, paramName string) string {

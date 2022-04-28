@@ -4,6 +4,10 @@ import "github.com/hashicorp/vault/sdk/framework"
 
 const (
 	issuerRefParam = "issuer_ref"
+	keyNameParam   = "key_name"
+	keyRefParam    = "key_ref"
+	keyIdParam     = "key_id"
+	keyTypeParam   = "key_type"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
@@ -375,7 +379,7 @@ func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*f
 }
 
 func addKeyNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields["key_name"] = &framework.FieldSchema{
+	fields[keyNameParam] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Provide a name for the key that will be generated,
 the name must be unique across all keys and not be the reserved value
@@ -386,7 +390,7 @@ the name must be unique across all keys and not be the reserved value
 }
 
 func addKeyRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields["key_ref"] = &framework.FieldSchema{
+	fields[keyRefParam] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Reference to a existing key; either "default"
 for the configured default key, an identifier or the name assigned

@@ -110,7 +110,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	// FIXME: Add tests for CAChain...
 
 	require.Equal(t, keyId, key.ID)
-	require.Equal(t, bundle.PrivateKey, key.PrivateKey)
+	require.Equal(t, strings.TrimSpace(bundle.PrivateKey), strings.TrimSpace(key.PrivateKey))
 	require.Equal(t, bundle.PrivateKeyType, key.PrivateKeyType)
 
 	// Make sure we kept the old bundle

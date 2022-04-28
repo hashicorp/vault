@@ -158,6 +158,10 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	// and identifier); the last return field is whether or not an error
 	// occurred.
 	//
+	// Normalize whitespace before beginning.  See note in importIssuer as to
+	// why we do this.
+	keyValue = strings.TrimSpace(keyValue) + "\n"
+	//
 	// Before we can import a known key, we first need to know if the key
 	// exists in storage already. This means iterating through all known
 	// keys and comparing their private value against this value.
@@ -205,7 +209,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	keyPublic := keySigner.Public()
 	result.PrivateKeyType = certutil.GetPrivateKeyTypeFromSigner(keySigner)
 
-	// Finally we can write the key to storage.
+	// Finally, we can write the key to storage.
 	if err := writeKey(ctx, s, result); err != nil {
 		return nil, false, err
 	}
@@ -724,4 +728,26 @@ func genUuid() string {
 		panic(err)
 	}
 	return aUuid
+}
+
+func isKeyInUse(keyId string, ctx context.Context, s logical.Storage) (inUse bool, issuerId string, err error) {
+	knownIssuers, err := listIssuers(ctx, s)
+	if err != nil {
+		return true, "", err
+	}
+
+	for _, issuerId := range knownIssuers {
+		issuerEntry, err := fetchIssuerById(ctx, s, issuerId)
+		if err != nil {
+			return true, issuerId.String(), errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
+		}
+		if issuerEntry == nil {
+			return true, issuerId.String(), errutil.InternalError{Err: fmt.Sprintf("Issuer listed: %s does not exist", issuerId.String())}
+		}
+		if issuerEntry.KeyID.String() == keyId {
+			return true, issuerId.String(), nil
+		}
+	}
+
+	return false, "", nil
 }
