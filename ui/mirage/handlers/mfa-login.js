@@ -2,11 +2,58 @@ import { Response } from 'miragejs';
 import Ember from 'ember';
 import fetch from 'fetch';
 
+// initial auth response cache -- lookup by mfa_request_id key
+const authResponses = {};
+// mfa requirement cache -- lookup by mfa_request_id key
+const mfaRequirement = {};
+
+// may be imported in tests when the validation request needs to be intercepted to make assertions prior to returning a response
+// in that case it may be helpful to still use this validation logic to ensure to payload is as expected
+export const validationHandler = (schema, req) => {
+  try {
+    const { mfa_request_id, mfa_payload } = JSON.parse(req.requestBody);
+    const mfaRequest = mfaRequirement[mfa_request_id];
+
+    if (!mfaRequest) {
+      return new Response(404, {}, { errors: ['MFA Request ID not found'] });
+    }
+    // validate request body
+    for (let constraintId in mfa_payload) {
+      // ensure ids were passed in map
+      const method = mfaRequest.methods.find(({ id }) => id === constraintId);
+      if (!method) {
+        return new Response(400, {}, { errors: [`Invalid MFA constraint id ${constraintId} passed in map`] });
+      }
+      // test non-totp validation by rejecting all pingid requests
+      if (method.type === 'pingid') {
+        return new Response(403, {}, { errors: ['PingId MFA validation failed'] });
+      }
+      // validate totp passcode
+      const passcode = mfa_payload[constraintId][0];
+      if (method.uses_passcode) {
+        if (passcode !== 'test') {
+          const error =
+            {
+              used: 'code already used; new code is available in 30 seconds',
+              limit:
+                'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
+            }[passcode] || 'failed to validate';
+          console.log(error);
+          return new Response(403, {}, { errors: [error] });
+        }
+      } else if (passcode) {
+        // for okta and duo, reject if a passcode was provided
+        return new Response(400, {}, { errors: ['Passcode should only be provided for TOTP MFA type'] });
+      }
+    }
+    return authResponses[mfa_request_id];
+  } catch (error) {
+    console.log(error);
+    return new Response(500, {}, { errors: ['Mirage Handler Error: /sys/mfa/validate'] });
+  }
+};
+
 export default function (server) {
-  // initial auth response cache -- lookup by mfa_request_id key
-  const authResponses = {};
-  // mfa requirement cache -- lookup by mfa_request_id key
-  const mfaRequirement = {};
   // generate different constraint scenarios and return mfa_requirement object
   const generateMfaRequirement = (req, res) => {
     const { user } = req.params;
@@ -104,48 +151,5 @@ export default function (server) {
   };
   server.post('/auth/:method/login/:user', passthroughLogin);
 
-  server.post('/sys/mfa/validate', (schema, req) => {
-    try {
-      const { mfa_request_id, mfa_payload } = JSON.parse(req.requestBody);
-      const mfaRequest = mfaRequirement[mfa_request_id];
-
-      if (!mfaRequest) {
-        return new Response(404, {}, { errors: ['MFA Request ID not found'] });
-      }
-      // validate request body
-      for (let constraintId in mfa_payload) {
-        // ensure ids were passed in map
-        const method = mfaRequest.methods.find(({ id }) => id === constraintId);
-        if (!method) {
-          return new Response(
-            400,
-            {},
-            { errors: [`Invalid MFA constraint id ${constraintId} passed in map`] }
-          );
-        }
-        // test non-totp validation by rejecting all pingid requests
-        if (method.type === 'pingid') {
-          return new Response(403, {}, { errors: ['PingId MFA validation failed'] });
-        }
-        // validate totp passcode
-        const passcode = mfa_payload[constraintId][0];
-        if (method.uses_passcode) {
-          if (passcode !== 'test') {
-            const error =
-              passcode === 'used'
-                ? 'code already used; new code is available in 30 seconds'
-                : 'failed to validate';
-            return new Response(403, {}, { errors: [error] });
-          }
-        } else if (passcode) {
-          // for okta and duo, reject if a passcode was provided
-          return new Response(400, {}, { errors: ['Passcode should only be provided for TOTP MFA type'] });
-        }
-      }
-      return authResponses[mfa_request_id];
-    } catch (error) {
-      console.log(error);
-      return new Response(500, {}, { errors: ['Mirage Handler Error: /sys/mfa/validate'] });
-    }
-  });
+  server.post('/sys/mfa/validate', validationHandler);
 }
