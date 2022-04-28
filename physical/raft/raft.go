@@ -934,12 +934,17 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 	confFuture := raftObj.GetConfiguration()
+	numServers := 0
 	if err := confFuture.Error(); err != nil {
+		// This should probably never happen, but just in case we'll log the error.
+		// We'll default in this case to the multi-node behaviour.
 		b.logger.Error("failed to read raft configuration", "error", err)
+	} else {
+		clusterConf := confFuture.Configuration()
+		numServers = len(clusterConf.Servers)
 	}
-	clusterConf := confFuture.Configuration()
 	if initialTimeoutMultiplier != 0 {
-		if len(clusterConf.Servers) == 1 {
+		if numServers == 1 {
 			reloadConfig()
 		} else {
 			go func() {

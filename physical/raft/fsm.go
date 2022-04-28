@@ -791,7 +791,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		snapshotInstallerRaw := wrapper.WrappedReadCloser()
 		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
 		if !ok {
-			return fmt.Errorf("expected snapshot installer object, got: %T", r)
+			return fmt.Errorf("expected snapshot installer object, got: %T", snapshotInstallerRaw)
 		}
 	}
 
