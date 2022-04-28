@@ -9,7 +9,7 @@
     </div>
 
     <div class="chart-container-wide">
-      <Clients::LineChart @dataset={{@lineChartData}} @upgradeData={{@upgradeData}} />
+      <Clients::LineChart @dataset={{this.lineChartData}} @upgradeData={{@upgradeData}} />
     </div>
 
     <div class="chart-subTitle">
@@ -38,7 +38,7 @@
 
   <div class="single-chart-grid">
     <div class="chart-container-wide">
-      <Clients::VerticalBarChart @dataset={{@barChartData}} @chartLegend={{@chartLegend}} />
+      <Clients::VerticalBarChart @dataset={{this.barChartData}} @chartLegend={{@chartLegend}} />
     </div>
 
     <div class="chart-subTitle">

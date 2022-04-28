@@ -2,7 +2,7 @@
   data-test-vertical-bar-chart
   class="chart has-grid"
   {{on "mouseleave" this.removeTooltip}}
-  {{did-insert this.registerListener @dataset}}
+  {{did-insert this.renderChart @dataset}}
   {{did-update this.renderChart @dataset}}
 >
 </svg>

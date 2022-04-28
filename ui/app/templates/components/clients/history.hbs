@@ -133,8 +133,8 @@
           {{#if this.monthlyClients}}
             <Clients::RunningTotal
               @chartLegend={{this.chartLegend}}
-              @lineChartData={{this.monthlyClients}}
-              @barChartData={{this.monthlyNewClients}}
+              @selectedNamespace={{this.selectedNamespace}}
+              @chartData={{this.monthlyClients}}
               @runningTotals={{this.totalUsageCounts}}
               @upgradeData={{this.upgradeDuringActivity}}
               @timestamp={{this.responseTimestamp}}

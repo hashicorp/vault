@@ -189,10 +189,6 @@ export default class History extends Component {
     return this.getActivityResponse?.byMonth;
   }
 
-  get monthlyNewClients() {
-    return this.monthlyClients.map((m) => m.new_clients);
-  }
-
   get hasAttributionData() {
     if (this.selectedAuthMethod) return false;
     if (this.selectedNamespace) {

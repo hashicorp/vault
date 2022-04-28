@@ -59,12 +59,12 @@ export default class HorizontalBarChart extends Component {
   }
 
   @action
-  renderChart(element, args) {
+  renderChart(element, [chartData]) {
     // chart legend tells stackFunction how to stack/organize data
     // creates an array of data for each key name
     // each array contains coordinates for each data bar
     let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
-    let dataset = args[0];
+    let dataset = chartData;
     let stackedData = stackFunction(dataset);
     let labelKey = this.labelKey;
     let xKey = this.xKey;
