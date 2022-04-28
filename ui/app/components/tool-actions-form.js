@@ -9,8 +9,9 @@ import { addSeconds, parseISO } from 'date-fns';
 import { A } from '@ember/array';
 
 /**
+//  * ARG TODO 
  * @module ToolActionsForm
- * ToolActionsForm2 components are used to...
+ * ToolActionsForm components are used to...
  *
  * @example
  * ```js
@@ -22,19 +23,18 @@ import { A } from '@ember/array';
  */
 
 export const DEFAULTS = {
-  token: null,
-  rewrap_token: null,
-  errors: A(),
-  wrap_info: null,
   creation_time: null,
   creation_ttl: null,
   data: '{\n}',
-  unwrap_data: null,
   details: null,
-  wrapTTL: null,
-  sum: null,
-  random_bytes: null,
+  errors: A(),
   input: null,
+  random_bytes: null,
+  rewrap_token: null,
+  sum: null,
+  token: null,
+  unwrap_data: null,
+  wrap_info: null,
 };
 
 export const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
@@ -44,11 +44,14 @@ export default class ToolActionForm extends Component {
   @service wizard;
 
   @tracked bytes = 32;
+  @tracked errors;
   @tracked format = 'base64';
-  @tracked alogrithm = 'sha2-256';
+  @tracked algorithm = 'sha2-256';
   @tracked unwrapActiveTab = 'data';
   @tracked creation_time;
   @tracked creation_ttl;
+  @tracked oldSelectedAction;
+  @tracked wrapTTL = '30m'; // default unless otherwise selected
 
   constructor() {
     super(...arguments);
@@ -68,6 +71,7 @@ export default class ToolActionForm extends Component {
     }
     this.oldSelectedAction = this.args.selectedAction;
   }
+
   @match('data', new RegExp(DEFAULTS.data)) dataIsEmpty;
 
   get expirationDate() {
@@ -119,8 +123,12 @@ export default class ToolActionForm extends Component {
     }
   }
 
+  get toolAdapter() {
+    return this.store.adapterFor('tools');
+  }
+
   @action
-  doSubmit(evt) {
+  async doSubmit(evt) {
     evt.preventDefault();
     const action = this.args.selectedAction;
     const wrapTTL = action === 'wrap' ? this.wrapTTL : null;
@@ -132,13 +140,12 @@ export default class ToolActionForm extends Component {
       creation_ttl: null,
     });
 
-    this.store
-      .adapterFor('tools')
-      .toolAction(action, data, { wrapTTL })
-      .then(
-        (resp) => this.handleSuccess(resp, action),
-        (...errArgs) => this.handleError(...errArgs)
-      );
+    try {
+      let response = await this.toolAdapter.toolAction(action, data, { wrapTTL });
+      this.handleSuccess(response, action);
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   @action
