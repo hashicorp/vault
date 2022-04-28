@@ -222,7 +222,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	config, err := getIssuersConfig(ctx, req.Storage)
 	if err == nil && len(config.DefaultIssuerId) > 0 {
 		// We can use the mapping above to check the issuer mapping.
-		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; !ok || len(keyId) == 0 {
+		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; ok && len(keyId) == 0 {
 			msg := "The default issuer has no key associated with it. Some operations like issuing certificates and signing CRLs will be unavailable with the requested default issuer until a key is imported or the default issuer is changed."
 			response.AddWarning(msg)
 			b.Logger().Error(msg)
