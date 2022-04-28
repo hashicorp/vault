@@ -5,21 +5,20 @@ import { action, setProperties } from '@ember/object';
 import { copy } from 'ember-copy';
 import { assign } from '@ember/polyfills';
 import { encodeString } from 'vault/utils/b64';
+// import { assert } from '@ember/debug';
 
 /**
- * @module TransitKeyActionsTwo
+ * @module TransitKeyActions
  * TransitKeyActionsTwo components are used to...
  *
  * @example
  * ```js
- * <TransitKeyActionsTwo @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <TransitKeyActions @key={this.model} @selectedAction='encrypt' @onRefresh={{this.onRefresh}}/>
  * ```
- * @param {string} key - requiredParam is...
- * @param {string} selectedAction - optionalParam is...
- * @param {string} [key=null] - param1 is...
- * @param {object} [capabilities] - param1 is...
- * @param {function} [onRefresh] - param1 is...
- * @param {string} [backend] - param1 is...
+ * @param {class} key - A model.
+ * @param {string} selectedAction - What the user is doing, e.g. encrypt, decrypt, etc.
+ * @param {function} [onRefresh] - function passed to the component.
+ * @param {string} [backend] - backend, e.g. transit
  */
 
 export const TRANSIT_PARAMS = {
@@ -29,7 +28,7 @@ export const TRANSIT_PARAMS = {
   bits: 256,
   bytes: 32,
   ciphertext: null,
-  context: null, // ARG TODO probably remove
+  context: null,
   format: 'base64',
   hmac: null,
   input: null,
@@ -69,7 +68,7 @@ export const SUCCESS_MESSAGE_FOR_ACTION = {
   datakey: 'Generated your key',
   export: 'Exported your key',
 };
-export default class TransitKeyActionsTwo extends Component {
+export default class TransitKeyActions extends Component {
   @service store;
   @service flashMessages;
 
@@ -86,11 +85,15 @@ export default class TransitKeyActionsTwo extends Component {
   constructor() {
     super(...arguments);
 
+    this.checkAction();
+    if (this.args.selectedAction === 'export') {
+      this.setExportKeyDefaults();
+    }
+
     if (this.args.selectedAction) {
+      //requires a key
       return;
     }
-    console.log('run test suite and see if this ever happens');
-    // debugger;
   }
 
   setExportKeyDefaults() {
@@ -123,7 +126,7 @@ export default class TransitKeyActionsTwo extends Component {
 
   checkAction() {
     const currentAction = this.args.selectedAction;
-    this.resetParams(this.oldSelectedAction, currentAction); // ARG TODO ???
+    this.resetParams(this.oldSelectedAction, currentAction);
     this.oldSelectedAction = this.args.selectedAction;
   }
 
@@ -136,7 +139,6 @@ export default class TransitKeyActionsTwo extends Component {
       oldAction === 'datakey' ||
       // can rewrap signatures — using that as a ciphertext later would be problematic
       (oldAction === 'rewrap' && !this.args.key.supportsEncryption);
-
     if (!clearWithoutCheck && action) {
       paramsToKeep = PARAMS_FOR_ACTION[action];
     }
@@ -146,7 +148,6 @@ export default class TransitKeyActionsTwo extends Component {
     }
     // resets params still left in the object to defaults
     this.clearErrors();
-    // debugger;
     setProperties(this, params);
     if (action === 'export') {
       this.setExportKeyDefaults();
@@ -184,7 +185,7 @@ export default class TransitKeyActionsTwo extends Component {
       setProperties(this, props);
     }
     if (action === 'rotate') {
-      this.onRefresh();
+      this.args.onRefresh();
     }
     this.triggerSuccessMessage(action);
   }

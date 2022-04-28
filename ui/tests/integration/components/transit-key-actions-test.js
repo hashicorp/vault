@@ -7,7 +7,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, find, findAll, fillIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
-import waitForError from 'vault/tests/helpers/wait-for-error';
+// import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -41,16 +41,6 @@ module('Integration | Component | transit key actions', function (hooks) {
       this.owner.register('service:store', storeStub);
       this.storeService = this.owner.lookup('service:store');
     });
-  });
-
-  test('it requires `key`', async function (assert) {
-    let promise = waitForError();
-    render(hbs`
-      {{transit-key-actions}}
-      <div id="modal-wormhole"></div>
-    `);
-    let err = await promise;
-    assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
   });
 
   test('it renders', async function (assert) {
@@ -244,9 +234,19 @@ module('Integration | Component | transit key actions', function (hooks) {
 
   test('it can export a key:default behavior', async function (assert) {
     this.set('storeService.rootKeyActionReturnVal', { wrap_info: { token: 'wrapped-token' } });
-    await setupExport.call(this);
+    this.set('key', {
+      backend: 'transit',
+      id: 'akey',
+      supportedActions: ['export'],
+      exportKeyTypes: ['encryption'],
+      validKeyVersions: [1],
+    });
+    await render(hbs`
+      {{transit-key-actions selectedAction="encrypt" key=key}}
+      <div id="modal-wormhole"></div>
+    `);
+    // await setupExport.call(this);
     await click('button[type="submit"]');
-
     assert.deepEqual(
       this.storeService.callArgs,
       {
