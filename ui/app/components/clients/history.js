@@ -209,7 +209,7 @@ export default class History extends Component {
   get newUsageCounts() {
     return this.selectedNamespace
       ? this.filteredNewClientAttribution
-      : this.byMonthTotalClients[0].new_clients;
+      : this.byMonthTotalClients[0]?.new_clients;
   }
 
   // total client data for horizontal bar chart in attribution component
@@ -231,7 +231,7 @@ export default class History extends Component {
     if (this.selectedNamespace) {
       return this.filteredNewClientAttribution?.mounts || null;
     } else {
-      return this.byMonthTotalClients[0].new_clients.namespaces;
+      return this.byMonthTotalClients[0]?.new_clients.namespaces || null;
     }
   }
 
@@ -257,7 +257,8 @@ export default class History extends Component {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
     // new client data is only available by month
-    const newClientsData = this.byMonthTotalClients[0].new_clients;
+    const newClientsData = this.byMonthTotalClients[0]?.new_clients;
+    if (!newClientsData) return null;
     if (this.isDateRange) return null;
     if (!namespace && !auth) return newClientsData;
 

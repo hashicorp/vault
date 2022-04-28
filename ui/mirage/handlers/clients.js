@@ -667,7 +667,7 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
       i++;
       let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
       // TODO CMB update this when we confirm what combined data looks like
-      transformedMonthlyArray.push({ timestamp });
+      transformedMonthlyArray.push({ timestamp, counts: null, namespaces: null });
     } while (i < differenceInCalendarMonths(startDateByMonth, queryStartDate));
   }
   if (isAfter(queryStartDate, startDateByMonth)) {

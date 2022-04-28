@@ -1,12 +1,14 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 export const flattenDataset = (object) => {
+  if (Object.values(object).every((e) => e === null)) return object;
   let flattenedObject = {};
   Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
   return homogenizeClientNaming(flattenedObject);
 };
 
 export const formatByMonths = (monthsArray) => {
+  if (!Array.isArray(monthsArray)) return monthsArray;
   const sortedPayload = [...monthsArray];
   // months are always returned from the API: [mostRecent...oldestMonth]
   sortedPayload.reverse();
@@ -38,6 +40,7 @@ export const formatByMonths = (monthsArray) => {
 };
 
 export const formatByNamespace = (namespaceArray) => {
+  if (!Array.isArray(namespaceArray)) return namespaceArray;
   return namespaceArray?.map((ns) => {
     // 'namespace_path' is an empty string for root
     if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
@@ -92,7 +95,7 @@ export const nestCountsWithinNamespaceKey = (month) => {
       let { clients, entity_clients, non_entity_clients, mounts } = namespace;
       let new_clients = {};
       if (month.new_clients) {
-        new_clients = month.new_clients.namespaces.find((n) => n.label === namespace.label) || {};
+        new_clients = month.new_clients.namespaces?.find((n) => n.label === namespace.label) || {};
       }
       // create counts object with namespace label as key name
       month.by_namespace_key[namespace.label] = {

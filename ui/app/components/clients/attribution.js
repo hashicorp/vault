@@ -38,7 +38,6 @@ import { inject as service } from '@ember/service';
 export default class Attribution extends Component {
   @tracked showCSVDownloadModal = false;
   @service downloadCsv;
-  @service store;
 
   get hasCsvData() {
     return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
