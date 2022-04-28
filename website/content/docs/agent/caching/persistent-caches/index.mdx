@@ -15,18 +15,16 @@ secret values.
 -> **Note:** Vault Agent Persistent Caching will only restore _leased_
 secrets. Secrets that are not renewable, such as KV v2, will not be persisted.
 
-In order to use Vault Agent persistent cache, auto-auth must be used. During the
-restoration of the cache, Vault Agent will pre-populate auto-auth with the
-persisted token. This token is required to renew restored leases. If the token
-has expired, the cached leases will be evicted and secrets will need to be
-retrieved from Vault.
+In order to use Vault Agent persistent cache, auto-auth must be used. If the
+auto-auth token has expired by the time the cache is restored, the cache will
+be invalidated and secrets will need to be re-fetched from Vault.
 
 If Vault Agent templating is enabled alongside of the persistent cache, Vault
 Agent will automatically route templating requests through the cache. This
 ensures template requests are cached and restored properly.
 
--> **Note** Vault Agent persistent cache is currently supported in a Kubernetes
-environment.
+-> **Note** Vault Agent persistent cache is currently supported only in a
+Kubernetes environment.
 
 ## Vault Agent Persistent Cache Types
 
