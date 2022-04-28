@@ -99,8 +99,10 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if p != nil {
-		p.Unlock()
-		return nil, fmt.Errorf("the import path cannot overwrite an existing key; use import-version to rotate an imported key")
+		if b.System().CachingDisabled() {
+			p.Unlock()
+		}
+		return nil, errors.New("the import path cannot overwrite an existing key; use import-version to rotate an imported key")
 	}
 
 	ciphertext, err := base64.RawURLEncoding.DecodeString(ciphertextString)
