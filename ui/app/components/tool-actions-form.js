@@ -9,17 +9,15 @@ import { addSeconds, parseISO } from 'date-fns';
 import { A } from '@ember/array';
 
 /**
-//  * ARG TODO 
  * @module ToolActionsForm
- * ToolActionsForm components are used to...
+ * ToolActionsForm components is used to display the tool fool under to tools/tool route.
  *
  * @example
  * ```js
- * <ToolActionsForm @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <ToolActionsForm @selectedAction=this.selectedAction/>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {string} selectedAction - The action selected such as wrap, lookup, etc.
+
  */
 
 export const DEFAULTS = {
@@ -43,27 +41,31 @@ export default class ToolActionForm extends Component {
   @service store;
   @service wizard;
 
-  @tracked bytes = 32;
-  @tracked errors;
-  @tracked input;
-  @tracked format = 'base64';
   @tracked algorithm = 'sha2-256';
-  @tracked unwrapActiveTab = 'data';
+  @tracked bytes = 32;
   @tracked creation_time;
   @tracked creation_ttl;
+  @tracked errors;
+  @tracked format = 'base64';
   @tracked oldSelectedAction;
+  @tracked input;
+  @tracked unwrapActiveTab = 'data';
   @tracked wrapTTL = '30m'; // default unless otherwise selected
+
+  @match('data', new RegExp(DEFAULTS.data)) dataIsEmpty;
 
   constructor() {
     super(...arguments);
     this.checkAction();
   }
 
-  reset() {
-    if (this.isDestroyed || this.isDestroying) {
-      return;
+  get expirationDate() {
+    const { creation_time, creation_ttl } = this;
+    if (!(creation_time && creation_ttl)) {
+      return null;
     }
-    this.DEFAULTS = setProperties(this, DEFAULTS);
+    // returns new Date with seconds added.
+    return addSeconds(parseISO(creation_time), creation_ttl);
   }
 
   checkAction() {
@@ -73,15 +75,17 @@ export default class ToolActionForm extends Component {
     this.oldSelectedAction = this.args.selectedAction;
   }
 
-  @match('data', new RegExp(DEFAULTS.data)) dataIsEmpty;
-
-  get expirationDate() {
-    const { creation_time, creation_ttl } = this;
-    if (!(creation_time && creation_ttl)) {
-      return null;
+  getData() {
+    const action = this.args.selectedAction;
+    if (WRAPPING_ENDPOINTS.includes(action)) {
+      return this.dataIsEmpty ? { token: (this.token || '').trim() } : JSON.parse(this.data);
     }
-    // returns new Date with seconds added.
-    return addSeconds(parseISO(creation_time), creation_ttl);
+    if (action === 'random') {
+      return { bytes: this.bytes, format: this.format };
+    }
+    if (action === 'hash') {
+      return { input: this.input, format: this.format, algorithm: this.algorithm };
+    }
   }
 
   handleError(e) {
@@ -111,21 +115,23 @@ export default class ToolActionForm extends Component {
     setProperties(this, props);
   }
 
-  getData() {
-    const action = this.args.selectedAction;
-    if (WRAPPING_ENDPOINTS.includes(action)) {
-      return this.dataIsEmpty ? { token: (this.token || '').trim() } : JSON.parse(this.data);
+  reset() {
+    if (this.isDestroyed || this.isDestroying) {
+      return;
     }
-    if (action === 'random') {
-      return { bytes: this.bytes, format: this.format };
-    }
-    if (action === 'hash') {
-      return { input: this.input, format: this.format, algorithm: this.algorithm };
-    }
+    this.DEFAULTS = setProperties(this, DEFAULTS);
   }
 
   get toolAdapter() {
     return this.store.adapterFor('tools');
+  }
+
+  @action
+  codemirrorUpdated(val, hasErrors) {
+    setProperties(this, {
+      buttonDisabled: hasErrors,
+      data: val,
+    });
   }
 
   @action
@@ -162,13 +168,5 @@ export default class ToolActionForm extends Component {
   @action
   updateTtl(ttl) {
     this.wrapTTl = ttl;
-  }
-
-  @action
-  codemirrorUpdated(val, hasErrors) {
-    setProperties(this, {
-      buttonDisabled: hasErrors,
-      data: val,
-    });
   }
 }

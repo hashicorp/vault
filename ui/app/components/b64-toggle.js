@@ -12,10 +12,10 @@ import { encodeString, decodeString } from 'vault/utils/b64';
  * ```js
  * <B64Toggle2 @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
- * @param {function} onChange - Function to handle the changing of the value passed in.
+ * @param {boolean} [isInput] - defaults to true. If false styling is changed.
+ * @param {string} value - value that is to be toggled between different states.
+ * @param {string} [dataTestType] - the optional value at the end of the data-test attribute. Used in testing.
+ * @param {function} onChange - Function passed down for a parent to handle the changing of the value passed in.
  */
 export const B64 = 'base64';
 export const UTF8 = 'utf-8';
@@ -23,10 +23,6 @@ export const UTF8 = 'utf-8';
 export default class B64Toggle2 extends Component {
   @tracked _value; // internal tracker of encoded value
   @tracked lastEncoding = ''; // only becomes value once the action has been hit
-
-  constructor() {
-    super(...arguments);
-  }
 
   get currentEncoding() {
     // can only be two values: B64 or UTF8
@@ -73,7 +69,7 @@ export default class B64Toggle2 extends Component {
     this.lastEncoding = toggleEncodingType;
 
     if (this.args.onChange) {
-      // function passed to component to change the changed value
+      // actions up to notify high level component of value change
       this.args.onChange(newVal);
     }
   }
