@@ -113,7 +113,7 @@ the certificate.
 )
 
 func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	keyRef := data.Get("ref").(string)
+	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
 		return logical.ErrorResponse("missing key reference"), nil
 	}
