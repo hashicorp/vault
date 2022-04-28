@@ -29,16 +29,6 @@ export default class Current extends Component {
       let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
       if (findUpgrade) relevantUpgrades.push(findUpgrade);
     });
-
-    // if no history for 1.9 or 1.10, customer skipped these releases so get first stored upgrade
-    // TODO account for customer STARTING on 1.11
-    if (relevantUpgrades.length === 0) {
-      relevantUpgrades.push({
-        id: versionHistory[0].id,
-        previousVersion: versionHistory[0].previousVersion,
-        timestampInstalled: versionHistory[0].timestampInstalled,
-      });
-    }
     // array of upgrade data objects for noteworthy upgrades
     return relevantUpgrades;
   }
@@ -134,11 +124,11 @@ export default class Current extends Component {
         return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
       }
       if (version.match('1.10')) {
-        return ' We added new client breakdowns starting in 1.10, so keep that in mind when looking at the data below.';
+        return ' We added mount level attribution starting in 1.10, so keep that in mind when looking at the data below.';
       }
     }
-    // return combined explanation if spans multiple upgrades, or customer skipped 1.9 and 1.10
-    return ' How we count clients changed in 1.9 and we added new client breakdowns starting in 1.10. Keep this in mind when looking at the data below.';
+    // return combined explanation if spans multiple upgrades
+    return ' How we count clients changed in 1.9 and we added mount level attribution starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
   // top level TOTAL client counts for current/partial month
