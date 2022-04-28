@@ -229,7 +229,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 						// Template returned a principal
 						allowedPrincipals = append(allowedPrincipals, templatePrincipal)
 					} else {
-						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", principal, err)
+						return nil, fmt.Errorf("template %q could not be rendered -> %s", principal, err)
 					}
 				}
 			} else {
@@ -393,7 +393,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 						// Template returned an extension value that we can use
 						extensions[extensionKey] = templateExtensionValue
 					} else {
-						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", extensionValue, err)
+						return nil, fmt.Errorf("template %q could not be rendered -> %s", extensionValue, err)
 					}
 				}
 			} else {

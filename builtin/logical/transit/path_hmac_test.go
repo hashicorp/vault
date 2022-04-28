@@ -268,7 +268,7 @@ func TestTransit_batchHMAC(t *testing.T) {
 			t.Fatalf("Expected HMAC %s got %s in result %d", expected[i].HMAC, m.HMAC, i)
 		}
 		if expected[i].Error != "" && expected[i].Error != m.Error {
-			t.Fatalf("Expected Error '%s' got '%s' in result %d", expected[i].Error, m.Error, i)
+			t.Fatalf("Expected Error %q got %q in result %d", expected[i].Error, m.Error, i)
 		}
 	}
 

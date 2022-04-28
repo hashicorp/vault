@@ -909,7 +909,7 @@ auto_auth {
 							continue
 						}
 						if string(c) != templateRendered(i)+suffix {
-							err = fmt.Errorf("expected='%s', got='%s'", templateRendered(i)+suffix, string(c))
+							err = fmt.Errorf("expected=%q, got=%q", templateRendered(i)+suffix, string(c))
 							continue
 						}
 					}
@@ -1462,7 +1462,7 @@ template_config {
 						continue
 					}
 					if string(c) != templateRendered(0) {
-						err = fmt.Errorf("expected='%s', got='%s'", templateRendered(0), string(c))
+						err = fmt.Errorf("expected=%q, got=%q", templateRendered(0), string(c))
 						continue
 					}
 					return nil
@@ -1982,7 +1982,7 @@ vault {
 						continue
 					}
 					if strings.TrimSpace(string(c)) != tc.expectTemplateRender {
-						err = fmt.Errorf("expected='%s', got='%s'", tc.expectTemplateRender, strings.TrimSpace(string(c)))
+						err = fmt.Errorf("expected=%q, got=%q", tc.expectTemplateRender, strings.TrimSpace(string(c)))
 						continue
 					}
 					return nil

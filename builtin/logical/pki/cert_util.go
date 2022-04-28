@@ -1123,7 +1123,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					parsedIP := net.ParseIP(v)
 					if parsedIP == nil {
 						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the value '%s' is not a valid IP address", v)}
+							"the value %q is not a valid IP address", v)}
 					}
 					ipAddresses = append(ipAddresses, parsedIP)
 				}
@@ -1178,7 +1178,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					if parsedURI == nil || err != nil {
 						return nil, errutil.UserError{
 							Err: fmt.Sprintf(
-								"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+								"the provided URI Subject Alternative Name %q is not a valid URI", uri),
 						}
 					}
 

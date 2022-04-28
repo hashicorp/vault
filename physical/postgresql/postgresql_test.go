@@ -166,7 +166,7 @@ func TestConnectionURL(t *testing.T) {
 			got := connectionURL(tt.input.conf)
 
 			if got != tt.want {
-				t.Errorf("connectionURL(%s): want '%s', got '%s'", tt.input, tt.want, got)
+				t.Errorf("connectionURL(%s): want %q, got %q", tt.input, tt.want, got)
 			}
 		})
 	}

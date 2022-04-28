@@ -290,7 +290,7 @@ func assertStringPrefix(expectedPrefix string) stringAssertion {
 	return func(t *testing.T, str string) {
 		t.Helper()
 		if !strings.HasPrefix(str, expectedPrefix) {
-			t.Fatalf("Missing prefix '%s': Actual: '%s'", expectedPrefix, str)
+			t.Fatalf("Missing prefix %q: Actual: %q", expectedPrefix, str)
 		}
 	}
 }
@@ -299,7 +299,7 @@ func assertStringRegex(expectedRegex string) stringAssertion {
 	re := regexp.MustCompile(expectedRegex)
 	return func(t *testing.T, str string) {
 		if !re.MatchString(str) {
-			t.Fatalf("Actual: '%s' did not match regexp '%s'", str, expectedRegex)
+			t.Fatalf("Actual: %q did not match regexp %q", str, expectedRegex)
 		}
 	}
 }

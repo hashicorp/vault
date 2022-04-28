@@ -915,7 +915,7 @@ func verifyRequestHeader(handler http.Handler) http.Handler {
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
 			logical.RespondError(w,
 				http.StatusPreconditionFailed,
-				fmt.Errorf("missing '%s' header", consts.RequestHeaderName))
+				fmt.Errorf("missing %q header", consts.RequestHeaderName))
 			return
 		}
 

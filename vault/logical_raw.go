@@ -56,7 +56,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 
 	encoding := data.Get("encoding").(string)
 	if encoding != "" && encoding != "base64" {
-		return logical.ErrorResponse("invalid encoding '%s'", encoding), logical.ErrInvalidRequest
+		return logical.ErrorResponse("invalid encoding %q", encoding), logical.ErrInvalidRequest
 	}
 
 	if b.recoveryMode {
@@ -66,7 +66,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot read '%s'", path)
+			err := fmt.Sprintf("cannot read %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -74,7 +74,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 	// Run additional checks if needed
 	if err := b.checkRaw(path); err != nil {
 		b.logger.Warn(err.Error(), "path", path)
-		return logical.ErrorResponse("cannot read '%s'", path), logical.ErrInvalidRequest
+		return logical.ErrorResponse("cannot read %q", path), logical.ErrInvalidRequest
 	}
 
 	entry, err := b.barrier.Get(ctx, path)
@@ -127,7 +127,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 
 	encoding := data.Get("encoding").(string)
 	if encoding != "" && encoding != "base64" {
-		return logical.ErrorResponse("invalid encoding '%s'", encoding), logical.ErrInvalidRequest
+		return logical.ErrorResponse("invalid encoding %q", encoding), logical.ErrInvalidRequest
 	}
 
 	if b.recoveryMode {
@@ -137,7 +137,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot write '%s'", path)
+			err := fmt.Sprintf("cannot write %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -203,7 +203,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 			}
 			break
 		default:
-			err := fmt.Sprintf("invalid compression type '%s'", compressionType)
+			err := fmt.Sprintf("invalid compression type %q", compressionType)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 
@@ -236,7 +236,7 @@ func (b *RawBackend) handleRawDelete(ctx context.Context, req *logical.Request, 
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot delete '%s'", path)
+			err := fmt.Sprintf("cannot delete %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -261,7 +261,7 @@ func (b *RawBackend) handleRawList(ctx context.Context, req *logical.Request, da
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot list '%s'", path)
+			err := fmt.Sprintf("cannot list %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -269,7 +269,7 @@ func (b *RawBackend) handleRawList(ctx context.Context, req *logical.Request, da
 	// Run additional checks if needed
 	if err := b.checkRaw(path); err != nil {
 		b.logger.Warn(err.Error(), "path", path)
-		return logical.ErrorResponse("cannot list '%s'", path), logical.ErrInvalidRequest
+		return logical.ErrorResponse("cannot list %q", path), logical.ErrInvalidRequest
 	}
 
 	keys, err := b.barrier.List(ctx, path)

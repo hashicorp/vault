@@ -897,7 +897,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("ttl should be shorter than max ttl"), nil
 	}
 	if roleEntry.TokenPeriod > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("period of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
+		return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
 	roleTagStr, ok := data.GetOk("role_tag")

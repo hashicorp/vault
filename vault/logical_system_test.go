@@ -3477,7 +3477,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 
 	for _, path := range pathSamples {
 		if doc.Paths[path.path] == nil {
-			t.Fatalf("didn't find expected path '%s'.", path)
+			t.Fatalf("didn't find expected path %q.", path)
 		}
 		tag := doc.Paths[path.path].Get.Tags[0]
 		if tag != path.tag {

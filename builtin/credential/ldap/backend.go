@@ -150,7 +150,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 	if len(ldapGroups) == 0 {
 		errString := fmt.Sprintf(
-			"no LDAP groups found in groupDN '%s'; only policies from locally-defined groups available",
+			"no LDAP groups found in groupDN %q; only policies from locally-defined groups available",
 			cfg.GroupDN)
 		ldapResponse.AddWarning(errString)
 	}

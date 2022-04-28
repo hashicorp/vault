@@ -14,7 +14,7 @@ func testParseTime(t *testing.T, format, timeval string) time.Time {
 	t.Helper()
 	tm, err := time.Parse(format, timeval)
 	if err != nil {
-		t.Fatalf("Error parsing time '%s': %v", timeval, err)
+		t.Fatalf("Error parsing time %q: %v", timeval, err)
 	}
 	return tm
 }

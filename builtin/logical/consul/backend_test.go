@@ -905,7 +905,7 @@ func testBackendEntNamespace(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated namespace '%s' token: %s with accessor %s", d.ConsulNamespace, d.Token, d.Accessor)
+	t.Logf("Generated namespace %q token: %s with accessor %s", d.ConsulNamespace, d.Token, d.Accessor)
 
 	if d.ConsulNamespace != "ns1" {
 		t.Fatalf("Failed to access namespace")
@@ -1025,7 +1025,7 @@ func testBackendEntPartition(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated partition '%s' token: %s with accessor %s", d.Partition, d.Token, d.Accessor)
+	t.Logf("Generated partition %q token: %s with accessor %s", d.Partition, d.Token, d.Accessor)
 
 	if d.Partition != "part1" {
 		t.Fatalf("Failed to access partition")

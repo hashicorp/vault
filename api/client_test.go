@@ -254,7 +254,7 @@ func TestDefaulRetryPolicy(t *testing.T) {
 				t.Fatalf("expected to retry request: '%t', but actual result was: '%t'", test.expect, retry)
 			}
 			if err != test.expectErr {
-				t.Fatalf("expected error from retry policy: '%s', but actual result was: '%s'", err, test.expectErr)
+				t.Fatalf("expected error from retry policy: %q, but actual result was: %q", err, test.expectErr)
 			}
 		})
 	}

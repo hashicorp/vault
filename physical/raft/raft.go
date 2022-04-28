@@ -233,7 +233,7 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 		}
 
 		if info.AutoJoinScheme != "" && (info.AutoJoinScheme != "http" && info.AutoJoinScheme != "https") {
-			return nil, fmt.Errorf("invalid scheme '%s'; must either be http or https", info.AutoJoinScheme)
+			return nil, fmt.Errorf("invalid scheme %q; must either be http or https", info.AutoJoinScheme)
 		}
 
 		info.Retry = true
