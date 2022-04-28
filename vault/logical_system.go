@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -9,7 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 	"hash"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -3639,9 +3642,40 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("unsupported encoding format %q; must be \"hex\" or \"base64\"", format), nil
 	}
 
-	randBytes, err := uuid.GenerateRandomBytes(bytes)
-	if err != nil {
-		return nil, err
+	var randBytes []byte
+	var warning string
+	source := d.Get("source").(string)
+	switch source {
+	case "", "platform":
+		randBytes, err = uuid.GenerateRandomBytes(bytes)
+		if err != nil {
+			return nil, err
+		}
+	case "seal":
+		if rand.Reader == b.Core.secureRandomReader {
+			warning = "no seal/entropy augmentation available, using platform entropy source"
+		}
+		randBytes = make([]byte, bytes)
+		_, err = io.ReadFull(b.Core.secureRandomReader, randBytes)
+		if err != nil {
+			return nil, err
+		}
+	case "all":
+		sealBytes := make([]byte, bytes)
+		_, err = io.ReadFull(b.Core.secureRandomReader, sealBytes)
+		if err != nil {
+			return nil, err
+		}
+		randBytes, err = uuid.GenerateRandomBytes(bytes)
+		if err != nil {
+			return nil, err
+		}
+		randBytes, err = xor.XORBytes(sealBytes, randBytes)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return logical.ErrorResponse("unsupported entropy source %q; must be \"platform\" or \"seal\", or \"all\"", source), nil
 	}
 
 	var retStr string
@@ -3657,6 +3691,9 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 		Data: map[string]interface{}{
 			"random_bytes": retStr,
 		},
+	}
+	if warning != "" {
+		resp.Warnings = []string{warning}
 	}
 	return resp, nil
 }

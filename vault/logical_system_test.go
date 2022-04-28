@@ -3102,7 +3102,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
+	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int, source string) {
 		t.Helper()
 		getResponse := func() []byte {
 			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
@@ -3152,30 +3152,32 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 			t.Fatal("length of output random bytes not what is expected")
 		}
 		if reflect.DeepEqual(rand1, rand2) {
-			t.Fatal("found identical ouputs")
+			t.Fatal("found identical outputs")
 		}
 	}
 
-	// Test defaults
-	doRequest(req, false, "base64", 32)
+	for _, source := range []string{"", "platform", "seal", "all"} {
+		// Test defaults
+		doRequest(req, false, "base64", 32, source)
 
-	// Test size selection in the path
-	req.Path = "tools/random/24"
-	req.Data["format"] = "hex"
-	doRequest(req, false, "hex", 24)
+		// Test size selection in the path
+		req.Path = "tools/random/24"
+		req.Data["format"] = "hex"
+		doRequest(req, false, "hex", 24, source)
 
-	// Test bad input/format
-	req.Path = "tools/random"
-	req.Data["format"] = "base92"
-	doRequest(req, true, "", 0)
+		// Test bad input/format
+		req.Path = "tools/random"
+		req.Data["format"] = "base92"
+		doRequest(req, true, "", 0, source)
 
-	req.Data["format"] = "hex"
-	req.Data["bytes"] = -1
-	doRequest(req, true, "", 0)
+		req.Data["format"] = "hex"
+		req.Data["bytes"] = -1
+		doRequest(req, true, "", 0, source)
 
-	req.Data["format"] = "hex"
-	req.Data["bytes"] = maxBytes + 1
-	doRequest(req, true, "", 0)
+		req.Data["format"] = "hex"
+		req.Data["bytes"] = maxBytes + 1
+		doRequest(req, true, "", 0, source)
+	}
 }
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
@@ -3436,9 +3438,6 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 			},
 		},
 		"paths": map[string]interface{}{},
-		"components": map[string]interface{}{
-			"schemas": map[string]interface{}{},
-		},
 	}
 
 	if diff := deep.Equal(oapi, exp); diff != nil {

@@ -873,6 +873,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 					Default:     "base64",
 					Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
 				},
+
+				"source": {
+					Type:        framework.TypeString,
+					Default:     "platform",
+					Description: `Which system to source entropy from, ether "platform", "seal", or "all".`,
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
