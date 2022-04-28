@@ -72,7 +72,7 @@ failures.
 
 ### `template_config` Stanza Example
 
-```python
+```hcl
 template_config {
   exit_on_retry_failure = true
   static_secret_render_interval = "10m"
@@ -162,7 +162,7 @@ can be used here:
 
 ### Example `template` Stanza
 
-```python
+```hcl
 template {
   source      = "/tmp/agent/template.ctmpl"
   destination = "/tmp/agent/render.txt"
@@ -220,7 +220,7 @@ existing certificates are valid.
 
 The following demonstrates Vault Agent Templates configuration blocks.
 
-```python
+```hcl
 # Other Vault Agent configuration blocks
 # ...
 
