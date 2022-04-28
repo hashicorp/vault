@@ -157,6 +157,10 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	// and identifier); the last return field is whether or not an error
 	// occurred.
 	//
+	// Normalize whitespace before beginning.  See note in importIssuer as to
+	// why we do this.
+	keyValue = strings.TrimSpace(keyValue) + "\n"
+	//
 	// Before we can import a known key, we first need to know if the key
 	// exists in storage already. This means iterating through all known
 	// keys and comparing their private value against this value.
