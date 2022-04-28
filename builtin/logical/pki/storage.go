@@ -730,26 +730,22 @@ func genUuid() string {
 	return aUuid
 }
 
-func isKeyInUse(keyID string, ctx context.Context, s logical.Storage) (inUse bool, issuerId string, err error) {
-	strList, err := s.List(ctx, issuerPrefix)
+func isKeyInUse(keyId string, ctx context.Context, s logical.Storage) (inUse bool, issuerId string, err error) {
+	knownIssuers, err := listIssuers(ctx, s)
 	if err != nil {
 		return true, "", err
 	}
 
-	for _, issuerId := range strList {
-		entry, err := s.Get(ctx, issuerPrefix+issuerId)
+	for _, issuerId := range knownIssuers {
+		issuerEntry, err := fetchIssuerById(ctx, s, issuerId)
 		if err != nil {
-			return true, issuerId, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
+			return true, issuerId.String(), errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
 		}
-		if entry == nil {
-			return true, issuerId, errutil.InternalError{Err: fmt.Sprintf("Issuer listed: %s does not exist", issuerId)}
+		if issuerEntry == nil {
+			return true, issuerId.String(), errutil.InternalError{Err: fmt.Sprintf("Issuer listed: %s does not exist", issuerId.String())}
 		}
-		var issuer issuerEntry
-		if err := entry.DecodeJSON(&issuer); err != nil {
-			return true, issuerId, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId, err)}
-		}
-		if entry.Key == keyID {
-			return true, issuerId, nil
+		if issuerEntry.KeyID.String() == keyId {
+			return true, issuerId.String(), nil
 		}
 	}
 
