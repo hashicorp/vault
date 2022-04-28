@@ -16,8 +16,10 @@ func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `ca(/pem)?`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -30,8 +32,10 @@ func pathFetchCAChain(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `(cert/)?ca_chain`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -44,8 +48,10 @@ func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl(/pem)?`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -65,8 +71,10 @@ hyphen-separated octal`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -87,8 +95,10 @@ hyphen-separated octal`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -101,8 +111,10 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/crl`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -115,8 +127,10 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathFetchCertList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathFetchCertList,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -205,17 +219,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 
 		if serial == "ca_chain" {
-			caChain := caInfo.GetCAChain()
-			var certStr string
-			for _, ca := range caChain {
-				block := pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: ca.Bytes,
-				}
-				certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
-			}
-			certificate = []byte(strings.TrimSpace(certStr))
-
 			rawChain := caInfo.GetFullChain()
 			var chainStr string
 			for _, ca := range rawChain {
@@ -226,6 +229,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 				chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 			}
 			fullChain = []byte(strings.TrimSpace(chainStr))
+			certificate = fullChain
 		} else if serial == "ca" {
 			certificate = caInfo.Certificate.Raw
 

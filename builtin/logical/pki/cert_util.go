@@ -89,19 +89,22 @@ func getFormat(data *framework.FieldData) string {
 	return format
 }
 
-// Fetches the CA info. Unlike other certificates, the CA info is stored
-// in the backend as a CertBundle, because we are storing its private key
+// fetchCAInfo will fetch the CA info, will return an error if no ca info exists.
 func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string) (*certutil.CAInfoBundle, error) {
-	id, err := resolveIssuerReference(ctx, req.Storage, issuerRef)
+	entry, bundle, err := fetchCertBundle(ctx, b, req.Storage, issuerRef)
 	if err != nil {
-		// Usually a bad label from the user or misconfigured default.
-		return nil, errutil.UserError{Err: err.Error()}
+		switch err.(type) {
+		case errutil.UserError:
+			return nil, err
+		case errutil.InternalError:
+			return nil, err
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+		}
 	}
 
-	bundle, err := fetchCertBundleByIssuerId(ctx, req.Storage, id, true)
-	if err != nil {
-		// Once we have an issuer id, usually a bug on our side if it isn't there.
-		return nil, errutil.InternalError{Err: err.Error()}
+	if bundle == nil {
+		return nil, errutil.UserError{Err: "no CA information is present"}
 	}
 
 	parsedBundle, err := parseCABundle(ctx, b, req, bundle)
@@ -116,7 +119,11 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerRef)}
 	}
 
-	caInfo := &certutil.CAInfoBundle{ParsedCertBundle: *parsedBundle, URLs: nil}
+	caInfo := &certutil.CAInfoBundle{
+		ParsedCertBundle:     *parsedBundle,
+		URLs:                 nil,
+		LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
+	}
 
 	entries, err := getURLs(ctx, req)
 	if err != nil {
@@ -132,6 +139,26 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 	caInfo.URLs = entries
 
 	return caInfo, nil
+}
+
+// fetchCertBundle is our flex point to load either the legacy ca bundle if migration has yet to be
+// performed or load the bundle from the new key/issuer storage. Any function that needs a bundle
+// should load it using this method to maintain compatibility on secondary nodes for which their
+// primary's have not upgraded yet.
+// NOTE: This function can return a nil, nil response.
+func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerRef string) (*issuerEntry, *certutil.CertBundle, error) {
+	if b.useLegacyBundleCaStorage() {
+		// We have not completed the migration so attempt to load the bundle from the legacy location
+		return getLegacyCertBundle(ctx, s)
+	}
+
+	id, err := resolveIssuerReference(ctx, s, issuerRef)
+	if err != nil {
+		// Usually a bad label from the user or misconfigured default.
+		return nil, nil, errutil.UserError{Err: err.Error()}
+	}
+
+	return fetchCertBundleByIssuerId(ctx, s, id, true)
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
@@ -1256,13 +1283,22 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		} else {
 			notAfter = time.Now().Add(ttl)
 		}
-		// If it's not self-signed, verify that the issued certificate won't be
-		// valid past the lifetime of the CA certificate
-		if caSign != nil &&
-			notAfter.After(caSign.Certificate.NotAfter) && !data.role.AllowExpirationPastCA {
-
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), caSign.Certificate.NotAfter.Format(time.RFC3339Nano))}
+		if caSign != nil && notAfter.After(caSign.Certificate.NotAfter) {
+			// If it's not self-signed, verify that the issued certificate
+			// won't be valid past the lifetime of the CA certificate, and
+			// act accordingly. This is dependent based on the issuers's
+			// LeafNotAfterBehavior argument.
+			switch caSign.LeafNotAfterBehavior {
+			case certutil.PermitNotAfterBehavior:
+				// Explicitly do nothing.
+			case certutil.TruncateNotAfterBehavior:
+				notAfter = caSign.Certificate.NotAfter
+			case certutil.ErrNotAfterBehavior:
+				fallthrough
+			default:
+				return nil, errutil.UserError{Err: fmt.Sprintf(
+					"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), caSign.Certificate.NotAfter.Format(time.RFC3339Nano))}
+			}
 		}
 	}
 

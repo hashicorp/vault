@@ -16,81 +16,112 @@ import (
 // and we need to perform it again...
 const latestMigrationVersion = 1
 
-type legacyBundleMigration struct {
+type legacyBundleMigrationLog struct {
 	Hash             string    `json:"hash" structs:"hash" mapstructure:"hash"`
 	Created          time.Time `json:"created" structs:"created" mapstructure:"created"`
 	MigrationVersion int       `json:"migrationVersion" structs:"migrationVersion" mapstructure:"migrationVersion"`
 }
 
-func migrateStorage(ctx context.Context, req *logical.InitializationRequest, logger log.Logger) error {
-	s := req.Storage
-	legacyBundle, err := getLegacyCertBundle(ctx, s)
+type migrationInfo struct {
+	isRequired       bool
+	legacyBundle     *certutil.CertBundle
+	legacyBundleHash string
+	migrationLog     *legacyBundleMigrationLog
+}
+
+func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, error) {
+	migrationInfo := migrationInfo{
+		isRequired:       false,
+		legacyBundle:     nil,
+		legacyBundleHash: "",
+		migrationLog:     nil,
+	}
+
+	var err error
+	_, migrationInfo.legacyBundle, err = getLegacyCertBundle(ctx, s)
+	if err != nil {
+		return migrationInfo, err
+	}
+
+	migrationInfo.migrationLog, err = getLegacyBundleMigrationLog(ctx, s)
+	if err != nil {
+		return migrationInfo, err
+	}
+
+	migrationInfo.legacyBundleHash, err = computeHashOfLegacyBundle(migrationInfo.legacyBundle)
+	if err != nil {
+		return migrationInfo, err
+	}
+
+	// Even if there isn't anything to migrate, we always want to write out the log entry
+	// as that will trigger the secondary clusters to toggle/wake up
+	if (migrationInfo.migrationLog == nil) ||
+		(migrationInfo.migrationLog.Hash != migrationInfo.legacyBundleHash) ||
+		(migrationInfo.migrationLog.MigrationVersion != latestMigrationVersion) {
+		migrationInfo.isRequired = true
+	}
+
+	return migrationInfo, nil
+}
+
+func migrateStorage(ctx context.Context, s logical.Storage, logger log.Logger) error {
+	migrationInfo, err := getMigrationInfo(ctx, s)
 	if err != nil {
 		return err
 	}
 
-	if legacyBundle == nil {
-		// No legacy certs to migrate, we are done...
-		logger.Debug("No legacy certs found, no migration required.")
+	if !migrationInfo.isRequired {
+		// No migration was deemed to be required.
+		logger.Debug("existing migration found and was considered valid, skipping migration.")
 		return nil
 	}
 
-	migrationEntry, err := getLegacyBundleMigrationLog(ctx, s)
-	if err != nil {
-		return err
-	}
-	hash, err := computeHashOfLegacyBundle(legacyBundle)
-	if err != nil {
-		return err
-	}
-
-	if migrationEntry != nil {
-		// At this point we have already migrated something previously.
-		if migrationEntry.Hash == hash &&
-			migrationEntry.MigrationVersion == latestMigrationVersion {
-			// The hashes are the same, no need to try and re-import...
-			logger.Debug("existing migration hash found and matched legacy bundle, skipping migration.")
-			return nil
-		}
-	}
-
 	logger.Info("performing PKI migration to new keys/issuers layout")
-
-	anIssuer, aKey, err := writeCaBundle(ctx, s, legacyBundle, "current", "current")
-	if err != nil {
-		return err
+	if migrationInfo.legacyBundle != nil {
+		anIssuer, aKey, err := writeCaBundle(ctx, s, migrationInfo.legacyBundle, "current", "current")
+		if err != nil {
+			return err
+		}
+		logger.Debug("Migration generated the following ids and set them as defaults",
+			"issuer id", anIssuer.ID, "key id", aKey.ID)
+	} else {
+		logger.Debug("No legacy CA certs found, no migration required.")
 	}
-	logger.Debug("Migration generated the following ids and set them as defaults",
-		"issuer id", anIssuer.ID, "key id", aKey.ID)
 
-	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigration{
-		Hash:             hash,
+	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
+	// if they were upgraded prior to the primary cluster's migration occurred.
+	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigrationLog{
+		Hash:             migrationInfo.legacyBundleHash,
 		Created:          time.Now(),
 		MigrationVersion: latestMigrationVersion,
 	})
 	if err != nil {
 		return err
 	}
+
 	logger.Info("successfully completed migration to new keys/issuers layout")
 	return nil
 }
 
 func computeHashOfLegacyBundle(bundle *certutil.CertBundle) (string, error) {
-	// We only hash the main certificate and the certs within the CAChain,
-	// assuming that any sort of change that occurred would have influenced one of those two fields.
 	hasher := sha256.New()
-	if _, err := hasher.Write([]byte(bundle.Certificate)); err != nil {
-		return "", err
-	}
-	for _, cert := range bundle.CAChain {
-		if _, err := hasher.Write([]byte(cert)); err != nil {
+	// Generate an empty hash if the bundle does not exist.
+	if bundle != nil {
+		// We only hash the main certificate and the certs within the CAChain,
+		// assuming that any sort of change that occurred would have influenced one of those two fields.
+		if _, err := hasher.Write([]byte(bundle.Certificate)); err != nil {
 			return "", err
+		}
+		for _, cert := range bundle.CAChain {
+			if _, err := hasher.Write([]byte(cert)); err != nil {
+				return "", err
+			}
 		}
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-func getLegacyBundleMigrationLog(ctx context.Context, s logical.Storage) (*legacyBundleMigration, error) {
+func getLegacyBundleMigrationLog(ctx context.Context, s logical.Storage) (*legacyBundleMigrationLog, error) {
 	entry, err := s.Get(ctx, legacyMigrationBundleLogKey)
 	if err != nil {
 		return nil, err
@@ -100,7 +131,7 @@ func getLegacyBundleMigrationLog(ctx context.Context, s logical.Storage) (*legac
 		return nil, nil
 	}
 
-	lbm := &legacyBundleMigration{}
+	lbm := &legacyBundleMigrationLog{}
 	err = entry.DecodeJSON(lbm)
 	if err != nil {
 		// If we can't decode our bundle, lets scrap it and assume a blank value,
@@ -110,7 +141,7 @@ func getLegacyBundleMigrationLog(ctx context.Context, s logical.Storage) (*legac
 	return lbm, nil
 }
 
-func setLegacyBundleMigrationLog(ctx context.Context, s logical.Storage, lbm *legacyBundleMigration) error {
+func setLegacyBundleMigrationLog(ctx context.Context, s logical.Storage, lbm *legacyBundleMigrationLog) error {
 	json, err := logical.StorageEntryJSON(legacyMigrationBundleLogKey, lbm)
 	if err != nil {
 		return err
@@ -119,21 +150,27 @@ func setLegacyBundleMigrationLog(ctx context.Context, s logical.Storage, lbm *le
 	return s.Put(ctx, json)
 }
 
-func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*certutil.CertBundle, error) {
+func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, *certutil.CertBundle, error) {
 	entry, err := s.Get(ctx, legacyCertBundlePath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if entry == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	cb := &certutil.CertBundle{}
 	err = entry.DecodeJSON(cb)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return cb, nil
+	// Fake a storage entry with backwards compatibility in mind. We only need
+	// the fields in the CAInfoBundle; everything else doesn't matter.
+	issuer := &issuerEntry{
+		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
+	}
+
+	return issuer, cb, nil
 }

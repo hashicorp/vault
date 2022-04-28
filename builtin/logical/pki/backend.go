@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -24,22 +25,27 @@ const (
 
 /*
  * PKI requests are a bit special to keep up with the various failure and load issues.
- * The main ca and intermediate requests are always forwarded to the Primary cluster's active
- * node to write and send the key material/config globally across all clusters.
  *
- * CRL/Revocation and Issued certificate apis are handled by the active node within the cluster
- * they originate. Which means if a request comes into a performance secondary cluster the writes
+ * Any requests to write/delete shared data (such as roles, issuers, keys, and configuration)
+ * are always forwarded to the Primary cluster's active node to write and send the key
+ * material/config globally across all clusters. Reads should be handled locally, to give a
+ * sense of where this cluster's replication state is at.
+ *
+ * CRL/Revocation and Fetch Certificate APIs are handled by the active node within the cluster
+ * they originate. This means, if a request comes into a performance secondary cluster, the writes
  * will be forwarded to that cluster's active node and not go all the way up to the performance primary's
  * active node.
  *
- * If a certificate issue request has a role in which no_store is set to true that node itself
- * will issue the certificate and not forward the request to the active node.
+ * If a certificate issue request has a role in which no_store is set to true, that node itself
+ * will issue the certificate and not forward the request to the active node, as this does not
+ * need to write to storage.
  *
- * Following the same pattern if a managed key is involved to sign an issued certificate request
+ * Following the same pattern, if a managed key is involved to sign an issued certificate request
  * and the local node does not have access for some reason to it, the request will be forwarded to
  * the active node within the cluster only.
  *
  * To make sense of what goes where the following bits need to be analyzed within the codebase.
+ *
  * 1. The backend LocalStorage paths determine what storage paths will remain within a
  *    cluster and not be forwarded to a performance primary
  * 2. Within each path's OperationHandler definition, check to see if ForwardPerformanceStandby &
@@ -146,12 +152,15 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 		BackendType:    logical.TypeLogical,
 		InitializeFunc: b.initialize,
+		Invalidate:     b.invalidate,
 	}
 
 	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
+
+	b.pkiStorageVersion.Store(0)
 
 	return &b
 }
@@ -166,6 +175,8 @@ type backend struct {
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
+
+	pkiStorageVersion atomic.Value
 }
 
 type (
@@ -261,20 +272,51 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 }
 
 // initialize is used to perform a possible PKI storage migration if needed
-func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
-	logger := b.Logger().Named("initialize")
-
+func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
 	// Early exit if not a primary cluster or performance secondary with a local mount.
 	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		logger.Debug("skipping pki migration as we are not on primary or secondary with a local mount")
+		b.Logger().Debug("skipping PKI migration as we are not on primary or secondary with a local mount")
 		return nil
 	}
 
-	if err := migrateStorage(ctx, req, logger); err != nil {
-		logger.Error("Error during migration of PKI mount: " + err.Error())
+	if err := migrateStorage(ctx, b.storage, b.Logger()); err != nil {
+		b.Logger().Error("Error during migration of PKI mount: " + err.Error())
 		return err
 	}
 
+	b.updatePkiStorageVersion(ctx)
+
 	return nil
+}
+
+func (b *backend) useLegacyBundleCaStorage() bool {
+	version := b.pkiStorageVersion.Load()
+	return version == nil || version == 0
+}
+
+func (b *backend) updatePkiStorageVersion(ctx context.Context) {
+	info, err := getMigrationInfo(ctx, b.storage)
+	if err != nil {
+		b.Logger().Error(fmt.Sprintf("Failed loading PKI migration status, staying in legacy mode: %v", err))
+		return
+	}
+
+	if info.isRequired {
+		b.Logger().Info("PKI migration is required, reading cert bundle from legacy ca location")
+		b.pkiStorageVersion.Store(0)
+	} else {
+		b.Logger().Debug("PKI migration completed, reading cert bundle from key/issuer storage")
+		b.pkiStorageVersion.Store(1)
+	}
+}
+
+func (b *backend) invalidate(ctx context.Context, key string) {
+	switch {
+	case strings.HasPrefix(key, legacyMigrationBundleLogKey):
+		// This is for a secondary cluster to pick up that the migration has completed
+		// and reset its compatibility mode.
+		b.updatePkiStorageVersion(ctx)
+	}
+	// FIXME: We need to hook into CRL generation here for issuer/bundle updates.
 }

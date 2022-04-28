@@ -56,13 +56,14 @@ type keyEntry struct {
 }
 
 type issuerEntry struct {
-	ID           issuerID   `json:"id" structs:"id" mapstructure:"id"`
-	Name         string     `json:"name" structs:"name" mapstructure:"name"`
-	KeyID        keyID      `json:"key_id" structs:"key_id" mapstructure:"key_id"`
-	Certificate  string     `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-	CAChain      []string   `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
-	ManualChain  []issuerID `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
-	SerialNumber string     `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
+	ID                   issuerID                  `json:"id" structs:"id" mapstructure:"id"`
+	Name                 string                    `json:"name" structs:"name" mapstructure:"name"`
+	KeyID                keyID                     `json:"key_id" structs:"key_id" mapstructure:"key_id"`
+	Certificate          string                    `json:"certificate" structs:"certificate" mapstructure:"certificate"`
+	CAChain              []string                  `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
+	ManualChain          []issuerID                `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
+	SerialNumber         string                    `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
+	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior" structs:"not_after_behavior" mapstructure:"not_after_behavior"`
 }
 
 type localCRLConfigEntry struct {
@@ -444,6 +445,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	result.ID = genIssuerId()
 	result.Name = issuerName
 	result.Certificate = certValue
+	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
 
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
@@ -663,10 +665,10 @@ func resolveIssuerCRLPath(ctx context.Context, s logical.Storage, reference stri
 
 // Builds a certutil.CertBundle from the specified issuer identifier,
 // optionally loading the key or not.
-func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuerID, loadKey bool) (*certutil.CertBundle, error) {
+func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuerID, loadKey bool) (*issuerEntry, *certutil.CertBundle, error) {
 	issuer, err := fetchIssuerById(ctx, s, id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var bundle certutil.CertBundle
@@ -678,14 +680,14 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 	if loadKey && issuer.KeyID != keyID("") {
 		key, err := fetchKeyById(ctx, s, issuer.KeyID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		bundle.PrivateKeyType = key.PrivateKeyType
 		bundle.PrivateKey = key.PrivateKey
 	}
 
-	return &bundle, nil
+	return issuer, &bundle, nil
 }
 
 func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {

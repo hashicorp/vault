@@ -440,7 +440,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 	revokedCerts = revoked
 
 WRITE:
-	bundle, caErr := fetchCertBundleByIssuerId(ctx, req.Storage, thisIssuerId, true /* need the signing key */)
+	_, bundle, caErr := fetchCertBundleByIssuerId(ctx, req.Storage, thisIssuerId, true /* need the signing key */)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:

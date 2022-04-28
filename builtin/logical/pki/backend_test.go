@@ -281,18 +281,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 
 func TestBackend_CSRValues(t *testing.T) {
 	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
+	b, _ := createBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -308,18 +297,7 @@ func TestBackend_CSRValues(t *testing.T) {
 
 func TestBackend_URLsCRUD(t *testing.T) {
 	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
+	b, _ := createBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -354,18 +332,8 @@ func TestBackend_Roles(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			initTest.Do(setCerts)
-			defaultLeaseTTLVal := time.Hour * 24
-			maxLeaseTTLVal := time.Hour * 24 * 32
-			b, err := Factory(context.Background(), &logical.BackendConfig{
-				Logger: nil,
-				System: &logical.StaticSystemView{
-					DefaultLeaseTTLVal: defaultLeaseTTLVal,
-					MaxLeaseTTLVal:     maxLeaseTTLVal,
-				},
-			})
-			if err != nil {
-				t.Fatalf("Unable to create backend: %s", err)
-			}
+			b, _ := createBackendWithStorage(t)
+
 			testCase := logicaltest.TestCase{
 				LogicalBackend: b,
 				Steps: []logicaltest.TestStep{
@@ -1748,14 +1716,127 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	return ret
 }
 
-func TestBackend_PathFetchValidRaw(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+func TestRolesAltIssuer(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create two issuers.
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "root a - example.com",
+		"issuer_name": "root-a",
+		"key_type":    "ec",
+	})
 	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootAPem := resp.Data["certificate"].(string)
+	rootACert := parseCert(t, rootAPem)
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "root b - example.com",
+		"issuer_name": "root-b",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootBPem := resp.Data["certificate"].(string)
+	rootBCert := parseCert(t, rootBPem)
+
+	// Create three roles: one with no assignment, one with explicit root-a,
+	// one with explicit root-b.
+	_, err = client.Logical().Write("pki/roles/use-default", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/roles/use-root-a", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"issuer_ref":        "root-a",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/roles/use-root-b", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"issuer_ref":        "root-b",
+	})
+	require.NoError(t, err)
+
+	// Now issue certs against these roles.
+	resp, err = client.Logical().Write("pki/issue/use-default", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem := resp.Data["certificate"].(string)
+	leafCert := parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootACert)
+	require.NoError(t, err, "should be signed by root-a but wasn't")
+
+	resp, err = client.Logical().Write("pki/issue/use-root-a", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem = resp.Data["certificate"].(string)
+	leafCert = parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootACert)
+	require.NoError(t, err, "should be signed by root-a but wasn't")
+
+	resp, err = client.Logical().Write("pki/issue/use-root-b", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem = resp.Data["certificate"].(string)
+	leafCert = parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootBCert)
+	require.NoError(t, err, "should be signed by root-b but wasn't")
+
+	// Update the default issuer to be root B and make sure that the
+	// use-default role updates.
+	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
+		"default": "root-b",
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/issue/use-default", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem = resp.Data["certificate"].(string)
+	leafCert = parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootBCert)
+	require.NoError(t, err, "should be signed by root-b but wasn't")
+}
+
+func TestBackend_PathFetchValidRaw(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1773,7 +1854,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 	rootCaAsPem := resp.Data["certificate"].(string)
 
-	// The ca_chain call at least for now does not return the root CA authority
+	// Chain should contain the root.
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.ReadOperation,
 		Path:       "ca_chain",
@@ -1785,7 +1866,9 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed read ca_chain, %#v", resp)
 	}
-	require.Equal(t, []byte{}, resp.Data[logical.HTTPRawBody], "ca_chain response should have been empty")
+	if strings.Count(string(resp.Data[logical.HTTPRawBody].([]byte)), rootCaAsPem) != 1 {
+		t.Fatalf("expected raw chain to contain the root cert")
+	}
 
 	// The ca/pem should return us the actual CA...
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -1884,15 +1967,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 
 func TestBackend_PathFetchCertList(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2034,15 +2109,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 
 func runTestSignVerbatim(t *testing.T, keyType string) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2479,15 +2546,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 func TestBackend_SignSelfIssued(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2626,15 +2685,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // require_matching_certificate_algorithms flag.
 func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -3611,6 +3662,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"province":                           []interface{}{},
 		"street_address":                     []interface{}{},
 		"code_signing_flag":                  false,
+		"issuer_ref":                         "default",
 	}
 
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
@@ -4908,6 +4960,100 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 	require.Equal(t, myKeyId1, myKeyId3, "our new ca did not seem to reuse the key as we expected.")
 }
 
+func TestIssuanceTTLs(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"ttl":         "15s",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().Write("pki/roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "1s",
+	})
+	require.NoError(t, err, "expected issuance to succeed due to shorter ttl than cert ttl")
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
+
+	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+		"issuer_name":             "root",
+		"leaf_not_after_behavior": "permit",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.NoError(t, err, "expected issuance to succeed due to permitted longer TTL")
+
+	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+		"issuer_name":             "root",
+		"leaf_not_after_behavior": "truncate",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.NoError(t, err, "expected issuance to succeed due to truncated ttl")
+
+	// Sleep until the parent cert expires.
+	time.Sleep(16 * time.Second)
+
+	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+		"issuer_name":             "root",
+		"leaf_not_after_behavior": "err",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Even 1s ttl should now fail.
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "1s",
+	})
+	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
+}
+
 func TestSealWrappedStorageConfigured(t *testing.T) {
 	b, _ := createBackendWithStorage(t)
 	wrappedEntries := b.Backend.PathsSpecial.SealWrapStorage
@@ -4941,7 +5087,7 @@ func mountPKIEndpoint(t *testing.T, client *api.Client, path string) {
 	require.NoError(t, err, "failed mounting pki endpoint")
 }
 
-func requireSignedBy(t *testing.T, cert x509.Certificate, key crypto.PublicKey) {
+func requireSignedBy(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
 	switch key.(type) {
 	case *rsa.PublicKey:
 		requireRSASignedBy(t, cert, key.(*rsa.PublicKey))
@@ -4954,7 +5100,7 @@ func requireSignedBy(t *testing.T, cert x509.Certificate, key crypto.PublicKey) 
 	}
 }
 
-func requireRSASignedBy(t *testing.T, cert x509.Certificate, key *rsa.PublicKey) {
+func requireRSASignedBy(t *testing.T, cert *x509.Certificate, key *rsa.PublicKey) {
 	require.Contains(t, []x509.SignatureAlgorithm{x509.SHA256WithRSA, x509.SHA512WithRSA},
 		cert.SignatureAlgorithm, "only sha256 signatures supported")
 
@@ -4977,7 +5123,7 @@ func requireRSASignedBy(t *testing.T, cert x509.Certificate, key *rsa.PublicKey)
 	require.NoError(t, err, "the certificate was not signed by the expected public rsa key.")
 }
 
-func requireECDSASignedBy(t *testing.T, cert x509.Certificate, key *ecdsa.PublicKey) {
+func requireECDSASignedBy(t *testing.T, cert *x509.Certificate, key *ecdsa.PublicKey) {
 	require.Contains(t, []x509.SignatureAlgorithm{x509.ECDSAWithSHA256, x509.ECDSAWithSHA512},
 		cert.SignatureAlgorithm, "only ecdsa signatures supported")
 
@@ -4996,21 +5142,21 @@ func requireECDSASignedBy(t *testing.T, cert x509.Certificate, key *ecdsa.Public
 	require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
 }
 
-func requireED25519SignedBy(t *testing.T, cert x509.Certificate, key ed25519.PublicKey) {
+func requireED25519SignedBy(t *testing.T, cert *x509.Certificate, key ed25519.PublicKey) {
 	require.Equal(t, x509.PureEd25519, cert.SignatureAlgorithm)
 	ed25519.Verify(key, cert.RawTBSCertificate, cert.Signature)
 }
 
-func parseCert(t *testing.T, pemCert string) x509.Certificate {
+func parseCert(t *testing.T, pemCert string) *x509.Certificate {
 	block, _ := pem.Decode([]byte(pemCert))
 	require.NotNil(t, block, "failed to decode PEM block")
 
 	cert, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
-	return *cert
+	return cert
 }
 
-func requireMatchingPublicKeys(t *testing.T, cert x509.Certificate, key crypto.PublicKey) {
+func requireMatchingPublicKeys(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
 	certPubKey := cert.PublicKey
 	require.True(t, reflect.DeepEqual(certPubKey, key),
 		"public keys mismatched: got: %v, expected: %v", certPubKey, key)

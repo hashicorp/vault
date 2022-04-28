@@ -18,8 +18,13 @@ secret key and certificate.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathImportIssuers,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathImportIssuers,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigCAHelpSyn,
@@ -49,9 +54,16 @@ func pathConfigIssuers(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCAIssuersRead,
-			logical.UpdateOperation: b.pathCAIssuersWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersWrite,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigIssuersHelpSyn,
@@ -83,16 +95,29 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("Error resolving issuer reference: " + err.Error()), nil
 	}
 
+	response := &logical.Response{
+		Data: map[string]interface{}{
+			"default": parsedIssuer,
+		},
+	}
+
+	entry, err := fetchIssuerById(ctx, req.Storage, parsedIssuer)
+	if err != nil {
+		return logical.ErrorResponse("Unable to fetch issuer: " + err.Error()), nil
+	}
+
+	if len(entry.KeyID) == 0 {
+		msg := "This selected default issuer has no key associated with it. Some operations like issuing certificates and signing CRLs will be unavailable with the requested default issuer until a key is imported or the default issuer is changed."
+		response.AddWarning(msg)
+		b.Logger().Error(msg)
+	}
+
 	err = updateDefaultIssuerId(ctx, req.Storage, parsedIssuer)
 	if err != nil {
 		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			defaultRef: parsedIssuer,
-		},
-	}, nil
+	return response, nil
 }
 
 const pathConfigIssuersHelpSyn = `Read and set the default issuer certificate for signing.`

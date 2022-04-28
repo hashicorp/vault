@@ -681,9 +681,18 @@ type URLEntries struct {
 	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
 }
 
+type NotAfterBehavior int
+
+const (
+	ErrNotAfterBehavior NotAfterBehavior = iota
+	TruncateNotAfterBehavior
+	PermitNotAfterBehavior
+)
+
 type CAInfoBundle struct {
 	ParsedCertBundle
-	URLs *URLEntries
+	URLs                 *URLEntries
+	LeafNotAfterBehavior NotAfterBehavior
 }
 
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {

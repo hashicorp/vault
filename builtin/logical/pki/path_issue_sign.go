@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -28,8 +29,10 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("issue", roleRequired, b.pathIssue),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("issue", roleRequired, b.pathIssue),
+			},
 		},
 
 		HelpSynopsis:    pathIssueHelpSyn,
@@ -54,8 +57,10 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("sign", roleRequired, b.pathSign),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("sign", roleRequired, b.pathSign),
+			},
 		},
 
 		HelpSynopsis:    pathSignHelpSyn,
@@ -88,8 +93,10 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
 		Pattern: pattern,
 		Fields:  map[string]*framework.FieldSchema{},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+			},
 		},
 
 		HelpSynopsis:    pathIssuerSignVerbatimHelpSyn,
@@ -206,6 +213,11 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 			*entry.GenerateLease = *role.GenerateLease
 		}
 		entry.NoStore = role.NoStore
+		entry.Issuer = role.Issuer
+	}
+
+	if len(entry.Issuer) == 0 {
+		entry.Issuer = defaultRef
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
@@ -218,9 +230,29 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, logical.ErrReadOnly
 	}
 
-	issuerName := getIssuerRef(data)
-	if len(issuerName) == 0 {
-		return logical.ErrorResponse("missing issuer reference"), nil
+	// We prefer the issuer from the role in two cases:
+	//
+	// 1. On the legacy sign-verbatim paths, as we always provision an issuer
+	//    in both the role and role-less cases, and
+	// 2. On the legacy sign/:role or issue/:role paths, as the issuer was
+	//    set on the role directly (either via upgrade or not). Note that
+	//    the updated issuer/:ref/{sign,issue}/:role path is not affected,
+	//    and we instead pull the issuer out of the path instead (which
+	//    allows users with access to those paths to manually choose their
+	//    issuer in desired scenarios).
+	var issuerName string
+	if strings.HasPrefix(req.Path, "sign-verbatim/") || strings.HasPrefix(req.Path, "sign/") || strings.HasPrefix(req.Path, "issue/") {
+		issuerName = role.Issuer
+		if len(issuerName) == 0 {
+			issuerName = defaultRef
+		}
+	} else {
+		// Otherwise, we must have a newer API which requires an issuer
+		// reference. Fetch it in this case
+		issuerName = getIssuerRef(data)
+		if len(issuerName) == 0 {
+			return logical.ErrorResponse("missing issuer reference"), nil
+		}
 	}
 
 	format := getFormat(data)

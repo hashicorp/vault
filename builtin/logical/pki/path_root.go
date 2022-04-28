@@ -87,6 +87,10 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, da
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
+	}
+
 	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
@@ -236,7 +240,6 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
-		AllowExpirationPastCA:     true,
 		NotAfter:                  data.Get("not_after").(string),
 	}
 	*role.AllowWildcardCertificates = true
@@ -257,6 +260,11 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 				"error fetching CA certificate: %s", caErr)}
 		}
 	}
+
+	// Since we are signing an intermediate, we explicitly want to override
+	// the leaf NotAfterBehavior to permit issuing intermediates longer than
+	// the life of this issuer.
+	signingBundle.LeafNotAfterBehavior = certutil.PermitNotAfterBehavior
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
