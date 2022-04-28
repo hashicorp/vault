@@ -217,8 +217,10 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 
 	var response *logical.Response
 	if wasDefault {
+		msg := fmt.Sprintf("Deleted key %v (via key_ref %v); this was configured as the default key. Operations without an explicit key will not work until a new default is configured.", string(keyId), keyRef)
+		b.Logger().Error(msg)
 		response = &logical.Response{}
-		response.AddWarning(fmt.Sprintf("Deleted key %v (via key_ref %v); this was configured as the default key. Operations without an explicit key will not work until a new default is configured.", string(keyId), keyRef))
+		response.AddWarning(msg)
 	}
 
 	return response, nil
