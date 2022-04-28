@@ -1,11 +1,11 @@
-{{#if (eq this.selectedAction "rotate")}}
-  {{#if this.key.canRotate}}
+{{#if (eq @selectedAction "rotate")}}
+  {{#if @key.canRotate}}
     <ConfirmAction
       @buttonClasses="toolbar-link"
       @confirmTitle="Rotate this key?"
       @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
       @confirmButtonText="Rotate"
-      @onConfirmAction={{action "doSubmit"}}
+      @onConfirmAction={{this.doSubmit}}
       data-test-transit-key-rotate="true"
     >
       Rotate encryption key
@@ -13,12 +13,12 @@
   {{/if}}
 {{else}}
   <MessageError @errors={{this.errors}} />
-  {{#if this.selectedAction}}
-    <div data-test-transit-action={{this.selectedAction}}>
+  {{#if @selectedAction}}
+    <div data-test-transit-action={{@selectedAction}}>
       {{! template-lint-disable no-passed-in-event-handlers }}
       {{component
-        (concat "transit-key-action/" this.selectedAction)
-        key=this.key
+        (concat "transit-key-action/" @selectedAction)
+        key=@key
         keys=this.keys
         keyIsRSA=this.keyIsRSA
         verification=this.verification
@@ -42,10 +42,10 @@
         exportKeyVersion=this.exportKeyVersion
         encodedBase64=this.encodedBase64
         valid=this.valid
-        doSubmit=(action "doSubmit")
-        onHash=(action "onHash")
-        toggleModal=(action "toggleModal")
-        clearParams=(action "clearParams")
+        doSubmit=this.doSubmit
+        onHash=this.onHash
+        toggleModal=this.toggleModal
+        clearParams=this.clearParams
       }}
     </div>
   {{/if}}

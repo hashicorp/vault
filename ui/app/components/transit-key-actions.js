@@ -241,5 +241,9 @@ export default Component.extend(TRANSIT_PARAMS, {
           (...errArgs) => this.handleError(...errArgs)
         );
     },
+
+    onHash(newValue) {
+      this.context = newValue;
+    },
   },
 });
