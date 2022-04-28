@@ -32,14 +32,18 @@ for a short while (including some randomness to help prevent thundering herd
 scenarios) and retry. On success, secrets defined in the templates will be
 retrieved from Vault and rendered locally.
 
-## Templating Language Resources
+## Templating Language
+
+The template output content can be provided directly as part of the `contents`
+option on a `template` stanza or as a separate `.ctmpl` file and specified in
+the `source` option of a `template` stanza.
 
 The following links contain additional resources for the templating language used by Vault Agent templating.
 
 - [Consul Templating Documentation][consul-templating-language]
 - [Go Templating Language Documentation](https://pkg.go.dev/text/template#pkg-overview)
 
-## Example Template
+### Template Language Example
 
 Template with Vault Agent requires the use of the `secret` [function from Consul
 Template](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret).
@@ -66,7 +70,7 @@ failures.
   This setting will not change how often Vault Agent Templating renders leased
   secrets.
 
-### Example `template_config` Stanza
+### `template_config` Stanza Example
 
 ```python
 template_config {
@@ -212,11 +216,14 @@ example, it generates a new token for Agent's use. This triggers a template
 server restart, which fetched and re-renders a new set of certificates even if
 existing certificates are valid.
 
-## Templating Example
+## Templating Configuration Example
 
 The following demonstrates Vault Agent Templates configuration blocks.
 
 ```python
+# Other Vault Agent configuration blocks
+# ...
+
 template_config {
   static_secret_render_interval = "10m"
   exit_on_retry_failure = true
@@ -225,6 +232,11 @@ template_config {
 template {
   source      = "/tmp/agent/template.ctmpl"
   destination = "/tmp/agent/render.txt"
+}
+
+template {
+  contents     = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
+  destination  = "/tmp/agent/render-content.txt"
 }
 ```
 

@@ -37,33 +37,13 @@ Please see the sidebar for available types and their usage/configuration.
 Here is an example of a persistent cache configuration.
 
 ```python
-auto_auth {
-  method "kubernetes" {
-    config = {
-      role = "foobar"
-    }
-  }
-
-  sink "file" {
-    config = {
-      path = "/tmp/file-foo"
-    }
-  }
-}
+# Other Vault Agent configuration blocks
+# ...
 
 cache {
   use_auto_auth_token = true
   persist "kubernetes" {
     path = "/vault/agent-cache"
   }
-}
-
-listener "tcp" {
-  address = "127.0.0.1:8200"
-  tls_disable = true
-}
-
-vault {
-  address = "http://127.0.0.1:8200"
 }
 ```
