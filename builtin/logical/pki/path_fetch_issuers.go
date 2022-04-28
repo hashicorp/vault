@@ -378,6 +378,15 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 		response.AddWarning(fmt.Sprintf("Deleted issuer %v (via issuer_ref %v); this was configured as the default issuer. Operations without an explicit issuer will not work until a new default is configured.", ref, issuerName))
 	}
 
+	// Since we've deleted an issuer, the chains might've changed. Call the
+	// rebuild code. We shouldn't technically err (as the issuer was deleted
+	// successfully), but log a warning (and to the response) if this fails.
+	if err := rebuildIssuersChains(ctx, req.Storage, nil); err != nil {
+		msg := fmt.Sprintf("Failed to rebuild remaining issuers' chains: %v", err)
+		b.Logger().Error(msg)
+		response.AddWarning(msg)
+	}
+
 	return response, nil
 }
 
