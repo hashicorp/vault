@@ -212,7 +212,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 	activeCore := DeriveActiveCore(t, cluster)
 	minDuration := time.NewTimer(3 * time.Second)
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		leaderResp, err := activeCore.Client.Sys().Leader()
 		if err != nil {
 			t.Fatal(err)
@@ -329,7 +329,7 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 
 func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				return core
@@ -564,7 +564,7 @@ func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
 
 // AwaitLeader waits for one of the cluster's nodes to become leader.
 func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
-	timeout := time.Now().Add(30 * time.Second)
+	timeout := time.Now().Add(60 * time.Second)
 	for {
 		if time.Now().After(timeout) {
 			break
