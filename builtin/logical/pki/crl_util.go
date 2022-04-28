@@ -360,6 +360,40 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		}
 	}
 
+	// Before persisting our updated CRL config, check to see if we have
+	// any dangling references. If we have any issuers that don't exist,
+	// remove them, remembering their CRLs IDs. If we've completely removed
+	// all issuers pointing to that CRL number, we can remove it from the
+	// number map and from storage.
+	for mapIssuerId := range crlConfig.IssuerIDCRLMap {
+		stillHaveIssuer := false
+		for _, listedIssuerId := range issuers {
+			if mapIssuerId == listedIssuerId {
+				stillHaveIssuer = true
+				break
+			}
+		}
+
+		if !stillHaveIssuer {
+			delete(crlConfig.IssuerIDCRLMap, mapIssuerId)
+		}
+	}
+	for crlId := range crlConfig.CRLNumberMap {
+		stillHaveIssuerForID := false
+		for _, remainingCRL := range crlConfig.IssuerIDCRLMap {
+			if remainingCRL == crlId {
+				stillHaveIssuerForID = true
+				break
+			}
+		}
+
+		if !stillHaveIssuerForID {
+			if err := req.Storage.Delete(ctx, "crls/"+crlId.String()); err != nil {
+				return fmt.Errorf("error building CRLs: unable to clean up deleted issuers' CRL: %v", err)
+			}
+		}
+	}
+
 	// Finally, persist our potentially updated local CRL config
 	if err := setLocalCRLConfig(ctx, req.Storage, crlConfig); err != nil {
 		return fmt.Errorf("error building CRLs: unable to persist updated cluster-local CRL config: %v", err)
