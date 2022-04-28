@@ -328,13 +328,13 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		// This is for a secondary cluster to pick up that the migration has completed
 		// and reset its compatibility mode and rebuild the CRL locally.
 		b.updatePkiStorageVersion(ctx)
-		b.crlBuilder.requestRebuildOnActiveNode(b)
+		b.crlBuilder.requestRebuildIfActiveNode(b)
 	case strings.HasPrefix(key, issuerPrefix):
 		// If an issuer has changed on the primary, we need to schedule an update of our CRL,
 		// the primary cluster would have done it already, but the CRL is cluster specific so
 		// force a rebuild of ours.
 		if !b.useLegacyBundleCaStorage() {
-			b.crlBuilder.requestRebuildOnActiveNode(b)
+			b.crlBuilder.requestRebuildIfActiveNode(b)
 		} else {
 			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")
 		}

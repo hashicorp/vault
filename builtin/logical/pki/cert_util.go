@@ -139,7 +139,7 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerRef string) (*issuerEntry, *certutil.CertBundle, error) {
 	if b.useLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
-		b.Logger().Info("Using legacy CA bundle")
+		b.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
 		return getLegacyCertBundle(ctx, s)
 	}
 
@@ -175,7 +175,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
 			return nil, err
 		}
-		path, err = resolveIssuerCRLPath(ctx, req.Storage, defaultRef)
+		path, err = resolveIssuerCRLPath(ctx, b, req.Storage, defaultRef)
 		if err != nil {
 			return nil, err
 		}

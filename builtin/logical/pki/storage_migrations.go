@@ -89,7 +89,7 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 
 	// Since we do not have all the mount information available we must schedule
 	// the CRL to be rebuilt at a later time.
-	b.crlBuilder.requestRebuildOnActiveNode(b)
+	b.crlBuilder.requestRebuildIfActiveNode(b)
 
 	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
 	// if they were upgraded prior to the primary cluster's migration occurred.
