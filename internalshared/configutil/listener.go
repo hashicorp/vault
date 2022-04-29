@@ -399,7 +399,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 // If the input doesn't appear to contain the 'template' format,
 // it will return the specified input unchanged.
 func ParseSingleIPTemplate(ipTmpl string) (string, error) {
-	m, err := regexp.MatchString("(.*?)({{.*?}})(.*)", ipTmpl)
+	m, err := regexp.MatchString("{{.*?}}", ipTmpl)
 	if err != nil {
 		return "", fmt.Errorf("unable to verify existence of template syntax in input %q: %v", ipTmpl, err)
 	} else if !m {
