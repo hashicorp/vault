@@ -13,37 +13,37 @@ func TestParseSingleIPTemplate(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		args    args
+		arg     string
 		want    string
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
 			name:    "test https addr",
-			args:    args{"https://vaultproject.io:8200"},
+			arg:     "https://vaultproject.io:8200",
 			want:    "https://vaultproject.io:8200",
 			wantErr: assert.NoError,
 		},
 		{
 			name:    "test invalid template func",
-			args:    args{"{{FooBar}}"},
+			arg:     "{{FooBar}}",
 			want:    "",
 			wantErr: assert.Error,
 		},
 		{
 			name:    "test partial template",
-			args:    args{"{{FooBar"},
+			arg:     "{{FooBar",
 			want:    "{{FooBar",
 			wantErr: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseSingleIPTemplate(tt.args.ipTmpl)
-			if !tt.wantErr(t, err, fmt.Sprintf("ParseSingleIPTemplate(%v)", tt.args.ipTmpl)) {
+			got, err := ParseSingleIPTemplate(tt.arg)
+			if !tt.wantErr(t, err, fmt.Sprintf("ParseSingleIPTemplate(%v)", tt.arg)) {
 				return
 			}
 
-			assert.Equalf(t, tt.want, got, "ParseSingleIPTemplate(%v)", tt.args.ipTmpl)
+			assert.Equalf(t, tt.want, got, "ParseSingleIPTemplate(%v)", tt.arg)
 		})
 	}
 }
