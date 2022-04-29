@@ -54,26 +54,28 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	issuers, err := listIssuers(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	keys, err := listKeys(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	// Delete all issuers and keys. Ignore deleting the default since we're
-	// explicitly deleting everything.
-	for _, issuer := range issuers {
-		if _, err = deleteIssuer(ctx, req.Storage, issuer); err != nil {
+	if !b.useLegacyBundleCaStorage() {
+		issuers, err := listIssuers(ctx, req.Storage)
+		if err != nil {
 			return nil, err
 		}
-	}
-	for _, key := range keys {
-		if _, err = deleteKey(ctx, req.Storage, key); err != nil {
+
+		keys, err := listKeys(ctx, req.Storage)
+		if err != nil {
 			return nil, err
+		}
+
+		// Delete all issuers and keys. Ignore deleting the default since we're
+		// explicitly deleting everything.
+		for _, issuer := range issuers {
+			if _, err = deleteIssuer(ctx, req.Storage, issuer); err != nil {
+				return nil, err
+			}
+		}
+		for _, key := range keys {
+			if _, err = deleteKey(ctx, req.Storage, key); err != nil {
+				return nil, err
+			}
 		}
 	}
 

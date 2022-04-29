@@ -27,6 +27,10 @@ func pathListIssuers(b *backend) *framework.Path {
 }
 
 func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not list issuers until migration has completed"), nil
+	}
+
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
@@ -122,6 +126,10 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return b.pathGetRawIssuer(ctx, req, data)
 	}
 
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not get issuer until migration has completed"), nil
+	}
+
 	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
@@ -163,6 +171,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	// got a consistent view.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not update issuer until migration has completed"), nil
+	}
 
 	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
@@ -282,6 +294,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not get issuer until migration has completed"), nil
+	}
+
 	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
@@ -333,6 +349,10 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	// got a consistent view.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not delete issuer until migration has completed"), nil
+	}
 
 	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
@@ -405,6 +425,10 @@ func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 }
 
 func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not get issuer's CRL until migration has completed"), nil
+	}
+
 	issuerName := getIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil

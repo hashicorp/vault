@@ -32,6 +32,10 @@ their identifier and their name (if set).`
 )
 
 func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not list keys until migration has completed"), nil
+	}
+
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
@@ -113,6 +117,10 @@ the certificate.
 )
 
 func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not get keys until migration has completed"), nil
+	}
+
 	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
 		return logical.ErrorResponse("missing key reference"), nil
@@ -145,6 +153,10 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 	// got a consistent view.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not update keys until migration has completed"), nil
+	}
 
 	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
@@ -198,6 +210,10 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 	// got a consistent view.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not delete keys until migration has completed"), nil
+	}
 
 	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
