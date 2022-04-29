@@ -2,8 +2,6 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action, setProperties } from '@ember/object';
 import { assign } from '@ember/polyfills';
-/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
-import { match } from '@ember/object/computed';
 import { tracked } from '@glimmer/tracking';
 import { addSeconds, parseISO } from 'date-fns';
 import { A } from '@ember/array';
@@ -52,11 +50,12 @@ export default class ToolActionForm extends Component {
   @tracked unwrapActiveTab = 'data';
   @tracked wrapTTL = '30m'; // default unless otherwise selected
 
-  @match('data', new RegExp(DEFAULTS.data)) dataIsEmpty;
-
   constructor() {
     super(...arguments);
     this.checkAction();
+  }
+  get dataIsEmpty() {
+    return this.data === new RegExp(DEFAULTS.data);
   }
 
   get expirationDate() {
