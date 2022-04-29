@@ -122,12 +122,17 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathGetIssuer(&b),
 			pathGetIssuerCRL(&b),
 			pathImportIssuer(&b),
+			pathIssuerIssue(&b),
+			pathIssuerSign(&b),
 			pathIssuerSignIntermediate(&b),
 			pathIssuerSignSelfIssued(&b),
 			pathIssuerSignVerbatim(&b),
 			pathIssuerGenerateRoot(&b),
+			pathRotateRoot(&b),
 			pathIssuerGenerateIntermediate(&b),
+			pathCrossSignIntermediate(&b),
 			pathConfigIssuers(&b),
+			pathReplaceRoot(&b),
 
 			// Key APIs
 			pathListKeys(&b),

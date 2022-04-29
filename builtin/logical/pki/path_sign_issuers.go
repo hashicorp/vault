@@ -6,7 +6,7 @@ import (
 )
 
 func pathIssuerSignIntermediate(b *backend) *framework.Path {
-	pattern := "issuers/" + framework.GenericNameRegex(issuerRefParam) + "/sign-intermediate"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-intermediate"
 	return pathIssuerSignIntermediateRaw(b, pattern)
 }
 
@@ -75,7 +75,7 @@ See the API documentation for more information about required parameters.
 )
 
 func pathIssuerSignSelfIssued(b *backend) *framework.Path {
-	pattern := "issuers/" + framework.GenericNameRegex(issuerRefParam) + "/sign-self-issued"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-self-issued"
 	return buildPathIssuerSignSelfIssued(b, pattern)
 }
 

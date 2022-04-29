@@ -71,6 +71,31 @@ func pathConfigIssuers(b *backend) *framework.Path {
 	}
 }
 
+func pathReplaceRoot(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "root/replace",
+		Fields: map[string]*framework.FieldSchema{
+			"default": {
+				Type:        framework.TypeString,
+				Description: `Reference (name or identifier) to the default issuer.`,
+				Default:     "next",
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCAIssuersWrite,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathConfigIssuersHelpSyn,
+		HelpDescription: pathConfigIssuersHelpDesc,
+	}
+}
+
 func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := getIssuersConfig(ctx, req.Storage)
 	if err != nil {
@@ -128,6 +153,9 @@ This path allows configuration of issuer parameters.
 Presently, the "default" parameter controls which issuer is the default,
 accessible by the existing signing paths (/root/sign-intermediate,
 /root/sign-self-issued, /sign-verbatim, /sign/:role, and /issue/:role).
+
+The /root/replace path is aliased to this path, with default taking the
+value of the issuer with the name "next", if it exists.
 `
 
 func pathConfigKeys(b *backend) *framework.Path {
