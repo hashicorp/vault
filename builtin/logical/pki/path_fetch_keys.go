@@ -141,6 +141,11 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 }
 
 func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating keys here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
 		return logical.ErrorResponse("missing key reference"), nil
@@ -189,6 +194,11 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	keyRef := data.Get(keyRefParam).(string)
 	if len(keyRef) == 0 {
 		return logical.ErrorResponse("missing key reference"), nil

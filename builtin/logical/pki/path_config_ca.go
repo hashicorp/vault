@@ -110,6 +110,11 @@ func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _
 }
 
 func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	newDefault := data.Get(defaultRef).(string)
 	if len(newDefault) == 0 || newDefault == defaultRef {
 		return logical.ErrorResponse("Invalid issuer specification; must be non-empty and can't be 'default'."), nil
@@ -200,6 +205,11 @@ func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, 
 }
 
 func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating keys here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	newDefault := data.Get(defaultRef).(string)
 	if len(newDefault) == 0 || newDefault == defaultRef {
 		return logical.ErrorResponse("Invalid key specification; must be non-empty and can't be 'default'."), nil

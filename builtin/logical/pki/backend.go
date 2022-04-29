@@ -185,6 +185,9 @@ type backend struct {
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *crlBuilder
+
+	// Write lock around issuers and keys.
+	issuersLock sync.RWMutex
 }
 
 type (
@@ -290,6 +293,9 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		b.Logger().Debug("skipping PKI migration as we are not on primary or secondary with a local mount")
 		return nil
 	}
+
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
 
 	if err := migrateStorage(ctx, b, b.storage); err != nil {
 		b.Logger().Error("Error during migration of PKI mount: " + err.Error())
