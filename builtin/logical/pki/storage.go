@@ -132,13 +132,12 @@ func writeKey(ctx context.Context, s logical.Storage, key keyEntry) error {
 }
 
 func deleteKey(ctx context.Context, s logical.Storage, id keyID) (bool, error) {
-	wasDefault := false
-
 	config, err := getKeysConfig(ctx, s)
 	if err != nil {
-		return wasDefault, err
+		return false, err
 	}
 
+	wasDefault := false
 	if config.DefaultKeyId == id {
 		wasDefault = true
 		config.DefaultKeyId = keyID("")
@@ -368,13 +367,12 @@ func writeIssuer(ctx context.Context, s logical.Storage, issuer *issuerEntry) er
 }
 
 func deleteIssuer(ctx context.Context, s logical.Storage, id issuerID) (bool, error) {
-	wasDefault := false
-
 	config, err := getIssuersConfig(ctx, s)
 	if err != nil {
-		return wasDefault, err
+		return false, err
 	}
 
+	wasDefault := false
 	if config.DefaultIssuerId == id {
 		wasDefault = true
 		config.DefaultIssuerId = issuerID("")

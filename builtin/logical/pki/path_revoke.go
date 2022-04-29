@@ -76,7 +76,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	return revokeCert(ctx, b, req, serial, false)
 }
 
-func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	b.revokeStorageLock.RLock()
 	defer b.revokeStorageLock.RUnlock()
 

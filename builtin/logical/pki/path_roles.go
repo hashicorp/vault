@@ -600,7 +600,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	return resp, nil
 }
 
-func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
@@ -710,16 +710,16 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	}
 
-	allow_wildcard_certificates, present := data.GetOk("allow_wildcard_certificates")
+	allowWildcardCertificates, present := data.GetOk("allow_wildcard_certificates")
 	if !present {
 		// While not the most secure default, when AllowWildcardCertificates isn't
 		// explicitly specified in the request, we automatically set it to true to
 		// preserve compatibility with previous versions of Vault.
-		allow_wildcard_certificates = true
+		allowWildcardCertificates = true
 	}
-	*entry.AllowWildcardCertificates = allow_wildcard_certificates.(bool)
+	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
 
-	// Ensure issuers ref is set to to a non-empty value. Note that we never
+	// Ensure issuers ref is set to a non-empty value. Note that we never
 	// resolve the reference (to an issuerId) at role creation time; instead,
 	// resolve it at use time. This allows values such as `default` or other
 	// user-assigned names to "float" and change over time.
