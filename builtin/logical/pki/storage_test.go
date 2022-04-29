@@ -103,36 +103,36 @@ func Test_KeysIssuerImport(t *testing.T) {
 	issuer1.ID = ""
 	issuer1.KeyID = ""
 
-	key1_ref1, existing, err := importKey(ctx, s, key1.PrivateKey, "key1")
+	key1Ref1, existing, err := importKey(ctx, s, key1.PrivateKey, "key1")
 	require.NoError(t, err)
 	require.False(t, existing)
-	require.Equal(t, strings.TrimSpace(key1.PrivateKey), strings.TrimSpace(key1_ref1.PrivateKey))
+	require.Equal(t, strings.TrimSpace(key1.PrivateKey), strings.TrimSpace(key1Ref1.PrivateKey))
 
 	// Make sure if we attempt to re-import the same private key, no import/updates occur.
-	// So the existing flag should be set to true and we do not update the existing Name field.
-	key1_ref2, existing, err := importKey(ctx, s, key1.PrivateKey, "ignore-me")
+	// So the existing flag should be set to true, and we do not update the existing Name field.
+	key1Ref2, existing, err := importKey(ctx, s, key1.PrivateKey, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
-	require.Equal(t, key1.PrivateKey, key1_ref1.PrivateKey)
-	require.Equal(t, key1_ref1.ID, key1_ref2.ID)
-	require.Equal(t, key1_ref1.Name, key1_ref2.Name)
+	require.Equal(t, key1.PrivateKey, key1Ref1.PrivateKey)
+	require.Equal(t, key1Ref1.ID, key1Ref2.ID)
+	require.Equal(t, key1Ref1.Name, key1Ref2.Name)
 
-	issuer1_ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate, "issuer1")
+	issuer1Ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate, "issuer1")
 	require.NoError(t, err)
 	require.False(t, existing)
-	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1_ref1.Certificate))
-	require.Equal(t, key1_ref1.ID, issuer1_ref1.KeyID)
-	require.Equal(t, "issuer1", issuer1_ref1.Name)
+	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
+	require.Equal(t, key1Ref1.ID, issuer1Ref1.KeyID)
+	require.Equal(t, "issuer1", issuer1Ref1.Name)
 
 	// Make sure if we attempt to re-import the same issuer, no import/updates occur.
-	// So the existing flag should be set to true and we do not update the existing Name field.
-	issuer1_ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate, "ignore-me")
+	// So the existing flag should be set to true, and we do not update the existing Name field.
+	issuer1Ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
-	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1_ref1.Certificate))
-	require.Equal(t, issuer1_ref1.ID, issuer1_ref2.ID)
-	require.Equal(t, key1_ref1.ID, issuer1_ref2.KeyID)
-	require.Equal(t, issuer1_ref1.Name, issuer1_ref2.Name)
+	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
+	require.Equal(t, issuer1Ref1.ID, issuer1Ref2.ID)
+	require.Equal(t, key1Ref1.ID, issuer1Ref2.KeyID)
+	require.Equal(t, issuer1Ref1.Name, issuer1Ref2.Name)
 
 	err = writeIssuer(ctx, s, &issuer2)
 	require.NoError(t, err)
@@ -141,21 +141,21 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.NoError(t, err)
 
 	// Same double import tests as above, but make sure if the previous was created through writeIssuer not importIssuer.
-	issuer2_ref, existing, err := importIssuer(ctx, s, issuer2.Certificate, "ignore-me")
+	issuer2Ref, existing, err := importIssuer(ctx, s, issuer2.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
-	require.Equal(t, strings.TrimSpace(issuer2.Certificate), strings.TrimSpace(issuer2_ref.Certificate))
-	require.Equal(t, issuer2.ID, issuer2_ref.ID)
-	require.Equal(t, "", issuer2_ref.Name)
-	require.Equal(t, issuer2.KeyID, issuer2_ref.KeyID)
+	require.Equal(t, strings.TrimSpace(issuer2.Certificate), strings.TrimSpace(issuer2Ref.Certificate))
+	require.Equal(t, issuer2.ID, issuer2Ref.ID)
+	require.Equal(t, "", issuer2Ref.Name)
+	require.Equal(t, issuer2.KeyID, issuer2Ref.KeyID)
 
 	// Same double import tests as above, but make sure if the previous was created through writeKey not importKey.
-	key2_ref, existing, err := importKey(ctx, s, key2.PrivateKey, "ignore-me")
+	key2Ref, existing, err := importKey(ctx, s, key2.PrivateKey, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
-	require.Equal(t, key2.PrivateKey, key2_ref.PrivateKey)
-	require.Equal(t, key2.ID, key2_ref.ID)
-	require.Equal(t, "", key2_ref.Name)
+	require.Equal(t, key2.PrivateKey, key2Ref.PrivateKey)
+	require.Equal(t, key2.ID, key2Ref.ID)
+	require.Equal(t, "", key2Ref.Name)
 }
 
 func genIssuerAndKey(t *testing.T, b *backend) (issuerEntry, keyEntry) {

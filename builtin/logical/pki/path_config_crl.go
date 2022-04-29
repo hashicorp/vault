@@ -66,7 +66,7 @@ func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error
 	return &result, nil
 }
 
-func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return nil, err

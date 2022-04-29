@@ -48,7 +48,7 @@ func pathDeleteRoot(b *backend) *framework.Path {
 	return ret
 }
 
-func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	issuers, err := listIssuers(ctx, req.Storage)
 	if err != nil {
 		return nil, err
