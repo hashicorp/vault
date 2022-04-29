@@ -851,9 +851,8 @@ jobs:
     - run:
         command: |
           export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
-          echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
+          export PATH=$CCI_PATH:$PATH
           set -x
-          . $BASH_ENV
           make ci-verify
         name: Verify CircleCI
     - add_ssh_keys:
