@@ -49,26 +49,33 @@ func pathDeleteRoot(b *backend) *framework.Path {
 }
 
 func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	issuers, err := listIssuers(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
 
-	keys, err := listKeys(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	// Delete all issuers and keys. Ignore deleting the default since we're
-	// explicitly deleting everything.
-	for _, issuer := range issuers {
-		if _, err = deleteIssuer(ctx, req.Storage, issuer); err != nil {
+	if !b.useLegacyBundleCaStorage() {
+		issuers, err := listIssuers(ctx, req.Storage)
+		if err != nil {
 			return nil, err
 		}
-	}
-	for _, key := range keys {
-		if _, err = deleteKey(ctx, req.Storage, key); err != nil {
+
+		keys, err := listKeys(ctx, req.Storage)
+		if err != nil {
 			return nil, err
+		}
+
+		// Delete all issuers and keys. Ignore deleting the default since we're
+		// explicitly deleting everything.
+		for _, issuer := range issuers {
+			if _, err = deleteIssuer(ctx, req.Storage, issuer); err != nil {
+				return nil, err
+			}
+		}
+		for _, key := range keys {
+			if _, err = deleteKey(ctx, req.Storage, key); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -85,6 +92,11 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 }
 
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	var err error
 
 	if b.useLegacyBundleCaStorage() {

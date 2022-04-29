@@ -49,6 +49,11 @@ const (
 )
 
 func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	keyName, err := getKeyName(ctx, req.Storage, data)
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
 		return nil, err
@@ -144,6 +149,11 @@ If name is set, that will be set on the key.`
 )
 
 func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	keyValueInterface, isOk := data.GetOk("pem_bundle")
 	if !isOk {
 		return logical.ErrorResponse("keyValue must be set"), nil
