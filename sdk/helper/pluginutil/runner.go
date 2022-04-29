@@ -34,6 +34,7 @@ type LookRunnerUtil interface {
 }
 
 type PluginClient interface {
+	BrokerID(*plugin.GRPCBroker) uint32
 	Conn() grpc.ClientConnInterface
 	plugin.ClientProtocol
 }

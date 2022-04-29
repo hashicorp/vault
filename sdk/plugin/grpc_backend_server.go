@@ -97,6 +97,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 			return &pb.SetupReply{}, err
 		}
 	}
+	b.logger.Debug("backend server", "brokerID", args.BrokerID)
 
 	// Dial for storage
 	brokeredClient, err := b.broker.Dial(args.BrokerID)

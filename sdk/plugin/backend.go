@@ -63,6 +63,7 @@ func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCB
 		cleanupCh:    make(chan struct{}),
 		doneCtx:      ctx,
 		metadataMode: b.MetadataMode,
+		logger:       b.Logger,
 	}
 
 	// Create the value and set the type

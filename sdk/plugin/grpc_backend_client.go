@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"errors"
+	lll "log"
 	"math"
 	"sync/atomic"
 
@@ -28,6 +29,7 @@ var _ logical.Backend = &backendGRPCPluginClient{}
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendGRPCPluginClient struct {
+	brokerID     uint32
 	broker       *plugin.GRPCBroker
 	client       pb.BackendClient
 	metadataMode bool
@@ -243,11 +245,11 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		close(b.cleanupCh)
 		return s
 	}
-	brokerID := b.broker.NextId()
-	go b.broker.AcceptAndServe(brokerID, serverFunc)
+	lll.Printf("backend client: brokerID %d", b.brokerID)
+	go b.broker.AcceptAndServe(b.brokerID, serverFunc)
 
 	args := &pb.SetupArgs{
-		BrokerID:    brokerID,
+		BrokerID:    b.brokerID,
 		Config:      config.Config,
 		BackendUUID: config.BackendUUID,
 	}

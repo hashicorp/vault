@@ -59,6 +59,8 @@ type externalPlugin struct {
 	// name is the plugin name
 	name string
 
+	brokerID uint32
+
 	// connections holds client connections by ID
 	connections map[string]*pluginClient
 
@@ -71,6 +73,10 @@ type pluginClient struct {
 
 	// id is the connection ID
 	id string
+
+	// setOrGetBrokerID allows multiplexed plugins that use bidrectional
+	// communication to share the same socket
+	setOrGetBrokerID func(b *plugin.GRPCBroker) uint32
 
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
@@ -138,6 +144,10 @@ func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc,
 
 func (p *pluginClient) Conn() grpc.ClientConnInterface {
 	return p.clientConn
+}
+
+func (p *pluginClient) BrokerID(b *plugin.GRPCBroker) uint32 {
+	return p.setOrGetBrokerID(b)
 }
 
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
@@ -246,6 +256,15 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	pc := &pluginClient{
 		id:     id,
 		logger: c.logger.Named(pluginRunner.Name),
+		setOrGetBrokerID: func(b *plugin.GRPCBroker) uint32 {
+			if extPlugin.multiplexingSupport && extPlugin.brokerID != 0 {
+				c.logger.Debug("setOrGetBrokerID -- MULTIPLEXED", "brokerID", extPlugin.brokerID)
+				return extPlugin.brokerID
+			}
+			extPlugin.brokerID = b.NextId()
+			c.logger.Debug("setOrGetBrokerID -- NEXT", "brokerID", extPlugin.brokerID)
+			return extPlugin.brokerID
+		},
 		cleanupFunc: func() error {
 			c.lock.Lock()
 			defer c.lock.Unlock()
