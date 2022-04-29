@@ -18,14 +18,14 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
       { label: 'second', clients: 3, entity_clients: 1, non_entity_clients: 2 },
       { label: 'first', clients: 2, entity_clients: 1, non_entity_clients: 1 },
     ];
-    this.set('totalUsageCounts', totalObject);
+    this.set('totalCounts', totalObject);
     this.set('totalClientAttribution', dataArray);
 
     await render(hbs`
     <Clients::HorizontalBarChart
       @dataset={{this.totalClientAttribution}}
       @chartLegend={{chartLegend}}
-      @totalUsageCounts={{totalUsageCounts}}
+      @totalCounts={{totalCounts}}
     />`);
 
     assert.dom('[data-test-horizontal-bar-chart]').exists();
@@ -43,7 +43,6 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
     textTotals.forEach((label, index) => {
       assert.dom(label).hasText(`${dataArray[index].clients}`, 'total value renders correct number');
     });
-
     for (let [i, bar] of actionBars.entries()) {
       let percent = Math.round((dataArray[i].clients / totalObject.clients) * 100);
       await triggerEvent(bar, 'mouseover');
@@ -58,14 +57,14 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
       { label: 'second', clients: 5929093, entity_clients: 1391896, non_entity_clients: 4537100 },
       { label: 'first', clients: 300, entity_clients: 101, non_entity_clients: 296 },
     ];
-    this.set('totalUsageCounts', totalObject);
+    this.set('totalCounts', totalObject);
     this.set('totalClientAttribution', dataArray);
 
     await render(hbs`
     <Clients::HorizontalBarChart
       @dataset={{this.totalClientAttribution}}
       @chartLegend={{chartLegend}}
-      @totalUsageCounts={{totalUsageCounts}}
+      @totalCounts={{totalCounts}}
     />`);
 
     assert.dom('[data-test-horizontal-bar-chart]').exists();

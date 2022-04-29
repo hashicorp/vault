@@ -21,6 +21,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} labelKey - string of key name for label value in chart data
  * @param {string} xKey - string of key name for x value in chart data
+ * @param {object} totalCounts - object to calculate percentage for tooltip
  */
 
 // SIZING CONSTANTS
