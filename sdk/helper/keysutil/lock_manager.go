@@ -442,8 +442,6 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 	return
 }
 
-// When the function returns, if caching was disabled, the Policy's lock must
-// be unlocked when the caller is done (and it should not be re-locked).
 func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key []byte, rand io.Reader) error {
 	var p *Policy
 	var err error
