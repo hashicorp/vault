@@ -1389,17 +1389,22 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 		}
 
 		switch parsedPrivateKey.(type) {
-		case ecdsa.PrivateKey:
-			ecdsaKey := parsedPrivateKey.(ecdsa.PrivateKey)
-			curve := elliptic.P256()
-			if p.Type == KeyType_ECDSA_P384 {
+		case *ecdsa.PrivateKey:
+			ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
+			var curve elliptic.Curve
+			if p.Type == KeyType_ECDSA_P256 {
+				curve = elliptic.P256()
+			} else if p.Type == KeyType_ECDSA_P384 {
 				curve = elliptic.P384()
 			} else if p.Type == KeyType_ECDSA_P521 {
 				curve = elliptic.P521()
 			}
 
+			if curve == nil {
+				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
+			}
 			if ecdsaKey.Curve != curve {
-				return fmt.Errorf("key type mismatch: provided key uses %s, expected %s", ecdsaKey.Curve, curve)
+				return fmt.Errorf("invalid curve: expected %s, got %s", p.Type, curve)
 			}
 
 			entry.EC_D = ecdsaKey.D
@@ -1419,16 +1424,35 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			}
 			entry.FormattedPublicKey = string(pemBytes)
 		case ed25519.PrivateKey:
+			if p.Type != KeyType_ED25519 {
+				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
+			}
 			privateKey := parsedPrivateKey.(ed25519.PrivateKey)
 
 			entry.Key = privateKey
 			publicKey := privateKey.Public().(ed25519.PublicKey)
 			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
 		case *rsa.PrivateKey:
+			var keyBits int
+			if p.Type == KeyType_RSA2048 {
+				keyBits = 2048
+			} else if p.Type == KeyType_RSA3072 {
+				keyBits = 3072
+			} else if p.Type == KeyType_RSA4096 {
+				keyBits = 4096
+			}
 			rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
+
+			if keyBits == 0 {
+				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, rsaKey)
+			}
+			if rsaKey.Size() != keyBits {
+				return fmt.Errorf("invalid key size: expected %s, got %d", p.Type, rsaKey.Size())
+			}
+
 			entry.RSAKey = rsaKey
 		default:
-			return fmt.Errorf("error parsing key: invalid key type %T", parsedPrivateKey)
+			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
 		}
 	}
 
