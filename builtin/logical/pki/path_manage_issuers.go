@@ -16,6 +16,10 @@ func pathIssuerGenerateRoot(b *backend) *framework.Path {
 	return buildPathGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
 }
 
+func pathRotateRoot(b *backend) *framework.Path {
+	return buildPathGenerateRoot(b, "root/rotate/"+framework.GenericNameRegex("exported"))
+}
+
 func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 	ret := &framework.Path{
 		Pattern: pattern,
@@ -42,6 +46,10 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
 	return buildPathGenerateIntermediate(b,
 		"issuers/generate/intermediate/"+framework.GenericNameRegex("exported"))
+}
+
+func pathCrossSignIntermediate(b *backend) *framework.Path {
+	return buildPathGenerateIntermediate(b, "intermediate/cross-sign")
 }
 
 func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
@@ -214,7 +222,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	config, err := getIssuersConfig(ctx, req.Storage)
 	if err == nil && len(config.DefaultIssuerId) > 0 {
 		// We can use the mapping above to check the issuer mapping.
-		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; !ok || len(keyId) == 0 {
+		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; ok && len(keyId) == 0 {
 			msg := "The default issuer has no key associated with it. Some operations like issuing certificates and signing CRLs will be unavailable with the requested default issuer until a key is imported or the default issuer is changed."
 			response.AddWarning(msg)
 			b.Logger().Error(msg)

@@ -106,6 +106,16 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
+	// Handle the aliased path specifying the new issuer name as "next", but
+	// only do it if its not in use.
+	if strings.HasPrefix(req.Path, "root/rotate/") && len(issuerName) == 0 {
+		// err is nil when the issuer name is in use.
+		_, err = resolveIssuerReference(ctx, req.Storage, "next")
+		if err != nil {
+			issuerName = "next"
+		}
+	}
+
 	keyName, err := getKeyName(ctx, req.Storage, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil

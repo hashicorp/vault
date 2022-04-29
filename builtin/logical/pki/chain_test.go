@@ -117,7 +117,7 @@ func (c CBGenerateIntermediate) Run(t *testing.T, client *api.Client, mount stri
 	csr := resp.Data["csr"].(string)
 
 	// Sign CSR
-	url = fmt.Sprintf(mount+"/issuers/%s/sign-intermediate", c.Parent)
+	url = fmt.Sprintf(mount+"/issuer/%s/sign-intermediate", c.Parent)
 	data = make(map[string]interface{})
 	data["csr"] = csr
 	data["common_name"] = c.Name

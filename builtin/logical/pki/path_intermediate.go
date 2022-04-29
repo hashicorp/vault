@@ -51,6 +51,13 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("Can not create intermediate until migration has completed"), nil
 	}
 
+	// Nasty hack :-) For cross-signing, we want to use the existing key, but
+	// this isn't _actually_ part of the path. Put it into the request
+	// parameters as if it was.
+	if req.Path == "intermediate/cross-sign" {
+		data.Raw["exported"] = "existing"
+	}
+
 	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
