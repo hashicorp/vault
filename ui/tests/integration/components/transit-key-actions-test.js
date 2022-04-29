@@ -234,18 +234,7 @@ module('Integration | Component | transit key actions', function (hooks) {
 
   test('it can export a key:default behavior', async function (assert) {
     this.set('storeService.rootKeyActionReturnVal', { wrap_info: { token: 'wrapped-token' } });
-    this.set('key', {
-      backend: 'transit',
-      id: 'akey',
-      supportedActions: ['export'],
-      exportKeyTypes: ['encryption'],
-      validKeyVersions: [1],
-    });
-    await render(hbs`
-      {{transit-key-actions selectedAction="encrypt" key=key}}
-      <div id="modal-wormhole"></div>
-    `);
-    // await setupExport.call(this);
+    await setupExport.call(this);
     await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,

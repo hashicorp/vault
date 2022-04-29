@@ -165,10 +165,12 @@ const testConvergentEncryption = async function (assert, keyName) {
       },
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
+        // console.log(key, 'key');
+        // debugger;
         assert.equal(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-          `${key}: the ui shows the base64-encoded plaintext`
+          `${key}: the ui shows the base64-encoded plaintext 2`
         );
       },
     },
@@ -345,6 +347,7 @@ module('Acceptance | transit', function (hooks) {
           .doesNotExist(`${name}: non-exportable key does not link to export action`);
       }
       if (key.convergent && key.supportsEncryption) {
+        // await this.pauseTest();
         await testConvergentEncryption(assert, name);
         await settled();
       }

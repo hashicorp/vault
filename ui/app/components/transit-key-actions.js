@@ -78,9 +78,6 @@ export default class TransitKeyActions extends Component {
   @tracked errors;
   @tracked isModalActive = false;
   @tracked oldSelectedAction;
-  @tracked ciphertext;
-  @tracked plaintext;
-  @tracked key_version;
 
   constructor() {
     super(...arguments);
@@ -89,7 +86,7 @@ export default class TransitKeyActions extends Component {
       this.setExportKeyDefaults();
     }
     if (this.args.selectedAction) {
-      //requires a key
+      // requires a key
       return;
     }
   }
@@ -107,7 +104,7 @@ export default class TransitKeyActions extends Component {
     let type = this.args.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }
-
+  // need to make a internal property so can reassign in actions
   get selectedAction() {
     return this.args.selectedAction || this.args.key.supportedActions.firstObject;
   }
@@ -221,7 +218,7 @@ export default class TransitKeyActions extends Component {
   @action
   clearParams(params) {
     const arr = Array.isArray(params) ? params : [params];
-    arr.forEach((param) => (param ? null : null)); // linting won't let me do param = null
+    arr.forEach((param) => (this[param] = null));
   }
 
   @action
