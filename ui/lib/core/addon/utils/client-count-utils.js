@@ -1,41 +1,42 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { compareAsc } from 'date-fns';
 
 export const flattenDataset = (object) => {
-  if (Object.values(object).every((e) => e === null)) return object;
-  let flattenedObject = {};
-  Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
-  return homogenizeClientNaming(flattenedObject);
+  if (Object.keys(object).includes('counts') && object.counts) {
+    let flattenedObject = {};
+    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
+    return homogenizeClientNaming(flattenedObject);
+  }
+  return object;
+};
+
+export const sortMonthsByTimestamp = (monthsArray) => {
+  // backend is working on a fix to sort months by date
+  // right now months are ordered in descending client count number
+  const sortedPayload = [...monthsArray];
+  return sortedPayload.sort((a, b) =>
+    compareAsc(parseAPITimestamp(a.timestamp), parseAPITimestamp(b.timestamp))
+  );
 };
 
 export const formatByMonths = (monthsArray) => {
   if (!Array.isArray(monthsArray)) return monthsArray;
-  const sortedPayload = [...monthsArray];
-  // months are always returned from the API: [mostRecent...oldestMonth]
-  sortedPayload.reverse();
+  const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload.map((m) => {
     if (Object.keys(m).includes('counts')) {
       let totalClients = flattenDataset(m);
-      let newClients = flattenDataset(m.new_clients);
-      m = {
+      let newClients = m.new_clients ? flattenDataset(m.new_clients) : {};
+      return {
         month: parseAPITimestamp(m.timestamp, 'M/yy'),
         ...totalClients,
         namespaces: formatByNamespace(m.namespaces),
         new_clients: {
           month: parseAPITimestamp(m.timestamp, 'M/yy'),
           ...newClients,
-          namespaces: formatByNamespace(m.new_clients.namespaces),
+          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
         },
       };
-      return nestCountsWithinNamespaceKey(m);
     }
-    // TODO CMB below is an assumption, need to test
-    // if no monthly data (no counts key), month object will just contain a timestamp
-    return {
-      month: parseAPITimestamp(m.timestamp, 'M/yy'),
-      new_clients: {
-        month: parseAPITimestamp(m.timestamp, 'M/yy'),
-      },
-    };
   });
 };
 
@@ -85,29 +86,4 @@ export const homogenizeClientNaming = (object) => {
     };
   }
   return object;
-};
-
-export const nestCountsWithinNamespaceKey = (month) => {
-  // create new key of `by_namespace_key` for month object
-  month.by_namespace_key = {};
-  if (month.namespaces) {
-    month.namespaces.forEach((namespace) => {
-      let { clients, entity_clients, non_entity_clients, mounts } = namespace;
-      let new_clients = {};
-      if (month.new_clients) {
-        new_clients = month.new_clients.namespaces?.find((n) => n.label === namespace.label) || {};
-      }
-      // create counts object with namespace label as key name
-      month.by_namespace_key[namespace.label] = {
-        clients,
-        entity_clients,
-        non_entity_clients,
-        mounts,
-        new_clients,
-      };
-      // TODO delete or keep new_clients.label within namespace key object?
-      // delete month.by_namespace_key[namespace.label].new_clients.label
-    });
-  }
-  return month;
 };
