@@ -58,6 +58,8 @@ var (
 		"/sys/revoke-force/{prefix}":                           regexp.MustCompile(`^/sys/revoke-force/.+$`),
 		"/sys/revoke-prefix/{prefix}":                          regexp.MustCompile(`^/sys/revoke-prefix/.+$`),
 		"/sys/rotate":                                          regexp.MustCompile(`^/sys/rotate$`),
+
+                // enterprise-only paths
 		"/sys/replication/dr/primary/secondary-token":          regexp.MustCompile(`^/sys/replication/dr/primary/secondary-token$`),
 		"/sys/replication/performance/primary/secondary-token": regexp.MustCompile(`^/sys/replication/performance/primary/secondary-token$`),
 		"/sys/replication/primary/secondary-token":             regexp.MustCompile(`^/sys/replication/primary/secondary-token$`),
