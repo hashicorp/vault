@@ -159,11 +159,15 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 
 	pc, ok := extPlugin.connections[id]
 	if !ok {
-		return fmt.Errorf("plugin connection not found")
+		// this can happen if the backend is reloaded due to a plugin process
+		// being killed out of band
+		c.logger.Warn("connection not found for client", "id", id)
+		return fmt.Errorf("connection not found for client", "id", id)
 	}
 
 	delete(extPlugin.connections, id)
 	c.logger.Debug("removed plugin client connection", "id", id)
+
 	if !extPlugin.multiplexingSupport {
 		pc.client.Kill()
 
