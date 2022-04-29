@@ -138,11 +138,19 @@ These are common configuration values that live within the `method` block:
   structure. Values can be an integer number of seconds or a stringish value
   like `5m`.
 
+- `min_backoff` `(string or integer: "1s")` - The minimum backoff time Agent
+  will delay before retrying after a failed auth attempt. The backoff will start
+  at the configured value and double (with some randomness) after successive
+  failures, capped by `max_backoff.` If Agent templating is being used, this
+  value is also used as the min backoff time for the templating server.
+
 - `max_backoff` `(string or integer: "5m")` - The maximum time Agent will delay
-  before retrying after a failed auth attempt. The backoff will start at 1 second
-  and double (with some randomness) after successive failures, capped by
-  `max_backoff.` `max_backoff` is the duration between retries, and **not** the
-  duration that retries will be performed before giving up.
+  before retrying after a failed auth attempt. The backoff will start at
+  `min_backoff` and double (with some randomness) after successive failures,
+  capped by `max_backoff.` If Agent templating is being used, this value is also
+  used as the max backoff time for the templating server. `max_backoff` is the
+  duration between retries, and **not** the duration that retries will be
+  performed before giving up.
 
 - `config` `(object: required)` - Configuration of the method itself. See the
   sidebar for information about each method.
