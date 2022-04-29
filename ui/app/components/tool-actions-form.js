@@ -67,12 +67,14 @@ export default class ToolActionForm extends Component {
     return addSeconds(parseISO(creation_time), creation_ttl);
   }
 
-  checkAction() {
+  // Because the previous (non-glimmer) component style relied on didReceiveAttrs we're using the render modifier in the template and calling this arrow function.
+  // It's an arrow function because we loose scope with the render modifier and need access to this.args.
+  checkAction = () => {
     if (this.args.selectedAction !== this.oldSelectedAction) {
       this.reset();
     }
     this.oldSelectedAction = this.args.selectedAction;
-  }
+  };
 
   getData() {
     const action = this.args.selectedAction;

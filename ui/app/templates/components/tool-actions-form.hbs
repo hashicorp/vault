@@ -1,4 +1,4 @@
-<form {{on "submit" this.doSubmit}}>
+<form {{on "submit" this.doSubmit}} {{did-update this.checkAction @selectedAction}}>
   {{#if (eq @selectedAction "hash")}}
     {{! template-lint-disable no-passed-in-event-handlers }}
     <ToolHash
@@ -10,7 +10,7 @@
       @input={{this.input}}
       @onChange={{this.onHash}}
     />
-    {{! template-lint-enable no-passed-in-event-handlers }}
+
   {{else if (eq @selectedAction "random")}}
     <ToolRandom
       @onClear={{this.onClear}}
