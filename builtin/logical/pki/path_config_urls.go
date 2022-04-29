@@ -92,7 +92,7 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 	return nil
 }
 
-func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err

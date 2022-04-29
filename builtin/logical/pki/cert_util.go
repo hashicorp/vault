@@ -64,18 +64,8 @@ var (
 	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
 
 	// OIDs for X.509 certificate extensions used below.
-	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
+	oidExtensionSubjectAltName = []int{2, 5, 29, 17}
 )
-
-func oidInExtensions(oid asn1.ObjectIdentifier, extensions []pkix.Extension) bool {
-	for _, e := range extensions {
-		if e.Id.Equal(oid) {
-			return true
-		}
-	}
-	return false
-}
 
 func getFormat(data *framework.FieldData) string {
 	format := data.Get("format").(string)

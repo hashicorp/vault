@@ -169,12 +169,12 @@ func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldDat
 		if !nameMatcher.MatchString(keyName) {
 			return "", errutil.UserError{Err: "key name contained invalid characters"}
 		}
-		key_id, err := resolveKeyReference(ctx, s, keyName)
+		keyId, err := resolveKeyReference(ctx, s, keyName)
 		if err == nil {
 			return "", errKeyNameInUse
 		}
 
-		if err != nil && key_id != KeyRefNotFound {
+		if err != nil && keyId != KeyRefNotFound {
 			return "", errutil.InternalError{Err: err.Error()}
 		}
 	}

@@ -31,7 +31,7 @@ const (
 their identifier and their name (if set).`
 )
 
-func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
