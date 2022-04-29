@@ -133,12 +133,9 @@ can be used here:
   when accessing a field that does not exist. It is highly recommended you set this
   to "true".
 - `exec` `(object: optional)` - The exec block executes a command when the
-  template is rendered. However, the command will only run if the resulting
-  template changes. Please note the exec block is optional, and the command
-  within the exec block must run within a configurable timeout which defaults
-  to 30s. The command must have a successful exit code. Additionally,
-  the parameters within the exec block just include the `command` string slice
-  and the `timeout` string value.
+  template is rendered and the output has changed. The block parameters are
+  `command` `(string slice: required)` and `timeout` `(string: optional, defaults
+  to 30s)`.
 - `perms` `(string: "")` - This is the permission to render the file. If
   this option is left unspecified, Vault Agent will attempt to match the permissions
   of the file that already exists at the destination path. If no file exists at that
