@@ -27,11 +27,11 @@ export default class MfaMethod extends Model {
   @attr('string') pushinfo;
   // totp props
   @attr('string') issuer;
-  @attr('int') period;
-  @attr('int') key_size;
-  @attr('int') qr_size;
+  @attr('number') period;
+  @attr('number') key_size;
+  @attr('number') qr_size;
   @attr('string') algorithm;
-  @attr('int') digits;
-  @attr('int') skew;
-  @attr('int') max_validation_attempts;
+  @attr('number') digits;
+  @attr('number') skew;
+  @attr('number') max_validation_attempts;
 }
