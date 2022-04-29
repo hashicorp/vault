@@ -61,6 +61,7 @@ Router.map(function () {
         this.route('mfa', function () {
           // lookup
           this.route('index', { path: '/' });
+          this.route('configure', { path: '/landing' });
         });
         this.route('leases', function () {
           // lookup
