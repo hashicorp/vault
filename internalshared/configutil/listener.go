@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/textproto"
+	"regexp"
 	"strings"
 	"time"
 
@@ -410,10 +411,13 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 
 // ParseSingleIPTemplate is used as a helper function to parse out a single IP
 // address from a config parameter.
-// If the input doesn't appear to be 'template' format,
-// it will return the specified input.
+// If the input doesn't appear to contain the 'template' format,
+// it will return the specified input unchanged.
 func ParseSingleIPTemplate(ipTmpl string) (string, error) {
-	if !(strings.HasPrefix(ipTmpl, "{{") && strings.HasSuffix(ipTmpl, "}}")) {
+	m, err := regexp.MatchString("(.*?)({{.*?}})(.*)", ipTmpl)
+	if err != nil {
+		return "", fmt.Errorf("unable to verify existence of template syntax in input %q: %v", ipTmpl, err)
+	} else if !m {
 		return ipTmpl, nil
 	}
 
