@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -676,7 +677,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	// scheduler.
 	config.BatchApplyCh = true
 
-	b.logger.Trace("using raft config", "inputs", b.conf, "raftconfig", config)
+	b.logger.Trace("applying raft config", "inputs", b.conf)
 	return nil
 }
 
@@ -933,30 +934,39 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		}
 	}
 	confFuture := raftObj.GetConfiguration()
+	numServers := 0
 	if err := confFuture.Error(); err != nil {
-		b.logger.Error("get config")
+		// This should probably never happen, but just in case we'll log the error.
+		// We'll default in this case to the multi-node behaviour.
+		b.logger.Error("failed to read raft configuration", "error", err)
+	} else {
+		clusterConf := confFuture.Configuration()
+		numServers = len(clusterConf.Servers)
 	}
-	clusterConf := confFuture.Configuration()
 	if initialTimeoutMultiplier != 0 {
-		if len(clusterConf.Servers) == 1 {
+		if numServers == 1 {
 			reloadConfig()
 		} else {
 			go func() {
 				ticker := time.NewTicker(50 * time.Millisecond)
-				timeout := time.NewTimer(raftConfig.HeartbeatTimeout)
+				// Emulate the random timeout used in Raft lib, to ensure that
+				// if all nodes are brought up simultaneously, they don't all
+				// call for an election at once.
+				extra := time.Duration(rand.Int63()) % raftConfig.HeartbeatTimeout
+				timeout := time.NewTimer(raftConfig.HeartbeatTimeout + extra)
 				for {
 					select {
 					case <-ticker.C:
 						switch raftObj.State() {
 						case raft.Candidate, raft.Leader:
-							b.logger.Trace("notifying due to being candidate or leader")
+							b.logger.Trace("triggering raft config reload due to being candidate or leader")
 							reloadConfig()
 							return
 						case raft.Shutdown:
 							return
 						}
 					case <-timeout.C:
-						b.logger.Trace("notifying due to timeout")
+						b.logger.Trace("triggering raft config reload due to initial timeout")
 						reloadConfig()
 						return
 					}

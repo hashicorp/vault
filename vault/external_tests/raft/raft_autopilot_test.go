@@ -43,7 +43,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		PhysicalFactoryConfig: map[string]interface{}{
-			"performance_multiplier": "1",
+			"performance_multiplier": "5",
 		},
 	})
 	defer cluster.Cleanup()
@@ -147,24 +147,24 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"core-0", "core-1", "core-2"}, state.Voters)
 
+	// Now make sure that after we seal and unseal a node, the current leader
+	// remains leader, and that the cluster becomes healthy again.
 	leader := state.Leader
-	deadline := time.Now().Add(5 * time.Minute)
-	for time.Now().Before(deadline) {
-		testhelpers.EnsureCoreSealed(t, cluster.Cores[1])
-		time.Sleep(10 * time.Second)
-		testhelpers.EnsureCoreUnsealed(t, cluster, cluster.Cores[1])
+	testhelpers.EnsureCoreSealed(t, cluster.Cores[1])
+	time.Sleep(10 * time.Second)
+	testhelpers.EnsureCoreUnsealed(t, cluster, cluster.Cores[1])
 
-		for time.Now().Before(deadline) {
-			state, err = client.Sys().RaftAutopilotState()
-			require.NoError(t, err)
-			if state.Healthy && state.Leader == leader {
-				break
-			}
-			time.Sleep(time.Second)
+	deadline := time.Now().Add(2 * time.Minute)
+	for time.Now().Before(deadline) {
+		state, err = client.Sys().RaftAutopilotState()
+		require.NoError(t, err)
+		if state.Healthy && state.Leader == leader {
+			break
 		}
-		require.Equal(t, true, state.Healthy)
-		require.Equal(t, leader, state.Leader)
+		time.Sleep(time.Second)
 	}
+	require.Equal(t, true, state.Healthy)
+	require.Equal(t, leader, state.Leader)
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
