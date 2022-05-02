@@ -230,7 +230,7 @@ func (i *IdentityStore) handleMFAMethodReadCommon(ctx context.Context, req *logi
 	}
 
 	if methodType != "" && respData["type"] != methodType {
-		return logical.ErrorResponse("invalid method type %s, expected %s", respData["type"], methodType), nil
+		return logical.ErrorResponse("failed to find the method ID under MFA type %s. Method ID belongs to %s MFA type", methodType, respData["type"]), nil
 	}
 
 	return &logical.Response{

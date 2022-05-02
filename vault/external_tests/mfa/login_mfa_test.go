@@ -45,7 +45,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 
 	testCases := []struct {
 		methodName    string
-		invalidName   string
+		invalidType   string
 		configData    map[string]interface{}
 		keyToUpdate   string
 		valueToUpdate string
@@ -171,7 +171,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 			}
 
 			// read the id on another MFA type endpoint should fail
-			invalidPath := fmt.Sprintf("identity/mfa/method/%s/%s", tc.invalidName, methodId)
+			invalidPath := fmt.Sprintf("identity/mfa/method/%s/%s", tc.invalidType, methodId)
 			resp, err = client.Logical().Read(invalidPath)
 			if err == nil {
 				t.Fatal(err)
@@ -233,7 +233,7 @@ func TestLoginMFA_ListAllMFAConfigsGlobally(t *testing.T) {
 	mountAccessor := auths["userpass/"].Accessor
 
 	mfaConfigs := []struct {
-		methodName string
+		methodType string
 		configData map[string]interface{}
 	}{
 		{
@@ -279,7 +279,7 @@ func TestLoginMFA_ListAllMFAConfigsGlobally(t *testing.T) {
 	var methodIDs []interface{}
 	for _, method := range mfaConfigs {
 		// create a new method config
-		myPath := fmt.Sprintf("identity/mfa/method/%s", method.methodName)
+		myPath := fmt.Sprintf("identity/mfa/method/%s", method.methodType)
 		resp, err := client.Logical().Write(myPath, method.configData)
 		if err != nil {
 			t.Fatal(err)
