@@ -81,6 +81,7 @@
 .is-flex-start {
   display: flex !important;
   justify-content: flex-start;
+  gap: $spacing-m;
 }
 .is-flex-full {
   flex-basis: 100%;

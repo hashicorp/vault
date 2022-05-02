@@ -17,6 +17,7 @@ Router.map(function () {
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
+      this.route('mfa-setup');
       this.route('clients', function () {
         this.route('current');
         this.route('history');
