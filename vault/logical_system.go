@@ -3609,8 +3609,8 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 	return resp, nil
 }
 
-func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return random.HandleRandomAPI(ctx, req, d, b.Core.secureRandomReader)
+func (b *SystemBackend) pathRandomWrite(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return random.HandleRandomAPI(d, b.Core.secureRandomReader)
 }
 
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {

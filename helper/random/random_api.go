@@ -1,24 +1,24 @@
 package random
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"strconv"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/sdk/logical"
-	"io"
-	"strconv"
 )
 
 const APIMaxBytes = 128 * 1024
 
-func HandleRandomAPI(ctx context.Context, req *logical.Request, d *framework.FieldData, additionalSource io.Reader) (*logical.Response, error) {
+func HandleRandomAPI(d *framework.FieldData, additionalSource io.Reader) (*logical.Response, error) {
 	bytes := 0
-	//Parsing is convoluted here, but allows operators to ACL both source and byte count
+	// Parsing is convoluted here, but allows operators to ACL both source and byte count
 	maybeUrlBytes := d.Raw["urlbytes"]
 	maybeSource := d.Raw["source"]
 	source := "platform"
