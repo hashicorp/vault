@@ -474,6 +474,76 @@ func (i *IdentityStore) handleLoginMFAAdminDestroyUpdate(ctx context.Context, re
 	return nil, nil
 }
 
+// loadMFAMethodConfigs loads MFA method configs for login MFA
+func (b *LoginMFABackend) loadMFAMethodConfigs(ctx context.Context) error {
+	// Accumulate existing entities
+	b.mfaLogger.Debug("loading login MFA configurations")
+	existing, err := b.Core.systemBarrierView.List(ctx, loginMFAConfigPrefix)
+	if err != nil {
+		return fmt.Errorf("failed to list MFA configurations for prefix %s: %w", loginMFAConfigPrefix, err)
+	}
+	b.mfaLogger.Debug("methods collected", "num_existing", len(existing))
+
+	for _, key := range existing {
+		b.mfaLogger.Trace("loading method", "method", key)
+
+		// Read the config from storage
+		mConfig, err := b.getMFAConfig(ctx, loginMFAConfigPrefix+key, b.Core.systemBarrierView)
+		if err != nil {
+			return err
+		}
+
+		if mConfig == nil {
+			continue
+		}
+
+		// Load the config in MemDB
+		err = b.MemDBUpsertMFAConfig(ctx, mConfig)
+		if err != nil {
+			return fmt.Errorf("failed to load configuration prefix %s in MemDB: %w", loginMFAConfigPrefix, err)
+		}
+	}
+
+	b.mfaLogger.Info("configurations restored", "prefix", loginMFAConfigPrefix)
+
+	return nil
+}
+
+// loadMFAEnforcementConfigs loads MFA method configs for login MFA
+func (b *LoginMFABackend) loadMFAEnforcementConfigs(ctx context.Context) error {
+	// Accumulate existing entities
+	b.mfaLogger.Debug("loading login MFA configurations")
+	existing, err := b.Core.systemBarrierView.List(ctx, mfaLoginEnforcementPrefix)
+	if err != nil {
+		return fmt.Errorf("failed to list MFA configurations for prefix %s: %w", mfaLoginEnforcementPrefix, err)
+	}
+	b.mfaLogger.Debug("methods collected", "num_existing", len(existing))
+
+	for _, key := range existing {
+		b.mfaLogger.Trace("loading method", "method", key)
+
+		// Read the config from storage
+		mConfig, err := b.getMFAEnforcementConfig(ctx, mfaLoginEnforcementPrefix+key, b.Core.systemBarrierView)
+		if err != nil {
+			return err
+		}
+
+		if mConfig == nil {
+			continue
+		}
+
+		// Load the config in MemDB
+		err = b.MemDBUpsertMFALoginEnforcementConfig(ctx, mConfig)
+		if err != nil {
+			return fmt.Errorf("failed to load configuration prefix %s in MemDB: %w", mfaLoginEnforcementPrefix, err)
+		}
+	}
+
+	b.mfaLogger.Info("configurations restored", "prefix", mfaLoginEnforcementPrefix)
+
+	return nil
+}
+
 func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logical.Request, d *framework.FieldData) (retResp *logical.Response, retErr error) {
 	// mfaReqID is the ID of the login request
 	mfaReqID := d.Get("mfa_request_id").(string)
@@ -2530,6 +2600,25 @@ func (b *MFABackend) getMFAConfig(ctx context.Context, path string, barrierView 
 	return &mConfig, nil
 }
 
+func (b *MFABackend) getMFAEnforcementConfig(ctx context.Context, path string, barrierView *BarrierView) (*mfa.MFAEnforcementConfig, error) {
+	entry, err := barrierView.Get(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	var mConfig mfa.MFAEnforcementConfig
+	err = proto.Unmarshal(entry.Value, &mConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mConfig, nil
+}
+
 func (b *LoginMFABackend) putMFALoginEnforcementConfig(ctx context.Context, eConfig *mfa.MFAEnforcementConfig) error {
 	entryIndex := mfaLoginEnforcementPrefix + eConfig.ID
 	marshaledEntry, err := proto.Marshal(eConfig)
@@ -2548,7 +2637,7 @@ func (b *LoginMFABackend) putMFALoginEnforcementConfig(ctx context.Context, eCon
 	})
 }
 
-func (b *LoginMFABackend) getMFALoginEnforcementConfig(ctx context.Context, key, namespaceId string) (*mfa.MFAEnforcementConfig, error) {
+func (b *LoginMFABackend) getMFALoginEnforcementConfigWithNamespace(ctx context.Context, key, namespaceId string) (*mfa.MFAEnforcementConfig, error) {
 	barrierView, err := b.Core.barrierViewForNamespace(namespaceId)
 	if err != nil {
 		return nil, err

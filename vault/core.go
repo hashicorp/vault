@@ -2140,6 +2140,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 	c.setupCachedMFAResponseAuth()
+	if err := c.loadLoginMFAConfigs(ctx); err != nil {
+		return err
+	}
 
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
@@ -2161,7 +2164,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
 			return err
 		}
-		if err := loadMFAConfigs(ctx, c); err != nil {
+		if err := loadPolicyMFAConfigs(ctx, c); err != nil {
 			return err
 		}
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
@@ -3071,6 +3074,22 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
+	if c.loginMFABackend == nil {
+		return fmt.Errorf("login MFA backend is not set up")
+	}
+
+	if err := c.loginMFABackend.loadMFAMethodConfigs(ctx); err != nil {
+		return fmt.Errorf("faile to load MFA method configuration. error: %w", err)
+	}
+
+	if err := c.loginMFABackend.loadMFAEnforcementConfigs(ctx); err != nil {
+		return fmt.Errorf("faile to load login MFA enforcement configuration . error: %w", err)
+	}
+
+	return nil
 }
 
 type MFACachedAuthResponse struct {
