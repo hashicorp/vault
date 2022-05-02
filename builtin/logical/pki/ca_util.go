@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -38,8 +37,8 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
 		return
 	}
-
-	keyType, keyBits, err := getKeyTypeAndBitsForRole(ctx, b, storage, data, mountPoint)
+	mkc := newManagedKeyContext(ctx, b, mountPoint)
+	keyType, keyBits, err := getKeyTypeAndBitsForRole(mkc, storage, data)
 	if err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 		return
@@ -77,7 +76,11 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 
 func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data *certutil.CreationBundle, randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
 	if kmsRequested(input) {
-		return generateManagedKeyCABundle(ctx, b, input, data, randomSource)
+		keyId, err := getManagedKeyId(input.apiData)
+		if err != nil {
+			return nil, err
+		}
+		return generateManagedKeyCABundle(ctx, b, input, keyId, data, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -85,7 +88,21 @@ func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data 
 		if err != nil {
 			return nil, err
 		}
-		return certutil.CreateCertificateWithKeyGenerator(data, randomSource, existingGeneratePrivateKey(ctx, input.req.Storage, keyRef))
+
+		keyEntry, err := getExistingKeyFromRef(ctx, input.req.Storage, keyRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if keyEntry.isManagedPrivateKey() {
+			keyId, err := keyEntry.getManagedKeyUUID()
+			if err != nil {
+				return nil, err
+			}
+			return generateManagedKeyCABundle(ctx, b, input, keyId, data, randomSource)
+		}
+
+		return certutil.CreateCertificateWithKeyGenerator(data, randomSource, existingKeyGeneratorFromBytes(keyEntry))
 	}
 
 	return certutil.CreateCertificateWithRandomSource(data, randomSource)
@@ -93,7 +110,12 @@ func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data 
 
 func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
 	if kmsRequested(input) {
-		return generateManagedKeyCSRBundle(ctx, b, input, data, addBasicConstraints, randomSource)
+		keyId, err := getManagedKeyId(input.apiData)
+		if err != nil {
+			return nil, err
+		}
+
+		return generateManagedKeyCSRBundle(ctx, b, input, keyId, data, addBasicConstraints, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -101,7 +123,21 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 		if err != nil {
 			return nil, err
 		}
-		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingGeneratePrivateKey(ctx, input.req.Storage, keyRef))
+
+		key, err := getExistingKeyFromRef(ctx, input.req.Storage, keyRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if key.isManagedPrivateKey() {
+			keyId, err := key.getManagedKeyUUID()
+			if err != nil {
+				return nil, err
+			}
+			return generateManagedKeyCSRBundle(ctx, b, input, keyId, data, addBasicConstraints, randomSource)
+		}
+
+		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingKeyGeneratorFromBytes(key))
 	}
 
 	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
@@ -114,7 +150,7 @@ func parseCABundle(ctx context.Context, b *backend, req *logical.Request, bundle
 	return bundle.ToParsedCertBundle()
 }
 
-func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.Storage, data *framework.FieldData, mountPoint string) (string, int, error) {
+func getKeyTypeAndBitsForRole(mkc managedKeyContext, storage logical.Storage, data *framework.FieldData) (string, int, error) {
 	exportedStr := data.Get("exported").(string)
 	var keyType string
 	var keyBits int
@@ -138,7 +174,12 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.S
 
 	var pubKey crypto.PublicKey
 	if kmsRequestedFromFieldData(data) {
-		pubKeyManagedKey, err := getManagedKeyPublicKey(ctx, b, data, mountPoint)
+		keyId, err := getManagedKeyId(data)
+		if err != nil {
+			return "", 0, errors.New("unable to determine managed key id" + err.Error())
+		}
+
+		pubKeyManagedKey, err := getManagedKeyPublicKey(mkc, keyId)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from managed key: " + err.Error())
 		}
@@ -146,95 +187,67 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.S
 	}
 
 	if existingKeyRequestedFromFieldData(data) {
-		existingPubKey, err := getExistingPublicKey(ctx, storage, data)
+		existingPubKey, err := getExistingPublicKey(mkc, storage, data)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from existing key: " + err.Error())
 		}
 		pubKey = existingPubKey
 	}
 
-	return getKeyTypeAndBitsFromPublicKeyForRole(pubKey)
+	privateKeyType, keyBits, err := getKeyTypeAndBitsFromPublicKeyForRole(pubKey)
+	return string(privateKeyType), keyBits, err
 }
 
-func getExistingPublicKey(ctx context.Context, s logical.Storage, data *framework.FieldData) (crypto.PublicKey, error) {
+func getExistingPublicKey(mkc managedKeyContext, s logical.Storage, data *framework.FieldData) (crypto.PublicKey, error) {
 	keyRef, err := getKeyRefWithErr(data)
 	if err != nil {
 		return nil, err
 	}
-	id, err := resolveKeyReference(ctx, s, keyRef)
+	id, err := resolveKeyReference(mkc.ctx, s, keyRef)
 	if err != nil {
 		return nil, err
 	}
-	key, err := fetchKeyById(ctx, s, id)
+	key, err := fetchKeyById(mkc.ctx, s, id)
 	if err != nil {
 		return nil, err
 	}
-	signer, err := key.GetSigner()
-	if err != nil {
-		return nil, err
-	}
-	return signer.Public(), nil
+	return getPublicKey(mkc, key)
 }
 
-func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (string, int, error) {
-	var keyType string
+func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.PrivateKeyType, int, error) {
+	var keyType certutil.PrivateKeyType
 	var keyBits int
 
 	switch pubKey.(type) {
 	case *rsa.PublicKey:
-		keyType = "rsa"
+		keyType = certutil.RSAPrivateKey
 		keyBits = certutil.GetPublicKeySize(pubKey)
 	case *ecdsa.PublicKey:
-		keyType = "ec"
+		keyType = certutil.ECPrivateKey
 	case *ed25519.PublicKey:
-		keyType = "ed25519"
+		keyType = certutil.Ed25519PrivateKey
 	default:
-		return "", 0, fmt.Errorf("unsupported public key: %#v", pubKey)
+		return certutil.UnknownPrivateKey, 0, fmt.Errorf("unsupported public key: %#v", pubKey)
 	}
 	return keyType, keyBits, nil
 }
 
-func getManagedKeyPublicKey(ctx context.Context, b *backend, data *framework.FieldData, mountPoint string) (crypto.PublicKey, error) {
-	keyId, err := getManagedKeyId(data)
+func getExistingKeyFromRef(ctx context.Context, s logical.Storage, keyRef string) (*keyEntry, error) {
+	keyId, err := resolveKeyReference(ctx, s, keyRef)
 	if err != nil {
-		return nil, errors.New("unable to determine managed key id")
+		return nil, err
 	}
-	// Determine key type and key bits from the managed public key
-	var pubKey crypto.PublicKey
-	err = withManagedPKIKey(ctx, b, keyId, mountPoint, func(ctx context.Context, key logical.ManagedSigningKey) error {
-		pubKey, err = key.GetPublicKey(ctx)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, errors.New("failed to lookup public key from managed key: " + err.Error())
-	}
-	return pubKey, nil
+	return fetchKeyById(ctx, s, keyId)
 }
 
-func existingGeneratePrivateKey(ctx context.Context, s logical.Storage, keyRef string) certutil.KeyGenerator {
-	return func(keyType string, keyBits int, container certutil.ParsedPrivateKeyContainer, _ io.Reader) error {
-		keyId, err := resolveKeyReference(ctx, s, keyRef)
+func existingKeyGeneratorFromBytes(key *keyEntry) certutil.KeyGenerator {
+	return func(_ string, _ int, container certutil.ParsedPrivateKeyContainer, _ io.Reader) error {
+		signer, _, pemBytes, err := getSignerFromKeyEntryBytes(key)
 		if err != nil {
 			return err
 		}
-		key, err := fetchKeyById(ctx, s, keyId)
-		if err != nil {
-			return err
-		}
-		signer, err := key.GetSigner()
-		if err != nil {
-			return err
-		}
-		privateKeyType := certutil.GetPrivateKeyTypeFromSigner(signer)
-		if privateKeyType == certutil.UnknownPrivateKey {
-			return errors.New("unknown private key type loaded from key id: " + keyId.String())
-		}
-		blk, _ := pem.Decode([]byte(key.PrivateKey))
-		container.SetParsedPrivateKey(signer, privateKeyType, blk.Bytes)
+
+		container.SetParsedPrivateKey(signer, key.PrivateKeyType, pemBytes.Bytes)
 		return nil
 	}
 }

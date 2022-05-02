@@ -2,7 +2,6 @@ package pki
 
 import (
 	"context"
-	"crypto/rand"
 	"strings"
 	"testing"
 
@@ -94,6 +93,8 @@ func Test_IssuerRoundTrip(t *testing.T) {
 
 func Test_KeysIssuerImport(t *testing.T) {
 	b, s := createBackendWithStorage(t)
+	mkc := newManagedKeyContext(ctx, b, "test")
+
 	issuer1, key1 := genIssuerAndKey(t, b, s)
 	issuer2, key2 := genIssuerAndKey(t, b, s)
 
@@ -103,21 +104,21 @@ func Test_KeysIssuerImport(t *testing.T) {
 	issuer1.ID = ""
 	issuer1.KeyID = ""
 
-	key1Ref1, existing, err := importKey(ctx, s, key1.PrivateKey, "key1")
+	key1Ref1, existing, err := importKey(mkc, s, key1.PrivateKey, "key1", key1.PrivateKeyType)
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, strings.TrimSpace(key1.PrivateKey), strings.TrimSpace(key1Ref1.PrivateKey))
 
 	// Make sure if we attempt to re-import the same private key, no import/updates occur.
 	// So the existing flag should be set to true, and we do not update the existing Name field.
-	key1Ref2, existing, err := importKey(ctx, s, key1.PrivateKey, "ignore-me")
+	key1Ref2, existing, err := importKey(mkc, s, key1.PrivateKey, "ignore-me", key1.PrivateKeyType)
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key1.PrivateKey, key1Ref1.PrivateKey)
 	require.Equal(t, key1Ref1.ID, key1Ref2.ID)
 	require.Equal(t, key1Ref1.Name, key1Ref2.Name)
 
-	issuer1Ref1, existing, err := importIssuer(ctx, s, issuer1.Certificate, "issuer1")
+	issuer1Ref1, existing, err := importIssuer(mkc, s, issuer1.Certificate, "issuer1")
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
@@ -126,7 +127,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 
 	// Make sure if we attempt to re-import the same issuer, no import/updates occur.
 	// So the existing flag should be set to true, and we do not update the existing Name field.
-	issuer1Ref2, existing, err := importIssuer(ctx, s, issuer1.Certificate, "ignore-me")
+	issuer1Ref2, existing, err := importIssuer(mkc, s, issuer1.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
@@ -141,7 +142,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.NoError(t, err)
 
 	// Same double import tests as above, but make sure if the previous was created through writeIssuer not importIssuer.
-	issuer2Ref, existing, err := importIssuer(ctx, s, issuer2.Certificate, "ignore-me")
+	issuer2Ref, existing, err := importIssuer(mkc, s, issuer2.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer2.Certificate), strings.TrimSpace(issuer2Ref.Certificate))
@@ -150,7 +151,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, issuer2.KeyID, issuer2Ref.KeyID)
 
 	// Same double import tests as above, but make sure if the previous was created through writeKey not importKey.
-	key2Ref, existing, err := importKey(ctx, s, key2.PrivateKey, "ignore-me")
+	key2Ref, existing, err := importKey(mkc, s, key2.PrivateKey, "ignore-me", key2.PrivateKeyType)
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key2.PrivateKey, key2Ref.PrivateKey)
@@ -207,7 +208,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		apiData: apiData,
 		role:    role,
 	}
-	parsedCertBundle, err := generateCert(ctx, b, input, nil, true, rand.Reader)
+	parsedCertBundle, err := generateCert(ctx, b, input, nil, true, b.GetRandomReader())
 
 	require.NoError(t, err)
 	certBundle, err := parsedCertBundle.ToCertBundle()

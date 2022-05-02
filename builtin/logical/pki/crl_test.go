@@ -131,10 +131,11 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
+	mkc := newManagedKeyContext(ctx, b, "test")
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
 	bundle := genCertBundle(t, b, s)
-	issuer, _, err := writeCaBundle(ctx, s, bundle, "", "")
+	issuer, _, err := writeCaBundle(mkc, s, bundle, "", "")
 	require.NoError(t, err)
 
 	// Just to validate, before we call the invalidate function, make sure our CRL has not been generated

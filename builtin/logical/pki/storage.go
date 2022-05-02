@@ -55,6 +55,17 @@ type keyEntry struct {
 	PrivateKey     string                  `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 }
 
+func (e keyEntry) getManagedKeyUUID() (UUIDKey, error) {
+	if !e.isManagedPrivateKey() {
+		return "", errutil.InternalError{Err: "getManagedKeyId called on a key id %s (%s) "}
+	}
+	return extractManagedKeyId([]byte(e.PrivateKey))
+}
+
+func (e keyEntry) isManagedPrivateKey() bool {
+	return e.PrivateKeyType == certutil.ManagedPrivateKey
+}
+
 type issuerEntry struct {
 	ID                   issuerID                  `json:"id" structs:"id" mapstructure:"id"`
 	Name                 string                    `json:"name" structs:"name" mapstructure:"name"`
@@ -77,11 +88,6 @@ type keyConfigEntry struct {
 
 type issuerConfigEntry struct {
 	DefaultIssuerId issuerID `json:"default" structs:"default" mapstructure:"default"`
-}
-
-func (k keyEntry) GetSigner() (crypto.Signer, error) {
-	signer, _, err := certutil.ParsePEMKey(k.PrivateKey)
-	return signer, err
 }
 
 func listKeys(ctx context.Context, s logical.Storage) ([]keyID, error) {
@@ -149,7 +155,7 @@ func deleteKey(ctx context.Context, s logical.Storage, id keyID) (bool, error) {
 	return wasDefault, s.Delete(ctx, keyPrefix+id.String())
 }
 
-func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName string) (*keyEntry, bool, error) {
+func importKey(mkc managedKeyContext, s logical.Storage, keyValue string, keyName string, keyType certutil.PrivateKeyType) (*keyEntry, bool, error) {
 	// importKey imports the specified PEM-format key (from keyValue) into
 	// the new PKI storage format. The first return field is a reference to
 	// the new key; the second is whether or not the key already existed
@@ -164,27 +170,40 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	// Before we can import a known key, we first need to know if the key
 	// exists in storage already. This means iterating through all known
 	// keys and comparing their private value against this value.
-	knownKeys, err := listKeys(ctx, s)
+	knownKeys, err := listKeys(mkc.ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
 
-	// Before we return below, we need to iterate over _all_ issuers and see if
-	// one of them has a missing KeyId link, and if so, point it back to
-	// ourselves. We fetch the list of issuers up front, even when don't need
-	// it, to give ourselves a better chance of succeeding below.
-	knownIssuers, err := listIssuers(ctx, s)
-	if err != nil {
-		return nil, false, err
+	// Get our public key from the current inbound key, to compare against all the other keys.
+	var pkForImportingKey crypto.PublicKey
+	if keyType == certutil.ManagedPrivateKey {
+		managedKeyUUID, err := extractManagedKeyId([]byte(keyValue))
+		if err != nil {
+			return nil, false, errutil.InternalError{Err: fmt.Sprintf("failed extracting managed key uuid from key: %v", err)}
+		}
+		pkForImportingKey, err = getManagedKeyPublicKey(mkc, managedKeyUUID)
+		if err != nil {
+			return nil, false, err
+		}
+	} else {
+		pkForImportingKey, err = getPublicKeyFromBytes([]byte(keyValue))
+		if err != nil {
+			return nil, false, err
+		}
 	}
 
 	for _, identifier := range knownKeys {
-		existingKey, err := fetchKeyById(ctx, s, identifier)
+		existingKey, err := fetchKeyById(mkc.ctx, s, identifier)
+		if err != nil {
+			return nil, false, err
+		}
+		areEqual, err := comparePublicKey(mkc, existingKey, pkForImportingKey)
 		if err != nil {
 			return nil, false, err
 		}
 
-		if existingKey.PrivateKey == keyValue {
+		if areEqual {
 			// Here, we don't need to stitch together the issuer entries,
 			// because the last run should've done that for us (or, when
 			// importing an issuer).
@@ -197,25 +216,25 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 	result.ID = genKeyId()
 	result.Name = keyName
 	result.PrivateKey = keyValue
-
-	// Extracting the signer is necessary for two reasons: first, to get the
-	// public key for comparison with existing issuers; second, to get the
-	// corresponding private key type.
-	keySigner, err := result.GetSigner()
-	if err != nil {
-		return nil, false, err
-	}
-	keyPublic := keySigner.Public()
-	result.PrivateKeyType = certutil.GetPrivateKeyTypeFromSigner(keySigner)
+	result.PrivateKeyType = keyType
 
 	// Finally, we can write the key to storage.
-	if err := writeKey(ctx, s, result); err != nil {
+	if err := writeKey(mkc.ctx, s, result); err != nil {
+		return nil, false, err
+	}
+
+	// Before we return below, we need to iterate over _all_ issuers and see if
+	// one of them has a missing KeyId link, and if so, point it back to
+	// ourselves. We fetch the list of issuers up front, even when don't need
+	// it, to give ourselves a better chance of succeeding below.
+	knownIssuers, err := listIssuers(mkc.ctx, s)
+	if err != nil {
 		return nil, false, err
 	}
 
 	// Now, for each issuer, try and compute the issuer<->key link if missing.
 	for _, identifier := range knownIssuers {
-		existingIssuer, err := fetchIssuerById(ctx, s, identifier)
+		existingIssuer, err := fetchIssuerById(mkc.ctx, s, identifier)
 		if err != nil {
 			return nil, false, err
 		}
@@ -234,7 +253,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 			return nil, false, err
 		}
 
-		equal, err := certutil.ComparePublicKeysAndType(cert.PublicKey, keyPublic)
+		equal, err := certutil.ComparePublicKeysAndType(cert.PublicKey, pkForImportingKey)
 		if err != nil {
 			return nil, false, err
 		}
@@ -243,7 +262,7 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 			// These public keys are equal, so this key entry must be the
 			// corresponding private key to this issuer; update it accordingly.
 			existingIssuer.KeyID = result.ID
-			if err := writeIssuer(ctx, s, existingIssuer); err != nil {
+			if err := writeIssuer(mkc.ctx, s, existingIssuer); err != nil {
 				return nil, false, err
 			}
 		}
@@ -251,12 +270,12 @@ func importKey(ctx context.Context, s logical.Storage, keyValue string, keyName 
 
 	// If there was no prior default value set and/or we had no known
 	// keys when we started, set this key as default.
-	keyDefaultSet, err := isDefaultKeySet(ctx, s)
+	keyDefaultSet, err := isDefaultKeySet(mkc.ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
 	if len(knownKeys) == 0 || !keyDefaultSet {
-		if err = updateDefaultKeyId(ctx, s, result.ID); err != nil {
+		if err = updateDefaultKeyId(mkc.ctx, s, result.ID); err != nil {
 			return nil, false, err
 		}
 	}
@@ -384,7 +403,7 @@ func deleteIssuer(ctx context.Context, s logical.Storage, id issuerID) (bool, er
 	return wasDefault, s.Delete(ctx, issuerPrefix+id.String())
 }
 
-func importIssuer(ctx context.Context, s logical.Storage, certValue string, issuerName string) (*issuerEntry, bool, error) {
+func importIssuer(ctx managedKeyContext, s logical.Storage, certValue string, issuerName string) (*issuerEntry, bool, error) {
 	// importIssuers imports the specified PEM-format certificate (from
 	// certValue) into the new PKI storage format. The first return field is a
 	// reference to the new issuer; the second is whether or not the issuer
@@ -409,7 +428,7 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	// Before we can import a known issuer, we first need to know if the issuer
 	// exists in storage already. This means iterating through all known
 	// issuers and comparing their private value against this value.
-	knownIssuers, err := listIssuers(ctx, s)
+	knownIssuers, err := listIssuers(ctx.ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
@@ -418,13 +437,13 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	// one of them a public key matching this certificate, and if so, update our
 	// link accordingly. We fetch the list of keys up front, even may not need
 	// it, to give ourselves a better chance of succeeding below.
-	knownKeys, err := listKeys(ctx, s)
+	knownKeys, err := listKeys(ctx.ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
 
 	for _, identifier := range knownIssuers {
-		existingIssuer, err := fetchIssuerById(ctx, s, identifier)
+		existingIssuer, err := fetchIssuerById(ctx.ctx, s, identifier)
 		if err != nil {
 			return nil, false, err
 		}
@@ -470,18 +489,12 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 	// writing issuer to storage as we won't need to update the key, only
 	// the issuer.
 	for _, identifier := range knownKeys {
-		existingKey, err := fetchKeyById(ctx, s, identifier)
+		existingKey, err := fetchKeyById(ctx.ctx, s, identifier)
 		if err != nil {
 			return nil, false, err
 		}
 
-		// Fetch the signer for its Public() value.
-		signer, err := existingKey.GetSigner()
-		if err != nil {
-			return nil, false, err
-		}
-
-		equal, err := certutil.ComparePublicKeysAndType(issuerCert.PublicKey, signer.Public())
+		equal, err := comparePublicKey(ctx, existingKey, issuerCert.PublicKey)
 		if err != nil {
 			return nil, false, err
 		}
@@ -498,18 +511,18 @@ func importIssuer(ctx context.Context, s logical.Storage, certValue string, issu
 
 	// Finally, rebuild the chains. In this process, because the provided
 	// reference issuer is non-nil, we'll save this issuer to storage.
-	if err := rebuildIssuersChains(ctx, s, &result); err != nil {
+	if err := rebuildIssuersChains(ctx.ctx, s, &result); err != nil {
 		return nil, false, err
 	}
 
 	// If there was no prior default value set and/or we had no known
 	// issuers when we started, set this issuer as default.
-	issuerDefaultSet, err := isDefaultIssuerSet(ctx, s)
+	issuerDefaultSet, err := isDefaultIssuerSet(ctx.ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
 	if len(knownIssuers) == 0 || !issuerDefaultSet {
-		if err = updateDefaultIssuerId(ctx, s, result.ID); err != nil {
+		if err = updateDefaultIssuerId(ctx.ctx, s, result.ID); err != nil {
 			return nil, false, err
 		}
 	}
@@ -692,19 +705,19 @@ func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuer
 	return issuer, &bundle, nil
 }
 
-func writeCaBundle(ctx context.Context, s logical.Storage, caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {
-	myKey, _, err := importKey(ctx, s, caBundle.PrivateKey, keyName)
+func writeCaBundle(mkc managedKeyContext, s logical.Storage, caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {
+	myKey, _, err := importKey(mkc, s, caBundle.PrivateKey, keyName, caBundle.PrivateKeyType)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	myIssuer, _, err := importIssuer(ctx, s, caBundle.Certificate, issuerName)
+	myIssuer, _, err := importIssuer(mkc, s, caBundle.Certificate, issuerName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for _, cert := range caBundle.CAChain {
-		if _, _, err = importIssuer(ctx, s, cert, ""); err != nil {
+		if _, _, err = importIssuer(mkc, s, cert, ""); err != nil {
 			return nil, nil, err
 		}
 	}

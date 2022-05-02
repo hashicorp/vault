@@ -130,7 +130,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		}
 	}
 
-	myKey, _, err := importKey(ctx, req.Storage, csrb.PrivateKey, keyName)
+	myKey, _, err := importKey(newManagedKeyContext(ctx, b, req.MountPoint), req.Storage, csrb.PrivateKey, keyName, csrb.PrivateKeyType)
 	if err != nil {
 		return nil, err
 	}
