@@ -21,39 +21,6 @@ const MOCK_MONTHLY_DATA = [
           non_entity_clients: 7,
           clients: 20,
         },
-        new_clients: {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 3,
-            non_entity_tokens: 0,
-            non_entity_clients: 2,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 3,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 2,
-                clients: 2,
-              },
-            },
-          ],
-        },
         mounts: [
           {
             mount_path: 'auth/up2/',
