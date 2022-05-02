@@ -119,7 +119,6 @@ module('Acceptance | clients current', function (hooks) {
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     await settled();
-    await waitUntil(() => find('[data-test-horizontal-bar-chart]'));
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
