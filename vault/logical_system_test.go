@@ -3103,8 +3103,9 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	}
 
 	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
+		t.Helper()
 		getResponse := func() []byte {
-			resp, err := b.HandleRequest(context.Background(), req)
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 			if err != nil && !errExpected {
 				t.Fatal(err)
 			}
@@ -3155,44 +3156,26 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 		}
 	}
 
-	for _, source := range []string{"", "platform", "seal", "all"} {
-		req.Data["source"] = source
-		req.Data["bytes"] = 32
-		req.Data["format"] = "base64"
-		req.Path = "tools/random"
-		// Test defaults
-		doRequest(req, false, "base64", 32)
+	// Test defaults
+	doRequest(req, false, "base64", 32)
 
-		// Test size selection in the path
-		req.Path = "tools/random/24"
-		req.Data["format"] = "hex"
-		doRequest(req, false, "hex", 24)
+	// Test size selection in the path
+	req.Path = "tools/random/24"
+	req.Data["format"] = "hex"
+	doRequest(req, false, "hex", 24)
 
-		if source != "" {
-			// Test source selection in the path
-			req.Path = fmt.Sprintf("tools/random/%s", source)
-			req.Data["format"] = "hex"
-			doRequest(req, false, "hex", 32)
+	// Test bad input/format
+	req.Path = "tools/random"
+	req.Data["format"] = "base92"
+	doRequest(req, true, "", 0)
 
-			req.Path = fmt.Sprintf("tools/random/%s/24", source)
-			req.Data["format"] = "hex"
-			doRequest(req, false, "hex", 24)
-		}
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = -1
+	doRequest(req, true, "", 0)
 
-		// Test bad input/format
-		req.Path = "tools/random"
-		req.Data["format"] = "base92"
-		doRequest(req, true, "", 0)
-
-		req.Data["format"] = "hex"
-		req.Data["bytes"] = -1
-		doRequest(req, true, "", 0)
-
-		req.Data["format"] = "hex"
-		req.Data["bytes"] = maxBytes + 1
-
-		doRequest(req, true, "", 0)
-	}
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = maxBytes + 1
+	doRequest(req, true, "", 0)
 }
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
@@ -3453,6 +3436,9 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 			},
 		},
 		"paths": map[string]interface{}{},
+		"components": map[string]interface{}{
+			"schemas": map[string]interface{}{},
+		},
 	}
 
 	if diff := deep.Equal(oapi, exp); diff != nil {
