@@ -1390,21 +1390,20 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 
 		switch parsedPrivateKey.(type) {
 		case *ecdsa.PrivateKey:
+			if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
+				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
+			}
+
 			ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
-			var curve elliptic.Curve
-			if p.Type == KeyType_ECDSA_P256 {
-				curve = elliptic.P256()
-			} else if p.Type == KeyType_ECDSA_P384 {
+			curve := elliptic.P256()
+			if p.Type == KeyType_ECDSA_P384 {
 				curve = elliptic.P384()
 			} else if p.Type == KeyType_ECDSA_P521 {
 				curve = elliptic.P521()
 			}
 
-			if curve == nil {
-				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
-			}
 			if ecdsaKey.Curve != curve {
-				return fmt.Errorf("invalid curve: expected %s, got %s", p.Type, curve)
+				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
 			}
 
 			entry.EC_D = ecdsaKey.D
@@ -1433,21 +1432,19 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			publicKey := privateKey.Public().(ed25519.PublicKey)
 			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
 		case *rsa.PrivateKey:
-			var keyBits int
-			if p.Type == KeyType_RSA2048 {
-				keyBits = 2048
-			} else if p.Type == KeyType_RSA3072 {
-				keyBits = 3072
+			if p.Type != KeyType_RSA2048 && p.Type != KeyType_RSA3072 && p.Type != KeyType_RSA4096 {
+				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
+			}
+
+			keyBytes := 256
+			if p.Type == KeyType_RSA3072 {
+				keyBytes = 384
 			} else if p.Type == KeyType_RSA4096 {
-				keyBits = 4096
+				keyBytes = 512
 			}
 			rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
-
-			if keyBits == 0 {
-				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, rsaKey)
-			}
-			if rsaKey.Size() != keyBits {
-				return fmt.Errorf("invalid key size: expected %s, got %d", p.Type, rsaKey.Size())
+			if rsaKey.Size() != keyBytes {
+				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
 
 			entry.RSAKey = rsaKey
@@ -1506,6 +1503,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		return err
 	}
 
+	p.Imported = false
 	return p.Persist(ctx, storage)
 }
 
