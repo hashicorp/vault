@@ -218,11 +218,6 @@ func importKey(mkc managedKeyContext, s logical.Storage, keyValue string, keyNam
 	result.PrivateKey = keyValue
 	result.PrivateKeyType = keyType
 
-	keyPublic, err := getPublicKey(mkc, &result)
-	if err != nil {
-		return nil, false, err
-	}
-
 	// Finally, we can write the key to storage.
 	if err := writeKey(mkc.ctx, s, result); err != nil {
 		return nil, false, err
@@ -258,7 +253,7 @@ func importKey(mkc managedKeyContext, s logical.Storage, keyValue string, keyNam
 			return nil, false, err
 		}
 
-		equal, err := certutil.ComparePublicKeysAndType(cert.PublicKey, keyPublic)
+		equal, err := certutil.ComparePublicKeysAndType(cert.PublicKey, pkForImportingKey)
 		if err != nil {
 			return nil, false, err
 		}
