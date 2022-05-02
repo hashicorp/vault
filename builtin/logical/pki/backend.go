@@ -165,6 +165,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.tidyCASGuard = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
+	b.backendUuid = conf.BackendUUID
 
 	b.pkiStorageVersion.Store(0)
 
@@ -175,6 +176,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 type backend struct {
 	*framework.Backend
 
+	backendUuid       string
 	storage           logical.Storage
 	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex

@@ -199,7 +199,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Store it as the CA bundle
-	myIssuer, myKey, err := writeCaBundle(ctx, req.Storage, cb, issuerName, keyName)
+	myIssuer, myKey, err := writeCaBundle(newManagedKeyContext(ctx, b, req.MountPoint), req.Storage, cb, issuerName, keyName)
 	if err != nil {
 		return nil, err
 	}

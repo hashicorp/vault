@@ -11,7 +11,7 @@ import (
 
 func pathGenerateKey(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/generate/(internal|exported)",
+		Pattern: "keys/generate/(internal|exported|kms)",
 
 		Fields: map[string]*framework.FieldSchema{
 			keyNameParam: {
@@ -23,15 +23,27 @@ func pathGenerateKey(b *backend) *framework.Path {
 				Default:     "rsa",
 				Description: `Type of the secret key to generate`,
 			},
-			"key_bits": {
+			keyBitsParam: {
 				Type:        framework.TypeInt,
 				Default:     2048,
 				Description: `Type of the secret key to generate`,
 			},
+			"managed_key_name": {
+				Type: framework.TypeString,
+				Description: `The name of the managed key to use when the exported
+type is kms. When kms type is the key type, this field or managed_key_id
+is required. Ignored for other types.`,
+			},
+			"managed_key_id": {
+				Type: framework.TypeString,
+				Description: `The name of the managed key to use when the exported
+type is kms. When kms type is the key type, this field or managed_key_name
+is required. Ignored for other types.`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.CreateOperation: &framework.PathOperation{
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathGenerateKeyHandler,
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -58,60 +70,60 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
 		return nil, err
 	}
-	keyType := data.Get(keyTypeParam).(string)
-	keyBits := data.Get("key_bits").(int)
 
+	mkc := newManagedKeyContext(ctx, b, req.MountPoint)
+	exportPrivateKey := false
+	var keyBundle certutil.KeyBundle
+	var actualPrivateKeyType certutil.PrivateKeyType
 	switch {
-	case strings.HasSuffix(req.Path, "/internal"):
-		// Internal key generation, stored in storage
-		keyBundle, err := certutil.GetKeyBundleFromKeyGenerator(keyType, keyBits, nil)
-		if err != nil {
-			return nil, err
-		}
-		privateKeyPemString, err := keyBundle.ToPrivateKeyPemString()
-		if err != nil {
-			return nil, err
-		}
-		key, _, err := importKey(ctx, req.Storage, privateKeyPemString, keyName)
-		if err != nil {
-			return nil, err
-		}
-		resp := logical.Response{
-			Data: map[string]interface{}{
-				keyIdParam:   key.ID,
-				keyNameParam: key.Name,
-				keyTypeParam: key.PrivateKeyType,
-			},
-		}
-		return &resp, nil
 	case strings.HasSuffix(req.Path, "/exported"):
-		// Same as internal key generation but we return the generated key
-		keyBundle, err := certutil.GetKeyBundleFromKeyGenerator(keyType, keyBits, nil)
+		exportPrivateKey = true
+		fallthrough
+	case strings.HasSuffix(req.Path, "/internal"):
+		keyType := data.Get(keyTypeParam).(string)
+		keyBits := data.Get(keyBitsParam).(int)
+
+		// Internal key generation, stored in storage
+		keyBundle, err = certutil.CreateKeyBundle(keyType, keyBits, b.GetRandomReader())
 		if err != nil {
 			return nil, err
 		}
-		privateKeyPemString, err := keyBundle.ToPrivateKeyPemString()
-		if err != nil {
-			return nil, err
-		}
-		key, _, err := importKey(ctx, req.Storage, privateKeyPemString, keyName)
-		if err != nil {
-			return nil, err
-		}
-		resp := logical.Response{
-			Data: map[string]interface{}{
-				keyIdParam:    key.ID,
-				keyNameParam:  key.Name,
-				keyTypeParam:  key.PrivateKeyType,
-				"private_key": privateKeyPemString,
-			},
-		}
-		return &resp, nil
+
+		actualPrivateKeyType = keyBundle.PrivateKeyType
 	case strings.HasSuffix(req.Path, "/kms"):
-		return nil, errEntOnly
+		keyId, err := getManagedKeyId(data)
+		if err != nil {
+			return nil, err
+		}
+
+		keyBundle, actualPrivateKeyType, err = createKmsKeyBundle(mkc, keyId)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return logical.ErrorResponse("Unknown type of key to generate"), nil
 	}
+
+	privateKeyPemString, err := keyBundle.ToPrivateKeyPemString()
+	if err != nil {
+		return nil, err
+	}
+
+	key, _, err := importKey(mkc, req.Storage, privateKeyPemString, keyName, keyBundle.PrivateKeyType)
+	if err != nil {
+		return nil, err
+	}
+	responseData := map[string]interface{}{
+		keyIdParam:   key.ID,
+		keyNameParam: key.Name,
+		keyTypeParam: string(actualPrivateKeyType),
+	}
+	if exportPrivateKey {
+		responseData["private_key"] = privateKeyPemString
+	}
+	return &logical.Response{
+		Data: responseData,
+	}, nil
 }
 
 func pathImportKey(b *backend) *framework.Path {
@@ -161,7 +173,8 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	keyValue := keyValueInterface.(string)
 	keyName := data.Get(keyNameParam).(string)
 
-	key, existed, err := importKey(ctx, req.Storage, keyValue, keyName)
+	mkc := newManagedKeyContext(ctx, b, req.MountPoint)
+	key, existed, err := importKeyFromBytes(mkc, req.Storage, keyValue, keyName)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -171,7 +184,6 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 			keyIdParam:   key.ID,
 			keyNameParam: key.Name,
 			keyTypeParam: key.PrivateKeyType,
-			"backing":    "", // This would show up as "Managed" in "type"
 		},
 	}
 

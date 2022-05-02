@@ -1229,16 +1229,19 @@ func GetPublicKeySize(key crypto.PublicKey) int {
 	return -1
 }
 
-func GetKeyBundleFromKeyGenerator(keyType string, keyBits int, keyGenerator KeyGenerator) (KeyBundle, error) {
+// CreateKeyBundle create a KeyBundle struct object which includes a generated key
+// of keyType with keyBits leveraging the randomness from randReader.
+func CreateKeyBundle(keyType string, keyBits int, randReader io.Reader) (KeyBundle, error) {
+	return CreateKeyBundleWithKeyGenerator(keyType, keyBits, randReader, generatePrivateKey)
+}
+
+// CreateKeyBundleWithKeyGenerator create a KeyBundle struct object which includes
+// a generated key of keyType with keyBits leveraging the randomness from randReader and
+// delegates the actual key generation to keyGenerator
+func CreateKeyBundleWithKeyGenerator(keyType string, keyBits int, randReader io.Reader, keyGenerator KeyGenerator) (KeyBundle, error) {
 	result := KeyBundle{}
-
-	if keyGenerator == nil {
-		keyGenerator = generatePrivateKey
-	}
-
-	if err := keyGenerator(keyType, keyBits, &result, nil); err != nil {
+	if err := keyGenerator(keyType, keyBits, &result, randReader); err != nil {
 		return result, err
 	}
-
 	return result, nil
 }
