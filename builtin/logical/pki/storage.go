@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -174,13 +175,35 @@ func importKey(mkc managedKeyContext, s logical.Storage, keyValue string, keyNam
 		return nil, false, err
 	}
 
+	// Get our public key from the current inbound key, to compare against all the other keys.
+	var pkForImportingKey crypto.PublicKey
+	if keyType == certutil.ManagedPrivateKey {
+		managedKeyUUID, err := extractManagedKeyId([]byte(keyValue))
+		if err != nil {
+			return nil, false, errutil.InternalError{Err: fmt.Sprintf("failed extracting managed key uuid from key: %v", err)}
+		}
+		pkForImportingKey, err = getManagedKeyPublicKey(mkc, managedKeyUUID)
+		if err != nil {
+			return nil, false, err
+		}
+	} else {
+		pkForImportingKey, err = getPublicKeyFromBytes([]byte(keyValue))
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
 	for _, identifier := range knownKeys {
 		existingKey, err := fetchKeyById(mkc.ctx, s, identifier)
 		if err != nil {
 			return nil, false, err
 		}
+		areEqual, err := comparePublicKey(mkc, existingKey, pkForImportingKey)
+		if err != nil {
+			return nil, false, err
+		}
 
-		if existingKey.PrivateKey == keyValue {
+		if areEqual {
 			// Here, we don't need to stitch together the issuer entries,
 			// because the last run should've done that for us (or, when
 			// importing an issuer).

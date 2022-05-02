@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -96,6 +97,15 @@ func getManagedKeyPublicKey(mkc managedKeyContext, keyId managedKeyId) (crypto.P
 		return nil, errors.New("failed to lookup public key from managed key: " + err.Error())
 	}
 	return pubKey, nil
+}
+
+func getPublicKeyFromBytes(keyBytes []byte) (crypto.PublicKey, error) {
+	signer, _, _, err := getSignerFromBytes(keyBytes)
+	if err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("failed parsing key bytes: %s", err.Error())}
+	}
+
+	return signer.Public(), nil
 }
 
 func importKeyFromBytes(mkc managedKeyContext, s logical.Storage, keyValue string, keyName string) (*keyEntry, bool, error) {
