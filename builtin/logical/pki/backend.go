@@ -77,6 +77,13 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"ca",
 				"crl/pem",
 				"crl",
+				"issuer/+/crl/der",
+				"issuer/+/crl/pem",
+				"issuer/+/crl",
+				"issuer/+/pem",
+				"issuer/+/der",
+				"issuer/+/json",
+				"issuers",
 			},
 
 			LocalStorage: []string{
