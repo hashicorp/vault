@@ -85,13 +85,10 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     this.server.shutdown();
   });
 
-  test('it does not render without @backend attr', async function (assert) {
-    await render(hbs`<Keymgmt::Distribute />`);
-    assert.dom(SELECTORS.form).doesNotExist('Form does not exist');
-  });
-
   test('it does not allow operation selection until valid key and provider selected', async function (assert) {
-    await render(hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} />`);
+    await render(
+      hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} @onClose={{fn (mut this.onClose)}} />`
+    );
     assert.dom(SELECTORS.operationsSection).hasAttribute('disabled');
     await clickTrigger();
     await settled();
@@ -108,7 +105,9 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.errorProvider).exists('Shows key/provider match error on provider');
   });
   test('it shows key type select field if new key created', async function (assert) {
-    await render(hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} />`);
+    await render(
+      hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} @onClose={{fn (mut this.onClose)}} />`
+    );
     assert.dom(SELECTORS.keyTypeSection).doesNotExist('Key Type section is not rendered by default');
     // Add new item on search-select
     await clickTrigger();
@@ -118,7 +117,9 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.keyTypeSection).exists('Key Type selector is shown');
   });
   test('it hides the provider field if passed from the parent', async function (assert) {
-    await render(hbs`<Keymgmt::Distribute @backend="keymgmt" @provider="provider-azure" />`);
+    await render(
+      hbs`<Keymgmt::Distribute @backend="keymgmt" @provider="provider-azure" @onClose={{fn (mut this.onClose)}} />`
+    );
     assert.dom(SELECTORS.providerInput).doesNotExist('Provider input is hidden');
     // Select existing key
     await clickTrigger();
@@ -140,7 +141,9 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.errorNewKey).exists('Shows error on key type');
   });
   test('it hides the key field if passed from the parent', async function (assert) {
-    await render(hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} @key="example-1" />`);
+    await render(
+      hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} @key="example-1" @onClose={{fn (mut this.onClose)}} />`
+    );
     assert.dom(SELECTORS.providerInput).exists('Provider input shown');
     assert.dom(SELECTORS.keySection).doesNotExist('Key input not shown');
     await select(SELECTORS.providerInput, 'provider-azure');

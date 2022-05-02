@@ -3,4 +3,4 @@
 DATE_FORMAT="%Y-%m-%dT%H:%M:%SZ"
 
 # we're using this for build date because it's stable across platform builds
-git show -s --format=%cd --date=format:"$DATE_FORMAT" HEAD
+git show --no-show-signature -s --format=%cd --date=format:"$DATE_FORMAT" HEAD

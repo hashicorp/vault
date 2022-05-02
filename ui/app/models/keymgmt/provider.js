@@ -2,6 +2,7 @@ import Model, { attr } from '@ember-data/model';
 import { tracked } from '@glimmer/tracking';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const CRED_PROPS = {
   azurekeyvault: ['client_id', 'client_secret', 'tenant_id'],
@@ -80,7 +81,11 @@ export default class KeymgmtProviderModel extends Model {
     const attrs = expandAttributeMeta(this, ['name', 'created', 'keyCollection']);
     attrs.splice(1, 0, { hasBlock: true, label: 'Type', value: this.typeName, icon: this.icon });
     const l = this.keys.length;
-    const value = l ? `${l} ${l > 1 ? 'keys' : 'key'}` : 'None';
+    const value = l
+      ? `${l} ${l > 1 ? 'keys' : 'key'}`
+      : this.canListKeys
+      ? 'None'
+      : 'You do not have permission to list keys';
     attrs.push({ hasBlock: true, isLink: l, label: 'Keys', value });
     return attrs;
   }
@@ -104,18 +109,48 @@ export default class KeymgmtProviderModel extends Model {
   }
 
   async fetchKeys(page) {
-    try {
-      this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
-        backend: 'keymgmt',
-        provider: this.name,
-        responsePath: 'data.keys',
-        page,
-      });
-    } catch (error) {
-      this.keys = [];
-      if (error.httpStatus !== 404) {
-        throw error;
+    if (this.canListKeys) {
+      try {
+        this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
+          backend: 'keymgmt',
+          provider: this.name,
+          responsePath: 'data.keys',
+          page,
+        });
+      } catch (error) {
+        this.keys = [];
+        if (error.httpStatus !== 404) {
+          throw error;
+        }
       }
+    } else {
+      this.keys = [];
     }
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/kms/${'id'}`, 'backend', 'id') providerPath;
+  @lazyCapabilities(apiPath`${'backend'}/kms`, 'backend') providersPath;
+  @lazyCapabilities(apiPath`${'backend'}/kms/${'id'}/key`, 'backend', 'id') providerKeysPath;
+
+  get canCreate() {
+    return this.providerPath.get('canCreate');
+  }
+  get canDelete() {
+    return this.providerPath.get('canDelete');
+  }
+  get canEdit() {
+    return this.providerPath.get('canUpdate');
+  }
+  get canRead() {
+    return this.providerPath.get('canRead');
+  }
+  get canList() {
+    return this.providersPath.get('canList');
+  }
+  get canListKeys() {
+    return this.providerKeysPath.get('canList');
+  }
+  get canCreateKeys() {
+    return this.providerKeysPath.get('canCreate');
   }
 }

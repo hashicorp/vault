@@ -149,4 +149,11 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     // TODO: re-fetch record data after
     return this.ajax(this.url(backend, id, 'ROTATE'), 'PUT');
   }
+
+  removeFromProvider(model) {
+    const url = `${this.buildURL()}/${model.backend}/kms/${model.provider.name}/key/${model.name}`;
+    return this.ajax(url, 'DELETE').then(() => {
+      model.provider = null;
+    });
+  }
 }

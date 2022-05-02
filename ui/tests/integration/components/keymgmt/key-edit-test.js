@@ -23,6 +23,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
           creation_time: now,
         },
       ],
+      canDelete: true,
     });
     this.model = model;
     this.tab = '';
