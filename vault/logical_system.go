@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -3610,55 +3609,8 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 	return resp, nil
 }
 
-func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	bytes := 0
-	var err error
-	strBytes := d.Get("urlbytes").(string)
-	if strBytes != "" {
-		bytes, err = strconv.Atoi(strBytes)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
-		}
-	} else {
-		bytes = d.Get("bytes").(int)
-	}
-	format := d.Get("format").(string)
-
-	if bytes < 1 {
-		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
-	}
-
-	if bytes > maxBytes {
-		return logical.ErrorResponse(`"bytes" should be less than %d`, maxBytes), nil
-	}
-
-	switch format {
-	case "hex":
-	case "base64":
-	default:
-		return logical.ErrorResponse("unsupported encoding format %q; must be \"hex\" or \"base64\"", format), nil
-	}
-
-	randBytes, err := uuid.GenerateRandomBytes(bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	var retStr string
-	switch format {
-	case "hex":
-		retStr = hex.EncodeToString(randBytes)
-	case "base64":
-		retStr = base64.StdEncoding.EncodeToString(randBytes)
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"random_bytes": retStr,
-		},
-	}
-	return resp, nil
+func (b *SystemBackend) pathRandomWrite(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return random.HandleRandomAPI(d, b.Core.secureRandomReader)
 }
 
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
