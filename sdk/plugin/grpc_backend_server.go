@@ -59,6 +59,22 @@ func (b *backendGRPCPluginServer) getBackend(ctx context.Context) (logical.Backe
 	return b.getBackendInternal(ctx)
 }
 
+func (b *backendGRPCPluginServer) getOrCreateBrokeredClient(instanceID string, brokerID uint32) (*grpc.ClientConn, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	if len(b.instances) == 0 {
+		// Dial for storage
+		brokeredClient, err := b.broker.Dial(brokerID)
+		if err != nil {
+			return nil, err
+		}
+		return brokeredClient, nil
+	}
+
+	return nil, fmt.Errorf("no backend instance found %s", fmt.Sprintf("%#+v", b.instances))
+}
+
 // getBrokeredClientInternal returns the brokeredClient but does not hold a lock
 func (b *backendGRPCPluginServer) getBrokeredClientInternal(ctx context.Context) (*grpc.ClientConn, error) {
 	if singleImpl, ok := b.instances["single"]; ok {
@@ -98,8 +114,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 		}
 	}
 
-	// Dial for storage
-	brokeredClient, err := b.broker.Dial(args.BrokerID)
+	brokeredClient, err := b.getOrCreateBrokeredClient(id, args.BrokerID)
 	if err != nil {
 		return &pb.SetupReply{}, err
 	}

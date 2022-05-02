@@ -28,9 +28,10 @@ var _ logical.Backend = &backendGRPCPluginClient{}
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendGRPCPluginClient struct {
-	broker       *plugin.GRPCBroker
-	client       pb.BackendClient
-	metadataMode bool
+	broker               *plugin.GRPCBroker
+	shouldAcceptAndServe bool
+	client               pb.BackendClient
+	metadataMode         bool
 
 	system logical.SystemView
 	logger log.Logger
@@ -213,38 +214,41 @@ func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string)
 }
 
 func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
-	// Shim logical.Storage
-	storageImpl := config.StorageView
-	if b.metadataMode {
-		storageImpl = &NOOPStorage{}
-	}
-	storage := &GRPCStorageServer{
-		impl: storageImpl,
-	}
+	brokerID := uint32(0)
+	if b.shouldAcceptAndServe {
+		// Shim logical.Storage
+		storageImpl := config.StorageView
+		if b.metadataMode {
+			storageImpl = &NOOPStorage{}
+		}
+		storage := &GRPCStorageServer{
+			impl: storageImpl,
+		}
 
-	// Shim logical.SystemView
-	sysViewImpl := config.System
-	if b.metadataMode {
-		sysViewImpl = &logical.StaticSystemView{}
-	}
-	sysView := &gRPCSystemViewServer{
-		impl: sysViewImpl,
-	}
+		// Shim logical.SystemView
+		sysViewImpl := config.System
+		if b.metadataMode {
+			sysViewImpl = &logical.StaticSystemView{}
+		}
+		sysView := &gRPCSystemViewServer{
+			impl: sysViewImpl,
+		}
 
-	// Register the server in this closure.
-	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
-		opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
-		opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
+		// Register the server in this closure.
+		serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
+			opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
+			opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
 
-		s := grpc.NewServer(opts...)
-		pb.RegisterSystemViewServer(s, sysView)
-		pb.RegisterStorageServer(s, storage)
-		b.server.Store(s)
-		close(b.cleanupCh)
-		return s
+			s := grpc.NewServer(opts...)
+			pb.RegisterSystemViewServer(s, sysView)
+			pb.RegisterStorageServer(s, storage)
+			b.server.Store(s)
+			close(b.cleanupCh)
+			return s
+		}
+		brokerID = b.broker.NextId()
+		go b.broker.AcceptAndServe(brokerID, serverFunc)
 	}
-	brokerID := b.broker.NextId()
-	go b.broker.AcceptAndServe(brokerID, serverFunc)
 
 	args := &pb.SetupArgs{
 		BrokerID:    brokerID,

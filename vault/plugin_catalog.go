@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -50,7 +49,8 @@ type PluginCatalog struct {
 	externalPlugins map[string]*externalPlugin
 	mlockPlugins    bool
 
-	lock sync.RWMutex
+	// lock sync.RWMutex
+	lock DeadlockRWMutex
 }
 
 // externalPlugin holds client connections for multiplexed and
@@ -71,6 +71,10 @@ type pluginClient struct {
 
 	// id is the connection ID
 	id string
+
+	// shouldAcceptAndServe allows multiplexed plugins that use bidrectional
+	// communication to share the same socket
+	shouldAcceptAndServe func() bool
 
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
@@ -140,6 +144,10 @@ func (p *pluginClient) Conn() grpc.ClientConnInterface {
 	return p.clientConn
 }
 
+func (p *pluginClient) ShouldAcceptAndServe() bool {
+	return p.shouldAcceptAndServe()
+}
+
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
 // the plugin client and the PluginCatalog. This implements the
 // plugin.ClientProtocol interface.
@@ -182,6 +190,26 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	}
 
 	return nil
+}
+
+func (c *PluginCatalog) ShouldAcceptAndServe(name string) bool {
+	extPlugin := c.externalPlugins[name]
+
+	if extPlugin.multiplexingSupport {
+		if c.ProcessConnectionLen(name) == 1 {
+			c.logger.Debug("shouldAcceptAndServe -- MULTIPLEXED -- true")
+			return true
+		}
+		c.logger.Debug("shouldAcceptAndServe -- MULTIPLEXED -- false", "connections", fmt.Sprintf("%#+v", extPlugin.connections))
+		return false
+	}
+	c.logger.Debug("shouldAcceptAndServe -- NEXT -- true")
+	return true
+}
+
+func (c *PluginCatalog) ProcessConnectionLen(name string) int {
+	extPlugin := c.externalPlugins[name]
+	return len(extPlugin.connections)
 }
 
 func (c *PluginCatalog) getExternalPlugin(pluginName string) *externalPlugin {
@@ -250,6 +278,9 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			c.lock.Lock()
 			defer c.lock.Unlock()
 			return c.cleanupExternalPlugin(pluginRunner.Name, id)
+		},
+		shouldAcceptAndServe: func() bool {
+			return c.ShouldAcceptAndServe(pluginRunner.Name)
 		},
 	}
 
