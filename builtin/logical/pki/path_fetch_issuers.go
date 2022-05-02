@@ -66,7 +66,7 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem)?"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem|/json)?"
 	return buildPathGetIssuer(b, pattern)
 }
 
@@ -122,7 +122,7 @@ intermediate CAs and "permit" only for root CAs.`,
 
 func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Handle raw issuers first.
-	if strings.HasSuffix(req.Path, "/der") || strings.HasSuffix(req.Path, "/pem") {
+	if strings.HasSuffix(req.Path, "/der") || strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/json") {
 		return b.pathGetRawIssuer(ctx, req, data)
 	}
 
@@ -317,11 +317,15 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	certificate := []byte(issuer.Certificate)
-	contentType := "application/pem-certificate-chain"
+
+	var contentType string
+	if strings.HasSuffix(req.Path, "/pem") {
+		contentType = "application/pem-certificate-chain"
+	} else if strings.HasSuffix(req.Path, "/der") {
+		contentType = "application/pkix-cert"
+	}
 
 	if strings.HasSuffix(req.Path, "/der") {
-		contentType = "application/pkix-cert"
-
 		pemBlock, _ := pem.Decode(certificate)
 		if pemBlock == nil {
 			return nil, err
@@ -335,13 +339,22 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		statusCode = 204
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			logical.HTTPContentType: contentType,
-			logical.HTTPRawBody:     certificate,
-			logical.HTTPStatusCode:  statusCode,
-		},
-	}, nil
+	if strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/der") {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				logical.HTTPContentType: contentType,
+				logical.HTTPRawBody:     certificate,
+				logical.HTTPStatusCode:  statusCode,
+			},
+		}, nil
+	} else {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"certificate": string(certificate),
+				"ca_chain":    issuer.CAChain,
+			},
+		}, nil
+	}
 }
 
 func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -409,7 +422,7 @@ the certificate.
 )
 
 func pathGetIssuerCRL(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/crl(/pem)?"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/crl(/pem|/der)?"
 	return buildPathGetIssuerCRL(b, pattern)
 }
 
@@ -462,13 +475,16 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		certificate = []byte(crlEntry.Value)
 	}
 
-	contentType := "application/pkix-crl"
-
-	if strings.HasSuffix(req.Path, "/pem") {
+	var contentType string
+	if strings.HasSuffix(req.Path, "/der") {
+		contentType = "application/pkix-crl"
+	} else if strings.HasSuffix(req.Path, "/pem") {
 		contentType = "application/x-pem-file"
+	}
 
-		// Rather return an empty response rather than an empty
-		// PEM blob.
+	if !strings.HasSuffix(req.Path, "/der") {
+		// Rather return an empty response rather than an empty PEM blob.
+		// We build this PEM block for both the JSON and PEM endpoints.
 		if len(certificate) > 0 {
 			pemBlock := pem.Block{
 				Type:  "X509 CRL",
@@ -484,11 +500,19 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		statusCode = 204
 	}
 
+	if strings.HasSuffix(req.Path, "/der") || strings.HasSuffix(req.Path, "/pem") {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				logical.HTTPContentType: contentType,
+				logical.HTTPRawBody:     certificate,
+				logical.HTTPStatusCode:  statusCode,
+			},
+		}, nil
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
-			logical.HTTPContentType: contentType,
-			logical.HTTPRawBody:     certificate,
-			logical.HTTPStatusCode:  statusCode,
+			"crl": string(certificate),
 		},
 	}, nil
 }
@@ -507,7 +531,8 @@ they have the same Subject value.
 will be consulted for the present default issuer, an identifier of an issuer,
 or its assigned name value.
 
-Use /issuer/:ref/crl/pem to return just the certificate in PEM form; the raw
-/issuer/:ref/crl is in DER form.
+ - /issuer/:ref/crl is JSON encoded and contains a PEM CRL,
+ - /issuer/:ref/crl/pem contains the PEM-encoded CRL,
+ - /issuer/:ref/crl/DER contains the raw DER-encoded (binary) CRL.
 `
 )
