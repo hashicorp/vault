@@ -877,7 +877,7 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 				"source": {
 					Type:        framework.TypeString,
 					Default:     "platform",
-					Description: `Which system to source entropy from, ether "platform", "seal", or "all".`,
+					Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
 				},
 			},
 

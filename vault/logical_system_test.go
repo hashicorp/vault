@@ -3159,7 +3159,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 		req.Data["source"] = source
 		req.Data["bytes"] = 32
 		req.Data["format"] = "base64"
-		req.Path = "random"
+		req.Path = "tools/random"
 		// Test defaults
 		doRequest(req, false, "base64", 32)
 

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/vault/helper/random"
 	"reflect"
 	"testing"
 
@@ -116,7 +117,7 @@ func TestTransit_Random(t *testing.T) {
 		doRequest(req, true, "", 0)
 
 		req.Data["format"] = "hex"
-		req.Data["bytes"] = maxBytes + 1
+		req.Data["bytes"] = random.APIMaxBytes + 1
 
 		doRequest(req, true, "", 0)
 	}
