@@ -4034,7 +4034,7 @@ func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.Cer
 }
 
 func getParsedCrlForIssuer(t *testing.T, client *api.Client, mountPoint string, issuer string) *pkix.CertificateList {
-	path := fmt.Sprintf("/v1/%v/issuer/%v/crl", mountPoint, issuer)
+	path := fmt.Sprintf("/v1/%v/issuer/%v/crl/der", mountPoint, issuer)
 	crl := getParsedCrlAtPath(t, client, path)
 
 	// Now fetch the issuer as well and verify the certificate
