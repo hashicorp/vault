@@ -1682,6 +1682,30 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	}
 }
 
+func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_key_ids":      false,
+				"allow_user_certificates": true,
+				"not_before_duration":     "300s",
+			}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
