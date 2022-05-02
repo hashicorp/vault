@@ -147,7 +147,12 @@
           class="button is-primary"
           data-test-secret-save={{true}}
         >
-          Save
+          {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+        </button>
+      </div>
+      <div class="control">
+        <button type="button" class="button" {{on "click" @onClose}}>
+          Cancel
         </button>
       </div>
     </div>

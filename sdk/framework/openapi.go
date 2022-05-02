@@ -336,6 +336,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				}
 
 				for name, field := range bodyFields {
+					// Removing this field from the spec as it is deprecated in favor of using "sha256"
+					// The duplicate sha_256 and sha256 in these paths cause issues with codegen
+					if name == "sha_256" && strings.Contains(path, "plugins/catalog/") {
+						continue
+					}
+
 					openapiField := convertType(field.Type)
 					if field.Required {
 						s.Required = append(s.Required, name)
