@@ -45,11 +45,13 @@ refresh_go_mod_cache:
           # code generation in later builds that rely on this module cache.
           go list ./...
           # try really, really, really hard to download everything
+          touch deps.json
           for dir in $(find . -name go.mod | xargs -n 1 dirname); do
             pushd $dir;
-            go mod download -json;
+            go mod download -json >> deps.json
             popd;
           done
+          jq -c '[.Path,.Version]' deps.json | sort | uniq
     - run:
         name: Verify downloading modules did not modify any files
         command: |
