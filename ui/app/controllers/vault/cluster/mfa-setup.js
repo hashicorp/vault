@@ -12,20 +12,17 @@ export default class VaultClusterMfaSetupController extends Controller {
     return this.auth.authData.entity_id;
   }
 
-  @action isUUIDVerified(response) {
-    if (response) {
+  @action isUUIDVerified(verified) {
+    if (verified) {
       this.onStep = 2;
     } else {
-      this.isError = 'UUID was not verified';
-      // ARG TODO work with Ivana on error message.
-      // try and figure out API response.
+      this.onStep = 1;
     }
   }
   @action isAuthenticationCodeVerified(response) {
     if (response) {
       this.onStep = 3;
     } else {
-      this.isError = 'Authentication code not verified';
       // ARG TODO work with Ivana on error message.
       // try and figure out API response.
     }
