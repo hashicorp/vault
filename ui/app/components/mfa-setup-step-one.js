@@ -21,4 +21,8 @@ export default class MfaSetupStepOne extends Component {
     // if verified send confirm boolean to the parent?
     this.args.isUUIDVerified(true);
   }
+  @action
+  redirectPreviousPage() {
+    window.history.back();
+  }
 }

@@ -39,6 +39,7 @@
       type="button"
       {{! ARG TODO disable if no value in the input }}
       {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
+      {{on "click" this.redirectPreviousPage}}
       class="button"
     >
       Cancel

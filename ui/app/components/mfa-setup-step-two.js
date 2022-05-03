@@ -22,4 +22,8 @@ export default class MfaSetupStepTwo extends Component {
     // if verified send confirm boolean to the parent?
     this.args.isAuthenticationCodeVerified(true);
   }
+  @action
+  redirectPreviousPage() {
+    window.history.back();
+  }
 }
