@@ -18,9 +18,9 @@ restore_go_mod_cache_permissive:
     - restore_cache:
         name: Restore closest matching go modules cache
         keys:
-          - &gocachekey v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          -             v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          -             v1.5-{{checksum "go.sum"}}
+          - &gocachekey v1.6-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          -             v1.6-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          -             v1.6-{{checksum "go.sum"}}
 restore_go_mod_cache:
   steps:
     - restore_cache:
@@ -44,11 +44,12 @@ refresh_go_mod_cache:
           # download' misses. We need this because we make use of go list itself during
           # code generation in later builds that rely on this module cache.
           go list ./...
-          go mod download -json
-          ( cd sdk && go mod download -json; )
-          ( cd api && go mod download -json; )
           # try really, really, really hard to download everything
-          (go mod graph | cut -d' ' -f1; go mod graph | cut -d' ' -f2) | sort | uniq | xargs go mod download -json
+          for dir in $(find . -name go.mod | xargs -n 1 dirname); do
+            pushd dir;
+            go mod download -json;
+            popd;
+          end
     - run:
         name: Verify downloading modules did not modify any files
         command: |
