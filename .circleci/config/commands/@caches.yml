@@ -46,7 +46,7 @@ refresh_go_mod_cache:
           go list ./...
           # try really, really, really hard to download everything
           for dir in $(find . -name go.mod | xargs -n 1 dirname); do
-            pushd dir;
+            pushd $dir;
             go mod download -json;
             popd;
           done
