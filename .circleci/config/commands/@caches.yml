@@ -48,7 +48,7 @@ refresh_go_mod_cache:
           touch deps.json
           for dir in $(find . -name go.mod | xargs -n 1 dirname); do
             pushd $dir;
-            go get .
+            go get . || true
             go mod download all
             go mod download -json >> deps.json
             rm -rf /tmp/vendor
