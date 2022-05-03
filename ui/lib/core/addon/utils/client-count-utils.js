@@ -10,15 +10,6 @@ export const flattenDataset = (object) => {
   return object;
 };
 
-export const sortMonthsByTimestamp = (monthsArray) => {
-  // backend is working on a fix to sort months by date
-  // right now months are ordered in descending client count number
-  const sortedPayload = [...monthsArray];
-  return sortedPayload.sort((a, b) =>
-    compareAsc(parseAPITimestamp(a.timestamp), parseAPITimestamp(b.timestamp))
-  );
-};
-
 export const formatByMonths = (monthsArray) => {
   if (!Array.isArray(monthsArray)) return monthsArray;
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
@@ -86,4 +77,13 @@ export const homogenizeClientNaming = (object) => {
     };
   }
   return object;
+};
+
+export const sortMonthsByTimestamp = (monthsArray) => {
+  // backend is working on a fix to sort months by date
+  // right now months are ordered in descending client count number
+  const sortedPayload = [...monthsArray];
+  return sortedPayload.sort((a, b) =>
+    compareAsc(parseAPITimestamp(a.timestamp), parseAPITimestamp(b.timestamp))
+  );
 };
