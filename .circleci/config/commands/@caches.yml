@@ -18,9 +18,9 @@ restore_go_mod_cache_permissive:
     - restore_cache:
         name: Restore closest matching go modules cache
         keys:
-          - &gocachekey v1.8-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          -             v1.8-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          -             v1.8-{{checksum "go.sum"}}
+          - &gocachekey v1.9-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          -             v1.9-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          -             v1.9-{{checksum "go.sum"}}
 restore_go_mod_cache:
   steps:
     - restore_cache:
@@ -50,6 +50,7 @@ refresh_go_mod_cache:
             pushd $dir;
             go list ./...
             go mod download -json >> deps.json
+            go mod download all -json >> deps.json
             rm -rf /tmp/vendor
             popd;
           done
