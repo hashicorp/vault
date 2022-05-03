@@ -1,6 +1,6 @@
-{{! show single chart if data is from a range, show two charts if from a single month}}
+{{! show single horizontal bar chart unless data is from a single, historical month (isDateRange = false) }}
 <div
-  class={{concat "chart-wrapper" (if @isDateRange " single-chart-grid") (unless @isDateRange " dual-chart-grid")}}
+  class={{concat "chart-wrapper" (if (or @isCurrentMonth @isDateRange) " single-chart-grid" " dual-chart-grid")}}
   data-test-clients-attribution
 >
   <div class="chart-header has-header-link has-bottom-margin-m">
@@ -23,12 +23,12 @@
   </div>
 
   {{#if this.barChartTotalClients}}
-    {{#if (eq @isDateRange true)}}
+    {{#if (or @isDateRange @isCurrentMonth)}}
       <div class="chart-container-wide" data-test-chart-container="total-clients">
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
           @chartLegend={{@chartLegend}}
-          @totalUsageCounts={{@totalUsageCounts}}
+          @totalCounts={{@totalUsageCounts}}
         />
       </div>
       <div class="chart-subTitle">
@@ -51,7 +51,7 @@
         <Clients::HorizontalBarChart
           @dataset={{this.barChartNewClients}}
           @chartLegend={{@chartLegend}}
-          @totalUsageCounts={{@newUsageCounts}}
+          @totalCounts={{@newUsageCounts}}
           @noDataMessage={{"There are no new clients for this namespace during this time period."}}
         />
       </div>
@@ -62,7 +62,7 @@
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
           @chartLegend={{@chartLegend}}
-          @totalUsageCounts={{@totalUsageCounts}}
+          @totalCounts={{@totalUsageCounts}}
         />
       </div>
     {{/if}}
@@ -93,18 +93,15 @@
 >
   <section class="modal-card-body">
     <p class="has-bottom-margin-s">
-      This export will include the namespace path, authentication method path, and the associated clients, unique entities,
-      and non-entity tokens for the below date range.
+      This export will include the namespace path, authentication method path, and the associated total, entity, and
+      non-entity clients for the below
+      {{if @isCurrentMonth "month" "date range"}}.
     </p>
     <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if @endTimeDisplay " RANGE"}}</p>
     <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      {{on "click" (fn this.exportChartData this.getCsvFileName this.getCsvData)}}
-    >
+    <button type="button" class="button is-primary" {{on "click" (fn this.exportChartData this.getCsvFileName)}}>
       Export
     </button>
     <button type="button" class="button is-secondary" onclick={{action (mut this.showCSVDownloadModal) false}}>

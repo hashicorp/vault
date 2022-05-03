@@ -48,8 +48,8 @@ export default class VerticalBarChart extends Component {
   }
 
   @action
-  registerListener(element, args) {
-    const dataset = args[0];
+  renderChart(element, [chartData]) {
+    const dataset = chartData;
     const filteredData = dataset.filter((e) => Object.keys(e).includes('clients')); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     const stackedData = stackFunction(filteredData);
@@ -66,6 +66,9 @@ export default class VerticalBarChart extends Component {
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
+
+    // clear out DOM before appending anything
+    chartSvg.selectAll('g').remove().exit().data(stackedData).enter();
 
     const dataBars = chartSvg
       .selectAll('g')
