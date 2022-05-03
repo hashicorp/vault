@@ -13,7 +13,10 @@ import (
 // This allows us to record the version of the migration code within the log entry
 // in case we find out in the future that something was horribly wrong with the migration,
 // and we need to perform it again...
-const latestMigrationVersion = 1
+const (
+	latestMigrationVersion = 1
+	legacyBundleShimID     = issuerID("legacy-entry-shim-id")
+)
 
 type legacyBundleMigrationLog struct {
 	Hash             string    `json:"hash" structs:"hash" mapstructure:"hash"`
@@ -173,8 +176,11 @@ func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, 
 	// Fake a storage entry with backwards compatibility in mind. We only need
 	// the fields in the CAInfoBundle; everything else doesn't matter.
 	issuer := &issuerEntry{
+		ID:                   legacyBundleShimID,
+		Name:                 "legacy-entry-shim",
 		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
 	}
+	issuer.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)
 
 	return issuer, cb, nil
 }

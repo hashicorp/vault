@@ -91,6 +91,14 @@ the entire validity period. It is suggested to use "truncate" for
 intermediate CAs and "permit" only for root CAs.`,
 		Default: "err",
 	}
+	fields["usage"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list (or string slice) of usages for
+this issuer; valid values are "read-only", "issuing-certificates", and
+"crl-signing". Multiple values may be specified. Read-only is implicit
+and always set.`,
+		Default: []string{"read-only", "issuing-certificates", "crl-signing"},
+	}
 
 	return &framework.Path{
 		// Returns a JSON entry.
@@ -162,6 +170,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 			"manual_chain":            respManualChain,
 			"ca_chain":                issuer.CAChain,
 			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior,
+			"usage":                   issuer.Usage.Names(),
 		},
 	}, nil
 }
@@ -202,6 +211,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// errs should still be surfaced, however.
 		return logical.ErrorResponse(err.Error()), nil
 	}
+	if err == errIssuerNameInUse && issuer.Name != newName {
+		// When the new name is in use but isn't this name, throw an error.
+		return logical.ErrorResponse(err.Error()), nil
+	}
 
 	newPath := data.Get("manual_chain").([]string)
 	rawLeafBehavior := data.Get("leaf_not_after_behavior").(string)
@@ -217,6 +230,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("Unknown value for field `leaf_not_after_behavior`. Possible values are `err`, `truncate`, and `permit`."), nil
 	}
 
+	rawUsage := data.Get("usage").([]string)
+	newUsage, err := NewIssuerUsageFromNames(rawUsage)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
+	}
+
 	modified := false
 
 	if newName != issuer.Name {
@@ -226,6 +245,11 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	if newLeafBehavior != issuer.LeafNotAfterBehavior {
 		issuer.LeafNotAfterBehavior = newLeafBehavior
+		modified = true
+	}
+
+	if newUsage != issuer.Usage {
+		issuer.Usage = newUsage
 		modified = true
 	}
 
@@ -289,6 +313,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 			"manual_chain":            respManualChain,
 			"ca_chain":                issuer.CAChain,
 			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior,
+			"usage":                   issuer.Usage.Names(),
 		},
 	}, nil
 }

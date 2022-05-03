@@ -276,7 +276,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -417,7 +417,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:

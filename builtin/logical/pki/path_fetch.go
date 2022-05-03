@@ -206,7 +206,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 	// Prefer fetchCAInfo to fetchCertBySerial for CA certificates.
 	if serial == "ca_chain" || serial == "ca" {
-		caInfo, err := fetchCAInfo(ctx, b, req, defaultRef)
+		caInfo, err := fetchCAInfo(ctx, b, req, defaultRef, ReadOnlyUsage)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

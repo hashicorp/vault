@@ -67,6 +67,68 @@ func (e keyEntry) isManagedPrivateKey() bool {
 	return e.PrivateKeyType == certutil.ManagedPrivateKey
 }
 
+type issuerUsage uint
+
+const (
+	ReadOnlyUsage   issuerUsage = iota
+	IssuanceUsage   issuerUsage = 1 << iota
+	CRLSigningUsage issuerUsage = 1 << iota
+
+	// When adding a new usage in the future, we'll need to create a usage
+	// mask field on the IssuerEntry and handle migrations to a newer mask,
+	// inferring a value for the new bits.
+	AllIssuerUsages issuerUsage = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage
+)
+
+var namedIssuerUsages = map[string]issuerUsage{
+	"read-only":            ReadOnlyUsage,
+	"issuing-certificates": IssuanceUsage,
+	"crl-signing":          CRLSigningUsage,
+}
+
+func (i *issuerUsage) ToggleUsage(usages ...issuerUsage) {
+	for _, usage := range usages {
+		*i ^= usage
+	}
+}
+
+func (i issuerUsage) HasUsage(usage issuerUsage) bool {
+	return (i & usage) == usage
+}
+
+func (i issuerUsage) Names() string {
+	var names []string
+	var builtUsage issuerUsage
+
+	for name, usage := range namedIssuerUsages {
+		if i.HasUsage(usage) {
+			names = append(names, name)
+			builtUsage.ToggleUsage(usage)
+		}
+	}
+
+	if i != builtUsage {
+		// Found some unknown usage, we should indicate this in the names.
+		names = append(names, fmt.Sprintf("unknown:%v", i^builtUsage))
+	}
+
+	return strings.Join(names, ",")
+}
+
+func NewIssuerUsageFromNames(names []string) (issuerUsage, error) {
+	var result issuerUsage
+	for index, name := range names {
+		usage, ok := namedIssuerUsages[name]
+		if !ok {
+			return ReadOnlyUsage, fmt.Errorf("unknown name for usage at index %v: %v", index, name)
+		}
+
+		result.ToggleUsage(usage)
+	}
+
+	return result, nil
+}
+
 type issuerEntry struct {
 	ID                   issuerID                  `json:"id" structs:"id" mapstructure:"id"`
 	Name                 string                    `json:"name" structs:"name" mapstructure:"name"`
@@ -76,6 +138,7 @@ type issuerEntry struct {
 	ManualChain          []issuerID                `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
 	SerialNumber         string                    `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior" structs:"not_after_behavior" mapstructure:"not_after_behavior"`
+	Usage                issuerUsage               `json:"usage" structs:"usage" mapstructure:"usage"`
 }
 
 type localCRLConfigEntry struct {
@@ -297,6 +360,30 @@ func (i issuerEntry) GetCertificate() (*x509.Certificate, error) {
 	return x509.ParseCertificate(block.Bytes)
 }
 
+func (i issuerEntry) EnsureUsage(usage issuerUsage) error {
+	// We want to spit out a nice error message about missing usages.
+	if i.Usage.HasUsage(usage) {
+		return nil
+	}
+
+	issuerRef := fmt.Sprintf("id:%v", i.ID)
+	if len(i.Name) > 0 {
+		issuerRef = fmt.Sprintf("%v / name:%v", issuerRef, i.Name)
+	}
+
+	// These usages differ at some point in time. We've gotta find the first
+	// usage that differs and return a logical-sounding error message around
+	// that difference.
+	for name, candidate := range namedIssuerUsages {
+		if usage.HasUsage(candidate) && !i.Usage.HasUsage(candidate) {
+			return fmt.Errorf("requested usage %v for issuer [%v] but only had usage %v", name, issuerRef, i.Usage.Names())
+		}
+	}
+
+	// Maybe we have an unnamed usage that's requested.
+	return fmt.Errorf("unknown delta between usages: %v -> %v / for issuer [%v]", usage.Names(), i.Usage.Names(), issuerRef)
+}
+
 func listIssuers(ctx context.Context, s logical.Storage) ([]issuerID, error) {
 	strList, err := s.List(ctx, issuerPrefix)
 	if err != nil {
@@ -464,6 +551,7 @@ func importIssuer(ctx managedKeyContext, s logical.Storage, certValue string, is
 	result.Name = issuerName
 	result.Certificate = certValue
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
+	result.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)
 
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")

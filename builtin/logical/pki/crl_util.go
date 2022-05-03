@@ -100,7 +100,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		return nil, nil
 	}
 
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, defaultRef)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, defaultRef, ReadOnlyUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -270,6 +270,11 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			continue
 		}
 
+		// Skip entries which aren't enabled for CRL signing.
+		if err := thisEntry.EnsureUsage(CRLSigningUsage); err != nil {
+			continue
+		}
+
 		issuerIDEntryMap[issuer] = thisEntry
 
 		thisCert, err := thisEntry.GetCertificate()
@@ -365,6 +370,12 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	// remove them, remembering their CRLs IDs. If we've completely removed
 	// all issuers pointing to that CRL number, we can remove it from the
 	// number map and from storage.
+	//
+	// Note that we persist the last generated CRL for a specified issuer
+	// if it is later disabled for CRL generation. This mirrors the old
+	// root deletion behavior, but using soft issuer deletes. If there is an
+	// alternate, equivalent issuer however, we'll keep updating the shared
+	// CRL; all equivalent issuers must have their CRLs disabled.
 	for mapIssuerId := range crlConfig.IssuerIDCRLMap {
 		stillHaveIssuer := false
 		for _, listedIssuerId := range issuers {
