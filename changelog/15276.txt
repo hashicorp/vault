@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Update to consul-template 0.29.0
+```
