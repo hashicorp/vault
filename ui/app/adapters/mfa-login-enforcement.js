@@ -8,7 +8,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   }
 
   async query(store, type, query) {
-    const url = this.buildURL(type.modelName, null, null, 'query', query);
+    const url = this.urlForQuery(query, type.modelName);
     return this.ajax(url, 'GET', { data: { list: true } }).then((resp) => resp.data);
   }
 }
