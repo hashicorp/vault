@@ -5,12 +5,13 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/keysutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io"
 	"path"
 	"strconv"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const WrappingKeyName = "wrapping-key"
@@ -92,6 +93,8 @@ func generateWrappingKey(ctx context.Context, storage logical.Storage, rand io.R
 	return p, nil
 }
 
-const pathWrappingKeyHelpSyn = "Returns the public key to use for wrapping imported keys"
-const pathWrappingKeyHelpDesc = "This path is used to retrieve the RSA-4096 wrapping key" +
-	"for wrapping keys that are being imported into transit."
+const (
+	pathWrappingKeyHelpSyn  = "Returns the public key to use for wrapping imported keys"
+	pathWrappingKeyHelpDesc = "This path is used to retrieve the RSA-4096 wrapping key" +
+		"for wrapping keys that are being imported into transit."
+)
