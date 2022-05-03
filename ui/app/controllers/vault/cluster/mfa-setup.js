@@ -1,25 +1,11 @@
-import Component from '@glimmer/component';
+import Controller from '@ember/controller';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
-/**
- * @module MfaSetupSteps
- * MfaSetupSteps components are used to...
- *
- * @example
- * ```js
- * <MfaSetupSteps @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
- * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
- */
-
-export default class MfaSetupSteps extends Component {
+export default class VaultClusterMfaSetupController extends Controller {
   @tracked onStep = 1;
 
   @action isUUIDVerified(response) {
-    console.log('here');
     if (response) {
       this.onStep = 2;
     } else {
@@ -29,7 +15,6 @@ export default class MfaSetupSteps extends Component {
     }
   }
   @action isAuthenticationCodeVerified(response) {
-    console.log('here');
     if (response) {
       this.onStep = 3;
     } else {
