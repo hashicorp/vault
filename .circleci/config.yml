@@ -860,8 +860,8 @@ jobs:
           for dir in $(find . -name go.mod | xargs -n 1 dirname); do
             pushd $dir;
             go list ./...
+            go mod download all
             go mod download -json >> deps.json
-            go mod download all -json >> deps.json
             rm -rf /tmp/vendor
             popd;
           done
