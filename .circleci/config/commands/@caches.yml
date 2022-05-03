@@ -50,7 +50,6 @@ refresh_go_mod_cache:
             pushd $dir;
             go list ./...
             go mod download -json >> deps.json
-            go mod vendor -v -o /tmp/vendor 2>&1 | grep -ve '^#' | xargs go mod download -json >> deps.json
             rm -rf /tmp/vendor
             popd;
           done
