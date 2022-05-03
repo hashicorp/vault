@@ -13,19 +13,10 @@ const (
 
 func TestTransit_WrappingKey(t *testing.T) {
 	// Set up shared backend for subtests
-	var b *backend
-	storage := &logical.InmemStorage{}
-	sysView := logical.TestSystemView()
-	b, _ = Backend(
-		context.Background(),
-		&logical.BackendConfig{
-			StorageView: storage,
-			System:      sysView,
-		},
-	)
+	b, s := createBackendWithStorage(t)
 
 	// Ensure the key does not exist before requesting it.
-	keyEntry, err := storage.Get(context.Background(), storagePath)
+	keyEntry, err := s.Get(context.Background(), storagePath)
 	if err != nil {
 		t.Fatalf("error retrieving wrapping key from storage: %s", err)
 	}
@@ -35,7 +26,7 @@ func TestTransit_WrappingKey(t *testing.T) {
 
 	// Generate the key pair by requesting the public key.
 	req := &logical.Request{
-		Storage:   storage,
+		Storage:   s,
 		Operation: logical.ReadOperation,
 		Path:      "wrapping_key",
 	}
@@ -50,7 +41,7 @@ func TestTransit_WrappingKey(t *testing.T) {
 
 	// Request the wrapping key again to ensure it isn't regenerated.
 	req = &logical.Request{
-		Storage:   storage,
+		Storage:   s,
 		Operation: logical.ReadOperation,
 		Path:      "wrapping_key",
 	}
