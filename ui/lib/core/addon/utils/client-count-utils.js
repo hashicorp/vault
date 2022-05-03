@@ -17,7 +17,7 @@ export const formatByMonths = (monthsArray) => {
     if (Object.keys(m).includes('counts')) {
       let totalClients = flattenDataset(m);
       let newClients = m.new_clients ? flattenDataset(m.new_clients) : {};
-      return {
+      let formattedMonth = {
         month: parseAPITimestamp(m.timestamp, 'M/yy'),
         ...totalClients,
         namespaces: formatByNamespace(m.namespaces),
@@ -27,6 +27,7 @@ export const formatByMonths = (monthsArray) => {
           namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
         },
       };
+      return createNamespaceKeyObject(formattedMonth);
     }
   });
 };
@@ -86,4 +87,43 @@ export const sortMonthsByTimestamp = (monthsArray) => {
   return sortedPayload.sort((a, b) =>
     compareAsc(parseAPITimestamp(a.timestamp), parseAPITimestamp(b.timestamp))
   );
+};
+
+export const createNamespaceKeyObject = (monthObject) => {
+  // create new key of `by_namespace_key` in month object:
+  //   by_namespace_key: {
+  //     "namespace_label": {
+  //       clients: 32,
+  //       entity_clients: 16,
+  //       non_entity_clients: 16,
+  //       mounts: [],
+  //       new_clients: {
+  //         clients: 5,
+  //         entity_clients: 2,
+  //         non_entity_clients: 3,
+  //         mounts: [],
+  //       },
+  //     },
+  //   },
+  // };
+
+  const { month } = monthObject;
+  monthObject.by_namespace_key = {};
+  if (monthObject.namespaces) {
+    monthObject.namespaces.forEach((namespace) => {
+      let new_clients;
+      if (monthObject.new_clients) {
+        new_clients = monthObject.new_clients.namespaces?.find((n) => n.label === namespace.label) || {};
+      }
+
+      monthObject.by_namespace_key[namespace.label] = {
+        month,
+        ...namespace,
+        new_clients: { month, ...new_clients },
+      };
+      // TODO delete or keep "label" key within namespace key object?
+      // delete month.by_namespace_key[namespace.label].new_clients.label
+    });
+  }
+  return monthObject;
 };
