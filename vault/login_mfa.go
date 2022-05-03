@@ -476,7 +476,6 @@ func (i *IdentityStore) handleLoginMFAAdminDestroyUpdate(ctx context.Context, re
 
 // loadMFAMethodConfigs loads MFA method configs for login MFA
 func (b *LoginMFABackend) loadMFAMethodConfigs(ctx context.Context) error {
-	// Accumulate existing entities
 	b.mfaLogger.Debug("loading login MFA configurations")
 	existing, err := b.Core.systemBarrierView.List(ctx, loginMFAConfigPrefix)
 	if err != nil {
@@ -511,16 +510,15 @@ func (b *LoginMFABackend) loadMFAMethodConfigs(ctx context.Context) error {
 
 // loadMFAEnforcementConfigs loads MFA method configs for login MFA
 func (b *LoginMFABackend) loadMFAEnforcementConfigs(ctx context.Context) error {
-	// Accumulate existing entities
-	b.mfaLogger.Debug("loading login MFA configurations")
+	b.mfaLogger.Debug("loading login MFA enforcement configurations")
 	existing, err := b.Core.systemBarrierView.List(ctx, mfaLoginEnforcementPrefix)
 	if err != nil {
-		return fmt.Errorf("failed to list MFA configurations for prefix %s: %w", mfaLoginEnforcementPrefix, err)
+		return fmt.Errorf("failed to list MFA enforcement configurations for prefix %s: %w", mfaLoginEnforcementPrefix, err)
 	}
-	b.mfaLogger.Debug("methods collected", "num_existing", len(existing))
+	b.mfaLogger.Debug("enforcements configs collected", "num_existing", len(existing))
 
 	for _, key := range existing {
-		b.mfaLogger.Trace("loading method", "method", key)
+		b.mfaLogger.Trace("loading enforcement", "config", key)
 
 		// Read the config from storage
 		mConfig, err := b.getMFAEnforcementConfig(ctx, mfaLoginEnforcementPrefix+key, b.Core.systemBarrierView)
@@ -535,11 +533,11 @@ func (b *LoginMFABackend) loadMFAEnforcementConfigs(ctx context.Context) error {
 		// Load the config in MemDB
 		err = b.MemDBUpsertMFALoginEnforcementConfig(ctx, mConfig)
 		if err != nil {
-			return fmt.Errorf("failed to load configuration prefix %s in MemDB: %w", mfaLoginEnforcementPrefix, err)
+			return fmt.Errorf("failed to load enforcement configuration prefix %s in MemDB: %w", mfaLoginEnforcementPrefix, err)
 		}
 	}
 
-	b.mfaLogger.Info("configurations restored", "prefix", mfaLoginEnforcementPrefix)
+	b.mfaLogger.Info("enforcement configurations restored", "prefix", mfaLoginEnforcementPrefix)
 
 	return nil
 }
