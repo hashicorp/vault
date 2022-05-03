@@ -1,13 +1,18 @@
+import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';
 
-export default ApplicationSerializer.extend({
-  normalizeFindAllResponse(store, primaryModelClass, payload, id, requestType) {
-    let normalizedPayload = [];
-    payload.forEach((data) => {
-      data.keys.forEach((key) => {
-        normalizedPayload.push({ id: key, ...data.key_info[key] });
+export default class KeymgmtKeySerializer extends ApplicationSerializer {
+  normalizeItems(payload) {
+    if (payload.data.keys && Array.isArray(payload.data.keys)) {
+      let data = payload.data.keys.map((key) => {
+        let model = payload.data.key_info[key];
+        model.id = key;
+        return model;
       });
-    });
-    return this._super(store, primaryModelClass, normalizedPayload, id, requestType);
-  },
-});
+      return data;
+    }
+    assign(payload, payload.data);
+    delete payload.data;
+    return payload;
+  }
+}
