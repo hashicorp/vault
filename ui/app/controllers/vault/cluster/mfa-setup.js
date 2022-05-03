@@ -6,6 +6,7 @@ import { tracked } from '@glimmer/tracking';
 export default class VaultClusterMfaSetupController extends Controller {
   @service auth;
   @tracked onStep = 1;
+  @tracked warning = '';
 
   get entityId() {
     // ARG TODO if root this will return empty string.
@@ -19,6 +20,13 @@ export default class VaultClusterMfaSetupController extends Controller {
       this.onStep = 1;
     }
   }
+
+  @action
+  goToReset(warning) {
+    this.warning = warning;
+    this.onStep = 3;
+  }
+
   @action isAuthenticationCodeVerified(response) {
     if (response) {
       this.onStep = 3;

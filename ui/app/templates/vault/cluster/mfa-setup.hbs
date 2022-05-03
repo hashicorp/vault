@@ -7,13 +7,17 @@
       <div class="box">
         {{! ARG TODO maybe make in one component or here in this component }}
         {{#if (eq this.onStep 1)}}
-          <MfaSetupStepOne @isUUIDVerified={{this.isUUIDVerified}} @entityId={{this.entityId}} />
+          <MfaSetupStepOne
+            @isUUIDVerified={{this.isUUIDVerified}}
+            @entityId={{this.entityId}}
+            @goToReset={{this.goToReset}}
+          />
         {{/if}}
         {{#if (eq this.onStep 2)}}
           <MfaSetupStepTwo @isAuthenticationCodeVerified={{this.isAuthenticationCodeVerified}} />
         {{/if}}
         {{#if (eq this.onStep 3)}}
-          <MfaSetupStepThree />
+          <MfaSetupStepThree @warning={{this.warning}} />
         {{/if}}
       </div>
     </div>

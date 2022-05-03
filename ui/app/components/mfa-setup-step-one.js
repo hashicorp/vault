@@ -17,6 +17,7 @@ import { tracked } from '@glimmer/tracking';
 export default class MfaSetupStepOne extends Component {
   @service store;
   @tracked error;
+  @tracked warning;
 
   async postAdminGenerate() {
     this.error = null;
@@ -27,25 +28,27 @@ export default class MfaSetupStepOne extends Component {
         entity_id: this.args.entityId,
         method_id: this.UUID,
       });
-    } catch (error) {
-      const errors = error.errors || [];
-      const incorrectMethodID = errors.find((e) => e.includes('missing method ID'));
-      const restartSetup = errors.find((e) => e.includes('Entity already has a secret'));
-      // ARG TODO confirm that this clears the errors
-
-      if (incorrectMethodID) {
-        this.error = 'You have used an incorrect Method ID. Contact your administrator.';
-        return 'stop_progress';
-      } else if (restartSetup) {
-        // ARG TODO switch screens to step 3 and show error message
-      } else {
-        // no custom error message, return adapter error
-        // ARG TODO test when root and no entity_id
-        this.error = error.errors;
-        return 'stop_progress';
+      // if there was a warning it won't fail but needs to be handled here
+      let warnings = response.warnings || [];
+      if (warnings.length > 0) {
+        this.UUID = ''; // clear UUID
+        const alreadyGenerated = warnings.find((w) =>
+          w.includes('Entity already has a secret for MFA method')
+        );
+        if (alreadyGenerated) {
+          // replace warning because it comes in with extra quotes: "Entity already has a secret for MFA method ""' "
+          // ARG TODO confirm with Ivana on language
+          this.warning = 'Entity already has a secret for MFA method';
+          return 'reset_method';
+        }
+        this.warning = warnings; // in case other kinds of warnings comes through. Still push to third screen because it's not an error.
+        return 'reset_method';
       }
+    } catch (error) {
+      this.UUID = ''; // clear the UUID
+      this.error = error.errors;
+      return 'stop_progress';
     }
-    // ARG TODO can check if returns already generated here
     return response;
   }
 
@@ -55,6 +58,8 @@ export default class MfaSetupStepOne extends Component {
     let response = await this.postAdminGenerate();
     if (response === 'stop_progress') {
       this.args.isUUIDVerified(false);
+    } else if (response === 'reset_method') {
+      this.args.goToReset(this.warning);
     } else {
       this.args.isUUIDVerified(true);
     }
