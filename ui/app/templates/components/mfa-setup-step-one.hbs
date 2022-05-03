@@ -2,7 +2,7 @@
   TOTP Multi-factor authentication (MFA) can be enabled here if it is required by your administrator. This will ensure that
   you are not prevented from logging into Vault in the future, once MFA is fully enforced.
 </p>
-<form id="mfa-setup-step-one" {{on "submit" this.submit}}>
+<form id="mfa-setup-step-one" {{on "submit" this.verifyUUID}}>
   {{!-- <MessageError @errorMessage={{this.error}} class="has-top-margin-s" /> --}}
   <div class="field has-top-margin-l">
     <label class="is-label">
@@ -19,9 +19,8 @@
       autocomplete="off"
       spellcheck="false"
       autofocus="true"
-      {{!-- @value={{constraint.passcode}} --}}
-      {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
-      @value=""
+      @value={{this.UUID}}
+      {{!-- disabled={{or this.validate.isRunning this.fnewCodeDelay.isRunning}} --}}
     />
   </div>
 
@@ -30,8 +29,9 @@
       id="continue"
       type="submit"
       {{! ARG TODO disable if no value in the input }}
+      {{! ARG TODO disable if loading }}
       {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
-      class="button is-primary {{if this.validate.isRunning 'is-loading'}}"
+      class="button is-primary"
     >
       Verify
     </button>

@@ -2,9 +2,8 @@
   TOTP Multi-factor authentication (MFA) can be enabled here if it is required by your administrator. This will ensure that
   you are not prevented from logging into Vault in the future, once MFA is fully enforced.
 </p>
-<form id="mfa-setup-step-three" {{on "submit" this.submit}}>
-  <AlertBanner @type="success" @title="MFA is enabled" class="has-top-margin-l" />
-  <button id="continue" type="button" class="button has-text-danger">
-    Restart setup
-  </button>
-</form>
+
+<AlertBanner @type="success" @title="MFA is enabled" class="has-top-margin-l" />
+<button id="continue" type="button" class="button has-text-danger" {{on "click" this.restartSetup}}>
+  Restart setup
+</button>
