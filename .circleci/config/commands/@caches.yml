@@ -49,7 +49,7 @@ refresh_go_mod_cache:
             pushd dir;
             go mod download -json;
             popd;
-          end
+          done
     - run:
         name: Verify downloading modules did not modify any files
         command: |

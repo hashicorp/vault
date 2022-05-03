@@ -860,7 +860,7 @@ jobs:
             pushd dir;
             go mod download -json;
             popd;
-          end
+          done
         name: go mod download
     - run:
         command: |
