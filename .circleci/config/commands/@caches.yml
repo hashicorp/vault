@@ -18,9 +18,9 @@ restore_go_mod_cache_permissive:
     - restore_cache:
         name: Restore closest matching go modules cache
         keys:
-          - &gocachekey v1.10-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          -             v1.10-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          -             v1.10-{{checksum "go.sum"}}
+          - &gocachekey v1.11-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          -             v1.11-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          -             v1.11-{{checksum "go.sum"}}
 restore_go_mod_cache:
   steps:
     - restore_cache:
@@ -33,7 +33,9 @@ save_go_mod_cache:
         name: Save go modules cache
         key: *gocachekey
         paths:
-          - /home/circleci/go/pkg/mod
+          - /home/circleci/go/pkg
+          - /home/circleci/go/src
+          - /home/circleci/go/bin
 refresh_go_mod_cache:
   steps:
     - restore_go_mod_cache_permissive
