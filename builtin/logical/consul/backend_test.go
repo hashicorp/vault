@@ -1117,7 +1117,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 				"lease":        "6h",
 			},
 		},
-		"role and policy": {
+		"role and policies": {
 			"rp",
 			map[string]interface{}{
 				"policies":     []string{"test"},
@@ -1132,7 +1132,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 				"lease":              "6h",
 			},
 		},
-		"service identity and policy": {
+		"service identity and policies": {
 			"sip",
 			map[string]interface{}{
 				"policies":           []string{"test"},
@@ -1148,7 +1148,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 				"lease":                "6h",
 			},
 		},
-		"service identity and role and policy": {
+		"service identity and role and policies": {
 			"sirp",
 			map[string]interface{}{
 				"policies":           []string{"test"},
@@ -1164,7 +1164,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 				"lease":           "6h",
 			},
 		},
-		"node identity and policy": {
+		"node identity and policies": {
 			"nip",
 			map[string]interface{}{
 				"policies":        []string{"test"},
@@ -1180,7 +1180,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 				"lease":           "6h",
 			},
 		},
-		"node identity and role and policy": {
+		"node identity and role and policies": {
 			"nirp",
 			map[string]interface{}{
 				"consul_roles":       []string{"role-test"},
@@ -1197,7 +1197,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 				"lease":              "6h",
 			},
 		},
-		"node identity and service identity and policy": {
+		"node identity and service identity and policies": {
 			"nisip",
 			map[string]interface{}{
 				"policies":           []string{"test"},
@@ -1215,7 +1215,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 				"lease":              "6h",
 			},
 		},
-		"node identity and service identity and role and policy": {
+		"node identity and service identity and role and policies": {
 			"nisirp",
 			map[string]interface{}{
 				"policies":           []string{"test"},

@@ -498,90 +498,6 @@ func TestFieldDataGet(t *testing.T) {
 			false,
 		},
 
-		"semicolon string slice type, empty string": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{
-				"foo": "",
-			},
-			"foo",
-			[]string{},
-			false,
-		},
-
-		"semicolon string slice type, semicolon string with one value": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{
-				"foo": "value1",
-			},
-			"foo",
-			[]string{"value1"},
-			false,
-		},
-
-		"semicolon string slice type, semicolon string with multi value": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{
-				"foo": "value1;value2;value3",
-			},
-			"foo",
-			[]string{"value1", "value2", "value3"},
-			false,
-		},
-
-		"semicolon string slice type, nil string slice value": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{
-				"foo": "",
-			},
-			"foo",
-			[]string{},
-			false,
-		},
-
-		"semicolon string slice type, string slice with one value": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{
-				"foo": []interface{}{"value1"},
-			},
-			"foo",
-			[]string{"value1"},
-			false,
-		},
-
-		"semicolon string slice type, string slice with multi value": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{
-				"foo": []interface{}{"value1", "value2", "value3"},
-			},
-			"foo",
-			[]string{"value1", "value2", "value3"},
-			false,
-		},
-
-		"semicolon string slice type, empty string slice value": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{
-				"foo": []interface{}{},
-			},
-			"foo",
-			[]string{},
-			false,
-		},
-
 		"comma int slice type, comma int with one value": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeCommaIntSlice},
@@ -962,16 +878,6 @@ func TestFieldDataGet(t *testing.T) {
 			},
 			"foo",
 			[]string{"123"},
-			false,
-		},
-
-		"type semicolon string slice, not supplied": {
-			map[string]*FieldSchema{
-				"foo": {Type: TypeSemicolonStringSlice},
-			},
-			map[string]interface{}{},
-			"foo",
-			[]string{},
 			false,
 		},
 
