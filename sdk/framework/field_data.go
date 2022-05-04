@@ -298,13 +298,6 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		}
 		return res, true, nil
 
-	case TypeSemicolonStringSlice:
-		res, err := parseutil.ParseSemicolonStringSlice(raw)
-		if err != nil {
-			return nil, false, err
-		}
-		return res, true, nil
-
 	case TypeKVPairs:
 		// First try to parse this as a map
 		var mapResult map[string]string
