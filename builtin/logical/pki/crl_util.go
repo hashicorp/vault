@@ -191,7 +191,9 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		// Add a little wiggle room because leases are stored with a second
 		// granularity
 		if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
-			return nil, nil
+			response := &logical.Response{}
+			response.AddWarning(fmt.Sprintf("certificate with serial %s already expired; refusing to add to CRL", serial))
+			return response, nil
 		}
 
 		// Compatibility: Don't revoke CAs if they had leases. New CAs going
