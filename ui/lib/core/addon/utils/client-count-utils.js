@@ -73,7 +73,8 @@ export const homogenizeClientNaming = (object) => {
 };
 
 const flattenDataset = (object) => {
-  if (Object.keys(object).includes('counts') && object.counts) {
+  // TODO CMB revisit when backend has finished ticket VAULT-6035
+  if (object?.counts) {
     let flattenedObject = {};
     Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
     return homogenizeClientNaming(flattenedObject);
@@ -91,8 +92,11 @@ const sortMonthsByTimestamp = (monthsArray) => {
 };
 
 const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month) => {
-  // first nest 'new_clients' within each namespace and mount object respectively
-  totalClientsByNamespace.forEach((ns) => {
+  const transformedNamespaceArray = [...totalClientsByNamespace];
+
+  // all 'new_client' data resides within a separate key of each month (see data structure below)
+  // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object instead
+  transformedNamespaceArray.forEach((ns) => {
     const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     const newClientsByMount = newNamespaceCounts?.mounts;
     if (newClientsByMount) delete newNamespaceCounts.mounts;
@@ -104,11 +108,10 @@ const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, 
     });
   });
 
-  // create a new object in which each namespace label is a key
-  // add month data to each object, including the nested 'new_clients', for time series graphs
+  // SECOND: create a new object (namespace_by_key) in which each namespace label is a key
   let namespaces_by_key = {};
-  totalClientsByNamespace.forEach((namespaceObject) => {
-    // and another where each mount label is a key
+  transformedNamespaceArray.forEach((namespaceObject) => {
+    // THIRD: make another object within the namespace where each mount label is a key
     let mounts_by_key = {};
     namespaceObject.mounts.forEach((mountObject) => {
       if (mountObject.new_clients) mountObject.new_clients.month = month;
@@ -127,7 +130,7 @@ const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, 
     };
   });
   return namespaces_by_key;
-  // sample structure of object
+  // structure of object returned
   // namespace_by_key: {
   //   "namespace_label": {
   //     month: "3/22",
@@ -157,3 +160,68 @@ const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, 
   //   },
   // };
 };
+
+// API RESPONSE STRUCTURE:
+// data: {
+//   ** by_namespace organized in descending order of client count number **
+//   by_namespace: [
+//     {
+//       namespace_id: '96OwG',
+//       namespace_path: 'test-ns/',
+//       counts: {},
+//       mounts: [{ mount_path: 'path-1', counts: {} }],
+//     },
+//   ],
+//   ** months organized in ascending order of timestamps, oldest to most recent
+//   months: [
+//     {
+//       timestamp: '2022-03-01T00:00:00Z',
+//       counts: {},
+//       namespaces: [
+//         {
+//           namespace_id: 'root',
+//           namespace_path: '',
+//           counts: {},
+//           mounts: [{ mount_path: 'auth/up2/', counts: {} }],
+//         },
+//       ],
+//       new_clients: {
+//         counts: {},
+//         namespaces: [
+//           {
+//             namespace_id: 'root',
+//             namespace_path: '',
+//             counts: {},
+//             mounts: [{ mount_path: 'auth/up2/', counts: {} }],
+//           },
+//         ],
+//       },
+//     },
+//     {
+//       timestamp: '2022-04-01T00:00:00Z',
+//       counts: {},
+//       namespaces: [
+//         {
+//           namespace_id: 'root',
+//           namespace_path: '',
+//           counts: {},
+//           mounts: [{ mount_path: 'auth/up2/', counts: {} }],
+//         },
+//       ],
+//       new_clients: {
+//         counts: {},
+//         namespaces: [
+//           {
+//             namespace_id: 'root',
+//             namespace_path: '',
+//             counts: {},
+//             mounts: [{ mount_path: 'auth/up2/', counts: {} }],
+//           },
+//         ],
+//       },
+//     },
+//   ],
+//   start_time: 'start timestamp string',
+//   end_time: 'end timestamp string',
+//   total: { clients: 300, non_entity_clients: 100, entity_clients: 400} ,
+// }

@@ -264,15 +264,15 @@ export default class History extends Component {
   get filteredActivityByMonth() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
-    const namespaceData = this.getActivityResponse?.byMonth.map((m) => m.namespaces_by_key[namespace]);
     if (!namespace && !auth) {
       return this.getActivityResponse?.byMonth;
     }
+    const namespaceData = this.getActivityResponse?.byMonth.map((m) => m.namespaces_by_key[namespace]);
     if (!auth) {
       return namespaceData;
     }
     const mountData = namespaceData.map((namespace) => namespace.mounts_by_key[auth]);
-    // TODO CMB come up with a better check when testing
+    // TODO CMB come up with a better check when testing, if there is no mount data (data from pre 1.10) the array will contain undefined.
     return mountData.includes(undefined) ? null : mountData;
   }
 
