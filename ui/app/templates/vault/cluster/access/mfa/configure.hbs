@@ -6,16 +6,16 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="box is-fullwidth is-sideless is-flex">
+<div class="box is-fullwidth is-sideless is-flex-between">
   <p>
     Configure and enforce multi-factor authentication (MFA) for users logging into Vault, for any
     <br />
     authentication method.
-    <LearnLink @path="/tutorials/vault/usage-metrics">
+    <LearnLink @path="/tutorials/vault/multi-factor-authentication">
       Learn more
     </LearnLink>
   </p>
-  <button type="submit" class="button is-primary is-flex-end">
+  <button type="submit" class="button is-primary">
     Configure MFA
   </button>
 </div>
@@ -29,6 +29,7 @@
     Set up an enforcement to map the MFA configuration to your chosen auth method(s).
   </p>
 </div>
-<div class="box is-fullwidth is-shadowless">
 
+<div class="box is-fullwidth is-shadowless">
+  <img src={{img-path "~/mfa-landing.png"}} alt="MFA configure diagram" />
 </div>

@@ -24,8 +24,6 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
       data: {
         list: true,
       },
-    }).then((resp) => {
-      return resp;
     });
   }
 }

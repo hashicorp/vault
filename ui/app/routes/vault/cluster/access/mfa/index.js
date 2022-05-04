@@ -1,5 +1,6 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+
 export default class MfaRoute extends Route {
   @service router;
 
@@ -15,9 +16,6 @@ export default class MfaRoute extends Route {
         responsePath: 'data.keys',
         page: params.page || 1,
       })
-      .then((model) => {
-        return model;
-      })
       .catch((err) => {
         if (err.httpStatus === 404) {
           return [];
@@ -27,7 +25,7 @@ export default class MfaRoute extends Route {
       });
   }
   afterModel(model) {
-    if (model.get('length') === 0) {
+    if (model.length === 0) {
       this.router.transitionTo('vault.cluster.access.mfa.configure');
     }
   }
