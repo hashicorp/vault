@@ -1,4 +1,4 @@
-import { formatISO, isAfter, isBefore, sub, isSameMonth, startOfMonth } from 'date-fns';
+import { addDays, formatISO, formatRFC3339, isAfter, isBefore, sub, isSameMonth, startOfMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 const MOCK_MONTHLY_DATA = [
   {
@@ -814,11 +814,13 @@ export default function (server) {
   });
 
   server.get('sys/license/status', function () {
+    const startTime = new Date();
+
     return {
       data: {
         autoloading_used: true,
         autoloaded: {
-          expiration_time: '2022-05-17T23:59:59.999Z',
+          expiration_time: formatRFC3339(addDays(startTime, 365))
           features: [
             'HSM',
             'Performance Replication',
@@ -838,10 +840,10 @@ export default function (server) {
           ],
           license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
           performance_standby_count: 9999,
-          start_time: '2021-01-17T00:00:00Z',
+          start_time: formatRFC3339(startTime)
         },
         persisted_autoload: {
-          expiration_time: '2022-05-17T23:59:59.999Z',
+          expiration_time: formatRFC3339(addDays(startTime, 365))
           features: [
             'HSM',
             'Performance Replication',
@@ -861,7 +863,7 @@ export default function (server) {
           ],
           license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
           performance_standby_count: 9999,
-          start_time: '2021-01-17T00:00:00Z',
+          start_time: formatRFC3339(startTime)
         },
       },
     };
