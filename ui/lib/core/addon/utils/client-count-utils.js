@@ -1,33 +1,25 @@
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc } from 'date-fns';
 
-export const flattenDataset = (object) => {
-  if (Object.keys(object).includes('counts') && object.counts) {
-    let flattenedObject = {};
-    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
-    return homogenizeClientNaming(flattenedObject);
-  }
-  return object;
-};
-
 export const formatByMonths = (monthsArray) => {
   if (!Array.isArray(monthsArray)) return monthsArray;
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload.map((m) => {
+    const month = parseAPITimestamp(m.timestamp, 'M/yy');
+    const totalClientsByNamespace = formatByNamespace(m.namespaces);
+    const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
     if (Object.keys(m).includes('counts')) {
-      let totalClients = flattenDataset(m);
-      let newClients = m.new_clients ? flattenDataset(m.new_clients) : {};
-      let formattedMonth = {
-        month: parseAPITimestamp(m.timestamp, 'M/yy'),
-        ...totalClients,
-        namespaces: formatByNamespace(m.namespaces),
+      let totalCounts = flattenDataset(m);
+      let newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
+      return {
+        month,
+        ...totalCounts,
+        namespaces_by_key: namespaceArrayToObject(totalClientsByNamespace, newClientsByNamespace, month),
         new_clients: {
-          month: parseAPITimestamp(m.timestamp, 'M/yy'),
-          ...newClients,
-          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
+          month,
+          ...newCounts,
         },
       };
-      return createNamespaceKeyObject(formattedMonth);
     }
   });
 };
@@ -80,7 +72,16 @@ export const homogenizeClientNaming = (object) => {
   return object;
 };
 
-export const sortMonthsByTimestamp = (monthsArray) => {
+const flattenDataset = (object) => {
+  if (Object.keys(object).includes('counts') && object.counts) {
+    let flattenedObject = {};
+    Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
+    return homogenizeClientNaming(flattenedObject);
+  }
+  return object;
+};
+
+const sortMonthsByTimestamp = (monthsArray) => {
   // backend is working on a fix to sort months by date
   // right now months are ordered in descending client count number
   const sortedPayload = [...monthsArray];
@@ -89,41 +90,70 @@ export const sortMonthsByTimestamp = (monthsArray) => {
   );
 };
 
-export const createNamespaceKeyObject = (monthObject) => {
-  // create new key of `by_namespace_key` in month object:
-  //   by_namespace_key: {
-  //     "namespace_label": {
-  //       clients: 32,
-  //       entity_clients: 16,
-  //       non_entity_clients: 16,
-  //       mounts: [],
-  //       new_clients: {
-  //         clients: 5,
-  //         entity_clients: 2,
-  //         non_entity_clients: 3,
-  //         mounts: [],
+const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month) => {
+  // first nest 'new_clients' within each namespace and mount object respectively
+  totalClientsByNamespace.forEach((ns) => {
+    const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
+    const newClientsByMount = newNamespaceCounts?.mounts;
+    if (newClientsByMount) delete newNamespaceCounts.mounts;
+
+    ns.new_clients = newNamespaceCounts || {};
+    ns.mounts.forEach((mount) => {
+      let newMountCounts = newClientsByMount?.find((m) => m.label === mount.label);
+      mount.new_clients = newMountCounts || {};
+    });
+  });
+
+  // create a new object in which each namespace label is a key
+  // add month data to each object, including the nested 'new_clients', for time series graphs
+  let namespaces_by_key = {};
+  totalClientsByNamespace.forEach((namespaceObject) => {
+    // and another where each mount label is a key
+    let mounts_by_key = {};
+    namespaceObject.mounts.forEach((mountObject) => {
+      if (mountObject.new_clients) mountObject.new_clients.month = month;
+      mounts_by_key[mountObject.label] = {
+        month,
+        ...mountObject,
+      };
+      // TODO CMB ^ delete the label key from final object don't think it's necessary
+    });
+    if (namespaceObject.new_clients) namespaceObject.new_clients.month = month;
+    if (namespaceObject.mounts) delete namespaceObject.mounts; // the 'mounts_by_key' object replaces the 'mounts' array
+    namespaces_by_key[namespaceObject.label] = {
+      month,
+      ...namespaceObject,
+      mounts_by_key,
+    };
+  });
+  return namespaces_by_key;
+  // sample structure of object
+  // namespace_by_key: {
+  //   "namespace_label": {
+  //     month: "3/22",
+  //     clients: 32,
+  //     entity_clients: 16,
+  //     non_entity_clients: 16,
+  //     new_clients: {
+  //       month: "3/22",
+  //       clients: 5,
+  //       entity_clients: 2,
+  //       non_entity_clients: 3,
+  //     },
+  //     mounts_by_key: {
+  //       "mount_label": {
+  //          month: "3/22",
+  //          clients: 3,
+  //          entity_clients: 2,
+  //          non_entity_clients: 1,
+  //          new_clients: {
+  //           month: "3/22",
+  //           clients: 5,
+  //           entity_clients: 2,
+  //           non_entity_clients: 3,
+  //         },
   //       },
   //     },
   //   },
   // };
-
-  const { month } = monthObject;
-  monthObject.by_namespace_key = {};
-  if (monthObject.namespaces) {
-    monthObject.namespaces.forEach((namespace) => {
-      let new_clients;
-      if (monthObject.new_clients) {
-        new_clients = monthObject.new_clients.namespaces?.find((n) => n.label === namespace.label) || {};
-      }
-
-      monthObject.by_namespace_key[namespace.label] = {
-        month,
-        ...namespace,
-        new_clients: { month, ...new_clients },
-      };
-      // TODO delete or keep "label" key within namespace key object?
-      // delete month.by_namespace_key[namespace.label].new_clients.label
-    });
-  }
-  return monthObject;
 };

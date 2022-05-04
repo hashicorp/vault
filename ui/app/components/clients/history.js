@@ -186,11 +186,18 @@ export default class History extends Component {
   }
 
   get byMonthTotalClients() {
-    return this.getActivityResponse?.byMonth;
+    if (this.selectedNamespace) {
+      return this.filteredActivityByMonth;
+    } else {
+      return this.getActivityResponse?.byMonth;
+    }
   }
 
   get byMonthNewClients() {
-    return this.byMonthTotalClients.map((m) => m.new_clients);
+    if (this.byMonthTotalClients) {
+      return this.byMonthTotalClients.map((m) => m.new_clients);
+    }
+    return null;
   }
 
   get hasAttributionData() {
@@ -203,7 +210,7 @@ export default class History extends Component {
 
   // top level TOTAL client counts for given date range
   get totalUsageCounts() {
-    return this.selectedNamespace ? this.filteredActivity : this.getActivityResponse.total;
+    return this.selectedNamespace ? this.filteredActivityByNamespace : this.getActivityResponse.total;
   }
 
   get newUsageCounts() {
@@ -215,7 +222,7 @@ export default class History extends Component {
   // total client data for horizontal bar chart in attribution component
   get totalClientAttribution() {
     if (this.selectedNamespace) {
-      return this.filteredActivity?.mounts || null;
+      return this.filteredActivityByNamespace?.mounts || null;
     } else {
       return this.getActivityResponse?.byNamespace;
     }
@@ -239,7 +246,8 @@ export default class History extends Component {
     return this.getActivityResponse.responseTimestamp;
   }
 
-  get filteredActivity() {
+  // FILTERS
+  get filteredActivityByNamespace() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
     if (!namespace && !auth) {
@@ -253,12 +261,27 @@ export default class History extends Component {
       .mounts?.find((mount) => mount.label === auth);
   }
 
+  get filteredActivityByMonth() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    const namespaceData = this.getActivityResponse?.byMonth.map((m) => m.namespaces_by_key[namespace]);
+    if (!namespace && !auth) {
+      return this.getActivityResponse?.byMonth;
+    }
+    if (!auth) {
+      return namespaceData;
+    }
+    const mountData = namespaceData.map((namespace) => namespace.mounts_by_key[auth]);
+    // TODO CMB come up with a better check when testing
+    return mountData.includes(undefined) ? null : mountData;
+  }
+
   get filteredNewClientAttribution() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
-    // new client data is only available by month
     const newClientsData = this.byMonthTotalClients[0]?.new_clients;
     if (!newClientsData) return null;
+    // new client attribution only available within single, historical month
     if (this.isDateRange) return null;
     if (!namespace && !auth) return newClientsData;
 
@@ -346,7 +369,7 @@ export default class History extends Component {
       this.selectedAuthMethod = null;
     } else {
       // Side effect: set auth namespaces
-      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+      const mounts = this.filteredActivityByNamespace.mounts?.map((mount) => ({
         id: mount.label,
         name: mount.label,
       }));
