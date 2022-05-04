@@ -139,8 +139,10 @@ These are common configuration values that live within the `method` block:
   like `5m`.
 
 - `max_backoff` `(string or integer: "5m")` - The maximum time Agent will delay
-  before retrying after a failed auth attempt. The backoff will start at 1 second
-  and double (with some randomness) after successive failures, capped by `max_backoff.`
+  before retrying after a failed auth attempt. The backoff will start at
+  1 second and double (with some randomness) after successive failures,
+  capped by `max_backoff.` `max_backoff` is the duration between retries, and
+  **not** the duration that retries will be performed before giving up.
 
 - `config` `(object: required)` - Configuration of the method itself. See the
   sidebar for information about each method.
@@ -183,3 +185,29 @@ These configuration values are common to all Sinks:
 
 - `config` `(object: required)` - Configuration of the sink itself. See the
   sidebar for information about each sink.
+
+### Auto Auth Example
+
+```hcl
+# Other Vault Agent configuration blocks
+# ...
+
+auto_auth {
+  method {
+    type = "approle"
+
+    config = {
+      role_id_file_path = "/etc/vault/roleid"
+      secret_id_file_path = "/etc/vault/secretid"
+    }
+  }
+
+  sink {
+    type = "file"
+
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
+}
+```

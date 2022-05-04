@@ -99,7 +99,8 @@ jobs:
           make test-ui-browserstack
         name: Run Browserstack Tests
   build-go-dev:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -113,6 +114,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=off" >> "$BASH_ENV"
@@ -145,7 +147,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.7
+    - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
@@ -166,7 +168,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -299,7 +301,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests
@@ -362,7 +364,8 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
   fmt:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -376,6 +379,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
@@ -398,12 +402,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.7
+    - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -532,7 +536,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests
@@ -613,7 +617,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -742,7 +746,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests
@@ -799,7 +803,8 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
   pre-flight-checks:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -813,6 +818,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
@@ -843,7 +849,11 @@ jobs:
           BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
         name: Install CircleCI CLI
     - run:
-        command: make ci-verify
+        command: |
+          set -x
+          . $BASH_ENV
+          make ci-verify
+        name: Verify CircleCI
     - add_ssh_keys:
         fingerprints:
         - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
@@ -881,12 +891,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.7
+    - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.7
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1019,7 +1029,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.7 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
               tail -f /dev/null
 
             # Run tests

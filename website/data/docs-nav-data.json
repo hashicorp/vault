@@ -898,10 +898,6 @@
         "path": "agent/template"
       },
       {
-        "title": "Template Config",
-        "path": "agent/template-config"
-      },
-      {
         "title": "Windows service",
         "path": "agent/winsvc"
       }
@@ -1477,8 +1473,8 @@
             "path": "platform/aws"
           },
           {
-            "title": "Vault Lambda Extension Cache",
-            "path": "platform/aws/lambda-extension-cache"
+            "title": "Vault Lambda Extension",
+            "path": "platform/aws/lambda-extension"
           },
           {
             "title": "Running Vault",
