@@ -4,6 +4,7 @@ import { task } from 'ember-concurrency';
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
+    mfa: 'identity/mfa/method',
     entities: 'identity/entity/id',
     groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
