@@ -18,9 +18,9 @@ restore_go_mod_cache_permissive:
     - restore_cache:
         name: Restore closest matching go modules cache
         keys:
-          - &gocachekey v1.12-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          -             v1.12-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          -             v1.12-{{checksum "go.sum"}}
+          - &gocachekey v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          -             v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          -             v1.13-{{checksum "go.sum"}}
 restore_go_mod_cache:
   steps:
     - restore_cache:
@@ -57,7 +57,8 @@ refresh_go_mod_cache:
           cat $deps | cut -d' ' -f2 > deps2.txt
           cat deps1.txt deps2.txt | sort | uniq > $deps
           rm -rf deps1.txt deps2.txt
-          cat $deps | xargs go mod download || true
+          cat $deps | xargs -n 1 go mod download || true
+          find /home/circleci/go -type d
     - run:
         name: Verify downloading modules did not modify any files
         command: |
