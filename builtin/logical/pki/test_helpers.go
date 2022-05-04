@@ -13,14 +13,15 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/require"
 	"hash"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 // Setup helpers

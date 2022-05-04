@@ -166,4 +166,3 @@ func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical
 	require.False(t, resp.IsError(), "crl error response: %v", resp)
 	return resp
 }
-

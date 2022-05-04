@@ -11,6 +11,7 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -1549,4 +1550,16 @@ func stringToOid(in string) (asn1.ObjectIdentifier, error) {
 		ret = append(ret, i)
 	}
 	return ret, nil
+}
+
+func parseCertificateFromBytes(certBytes []byte) (*x509.Certificate, error) {
+	block, extra := pem.Decode(certBytes)
+	if block == nil {
+		return nil, errors.New("unable to parse certificate: invalid PEM")
+	}
+	if len(strings.TrimSpace(string(extra))) > 0 {
+		return nil, errors.New("unable to parse certificate: trailing PEM data")
+	}
+
+	return x509.ParseCertificate(block.Bytes)
 }
