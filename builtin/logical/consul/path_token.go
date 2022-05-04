@@ -8,7 +8,9 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -104,18 +106,22 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		})
 	}
 
-	serviceIdentities := []*api.ACLServiceIdentity{}
-	for _, serviceIdentity := range roleConfigData.ServiceIdentities {
+	aclServiceIdentities := []*api.ACLServiceIdentity{}
+	parsedServiceIdentities, err := parseSemicolonStringSlice(roleConfigData.ServiceIdentities)
+	if err != nil {
+		return nil, err
+	}
+	for _, serviceIdentity := range parsedServiceIdentities {
 		entry := &api.ACLServiceIdentity{}
 		components := strings.SplitN(serviceIdentity, ":", 2)
 		entry.ServiceName = components[0]
 		if len(components) == 2 {
 			entry.Datacenters = strings.Split(components[1], ",")
 		}
-		serviceIdentities = append(serviceIdentities, entry)
+		aclServiceIdentities = append(aclServiceIdentities, entry)
 	}
 
-	nodeIdentities := []*api.ACLNodeIdentity{}
+	aclNodeIdentities := []*api.ACLNodeIdentity{}
 	for _, nodeIdentity := range roleConfigData.NodeIdentities {
 		entry := &api.ACLNodeIdentity{}
 		components := strings.Split(nodeIdentity, ":")
@@ -123,15 +129,15 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		if len(components) > 1 {
 			entry.Datacenter = components[1]
 		}
-		nodeIdentities = append(nodeIdentities, entry)
+		aclNodeIdentities = append(aclNodeIdentities, entry)
 	}
 
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description:       tokenName,
-		Policies:          policyLink,
-		Roles:             roleLink,
-		ServiceIdentities: serviceIdentities,
-		NodeIdentities:    nodeIdentities,
+		Policies:          policyLinks,
+		Roles:             roleLinks,
+		ServiceIdentities: aclServiceIdentities,
+		NodeIdentities:    aclNodeIdentities,
 		Local:             roleConfigData.Local,
 		Namespace:         roleConfigData.ConsulNamespace,
 		Partition:         roleConfigData.Partition,
@@ -156,4 +162,26 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	s.Secret.MaxTTL = roleConfigData.MaxTTL
 
 	return s, nil
+}
+
+// Parses the provided string-like value as a semicolon-separated list of values.
+func parseSemicolonStringSlice(in interface{}) ([]string, error) {
+	rawString, ok := in.(string)
+	if ok && rawString == "" {
+		return []string{}, nil
+	}
+	var result []string
+	config := &mapstructure.DecoderConfig{
+		Result:           &result,
+		WeaklyTypedInput: true,
+		DecodeHook:       mapstructure.StringToSliceHookFunc(";"),
+	}
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return nil, err
+	}
+	if err := decoder.Decode(in); err != nil {
+		return nil, err
+	}
+	return strutil.TrimStrings(result), nil
 }

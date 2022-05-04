@@ -91,7 +91,7 @@ will be created within. Defaults to 'default'. Available in Consul 1.11 and abov
 			},
 
 			"service_identities": {
-				Type: framework.TypeSemicolonStringSlice,
+				Type: framework.TypeString,
 				Description: `List of Service Identities to attach to the
 token, separated by semicolons. Available in Consul 1.5 or above.`,
 			},
@@ -175,10 +175,9 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
 	policies := d.Get("policies").([]string)
-	serviceIdentities := d.Get("service_identities").([]string)
-	nodeIdentities := d.Get("node_identities").([]string)
-	local := d.Get("local").(bool)
 	roles := d.Get("consul_roles").([]string)
+	serviceIdentities := d.Get("service_identities").(string)
+	nodeIdentities := d.Get("node_identities").([]string)
 
 	switch tokenType {
 	case "client":
@@ -258,7 +257,7 @@ type roleConfig struct {
 	Policy            string        `json:"policy"`
 	Policies          []string      `json:"policies"`
 	ConsulRoles       []string      `json:"consul_roles"`
-	ServiceIdentities []string      `json:"service_identities"`
+	ServiceIdentities string        `json:"service_identities"`
 	NodeIdentities    []string      `json:"node_identities"`
 	TTL               time.Duration `json:"lease"`
 	MaxTTL            time.Duration `json:"max_ttl"`
