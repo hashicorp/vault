@@ -974,6 +974,26 @@ export default function (server) {
                   clients: 11212,
                 },
               },
+              {
+                mount_path: 'auth/up2/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 50,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 23,
+                  clients: 73,
+                },
+              },
+              {
+                mount_path: 'auth/up1/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 25,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 15,
+                  clients: 40,
+                },
+              },
             ],
           },
         ],
