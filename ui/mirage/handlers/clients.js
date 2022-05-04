@@ -820,7 +820,7 @@ export default function (server) {
       data: {
         autoloading_used: true,
         autoloaded: {
-          expiration_time: formatRFC3339(addDays(startTime, 365))
+          expiration_time: formatRFC3339(addDays(startTime, 365)),
           features: [
             'HSM',
             'Performance Replication',
@@ -843,7 +843,7 @@ export default function (server) {
           start_time: formatRFC3339(startTime)
         },
         persisted_autoload: {
-          expiration_time: formatRFC3339(addDays(startTime, 365))
+          expiration_time: formatRFC3339(addDays(startTime, 365)),
           features: [
             'HSM',
             'Performance Replication',
