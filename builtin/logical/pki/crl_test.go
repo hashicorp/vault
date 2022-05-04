@@ -2,8 +2,6 @@ package pki
 
 import (
 	"context"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"testing"
 	"time"
 
@@ -66,17 +64,21 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 		serials[i] = resp.Data["serial_number"].(string)
 	}
 
-	test := func(num int) {
-		certList := getCrlCertificateList(t, client)
+	test := func(numRevokedExpected int, expectedSerials ...string) {
+		certList := getCrlCertificateList(t, client, "pki")
 		lenList := len(certList.RevokedCertificates)
-		if lenList != num {
-			t.Fatalf("expected %d revoked certificates, found %d", num, lenList)
+		if lenList != numRevokedExpected {
+			t.Fatalf("expected %d revoked certificates, found %d", numRevokedExpected, lenList)
+		}
+
+		for _, serialNum := range expectedSerials {
+			requireSerialNumberInCRL(t, certList, serialNum)
 		}
 	}
 
-	revoke := func(num int) {
+	revoke := func(serialIndex int) {
 		resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
-			"serial_number": serials[num],
+			"serial_number": serials[serialIndex],
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -102,14 +104,14 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	test(0)
 	revoke(0)
 	revoke(1)
-	test(2)
+	test(2, serials[0], serials[1])
 	toggle(true)
 	test(0)
 	revoke(2)
 	revoke(3)
 	test(0)
 	toggle(false)
-	test(4)
+	test(4, serials[0], serials[1], serials[2], serials[3])
 	revoke(4)
 	revoke(5)
 	test(6)
@@ -119,12 +121,12 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	test(6)
 
 	// The rotate command should reset the update time of the CRL.
-	crlCreationTime1 := getCrlCertificateList(t, client).ThisUpdate
+	crlCreationTime1 := getCrlCertificateList(t, client, "pki").ThisUpdate
 	time.Sleep(1 * time.Second)
 	_, err = client.Logical().Read("pki/crl/rotate")
 	require.NoError(t, err)
 
-	crlCreationTime2 := getCrlCertificateList(t, client).ThisUpdate
+	crlCreationTime2 := getCrlCertificateList(t, client, "pki").ThisUpdate
 	require.NotEqual(t, crlCreationTime1, crlCreationTime2)
 }
 
@@ -165,21 +167,3 @@ func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical
 	return resp
 }
 
-func getCrlCertificateList(t *testing.T, client *api.Client) pkix.TBSCertificateList {
-	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/cert/crl")
-	require.NoError(t, err, "crl req failed with an error")
-	require.NotNil(t, resp, "crl response was nil with no error")
-
-	crlPem := resp.Data["certificate"].(string)
-	return parseCrlPemString(t, crlPem)
-}
-
-func parseCrlPemString(t *testing.T, crlPem string) pkix.TBSCertificateList {
-	return parseCrlPemBytes(t, []byte(crlPem))
-}
-
-func parseCrlPemBytes(t *testing.T, crlPem []byte) pkix.TBSCertificateList {
-	certList, err := x509.ParseCRL(crlPem)
-	require.NoError(t, err)
-	return certList.TBSCertList
-}
