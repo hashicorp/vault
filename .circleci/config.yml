@@ -127,7 +127,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - attach_workspace:
         at: .
@@ -187,7 +187,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -423,7 +423,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -610,7 +610,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -845,9 +845,9 @@ jobs:
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.13-{{checksum "go.sum"}}
+        - v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.14-{{checksum "go.sum"}}
         name: Restore closest matching go modules cache
     - run:
         command: |
@@ -877,12 +877,11 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Save go modules cache
         paths:
         - /home/circleci/go/pkg
-        - /home/circleci/go/src
-        - /home/circleci/go/bin
+        - /home/circleci/.go_workspace/pkg
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
@@ -926,7 +925,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.13-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.14-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
