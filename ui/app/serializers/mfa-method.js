@@ -1,4 +1,3 @@
-import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';
 
 export default class KeymgmtKeySerializer extends ApplicationSerializer {
@@ -11,7 +10,7 @@ export default class KeymgmtKeySerializer extends ApplicationSerializer {
       });
       return data;
     }
-    assign(payload, payload.data);
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   }
