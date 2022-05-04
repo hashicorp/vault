@@ -747,7 +747,7 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 
 func resolveIssuerCRLPath(ctx context.Context, b *backend, s logical.Storage, reference string) (string, error) {
 	if b.useLegacyBundleCaStorage() {
-		return "crl", nil
+		return legacyCRLPath, nil
 	}
 
 	issuer, err := resolveIssuerReference(ctx, s, reference)
