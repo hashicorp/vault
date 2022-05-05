@@ -14,7 +14,7 @@ import (
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner
 type Looker interface {
-	LookupPlugin(context.Context, string, consts.PluginType) (*PluginRunner, error)
+	LookupPlugin(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*PluginRunner, error)
 }
 
 // RunnerUtil interface defines the functions needed by the runner to wrap the
@@ -45,6 +45,7 @@ const MultiplexingCtxKey string = "multiplex_id"
 type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
+	Version        string                      `json:"version" structs:"version"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`

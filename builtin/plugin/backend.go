@@ -46,11 +46,12 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err != nil {
 		return nil, err
 	}
+	version := conf.Config["plugin_version"]
 
 	sys := conf.System
 
 	// NewBackend with isMetadataMode set to true
-	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, true)
+	raw, err := bplugin.NewBackend(ctx, name, pluginType, version, sys, conf, true)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +104,7 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
 	b.Backend.Cleanup(ctx)
 
-	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
+	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, "", b.config.System, b.config, false)
 	if err != nil {
 		return err
 	}

@@ -22,8 +22,8 @@ type databaseVersionWrapper struct {
 
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
 // that can be used to make operations on the underlying database plugin.
-func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
-	newDB, err := v5.PluginFactory(ctx, pluginName, sys, logger)
+func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
+	newDB, err := v5.PluginFactory(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v5: newDB,
@@ -34,7 +34,7 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 	merr := &multierror.Error{}
 	merr = multierror.Append(merr, err)
 
-	legacyDB, err := v4.PluginFactory(ctx, pluginName, sys, logger)
+	legacyDB, err := v4.PluginFactory(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v4: legacyDB,

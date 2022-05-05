@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -390,6 +391,7 @@ func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+// TODO: Think more carefully about updating this in a non-breaking way
 func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
 	if err != nil {
@@ -403,6 +405,7 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 	return logical.ListResponse(plugins), nil
 }
 
+// TODO: Think more carefully about updating this in a non-breaking way
 func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginsByType := make(map[string]interface{})
 	for _, pluginType := range consts.PluginTypes {
@@ -420,7 +423,7 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req 
 	}, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
@@ -468,12 +471,17 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 
 	env := d.Get("env").([]string)
 
+	ver := d.Get("version").(string)
+	if _, err := semver.NewSemver(ver); err != nil {
+		return logical.ErrorResponse("version specified is not a valid semantic version: %s", err), nil
+	}
+
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, parts[0], args, env, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, ver, parts[0], args, env, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -496,13 +504,14 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		resp.AddWarning(fmt.Sprintf("Deprecated API endpoint, cannot read plugin information from catalog for %q", pluginName))
 		return resp, nil
 	}
+	pluginVersion := d.Get("version").(string)
 
 	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
 	}
 
-	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType)
+	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -5103,6 +5112,10 @@ plugin directory.`,
 	"plugin-catalog_env": {
 		`The environment variables passed to plugin command.
 Each entry is of the form "key=value".`,
+		"",
+	},
+	"plugin-catalog_version": {
+		"The semantic version of the plugin to use.",
 		"",
 	},
 	"leases": {

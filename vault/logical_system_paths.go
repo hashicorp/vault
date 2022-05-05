@@ -722,6 +722,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_env"][0]),
 			},
+			"version": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

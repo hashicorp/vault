@@ -260,7 +260,8 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, err
 	}
 
-	dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
+	// TODO: Add ability to use versioned plugins
+	dbw, err := newDatabaseWrapper(ctx, config.PluginName, "", b.System(), b.logger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}

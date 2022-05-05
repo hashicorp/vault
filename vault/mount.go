@@ -291,7 +291,8 @@ const mountStateUnmounting = "unmounting"
 type MountEntry struct {
 	Table                 string            `json:"table"`                             // The table it belongs to
 	Path                  string            `json:"path"`                              // Mount Path
-	Type                  string            `json:"type"`                              // Logical backend Type
+	Type                  string            `json:"type"`                              // Logical backend Type. NB: This is the plugin name, e.g. my-vault-plugin, NOT plugin type (e.g. auth).
+	Version               string            `json:"version"`                           // The semantic version of the mounted plugin, e.g. v1.2.3.
 	Description           string            `json:"description"`                       // User-provided description
 	UUID                  string            `json:"uuid"`                              // Barrier view UUID
 	BackendAwareUUID      string            `json:"backend_aware_uuid"`                // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
@@ -1395,7 +1396,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets)
+		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets, entry.Version)
 		if err != nil {
 			return nil, err
 		}
@@ -1423,6 +1424,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	conf["plugin_type"] = consts.PluginTypeSecrets.String()
+	conf["plugin_version"] = entry.Version
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
 	c.AddLogger(backendLogger)

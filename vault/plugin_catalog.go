@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -209,7 +210,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 		return nil, fmt.Errorf("no plugin type provided")
 	}
 
-	pluginRunner, err := c.get(ctx, config.Name, config.PluginType)
+	pluginRunner, err := c.get(ctx, config.Name, config.PluginType, config.Version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup plugin: %w", err)
 	}
@@ -365,6 +366,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		Name:            pluginRunner.Name,
 		PluginSets:      v5.PluginSets,
 		PluginType:      consts.PluginTypeDatabase,
+		Version:         pluginRunner.Version,
 		HandshakeConfig: v5.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  true,
@@ -445,7 +447,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
 		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unkonwn type.
-		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, "TODO", cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
 		if err != nil {
 			if errors.Is(err, ErrPluginBadType) {
 				retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
@@ -470,18 +472,22 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 // Get retrieves a plugin with the specified name from the catalog. It first
 // looks for external plugins with this name and then looks for builtin plugins.
 // It returns a PluginRunner or an error if no plugin was found.
-func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
+func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
-	runner, err := c.get(ctx, name, pluginType)
+	runner, err := c.get(ctx, name, pluginType, version)
 	c.lock.RUnlock()
 	return runner, err
 }
 
-func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
+func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
-		out, err := c.catalogView.Get(ctx, pluginType.String()+"/"+name)
+		storageKey := path.Join(pluginType.String(), name)
+		if version != "" {
+			storageKey = path.Join(storageKey, version)
+		}
+		out, err := c.catalogView.Get(ctx, storageKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
 		}
@@ -523,7 +529,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
-func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.PluginType, command string, args []string, env []string, sha256 []byte) error {
+func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.PluginType, version string, command string, args []string, env []string, sha256 []byte) error {
 	if c.directory == "" {
 		return ErrDirectoryNotConfigured
 	}
@@ -538,11 +544,11 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	_, err := c.setInternal(ctx, name, pluginType, command, args, env, sha256)
+	_, err := c.setInternal(ctx, name, pluginType, version, command, args, env, sha256)
 	return err
 }
 
-func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, command string, args []string, env []string, sha256 []byte) (*pluginutil.PluginRunner, error) {
+func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, version string, command string, args []string, env []string, sha256 []byte) (*pluginutil.PluginRunner, error) {
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
 	commandFull := filepath.Join(c.directory, command)
@@ -584,6 +590,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	entry := &pluginutil.PluginRunner{
 		Name:    name,
 		Type:    pluginType,
+		Version: version,
 		Command: command,
 		Args:    args,
 		Env:     env,
@@ -596,8 +603,12 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return nil, fmt.Errorf("failed to encode plugin entry: %w", err)
 	}
 
+	storageKey := path.Join(pluginType.String(), name)
+	if version != "" {
+		storageKey = path.Join(storageKey, version)
+	}
 	logicalEntry := logical.StorageEntry{
-		Key:   pluginType.String() + "/" + name,
+		Key:   storageKey,
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
@@ -644,7 +655,7 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 
 	for _, plugin := range keys {
 		// Only list user-added plugins if they're of the given type.
-		if entry, err := c.get(ctx, plugin, pluginType); err == nil && entry != nil {
+		if entry, err := c.get(ctx, plugin, pluginType, ""); err == nil && entry != nil {
 
 			// Some keys will be prepended with the plugin type, but other ones won't.
 			// Users don't expect to see the plugin type, so we need to strip that here.
@@ -670,4 +681,67 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	sort.Strings(retList)
 
 	return retList, nil
+}
+
+type VersionedPlugin struct {
+	Name    string
+	Type    consts.PluginType
+	Version string
+}
+
+func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]VersionedPlugin, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	var result []VersionedPlugin
+
+	// Collect keys for external plugins in the barrier.
+	plugins, err := logical.CollectKeys(ctx, c.catalogView)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the builtin plugins.
+	builtinPlugins := c.builtinRegistry.Keys(pluginType)
+	for _, plugin := range builtinPlugins {
+		result = append(result, VersionedPlugin{
+			Name:    plugin,
+			Type:    pluginType,
+			Version: "builtin",
+		})
+	}
+
+	pluginTypePrefix := pluginType.String() + "/"
+
+	for _, plugin := range plugins {
+		// Some keys will be prepended with the plugin type, but other ones won't.
+		// Users don't expect to see the plugin type, so we need to strip that here.
+		var normalizedName, version string
+		normalizedName = strings.TrimPrefix(plugin, pluginTypePrefix)
+		parts := strings.Split(normalizedName, "/")
+
+		switch len(parts) {
+		case 1: // Unversioned
+		case 2: // Versioned
+			normalizedName, version = parts[0], parts[1]
+		default:
+			return nil, fmt.Errorf("unexpected entry in version catalog: %s", plugin)
+		}
+
+		// Only list user-added plugins if they're of the given type.
+		if entry, err := c.get(ctx, normalizedName, pluginType, version); err == nil && entry != nil {
+			result = append(result, VersionedPlugin{
+				Name:    normalizedName,
+				Type:    pluginType,
+				Version: version,
+			})
+		}
+	}
+
+	// sort for consistent ordering of builtin plugins
+	// sort.Slice(result, func(i, j int) bool {
+
+	// })
+
+	return result, nil
 }
