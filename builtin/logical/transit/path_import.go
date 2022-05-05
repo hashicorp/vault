@@ -280,8 +280,13 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	return importKey, nil
 }
 
-const pathImportWriteSyn = "Imports an externally-generated key into transit"
-const pathImportWriteDesc = ""
+const pathImportWriteSyn = "Imports an externally-generated key into a new transit key"
+const pathImportWriteDesc = "This path is used to import an externally-generated " +
+	"key into Vault. The import operation creates a new key and cannot be used to " +
+	"replace an existing key."
 
-const pathImportVersionWriteSyn = ""
-const pathImportVersionWriteDesc = ""
+const pathImportVersionWriteSyn = "Imports an externally-generated key into an " +
+	"existing imported key"
+const pathImportVersionWriteDesc = "This path is used to import a new version of an " +
+	"externally-generated key into an existing import key. The import_version endpoint " +
+	"only supports importing key material into existing imported keys."
