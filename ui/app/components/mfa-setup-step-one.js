@@ -17,7 +17,7 @@ import { tracked } from '@glimmer/tracking';
 export default class MfaSetupStepOne extends Component {
   @service store;
   @tracked error;
-  @tracked warning;
+  @tracked warning = '';
   @tracked qrCode = '';
 
   @action
@@ -40,8 +40,8 @@ export default class MfaSetupStepOne extends Component {
   }
 
   async postAdminGenerate() {
-    this.error = null;
-    this.warning = null;
+    this.error = '';
+    this.warning = '';
     let adapter = this.store.adapterFor('mfa-setup');
     let response;
     try {
@@ -71,6 +71,7 @@ export default class MfaSetupStepOne extends Component {
       this.error = error.errors;
       return 'stop_progress';
     }
+    console.log('successful');
     return response;
   }
 }
