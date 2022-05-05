@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
@@ -2139,10 +2140,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
-	c.setupCachedMFAResponseAuth()
-	if err := c.loadLoginMFAConfigs(ctx); err != nil {
-		return err
-	}
 
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
@@ -2167,6 +2164,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := loadPolicyMFAConfigs(ctx, c); err != nil {
 			return err
 		}
+		c.setupCachedMFAResponseAuth()
+		if err := c.loadLoginMFAConfigs(ctx); err != nil {
+			return err
+		}
+
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
@@ -2328,10 +2330,6 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
-	// Clear any cached auth response
-	c.mfaResponseAuthQueueLock.Lock()
-	c.mfaResponseAuthQueue = nil
-	c.mfaResponseAuthQueueLock.Unlock()
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -2359,10 +2357,13 @@ func (c *Core) preSeal() error {
 		seal.StopHealthCheck()
 	}
 
-	c.loginMFABackend.usedCodes = nil
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = nil
 	}
+	if err := c.teardownLoginMFA(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
+	}
+
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
@@ -3077,18 +3078,27 @@ type LicenseState struct {
 }
 
 func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
-	if c.loginMFABackend == nil {
-		return fmt.Errorf("login MFA backend is not set up")
+	eConfigs := make([]*mfa.MFAEnforcementConfig, 0)
+	allNamespaces := c.collectNamespaces()
+	for _, ns := range allNamespaces {
+		err := c.loginMFABackend.loadMFAMethodConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA method Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		loadedConfigs, err := c.loginMFABackend.loadMFAEnforcementConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA enforcement Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		eConfigs = append(eConfigs, loadedConfigs...)
 	}
 
-	if err := c.loginMFABackend.loadMFAMethodConfigs(ctx); err != nil {
-		return fmt.Errorf("faile to load MFA method configuration. error: %w", err)
+	for _, conf := range eConfigs {
+		if err := c.loginMFABackend.loginMFAMethodExistenceCheck(conf); err != nil {
+			c.loginMFABackend.mfaLogger.Error("failed to find all MFA methods that exist in MFA enforcement configs", "configID", conf.ID, "namespcaeID", conf.NamespaceID, "error", err.Error())
+		}
 	}
-
-	if err := c.loginMFABackend.loadMFAEnforcementConfigs(ctx); err != nil {
-		return fmt.Errorf("faile to load login MFA enforcement configuration . error: %w", err)
-	}
-
 	return nil
 }
 
