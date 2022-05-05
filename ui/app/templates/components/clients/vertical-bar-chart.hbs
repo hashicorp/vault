@@ -1,11 +1,17 @@
-<svg
-  data-test-vertical-bar-chart
-  class="chart has-grid"
-  {{on "mouseleave" this.removeTooltip}}
-  {{did-insert this.renderChart @dataset}}
-  {{did-update this.renderChart @dataset}}
->
-</svg>
+{{#if @dataset}}
+  <svg
+    data-test-vertical-bar-chart
+    class="chart has-grid"
+    {{on "mouseleave" this.removeTooltip}}
+    {{did-insert this.renderChart @dataset}}
+    {{did-update this.renderChart @dataset}}
+  >
+  </svg>
+{{else}}
+  <div class="chart-empty-state">
+    <EmptyState @title={{@noDataTitle}} @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
+  </div>
+{{/if}}
 
 {{! TOOLTIP }}
 

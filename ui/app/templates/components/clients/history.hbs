@@ -133,7 +133,7 @@
           {{#if this.byMonthTotalClients}}
             <Clients::RunningTotal
               @chartLegend={{this.chartLegend}}
-              @selectedNamespace={{this.selectedNamespace}}
+              @selectedAuthMethod={{this.selectedAuthMethod}}
               @lineChartData={{this.byMonthTotalClients}}
               @barChartData={{this.byMonthNewClients}}
               @runningTotals={{this.totalUsageCounts}}

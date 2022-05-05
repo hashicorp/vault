@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { mean } from 'd3-array';
+import { calculateAverageClients } from 'vault/utils/chart-helpers';
 
 /**
  * @module MonthlyUsage
@@ -34,12 +34,15 @@ import { mean } from 'd3-array';
  */
 export default class MonthlyUsage extends Component {
   get averageTotalClients() {
-    let average = mean(this.args.verticalBarChartData?.map((d) => d.clients));
-    return Math.round(average) || null;
+    return calculateAverageClients(this.args.verticalBarChartData, 'clients') || '0';
   }
 
   get averageNewClients() {
-    let average = mean(this.args.verticalBarChartData?.map((d) => d.new_clients.clients));
-    return Math.round(average) || null;
+    return (
+      calculateAverageClients(
+        this.args.verticalBarChartData.map((d) => d.new_clients),
+        'clients'
+      ) || '0'
+    );
   }
 }
