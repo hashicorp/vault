@@ -8,6 +8,7 @@ export default class VaultClusterMfaSetupController extends Controller {
   @tracked onStep = 1;
   @tracked warning = '';
   @tracked uuid = '';
+  @tracked qrCode = '';
 
   get entityId() {
     // ARG TODO if root this will return empty string.
@@ -18,28 +19,27 @@ export default class VaultClusterMfaSetupController extends Controller {
     if (verified) {
       this.onStep = 2;
     } else {
-      this.onStep = 1;
+      this.restartFlow();
     }
   }
 
   @action
-  goToReset(warning) {
-    this.warning = warning;
-    this.onStep = 3;
-  }
-
-  @action isAuthenticationCodeVerified(response) {
-    if (response) {
-      this.onStep = 3;
-    } else {
-      // ARG TODO work with Ivana on error message.
-      // try and figure out API response.
-    }
+  restartFlow() {
+    // they have hit the restart screen and hit the cancel button.
+    window.history.back();
+    this.onStep = 1;
   }
 
   @action
-  saveUUID(uuid) {
+  saveUUIDandQrCode(uuid, qrCode) {
+    // qrCode could be an empty string if the admin-generate was not successful
     this.uuid = uuid;
-    console.log(this.uuid, 'Save UUID should be called on verify');
+    this.qrCode = qrCode;
+  }
+
+  @action
+  showWarning(warning) {
+    this.warning = warning;
+    this.onStep = 2;
   }
 }

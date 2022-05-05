@@ -12,24 +12,14 @@
     {{! template-lint-disable no-autofocus-attribute}}
     <p class="sub-text">Enter the UUID for your multi-factor authentication method. This can be provided to you by your
       administrator.</p>
-    <Input
-      id="uuid"
-      name="uuid"
-      class="input"
-      autocomplete="off"
-      spellcheck="false"
-      autofocus="true"
-      @value={{this.UUID}}
-      {{!-- disabled={{or this.validate.isRunning this.fnewCodeDelay.isRunning}} --}}
-    />
+    <Input id="uuid" name="uuid" class="input" autocomplete="off" spellcheck="false" autofocus="true" @value={{this.UUID}} />
   </div>
 
   <div class="is-flex-start">
     <button
       id="continue"
       type="submit"
-      {{! ARG TODO disable if no value in the input }}
-      {{! ARG TODO disable if loading }}
+      {{! ARG TODO disable if no value in the input}}
       {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
       class="button is-primary"
     >

@@ -2,47 +2,19 @@
   TOTP Multi-factor authentication (MFA) can be enabled here if it is required by your administrator. This will ensure that
   you are not prevented from logging into Vault in the future, once MFA is fully enforced.
 </p>
-<form id="mfa-setup-step-two" {{on "submit" this.verifyAuthenticationCode}}>
-  {{!-- <MessageError @errorMessage={{this.error}} class="has-top-margin-s" /> --}}
-  <div class="field has-top-margin-l">
-    <div>QR CODE HERE</div>
-    <p>
-      After scanning the code, enter the six-digit authentication code below.
-    </p>
-    <label class="is-label has-top-margin-s">
-      Authentication code
-    </label>
-    <Input
-      id="auth-code"
-      name="auth-code"
-      class="input"
-      autocomplete="off"
-      spellcheck="false"
-      {{!-- @value={{constraint.passcode}} --}}
-      {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
-      @value={{this.authenticationCode}}
-    />
-  </div>
-
-  <div class="is-flex-start">
-    <button
-      id="continue"
-      type="submit"
-      {{! ARG TODO disable if no value in the input }}
-      {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
-      class="button is-primary {{if this.validate.isRunning 'is-loading'}}"
-    >
-      Enable
+<div class="field has-top-margin-l">
+  {{#if @warning}}
+    <AlertBanner @type="warning" @title={{@warning}} class="has-top-margin-l" />
+  {{else}}
+    {{! template-lint-disable no-curly-component-invocation }}
+    <div>{{qr-code text=@qrCode colorLight="#F7F7F7" width=155 height=155 correctLevel="L"}}</div>
+  {{/if}}
+  <div class="is-flex-start has-top-margin-s">
+    <button id="restart" type="button" class="button has-text-danger" {{on "click" this.restartSetup}}>
+      Restart setup
     </button>
-    <button
-      id="cancel"
-      type="button"
-      {{! ARG TODO disable if no value in the input }}
-      {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
-      {{on "click" this.redirectPreviousPage}}
-      class="button"
-    >
+    <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button">
       Cancel
     </button>
   </div>
-</form>
+</div>

@@ -5,20 +5,24 @@
   <Page.content>
     <div class="auth-form" data-test-mfa-form>
       <div class="box">
-        {{! ARG TODO maybe make in one component or here in this component }}
         {{#if (eq this.onStep 1)}}
           <MfaSetupStepOne
             @isUUIDVerified={{this.isUUIDVerified}}
             @entityId={{this.entityId}}
-            @goToReset={{this.goToReset}}
+            @saveUUIDandQrCode={{this.saveUUIDandQrCode}}
+            @showWarning={{this.showWarning}}
+            @restartFlow={{this.restartFlow}}
           />
         {{/if}}
         {{#if (eq this.onStep 2)}}
-          <MfaSetupStepTwo @isAuthenticationCodeVerified={{this.isAuthenticationCodeVerified}} />
+          <MfaSetupStepTwo
+            @isQRCodeVerified={{this.isQRCodeVerified}}
+            @qrCode={{this.qrCode}}
+            @warning={{this.warning}}
+            @restartFlow={{this.restartFlow}}
+          />
         {{/if}}
-        {{#if (eq this.onStep 3)}}
-          <MfaSetupStepThree @warning={{this.warning}} />
-        {{/if}}
+
       </div>
     </div>
   </Page.content>
