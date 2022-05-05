@@ -231,6 +231,9 @@ spellcheck:
 mysql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
 
+yugabyte-ysql-database-plugin:
+	@CGO_ENABLED=0 $(GO_CMD) build -o bin/yugabyte-ysql-database-plugin ./plugins/database/yugabyte-ysql/cmd/ysql-plugin
+
 mysql-legacy-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mysql-legacy-database-plugin ./plugins/database/mysql/mysql-legacy-database-plugin
 

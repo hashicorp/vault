@@ -53,6 +53,7 @@ import (
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
+	dbYSQL "github.com/hashicorp/vault/plugins/database/yugabyte-ysql"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -108,6 +109,7 @@ func newRegistry() *registry {
 			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
 			"mssql-database-plugin":         dbMssql.New,
 			"postgresql-database-plugin":    dbPostgres.New,
+			"yugabyte-ysql-database-plugin": dbYSQL.New,
 			"redshift-database-plugin":      dbRedshift.New,
 			"snowflake-database-plugin":     dbSnowflake.New,
 		},
