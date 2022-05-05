@@ -317,6 +317,14 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 }
 
 func (b *backend) useLegacyBundleCaStorage() bool {
+	// This helper function is here to choose whether or not we use the newer
+	// issuer/key storage format or the older legacy ca bundle format.
+	//
+	// This happens because we might've upgraded secondary PR clusters to
+	// newer vault code versions. We still want to be able to service requests
+	// with the old bundle format (e.g., issuing and revoking certs), until
+	// the primary cluster's active node is upgraded to the newer Vault version
+	// and the storage is migrated to the new format.
 	version := b.pkiStorageVersion.Load()
 	return version == nil || version == 0
 }
