@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -73,9 +74,9 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		opts.SetupFunc = nil
 	}
 
-	cluster := vault.NewTestCluster(t, conf, &opts)
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), conf, &opts)
 	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	vault.TestWaitActive(benchhelpers.TBtoT(t), cluster.Cores[0].Core)
 	return cluster
 }
 
