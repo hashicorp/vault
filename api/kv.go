@@ -119,6 +119,32 @@ func (kv *KVClient) ReadMetadata(ctx context.Context, secretPath string) (*KVMet
 	return extractFullMetadata(secret)
 }
 
+func (kv *KVClient) Write(ctx context.Context, secretPath string, data map[string]interface{}) (*KVSecret, error) {
+	pathToWriteTo, err := kv.getFullPath(secretPath)
+	if err != nil {
+		return nil, fmt.Errorf("error assembling full path to KV secret: %v", err)
+	}
+
+	secret, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, data)
+	if err != nil {
+		return nil, fmt.Errorf("error writing secret to %s: %v", pathToWriteTo, err)
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("no secret was written to %s", pathToWriteTo)
+	}
+
+	metadata, err := extractVersionMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("secret was written successfully, but unable to view version metadata from response: %v", err)
+	}
+
+	return &KVSecret{
+		Data:     nil,
+		Metadata: metadata,
+		Raw:      secret,
+	}, nil
+}
+
 func (kv *KVClient) getFullPath(secretPath string) (string, error) {
 	var pathToRead string
 	switch kv.version {
@@ -207,6 +233,32 @@ func extractDataAndVersionMetadata(secret *Secret, version int) (*KVSecret, erro
 		Metadata: metadata,
 		Raw:      secret,
 	}, nil
+}
+
+func extractVersionMetadata(secret *Secret) (*VersionMetadata, error) {
+	metadataMap := secret.Data
+	var metadata *VersionMetadata
+
+	// deletion_time usually comes in as an empty string which can't be
+	// processed as time.RFC3339, so we reset it to a convertible value
+	if metadataMap["deletion_time"] == "" {
+		metadataMap["deletion_time"] = time.Time{}
+	}
+
+	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
+		Result:     &metadata,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error setting up decoder for API response: %v", err)
+	}
+
+	err = d.Decode(metadataMap)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding metadata from API response into VersionMetadata: %v", err)
+	}
+
+	return metadata, nil
 }
 
 func extractFullMetadata(secret *Secret) (*KVMetadata, error) {
