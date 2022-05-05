@@ -55,6 +55,7 @@ export default class MfaSetupStepOne extends Component {
   @action
   async verifyUUID(evt) {
     evt.preventDefault();
+    this.args.saveUUID(this.UUID); // send UUID to the parent. Needs to record in case of reset method.
     let response = await this.postAdminGenerate();
     if (response === 'stop_progress') {
       this.args.isUUIDVerified(false);

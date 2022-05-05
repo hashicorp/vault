@@ -5,7 +5,9 @@
 {{#if @warning}}
   <AlertBanner @type="info" @title={{@warning}} class="has-top-margin-l" />
 {{/if}}
-<button id="continue" type="button" class="button has-text-danger" {{on "click" this.restartSetup}}>
+<button id="restart" type="button" class="button has-text-danger" {{on "click" this.restartSetup}}>
   Restart setup
 </button>
-{{! ARG TODO add cancel button }}
+<button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button">
+  Cancel
+</button>

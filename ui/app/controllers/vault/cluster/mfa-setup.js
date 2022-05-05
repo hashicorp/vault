@@ -7,6 +7,7 @@ export default class VaultClusterMfaSetupController extends Controller {
   @service auth;
   @tracked onStep = 1;
   @tracked warning = '';
+  @tracked uuid = '';
 
   get entityId() {
     // ARG TODO if root this will return empty string.
@@ -34,5 +35,11 @@ export default class VaultClusterMfaSetupController extends Controller {
       // ARG TODO work with Ivana on error message.
       // try and figure out API response.
     }
+  }
+
+  @action
+  saveUUID(uuid) {
+    this.uuid = uuid;
+    console.log(this.uuid, 'Save UUID should be called on verify');
   }
 }
