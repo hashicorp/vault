@@ -283,7 +283,7 @@ module('Acceptance | clients history tab', function (hooks) {
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
-    assert.dom('[data-test-alert-banner]').includesText('Vault was upgraded');
+    assert.dom('[data-test-alert-banner="alert"]').includesText('Vault was upgraded');
   });
 
   test('Shows empty if license start date is current month', async function (assert) {

@@ -793,7 +793,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
-		clonedClient, err := c.client.Clone()
+		clonedClient, err := c.client.CloneWithHeaders()
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
 			return 1

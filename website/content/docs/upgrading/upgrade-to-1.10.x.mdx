@@ -109,3 +109,16 @@ set to `unauth`.
 There is a workaround for this error that will allow you to sign in to Vault using the OIDC
 auth method. Select the "Other" tab instead of selecting the specific OIDC auth mount tab.
 From there, select "OIDC" from the "Method" select box and proceed to sign in to Vault.
+
+### Login MFA not enforced after restart
+
+A serious bug was identified in the Login MFA feature introduced in 1.10.0:
+[#15108](https://github.com/hashicorp/vault/issues/15108).
+Upon restart, Vault is not populating its in-memory MFA data structures based
+on what is found in storage. Although Vault is persisting to storage MFA methods
+and login enforcement configs populated via /identity/mfa, they will effectively
+disappear after the process is restarted.
+
+We plan to issue a new 1.10.3 release to address this soon. We recommend delaying
+any rollouts of Login MFA until that release.
+
