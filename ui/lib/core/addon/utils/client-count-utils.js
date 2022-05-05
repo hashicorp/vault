@@ -101,7 +101,6 @@ const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, 
   transformedNamespaceArray.forEach((ns) => {
     const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     const newClientsByMount = newNamespaceCounts?.mounts;
-    if (newClientsByMount) delete newNamespaceCounts.mounts;
 
     ns.new_clients = newNamespaceCounts || {};
     ns.mounts.forEach((mount) => {
@@ -121,10 +120,9 @@ const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, 
         month,
         ...mountObject,
       };
-      // TODO CMB ^ delete the label key from final object don't think it's necessary
     });
     if (namespaceObject.new_clients) namespaceObject.new_clients.month = month;
-    if (namespaceObject.mounts) delete namespaceObject.mounts; // the 'mounts_by_key' object replaces the 'mounts' array
+
     namespaces_by_key[namespaceObject.label] = {
       month,
       ...namespaceObject,

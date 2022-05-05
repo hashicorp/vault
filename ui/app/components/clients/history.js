@@ -185,7 +185,7 @@ export default class History extends Component {
     return this.queriedActivityResponse || this.args.model.activity;
   }
 
-  get byMonthTotalClients() {
+  get byMonthActivityData() {
     if (this.selectedNamespace) {
       return this.filteredActivityByMonth;
     } else {
@@ -194,8 +194,8 @@ export default class History extends Component {
   }
 
   get byMonthNewClients() {
-    if (this.byMonthTotalClients) {
-      return this.byMonthTotalClients.map((m) => m.new_clients);
+    if (this.byMonthActivityData) {
+      return this.byMonthActivityData.map((m) => m.new_clients);
     }
     return null;
   }
@@ -208,15 +208,14 @@ export default class History extends Component {
     return !!this.totalClientAttribution && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
   }
 
-  // top level TOTAL client counts for given date range
+  // (object) top level TOTAL client counts for given date range
   get totalUsageCounts() {
     return this.selectedNamespace ? this.filteredActivityByNamespace : this.getActivityResponse.total;
   }
 
-  get newUsageCounts() {
-    return this.selectedNamespace
-      ? this.filteredNewClientAttribution
-      : this.byMonthTotalClients[0]?.new_clients;
+  // (object) single month new client data with total counts + array of namespace breakdown
+  get newClientCounts() {
+    return this.isDateRange ? null : this.byMonthActivityData[0]?.new_clients;
   }
 
   // total client data for horizontal bar chart in attribution component
@@ -224,21 +223,19 @@ export default class History extends Component {
     if (this.selectedNamespace) {
       return this.filteredActivityByNamespace?.mounts || null;
     } else {
-      return this.getActivityResponse?.byNamespace;
+      return this.getActivityResponse?.byNamespace || null;
     }
   }
 
   // new client data for horizontal bar chart
   get newClientAttribution() {
-    // new client attribution only available in a single, historical month
-    if (this.isDateRange) {
-      return null;
-    }
-    // only a single month is returned from the api
+    // new client attribution only available in a single, historical month (not a date range)
+    if (this.isDateRange) return null;
+
     if (this.selectedNamespace) {
-      return this.filteredNewClientAttribution?.mounts || null;
+      return this.newClientCounts?.mounts || null;
     } else {
-      return this.byMonthTotalClients[0]?.new_clients.namespaces || null;
+      return this.newClientCounts?.namespaces || null;
     }
   }
 
@@ -274,21 +271,6 @@ export default class History extends Component {
     const mountData = namespaceData.map((namespace) => namespace.mounts_by_key[auth]);
     // TODO CMB come up with a better check when testing, if there is no mount data (data from pre 1.10) the array will contain undefined.
     return mountData.includes(undefined) ? null : mountData;
-  }
-
-  get filteredNewClientAttribution() {
-    const namespace = this.selectedNamespace;
-    const auth = this.selectedAuthMethod;
-    const newClientsData = this.byMonthTotalClients[0]?.new_clients;
-    if (!newClientsData) return null;
-    // new client attribution only available within single, historical month
-    if (this.isDateRange) return null;
-    if (!namespace && !auth) return newClientsData;
-
-    const foundNamespace = newClientsData.namespaces.find((ns) => ns.label === namespace);
-    if (!foundNamespace) return null;
-    if (!auth) return foundNamespace;
-    return foundNamespace.mounts?.find((mount) => mount.label === auth);
   }
 
   @action

@@ -10,7 +10,7 @@ import { calculateAverageClients } from 'vault/utils/chart-helpers';
   <Clients::MonthlyUsage 
     @chartLegend={{this.chartLegend}} 
     @timestamp={{this.responseTimestamp}}
-    @verticalBarChartData={{this.byMonthTotalClients}} 
+    @verticalBarChartData={{this.byMonthActivityData}} 
   />
  * ```
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
