@@ -3,7 +3,7 @@ package benchhelpers
 import (
 	"testing"
 
-	testing2 "github.com/mitchellh/go-testing-interface"
+	testinginterface "github.com/mitchellh/go-testing-interface"
 )
 
 type tbWrapper struct {
@@ -14,6 +14,6 @@ func (b tbWrapper) Parallel() {
 	// no-op
 }
 
-func TBtoT(tb testing.TB) testing2.T {
+func TBtoT(tb testing.TB) testinginterface.T {
 	return tbWrapper{tb}
 }
