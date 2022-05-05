@@ -58,6 +58,11 @@ Router.map(function () {
           });
           this.route('section', { path: '/:section_name' });
         });
+        this.route('mfa', function () {
+          // lookup
+          this.route('index', { path: '/' });
+          this.route('configure', { path: '/landing' });
+        });
         this.route('leases', function () {
           // lookup
           this.route('index', { path: '/' });
