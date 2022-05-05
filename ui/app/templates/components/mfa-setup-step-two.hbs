@@ -3,6 +3,7 @@
   you are not prevented from logging into Vault in the future, once MFA is fully enforced.
 </p>
 <div class="field has-top-margin-l">
+  <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
   {{#if @warning}}
     <AlertBanner @type="warning" @title={{@warning}} class="has-top-margin-l" />
   {{else}}

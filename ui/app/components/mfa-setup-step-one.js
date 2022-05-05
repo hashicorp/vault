@@ -23,13 +23,13 @@ export default class MfaSetupStepOne extends Component {
   @action
   redirectPreviousPage() {
     this.args.restartFlow();
+    window.history.back();
   }
 
   @action
   async verifyUUID(evt) {
     evt.preventDefault();
     let response = await this.postAdminGenerate();
-    this.args.saveUUIDandQrCode(this.UUID, this.qrCode); // parent needs to keep track of UUID and qrCode.
     if (response === 'stop_progress') {
       this.args.isUUIDVerified(false);
     } else if (response === 'reset_method') {
@@ -49,6 +49,7 @@ export default class MfaSetupStepOne extends Component {
         entity_id: this.args.entityId,
         method_id: this.UUID, // comes from value on the input
       });
+      this.args.saveUUIDandQrCode(this.UUID, response.data?.url); // parent needs to keep track of UUID and qrCode.
       // if there was a warning it won't fail but needs to be handled here and the flow needs to be interrupted
       let warnings = response.warnings || [];
       if (warnings.length > 0) {
@@ -64,14 +65,11 @@ export default class MfaSetupStepOne extends Component {
         this.warning = warnings; // in case other kinds of warnings comes through. Still push to third screen because it's not an error.
         return 'reset_method';
       }
-      // if no warning, then set the qrCode which comes from the successful response.
-      this.qrCode = response.data.url;
     } catch (error) {
       this.UUID = ''; // clear the UUID
       this.error = error.errors;
       return 'stop_progress';
     }
-    console.log('successful');
     return response;
   }
 }

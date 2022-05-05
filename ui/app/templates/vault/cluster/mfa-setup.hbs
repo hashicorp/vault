@@ -16,6 +16,8 @@
         {{/if}}
         {{#if (eq this.onStep 2)}}
           <MfaSetupStepTwo
+            @entityId={{this.entityId}}
+            @uuid={{this.uuid}}
             @isQRCodeVerified={{this.isQRCodeVerified}}
             @qrCode={{this.qrCode}}
             @restartFlow={{this.restartFlow}}
