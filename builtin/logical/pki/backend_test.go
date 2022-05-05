@@ -4158,9 +4158,23 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	fullChain := resp.Data["ca_chain"].(string)
-	if strings.Count(fullChain, rootCert) != 1 {
-		t.Fatalf("expected full chain to contain root certificate; got %v occurrences", strings.Count(fullChain, rootCert))
-	}
+	requireCertInCaChainString(t, fullChain, rootCert, "expected root cert within root cert/ca_chain")
+
+	// Make sure when we issue a leaf certificate we get the full chain back.
+	resp, err = client.Logical().Write("pki-root/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+	})
+	require.NoError(t, err, "error setting up pki root role: %v", err)
+
+	resp, err = client.Logical().Write("pki-root/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "5m",
+	})
+	require.NoError(t, err, "error issuing certificate from pki root: %v", err)
+	fullChainArray := resp.Data["ca_chain"].([]interface{})
+	requireCertInCaChainArray(t, fullChainArray, rootCert, "expected root cert within root issuance pki-root/issue/example")
 
 	// Now generate an intermediate at /pki-intermediate, signed by the root.
 	err = client.Sys().Mount("pki-intermediate", &api.MountInput{
@@ -4226,12 +4240,25 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	require.Equal(t, 0, len(crl.TBSCertList.RevokedCertificates))
 
 	fullChain = resp.Data["ca_chain"].(string)
-	if strings.Count(fullChain, intermediateCert) != 1 {
-		t.Fatalf("expected full chain to contain intermediate certificate; got %v occurrences", strings.Count(fullChain, intermediateCert))
-	}
-	if strings.Count(fullChain, rootCert) != 1 {
-		t.Fatalf("expected full chain to contain root certificate; got %v occurrences", strings.Count(fullChain, rootCert))
-	}
+	requireCertInCaChainString(t, fullChain, intermediateCert, "expected full chain to contain intermediate certificate from pki-intermediate/cert/ca_chain")
+	requireCertInCaChainString(t, fullChain, rootCert, "expected full chain to contain root certificate from pki-intermediate/cert/ca_chain")
+
+	// Make sure when we issue a leaf certificate we get the full chain back.
+	resp, err = client.Logical().Write("pki-intermediate/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+	})
+	require.NoError(t, err, "error setting up pki intermediate role: %v", err)
+
+	resp, err = client.Logical().Write("pki-intermediate/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "5m",
+	})
+	require.NoError(t, err, "error issuing certificate from pki intermediate: %v", err)
+	fullChainArray = resp.Data["ca_chain"].([]interface{})
+	requireCertInCaChainArray(t, fullChainArray, intermediateCert, "expected full chain to contain intermediate certificate from pki-intermediate/issue/example")
+	requireCertInCaChainArray(t, fullChainArray, rootCert, "expected full chain to contain root certificate from pki-intermediate/issue/example")
 
 	// Finally, import this signing cert chain into a new mount to ensure
 	// "external" CAs behave as expected.
@@ -4289,6 +4316,23 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	// Verify that the certificates are signed by the intermediary CA key...
 	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
+}
+
+func requireCertInCaChainArray(t *testing.T, chain []interface{}, cert string, msgAndArgs ...interface{}) {
+	var fullChain string
+	for _, caCert := range chain {
+		fullChain = fullChain + "\n" + caCert.(string)
+	}
+
+	requireCertInCaChainString(t, fullChain, cert, msgAndArgs)
+}
+
+func requireCertInCaChainString(t *testing.T, chain string, cert string, msgAndArgs ...interface{}) {
+	count := strings.Count(chain, cert)
+	if count != 1 {
+		failMsg := fmt.Sprintf("Found %d occurrances of the cert in the provided chain", count)
+		require.FailNow(t, failMsg, msgAndArgs...)
+	}
 }
 
 type MultiBool int
