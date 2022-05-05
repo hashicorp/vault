@@ -1128,7 +1128,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		"service identity": {
 			"si",
 			map[string]interface{}{
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"lease":              "6h",
 			},
 		},
@@ -1136,16 +1136,16 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			"sip",
 			map[string]interface{}{
 				"policies":           []string{"test"},
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"lease":              "6h",
 			},
 		},
 		"service identity and role": {
 			"sir",
 			map[string]interface{}{
-				"consul_roles":         []string{"role-test"},
-				"service_identitities": []string{"service1"},
-				"lease":                "6h",
+				"consul_roles":       []string{"role-test"},
+				"service_identities": "service1",
+				"lease":              "6h",
 			},
 		},
 		"service identity and role and policies": {
@@ -1153,7 +1153,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			map[string]interface{}{
 				"policies":           []string{"test"},
 				"consul_roles":       []string{"role-test"},
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"lease":              "6h",
 			},
 		},
@@ -1184,7 +1184,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			"nirp",
 			map[string]interface{}{
 				"consul_roles":       []string{"role-test"},
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
 				"lease":              "6h",
 			},
@@ -1192,7 +1192,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		"node identity and service identity": {
 			"nisi",
 			map[string]interface{}{
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
 				"lease":              "6h",
 			},
@@ -1201,7 +1201,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			"nisip",
 			map[string]interface{}{
 				"policies":           []string{"test"},
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
 				"lease":              "6h",
 			},
@@ -1210,7 +1210,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			"nisir",
 			map[string]interface{}{
 				"consul_roles":       []string{"role-test"},
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
 				"lease":              "6h",
 			},
@@ -1220,7 +1220,7 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			map[string]interface{}{
 				"policies":           []string{"test"},
 				"consul_roles":       []string{"role-test"},
-				"service_identities": []string{"service1"},
+				"service_identities": "service1",
 				"node_identities":    []string{"node1:dc1"},
 				"lease":              "6h",
 			},
