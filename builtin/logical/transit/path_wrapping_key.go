@@ -5,8 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io"
-	"path"
 	"strconv"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -28,15 +26,26 @@ func (b *backend) pathWrappingKey() *framework.Path {
 }
 
 func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	p, err := getWrappingKey(ctx, req.Storage)
+	polReq := keysutil.PolicyRequest{
+		Upsert:               true,
+		Storage:              req.Storage,
+		Name:                 fmt.Sprintf("import/%s", WrappingKeyName),
+		KeyType:              keysutil.KeyType_RSA4096,
+		Derived:              false,
+		Convergent:           false,
+		Exportable:           false,
+		AllowPlaintextBackup: false,
+		AutoRotatePeriod:     0,
+	}
+	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
-		p, err = generateWrappingKey(ctx, req.Storage, b.GetRandomReader())
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("error retrieving wrapping key: returned policy was nil")
+	}
+	if b.System().CachingDisabled() {
+		p.Unlock()
 	}
 
 	rsaPublicKey := p.Keys[strconv.Itoa(p.LatestVersion)]
@@ -63,34 +72,6 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 	}
 
 	return resp, nil
-}
-
-func getWrappingKey(ctx context.Context, storage logical.Storage) (*keysutil.Policy, error) {
-	p, err := keysutil.LoadPolicy(ctx, storage, path.Join("import", "policy", WrappingKeyName))
-	if err != nil {
-		return nil, err
-	}
-
-	return p, nil
-}
-
-func generateWrappingKey(ctx context.Context, storage logical.Storage, rand io.Reader) (*keysutil.Policy, error) {
-	p := &keysutil.Policy{
-		Name:                 WrappingKeyName,
-		Type:                 keysutil.KeyType_RSA4096,
-		Derived:              false,
-		Exportable:           false,
-		AllowPlaintextBackup: false,
-		AutoRotatePeriod:     0,
-		StoragePrefix:        "import/",
-	}
-
-	err := p.Rotate(ctx, storage, rand)
-	if err != nil {
-		return nil, err
-	}
-
-	return p, nil
 }
 
 const (

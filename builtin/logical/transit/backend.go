@@ -37,7 +37,6 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			SealWrapStorage: []string{
 				"archive/",
 				"policy/",
-				"import/",
 			},
 		},
 

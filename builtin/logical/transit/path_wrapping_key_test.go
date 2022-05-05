@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	storagePath = "import/policy/" + WrappingKeyName
+	storagePath = "policy/import/" + WrappingKeyName
 )
 
 func TestTransit_WrappingKey(t *testing.T) {
