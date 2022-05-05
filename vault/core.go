@@ -3096,7 +3096,7 @@ func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
 
 	for _, conf := range eConfigs {
 		if err := c.loginMFABackend.loginMFAMethodExistenceCheck(conf); err != nil {
-			c.loginMFABackend.mfaLogger.Error("failed to find all MFA methods that exist in MFA enforcement configs", "configID", conf.ID, "namespcaeID", conf.NamespaceID, "error", err.Error())
+			c.loginMFABackend.mfaLogger.Error("failed to find all MFA methods that exist in MFA enforcement configs", "configID", conf.ID, "namespaceID", conf.NamespaceID, "error", err.Error())
 		}
 	}
 	return nil
