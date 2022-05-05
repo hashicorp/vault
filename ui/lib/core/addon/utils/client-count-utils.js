@@ -6,18 +6,20 @@ export const formatByMonths = (monthsArray) => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
-    const totalClientsByNamespace = formatByNamespace(m.namespaces);
-    const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
+    let totalClientsByNamespace = formatByNamespace(m.namespaces);
+    let newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
     if (Object.keys(m).includes('counts')) {
       let totalCounts = flattenDataset(m);
       let newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
       return {
         month,
         ...totalCounts,
+        namespaces: formatByNamespace(m.namespaces),
         namespaces_by_key: namespaceArrayToObject(totalClientsByNamespace, newClientsByNamespace, month),
         new_clients: {
           month,
           ...newCounts,
+          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
         },
       };
     }
