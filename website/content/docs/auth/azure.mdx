@@ -460,7 +460,7 @@ If one or more of these restrictions are supplied and the vmss_name is supplied,
 
 1. Vault reaches out to the Azure API and checks that the VMSS exists. It uses the subscription id and resource group mandatory fields to make this call.  If the VMSS does exist it pulls metadata. If the VMSS does not exist in that subscription and resource group login fails.
 2. Vault checks `bound_scale_sets` restrictions if configured. Login fails if the scale set is not in the list.
-3. Vault checks that the VM has a managed identity. If it does not login fails.
+3. Vault checks that the VMSS has a managed identity. If it does not login fails.
 4. Vault checks that the managed identity in the JWT matches the managed identity on the VM. If it does not login fails.
 5. Vault checks `bound_subscription_ids` restrictions if configured. Login fails if the subscription is not in the list.
 6. Vault checks `bound_resource_groups` restrictions if configured. Login fails if the resource group is not in the list.
