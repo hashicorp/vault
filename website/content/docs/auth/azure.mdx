@@ -407,13 +407,13 @@ There are 3 core flows and associated methods of restricting a role in the Azure
   
 The VM and VMSS-based restrictions can only be used for those resource types. If using Azure Kubernetes Service, Azure Container Instance, or some other resource type that supports a managed identity, you cannot apply the restrictions applicable to VM and VMSS.
   
-The restrictions that apply only to VM or VMSS are:
+The restrictions that apply only to VM or VMSS resource types are:
 - Locations `bound_locations`.
 - Subscriptions `bound_subscription_ids`.
 - Resource groups `bound_resource_groups`.
 - Scale sets `bound_scale_sets`. (VMSS only).
   
-The restrictions that apply to any resource type come from the JWT and these are:
+The restrictions that apply to any resource type are sourced from the JWT, these are:
 - Service principals `bound_service_principal_ids`.
 - Azure AD groups `bound_group_ids`.
   
@@ -427,8 +427,8 @@ The JWT flow occurs in all cases and there are some optional restrictions that c
 The JWT flow is:
 1. Vault validates the JWT with Azure. If the JWT is not valid, login fails.
 2. Vault validates the JWT is still valid according to its `NotBefore` time claim. If the `NotBefore’`claim is later than the current time, login fails.
-3. Vault checks Service Principal Ids restrictions if it is configured. Login fails if the service principal id from the JWT is not on the list. Note that Service Principal Ids restriction can be set to a single `*` record too and this check will be skipped.
-4. Vault checks Azure AD Group Ids restrictions if it is configured. Login fails if at least one of the groups claims from the JWT are not on the list. Note that Azure AD Group Ids restriction can be set to a single `*` record too and this check will be skipped.
+3. Vault checks `bound_principal_ids` restrictions if it is configured. Login fails if the service principal id from the JWT is not on the list. Note that Service Principal Ids restriction can be set to a single `*` record too and this check will be skipped.
+4. Vault checks `bound_group_ids` restrictions if it is configured. Login fails if at least one of the groups claims from the JWT are not on the list. Note that Azure AD Group Ids restriction can be set to a single `*` record too and this check will be skipped.
 
 ### VM Flow
 The VM flow is only applicable to virtual machines outside of a VMSS. This flow will not work for machines inside a scale set, which must use the VMSS flow. The VM flow can be used if any of these restrictions are applied:
@@ -438,7 +438,8 @@ The VM flow is only applicable to virtual machines outside of a VMSS. This flow 
   
 If none of these restrictions are supplied, then the vm_name field will be ignored on login.
   
-If one or more of these restrictions are supplied and the vm_name is supplied, then the follow checks will take place:
+If one or more of these restrictions are supplied and the vm_name is supplied, then the following checks will take place:
+  
 1. Vault reaches out to the Azure API and checks that the VM exists. It uses the subscription id and resource group mandatory fields to make this call.  If the VM does exist, it pulls the metadata. If the VM does not exist in that subscription and resource group, login fails.
 2. Vault checks that the VM has a managed identity. If it does not, login fails.
 3. Vault checks that the `bound_scale_sets` is not populated on the role. If it is, login fails.
