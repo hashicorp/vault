@@ -48,9 +48,9 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 		p.Unlock()
 	}
 
-	rsaPublicKey := p.Keys[strconv.Itoa(p.LatestVersion)]
+	wrappingKey := p.Keys[strconv.Itoa(p.LatestVersion)]
 
-	derBytes, err := x509.MarshalPKIXPublicKey(rsaPublicKey.RSAKey.Public())
+	derBytes, err := x509.MarshalPKIXPublicKey(wrappingKey.RSAKey.Public())
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
 	}
