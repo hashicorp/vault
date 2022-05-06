@@ -460,6 +460,734 @@ type CBTestScenario struct {
 	Steps []CBTestStep
 }
 
+var chainBuildingTestCases = []CBTestScenario{
+	{
+		// This test builds up two cliques lined by a cycle, dropping into
+		// a single intermediate.
+		Steps: []CBTestStep{
+			// Create a reissued certificate using the same key. These
+			// should validate themselves.
+			CBGenerateRoot{
+				Key:        "key-root-old",
+				Name:       "root-old-a",
+				CommonName: "root-old",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a": {"self"},
+				},
+			},
+			// After adding the second root using the same key and common
+			// name, there should now be two certs in each chain.
+			CBGenerateRoot{
+				Key:        "key-root-old",
+				Existing:   true,
+				Name:       "root-old-b",
+				CommonName: "root-old",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a": {"self", "root-old-b"},
+					"root-old-b": {"self", "root-old-a"},
+				},
+			},
+			// After adding a third root, there are now two possibilities for
+			// each later chain entry.
+			CBGenerateRoot{
+				Key:        "key-root-old",
+				Existing:   true,
+				Name:       "root-old-c",
+				CommonName: "root-old",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a": {"self", "root-old-bc", "root-old-bc"},
+					"root-old-b": {"self", "root-old-ac", "root-old-ac"},
+					"root-old-c": {"self", "root-old-ab", "root-old-ab"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac": "root-old-a,root-old-c",
+					"root-old-ab": "root-old-a,root-old-b",
+					"root-old-bc": "root-old-b,root-old-c",
+				},
+			},
+			// If we generate an unrelated issuer, it shouldn't affect either
+			// chain.
+			CBGenerateRoot{
+				Key:        "key-root-new",
+				Name:       "root-new-a",
+				CommonName: "root-new",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a": {"self", "root-old-bc", "root-old-bc"},
+					"root-old-b": {"self", "root-old-ac", "root-old-ac"},
+					"root-old-c": {"self", "root-old-ab", "root-old-ab"},
+					"root-new-a": {"self"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac": "root-old-a,root-old-c",
+					"root-old-ab": "root-old-a,root-old-b",
+					"root-old-bc": "root-old-b,root-old-c",
+				},
+			},
+			// Reissuing this new root should form another clique.
+			CBGenerateRoot{
+				Key:        "key-root-new",
+				Existing:   true,
+				Name:       "root-new-b",
+				CommonName: "root-new",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a": {"self", "root-old-bc", "root-old-bc"},
+					"root-old-b": {"self", "root-old-ac", "root-old-ac"},
+					"root-old-c": {"self", "root-old-ab", "root-old-ab"},
+					"root-new-a": {"self", "root-new-b"},
+					"root-new-b": {"self", "root-new-a"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac": "root-old-a,root-old-c",
+					"root-old-ab": "root-old-a,root-old-b",
+					"root-old-bc": "root-old-b,root-old-c",
+				},
+			},
+			// Generating a cross-signed cert from old->new should result
+			// in all old clique certs showing up in the new root's paths.
+			// This does not form a cycle.
+			CBGenerateIntermediate{
+				// In order to validate the existing root-new clique, we
+				// have to reuse the key and common name here for
+				// cross-signing.
+				Key:        "key-root-new",
+				Existing:   true,
+				Name:       "cross-old-new",
+				CommonName: "root-new",
+				// Which old issuer is used here doesn't matter as they have
+				// the same CN and key.
+				Parent: "root-old-a",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a":    {"self", "root-old-bc", "root-old-bc"},
+					"root-old-b":    {"self", "root-old-ac", "root-old-ac"},
+					"root-old-c":    {"self", "root-old-ab", "root-old-ab"},
+					"cross-old-new": {"self", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"root-new-a":    {"self", "root-new-b", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"root-new-b":    {"self", "root-new-a", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac":  "root-old-a,root-old-c",
+					"root-old-ab":  "root-old-a,root-old-b",
+					"root-old-bc":  "root-old-b,root-old-c",
+					"root-old-abc": "root-old-a,root-old-b,root-old-c",
+				},
+			},
+			// If we create a new intermediate off of the root-new, we should
+			// simply add to the existing chain.
+			CBGenerateIntermediate{
+				Key:    "key-inter-a-root-new",
+				Name:   "inter-a-root-new",
+				Parent: "root-new-a",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a":    {"self", "root-old-bc", "root-old-bc"},
+					"root-old-b":    {"self", "root-old-ac", "root-old-ac"},
+					"root-old-c":    {"self", "root-old-ab", "root-old-ab"},
+					"cross-old-new": {"self", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"root-new-a":    {"self", "root-new-b", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"root-new-b":    {"self", "root-new-a", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					// If we find cross-old-new first, the old clique will be ahead
+					// of the new clique; otherwise the new clique will appear first.
+					"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac":  "root-old-a,root-old-c",
+					"root-old-ab":  "root-old-a,root-old-b",
+					"root-old-bc":  "root-old-b,root-old-c",
+					"root-old-abc": "root-old-a,root-old-b,root-old-c",
+					"full-cycle":   "root-old-a,root-old-b,root-old-c,cross-old-new,root-new-a,root-new-b",
+				},
+			},
+			// Now, if we cross-sign back from new to old, we should
+			// form cycle with multiple reissued cliques. This means
+			// all nodes will have the same chain.
+			CBGenerateIntermediate{
+				// In order to validate the existing root-old clique, we
+				// have to reuse the key and common name here for
+				// cross-signing.
+				Key:        "key-root-old",
+				Existing:   true,
+				Name:       "cross-new-old",
+				CommonName: "root-old",
+				// Which new issuer is used here doesn't matter as they have
+				// the same CN and key.
+				Parent: "root-new-a",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a":       {"self", "root-old-bc", "root-old-bc", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+					"root-old-b":       {"self", "root-old-ac", "root-old-ac", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+					"root-old-c":       {"self", "root-old-ab", "root-old-ab", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+					"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+					"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+					"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac":        "root-old-a,root-old-c",
+					"root-old-ab":        "root-old-a,root-old-b",
+					"root-old-bc":        "root-old-b,root-old-c",
+					"root-old-abc":       "root-old-a,root-old-b,root-old-c",
+					"root-new-ab":        "root-new-a,root-new-b",
+					"both-cross-old-new": "cross-old-new,cross-new-old",
+					"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
+					"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
+				},
+			},
+			// Update each old root to only include itself.
+			CBUpdateIssuer{
+				Name:    "root-old-a",
+				CAChain: []string{"root-old-a"},
+			},
+			CBUpdateIssuer{
+				Name:    "root-old-b",
+				CAChain: []string{"root-old-b"},
+			},
+			CBUpdateIssuer{
+				Name:    "root-old-c",
+				CAChain: []string{"root-old-c"},
+			},
+			// Step 19
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a":       {"self"},
+					"root-old-b":       {"self"},
+					"root-old-c":       {"self"},
+					"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+					"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+					"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac":        "root-old-a,root-old-c",
+					"root-old-ab":        "root-old-a,root-old-b",
+					"root-old-bc":        "root-old-b,root-old-c",
+					"root-old-abc":       "root-old-a,root-old-b,root-old-c",
+					"root-new-ab":        "root-new-a,root-new-b",
+					"both-cross-old-new": "cross-old-new,cross-new-old",
+					"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
+					"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
+				},
+			},
+			// Reset the old roots; should get the original chains back.
+			CBUpdateIssuer{
+				Name: "root-old-a",
+			},
+			CBUpdateIssuer{
+				Name: "root-old-b",
+			},
+			CBUpdateIssuer{
+				Name: "root-old-c",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-old-a":       {"self", "root-old-bc", "root-old-bc", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+					"root-old-b":       {"self", "root-old-ac", "root-old-ac", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+					"root-old-c":       {"self", "root-old-ab", "root-old-ab", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
+					"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+					"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
+					"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
+					"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
+				},
+				Aliases: map[string]string{
+					"root-old-ac":        "root-old-a,root-old-c",
+					"root-old-ab":        "root-old-a,root-old-b",
+					"root-old-bc":        "root-old-b,root-old-c",
+					"root-old-abc":       "root-old-a,root-old-b,root-old-c",
+					"root-new-ab":        "root-new-a,root-new-b",
+					"both-cross-old-new": "cross-old-new,cross-new-old",
+					"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
+					"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
+				},
+			},
+			CBIssueLeaf{Issuer: "root-old-a"},
+			CBIssueLeaf{Issuer: "root-old-b"},
+			CBIssueLeaf{Issuer: "root-old-c"},
+			CBIssueLeaf{Issuer: "cross-old-new"},
+			CBIssueLeaf{Issuer: "cross-new-old"},
+			CBIssueLeaf{Issuer: "root-new-a"},
+			CBIssueLeaf{Issuer: "root-new-b"},
+			CBIssueLeaf{Issuer: "inter-a-root-new"},
+		},
+	},
+	{
+		// Here we're testing our chain capacity. First we'll create a
+		// bunch of unique roots to form a cycle of length 10.
+		Steps: []CBTestStep{
+			CBGenerateRoot{
+				Key:        "key-root-a",
+				Name:       "root-a",
+				CommonName: "root-a",
+			},
+			CBGenerateRoot{
+				Key:        "key-root-b",
+				Name:       "root-b",
+				CommonName: "root-b",
+			},
+			CBGenerateRoot{
+				Key:        "key-root-c",
+				Name:       "root-c",
+				CommonName: "root-c",
+			},
+			CBGenerateRoot{
+				Key:        "key-root-d",
+				Name:       "root-d",
+				CommonName: "root-d",
+			},
+			CBGenerateRoot{
+				Key:        "key-root-e",
+				Name:       "root-e",
+				CommonName: "root-e",
+			},
+			// They should all be disjoint to start.
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-a": {"self"},
+					"root-b": {"self"},
+					"root-c": {"self"},
+					"root-d": {"self"},
+					"root-e": {"self"},
+				},
+			},
+			// Start the cross-signing chains. These are all linear, so there's
+			// no error expected; they're just long.
+			CBGenerateIntermediate{
+				Key:        "key-root-b",
+				Existing:   true,
+				Name:       "cross-a-b",
+				CommonName: "root-b",
+				Parent:     "root-a",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-a":    {"self"},
+					"cross-a-b": {"self", "root-a"},
+					"root-b":    {"self", "cross-a-b", "root-a"},
+					"root-c":    {"self"},
+					"root-d":    {"self"},
+					"root-e":    {"self"},
+				},
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-c",
+				Existing:   true,
+				Name:       "cross-b-c",
+				CommonName: "root-c",
+				Parent:     "root-b",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-a":    {"self"},
+					"cross-a-b": {"self", "root-a"},
+					"root-b":    {"self", "cross-a-b", "root-a"},
+					"cross-b-c": {"self", "b-or-cross", "b-chained-cross", "b-chained-cross"},
+					"root-c":    {"self", "cross-b-c", "b-or-cross", "b-chained-cross", "b-chained-cross"},
+					"root-d":    {"self"},
+					"root-e":    {"self"},
+				},
+				Aliases: map[string]string{
+					"b-or-cross":      "root-b,cross-a-b",
+					"b-chained-cross": "root-b,cross-a-b,root-a",
+				},
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-d",
+				Existing:   true,
+				Name:       "cross-c-d",
+				CommonName: "root-d",
+				Parent:     "root-c",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-a":    {"self"},
+					"cross-a-b": {"self", "root-a"},
+					"root-b":    {"self", "cross-a-b", "root-a"},
+					"cross-b-c": {"self", "b-or-cross", "b-chained-cross", "b-chained-cross"},
+					"root-c":    {"self", "cross-b-c", "b-or-cross", "b-chained-cross", "b-chained-cross"},
+					"cross-c-d": {"self", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
+					"root-d":    {"self", "cross-c-d", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
+					"root-e":    {"self"},
+				},
+				Aliases: map[string]string{
+					"b-or-cross":      "root-b,cross-a-b",
+					"b-chained-cross": "root-b,cross-a-b,root-a",
+					"c-or-cross":      "root-c,cross-b-c",
+					"c-chained-cross": "root-c,cross-b-c,root-b,cross-a-b,root-a",
+				},
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-e",
+				Existing:   true,
+				Name:       "cross-d-e",
+				CommonName: "root-e",
+				Parent:     "root-d",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-a":    {"self"},
+					"cross-a-b": {"self", "root-a"},
+					"root-b":    {"self", "cross-a-b", "root-a"},
+					"cross-b-c": {"self", "b-or-cross", "b-chained-cross", "b-chained-cross"},
+					"root-c":    {"self", "cross-b-c", "b-or-cross", "b-chained-cross", "b-chained-cross"},
+					"cross-c-d": {"self", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
+					"root-d":    {"self", "cross-c-d", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
+					"cross-d-e": {"self", "d-or-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross"},
+					"root-e":    {"self", "cross-d-e", "d-or-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross"},
+				},
+				Aliases: map[string]string{
+					"b-or-cross":      "root-b,cross-a-b",
+					"b-chained-cross": "root-b,cross-a-b,root-a",
+					"c-or-cross":      "root-c,cross-b-c",
+					"c-chained-cross": "root-c,cross-b-c,root-b,cross-a-b,root-a",
+					"d-or-cross":      "root-d,cross-c-d",
+					"d-chained-cross": "root-d,cross-c-d,root-c,cross-b-c,root-b,cross-a-b,root-a",
+				},
+			},
+			CBIssueLeaf{Issuer: "root-a"},
+			CBIssueLeaf{Issuer: "cross-a-b"},
+			CBIssueLeaf{Issuer: "root-b"},
+			CBIssueLeaf{Issuer: "cross-b-c"},
+			CBIssueLeaf{Issuer: "root-c"},
+			CBIssueLeaf{Issuer: "cross-c-d"},
+			CBIssueLeaf{Issuer: "root-d"},
+			CBIssueLeaf{Issuer: "cross-d-e"},
+			CBIssueLeaf{Issuer: "root-e"},
+			// Importing the new e->a cross fails because the cycle
+			// it builds is too long.
+			CBGenerateIntermediate{
+				Key:                "key-root-a",
+				Existing:           true,
+				Name:               "cross-e-a",
+				CommonName:         "root-a",
+				Parent:             "root-e",
+				ImportErrorMessage: "exceeds max size",
+			},
+			// Deleting any root and one of its crosses (either a->b or b->c)
+			// should fix this.
+			CBDeleteIssuer{"root-b"},
+			CBDeleteIssuer{"cross-b-c"},
+			// Importing the new e->a cross fails because the cycle
+			// it builds is too long.
+			CBGenerateIntermediate{
+				Key:        "key-root-a",
+				Existing:   true,
+				Name:       "cross-e-a",
+				CommonName: "root-a",
+				Parent:     "root-e",
+			},
+			CBIssueLeaf{Issuer: "root-a"},
+			CBIssueLeaf{Issuer: "cross-a-b"},
+			CBIssueLeaf{Issuer: "root-c"},
+			CBIssueLeaf{Issuer: "cross-c-d"},
+			CBIssueLeaf{Issuer: "root-d"},
+			CBIssueLeaf{Issuer: "cross-d-e"},
+			CBIssueLeaf{Issuer: "root-e"},
+			CBIssueLeaf{Issuer: "cross-e-a"},
+		},
+	},
+	{
+		// Here we're testing our clique capacity. First we'll create a
+		// bunch of unique roots to form a cycle of length 10.
+		Steps: []CBTestStep{
+			CBGenerateRoot{
+				Key:        "key-root",
+				Name:       "root-a",
+				CommonName: "root",
+			},
+			CBGenerateRoot{
+				Key:        "key-root",
+				Existing:   true,
+				Name:       "root-b",
+				CommonName: "root",
+			},
+			CBGenerateRoot{
+				Key:        "key-root",
+				Existing:   true,
+				Name:       "root-c",
+				CommonName: "root",
+			},
+			CBGenerateRoot{
+				Key:        "key-root",
+				Existing:   true,
+				Name:       "root-d",
+				CommonName: "root",
+			},
+			CBGenerateRoot{
+				Key:        "key-root",
+				Existing:   true,
+				Name:       "root-e",
+				CommonName: "root",
+			},
+			CBGenerateRoot{
+				Key:        "key-root",
+				Existing:   true,
+				Name:       "root-f",
+				CommonName: "root",
+			},
+			CBIssueLeaf{Issuer: "root-a"},
+			CBIssueLeaf{Issuer: "root-b"},
+			CBIssueLeaf{Issuer: "root-c"},
+			CBIssueLeaf{Issuer: "root-d"},
+			CBIssueLeaf{Issuer: "root-e"},
+			CBIssueLeaf{Issuer: "root-f"},
+			// Seventh reissuance fails.
+			CBGenerateRoot{
+				Key:          "key-root",
+				Existing:     true,
+				Name:         "root-g",
+				CommonName:   "root",
+				ErrorMessage: "excessively reissued certificate",
+			},
+			// Deleting one and trying again should succeed.
+			CBDeleteIssuer{"root-a"},
+			CBGenerateRoot{
+				Key:        "key-root",
+				Existing:   true,
+				Name:       "root-g",
+				CommonName: "root",
+			},
+			CBIssueLeaf{Issuer: "root-b"},
+			CBIssueLeaf{Issuer: "root-c"},
+			CBIssueLeaf{Issuer: "root-d"},
+			CBIssueLeaf{Issuer: "root-e"},
+			CBIssueLeaf{Issuer: "root-f"},
+			CBIssueLeaf{Issuer: "root-g"},
+		},
+	},
+	{
+		// There's one more pathological case here: we have a cycle
+		// which validates a clique/cycle via cross-signing. We call
+		// the parent cycle new roots and the child cycle/clique the
+		// old roots.
+		Steps: []CBTestStep{
+			// New Cycle
+			CBGenerateRoot{
+				Key:  "key-root-new-a",
+				Name: "root-new-a",
+			},
+			CBGenerateRoot{
+				Key:  "key-root-new-b",
+				Name: "root-new-b",
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-new-b",
+				Existing:   true,
+				Name:       "cross-root-new-b-sig-a",
+				CommonName: "root-new-b",
+				Parent:     "root-new-a",
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-new-a",
+				Existing:   true,
+				Name:       "cross-root-new-a-sig-b",
+				CommonName: "root-new-a",
+				Parent:     "root-new-b",
+			},
+			// Old Cycle + Clique
+			CBGenerateRoot{
+				Key:  "key-root-old-a",
+				Name: "root-old-a",
+			},
+			CBGenerateRoot{
+				Key:        "key-root-old-a",
+				Existing:   true,
+				Name:       "root-old-a-reissued",
+				CommonName: "root-old-a",
+			},
+			CBGenerateRoot{
+				Key:  "key-root-old-b",
+				Name: "root-old-b",
+			},
+			CBGenerateRoot{
+				Key:        "key-root-old-b",
+				Existing:   true,
+				Name:       "root-old-b-reissued",
+				CommonName: "root-old-b",
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-old-b",
+				Existing:   true,
+				Name:       "cross-root-old-b-sig-a",
+				CommonName: "root-old-b",
+				Parent:     "root-old-a",
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-old-a",
+				Existing:   true,
+				Name:       "cross-root-old-a-sig-b",
+				CommonName: "root-old-a",
+				Parent:     "root-old-b",
+			},
+			// Validate the chains are separate before linking them.
+			CBValidateChain{
+				Chains: map[string][]string{
+					// New stuff
+					"root-new-a":             {"self", "cross-root-new-a-sig-b", "root-new-b-or-cross", "root-new-b-or-cross"},
+					"root-new-b":             {"self", "cross-root-new-b-sig-a", "root-new-a-or-cross", "root-new-a-or-cross"},
+					"cross-root-new-b-sig-a": {"self", "any-root-new", "any-root-new", "any-root-new"},
+					"cross-root-new-a-sig-b": {"self", "any-root-new", "any-root-new", "any-root-new"},
+
+					// Old stuff
+					"root-old-a":             {"self", "root-old-a-reissued", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b"},
+					"root-old-a-reissued":    {"self", "root-old-a", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b"},
+					"root-old-b":             {"self", "root-old-b-reissued", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a"},
+					"root-old-b-reissued":    {"self", "root-old-b", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a"},
+					"cross-root-old-b-sig-a": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old"},
+					"cross-root-old-a-sig-b": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old"},
+				},
+				Aliases: map[string]string{
+					"root-new-a-or-cross": "root-new-a,cross-root-new-a-sig-b",
+					"root-new-b-or-cross": "root-new-b,cross-root-new-b-sig-a",
+					"both-root-new":       "root-new-a,root-new-b",
+					"any-root-new":        "root-new-a,cross-root-new-a-sig-b,root-new-b,cross-root-new-b-sig-a",
+					"both-root-old-a":     "root-old-a,root-old-a-reissued",
+					"both-root-old-b":     "root-old-b,root-old-b-reissued",
+					"all-root-old":        "root-old-a,root-old-a-reissued,root-old-b,root-old-b-reissued,cross-root-old-b-sig-a,cross-root-old-a-sig-b",
+				},
+			},
+			// Finally, generate an intermediate to link new->old. We
+			// link root-new-a into root-old-a.
+			CBGenerateIntermediate{
+				Key:        "key-root-old-a",
+				Existing:   true,
+				Name:       "cross-root-old-a-sig-root-new-a",
+				CommonName: "root-old-a",
+				Parent:     "root-new-a",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					// New stuff should be unchanged.
+					"root-new-a":             {"self", "cross-root-new-a-sig-b", "root-new-b-or-cross", "root-new-b-or-cross"},
+					"root-new-b":             {"self", "cross-root-new-b-sig-a", "root-new-a-or-cross", "root-new-a-or-cross"},
+					"cross-root-new-b-sig-a": {"self", "any-root-new", "any-root-new", "any-root-new"},
+					"cross-root-new-a-sig-b": {"self", "any-root-new", "any-root-new", "any-root-new"},
+
+					// Old stuff
+					"root-old-a":             {"self", "root-old-a-reissued", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
+					"root-old-a-reissued":    {"self", "root-old-a", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
+					"root-old-b":             {"self", "root-old-b-reissued", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
+					"root-old-b-reissued":    {"self", "root-old-b", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
+					"cross-root-old-b-sig-a": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
+					"cross-root-old-a-sig-b": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
+
+					// Link
+					"cross-root-old-a-sig-root-new-a": {"self", "root-new-a-or-cross", "any-root-new", "any-root-new", "any-root-new"},
+				},
+				Aliases: map[string]string{
+					"root-new-a-or-cross": "root-new-a,cross-root-new-a-sig-b",
+					"root-new-b-or-cross": "root-new-b,cross-root-new-b-sig-a",
+					"both-root-new":       "root-new-a,root-new-b",
+					"any-root-new":        "root-new-a,cross-root-new-a-sig-b,root-new-b,cross-root-new-b-sig-a",
+					"both-root-old-a":     "root-old-a,root-old-a-reissued",
+					"both-root-old-b":     "root-old-b,root-old-b-reissued",
+					"all-root-old":        "root-old-a,root-old-a-reissued,root-old-b,root-old-b-reissued,cross-root-old-b-sig-a,cross-root-old-a-sig-b",
+				},
+			},
+			CBIssueLeaf{Issuer: "root-new-a"},
+			CBIssueLeaf{Issuer: "root-new-b"},
+			CBIssueLeaf{Issuer: "cross-root-new-b-sig-a"},
+			CBIssueLeaf{Issuer: "cross-root-new-a-sig-b"},
+			CBIssueLeaf{Issuer: "root-old-a"},
+			CBIssueLeaf{Issuer: "root-old-a-reissued"},
+			CBIssueLeaf{Issuer: "root-old-b"},
+			CBIssueLeaf{Issuer: "root-old-b-reissued"},
+			CBIssueLeaf{Issuer: "cross-root-old-b-sig-a"},
+			CBIssueLeaf{Issuer: "cross-root-old-a-sig-b"},
+			CBIssueLeaf{Issuer: "cross-root-old-a-sig-root-new-a"},
+		},
+	},
+	{
+		// Test a dual-root of trust chaining example with different
+		// lengths of chains.
+		Steps: []CBTestStep{
+			CBGenerateRoot{
+				Key:  "key-root-new",
+				Name: "root-new",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter-new",
+				Name:   "inter-new",
+				Parent: "root-new",
+			},
+			CBGenerateRoot{
+				Key:  "key-root-old",
+				Name: "root-old",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter-old-a",
+				Name:   "inter-old-a",
+				Parent: "root-old",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter-old-b",
+				Name:   "inter-old-b",
+				Parent: "inter-old-a",
+			},
+			// Now generate a cross-signed intermediate to merge these
+			// two chains.
+			CBGenerateIntermediate{
+				Key:        "key-cross-old-new",
+				Name:       "cross-old-new-signed-new",
+				CommonName: "cross-old-new",
+				Parent:     "inter-new",
+			},
+			CBGenerateIntermediate{
+				Key:        "key-cross-old-new",
+				Existing:   true,
+				Name:       "cross-old-new-signed-old",
+				CommonName: "cross-old-new",
+				Parent:     "inter-old-b",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-leaf-inter",
+				Name:   "leaf-inter",
+				Parent: "cross-old-new-signed-new",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-new":                 {"self"},
+					"inter-new":                {"self", "root-new"},
+					"cross-old-new-signed-new": {"self", "inter-new", "root-new"},
+					"root-old":                 {"self"},
+					"inter-old-a":              {"self", "root-old"},
+					"inter-old-b":              {"self", "inter-old-a", "root-old"},
+					"cross-old-new-signed-old": {"self", "inter-old-b", "inter-old-a", "root-old"},
+					"leaf-inter":               {"self", "either-cross", "one-intermediate", "other-inter-or-root", "everything-else", "everything-else", "everything-else", "everything-else"},
+				},
+				Aliases: map[string]string{
+					"either-cross":        "cross-old-new-signed-new,cross-old-new-signed-old",
+					"one-intermediate":    "inter-new,inter-old-b",
+					"other-inter-or-root": "root-new,inter-old-a",
+					"everything-else":     "cross-old-new-signed-new,cross-old-new-signed-old,inter-new,inter-old-b,root-new,inter-old-a,root-old",
+				},
+			},
+			CBIssueLeaf{Issuer: "root-new"},
+			CBIssueLeaf{Issuer: "inter-new"},
+			CBIssueLeaf{Issuer: "root-old"},
+			CBIssueLeaf{Issuer: "inter-old-a"},
+			CBIssueLeaf{Issuer: "inter-old-b"},
+			CBIssueLeaf{Issuer: "cross-old-new-signed-new"},
+			CBIssueLeaf{Issuer: "cross-old-new-signed-old"},
+			CBIssueLeaf{Issuer: "leaf-inter"},
+		},
+	},
+}
+
 func Test_CAChainBuilding(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -474,735 +1202,7 @@ func Test_CAChainBuilding(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	testCases := []CBTestScenario{
-		{
-			// This test builds up two cliques lined by a cycle, dropping into
-			// a single intermediate.
-			Steps: []CBTestStep{
-				// Create a reissued certificate using the same key. These
-				// should validate themselves.
-				CBGenerateRoot{
-					Key:        "key-root-old",
-					Name:       "root-old-a",
-					CommonName: "root-old",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a": {"self"},
-					},
-				},
-				// After adding the second root using the same key and common
-				// name, there should now be two certs in each chain.
-				CBGenerateRoot{
-					Key:        "key-root-old",
-					Existing:   true,
-					Name:       "root-old-b",
-					CommonName: "root-old",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a": {"self", "root-old-b"},
-						"root-old-b": {"self", "root-old-a"},
-					},
-				},
-				// After adding a third root, there are now two possibilities for
-				// each later chain entry.
-				CBGenerateRoot{
-					Key:        "key-root-old",
-					Existing:   true,
-					Name:       "root-old-c",
-					CommonName: "root-old",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a": {"self", "root-old-bc", "root-old-bc"},
-						"root-old-b": {"self", "root-old-ac", "root-old-ac"},
-						"root-old-c": {"self", "root-old-ab", "root-old-ab"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac": "root-old-a,root-old-c",
-						"root-old-ab": "root-old-a,root-old-b",
-						"root-old-bc": "root-old-b,root-old-c",
-					},
-				},
-				// If we generate an unrelated issuer, it shouldn't affect either
-				// chain.
-				CBGenerateRoot{
-					Key:        "key-root-new",
-					Name:       "root-new-a",
-					CommonName: "root-new",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a": {"self", "root-old-bc", "root-old-bc"},
-						"root-old-b": {"self", "root-old-ac", "root-old-ac"},
-						"root-old-c": {"self", "root-old-ab", "root-old-ab"},
-						"root-new-a": {"self"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac": "root-old-a,root-old-c",
-						"root-old-ab": "root-old-a,root-old-b",
-						"root-old-bc": "root-old-b,root-old-c",
-					},
-				},
-				// Reissuing this new root should form another clique.
-				CBGenerateRoot{
-					Key:        "key-root-new",
-					Existing:   true,
-					Name:       "root-new-b",
-					CommonName: "root-new",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a": {"self", "root-old-bc", "root-old-bc"},
-						"root-old-b": {"self", "root-old-ac", "root-old-ac"},
-						"root-old-c": {"self", "root-old-ab", "root-old-ab"},
-						"root-new-a": {"self", "root-new-b"},
-						"root-new-b": {"self", "root-new-a"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac": "root-old-a,root-old-c",
-						"root-old-ab": "root-old-a,root-old-b",
-						"root-old-bc": "root-old-b,root-old-c",
-					},
-				},
-				// Generating a cross-signed cert from old->new should result
-				// in all old clique certs showing up in the new root's paths.
-				// This does not form a cycle.
-				CBGenerateIntermediate{
-					// In order to validate the existing root-new clique, we
-					// have to reuse the key and common name here for
-					// cross-signing.
-					Key:        "key-root-new",
-					Existing:   true,
-					Name:       "cross-old-new",
-					CommonName: "root-new",
-					// Which old issuer is used here doesn't matter as they have
-					// the same CN and key.
-					Parent: "root-old-a",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a":    {"self", "root-old-bc", "root-old-bc"},
-						"root-old-b":    {"self", "root-old-ac", "root-old-ac"},
-						"root-old-c":    {"self", "root-old-ab", "root-old-ab"},
-						"cross-old-new": {"self", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"root-new-a":    {"self", "root-new-b", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"root-new-b":    {"self", "root-new-a", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac":  "root-old-a,root-old-c",
-						"root-old-ab":  "root-old-a,root-old-b",
-						"root-old-bc":  "root-old-b,root-old-c",
-						"root-old-abc": "root-old-a,root-old-b,root-old-c",
-					},
-				},
-				// If we create a new intermediate off of the root-new, we should
-				// simply add to the existing chain.
-				CBGenerateIntermediate{
-					Key:    "key-inter-a-root-new",
-					Name:   "inter-a-root-new",
-					Parent: "root-new-a",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a":    {"self", "root-old-bc", "root-old-bc"},
-						"root-old-b":    {"self", "root-old-ac", "root-old-ac"},
-						"root-old-c":    {"self", "root-old-ab", "root-old-ab"},
-						"cross-old-new": {"self", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"root-new-a":    {"self", "root-new-b", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"root-new-b":    {"self", "root-new-a", "cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						// If we find cross-old-new first, the old clique will be ahead
-						// of the new clique; otherwise the new clique will appear first.
-						"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac":  "root-old-a,root-old-c",
-						"root-old-ab":  "root-old-a,root-old-b",
-						"root-old-bc":  "root-old-b,root-old-c",
-						"root-old-abc": "root-old-a,root-old-b,root-old-c",
-						"full-cycle":   "root-old-a,root-old-b,root-old-c,cross-old-new,root-new-a,root-new-b",
-					},
-				},
-				// Now, if we cross-sign back from new to old, we should
-				// form cycle with multiple reissued cliques. This means
-				// all nodes will have the same chain.
-				CBGenerateIntermediate{
-					// In order to validate the existing root-old clique, we
-					// have to reuse the key and common name here for
-					// cross-signing.
-					Key:        "key-root-old",
-					Existing:   true,
-					Name:       "cross-new-old",
-					CommonName: "root-old",
-					// Which new issuer is used here doesn't matter as they have
-					// the same CN and key.
-					Parent: "root-new-a",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a":       {"self", "root-old-bc", "root-old-bc", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
-						"root-old-b":       {"self", "root-old-ac", "root-old-ac", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
-						"root-old-c":       {"self", "root-old-ab", "root-old-ab", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
-						"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
-						"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
-						"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac":        "root-old-a,root-old-c",
-						"root-old-ab":        "root-old-a,root-old-b",
-						"root-old-bc":        "root-old-b,root-old-c",
-						"root-old-abc":       "root-old-a,root-old-b,root-old-c",
-						"root-new-ab":        "root-new-a,root-new-b",
-						"both-cross-old-new": "cross-old-new,cross-new-old",
-						"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
-						"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
-					},
-				},
-				// Update each old root to only include itself.
-				CBUpdateIssuer{
-					Name:    "root-old-a",
-					CAChain: []string{"root-old-a"},
-				},
-				CBUpdateIssuer{
-					Name:    "root-old-b",
-					CAChain: []string{"root-old-b"},
-				},
-				CBUpdateIssuer{
-					Name:    "root-old-c",
-					CAChain: []string{"root-old-c"},
-				},
-				// Step 19
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a":       {"self"},
-						"root-old-b":       {"self"},
-						"root-old-c":       {"self"},
-						"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
-						"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
-						"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac":        "root-old-a,root-old-c",
-						"root-old-ab":        "root-old-a,root-old-b",
-						"root-old-bc":        "root-old-b,root-old-c",
-						"root-old-abc":       "root-old-a,root-old-b,root-old-c",
-						"root-new-ab":        "root-new-a,root-new-b",
-						"both-cross-old-new": "cross-old-new,cross-new-old",
-						"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
-						"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
-					},
-				},
-				// Reset the old roots; should get the original chains back.
-				CBUpdateIssuer{
-					Name: "root-old-a",
-				},
-				CBUpdateIssuer{
-					Name: "root-old-b",
-				},
-				CBUpdateIssuer{
-					Name: "root-old-c",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-old-a":       {"self", "root-old-bc", "root-old-bc", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
-						"root-old-b":       {"self", "root-old-ac", "root-old-ac", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
-						"root-old-c":       {"self", "root-old-ab", "root-old-ab", "both-cross-old-new", "both-cross-old-new", "root-new-ab", "root-new-ab"},
-						"cross-old-new":    {"self", "cross-new-old", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
-						"cross-new-old":    {"self", "cross-old-new", "both-cliques", "both-cliques", "both-cliques", "both-cliques", "both-cliques"},
-						"root-new-a":       {"self", "root-new-b", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"root-new-b":       {"self", "root-new-a", "both-cross-old-new", "both-cross-old-new", "root-old-abc", "root-old-abc", "root-old-abc"},
-						"inter-a-root-new": {"self", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle", "full-cycle"},
-					},
-					Aliases: map[string]string{
-						"root-old-ac":        "root-old-a,root-old-c",
-						"root-old-ab":        "root-old-a,root-old-b",
-						"root-old-bc":        "root-old-b,root-old-c",
-						"root-old-abc":       "root-old-a,root-old-b,root-old-c",
-						"root-new-ab":        "root-new-a,root-new-b",
-						"both-cross-old-new": "cross-old-new,cross-new-old",
-						"both-cliques":       "root-old-a,root-old-b,root-old-c,root-new-a,root-new-b",
-						"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
-					},
-				},
-				CBIssueLeaf{Issuer: "root-old-a"},
-				CBIssueLeaf{Issuer: "root-old-b"},
-				CBIssueLeaf{Issuer: "root-old-c"},
-				CBIssueLeaf{Issuer: "cross-old-new"},
-				CBIssueLeaf{Issuer: "cross-new-old"},
-				CBIssueLeaf{Issuer: "root-new-a"},
-				CBIssueLeaf{Issuer: "root-new-b"},
-				CBIssueLeaf{Issuer: "inter-a-root-new"},
-			},
-		},
-		{
-			// Here we're testing our chain capacity. First we'll create a
-			// bunch of unique roots to form a cycle of length 10.
-			Steps: []CBTestStep{
-				CBGenerateRoot{
-					Key:        "key-root-a",
-					Name:       "root-a",
-					CommonName: "root-a",
-				},
-				CBGenerateRoot{
-					Key:        "key-root-b",
-					Name:       "root-b",
-					CommonName: "root-b",
-				},
-				CBGenerateRoot{
-					Key:        "key-root-c",
-					Name:       "root-c",
-					CommonName: "root-c",
-				},
-				CBGenerateRoot{
-					Key:        "key-root-d",
-					Name:       "root-d",
-					CommonName: "root-d",
-				},
-				CBGenerateRoot{
-					Key:        "key-root-e",
-					Name:       "root-e",
-					CommonName: "root-e",
-				},
-				// They should all be disjoint to start.
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-a": {"self"},
-						"root-b": {"self"},
-						"root-c": {"self"},
-						"root-d": {"self"},
-						"root-e": {"self"},
-					},
-				},
-				// Start the cross-signing chains. These are all linear, so there's
-				// no error expected; they're just long.
-				CBGenerateIntermediate{
-					Key:        "key-root-b",
-					Existing:   true,
-					Name:       "cross-a-b",
-					CommonName: "root-b",
-					Parent:     "root-a",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-a":    {"self"},
-						"cross-a-b": {"self", "root-a"},
-						"root-b":    {"self", "cross-a-b", "root-a"},
-						"root-c":    {"self"},
-						"root-d":    {"self"},
-						"root-e":    {"self"},
-					},
-				},
-				CBGenerateIntermediate{
-					Key:        "key-root-c",
-					Existing:   true,
-					Name:       "cross-b-c",
-					CommonName: "root-c",
-					Parent:     "root-b",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-a":    {"self"},
-						"cross-a-b": {"self", "root-a"},
-						"root-b":    {"self", "cross-a-b", "root-a"},
-						"cross-b-c": {"self", "b-or-cross", "b-chained-cross", "b-chained-cross"},
-						"root-c":    {"self", "cross-b-c", "b-or-cross", "b-chained-cross", "b-chained-cross"},
-						"root-d":    {"self"},
-						"root-e":    {"self"},
-					},
-					Aliases: map[string]string{
-						"b-or-cross":      "root-b,cross-a-b",
-						"b-chained-cross": "root-b,cross-a-b,root-a",
-					},
-				},
-				CBGenerateIntermediate{
-					Key:        "key-root-d",
-					Existing:   true,
-					Name:       "cross-c-d",
-					CommonName: "root-d",
-					Parent:     "root-c",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-a":    {"self"},
-						"cross-a-b": {"self", "root-a"},
-						"root-b":    {"self", "cross-a-b", "root-a"},
-						"cross-b-c": {"self", "b-or-cross", "b-chained-cross", "b-chained-cross"},
-						"root-c":    {"self", "cross-b-c", "b-or-cross", "b-chained-cross", "b-chained-cross"},
-						"cross-c-d": {"self", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
-						"root-d":    {"self", "cross-c-d", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
-						"root-e":    {"self"},
-					},
-					Aliases: map[string]string{
-						"b-or-cross":      "root-b,cross-a-b",
-						"b-chained-cross": "root-b,cross-a-b,root-a",
-						"c-or-cross":      "root-c,cross-b-c",
-						"c-chained-cross": "root-c,cross-b-c,root-b,cross-a-b,root-a",
-					},
-				},
-				CBGenerateIntermediate{
-					Key:        "key-root-e",
-					Existing:   true,
-					Name:       "cross-d-e",
-					CommonName: "root-e",
-					Parent:     "root-d",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-a":    {"self"},
-						"cross-a-b": {"self", "root-a"},
-						"root-b":    {"self", "cross-a-b", "root-a"},
-						"cross-b-c": {"self", "b-or-cross", "b-chained-cross", "b-chained-cross"},
-						"root-c":    {"self", "cross-b-c", "b-or-cross", "b-chained-cross", "b-chained-cross"},
-						"cross-c-d": {"self", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
-						"root-d":    {"self", "cross-c-d", "c-or-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross", "c-chained-cross"},
-						"cross-d-e": {"self", "d-or-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross"},
-						"root-e":    {"self", "cross-d-e", "d-or-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross", "d-chained-cross"},
-					},
-					Aliases: map[string]string{
-						"b-or-cross":      "root-b,cross-a-b",
-						"b-chained-cross": "root-b,cross-a-b,root-a",
-						"c-or-cross":      "root-c,cross-b-c",
-						"c-chained-cross": "root-c,cross-b-c,root-b,cross-a-b,root-a",
-						"d-or-cross":      "root-d,cross-c-d",
-						"d-chained-cross": "root-d,cross-c-d,root-c,cross-b-c,root-b,cross-a-b,root-a",
-					},
-				},
-				CBIssueLeaf{Issuer: "root-a"},
-				CBIssueLeaf{Issuer: "cross-a-b"},
-				CBIssueLeaf{Issuer: "root-b"},
-				CBIssueLeaf{Issuer: "cross-b-c"},
-				CBIssueLeaf{Issuer: "root-c"},
-				CBIssueLeaf{Issuer: "cross-c-d"},
-				CBIssueLeaf{Issuer: "root-d"},
-				CBIssueLeaf{Issuer: "cross-d-e"},
-				CBIssueLeaf{Issuer: "root-e"},
-				// Importing the new e->a cross fails because the cycle
-				// it builds is too long.
-				CBGenerateIntermediate{
-					Key:                "key-root-a",
-					Existing:           true,
-					Name:               "cross-e-a",
-					CommonName:         "root-a",
-					Parent:             "root-e",
-					ImportErrorMessage: "exceeds max size",
-				},
-				// Deleting any root and one of its crosses (either a->b or b->c)
-				// should fix this.
-				CBDeleteIssuer{"root-b"},
-				CBDeleteIssuer{"cross-b-c"},
-				// Importing the new e->a cross fails because the cycle
-				// it builds is too long.
-				CBGenerateIntermediate{
-					Key:        "key-root-a",
-					Existing:   true,
-					Name:       "cross-e-a",
-					CommonName: "root-a",
-					Parent:     "root-e",
-				},
-				CBIssueLeaf{Issuer: "root-a"},
-				CBIssueLeaf{Issuer: "cross-a-b"},
-				CBIssueLeaf{Issuer: "root-c"},
-				CBIssueLeaf{Issuer: "cross-c-d"},
-				CBIssueLeaf{Issuer: "root-d"},
-				CBIssueLeaf{Issuer: "cross-d-e"},
-				CBIssueLeaf{Issuer: "root-e"},
-				CBIssueLeaf{Issuer: "cross-e-a"},
-			},
-		},
-		{
-			// Here we're testing our clique capacity. First we'll create a
-			// bunch of unique roots to form a cycle of length 10.
-			Steps: []CBTestStep{
-				CBGenerateRoot{
-					Key:        "key-root",
-					Name:       "root-a",
-					CommonName: "root",
-				},
-				CBGenerateRoot{
-					Key:        "key-root",
-					Existing:   true,
-					Name:       "root-b",
-					CommonName: "root",
-				},
-				CBGenerateRoot{
-					Key:        "key-root",
-					Existing:   true,
-					Name:       "root-c",
-					CommonName: "root",
-				},
-				CBGenerateRoot{
-					Key:        "key-root",
-					Existing:   true,
-					Name:       "root-d",
-					CommonName: "root",
-				},
-				CBGenerateRoot{
-					Key:        "key-root",
-					Existing:   true,
-					Name:       "root-e",
-					CommonName: "root",
-				},
-				CBGenerateRoot{
-					Key:        "key-root",
-					Existing:   true,
-					Name:       "root-f",
-					CommonName: "root",
-				},
-				CBIssueLeaf{Issuer: "root-a"},
-				CBIssueLeaf{Issuer: "root-b"},
-				CBIssueLeaf{Issuer: "root-c"},
-				CBIssueLeaf{Issuer: "root-d"},
-				CBIssueLeaf{Issuer: "root-e"},
-				CBIssueLeaf{Issuer: "root-f"},
-				// Seventh reissuance fails.
-				CBGenerateRoot{
-					Key:          "key-root",
-					Existing:     true,
-					Name:         "root-g",
-					CommonName:   "root",
-					ErrorMessage: "excessively reissued certificate",
-				},
-				// Deleting one and trying again should succeed.
-				CBDeleteIssuer{"root-a"},
-				CBGenerateRoot{
-					Key:        "key-root",
-					Existing:   true,
-					Name:       "root-g",
-					CommonName: "root",
-				},
-				CBIssueLeaf{Issuer: "root-b"},
-				CBIssueLeaf{Issuer: "root-c"},
-				CBIssueLeaf{Issuer: "root-d"},
-				CBIssueLeaf{Issuer: "root-e"},
-				CBIssueLeaf{Issuer: "root-f"},
-				CBIssueLeaf{Issuer: "root-g"},
-			},
-		},
-		{
-			// There's one more pathological case here: we have a cycle
-			// which validates a clique/cycle via cross-signing. We call
-			// the parent cycle new roots and the child cycle/clique the
-			// old roots.
-			Steps: []CBTestStep{
-				// New Cycle
-				CBGenerateRoot{
-					Key:  "key-root-new-a",
-					Name: "root-new-a",
-				},
-				CBGenerateRoot{
-					Key:  "key-root-new-b",
-					Name: "root-new-b",
-				},
-				CBGenerateIntermediate{
-					Key:        "key-root-new-b",
-					Existing:   true,
-					Name:       "cross-root-new-b-sig-a",
-					CommonName: "root-new-b",
-					Parent:     "root-new-a",
-				},
-				CBGenerateIntermediate{
-					Key:        "key-root-new-a",
-					Existing:   true,
-					Name:       "cross-root-new-a-sig-b",
-					CommonName: "root-new-a",
-					Parent:     "root-new-b",
-				},
-				// Old Cycle + Clique
-				CBGenerateRoot{
-					Key:  "key-root-old-a",
-					Name: "root-old-a",
-				},
-				CBGenerateRoot{
-					Key:        "key-root-old-a",
-					Existing:   true,
-					Name:       "root-old-a-reissued",
-					CommonName: "root-old-a",
-				},
-				CBGenerateRoot{
-					Key:  "key-root-old-b",
-					Name: "root-old-b",
-				},
-				CBGenerateRoot{
-					Key:        "key-root-old-b",
-					Existing:   true,
-					Name:       "root-old-b-reissued",
-					CommonName: "root-old-b",
-				},
-				CBGenerateIntermediate{
-					Key:        "key-root-old-b",
-					Existing:   true,
-					Name:       "cross-root-old-b-sig-a",
-					CommonName: "root-old-b",
-					Parent:     "root-old-a",
-				},
-				CBGenerateIntermediate{
-					Key:        "key-root-old-a",
-					Existing:   true,
-					Name:       "cross-root-old-a-sig-b",
-					CommonName: "root-old-a",
-					Parent:     "root-old-b",
-				},
-				// Validate the chains are separate before linking them.
-				CBValidateChain{
-					Chains: map[string][]string{
-						// New stuff
-						"root-new-a":             {"self", "cross-root-new-a-sig-b", "root-new-b-or-cross", "root-new-b-or-cross"},
-						"root-new-b":             {"self", "cross-root-new-b-sig-a", "root-new-a-or-cross", "root-new-a-or-cross"},
-						"cross-root-new-b-sig-a": {"self", "any-root-new", "any-root-new", "any-root-new"},
-						"cross-root-new-a-sig-b": {"self", "any-root-new", "any-root-new", "any-root-new"},
-
-						// Old stuff
-						"root-old-a":             {"self", "root-old-a-reissued", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b"},
-						"root-old-a-reissued":    {"self", "root-old-a", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b"},
-						"root-old-b":             {"self", "root-old-b-reissued", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a"},
-						"root-old-b-reissued":    {"self", "root-old-b", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a"},
-						"cross-root-old-b-sig-a": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old"},
-						"cross-root-old-a-sig-b": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old"},
-					},
-					Aliases: map[string]string{
-						"root-new-a-or-cross": "root-new-a,cross-root-new-a-sig-b",
-						"root-new-b-or-cross": "root-new-b,cross-root-new-b-sig-a",
-						"both-root-new":       "root-new-a,root-new-b",
-						"any-root-new":        "root-new-a,cross-root-new-a-sig-b,root-new-b,cross-root-new-b-sig-a",
-						"both-root-old-a":     "root-old-a,root-old-a-reissued",
-						"both-root-old-b":     "root-old-b,root-old-b-reissued",
-						"all-root-old":        "root-old-a,root-old-a-reissued,root-old-b,root-old-b-reissued,cross-root-old-b-sig-a,cross-root-old-a-sig-b",
-					},
-				},
-				// Finally, generate an intermediate to link new->old. We
-				// link root-new-a into root-old-a.
-				CBGenerateIntermediate{
-					Key:        "key-root-old-a",
-					Existing:   true,
-					Name:       "cross-root-old-a-sig-root-new-a",
-					CommonName: "root-old-a",
-					Parent:     "root-new-a",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						// New stuff should be unchanged.
-						"root-new-a":             {"self", "cross-root-new-a-sig-b", "root-new-b-or-cross", "root-new-b-or-cross"},
-						"root-new-b":             {"self", "cross-root-new-b-sig-a", "root-new-a-or-cross", "root-new-a-or-cross"},
-						"cross-root-new-b-sig-a": {"self", "any-root-new", "any-root-new", "any-root-new"},
-						"cross-root-new-a-sig-b": {"self", "any-root-new", "any-root-new", "any-root-new"},
-
-						// Old stuff
-						"root-old-a":             {"self", "root-old-a-reissued", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
-						"root-old-a-reissued":    {"self", "root-old-a", "cross-root-old-a-sig-b", "cross-root-old-b-sig-a", "both-root-old-b", "both-root-old-b", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
-						"root-old-b":             {"self", "root-old-b-reissued", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
-						"root-old-b-reissued":    {"self", "root-old-b", "cross-root-old-b-sig-a", "cross-root-old-a-sig-b", "both-root-old-a", "both-root-old-a", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
-						"cross-root-old-b-sig-a": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
-						"cross-root-old-a-sig-b": {"self", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "all-root-old", "cross-root-old-a-sig-root-new-a", "any-root-new", "any-root-new", "any-root-new", "any-root-new"},
-
-						// Link
-						"cross-root-old-a-sig-root-new-a": {"self", "root-new-a-or-cross", "any-root-new", "any-root-new", "any-root-new"},
-					},
-					Aliases: map[string]string{
-						"root-new-a-or-cross": "root-new-a,cross-root-new-a-sig-b",
-						"root-new-b-or-cross": "root-new-b,cross-root-new-b-sig-a",
-						"both-root-new":       "root-new-a,root-new-b",
-						"any-root-new":        "root-new-a,cross-root-new-a-sig-b,root-new-b,cross-root-new-b-sig-a",
-						"both-root-old-a":     "root-old-a,root-old-a-reissued",
-						"both-root-old-b":     "root-old-b,root-old-b-reissued",
-						"all-root-old":        "root-old-a,root-old-a-reissued,root-old-b,root-old-b-reissued,cross-root-old-b-sig-a,cross-root-old-a-sig-b",
-					},
-				},
-				CBIssueLeaf{Issuer: "root-new-a"},
-				CBIssueLeaf{Issuer: "root-new-b"},
-				CBIssueLeaf{Issuer: "cross-root-new-b-sig-a"},
-				CBIssueLeaf{Issuer: "cross-root-new-a-sig-b"},
-				CBIssueLeaf{Issuer: "root-old-a"},
-				CBIssueLeaf{Issuer: "root-old-a-reissued"},
-				CBIssueLeaf{Issuer: "root-old-b"},
-				CBIssueLeaf{Issuer: "root-old-b-reissued"},
-				CBIssueLeaf{Issuer: "cross-root-old-b-sig-a"},
-				CBIssueLeaf{Issuer: "cross-root-old-a-sig-b"},
-				CBIssueLeaf{Issuer: "cross-root-old-a-sig-root-new-a"},
-			},
-		},
-		{
-			// Test a dual-root of trust chaining example with different
-			// lengths of chains.
-			Steps: []CBTestStep{
-				CBGenerateRoot{
-					Key:  "key-root-new",
-					Name: "root-new",
-				},
-				CBGenerateIntermediate{
-					Key:    "key-inter-new",
-					Name:   "inter-new",
-					Parent: "root-new",
-				},
-				CBGenerateRoot{
-					Key:  "key-root-old",
-					Name: "root-old",
-				},
-				CBGenerateIntermediate{
-					Key:    "key-inter-old-a",
-					Name:   "inter-old-a",
-					Parent: "root-old",
-				},
-				CBGenerateIntermediate{
-					Key:    "key-inter-old-b",
-					Name:   "inter-old-b",
-					Parent: "inter-old-a",
-				},
-				// Now generate a cross-signed intermediate to merge these
-				// two chains.
-				CBGenerateIntermediate{
-					Key:        "key-cross-old-new",
-					Name:       "cross-old-new-signed-new",
-					CommonName: "cross-old-new",
-					Parent:     "inter-new",
-				},
-				CBGenerateIntermediate{
-					Key:        "key-cross-old-new",
-					Existing:   true,
-					Name:       "cross-old-new-signed-old",
-					CommonName: "cross-old-new",
-					Parent:     "inter-old-b",
-				},
-				CBGenerateIntermediate{
-					Key:    "key-leaf-inter",
-					Name:   "leaf-inter",
-					Parent: "cross-old-new-signed-new",
-				},
-				CBValidateChain{
-					Chains: map[string][]string{
-						"root-new":                 {"self"},
-						"inter-new":                {"self", "root-new"},
-						"cross-old-new-signed-new": {"self", "inter-new", "root-new"},
-						"root-old":                 {"self"},
-						"inter-old-a":              {"self", "root-old"},
-						"inter-old-b":              {"self", "inter-old-a", "root-old"},
-						"cross-old-new-signed-old": {"self", "inter-old-b", "inter-old-a", "root-old"},
-						"leaf-inter":               {"self", "either-cross", "one-intermediate", "other-inter-or-root", "everything-else", "everything-else", "everything-else", "everything-else"},
-					},
-					Aliases: map[string]string{
-						"either-cross":        "cross-old-new-signed-new,cross-old-new-signed-old",
-						"one-intermediate":    "inter-new,inter-old-b",
-						"other-inter-or-root": "root-new,inter-old-a",
-						"everything-else":     "cross-old-new-signed-new,cross-old-new-signed-old,inter-new,inter-old-b,root-new,inter-old-a,root-old",
-					},
-				},
-				CBIssueLeaf{Issuer: "root-new"},
-				CBIssueLeaf{Issuer: "inter-new"},
-				CBIssueLeaf{Issuer: "root-old"},
-				CBIssueLeaf{Issuer: "inter-old-a"},
-				CBIssueLeaf{Issuer: "inter-old-b"},
-				CBIssueLeaf{Issuer: "cross-old-new-signed-new"},
-				CBIssueLeaf{Issuer: "cross-old-new-signed-old"},
-				CBIssueLeaf{Issuer: "leaf-inter"},
-			},
-		},
-	}
-
-	for testIndex, testCase := range testCases {
+	for testIndex, testCase := range chainBuildingTestCases {
 		mount := fmt.Sprintf("pki-test-%v", testIndex)
 		mountPKIEndpoint(t, client, mount)
 		knownKeys := make(map[string]string)
