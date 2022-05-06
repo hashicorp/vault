@@ -396,9 +396,9 @@ namespace Examples
 This section provides more details about the authentication flows and associated restrictions that be supplied in the the role definition.
   
 There are 3 core flows and associated methods of restricting a role in the Azure Auth Method:
-- Identity based restrictions that use claims from the JWT.
-- Virtual Machine (VM) based restrictions that use data from the Virtual Machine.
-- Virtual Machine Scale Set (VMSS) based restrictions that use data from the Scale Set.
+- JWT Flow: Identity based restrictions that use claims from the JWT.
+- VM Flow: Virtual Machine (VM) based restrictions that use data from the Virtual Machine.
+- VMSS Flow: Virtual Machine Scale Set (VMSS) based restrictions that use data from the Virtual Machine Scale Set.
   
 The VM and VMSS based restrictions can only be used for those resource types. If using Azure Kubernetes Service, Azure Container Instance or some other resource type that supports a managed identity, you cannot apply the restrictions applicable to VM and VMSS.
   
@@ -421,7 +421,7 @@ The JWT flow happens in all cases and there are some optional restrictions that 
   
 The JWT flow is:
 1. Vault validates the JWT with Azure. If the JWT is not valid, login fails.
-2. Vault validates the JWT is still valid according to its Not Before time claim. If the ‘time before’ claim is  later than the current time, login fails.
+2. Vault validates the JWT is still valid according to its `NotBefore` time claim. If the ‘NotBefore’ claim is later than the current time, login fails.
 3. Vault checks Service Principal Ids restrictions if configured. Login fails if the service principal id from the JWT is not in the list. Note that Service Principal Ids restriction can be set to a single `*` record too and this check will be skipped.
 4. Vault checks Azure AD Group Ids restrictions if configured. Login fails if at least one of the groups claims from the JWT are not in the list. Note that Azure AD Group Ids restriction can be set to a single `*` record too and this check will be skipped.
 
