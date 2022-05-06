@@ -1,0 +1,3 @@
+```release-note:improvement
+Azure Auth Method: Extend documentation to include details on the VM and VMSS workflows.
+```
