@@ -8,9 +8,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -106,31 +104,8 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		})
 	}
 
-	aclServiceIdentities := []*api.ACLServiceIdentity{}
-	parsedServiceIdentities, err := parseSemicolonStringSlice(roleConfigData.ServiceIdentities)
-	if err != nil {
-		return nil, err
-	}
-	for _, serviceIdentity := range parsedServiceIdentities {
-		entry := &api.ACLServiceIdentity{}
-		components := strings.SplitN(serviceIdentity, ":", 2)
-		entry.ServiceName = components[0]
-		if len(components) == 2 {
-			entry.Datacenters = strings.Split(components[1], ",")
-		}
-		aclServiceIdentities = append(aclServiceIdentities, entry)
-	}
-
-	aclNodeIdentities := []*api.ACLNodeIdentity{}
-	for _, nodeIdentity := range roleConfigData.NodeIdentities {
-		entry := &api.ACLNodeIdentity{}
-		components := strings.Split(nodeIdentity, ":")
-		entry.NodeName = components[0]
-		if len(components) > 1 {
-			entry.Datacenter = components[1]
-		}
-		aclNodeIdentities = append(aclNodeIdentities, entry)
-	}
+	aclServiceIdentities := parseServiceIdentities(roleConfigData.ServiceIdentities)
+	aclNodeIdentities := parseNodeIdentities(roleConfigData.NodeIdentities)
 
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description:       tokenName,
@@ -164,24 +139,38 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	return s, nil
 }
 
-// Parses the provided string-like value as a semicolon-separated list of values.
-func parseSemicolonStringSlice(in interface{}) ([]string, error) {
-	rawString, ok := in.(string)
-	if ok && rawString == "" {
-		return []string{}, nil
+func parseServiceIdentities(data string) []*api.ACLServiceIdentity {
+	aclServiceIdentities := []*api.ACLServiceIdentity{}
+	if data == "" {
+		return aclServiceIdentities
 	}
-	var result []string
-	config := &mapstructure.DecoderConfig{
-		Result:           &result,
-		WeaklyTypedInput: true,
-		DecodeHook:       mapstructure.StringToSliceHookFunc(";"),
+
+	parsedServiceIdentities := strings.Split(data, ";")
+	for _, serviceIdentity := range parsedServiceIdentities {
+		entry := &api.ACLServiceIdentity{}
+		components := strings.Split(serviceIdentity, ":")
+		entry.ServiceName = components[0]
+		if len(components) == 2 {
+			entry.Datacenters = strings.Split(components[1], ",")
+		}
+		aclServiceIdentities = append(aclServiceIdentities, entry)
 	}
-	decoder, err := mapstructure.NewDecoder(config)
-	if err != nil {
-		return nil, err
+
+	return aclServiceIdentities
+}
+
+func parseNodeIdentities(data []string) []*api.ACLNodeIdentity {
+	aclNodeIdentities := []*api.ACLNodeIdentity{}
+
+	for _, nodeIdentity := range data {
+		entry := &api.ACLNodeIdentity{}
+		components := strings.Split(nodeIdentity, ":")
+		entry.NodeName = components[0]
+		if len(components) > 1 {
+			entry.Datacenter = components[1]
+		}
+		aclNodeIdentities = append(aclNodeIdentities, entry)
 	}
-	if err := decoder.Decode(in); err != nil {
-		return nil, err
-	}
-	return strutil.TrimStrings(result), nil
+
+	return aclNodeIdentities
 }

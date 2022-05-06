@@ -181,11 +181,8 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 	switch tokenType {
 	case "client":
-		if policy == "" &&
-			len(policies) == 0 &&
-			len(roles) == 0 &&
-			len(serviceIdentities) == 0 &&
-			len(nodeIdentities) == 0 {
+		if policy == "" && len(policies) == 0 && len(roles) == 0 &&
+			len(serviceIdentities) == 0 && len(nodeIdentities) == 0 {
 			return logical.ErrorResponse(
 				"Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"), nil
 		}
