@@ -22,7 +22,8 @@ var (
 // DatabaseConfig is used by the Factory function to configure a Database
 // object.
 type DatabaseConfig struct {
-	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
+	PluginName    string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
+	PluginVersion string `json:"plugin_version" structs:"plugin_version" mapstructure:"plugin_version"`
 	// ConnectionDetails stores the database specific connection settings needed
 	// by each database type.
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
@@ -92,6 +93,11 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 				Description: `The name of a builtin or previously registered
 				plugin known to vault. This endpoint will create an instance of
 				that plugin type.`,
+			},
+
+			"plugin_version": {
+				Type:        framework.TypeString,
+				Description: `The version of the plugin to use.`,
 			},
 
 			"verify_connection": {
@@ -265,6 +271,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyPluginName), nil
 		}
 
+		if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
+			config.PluginVersion = pluginVersionRaw.(string)
+		}
+
 		if allowedRolesRaw, ok := data.GetOk("allowed_roles"); ok {
 			config.AllowedRoles = allowedRolesRaw.([]string)
 		} else if req.Operation == logical.CreateOperation {
@@ -285,6 +295,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		// ConnectionDetails.
 		delete(data.Raw, "name")
 		delete(data.Raw, "plugin_name")
+		delete(data.Raw, "plugin_version")
 		delete(data.Raw, "allowed_roles")
 		delete(data.Raw, "verify_connection")
 		delete(data.Raw, "root_rotation_statements")
@@ -310,8 +321,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Create a database plugin and initialize it.
-		// TODO: Add ability to use versioned plugins
-		dbw, err := newDatabaseWrapper(ctx, config.PluginName, "", b.System(), b.logger)
+		dbw, err := newDatabaseWrapper(ctx, config.PluginName, config.PluginVersion, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
