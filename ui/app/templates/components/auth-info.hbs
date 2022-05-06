@@ -16,8 +16,7 @@
               />
             </li>
           {{/if}}
-          {{#if true}}
-            {{! ARG TODO conditional will be if MFA is setup for user but not enforced? }}
+          {{#if this.hasEntityId}}
             <li class="action">
               <LinkTo @route="vault.cluster.mfa-setup">
                 Multi-factor authentication
