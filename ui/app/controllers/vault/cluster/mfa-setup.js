@@ -11,7 +11,6 @@ export default class VaultClusterMfaSetupController extends Controller {
   @tracked qrCode = '';
 
   get entityId() {
-    // ARG TODO if root this will return empty string.
     return this.auth.authData.entity_id;
   }
 
