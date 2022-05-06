@@ -672,28 +672,10 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 }
 
 func TestBackend_PluginMainLogical(t *testing.T) {
-	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
-		return
-	}
-
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
-
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -701,28 +683,10 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 }
 
 func TestBackend_PluginMainCredentials(t *testing.T) {
-	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
-		return
-	}
-
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
-
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -731,34 +695,10 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 
 // TestBackend_PluginMainEnv is a mock plugin that simply checks for the existence of FOO env var.
 func TestBackend_PluginMainEnv(t *testing.T) {
-	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
-		return
-	}
-
-	// Check on actual vs expected env var
-	actual := os.Getenv(expectedEnvKey)
-	if actual != expectedEnvValue {
-		t.Fatalf("expected: %q, got: %q", expectedEnvValue, actual)
-	}
-
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
-
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)
