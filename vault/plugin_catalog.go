@@ -162,7 +162,7 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 		// this can happen if the backend is reloaded due to a plugin process
 		// being killed out of band
 		c.logger.Warn("connection not found for client", "id", id)
-		return fmt.Errorf("connection not found for client", "id", id)
+		return fmt.Errorf("connection not found for client id: %s", id)
 	}
 
 	delete(extPlugin.connections, id)
