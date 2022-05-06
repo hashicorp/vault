@@ -4,8 +4,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -342,6 +344,114 @@ func (c CBUpdateIssuer) Run(t *testing.T, client *api.Client, mount string, know
 	}
 }
 
+// Issue a leaf
+type CBIssueLeaf struct {
+	Issuer string
+	Role   string
+}
+
+func (c CBIssueLeaf) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
+	if len(c.Role) == 0 {
+		c.Role = "testing"
+	}
+
+	url := mount + "/roles/" + c.Role
+	data := make(map[string]interface{})
+	data["allow_localhost"] = true
+	data["ttl"] = "1s"
+	data["key_type"] = "ec"
+
+	_, err := client.Logical().Write(url, data)
+	if err != nil {
+		t.Fatalf("failed to update role (%v): %v / body: %v", c.Role, err, data)
+	}
+
+	url = mount + "/issuer/" + c.Issuer + "/issue/" + c.Role
+	data = make(map[string]interface{})
+	data["common_name"] = "localhost"
+
+	resp, err := client.Logical().Write(url, data)
+	if err != nil {
+		t.Fatalf("failed to issue cert (%v via %v): %v / body: %v", c.Issuer, c.Role, err, data)
+	}
+	if resp == nil {
+		t.Fatalf("failed to issue cert (%v via %v): nil response / body: %v", c.Issuer, c.Role, data)
+	}
+}
+
+// Stable ordering
+func ensureStableOrderingOfChains(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
+	// Start by fetching all chains
+	certChains := make(map[string][]string)
+	for issuer := range knownCerts {
+		resp, err := client.Logical().Read(mount + "/issuer/" + issuer)
+		if err != nil {
+			t.Fatalf("failed to get chain for issuer (%v): %v", issuer, err)
+		}
+
+		rawCurrentChain := resp.Data["ca_chain"].([]interface{})
+		var currentChain []string
+		for _, entry := range rawCurrentChain {
+			currentChain = append(currentChain, strings.TrimSpace(entry.(string)))
+		}
+
+		certChains[issuer] = currentChain
+	}
+
+	// Now, generate a bunch of arbitrary roots and validate the chain is
+	// consistent.
+	var runs []time.Duration
+	for i := 0; i < 10; i++ {
+		name := "stable-order-root-" + strconv.Itoa(i)
+		step := CBGenerateRoot{
+			Key:  name,
+			Name: name,
+		}
+		step.Run(t, client, mount, make(map[string]string), make(map[string]string))
+
+		before := time.Now()
+		_, err := client.Logical().Delete(mount + "/issuer/" + name)
+		if err != nil {
+			t.Fatalf("failed to delete temporary testing issuer %v: %v", name, err)
+		}
+		after := time.Now()
+		elapsed := after.Sub(before)
+		runs = append(runs, elapsed)
+
+		for issuer := range knownCerts {
+			resp, err := client.Logical().Read(mount + "/issuer/" + issuer)
+			if err != nil {
+				t.Fatalf("failed to get chain for issuer (%v): %v", issuer, err)
+			}
+
+			rawCurrentChain := resp.Data["ca_chain"].([]interface{})
+			for index, entry := range rawCurrentChain {
+				if strings.TrimSpace(entry.(string)) != certChains[issuer][index] {
+					t.Fatalf("iteration %d - chain for issuer %v differed at index %d\n%v\nvs\n%v", i, issuer, index, entry, certChains[issuer][index])
+				}
+			}
+		}
+	}
+
+	min := runs[0]
+	max := runs[0]
+	var avg time.Duration
+	for _, run := range runs {
+		if run < min {
+			min = run
+		}
+
+		if run > max {
+			max = run
+		}
+
+		avg += run
+	}
+	avg = avg / time.Duration(len(runs))
+
+	t.Logf("Chain building run time (deletion) - min: %v / avg: %v / max: %v - entries: %v", min, avg, max, runs)
+}
+
 type CBTestStep interface {
 	Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string)
 }
@@ -619,6 +729,14 @@ func Test_CAChainBuilding(t *testing.T) {
 						"full-cycle":         "root-old-a,root-old-b,root-old-c,cross-old-new,cross-new-old,root-new-a,root-new-b",
 					},
 				},
+				CBIssueLeaf{Issuer: "root-old-a"},
+				CBIssueLeaf{Issuer: "root-old-b"},
+				CBIssueLeaf{Issuer: "root-old-c"},
+				CBIssueLeaf{Issuer: "cross-old-new"},
+				CBIssueLeaf{Issuer: "cross-new-old"},
+				CBIssueLeaf{Issuer: "root-new-a"},
+				CBIssueLeaf{Issuer: "root-new-b"},
+				CBIssueLeaf{Issuer: "inter-a-root-new"},
 			},
 		},
 		{
@@ -754,6 +872,15 @@ func Test_CAChainBuilding(t *testing.T) {
 						"d-chained-cross": "root-d,cross-c-d,root-c,cross-b-c,root-b,cross-a-b,root-a",
 					},
 				},
+				CBIssueLeaf{Issuer: "root-a"},
+				CBIssueLeaf{Issuer: "cross-a-b"},
+				CBIssueLeaf{Issuer: "root-b"},
+				CBIssueLeaf{Issuer: "cross-b-c"},
+				CBIssueLeaf{Issuer: "root-c"},
+				CBIssueLeaf{Issuer: "cross-c-d"},
+				CBIssueLeaf{Issuer: "root-d"},
+				CBIssueLeaf{Issuer: "cross-d-e"},
+				CBIssueLeaf{Issuer: "root-e"},
 				// Importing the new e->a cross fails because the cycle
 				// it builds is too long.
 				CBGenerateIntermediate{
@@ -777,6 +904,14 @@ func Test_CAChainBuilding(t *testing.T) {
 					CommonName: "root-a",
 					Parent:     "root-e",
 				},
+				CBIssueLeaf{Issuer: "root-a"},
+				CBIssueLeaf{Issuer: "cross-a-b"},
+				CBIssueLeaf{Issuer: "root-c"},
+				CBIssueLeaf{Issuer: "cross-c-d"},
+				CBIssueLeaf{Issuer: "root-d"},
+				CBIssueLeaf{Issuer: "cross-d-e"},
+				CBIssueLeaf{Issuer: "root-e"},
+				CBIssueLeaf{Issuer: "cross-e-a"},
 			},
 		},
 		{
@@ -818,6 +953,12 @@ func Test_CAChainBuilding(t *testing.T) {
 					Name:       "root-f",
 					CommonName: "root",
 				},
+				CBIssueLeaf{Issuer: "root-a"},
+				CBIssueLeaf{Issuer: "root-b"},
+				CBIssueLeaf{Issuer: "root-c"},
+				CBIssueLeaf{Issuer: "root-d"},
+				CBIssueLeaf{Issuer: "root-e"},
+				CBIssueLeaf{Issuer: "root-f"},
 				// Seventh reissuance fails.
 				CBGenerateRoot{
 					Key:          "key-root",
@@ -834,6 +975,12 @@ func Test_CAChainBuilding(t *testing.T) {
 					Name:       "root-g",
 					CommonName: "root",
 				},
+				CBIssueLeaf{Issuer: "root-b"},
+				CBIssueLeaf{Issuer: "root-c"},
+				CBIssueLeaf{Issuer: "root-d"},
+				CBIssueLeaf{Issuer: "root-e"},
+				CBIssueLeaf{Issuer: "root-f"},
+				CBIssueLeaf{Issuer: "root-g"},
 			},
 		},
 		{
@@ -965,6 +1112,92 @@ func Test_CAChainBuilding(t *testing.T) {
 						"all-root-old":        "root-old-a,root-old-a-reissued,root-old-b,root-old-b-reissued,cross-root-old-b-sig-a,cross-root-old-a-sig-b",
 					},
 				},
+				CBIssueLeaf{Issuer: "root-new-a"},
+				CBIssueLeaf{Issuer: "root-new-b"},
+				CBIssueLeaf{Issuer: "cross-root-new-b-sig-a"},
+				CBIssueLeaf{Issuer: "cross-root-new-a-sig-b"},
+				CBIssueLeaf{Issuer: "root-old-a"},
+				CBIssueLeaf{Issuer: "root-old-a-reissued"},
+				CBIssueLeaf{Issuer: "root-old-b"},
+				CBIssueLeaf{Issuer: "root-old-b-reissued"},
+				CBIssueLeaf{Issuer: "cross-root-old-b-sig-a"},
+				CBIssueLeaf{Issuer: "cross-root-old-a-sig-b"},
+				CBIssueLeaf{Issuer: "cross-root-old-a-sig-root-new-a"},
+			},
+		},
+		{
+			// Test a dual-root of trust chaining example with different
+			// lengths of chains.
+			Steps: []CBTestStep{
+				CBGenerateRoot{
+					Key:  "key-root-new",
+					Name: "root-new",
+				},
+				CBGenerateIntermediate{
+					Key:    "key-inter-new",
+					Name:   "inter-new",
+					Parent: "root-new",
+				},
+				CBGenerateRoot{
+					Key:  "key-root-old",
+					Name: "root-old",
+				},
+				CBGenerateIntermediate{
+					Key:    "key-inter-old-a",
+					Name:   "inter-old-a",
+					Parent: "root-old",
+				},
+				CBGenerateIntermediate{
+					Key:    "key-inter-old-b",
+					Name:   "inter-old-b",
+					Parent: "inter-old-a",
+				},
+				// Now generate a cross-signed intermediate to merge these
+				// two chains.
+				CBGenerateIntermediate{
+					Key:        "key-cross-old-new",
+					Name:       "cross-old-new-signed-new",
+					CommonName: "cross-old-new",
+					Parent:     "inter-new",
+				},
+				CBGenerateIntermediate{
+					Key:        "key-cross-old-new",
+					Existing:   true,
+					Name:       "cross-old-new-signed-old",
+					CommonName: "cross-old-new",
+					Parent:     "inter-old-b",
+				},
+				CBGenerateIntermediate{
+					Key:    "key-leaf-inter",
+					Name:   "leaf-inter",
+					Parent: "cross-old-new-signed-new",
+				},
+				CBValidateChain{
+					Chains: map[string][]string{
+						"root-new":                 {"self"},
+						"inter-new":                {"self", "root-new"},
+						"cross-old-new-signed-new": {"self", "inter-new", "root-new"},
+						"root-old":                 {"self"},
+						"inter-old-a":              {"self", "root-old"},
+						"inter-old-b":              {"self", "inter-old-a", "root-old"},
+						"cross-old-new-signed-old": {"self", "inter-old-b", "inter-old-a", "root-old"},
+						"leaf-inter":               {"self", "either-cross", "one-intermediate", "other-inter-or-root", "everything-else", "everything-else", "everything-else", "everything-else"},
+					},
+					Aliases: map[string]string{
+						"either-cross":        "cross-old-new-signed-new,cross-old-new-signed-old",
+						"one-intermediate":    "inter-new,inter-old-b",
+						"other-inter-or-root": "root-new,inter-old-a",
+						"everything-else":     "cross-old-new-signed-new,cross-old-new-signed-old,inter-new,inter-old-b,root-new,inter-old-a,root-old",
+					},
+				},
+				CBIssueLeaf{Issuer: "root-new"},
+				CBIssueLeaf{Issuer: "inter-new"},
+				CBIssueLeaf{Issuer: "root-old"},
+				CBIssueLeaf{Issuer: "inter-old-a"},
+				CBIssueLeaf{Issuer: "inter-old-b"},
+				CBIssueLeaf{Issuer: "cross-old-new-signed-new"},
+				CBIssueLeaf{Issuer: "cross-old-new-signed-old"},
+				CBIssueLeaf{Issuer: "leaf-inter"},
 			},
 		},
 	}
@@ -979,5 +1212,7 @@ func Test_CAChainBuilding(t *testing.T) {
 			testStep.Run(t, client, mount, knownKeys, knownCerts)
 		}
 
+		t.Logf("Checking stable ordering of chains...")
+		ensureStableOrderingOfChains(t, client, mount, knownKeys, knownCerts)
 	}
 }

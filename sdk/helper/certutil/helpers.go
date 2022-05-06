@@ -1167,7 +1167,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
 	}
 
-	result.CAChain = data.SigningBundle.GetCAChain()
+	result.CAChain = data.SigningBundle.GetFullChain()
 
 	return result, nil
 }
