@@ -196,33 +196,10 @@ func extractDataAndVersionMetadata(secret *Secret, version int) (*KVSecret, erro
 			}
 		}
 
-		metadataInterface, ok := secret.Data["metadata"]
-		if !ok {
-			return nil, fmt.Errorf("missing expected 'metadata' element")
-		}
-
-		metadataMap, ok := metadataInterface.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadata, metadata)
-		}
-
-		// deletion_time usually comes in as an empty string which can't be
-		// processed as time.RFC3339, so we reset it to a convertible value
-		if metadataMap["deletion_time"] == "" {
-			metadataMap["deletion_time"] = time.Time{}
-		}
-
-		d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
-			Result:     &metadata,
-		})
+		var err error
+		metadata, err = extractVersionMetadata(secret)
 		if err != nil {
-			return nil, fmt.Errorf("error setting up decoder for API response: %v", err)
-		}
-
-		err = d.Decode(metadataMap)
-		if err != nil {
-			return nil, fmt.Errorf("error decoding metadata from API response into VersionMetadata: %v", err)
+			return nil, fmt.Errorf("unable to get version metadata: %v", err)
 		}
 	default:
 		return nil, fmt.Errorf("cannot parse secret without specifying valid KV secrets engine version")
@@ -236,7 +213,18 @@ func extractDataAndVersionMetadata(secret *Secret, version int) (*KVSecret, erro
 }
 
 func extractVersionMetadata(secret *Secret) (*VersionMetadata, error) {
-	metadataMap := secret.Data
+	// Writes return the metadata directly, Reads return it nested inside the "metadata" key
+	var metadataMap map[string]interface{}
+	metadataInterface, ok := secret.Data["metadata"]
+	if ok {
+		metadataMap, ok = metadataInterface.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
+		}
+	} else {
+		metadataMap = secret.Data
+	}
+
 	var metadata *VersionMetadata
 
 	// deletion_time usually comes in as an empty string which can't be
