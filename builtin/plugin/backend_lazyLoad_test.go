@@ -59,7 +59,7 @@ func testLazyLoad(t *testing.T, methodWrapper func() error) *PluginBackend {
 	}
 
 	// this is a dummy plugin that hasn't really been loaded yet
-	orig, err := plugin.NewBackend(ctx, "test-plugin", consts.PluginTypeSecrets, sysView, config, true)
+	orig, err := plugin.NewBackend(ctx, "test-plugin", consts.PluginTypeSecrets, "", sysView, config, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func newTestSystemView() testSystemView {
 	}
 }
 
-func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error) {
+func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType, string) (*pluginutil.PluginRunner, error) {
 	return &pluginutil.PluginRunner{
 		Name:    "test-plugin-runner",
 		Builtin: true,

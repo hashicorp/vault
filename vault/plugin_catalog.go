@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/sdk/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -684,9 +686,10 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 }
 
 type VersionedPlugin struct {
-	Name    string
-	Type    consts.PluginType
-	Version string
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Version string `json:"version"`
+	SHA256  string `json:"sha256,omitempty"`
 }
 
 func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]VersionedPlugin, error) {
@@ -706,34 +709,39 @@ func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType con
 	for _, plugin := range builtinPlugins {
 		result = append(result, VersionedPlugin{
 			Name:    plugin,
-			Type:    pluginType,
-			Version: "builtin",
+			Type:    pluginType.String(),
+			Version: version.GetVersion().Version + "+builtin",
 		})
 	}
-
-	pluginTypePrefix := pluginType.String() + "/"
 
 	for _, plugin := range plugins {
 		// Some keys will be prepended with the plugin type, but other ones won't.
 		// Users don't expect to see the plugin type, so we need to strip that here.
 		var normalizedName, version string
-		normalizedName = strings.TrimPrefix(plugin, pluginTypePrefix)
-		parts := strings.Split(normalizedName, "/")
+		parts := strings.Split(plugin, "/")
 
 		switch len(parts) {
-		case 1: // Unversioned
-		case 2: // Versioned
-			normalizedName, version = parts[0], parts[1]
+		case 1: // Unversioned, no type (legacy)
+			normalizedName = parts[0]
+		case 2: // Unversioned
+			if isPluginType(parts[0]) {
+				normalizedName = parts[1]
+			} else {
+				return nil, fmt.Errorf("unknown plugin type in plugin catalog: %s", plugin)
+			}
+		case 3: // Versioned, with type
+			normalizedName, version = parts[1], parts[2]
 		default:
-			return nil, fmt.Errorf("unexpected entry in version catalog: %s", plugin)
+			return nil, fmt.Errorf("unexpected entry in plugin catalog: %s", plugin)
 		}
 
 		// Only list user-added plugins if they're of the given type.
 		if entry, err := c.get(ctx, normalizedName, pluginType, version); err == nil && entry != nil {
 			result = append(result, VersionedPlugin{
 				Name:    normalizedName,
-				Type:    pluginType,
+				Type:    pluginType.String(),
 				Version: version,
+				SHA256:  hex.EncodeToString(entry.Sha256),
 			})
 		}
 	}
@@ -744,4 +752,14 @@ func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType con
 	// })
 
 	return result, nil
+}
+
+func isPluginType(s string) bool {
+	for _, t := range consts.PluginTypes {
+		if s == t.String() {
+			return true
+		}
+	}
+
+	return false
 }

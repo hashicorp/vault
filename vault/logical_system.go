@@ -391,7 +391,6 @@ func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-// TODO: Think more carefully about updating this in a non-breaking way
 func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
 	if err != nil {
@@ -405,9 +404,9 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 	return logical.ListResponse(plugins), nil
 }
 
-// TODO: Think more carefully about updating this in a non-breaking way
 func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	pluginsByType := make(map[string]interface{})
+	data := make(map[string]interface{})
+	var versionedPlugins []VersionedPlugin
 	for _, pluginType := range consts.PluginTypes {
 		plugins, err := b.Core.pluginCatalog.List(ctx, pluginType)
 		if err != nil {
@@ -415,11 +414,20 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req 
 		}
 		if len(plugins) > 0 {
 			sort.Strings(plugins)
-			pluginsByType[pluginType.String()] = plugins
+			data[pluginType.String()] = plugins
 		}
+
+		versioned, err := b.Core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
+		if err != nil {
+			return nil, err
+		}
+		versionedPlugins = append(versionedPlugins, versioned...)
 	}
+
+	data["versioned_plugins"] = versionedPlugins
+
 	return &logical.Response{
-		Data: pluginsByType,
+		Data: data,
 	}, nil
 }
 
@@ -472,8 +480,13 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	env := d.Get("env").([]string)
 
 	ver := d.Get("version").(string)
-	if _, err := semver.NewSemver(ver); err != nil {
-		return logical.ErrorResponse("version specified is not a valid semantic version: %s", err), nil
+	if ver != "" {
+		if _, err := semver.NewSemver(ver); err != nil {
+			return logical.ErrorResponse("version %q is not a valid semantic version: %s", ver, err), nil
+		}
+		if !strings.HasPrefix(ver, "v") {
+			return logical.ErrorResponse("version %q must start with a 'v'", ver), nil
+		}
 	}
 
 	sha256Bytes, err := hex.DecodeString(sha256)
