@@ -129,6 +129,9 @@ func (kv *KVClient) Write(ctx context.Context, secretPath string, data map[strin
 	if err != nil {
 		return nil, fmt.Errorf("error writing secret to %s: %v", pathToWriteTo, err)
 	}
+	if kv.version == 1 {
+		return nil, nil // v1 Logical Write returns a nil secret
+	}
 	if secret == nil || secret.Data == nil {
 		return nil, fmt.Errorf("no secret was written to %s", pathToWriteTo)
 	}
