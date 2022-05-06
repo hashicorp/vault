@@ -29,7 +29,12 @@ The following documentation assumes that the method has been
 - A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications) which is used as the resource for generating MSI access tokens.
 - Client credentials (shared secret) for accessing the Azure Resource Manager with read access to compute endpoints. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service)
 
-Required Azure API permissions to be granted to Vault user:
+Required Azure API permissions to be granted to the Vault Service Principal:
+
+- `GroupMember.Read.All`
+- Admin consent is required for this permission.
+
+Optional Azure API permissions to be granted to the Vault Service Principal to use VM resource restrictions:
 
 - `Microsoft.Compute/virtualMachines/*/read`
 - `Microsoft.Compute/virtualMachineScaleSets/*/read`
