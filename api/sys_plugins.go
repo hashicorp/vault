@@ -101,6 +101,10 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 	}
 	if i.Type == consts.PluginTypeUnknown {
 		for pluginTypeStr, pluginsRaw := range secret.Data {
+			// TODO: Better test fix
+			if pluginTypeStr == "versioned_plugins" {
+				continue
+			}
 			pluginType, err := consts.ParsePluginType(pluginTypeStr)
 			if err != nil {
 				return nil, err
