@@ -31,21 +31,10 @@ export default class MfaSetupStepTwo extends Component {
         entity_id: this.args.entityId,
         method_id: this.args.uuid,
       });
-      // if there was a warning it won't fail but needs to be handled here
     } catch (error) {
       this.error = error.errors;
       return 'stop_progress';
     }
-    // restart to step one.
     this.args.restartFlow();
-  }
-
-  @action
-  verifyAuthenticationCode(evt) {
-    evt.preventDefault();
-    // let authenticationCode = this.authenticationCode;
-    // ARG TODO verify the UUID;
-    // if verified send confirm boolean to the parent?
-    this.args.isQRCodeVerified(true);
   }
 }

@@ -16,23 +16,10 @@
   </div>
 
   <div class="is-flex-start">
-    <button
-      id="continue"
-      type="submit"
-      {{! ARG TODO disable if no value in the input}}
-      {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
-      class="button is-primary"
-    >
+    <button id="continue" type="submit" class="button is-primary">
       Verify
     </button>
-    <button
-      id="cancel"
-      type="button"
-      {{! ARG TODO disable if no value in the input }}
-      {{!-- disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}} --}}
-      {{on "click" this.redirectPreviousPage}}
-      class="button"
-    >
+    <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button">
       Cancel
     </button>
   </div>

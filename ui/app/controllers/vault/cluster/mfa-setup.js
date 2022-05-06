@@ -25,7 +25,6 @@ export default class VaultClusterMfaSetupController extends Controller {
 
   @action
   restartFlow() {
-    // they have hit the restart screen and hit the cancel button.
     this.onStep = 1;
   }
 

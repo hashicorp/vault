@@ -16,7 +16,7 @@ import { tracked } from '@glimmer/tracking';
 
 export default class MfaSetupStepOne extends Component {
   @service store;
-  @tracked error;
+  @tracked error = '';
   @tracked warning = '';
   @tracked qrCode = '';
 
@@ -30,6 +30,7 @@ export default class MfaSetupStepOne extends Component {
   async verifyUUID(evt) {
     evt.preventDefault();
     let response = await this.postAdminGenerate();
+
     if (response === 'stop_progress') {
       this.args.isUUIDVerified(false);
     } else if (response === 'reset_method') {
@@ -44,12 +45,13 @@ export default class MfaSetupStepOne extends Component {
     this.warning = '';
     let adapter = this.store.adapterFor('mfa-setup');
     let response;
+
     try {
       response = await adapter.adminGenerate({
         entity_id: this.args.entityId,
         method_id: this.UUID, // comes from value on the input
       });
-      this.args.saveUUIDandQrCode(this.UUID, response.data?.url); // parent needs to keep track of UUID and qrCode.
+      this.args.saveUUIDandQrCode(this.UUID, response.data?.url);
       // if there was a warning it won't fail but needs to be handled here and the flow needs to be interrupted
       let warnings = response.warnings || [];
       if (warnings.length > 0) {
@@ -62,7 +64,7 @@ export default class MfaSetupStepOne extends Component {
           this.warning = 'Entity already has a secret for MFA method';
           return 'reset_method';
         }
-        this.warning = warnings; // in case other kinds of warnings comes through. Still push to third screen because it's not an error.
+        this.warning = warnings; // in case other kinds of warnings comes through.
         return 'reset_method';
       }
     } catch (error) {
