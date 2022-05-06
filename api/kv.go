@@ -145,6 +145,43 @@ func (kv *KVClient) Write(ctx context.Context, secretPath string, data map[strin
 	}, nil
 }
 
+func (kv *KVClient) Delete(ctx context.Context, secretPath string, versions ...int) error {
+	pathToDelete, err := kv.getFullPath(secretPath)
+	if err != nil {
+		return fmt.Errorf("error assembling full path to KV secret: %v", err)
+	}
+
+	var derr error
+
+	switch kv.version {
+	case 1:
+		if len(versions) > 0 {
+			return fmt.Errorf("cannot specify versions for KV v1 secrets")
+		}
+		_, derr = kv.c.Logical().DeleteWithContext(ctx, pathToDelete)
+	case 2:
+		// verb and path are different when trying to delete past versions
+		if len(versions) > 0 {
+			var versionsToDelete []string
+			for _, version := range versions {
+				versionsToDelete = append(versionsToDelete, strconv.Itoa(version))
+			}
+			versionsMap := map[string]interface{}{
+				"versions": versionsToDelete,
+			}
+			pathToDelete = fmt.Sprintf("%s/delete/%s", kv.mountPath, secretPath)
+			_, derr = kv.c.Logical().Write(pathToDelete, versionsMap)
+		} else {
+			_, derr = kv.c.Logical().DeleteWithContext(ctx, pathToDelete)
+		}
+	}
+	if derr != nil {
+		return fmt.Errorf("error deleting secret at %s: %v", pathToDelete, derr)
+	}
+
+	return nil
+}
+
 func (kv *KVClient) getFullPath(secretPath string) (string, error) {
 	var pathToRead string
 	switch kv.version {
