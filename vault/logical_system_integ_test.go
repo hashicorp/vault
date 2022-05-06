@@ -672,6 +672,10 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 }
 
 func TestBackend_PluginMainLogical(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
@@ -683,6 +687,10 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 }
 
 func TestBackend_PluginMainCredentials(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
@@ -695,6 +703,10 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 
 // TestBackend_PluginMainEnv is a mock plugin that simply checks for the existence of FOO env var.
 func TestBackend_PluginMainEnv(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
