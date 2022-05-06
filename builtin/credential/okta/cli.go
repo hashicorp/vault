@@ -41,19 +41,14 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		"password": password,
 	}
 
-	// Okta totp code
+	// Okta or Google totp code
 	if totp, ok := m["totp"]; ok {
 		data["totp"] = totp
 	}
 
-	// Legacy MFA support
-	mfa_method, ok := m["method"]
-	if ok {
-		data["method"] = mfa_method
-	}
-	mfa_passcode, ok := m["passcode"]
-	if ok {
-		data["passcode"] = mfa_passcode
+	// provider is an optional parameter
+	if provider, ok := m["provider"]; ok {
+		data["provider"] = provider
 	}
 
 	nonce := base62.MustRandom(20)

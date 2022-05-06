@@ -8,7 +8,13 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+)
+
+const (
+	googleProvider = "GOOGLE"
+	oktaProvider   = "OKTA"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -32,6 +38,10 @@ func pathLogin(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Nonce",
 			},
+			"provider": {
+				Type:        framework.TypeString,
+				Description: "Preferred factor provider.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -42,6 +52,10 @@ func pathLogin(b *backend) *framework.Path {
 		HelpSynopsis:    pathLoginSyn,
 		HelpDescription: pathLoginDesc,
 	}
+}
+
+func (b *backend) getSupportedProviders() []string {
+	return []string{googleProvider, oktaProvider}
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -64,10 +78,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	password := d.Get("password").(string)
 	totp := d.Get("totp").(string)
 	nonce := d.Get("nonce").(string)
+	preferredProvider := strings.ToUpper(d.Get("provider").(string))
+	if preferredProvider != "" && !strutil.StrListContains(b.getSupportedProviders(), preferredProvider) {
+		return logical.ErrorResponse(fmt.Sprintf("provider %s is not among the supported ones %v", preferredProvider, b.getSupportedProviders())), nil
+	}
 
 	defer b.verifyCache.Delete(nonce)
 
-	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp, nonce)
+	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp, nonce, preferredProvider)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -132,7 +150,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 	// No TOTP entry is possible on renew. If push MFA is enabled it will still be triggered, however.
 	// Sending "" as the totp will prompt the push action if it is configured.
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, "", nonce)
+	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, "", nonce, "")
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}

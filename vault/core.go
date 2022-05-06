@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -79,6 +80,12 @@ const (
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
+
+	// defaultMaxTOTPValidateAttempts is the default value for the number
+	// of failed attempts to validate a request subject to TOTP MFA. If the
+	// number of failed totp passcode validations exceeds this max value, the
+	// user needs to wait until a fresh totp passcode is generated.
+	defaultMaxTOTPValidateAttempts = 5
 
 	// ForwardSSCTokenToActive is the value that must be set in the
 	// forwardToActive to trigger forwarding if a perf standby encounters
@@ -487,6 +494,12 @@ type Core struct {
 	// pluginDirectory is the location vault will look for plugin binaries
 	pluginDirectory string
 
+	// pluginFileUid is the uid of the plugin files and directory
+	pluginFileUid int
+
+	// pluginFilePermissions is the permissions of the plugin files and directory
+	pluginFilePermissions int
+
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 
@@ -598,11 +611,12 @@ type Core struct {
 	// disableSSCTokens is used to disable server side consistent token creation/usage
 	disableSSCTokens bool
 
-	// versionTimestamps is a map of vault versions to timestamps when the version
+	// versionHistory is a map of vault versions to VaultVersion. The
+	// VaultVersion.TimestampInstalled when the version will denote when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
-	versionTimestamps map[string]time.Time
+	versionHistory map[string]VaultVersion
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -683,6 +697,10 @@ type CoreConfig struct {
 	EnableRaw bool
 
 	PluginDirectory string
+
+	PluginFileUid int
+
+	PluginFilePermissions int
 
 	DisableSealWrap bool
 
@@ -998,6 +1016,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
+	if conf.PluginFileUid != 0 {
+		c.pluginFileUid = conf.PluginFileUid
+	}
+	if conf.PluginFilePermissions != 0 {
+		c.pluginFilePermissions = conf.PluginFilePermissions
+	}
+
 	createSecondaries(c, conf)
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -1088,9 +1113,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	if c.versionTimestamps == nil {
-		c.logger.Info("Initializing versionTimestamps for core")
-		c.versionTimestamps = make(map[string]time.Time)
+	if c.versionHistory == nil {
+		c.logger.Info("Initializing version history cache for core")
+		c.versionHistory = make(map[string]VaultVersion)
 	}
 
 	return c, nil
@@ -1100,15 +1125,22 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now().UTC()
-	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime, false)
+
+	vaultVersion := &VaultVersion{
+		TimestampInstalled: currentTime,
+		Version:            version.Version,
+		BuildDate:          version.BuildDate,
+	}
+
+	isUpdated, err := c.storeVersionEntry(ctx, vaultVersion, false)
 	if err != nil {
 		return fmt.Errorf("error storing vault version: %w", err)
 	}
 	if isUpdated {
-		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime)
+		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
-	// Finally, load the versions into core fields
-	err = c.loadVersionTimestamps(ctx)
+	// Finally, populate the version history cache
+	err = c.loadVersionHistory(ctx)
 	if err != nil {
 		return err
 	}
@@ -2246,6 +2278,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2322,6 +2357,9 @@ func (c *Core) preSeal() error {
 	}
 
 	c.loginMFABackend.usedCodes = nil
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = nil
+	}
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
@@ -3200,4 +3238,19 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 		})
 	}
 	return nodes
+}
+
+func (c *Core) CheckPluginPerms(pluginName string) (err error) {
+	if c.pluginDirectory != "" && os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+		err = osutil.OwnerPermissionsMatch(c.pluginDirectory, c.pluginFileUid, c.pluginFilePermissions)
+		if err != nil {
+			return err
+		}
+		fullPath := filepath.Join(c.pluginDirectory, pluginName)
+		err = osutil.OwnerPermissionsMatch(fullPath, c.pluginFileUid, c.pluginFilePermissions)
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }

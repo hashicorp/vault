@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add new DB methods that do not prepare statements.
+```

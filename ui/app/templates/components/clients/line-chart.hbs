@@ -3,6 +3,7 @@
   class="chart has-grid"
   {{on "mouseleave" this.removeTooltip}}
   {{did-insert this.renderChart @dataset}}
+  {{did-update this.renderChart @dataset}}
 >
 </svg>
 
@@ -23,6 +24,10 @@
       <p class="bold">{{this.tooltipMonth}}</p>
       <p>{{this.tooltipTotal}}</p>
       <p>{{this.tooltipNew}}</p>
+      {{#if this.tooltipUpgradeText}}
+        <br />
+        <p class="has-text-highlight">{{this.tooltipUpgradeText}}</p>
+      {{/if}}
     </div>
     <div class="chart-tooltip-arrow"></div>
   {{/modal-dialog}}

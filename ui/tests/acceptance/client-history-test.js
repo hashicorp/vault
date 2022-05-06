@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, settled, waitUntil, find } from '@ember/test-helpers';
+import { visit, currentURL, click, settled, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
@@ -8,6 +8,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import {
+  CHART_ELEMENTS,
   generateActivityResponse,
   generateConfigResponse,
   generateLicenseResponse,
@@ -45,7 +46,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
 
     assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
@@ -69,7 +70,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('Data tracking is disabled');
     assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is hidden when no data available');
   });
@@ -92,13 +93,14 @@ module('Acceptance | clients history tab', function (hooks) {
     // History Tab
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
 
     assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly history');
     assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
+    assert.expect(26);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);
@@ -127,6 +129,7 @@ module('Acceptance | clients history tab', function (hooks) {
         'Date range shows dates correctly parsed activity response'
       );
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
+    const { by_namespace } = activity.data;
     const { clients, entity_clients, non_entity_clients } = activity.data.total;
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-value')
@@ -140,9 +143,42 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
+
+    // TODO CMB - add assertion so double charts show for single historical month
+    // TODO and check for empty state there
+    // assert
+    // .dom('[data-test-chart-container="new-clients"] [data-test-empty-state-subtext]')
+    // .includesText(
+    //   'There are no new clients for this namespace during this time period.',
+    //   'Shows empty state if no new client counts'
+    // );
+
+    // check chart displays correct elements and values
+    for (const key in CHART_ELEMENTS) {
+      let namespaceNumber = by_namespace.length < 10 ? by_namespace.length : 10;
+      let group = find(CHART_ELEMENTS[key]);
+      let elementArray = Array.from(group.children);
+      assert.equal(elementArray.length, namespaceNumber, `renders correct number of ${key}`);
+      if (key === 'totalValues') {
+        elementArray.forEach((element, i) => {
+          assert.equal(element.innerHTML, `${by_namespace[i].counts.clients}`, 'displays correct value');
+        });
+      }
+      if (key === 'yLabels') {
+        elementArray.forEach((element, i) => {
+          assert
+            .dom(element.children[1])
+            .hasTextContaining(`${by_namespace[i].namespace_path}`, 'displays correct namespace label');
+        });
+      }
+    }
   });
 
+  // flaky test -- does not consistently run the same number of assertions
+  // refactor before using assert.expect
   test('filters correctly on history with full data', async function (assert) {
+    /* eslint qunit/require-expect: "warn" */
+    // assert.expect(44);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);
@@ -161,23 +197,45 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    const { clients } = activity.data.total;
-    // Filter by namespace
+    const { total, by_namespace } = activity.data;
+
+    // FILTER BY NAMESPACE
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    await waitUntil(() => {
-      return find('[data-test-horizontal-bar-chart]');
-    });
+    await settled();
     assert.ok(true, 'Filter by first namespace');
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
+    await settled();
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
-    // Filter by auth method
+
+    // check chart displays correct elements and values
+    for (const key in CHART_ELEMENTS) {
+      const { mounts } = by_namespace[0];
+      let mountNumber = mounts.length < 10 ? mounts.length : 10;
+      let group = find(CHART_ELEMENTS[key]);
+      let elementArray = Array.from(group.children);
+      assert.equal(elementArray.length, mountNumber, `renders correct number of ${key}`);
+      if (key === 'totalValues') {
+        elementArray.forEach((element, i) => {
+          assert.equal(element.innerHTML, `${mounts[i].counts.clients}`, 'displays correct value');
+        });
+      }
+      if (key === 'yLabels') {
+        elementArray.forEach((element, i) => {
+          assert
+            .dom(element.children[1])
+            .hasTextContaining(`${mounts[i].mount_path}`, 'displays correct auth label');
+        });
+      }
+    }
+
+    // FILTER BY AUTH METHOD
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     await settled();
@@ -192,7 +250,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-value')
-      .hasText(clients.toString(), 'total clients stat is back to unfiltered value');
+      .hasText(total.clients.toString(), 'total clients stat is back to unfiltered value');
   });
 
   test('shows warning if upgrade happened within license period', async function (assert) {
@@ -211,7 +269,7 @@ module('Acceptance | clients history tab', function (hooks) {
           keys: ['1.9.0'],
           key_info: {
             '1.9.0': {
-              previous_version: '1.8.3',
+              previous_version: null,
               timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
             },
           },
@@ -224,8 +282,8 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
-    assert.dom('[data-test-flash-message] .message-actions').containsText(`You upgraded to Vault 1.9.0`);
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+    assert.dom('[data-test-alert-banner]').includesText('Vault was upgraded');
   });
 
   test('Shows empty if license start date is current month', async function (assert) {
@@ -270,7 +328,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     // Message changes depending on ent or OSS
     assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
     assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');
@@ -292,7 +350,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert
       .dom(SELECTORS.emptyStateTitle)
-      .includesText('No start date found', 'Empty state shows no billing start date');
+      .includesText('start date found', 'Empty state shows no billing start date');
     await click(SELECTORS.monthDropdown);
     await click(this.element.querySelector('[data-test-month-list] button:not([disabled])'));
     await click(SELECTORS.yearDropdown);

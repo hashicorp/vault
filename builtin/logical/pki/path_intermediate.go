@@ -124,6 +124,8 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = csrb.PrivateKeyType
 		}
+	default:
+		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
 	if data.Get("private_key_format").(string) == "pkcs8" {

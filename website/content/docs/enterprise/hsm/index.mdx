@@ -2,7 +2,7 @@
 layout: docs
 page_title: HSM Integration - Vault Enterprise
 description: >-
-  Vault Enterprise has HSM support, allowing for external master key storage and
+  Vault Enterprise has HSM support, allowing for external root key storage and
   automatic unsealing.
 ---
 
@@ -10,9 +10,9 @@ description: >-
 
 -> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
 
-- Master Key Wrapping: Vault protects its master key by transiting it through
+- Root key Wrapping: Vault protects its root key by transiting it through
   the HSM for encryption rather than splitting into key shares
-- Automatic Unsealing: Vault stores its HSM-wrapped master key in storage,
+- Automatic Unsealing: Vault stores its HSM-wrapped root key in storage,
   allowing for automatic unsealing
 - [Seal Wrapping](/docs/enterprise/sealwrap) to provide FIPS
   KeyStorage-conforming functionality for Critical Security Parameters

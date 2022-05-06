@@ -164,7 +164,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 				"password":   password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, err
 			}
 		}
@@ -246,7 +246,7 @@ func updateUserExpiration(ctx context.Context, req dbplugin.UpdateUserRequest, t
 				"username":   req.Username,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -293,7 +293,7 @@ func updateUserPassword(ctx context.Context, req dbplugin.UpdateUserRequest, tx 
 				"username": username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -341,7 +341,7 @@ func (r *RedShift) customDeleteUser(ctx context.Context, req dbplugin.DeleteUser
 				"name":     req.Username,
 				"username": req.Username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.DeleteUserResponse{}, err
 			}
 		}
@@ -452,7 +452,7 @@ $$;`)
 	// many permissions as possible right now
 	var lastStmtError *multierror.Error // error
 	for _, query := range revocationStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 			lastStmtError = multierror.Append(lastStmtError, err)
 		}
 	}

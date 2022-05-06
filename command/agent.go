@@ -790,10 +790,19 @@ func (c *AgentCommand) Run(args []string) int {
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
+
+		// Auth Handler is going to set its own retry values, so we want to
+		// work on a copy of the client to not affect other subsystems.
+		clonedClient, err := c.client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
+			return 1
+		}
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
 			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       c.client,
+			Client:                       clonedClient,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
@@ -979,7 +988,7 @@ func (c *AgentCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("could not open pid file: %w", err)
 	}

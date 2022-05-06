@@ -271,7 +271,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			Root:            test.rootPaths,
 			Unauthenticated: test.unauthPaths,
 		}
-		err := documentPath(&path, sp, logical.TypeLogical, doc)
+		err := documentPath(&path, sp, "kv", logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -355,6 +355,10 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Type:          TypeHeader,
 					Description:   "a header value",
 					AllowedValues: []interface{}{"a", "b", "c"},
+				},
+				"maximum": {
+					Type:        TypeInt64,
+					Description: "a maximum value",
 				},
 				"format": {
 					Type:        TypeString,
@@ -515,11 +519,11 @@ func TestOpenAPI_OperationID(t *testing.T) {
 
 	for _, context := range []string{"", "bar"} {
 		doc := NewOASDocument()
-		err := documentPath(path1, nil, logical.TypeLogical, doc)
+		err := documentPath(path1, nil, "kv", logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = documentPath(path2, nil, logical.TypeLogical, doc)
+		err = documentPath(path2, nil, "kv", logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -579,7 +583,7 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	}
 
 	docOrig := NewOASDocument()
-	err := documentPath(p, nil, logical.TypeLogical, docOrig)
+	err := documentPath(p, nil, "kv", logical.TypeLogical, docOrig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -642,7 +646,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	t.Helper()
 
 	doc := NewOASDocument()
-	if err := documentPath(path, sp, logical.TypeLogical, doc); err != nil {
+	if err := documentPath(path, sp, "kv", logical.TypeLogical, doc); err != nil {
 		t.Fatal(err)
 	}
 	doc.CreateOperationIDs("")

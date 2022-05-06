@@ -65,7 +65,7 @@ set, defaults to the system maximum lease TTL.`,
 			"allow_localhost": {
 				Type:    framework.TypeBool,
 				Default: true,
-				Description: `Whether to allow "localhost" and "localdoamin"
+				Description: `Whether to allow "localhost" and "localdomain"
 as a valid common name in a request, independent of allowed_domains value.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: true,
@@ -211,8 +211,8 @@ protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
-"ec" and "ed25519" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+"ec", "ed25519" and "any" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec", "ed25519", "any"},
 			},
 
 			"key_bits": {

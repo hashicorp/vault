@@ -9,22 +9,24 @@ import { mean } from 'd3-array';
  * ```js
   <Clients::MonthlyUsage 
     @chartLegend={{this.chartLegend}} 
-    @verticalBarChartData={{this.byMonth}} 
+    @timestamp={{this.responseTimestamp}}
+    @verticalBarChartData={{this.byMonthTotalClients}} 
   />
  * ```
-
+ * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
+ * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  * @param {array} verticalBarChartData - array of flattened objects
     sample object = 
     {
       month: '1/22',
       entity_clients: 23,
       non_entity_clients: 45,
-      total: 68,
+      clients: 68,
       namespaces: [],
       new_clients: {
         entity_clients: 11,
         non_entity_clients: 36,
-        total: 47,
+        clients: 47,
         namespaces: [],
       },
     }
@@ -32,12 +34,12 @@ import { mean } from 'd3-array';
  */
 export default class MonthlyUsage extends Component {
   get averageTotalClients() {
-    let average = mean(this.args.verticalBarChartData?.map((d) => d.total));
+    let average = mean(this.args.verticalBarChartData?.map((d) => d.clients));
     return Math.round(average) || null;
   }
 
   get averageNewClients() {
-    let average = mean(this.args.verticalBarChartData?.map((d) => d.new_clients));
+    let average = mean(this.args.verticalBarChartData?.map((d) => d.new_clients.clients));
     return Math.round(average) || null;
   }
 }

@@ -148,6 +148,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
+				"max_validation_attempts": {
+					Type:        framework.TypeInt,
+					Description: `Max number of allowed validation attempts.`,
+				},
 				"issuer": {
 					Type:        framework.TypeString,
 					Description: `The name of the key's issuing organization.`,
@@ -772,6 +776,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			if err != nil {
 				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
 				return
+			}
+			if entity == nil {
+				i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+				continue
 			}
 
 			// Delete local aliases from the entity.

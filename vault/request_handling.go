@@ -320,6 +320,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		case logical.ErrUnsupportedPath:
 			// fail later via bad path to avoid confusing items in the log
 			checkExists = false
+		case logical.ErrRelativePath:
+			return nil, te, errutil.UserError{Err: err.Error()}
 		case nil:
 			if existsResp != nil && existsResp.IsError() {
 				return nil, te, existsResp.Error()
@@ -825,6 +827,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
+	if ctErr == logical.ErrRelativePath {
+		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
+	}
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -1501,6 +1506,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					}
 				}
 			} else if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) == 0 {
+				// two-phase login MFA requests should be forwarded
+				// to the active node, as the validation should only
+				// happen in that node
+				if c.perfStandby {
+					return nil, nil, logical.ErrPerfStandbyPleaseForward
+				}
 				mfaRequestID, err := uuid.GenerateUUID()
 				if err != nil {
 					return nil, nil, err

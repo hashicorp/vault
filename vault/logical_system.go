@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -448,6 +447,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	command := d.Get("command").(string)
 	if command == "" {
 		return logical.ErrorResponse("missing command value"), nil
+	}
+
+	if err = b.Core.CheckPluginPerms(command); err != nil {
+		return nil, err
 	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
@@ -1199,6 +1202,13 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(
 				"both 'from' and 'to' path must be specified as a string"),
 			logical.ErrInvalidRequest
+	}
+
+	if strings.Contains(fromPath, " ") {
+		return logical.ErrorResponse("'from' path cannot contain whitespace"), logical.ErrInvalidRequest
+	}
+	if strings.Contains(toPath, " ") {
+		return logical.ErrorResponse("'to' path cannot contain whitespace"), logical.ErrInvalidRequest
 	}
 
 	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
@@ -2428,13 +2438,18 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return nil, err
 		}
 
+		name := data.Get("name").(string)
 		policy := &Policy{
-			Name:      strings.ToLower(data.Get("name").(string)),
+			Name:      strings.ToLower(name),
 			Type:      policyType,
 			namespace: ns,
 		}
 		if policy.Name == "" {
 			return logical.ErrorResponse("policy name must be provided in the URL"), nil
+		}
+		if name != policy.Name {
+			resp = &logical.Response{}
+			resp.AddWarning(fmt.Sprintf("policy name was converted to %s", policy.Name))
 		}
 
 		policy.Raw = data.Get("policy").(string)
@@ -2478,6 +2493,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
+
 		return resp, nil
 	}
 }
@@ -3593,55 +3609,8 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 	return resp, nil
 }
 
-func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	bytes := 0
-	var err error
-	strBytes := d.Get("urlbytes").(string)
-	if strBytes != "" {
-		bytes, err = strconv.Atoi(strBytes)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
-		}
-	} else {
-		bytes = d.Get("bytes").(int)
-	}
-	format := d.Get("format").(string)
-
-	if bytes < 1 {
-		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
-	}
-
-	if bytes > maxBytes {
-		return logical.ErrorResponse(`"bytes" should be less than %d`, maxBytes), nil
-	}
-
-	switch format {
-	case "hex":
-	case "base64":
-	default:
-		return logical.ErrorResponse("unsupported encoding format %q; must be \"hex\" or \"base64\"", format), nil
-	}
-
-	randBytes, err := uuid.GenerateRandomBytes(bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	var retStr string
-	switch format {
-	case "hex":
-		retStr = hex.EncodeToString(randBytes)
-	case "base64":
-		retStr = base64.StdEncoding.EncodeToString(randBytes)
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"random_bytes": retStr,
-		},
-	}
-	return resp, nil
+func (b *SystemBackend) pathRandomWrite(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return random.HandleRandomAPI(d, b.Core.secureRandomReader)
 }
 
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
@@ -4027,7 +3996,13 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	doc := framework.NewOASDocument()
 
 	procMountGroup := func(group, mountPrefix string) error {
-		for mount := range resp.Data[group].(map[string]interface{}) {
+		for mount, entry := range resp.Data[group].(map[string]interface{}) {
+
+			var pluginType string
+			if t, ok := entry.(map[string]interface{})["type"]; ok {
+				pluginType = t.(string)
+			}
+
 			backend := b.Core.router.MatchingBackend(ctx, mountPrefix+mount)
 
 			if backend == nil {
@@ -4037,6 +4012,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4092,6 +4068,11 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				doc.Paths["/"+mountPrefix+mount+path] = obj
 			}
+
+			// Merge backend schema components
+			for e, schema := range backendDoc.Components.Schemas {
+				doc.Components.Schemas[e] = schema
+			}
 		}
 		return nil
 	}
@@ -4130,6 +4111,7 @@ type SealStatusResponse struct {
 	Progress     int    `json:"progress"`
 	Nonce        string `json:"nonce"`
 	Version      string `json:"version"`
+	BuildDate    string `json:"build_date"`
 	Migration    bool   `json:"migration"`
 	ClusterName  string `json:"cluster_name,omitempty"`
 	ClusterID    string `json:"cluster_id,omitempty"`
@@ -4163,6 +4145,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
+			BuildDate:    version.BuildDate,
 		}, nil
 	}
 
@@ -4191,6 +4174,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		Progress:     progress,
 		Nonce:        nonce,
 		Version:      version.GetVersion().VersionNumber(),
+		BuildDate:    version.BuildDate,
 		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
@@ -4372,11 +4356,8 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	versions := make([]VaultVersion, 0)
 	respKeys := make([]string, 0)
 
-	for versionString, ts := range b.Core.versionTimestamps {
-		versions = append(versions, VaultVersion{
-			Version:            versionString,
-			TimestampInstalled: ts,
-		})
+	for _, versionEntry := range b.Core.versionHistory {
+		versions = append(versions, versionEntry)
 	}
 
 	sort.Slice(versions, func(i, j int) bool {
@@ -4390,6 +4371,7 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 
 		entry := map[string]interface{}{
 			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"build_date":          v.BuildDate,
 			"previous_version":    nil,
 		}
 

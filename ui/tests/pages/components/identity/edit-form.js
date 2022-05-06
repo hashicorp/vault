@@ -1,4 +1,5 @@
 import { clickable, fillable, attribute } from 'ember-cli-page-object';
+import { waitFor } from '@ember/test-helpers';
 import fields from '../form-field';
 
 export default {
@@ -13,4 +14,10 @@ export default {
   submit: clickable('[data-test-identity-submit]'),
   delete: clickable('[data-test-confirm-action-trigger]'),
   confirmDelete: clickable('[data-test-confirm-button]'),
+  waitForConfirm() {
+    return waitFor('[data-test-confirm-button]');
+  },
+  waitForFlash() {
+    return waitFor('[data-test-flash-message-body]');
+  },
 };

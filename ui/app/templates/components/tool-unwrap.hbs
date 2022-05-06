@@ -12,7 +12,6 @@
       <ul>
         {{! template-lint-configure no-nested-interactive "warn" }}
         <li
-          role="tab"
           aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
           class={{if (eq @unwrapActiveTab "data") "is-active"}}
         >
@@ -26,7 +25,6 @@
           </button>
         </li>
         <li
-          role="tab"
           aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
           class={{if (eq @unwrapActiveTab "details") "is-active"}}
         >
@@ -45,7 +43,7 @@
     {{#if (eq @unwrapActiveTab "data")}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="Unwrapped Data" @value={{stringify @unwrap_data}} @options={{hash readOnly=true}} />
+          <JsonEditor @title="Unwrapped Data" @value={{stringify @unwrap_data}} @readOnly={{true}} />
         </div>
       </div>
     {{else}}

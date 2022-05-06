@@ -20,14 +20,7 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 		return nil, nil, fmt.Errorf("no error received but no configuration found")
 	}
 
-	consulConf := api.DefaultNonPooledConfig()
-	consulConf.Address = conf.Address
-	consulConf.Scheme = conf.Scheme
-	consulConf.Token = conf.Token
-	consulConf.TLSConfig.CAPem = []byte(conf.CACert)
-	consulConf.TLSConfig.CertPEM = []byte(conf.ClientCert)
-	consulConf.TLSConfig.KeyPEM = []byte(conf.ClientKey)
-
+	consulConf := conf.NewConfig()
 	client, err := api.NewClient(consulConf)
 	return client, nil, err
 }

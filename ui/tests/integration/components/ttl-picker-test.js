@@ -17,11 +17,10 @@ module('Integration | Component | ttl picker', function (hooks) {
 
     let callCount = this.changeSpy.callCount;
     await fillIn('[data-test-ttl-value]', 'foo');
-    assert.equal(this.changeSpy.callCount, callCount, "it did't call onChange again");
+    assert.equal(this.changeSpy.callCount, callCount, "it didn't call onChange again");
     assert.dom('[data-test-ttl-error]').includesText('Error', 'renders the error box');
-
     await fillIn('[data-test-ttl-value]', '33');
-    assert.dom('[data-test-ttl-error]').doesNotIncludeText('Error', 'removes the error box');
+    assert.dom('[data-test-ttl-error]').doesNotExist('removes the error box');
   });
 
   test('it shows 30s for invalid duration initialValue input', async function (assert) {

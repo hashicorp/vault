@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -745,8 +745,6 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 // setupCredentials is invoked after we've loaded the auth table to
 // initialize the credential backends and setup the router
 func (c *Core) setupCredentials(ctx context.Context) error {
-	var persistNeeded bool
-
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
@@ -825,16 +823,19 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		path := credentialRoutePrefix + entry.Path
 		err = c.router.Mount(backend, path, entry, view)
 		if err != nil {
-			c.logger.Error("failed to mount auth entry", "path", entry.Path, "error", err)
+			c.logger.Error("failed to mount auth entry", "path", entry.Path, "namespace", entry.Namespace(), "error", err)
 			return errLoadAuthFailed
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "path", entry.Path)
+			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "path", entry.Path, "namespace", entry.Namespace())
 		}
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
+			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
+			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
+			path = entry.Namespace().Path + path
 			c.router.Taint(ctx, path)
 		}
 
@@ -874,11 +875,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 	}
 
-	if persistNeeded {
-		// persist non-local auth
-		return c.persistAuth(ctx, c.auth, nil)
-	}
-
 	return nil
 }
 
@@ -915,7 +911,18 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
+		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential)
+		if err != nil {
+			return nil, err
+		}
+		if plug == nil {
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+		}
+
 		f = plugin.Factory
+		if !plug.Builtin {
+			f = wrapFactoryCheckPerms(c, plugin.Factory)
+		}
 	}
 
 	// Set up conf to pass in plugin_name

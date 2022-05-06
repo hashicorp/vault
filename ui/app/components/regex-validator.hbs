@@ -62,7 +62,7 @@
       spellcheck="false"
       value={{this.testValue}}
       {{on "change" this.updateTestValue}}
-      class="input {{if this.regexError "has-error"}}"
+      class="input {{if this.regexError 'has-error'}}"
     />
 
     {{#if this.testValue}}
