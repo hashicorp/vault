@@ -85,6 +85,9 @@ type Backend interface {
 
 	// Type returns the BackendType for the particular backend
 	Type() BackendType
+
+	// Version returns the version and SHA for the backend
+	Version() VersionInfo
 }
 
 // BackendConfig is provided to the factory to initialize the backend
@@ -137,3 +140,10 @@ type Auditor interface {
 	AuditRequest(ctx context.Context, input *LogInput) error
 	AuditResponse(ctx context.Context, input *LogInput) error
 }
+
+type VersionInfo struct {
+	Version string
+	Sha     string
+}
+
+var EmptyVersion = VersionInfo{"", ""}

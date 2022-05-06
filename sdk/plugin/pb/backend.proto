@@ -403,6 +403,13 @@ message TypeReply {
 	uint32 type = 1;
 }
 
+// VersionReply is the reply for the Version method.
+message VersionReply {
+	string name = 1;
+	string version = 2;
+	string sha = 3;
+}
+
 message InvalidateKeyArgs {
 	string key = 1;
 }
@@ -451,8 +458,11 @@ service Backend {
 	// handle any initialization tasks that need to be performed.
 	rpc Initialize(InitializeArgs) returns (InitializeReply);
 
-   	// Type returns the BackendType for the particular backend
+	// Type returns the BackendType for the particular backend
 	rpc Type(Empty) returns (TypeReply);
+
+	// Version returns version information for the plugin.
+	rpc Version(Empty) returns (VersionReply);
 }
 
 message StorageEntry {

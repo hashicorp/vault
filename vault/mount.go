@@ -12,13 +12,14 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -305,6 +306,8 @@ type MountEntry struct {
 	Tainted               bool              `json:"tainted,omitempty"`                 // Set as a Write-Ahead flag for unmount/remount
 	MountState            string            `json:"mount_state,omitempty"`             // The current mount state.  The only non-empty mount state right now is "unmounting"
 	NamespaceID           string            `json:"namespace_id"`
+	RunningVersion        string            `json:"running_version"` // Self-reported version of the running plugin
+	RunningSha            string            `json:"sha"`             // Self-reported sha of the running plugin
 
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
@@ -631,7 +634,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
+		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "running_version", entry.RunningVersion)
 	}
 	return nil
 }
@@ -1470,6 +1473,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
 		}
 
+		versionInfo := version.GetVersion()
 		kvMount := &MountEntry{
 			Table:            mountTableType,
 			Path:             "secret/",
@@ -1481,6 +1485,9 @@ func (c *Core) defaultMountTable() *MountTable {
 			Options: map[string]string{
 				"version": "2",
 			},
+			Version:        versionInfo.Version,
+			RunningVersion: versionInfo.Version,
+			RunningSha:     strings.Trim(versionInfo.Revision, "'"),
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1491,6 +1498,7 @@ func (c *Core) defaultMountTable() *MountTable {
 // requiredMountTable() creates a mount table with entries required
 // to be available
 func (c *Core) requiredMountTable() *MountTable {
+	versionInfo := version.GetVersion()
 	table := &MountTable{
 		Type: mountTableType,
 	}
@@ -1515,6 +1523,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		Accessor:         cubbyholeAccessor,
 		Local:            true,
 		BackendAwareUUID: cubbyholeBackendUUID,
+		Version:          versionInfo.Version,
+		RunningVersion:   versionInfo.Version,
+		RunningSha:       strings.Trim(versionInfo.Revision, "'"),
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1529,6 +1540,7 @@ func (c *Core) requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create sys backend UUID: %v", err))
 	}
+
 	sysMount := &MountEntry{
 		Table:            mountTableType,
 		Path:             "sys/",
@@ -1541,6 +1553,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Accept"},
 		},
+		Version:        versionInfo.Version,
+		RunningVersion: versionInfo.Version,
+		RunningSha:     strings.Trim(versionInfo.Revision, "'"),
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1566,6 +1581,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
 		},
+		Version:        versionInfo.Version,
+		RunningVersion: versionInfo.Version,
+		RunningSha:     strings.Trim(versionInfo.Revision, "'"),
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

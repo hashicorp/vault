@@ -84,6 +84,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		mfaBackend: NewPolicyMFABackend(core, logger),
 	}
 
+	versionInfo := version.GetVersion()
+
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
 
@@ -162,6 +164,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				managedKeyRegistrySubPath,
 			},
 		},
+		PluginVersion: versionInfo.Version,
+		PluginSha:     strings.Trim(versionInfo.Revision, "'"),
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
@@ -861,6 +865,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
+		"version":                 entry.Version,
+		"running_version":         entry.RunningVersion,
+		"running_sha":             entry.RunningSha,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -1085,6 +1092,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
+	versionInfo := b.Version()
+	if versionInfo == logical.EmptyVersion {
+		versionInfo = b.Backend.Version()
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 mountTableType,
@@ -1096,6 +1108,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		RunningVersion:        versionInfo.Version,
+		RunningSha:            versionInfo.Sha,
 	}
 
 	// Attempt mount
@@ -2313,6 +2327,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
+	versionInfo := b.Backend.Version()
 	// Create the mount entry
 	me := &MountEntry{
 		Table:                 credentialTableType,
@@ -2324,6 +2339,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		RunningVersion:        versionInfo.Version,
+		RunningSha:            versionInfo.Sha,
 	}
 
 	// Attempt enabling
@@ -2800,14 +2817,18 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	description := data.Get("description").(string)
 	options := data.Get("options").(map[string]string)
 
+	versionInfo := b.Backend.Version()
+
 	// Create the mount entry
 	me := &MountEntry{
-		Table:       auditTableType,
-		Path:        path,
-		Type:        backendType,
-		Description: description,
-		Options:     options,
-		Local:       local,
+		Table:          auditTableType,
+		Path:           path,
+		Type:           backendType,
+		Description:    description,
+		Options:        options,
+		Local:          local,
+		RunningVersion: versionInfo.Version,
+		RunningSha:     versionInfo.Sha,
 	}
 
 	// Attempt enabling

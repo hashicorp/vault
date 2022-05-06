@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -39,7 +39,7 @@ func Serve(opts *ServeOpts) error {
 
 	// pluginMap is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
-		// Version 3 used to supports both protocols. We want to keep it around
+		// Version 3 used to support both protocols. We want to keep it around
 		// since it's possible old plugins built against this version will still
 		// work with gRPC. There is currently no difference between version 3
 		// and version 4.

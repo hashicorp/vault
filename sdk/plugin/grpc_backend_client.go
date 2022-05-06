@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -279,4 +279,18 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 	}
 
 	return logical.BackendType(reply.Type)
+}
+
+func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
+	reply, err := b.client.Version(b.doneCtx, &pb.Empty{})
+	if err != nil {
+		return logical.VersionInfo{
+			Version: "",
+			Sha:     "",
+		}
+	}
+	return logical.VersionInfo{
+		Version: reply.Version,
+		Sha:     reply.Sha,
+	}
 }

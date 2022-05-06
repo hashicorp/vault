@@ -753,6 +753,13 @@ func (n *rawHTTP) Type() logical.BackendType {
 	return logical.TypeLogical
 }
 
+func (n *rawHTTP) Version() logical.VersionInfo {
+	return logical.VersionInfo{
+		Version: "",
+		Sha:     "",
+	}
+}
+
 func GenerateRandBytes(length int) ([]byte, error) {
 	if length < 0 {
 		return nil, fmt.Errorf("length must be >= 0")

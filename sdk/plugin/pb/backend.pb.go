@@ -1919,6 +1919,70 @@ func (x *TypeReply) GetType() uint32 {
 	return 0
 }
 
+// VersionReply is the reply for the Version method.
+type VersionReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name    string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version string `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Sha     string `protobuf:"bytes,3,opt,name=sha,proto3" json:"sha,omitempty"`
+}
+
+func (x *VersionReply) Reset() {
+	*x = VersionReply{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[22]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *VersionReply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VersionReply) ProtoMessage() {}
+
+func (x *VersionReply) ProtoReflect() protoreflect.Message {
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[22]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VersionReply.ProtoReflect.Descriptor instead.
+func (*VersionReply) Descriptor() ([]byte, []int) {
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *VersionReply) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *VersionReply) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *VersionReply) GetSha() string {
+	if x != nil {
+		return x.Sha
+	}
+	return ""
+}
+
 type InvalidateKeyArgs struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1930,7 +1994,7 @@ type InvalidateKeyArgs struct {
 func (x *InvalidateKeyArgs) Reset() {
 	*x = InvalidateKeyArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[22]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1943,7 +2007,7 @@ func (x *InvalidateKeyArgs) String() string {
 func (*InvalidateKeyArgs) ProtoMessage() {}
 
 func (x *InvalidateKeyArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[22]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1956,7 +2020,7 @@ func (x *InvalidateKeyArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvalidateKeyArgs.ProtoReflect.Descriptor instead.
 func (*InvalidateKeyArgs) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{22}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *InvalidateKeyArgs) GetKey() string {
@@ -1979,7 +2043,7 @@ type StorageEntry struct {
 func (x *StorageEntry) Reset() {
 	*x = StorageEntry{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[23]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1992,7 +2056,7 @@ func (x *StorageEntry) String() string {
 func (*StorageEntry) ProtoMessage() {}
 
 func (x *StorageEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[23]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2005,7 +2069,7 @@ func (x *StorageEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageEntry.ProtoReflect.Descriptor instead.
 func (*StorageEntry) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{23}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *StorageEntry) GetKey() string {
@@ -2040,7 +2104,7 @@ type StorageListArgs struct {
 func (x *StorageListArgs) Reset() {
 	*x = StorageListArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[24]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2053,7 +2117,7 @@ func (x *StorageListArgs) String() string {
 func (*StorageListArgs) ProtoMessage() {}
 
 func (x *StorageListArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[24]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2066,7 +2130,7 @@ func (x *StorageListArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageListArgs.ProtoReflect.Descriptor instead.
 func (*StorageListArgs) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{24}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *StorageListArgs) GetPrefix() string {
@@ -2088,7 +2152,7 @@ type StorageListReply struct {
 func (x *StorageListReply) Reset() {
 	*x = StorageListReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[25]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2101,7 +2165,7 @@ func (x *StorageListReply) String() string {
 func (*StorageListReply) ProtoMessage() {}
 
 func (x *StorageListReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[25]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2114,7 +2178,7 @@ func (x *StorageListReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageListReply.ProtoReflect.Descriptor instead.
 func (*StorageListReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{25}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *StorageListReply) GetKeys() []string {
@@ -2142,7 +2206,7 @@ type StorageGetArgs struct {
 func (x *StorageGetArgs) Reset() {
 	*x = StorageGetArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[26]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2155,7 +2219,7 @@ func (x *StorageGetArgs) String() string {
 func (*StorageGetArgs) ProtoMessage() {}
 
 func (x *StorageGetArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[26]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2168,7 +2232,7 @@ func (x *StorageGetArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageGetArgs.ProtoReflect.Descriptor instead.
 func (*StorageGetArgs) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{26}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *StorageGetArgs) GetKey() string {
@@ -2190,7 +2254,7 @@ type StorageGetReply struct {
 func (x *StorageGetReply) Reset() {
 	*x = StorageGetReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[27]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2203,7 +2267,7 @@ func (x *StorageGetReply) String() string {
 func (*StorageGetReply) ProtoMessage() {}
 
 func (x *StorageGetReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[27]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2216,7 +2280,7 @@ func (x *StorageGetReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageGetReply.ProtoReflect.Descriptor instead.
 func (*StorageGetReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{27}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *StorageGetReply) GetEntry() *StorageEntry {
@@ -2244,7 +2308,7 @@ type StoragePutArgs struct {
 func (x *StoragePutArgs) Reset() {
 	*x = StoragePutArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[28]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2257,7 +2321,7 @@ func (x *StoragePutArgs) String() string {
 func (*StoragePutArgs) ProtoMessage() {}
 
 func (x *StoragePutArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[28]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2270,7 +2334,7 @@ func (x *StoragePutArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StoragePutArgs.ProtoReflect.Descriptor instead.
 func (*StoragePutArgs) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{28}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *StoragePutArgs) GetEntry() *StorageEntry {
@@ -2291,7 +2355,7 @@ type StoragePutReply struct {
 func (x *StoragePutReply) Reset() {
 	*x = StoragePutReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[29]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2304,7 +2368,7 @@ func (x *StoragePutReply) String() string {
 func (*StoragePutReply) ProtoMessage() {}
 
 func (x *StoragePutReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[29]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2317,7 +2381,7 @@ func (x *StoragePutReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StoragePutReply.ProtoReflect.Descriptor instead.
 func (*StoragePutReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{29}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *StoragePutReply) GetErr() string {
@@ -2338,7 +2402,7 @@ type StorageDeleteArgs struct {
 func (x *StorageDeleteArgs) Reset() {
 	*x = StorageDeleteArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[30]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2351,7 +2415,7 @@ func (x *StorageDeleteArgs) String() string {
 func (*StorageDeleteArgs) ProtoMessage() {}
 
 func (x *StorageDeleteArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[30]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2364,7 +2428,7 @@ func (x *StorageDeleteArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageDeleteArgs.ProtoReflect.Descriptor instead.
 func (*StorageDeleteArgs) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{30}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *StorageDeleteArgs) GetKey() string {
@@ -2385,7 +2449,7 @@ type StorageDeleteReply struct {
 func (x *StorageDeleteReply) Reset() {
 	*x = StorageDeleteReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[31]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2398,7 +2462,7 @@ func (x *StorageDeleteReply) String() string {
 func (*StorageDeleteReply) ProtoMessage() {}
 
 func (x *StorageDeleteReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[31]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2411,7 +2475,7 @@ func (x *StorageDeleteReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageDeleteReply.ProtoReflect.Descriptor instead.
 func (*StorageDeleteReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{31}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *StorageDeleteReply) GetErr() string {
@@ -2432,7 +2496,7 @@ type TTLReply struct {
 func (x *TTLReply) Reset() {
 	*x = TTLReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[32]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2445,7 +2509,7 @@ func (x *TTLReply) String() string {
 func (*TTLReply) ProtoMessage() {}
 
 func (x *TTLReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[32]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2458,7 +2522,7 @@ func (x *TTLReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TTLReply.ProtoReflect.Descriptor instead.
 func (*TTLReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{32}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *TTLReply) GetTTL() int64 {
@@ -2479,7 +2543,7 @@ type TaintedReply struct {
 func (x *TaintedReply) Reset() {
 	*x = TaintedReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[33]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2492,7 +2556,7 @@ func (x *TaintedReply) String() string {
 func (*TaintedReply) ProtoMessage() {}
 
 func (x *TaintedReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[33]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2505,7 +2569,7 @@ func (x *TaintedReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaintedReply.ProtoReflect.Descriptor instead.
 func (*TaintedReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{33}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *TaintedReply) GetTainted() bool {
@@ -2526,7 +2590,7 @@ type CachingDisabledReply struct {
 func (x *CachingDisabledReply) Reset() {
 	*x = CachingDisabledReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[34]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2539,7 +2603,7 @@ func (x *CachingDisabledReply) String() string {
 func (*CachingDisabledReply) ProtoMessage() {}
 
 func (x *CachingDisabledReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[34]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2552,7 +2616,7 @@ func (x *CachingDisabledReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CachingDisabledReply.ProtoReflect.Descriptor instead.
 func (*CachingDisabledReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{34}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CachingDisabledReply) GetDisabled() bool {
@@ -2573,7 +2637,7 @@ type ReplicationStateReply struct {
 func (x *ReplicationStateReply) Reset() {
 	*x = ReplicationStateReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[35]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2586,7 +2650,7 @@ func (x *ReplicationStateReply) String() string {
 func (*ReplicationStateReply) ProtoMessage() {}
 
 func (x *ReplicationStateReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[35]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2599,7 +2663,7 @@ func (x *ReplicationStateReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplicationStateReply.ProtoReflect.Descriptor instead.
 func (*ReplicationStateReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{35}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ReplicationStateReply) GetState() int32 {
@@ -2622,7 +2686,7 @@ type ResponseWrapDataArgs struct {
 func (x *ResponseWrapDataArgs) Reset() {
 	*x = ResponseWrapDataArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[36]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2635,7 +2699,7 @@ func (x *ResponseWrapDataArgs) String() string {
 func (*ResponseWrapDataArgs) ProtoMessage() {}
 
 func (x *ResponseWrapDataArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[36]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2648,7 +2712,7 @@ func (x *ResponseWrapDataArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseWrapDataArgs.ProtoReflect.Descriptor instead.
 func (*ResponseWrapDataArgs) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{36}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ResponseWrapDataArgs) GetData() string {
@@ -2684,7 +2748,7 @@ type ResponseWrapDataReply struct {
 func (x *ResponseWrapDataReply) Reset() {
 	*x = ResponseWrapDataReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[37]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2697,7 +2761,7 @@ func (x *ResponseWrapDataReply) String() string {
 func (*ResponseWrapDataReply) ProtoMessage() {}
 
 func (x *ResponseWrapDataReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[37]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2710,7 +2774,7 @@ func (x *ResponseWrapDataReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseWrapDataReply.ProtoReflect.Descriptor instead.
 func (*ResponseWrapDataReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{37}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ResponseWrapDataReply) GetWrapInfo() *ResponseWrapInfo {
@@ -2738,7 +2802,7 @@ type MlockEnabledReply struct {
 func (x *MlockEnabledReply) Reset() {
 	*x = MlockEnabledReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[38]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2751,7 +2815,7 @@ func (x *MlockEnabledReply) String() string {
 func (*MlockEnabledReply) ProtoMessage() {}
 
 func (x *MlockEnabledReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[38]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2764,7 +2828,7 @@ func (x *MlockEnabledReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MlockEnabledReply.ProtoReflect.Descriptor instead.
 func (*MlockEnabledReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{38}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *MlockEnabledReply) GetEnabled() bool {
@@ -2785,7 +2849,7 @@ type LocalMountReply struct {
 func (x *LocalMountReply) Reset() {
 	*x = LocalMountReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[39]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2798,7 +2862,7 @@ func (x *LocalMountReply) String() string {
 func (*LocalMountReply) ProtoMessage() {}
 
 func (x *LocalMountReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[39]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2811,7 +2875,7 @@ func (x *LocalMountReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocalMountReply.ProtoReflect.Descriptor instead.
 func (*LocalMountReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{39}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *LocalMountReply) GetLocal() bool {
@@ -2832,7 +2896,7 @@ type EntityInfoArgs struct {
 func (x *EntityInfoArgs) Reset() {
 	*x = EntityInfoArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[40]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2845,7 +2909,7 @@ func (x *EntityInfoArgs) String() string {
 func (*EntityInfoArgs) ProtoMessage() {}
 
 func (x *EntityInfoArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[40]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2858,7 +2922,7 @@ func (x *EntityInfoArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityInfoArgs.ProtoReflect.Descriptor instead.
 func (*EntityInfoArgs) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{40}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *EntityInfoArgs) GetEntityID() string {
@@ -2880,7 +2944,7 @@ type EntityInfoReply struct {
 func (x *EntityInfoReply) Reset() {
 	*x = EntityInfoReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[41]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2893,7 +2957,7 @@ func (x *EntityInfoReply) String() string {
 func (*EntityInfoReply) ProtoMessage() {}
 
 func (x *EntityInfoReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[41]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2906,7 +2970,7 @@ func (x *EntityInfoReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityInfoReply.ProtoReflect.Descriptor instead.
 func (*EntityInfoReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{41}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *EntityInfoReply) GetEntity() *logical.Entity {
@@ -2935,7 +2999,7 @@ type GroupsForEntityReply struct {
 func (x *GroupsForEntityReply) Reset() {
 	*x = GroupsForEntityReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[42]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2948,7 +3012,7 @@ func (x *GroupsForEntityReply) String() string {
 func (*GroupsForEntityReply) ProtoMessage() {}
 
 func (x *GroupsForEntityReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[42]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2961,7 +3025,7 @@ func (x *GroupsForEntityReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupsForEntityReply.ProtoReflect.Descriptor instead.
 func (*GroupsForEntityReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{42}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GroupsForEntityReply) GetGroups() []*logical.Group {
@@ -2990,7 +3054,7 @@ type PluginEnvReply struct {
 func (x *PluginEnvReply) Reset() {
 	*x = PluginEnvReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[43]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[44]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3003,7 +3067,7 @@ func (x *PluginEnvReply) String() string {
 func (*PluginEnvReply) ProtoMessage() {}
 
 func (x *PluginEnvReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[43]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[44]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3016,7 +3080,7 @@ func (x *PluginEnvReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PluginEnvReply.ProtoReflect.Descriptor instead.
 func (*PluginEnvReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{43}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *PluginEnvReply) GetPluginEnvironment() *logical.PluginEnvironment {
@@ -3044,7 +3108,7 @@ type GeneratePasswordFromPolicyRequest struct {
 func (x *GeneratePasswordFromPolicyRequest) Reset() {
 	*x = GeneratePasswordFromPolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[44]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[45]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3057,7 +3121,7 @@ func (x *GeneratePasswordFromPolicyRequest) String() string {
 func (*GeneratePasswordFromPolicyRequest) ProtoMessage() {}
 
 func (x *GeneratePasswordFromPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[44]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[45]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3070,7 +3134,7 @@ func (x *GeneratePasswordFromPolicyRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GeneratePasswordFromPolicyRequest.ProtoReflect.Descriptor instead.
 func (*GeneratePasswordFromPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{44}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *GeneratePasswordFromPolicyRequest) GetPolicyName() string {
@@ -3091,7 +3155,7 @@ type GeneratePasswordFromPolicyReply struct {
 func (x *GeneratePasswordFromPolicyReply) Reset() {
 	*x = GeneratePasswordFromPolicyReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[45]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[46]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3104,7 +3168,7 @@ func (x *GeneratePasswordFromPolicyReply) String() string {
 func (*GeneratePasswordFromPolicyReply) ProtoMessage() {}
 
 func (x *GeneratePasswordFromPolicyReply) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[45]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[46]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3117,7 +3181,7 @@ func (x *GeneratePasswordFromPolicyReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeneratePasswordFromPolicyReply.ProtoReflect.Descriptor instead.
 func (*GeneratePasswordFromPolicyReply) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{45}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *GeneratePasswordFromPolicyReply) GetPassword() string {
@@ -3144,7 +3208,7 @@ type Connection struct {
 func (x *Connection) Reset() {
 	*x = Connection{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[46]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[47]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3157,7 +3221,7 @@ func (x *Connection) String() string {
 func (*Connection) ProtoMessage() {}
 
 func (x *Connection) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[46]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[47]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3170,7 +3234,7 @@ func (x *Connection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Connection.ProtoReflect.Descriptor instead.
 func (*Connection) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{46}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *Connection) GetRemoteAddr() string {
@@ -3216,7 +3280,7 @@ type ConnectionState struct {
 func (x *ConnectionState) Reset() {
 	*x = ConnectionState{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[47]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[48]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3229,7 +3293,7 @@ func (x *ConnectionState) String() string {
 func (*ConnectionState) ProtoMessage() {}
 
 func (x *ConnectionState) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[47]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[48]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3242,7 +3306,7 @@ func (x *ConnectionState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectionState.ProtoReflect.Descriptor instead.
 func (*ConnectionState) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{47}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ConnectionState) GetVersion() uint32 {
@@ -3340,7 +3404,7 @@ type Certificate struct {
 func (x *Certificate) Reset() {
 	*x = Certificate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[48]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[49]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3353,7 +3417,7 @@ func (x *Certificate) String() string {
 func (*Certificate) ProtoMessage() {}
 
 func (x *Certificate) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[48]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[49]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3366,7 +3430,7 @@ func (x *Certificate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Certificate.ProtoReflect.Descriptor instead.
 func (*Certificate) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{48}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *Certificate) GetAsn1Data() []byte {
@@ -3387,7 +3451,7 @@ type CertificateChain struct {
 func (x *CertificateChain) Reset() {
 	*x = CertificateChain{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[49]
+		mi := &file_sdk_plugin_pb_backend_proto_msgTypes[50]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3400,7 +3464,7 @@ func (x *CertificateChain) String() string {
 func (*CertificateChain) ProtoMessage() {}
 
 func (x *CertificateChain) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[49]
+	mi := &file_sdk_plugin_pb_backend_proto_msgTypes[50]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3413,7 +3477,7 @@ func (x *CertificateChain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CertificateChain.ProtoReflect.Descriptor instead.
 func (*CertificateChain) Descriptor() ([]byte, []int) {
-	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{49}
+	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *CertificateChain) GetCertificates() []*Certificate {
@@ -3716,7 +3780,12 @@ var file_sdk_plugin_pb_backend_proto_rawDesc = []byte{
 	0x12, 0x10, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x65,
 	0x72, 0x72, 0x22, 0x1f, 0x0a, 0x09, 0x54, 0x79, 0x70, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12,
 	0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x74,
-	0x79, 0x70, 0x65, 0x22, 0x25, 0x0a, 0x11, 0x49, 0x6e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
+	0x79, 0x70, 0x65, 0x22, 0x4e, 0x0a, 0x0c, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65,
+	0x70, 0x6c, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69,
+	0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f,
+	0x6e, 0x12, 0x10, 0x0a, 0x03, 0x73, 0x68, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
+	0x73, 0x68, 0x61, 0x22, 0x25, 0x0a, 0x11, 0x49, 0x6e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
 	0x65, 0x4b, 0x65, 0x79, 0x41, 0x72, 0x67, 0x73, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x22, 0x53, 0x0a, 0x0c, 0x53, 0x74,
 	0x6f, 0x72, 0x61, 0x67, 0x65, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65,
@@ -3855,7 +3924,7 @@ var file_sdk_plugin_pb_backend_proto_rawDesc = []byte{
 	0x65, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x12, 0x33, 0x0a, 0x0c, 0x63, 0x65, 0x72, 0x74, 0x69, 0x66,
 	0x69, 0x63, 0x61, 0x74, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x70,
 	0x62, 0x2e, 0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x52, 0x0c, 0x63,
-	0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x73, 0x32, 0xa5, 0x03, 0x0a, 0x07,
+	0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x73, 0x32, 0xcd, 0x03, 0x0a, 0x07,
 	0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x12, 0x3e, 0x0a, 0x0d, 0x48, 0x61, 0x6e, 0x64, 0x6c,
 	0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x2e, 0x70, 0x62, 0x2e, 0x48, 0x61,
 	0x6e, 0x64, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x41, 0x72, 0x67, 0x73, 0x1a,
@@ -3882,67 +3951,69 @@ var file_sdk_plugin_pb_backend_proto_rawDesc = []byte{
 	0x62, 0x2e, 0x49, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x52, 0x65, 0x70, 0x6c,
 	0x79, 0x12, 0x20, 0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45,
 	0x6d, 0x70, 0x74, 0x79, 0x1a, 0x0d, 0x2e, 0x70, 0x62, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52, 0x65,
-	0x70, 0x6c, 0x79, 0x32, 0xd5, 0x01, 0x0a, 0x07, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x12,
-	0x31, 0x0a, 0x04, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x13, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f,
-	0x72, 0x61, 0x67, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x14, 0x2e, 0x70,
-	0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x70,
-	0x6c, 0x79, 0x12, 0x2e, 0x0a, 0x03, 0x47, 0x65, 0x74, 0x12, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x53,
-	0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x47, 0x65, 0x74, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x13, 0x2e,
-	0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70,
-	0x6c, 0x79, 0x12, 0x2e, 0x0a, 0x03, 0x50, 0x75, 0x74, 0x12, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x53,
-	0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x50, 0x75, 0x74, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x13, 0x2e,
-	0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x50, 0x75, 0x74, 0x52, 0x65, 0x70,
-	0x6c, 0x79, 0x12, 0x37, 0x0a, 0x06, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x12, 0x15, 0x2e, 0x70,
-	0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x41,
-	0x72, 0x67, 0x73, 0x1a, 0x16, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65,
-	0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x32, 0xb1, 0x05, 0x0a, 0x0a,
-	0x53, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x56, 0x69, 0x65, 0x77, 0x12, 0x2a, 0x0a, 0x0f, 0x44, 0x65,
-	0x66, 0x61, 0x75, 0x6c, 0x74, 0x4c, 0x65, 0x61, 0x73, 0x65, 0x54, 0x54, 0x4c, 0x12, 0x09, 0x2e,
-	0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x0c, 0x2e, 0x70, 0x62, 0x2e, 0x54, 0x54,
-	0x4c, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x26, 0x0a, 0x0b, 0x4d, 0x61, 0x78, 0x4c, 0x65, 0x61,
+	0x70, 0x6c, 0x79, 0x12, 0x26, 0x0a, 0x07, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x09,
+	0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x10, 0x2e, 0x70, 0x62, 0x2e, 0x56,
+	0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x32, 0xd5, 0x01, 0x0a, 0x07,
+	0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x12, 0x31, 0x0a, 0x04, 0x4c, 0x69, 0x73, 0x74, 0x12,
+	0x13, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x4c, 0x69, 0x73, 0x74,
+	0x41, 0x72, 0x67, 0x73, 0x1a, 0x14, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67,
+	0x65, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x2e, 0x0a, 0x03, 0x47, 0x65,
+	0x74, 0x12, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x47, 0x65,
+	0x74, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x13, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61,
+	0x67, 0x65, 0x47, 0x65, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x2e, 0x0a, 0x03, 0x50, 0x75,
+	0x74, 0x12, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x50, 0x75,
+	0x74, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x13, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61,
+	0x67, 0x65, 0x50, 0x75, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x37, 0x0a, 0x06, 0x44, 0x65,
+	0x6c, 0x65, 0x74, 0x65, 0x12, 0x15, 0x2e, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67,
+	0x65, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x16, 0x2e, 0x70, 0x62,
+	0x2e, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65,
+	0x70, 0x6c, 0x79, 0x32, 0xb1, 0x05, 0x0a, 0x0a, 0x53, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x56, 0x69,
+	0x65, 0x77, 0x12, 0x2a, 0x0a, 0x0f, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x4c, 0x65, 0x61,
 	0x73, 0x65, 0x54, 0x54, 0x4c, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
 	0x1a, 0x0c, 0x2e, 0x70, 0x62, 0x2e, 0x54, 0x54, 0x4c, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x26,
-	0x0a, 0x07, 0x54, 0x61, 0x69, 0x6e, 0x74, 0x65, 0x64, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45,
-	0x6d, 0x70, 0x74, 0x79, 0x1a, 0x10, 0x2e, 0x70, 0x62, 0x2e, 0x54, 0x61, 0x69, 0x6e, 0x74, 0x65,
-	0x64, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x36, 0x0a, 0x0f, 0x43, 0x61, 0x63, 0x68, 0x69, 0x6e,
-	0x67, 0x44, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45,
-	0x6d, 0x70, 0x74, 0x79, 0x1a, 0x18, 0x2e, 0x70, 0x62, 0x2e, 0x43, 0x61, 0x63, 0x68, 0x69, 0x6e,
-	0x67, 0x44, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x38,
-	0x0a, 0x10, 0x52, 0x65, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61,
-	0x74, 0x65, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x19, 0x2e,
-	0x70, 0x62, 0x2e, 0x52, 0x65, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74,
-	0x61, 0x74, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x47, 0x0a, 0x10, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x57, 0x72, 0x61, 0x70, 0x44, 0x61, 0x74, 0x61, 0x12, 0x18, 0x2e, 0x70,
-	0x62, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x57, 0x72, 0x61, 0x70, 0x44, 0x61,
-	0x74, 0x61, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x19, 0x2e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x57, 0x72, 0x61, 0x70, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x70, 0x6c,
-	0x79, 0x12, 0x30, 0x0a, 0x0c, 0x4d, 0x6c, 0x6f, 0x63, 0x6b, 0x45, 0x6e, 0x61, 0x62, 0x6c, 0x65,
-	0x64, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x15, 0x2e, 0x70,
-	0x62, 0x2e, 0x4d, 0x6c, 0x6f, 0x63, 0x6b, 0x45, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x52, 0x65,
-	0x70, 0x6c, 0x79, 0x12, 0x2c, 0x0a, 0x0a, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x4d, 0x6f, 0x75, 0x6e,
-	0x74, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x13, 0x2e, 0x70,
-	0x62, 0x2e, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x4d, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x6c,
-	0x79, 0x12, 0x35, 0x0a, 0x0a, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x49, 0x6e, 0x66, 0x6f, 0x12,
+	0x0a, 0x0b, 0x4d, 0x61, 0x78, 0x4c, 0x65, 0x61, 0x73, 0x65, 0x54, 0x54, 0x4c, 0x12, 0x09, 0x2e,
+	0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x0c, 0x2e, 0x70, 0x62, 0x2e, 0x54, 0x54,
+	0x4c, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x26, 0x0a, 0x07, 0x54, 0x61, 0x69, 0x6e, 0x74, 0x65,
+	0x64, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x10, 0x2e, 0x70,
+	0x62, 0x2e, 0x54, 0x61, 0x69, 0x6e, 0x74, 0x65, 0x64, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x36,
+	0x0a, 0x0f, 0x43, 0x61, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x44, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65,
+	0x64, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x18, 0x2e, 0x70,
+	0x62, 0x2e, 0x43, 0x61, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x44, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65,
+	0x64, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x38, 0x0a, 0x10, 0x52, 0x65, 0x70, 0x6c, 0x69, 0x63,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e,
+	0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x19, 0x2e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x70, 0x6c, 0x69,
+	0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79,
+	0x12, 0x47, 0x0a, 0x10, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x57, 0x72, 0x61, 0x70,
+	0x44, 0x61, 0x74, 0x61, 0x12, 0x18, 0x2e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x57, 0x72, 0x61, 0x70, 0x44, 0x61, 0x74, 0x61, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x19,
+	0x2e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x57, 0x72, 0x61, 0x70,
+	0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x30, 0x0a, 0x0c, 0x4d, 0x6c, 0x6f,
+	0x63, 0x6b, 0x45, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45,
+	0x6d, 0x70, 0x74, 0x79, 0x1a, 0x15, 0x2e, 0x70, 0x62, 0x2e, 0x4d, 0x6c, 0x6f, 0x63, 0x6b, 0x45,
+	0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x2c, 0x0a, 0x0a, 0x4c,
+	0x6f, 0x63, 0x61, 0x6c, 0x4d, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45,
+	0x6d, 0x70, 0x74, 0x79, 0x1a, 0x13, 0x2e, 0x70, 0x62, 0x2e, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x4d,
+	0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x35, 0x0a, 0x0a, 0x45, 0x6e, 0x74,
+	0x69, 0x74, 0x79, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6e, 0x74,
+	0x69, 0x74, 0x79, 0x49, 0x6e, 0x66, 0x6f, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x13, 0x2e, 0x70, 0x62,
+	0x2e, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x70, 0x6c, 0x79,
+	0x12, 0x2a, 0x0a, 0x09, 0x50, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x45, 0x6e, 0x76, 0x12, 0x09, 0x2e,
+	0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x50, 0x6c,
+	0x75, 0x67, 0x69, 0x6e, 0x45, 0x6e, 0x76, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x3f, 0x0a, 0x0f,
+	0x47, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x46, 0x6f, 0x72, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x12,
 	0x12, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x49, 0x6e, 0x66, 0x6f, 0x41,
-	0x72, 0x67, 0x73, 0x1a, 0x13, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x49,
-	0x6e, 0x66, 0x6f, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x2a, 0x0a, 0x09, 0x50, 0x6c, 0x75, 0x67,
-	0x69, 0x6e, 0x45, 0x6e, 0x76, 0x12, 0x09, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
-	0x1a, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x50, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x45, 0x6e, 0x76, 0x52,
-	0x65, 0x70, 0x6c, 0x79, 0x12, 0x3f, 0x0a, 0x0f, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x46, 0x6f,
-	0x72, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x12, 0x12, 0x2e, 0x70, 0x62, 0x2e, 0x45, 0x6e, 0x74,
-	0x69, 0x74, 0x79, 0x49, 0x6e, 0x66, 0x6f, 0x41, 0x72, 0x67, 0x73, 0x1a, 0x18, 0x2e, 0x70, 0x62,
-	0x2e, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x46, 0x6f, 0x72, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79,
-	0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x68, 0x0a, 0x1a, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74,
-	0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x46, 0x72, 0x6f, 0x6d, 0x50, 0x6f, 0x6c,
-	0x69, 0x63, 0x79, 0x12, 0x25, 0x2e, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74,
-	0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x46, 0x72, 0x6f, 0x6d, 0x50, 0x6f, 0x6c,
-	0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x70, 0x62, 0x2e,
-	0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64,
-	0x46, 0x72, 0x6f, 0x6d, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x42,
-	0x2a, 0x5a, 0x28, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x61,
-	0x73, 0x68, 0x69, 0x63, 0x6f, 0x72, 0x70, 0x2f, 0x76, 0x61, 0x75, 0x6c, 0x74, 0x2f, 0x73, 0x64,
-	0x6b, 0x2f, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x72, 0x67, 0x73, 0x1a, 0x18, 0x2e, 0x70, 0x62, 0x2e, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x46,
+	0x6f, 0x72, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x68, 0x0a,
+	0x1a, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
+	0x64, 0x46, 0x72, 0x6f, 0x6d, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x25, 0x2e, 0x70, 0x62,
+	0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
+	0x64, 0x46, 0x72, 0x6f, 0x6d, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x23, 0x2e, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65,
+	0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x46, 0x72, 0x6f, 0x6d, 0x50, 0x6f, 0x6c, 0x69,
+	0x63, 0x79, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x42, 0x2a, 0x5a, 0x28, 0x67, 0x69, 0x74, 0x68, 0x75,
+	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x61, 0x73, 0x68, 0x69, 0x63, 0x6f, 0x72, 0x70, 0x2f,
+	0x76, 0x61, 0x75, 0x6c, 0x74, 0x2f, 0x73, 0x64, 0x6b, 0x2f, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e,
+	0x2f, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -3957,7 +4028,7 @@ func file_sdk_plugin_pb_backend_proto_rawDescGZIP() []byte {
 	return file_sdk_plugin_pb_backend_proto_rawDescData
 }
 
-var file_sdk_plugin_pb_backend_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
+var file_sdk_plugin_pb_backend_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
 var file_sdk_plugin_pb_backend_proto_goTypes = []interface{}{
 	(*Empty)(nil),                             // 0: pb.Empty
 	(*Header)(nil),                            // 1: pb.Header
@@ -3981,65 +4052,66 @@ var file_sdk_plugin_pb_backend_proto_goTypes = []interface{}{
 	(*SetupArgs)(nil),                         // 19: pb.SetupArgs
 	(*SetupReply)(nil),                        // 20: pb.SetupReply
 	(*TypeReply)(nil),                         // 21: pb.TypeReply
-	(*InvalidateKeyArgs)(nil),                 // 22: pb.InvalidateKeyArgs
-	(*StorageEntry)(nil),                      // 23: pb.StorageEntry
-	(*StorageListArgs)(nil),                   // 24: pb.StorageListArgs
-	(*StorageListReply)(nil),                  // 25: pb.StorageListReply
-	(*StorageGetArgs)(nil),                    // 26: pb.StorageGetArgs
-	(*StorageGetReply)(nil),                   // 27: pb.StorageGetReply
-	(*StoragePutArgs)(nil),                    // 28: pb.StoragePutArgs
-	(*StoragePutReply)(nil),                   // 29: pb.StoragePutReply
-	(*StorageDeleteArgs)(nil),                 // 30: pb.StorageDeleteArgs
-	(*StorageDeleteReply)(nil),                // 31: pb.StorageDeleteReply
-	(*TTLReply)(nil),                          // 32: pb.TTLReply
-	(*TaintedReply)(nil),                      // 33: pb.TaintedReply
-	(*CachingDisabledReply)(nil),              // 34: pb.CachingDisabledReply
-	(*ReplicationStateReply)(nil),             // 35: pb.ReplicationStateReply
-	(*ResponseWrapDataArgs)(nil),              // 36: pb.ResponseWrapDataArgs
-	(*ResponseWrapDataReply)(nil),             // 37: pb.ResponseWrapDataReply
-	(*MlockEnabledReply)(nil),                 // 38: pb.MlockEnabledReply
-	(*LocalMountReply)(nil),                   // 39: pb.LocalMountReply
-	(*EntityInfoArgs)(nil),                    // 40: pb.EntityInfoArgs
-	(*EntityInfoReply)(nil),                   // 41: pb.EntityInfoReply
-	(*GroupsForEntityReply)(nil),              // 42: pb.GroupsForEntityReply
-	(*PluginEnvReply)(nil),                    // 43: pb.PluginEnvReply
-	(*GeneratePasswordFromPolicyRequest)(nil), // 44: pb.GeneratePasswordFromPolicyRequest
-	(*GeneratePasswordFromPolicyReply)(nil),   // 45: pb.GeneratePasswordFromPolicyReply
-	(*Connection)(nil),                        // 46: pb.Connection
-	(*ConnectionState)(nil),                   // 47: pb.ConnectionState
-	(*Certificate)(nil),                       // 48: pb.Certificate
-	(*CertificateChain)(nil),                  // 49: pb.CertificateChain
-	nil,                                       // 50: pb.Request.HeadersEntry
-	nil,                                       // 51: pb.Auth.MetadataEntry
-	nil,                                       // 52: pb.TokenEntry.MetaEntry
-	nil,                                       // 53: pb.TokenEntry.InternalMetaEntry
-	nil,                                       // 54: pb.Response.HeadersEntry
-	nil,                                       // 55: pb.SetupArgs.ConfigEntry
-	(*logical.Alias)(nil),                     // 56: logical.Alias
-	(*timestamppb.Timestamp)(nil),             // 57: google.protobuf.Timestamp
-	(*logical.Entity)(nil),                    // 58: logical.Entity
-	(*logical.Group)(nil),                     // 59: logical.Group
-	(*logical.PluginEnvironment)(nil),         // 60: logical.PluginEnvironment
+	(*VersionReply)(nil),                      // 22: pb.VersionReply
+	(*InvalidateKeyArgs)(nil),                 // 23: pb.InvalidateKeyArgs
+	(*StorageEntry)(nil),                      // 24: pb.StorageEntry
+	(*StorageListArgs)(nil),                   // 25: pb.StorageListArgs
+	(*StorageListReply)(nil),                  // 26: pb.StorageListReply
+	(*StorageGetArgs)(nil),                    // 27: pb.StorageGetArgs
+	(*StorageGetReply)(nil),                   // 28: pb.StorageGetReply
+	(*StoragePutArgs)(nil),                    // 29: pb.StoragePutArgs
+	(*StoragePutReply)(nil),                   // 30: pb.StoragePutReply
+	(*StorageDeleteArgs)(nil),                 // 31: pb.StorageDeleteArgs
+	(*StorageDeleteReply)(nil),                // 32: pb.StorageDeleteReply
+	(*TTLReply)(nil),                          // 33: pb.TTLReply
+	(*TaintedReply)(nil),                      // 34: pb.TaintedReply
+	(*CachingDisabledReply)(nil),              // 35: pb.CachingDisabledReply
+	(*ReplicationStateReply)(nil),             // 36: pb.ReplicationStateReply
+	(*ResponseWrapDataArgs)(nil),              // 37: pb.ResponseWrapDataArgs
+	(*ResponseWrapDataReply)(nil),             // 38: pb.ResponseWrapDataReply
+	(*MlockEnabledReply)(nil),                 // 39: pb.MlockEnabledReply
+	(*LocalMountReply)(nil),                   // 40: pb.LocalMountReply
+	(*EntityInfoArgs)(nil),                    // 41: pb.EntityInfoArgs
+	(*EntityInfoReply)(nil),                   // 42: pb.EntityInfoReply
+	(*GroupsForEntityReply)(nil),              // 43: pb.GroupsForEntityReply
+	(*PluginEnvReply)(nil),                    // 44: pb.PluginEnvReply
+	(*GeneratePasswordFromPolicyRequest)(nil), // 45: pb.GeneratePasswordFromPolicyRequest
+	(*GeneratePasswordFromPolicyReply)(nil),   // 46: pb.GeneratePasswordFromPolicyReply
+	(*Connection)(nil),                        // 47: pb.Connection
+	(*ConnectionState)(nil),                   // 48: pb.ConnectionState
+	(*Certificate)(nil),                       // 49: pb.Certificate
+	(*CertificateChain)(nil),                  // 50: pb.CertificateChain
+	nil,                                       // 51: pb.Request.HeadersEntry
+	nil,                                       // 52: pb.Auth.MetadataEntry
+	nil,                                       // 53: pb.TokenEntry.MetaEntry
+	nil,                                       // 54: pb.TokenEntry.InternalMetaEntry
+	nil,                                       // 55: pb.Response.HeadersEntry
+	nil,                                       // 56: pb.SetupArgs.ConfigEntry
+	(*logical.Alias)(nil),                     // 57: logical.Alias
+	(*timestamppb.Timestamp)(nil),             // 58: google.protobuf.Timestamp
+	(*logical.Entity)(nil),                    // 59: logical.Entity
+	(*logical.Group)(nil),                     // 60: logical.Group
+	(*logical.PluginEnvironment)(nil),         // 61: logical.PluginEnvironment
 }
 var file_sdk_plugin_pb_backend_proto_depIDxs = []int32{
 	8,  // 0: pb.Request.secret:type_name -> pb.Secret
 	5,  // 1: pb.Request.auth:type_name -> pb.Auth
-	50, // 2: pb.Request.headers:type_name -> pb.Request.HeadersEntry
+	51, // 2: pb.Request.headers:type_name -> pb.Request.HeadersEntry
 	11, // 3: pb.Request.wrap_info:type_name -> pb.RequestWrapInfo
-	46, // 4: pb.Request.connection:type_name -> pb.Connection
+	47, // 4: pb.Request.connection:type_name -> pb.Connection
 	7,  // 5: pb.Auth.lease_options:type_name -> pb.LeaseOptions
-	51, // 6: pb.Auth.metadata:type_name -> pb.Auth.MetadataEntry
-	56, // 7: pb.Auth.alias:type_name -> logical.Alias
-	56, // 8: pb.Auth.group_aliases:type_name -> logical.Alias
-	52, // 9: pb.TokenEntry.meta:type_name -> pb.TokenEntry.MetaEntry
-	53, // 10: pb.TokenEntry.internal_meta:type_name -> pb.TokenEntry.InternalMetaEntry
-	57, // 11: pb.LeaseOptions.issue_time:type_name -> google.protobuf.Timestamp
+	52, // 6: pb.Auth.metadata:type_name -> pb.Auth.MetadataEntry
+	57, // 7: pb.Auth.alias:type_name -> logical.Alias
+	57, // 8: pb.Auth.group_aliases:type_name -> logical.Alias
+	53, // 9: pb.TokenEntry.meta:type_name -> pb.TokenEntry.MetaEntry
+	54, // 10: pb.TokenEntry.internal_meta:type_name -> pb.TokenEntry.InternalMetaEntry
+	58, // 11: pb.LeaseOptions.issue_time:type_name -> google.protobuf.Timestamp
 	7,  // 12: pb.Secret.lease_options:type_name -> pb.LeaseOptions
 	8,  // 13: pb.Response.secret:type_name -> pb.Secret
 	5,  // 14: pb.Response.auth:type_name -> pb.Auth
 	10, // 15: pb.Response.wrap_info:type_name -> pb.ResponseWrapInfo
-	54, // 16: pb.Response.headers:type_name -> pb.Response.HeadersEntry
-	57, // 17: pb.ResponseWrapInfo.creation_time:type_name -> google.protobuf.Timestamp
+	55, // 16: pb.Response.headers:type_name -> pb.Response.HeadersEntry
+	58, // 17: pb.ResponseWrapInfo.creation_time:type_name -> google.protobuf.Timestamp
 	4,  // 18: pb.HandleRequestArgs.request:type_name -> pb.Request
 	9,  // 19: pb.HandleRequestReply.response:type_name -> pb.Response
 	2,  // 20: pb.HandleRequestReply.err:type_name -> pb.ProtoError
@@ -4047,69 +4119,71 @@ var file_sdk_plugin_pb_backend_proto_depIDxs = []int32{
 	3,  // 22: pb.SpecialPathsReply.paths:type_name -> pb.Paths
 	4,  // 23: pb.HandleExistenceCheckArgs.request:type_name -> pb.Request
 	2,  // 24: pb.HandleExistenceCheckReply.err:type_name -> pb.ProtoError
-	55, // 25: pb.SetupArgs.Config:type_name -> pb.SetupArgs.ConfigEntry
-	23, // 26: pb.StorageGetReply.entry:type_name -> pb.StorageEntry
-	23, // 27: pb.StoragePutArgs.entry:type_name -> pb.StorageEntry
+	56, // 25: pb.SetupArgs.Config:type_name -> pb.SetupArgs.ConfigEntry
+	24, // 26: pb.StorageGetReply.entry:type_name -> pb.StorageEntry
+	24, // 27: pb.StoragePutArgs.entry:type_name -> pb.StorageEntry
 	10, // 28: pb.ResponseWrapDataReply.wrap_info:type_name -> pb.ResponseWrapInfo
-	58, // 29: pb.EntityInfoReply.entity:type_name -> logical.Entity
-	59, // 30: pb.GroupsForEntityReply.groups:type_name -> logical.Group
-	60, // 31: pb.PluginEnvReply.plugin_environment:type_name -> logical.PluginEnvironment
-	47, // 32: pb.Connection.connection_state:type_name -> pb.ConnectionState
-	49, // 33: pb.ConnectionState.peer_certificates:type_name -> pb.CertificateChain
-	49, // 34: pb.ConnectionState.verified_chains:type_name -> pb.CertificateChain
-	48, // 35: pb.CertificateChain.certificates:type_name -> pb.Certificate
+	59, // 29: pb.EntityInfoReply.entity:type_name -> logical.Entity
+	60, // 30: pb.GroupsForEntityReply.groups:type_name -> logical.Group
+	61, // 31: pb.PluginEnvReply.plugin_environment:type_name -> logical.PluginEnvironment
+	48, // 32: pb.Connection.connection_state:type_name -> pb.ConnectionState
+	50, // 33: pb.ConnectionState.peer_certificates:type_name -> pb.CertificateChain
+	50, // 34: pb.ConnectionState.verified_chains:type_name -> pb.CertificateChain
+	49, // 35: pb.CertificateChain.certificates:type_name -> pb.Certificate
 	1,  // 36: pb.Request.HeadersEntry.value:type_name -> pb.Header
 	1,  // 37: pb.Response.HeadersEntry.value:type_name -> pb.Header
 	12, // 38: pb.Backend.HandleRequest:input_type -> pb.HandleRequestArgs
 	0,  // 39: pb.Backend.SpecialPaths:input_type -> pb.Empty
 	17, // 40: pb.Backend.HandleExistenceCheck:input_type -> pb.HandleExistenceCheckArgs
 	0,  // 41: pb.Backend.Cleanup:input_type -> pb.Empty
-	22, // 42: pb.Backend.InvalidateKey:input_type -> pb.InvalidateKeyArgs
+	23, // 42: pb.Backend.InvalidateKey:input_type -> pb.InvalidateKeyArgs
 	19, // 43: pb.Backend.Setup:input_type -> pb.SetupArgs
 	14, // 44: pb.Backend.Initialize:input_type -> pb.InitializeArgs
 	0,  // 45: pb.Backend.Type:input_type -> pb.Empty
-	24, // 46: pb.Storage.List:input_type -> pb.StorageListArgs
-	26, // 47: pb.Storage.Get:input_type -> pb.StorageGetArgs
-	28, // 48: pb.Storage.Put:input_type -> pb.StoragePutArgs
-	30, // 49: pb.Storage.Delete:input_type -> pb.StorageDeleteArgs
-	0,  // 50: pb.SystemView.DefaultLeaseTTL:input_type -> pb.Empty
-	0,  // 51: pb.SystemView.MaxLeaseTTL:input_type -> pb.Empty
-	0,  // 52: pb.SystemView.Tainted:input_type -> pb.Empty
-	0,  // 53: pb.SystemView.CachingDisabled:input_type -> pb.Empty
-	0,  // 54: pb.SystemView.ReplicationState:input_type -> pb.Empty
-	36, // 55: pb.SystemView.ResponseWrapData:input_type -> pb.ResponseWrapDataArgs
-	0,  // 56: pb.SystemView.MlockEnabled:input_type -> pb.Empty
-	0,  // 57: pb.SystemView.LocalMount:input_type -> pb.Empty
-	40, // 58: pb.SystemView.EntityInfo:input_type -> pb.EntityInfoArgs
-	0,  // 59: pb.SystemView.PluginEnv:input_type -> pb.Empty
-	40, // 60: pb.SystemView.GroupsForEntity:input_type -> pb.EntityInfoArgs
-	44, // 61: pb.SystemView.GeneratePasswordFromPolicy:input_type -> pb.GeneratePasswordFromPolicyRequest
-	13, // 62: pb.Backend.HandleRequest:output_type -> pb.HandleRequestReply
-	16, // 63: pb.Backend.SpecialPaths:output_type -> pb.SpecialPathsReply
-	18, // 64: pb.Backend.HandleExistenceCheck:output_type -> pb.HandleExistenceCheckReply
-	0,  // 65: pb.Backend.Cleanup:output_type -> pb.Empty
-	0,  // 66: pb.Backend.InvalidateKey:output_type -> pb.Empty
-	20, // 67: pb.Backend.Setup:output_type -> pb.SetupReply
-	15, // 68: pb.Backend.Initialize:output_type -> pb.InitializeReply
-	21, // 69: pb.Backend.Type:output_type -> pb.TypeReply
-	25, // 70: pb.Storage.List:output_type -> pb.StorageListReply
-	27, // 71: pb.Storage.Get:output_type -> pb.StorageGetReply
-	29, // 72: pb.Storage.Put:output_type -> pb.StoragePutReply
-	31, // 73: pb.Storage.Delete:output_type -> pb.StorageDeleteReply
-	32, // 74: pb.SystemView.DefaultLeaseTTL:output_type -> pb.TTLReply
-	32, // 75: pb.SystemView.MaxLeaseTTL:output_type -> pb.TTLReply
-	33, // 76: pb.SystemView.Tainted:output_type -> pb.TaintedReply
-	34, // 77: pb.SystemView.CachingDisabled:output_type -> pb.CachingDisabledReply
-	35, // 78: pb.SystemView.ReplicationState:output_type -> pb.ReplicationStateReply
-	37, // 79: pb.SystemView.ResponseWrapData:output_type -> pb.ResponseWrapDataReply
-	38, // 80: pb.SystemView.MlockEnabled:output_type -> pb.MlockEnabledReply
-	39, // 81: pb.SystemView.LocalMount:output_type -> pb.LocalMountReply
-	41, // 82: pb.SystemView.EntityInfo:output_type -> pb.EntityInfoReply
-	43, // 83: pb.SystemView.PluginEnv:output_type -> pb.PluginEnvReply
-	42, // 84: pb.SystemView.GroupsForEntity:output_type -> pb.GroupsForEntityReply
-	45, // 85: pb.SystemView.GeneratePasswordFromPolicy:output_type -> pb.GeneratePasswordFromPolicyReply
-	62, // [62:86] is the sub-list for method output_type
-	38, // [38:62] is the sub-list for method input_type
+	0,  // 46: pb.Backend.Version:input_type -> pb.Empty
+	25, // 47: pb.Storage.List:input_type -> pb.StorageListArgs
+	27, // 48: pb.Storage.Get:input_type -> pb.StorageGetArgs
+	29, // 49: pb.Storage.Put:input_type -> pb.StoragePutArgs
+	31, // 50: pb.Storage.Delete:input_type -> pb.StorageDeleteArgs
+	0,  // 51: pb.SystemView.DefaultLeaseTTL:input_type -> pb.Empty
+	0,  // 52: pb.SystemView.MaxLeaseTTL:input_type -> pb.Empty
+	0,  // 53: pb.SystemView.Tainted:input_type -> pb.Empty
+	0,  // 54: pb.SystemView.CachingDisabled:input_type -> pb.Empty
+	0,  // 55: pb.SystemView.ReplicationState:input_type -> pb.Empty
+	37, // 56: pb.SystemView.ResponseWrapData:input_type -> pb.ResponseWrapDataArgs
+	0,  // 57: pb.SystemView.MlockEnabled:input_type -> pb.Empty
+	0,  // 58: pb.SystemView.LocalMount:input_type -> pb.Empty
+	41, // 59: pb.SystemView.EntityInfo:input_type -> pb.EntityInfoArgs
+	0,  // 60: pb.SystemView.PluginEnv:input_type -> pb.Empty
+	41, // 61: pb.SystemView.GroupsForEntity:input_type -> pb.EntityInfoArgs
+	45, // 62: pb.SystemView.GeneratePasswordFromPolicy:input_type -> pb.GeneratePasswordFromPolicyRequest
+	13, // 63: pb.Backend.HandleRequest:output_type -> pb.HandleRequestReply
+	16, // 64: pb.Backend.SpecialPaths:output_type -> pb.SpecialPathsReply
+	18, // 65: pb.Backend.HandleExistenceCheck:output_type -> pb.HandleExistenceCheckReply
+	0,  // 66: pb.Backend.Cleanup:output_type -> pb.Empty
+	0,  // 67: pb.Backend.InvalidateKey:output_type -> pb.Empty
+	20, // 68: pb.Backend.Setup:output_type -> pb.SetupReply
+	15, // 69: pb.Backend.Initialize:output_type -> pb.InitializeReply
+	21, // 70: pb.Backend.Type:output_type -> pb.TypeReply
+	22, // 71: pb.Backend.Version:output_type -> pb.VersionReply
+	26, // 72: pb.Storage.List:output_type -> pb.StorageListReply
+	28, // 73: pb.Storage.Get:output_type -> pb.StorageGetReply
+	30, // 74: pb.Storage.Put:output_type -> pb.StoragePutReply
+	32, // 75: pb.Storage.Delete:output_type -> pb.StorageDeleteReply
+	33, // 76: pb.SystemView.DefaultLeaseTTL:output_type -> pb.TTLReply
+	33, // 77: pb.SystemView.MaxLeaseTTL:output_type -> pb.TTLReply
+	34, // 78: pb.SystemView.Tainted:output_type -> pb.TaintedReply
+	35, // 79: pb.SystemView.CachingDisabled:output_type -> pb.CachingDisabledReply
+	36, // 80: pb.SystemView.ReplicationState:output_type -> pb.ReplicationStateReply
+	38, // 81: pb.SystemView.ResponseWrapData:output_type -> pb.ResponseWrapDataReply
+	39, // 82: pb.SystemView.MlockEnabled:output_type -> pb.MlockEnabledReply
+	40, // 83: pb.SystemView.LocalMount:output_type -> pb.LocalMountReply
+	42, // 84: pb.SystemView.EntityInfo:output_type -> pb.EntityInfoReply
+	44, // 85: pb.SystemView.PluginEnv:output_type -> pb.PluginEnvReply
+	43, // 86: pb.SystemView.GroupsForEntity:output_type -> pb.GroupsForEntityReply
+	46, // 87: pb.SystemView.GeneratePasswordFromPolicy:output_type -> pb.GeneratePasswordFromPolicyReply
+	63, // [63:88] is the sub-list for method output_type
+	38, // [38:63] is the sub-list for method input_type
 	38, // [38:38] is the sub-list for extension type_name
 	38, // [38:38] is the sub-list for extension extendee
 	0,  // [0:38] is the sub-list for field type_name
@@ -4386,7 +4460,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InvalidateKeyArgs); i {
+			switch v := v.(*VersionReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4398,7 +4472,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StorageEntry); i {
+			switch v := v.(*InvalidateKeyArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4410,7 +4484,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StorageListArgs); i {
+			switch v := v.(*StorageEntry); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4422,7 +4496,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StorageListReply); i {
+			switch v := v.(*StorageListArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4434,7 +4508,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StorageGetArgs); i {
+			switch v := v.(*StorageListReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4446,7 +4520,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StorageGetReply); i {
+			switch v := v.(*StorageGetArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4458,7 +4532,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StoragePutArgs); i {
+			switch v := v.(*StorageGetReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4470,7 +4544,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StoragePutReply); i {
+			switch v := v.(*StoragePutArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4482,7 +4556,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StorageDeleteArgs); i {
+			switch v := v.(*StoragePutReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4494,7 +4568,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StorageDeleteReply); i {
+			switch v := v.(*StorageDeleteArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4506,7 +4580,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TTLReply); i {
+			switch v := v.(*StorageDeleteReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4518,7 +4592,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TaintedReply); i {
+			switch v := v.(*TTLReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4530,7 +4604,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CachingDisabledReply); i {
+			switch v := v.(*TaintedReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4542,7 +4616,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReplicationStateReply); i {
+			switch v := v.(*CachingDisabledReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4554,7 +4628,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseWrapDataArgs); i {
+			switch v := v.(*ReplicationStateReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4566,7 +4640,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResponseWrapDataReply); i {
+			switch v := v.(*ResponseWrapDataArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4578,7 +4652,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MlockEnabledReply); i {
+			switch v := v.(*ResponseWrapDataReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4590,7 +4664,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LocalMountReply); i {
+			switch v := v.(*MlockEnabledReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4602,7 +4676,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EntityInfoArgs); i {
+			switch v := v.(*LocalMountReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4614,7 +4688,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EntityInfoReply); i {
+			switch v := v.(*EntityInfoArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4626,7 +4700,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GroupsForEntityReply); i {
+			switch v := v.(*EntityInfoReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4638,7 +4712,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PluginEnvReply); i {
+			switch v := v.(*GroupsForEntityReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4650,7 +4724,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GeneratePasswordFromPolicyRequest); i {
+			switch v := v.(*PluginEnvReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4662,7 +4736,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GeneratePasswordFromPolicyReply); i {
+			switch v := v.(*GeneratePasswordFromPolicyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4674,7 +4748,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Connection); i {
+			switch v := v.(*GeneratePasswordFromPolicyReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4686,7 +4760,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ConnectionState); i {
+			switch v := v.(*Connection); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4698,7 +4772,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Certificate); i {
+			switch v := v.(*ConnectionState); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4710,6 +4784,18 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			}
 		}
 		file_sdk_plugin_pb_backend_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Certificate); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sdk_plugin_pb_backend_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CertificateChain); i {
 			case 0:
 				return &v.state
@@ -4728,7 +4814,7 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sdk_plugin_pb_backend_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   56,
+			NumMessages:   57,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

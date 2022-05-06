@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -159,5 +159,13 @@ func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.In
 func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.TypeReply, error) {
 	return &pb.TypeReply{
 		Type: uint32(b.backend.Type()),
+	}, nil
+}
+
+func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *pb.Empty) (*pb.VersionReply, error) {
+	version := b.backend.Version()
+	return &pb.VersionReply{
+		Version: version.Version,
+		Sha:     version.Sha,
 	}, nil
 }
