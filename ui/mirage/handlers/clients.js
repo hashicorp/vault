@@ -17,7 +17,7 @@ const MOCK_MONTHLY_DATA = [
       distinct_entities: 0,
       entity_clients: 25,
       non_entity_tokens: 0,
-      non_entity_clients: 20,
+      non_entity_clients: 25,
       clients: 50,
     },
     namespaces: [
