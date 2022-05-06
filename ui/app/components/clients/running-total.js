@@ -58,14 +58,14 @@ export default class RunningTotal extends Component {
 
   get hasRunningTotalClients() {
     return (
-      typeof this.entityClientData.runningTotal === 'number' &&
+      typeof this.entityClientData.runningTotal === 'number' ||
       typeof this.nonEntityClientData.runningTotal === 'number'
     );
   }
 
   get hasAverageNewClients() {
     return (
-      typeof this.entityClientData.averageNewClients === 'number' &&
+      typeof this.entityClientData.averageNewClients === 'number' ||
       typeof this.nonEntityClientData.averageNewClients === 'number'
     );
   }

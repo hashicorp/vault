@@ -158,10 +158,9 @@ export default class LineChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
       // TODO: how to generalize this?
-      let { new_clients } = data || null;
       this.tooltipMonth = formatChartDate(data[this.xKey]);
       this.tooltipTotal = data[this.yKey] + ' total clients';
-      this.tooltipNew = (new_clients ? new_clients[this.yKey] : '0') + ' new clients';
+      this.tooltipNew = (data?.new_clients[this.yKey] || '0') + ' new clients';
       this.tooltipUpgradeText = '';
       let upgradeInfo = findUpgradeData(data);
       if (upgradeInfo) {
