@@ -16,7 +16,7 @@
   </div>
 
   <div class="is-flex-start">
-    <button id="continue" type="submit" class="button is-primary">
+    <button id="continue" type="submit" class="button is-primary" disabled={{(is-empty-value this.UUID)}}>
       Verify
     </button>
     <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button">

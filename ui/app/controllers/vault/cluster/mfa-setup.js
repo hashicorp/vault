@@ -16,6 +16,7 @@ export default class VaultClusterMfaSetupController extends Controller {
   }
 
   @action isUUIDVerified(verified) {
+    this.warning = ''; // clear the warning, otherwise it persists.
     if (verified) {
       this.onStep = 2;
     } else {
