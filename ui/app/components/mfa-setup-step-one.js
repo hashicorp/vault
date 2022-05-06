@@ -5,13 +5,13 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module MfaSetupStepOne
- * MfaSetupStepOne components are used to...
+ * MfaSetupStepOne component is a child component used in the end user setup for MFA. It records the UUID (aka method_id) and sends a admin-generate request.
  *
- * @example
- * ```js
- * <MfaSetupStepOne @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
- * ```
- * @param {object} isUUIDVerified - action from parent that returns a boolean from the child regarding whether or not the UUID was verified. If true then proceed to step 2.
+ * @param {string} entityId - the entityId of the user. This comes from the auth service which records it on loading of the cluster. A root user does not have an entityId.
+ * @param {function} isUUIDVerified - a function that consumes a boolean. Is true if the admin-generate is successful and false if it throws a warning or error.
+ * @param {boolean} restartFlow - a boolean that is true that is true if the user should proceed to step two or false if they should stay on step one.
+ * @param {function} saveUUIDandQrCode - A function that sends the inputted UUID and return qrCode from step one to the parent.
+ * @param {boolean} showWarning - whether a warning is returned from the admin-generate query. Needs to be passed to step two.
  */
 
 export default class MfaSetupStepOne extends Component {
