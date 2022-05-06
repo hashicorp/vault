@@ -1,3 +1,3 @@
 ```release-note:improvement
-cli: vault debug can now collect metrics from a DR Secondary cluster if unauthenticated metrics access is enabled
+cli/debug: added support for retrieving metrics from DR clusters if `unauthenticated_metrics_access` is enabled
 ```
