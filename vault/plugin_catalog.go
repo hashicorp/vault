@@ -448,8 +448,8 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unkonwn type.
-		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, "TODO", cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unknown type.
+		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, plugin.Version, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
 		if err != nil {
 			if errors.Is(err, ErrPluginBadType) {
 				retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
