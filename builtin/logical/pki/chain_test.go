@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -9,19 +10,47 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
 )
+
+func CBReq(b *backend, s logical.Storage, operation logical.Operation, path string, data map[string]interface{}) (*logical.Response, error) {
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  operation,
+		Path:       path,
+		Data:       data,
+		Storage:    s,
+		MountPoint: "pki/",
+	})
+	if err != nil || resp == nil {
+		return resp, err
+	}
+
+	if msg, ok := resp.Data["error"]; ok && msg != nil && len(msg.(string)) > 0 {
+		return resp, fmt.Errorf("%s", msg)
+	}
+
+	return resp, nil
+}
+
+func CBRead(b *backend, s logical.Storage, path string) (*logical.Response, error) {
+	return CBReq(b, s, logical.ReadOperation, path, make(map[string]interface{}))
+}
+
+func CBWrite(b *backend, s logical.Storage, path string, data map[string]interface{}) (*logical.Response, error) {
+	return CBReq(b, s, logical.UpdateOperation, path, data)
+}
+
+func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, error) {
+	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
+}
 
 // For speed, all keys are ECDSA.
 type CBGenerateKey struct {
 	Name string
 }
 
-func (c CBGenerateKey) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
-	resp, err := client.Logical().Write(mount+"/keys/generate/exported", map[string]interface{}{
+func (c CBGenerateKey) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
+	resp, err := CBWrite(b, s, "keys/generate/exported", map[string]interface{}{
 		"name": c.Name,
 		"algo": "ec",
 		"bits": 256,
@@ -41,8 +70,8 @@ type CBGenerateRoot struct {
 	ErrorMessage string
 }
 
-func (c CBGenerateRoot) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
-	url := mount + "/issuers/generate/root/"
+func (c CBGenerateRoot) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
+	url := "issuers/generate/root/"
 	data := make(map[string]interface{})
 
 	if c.Existing {
@@ -61,7 +90,7 @@ func (c CBGenerateRoot) Run(t *testing.T, client *api.Client, mount string, know
 		data["common_name"] = c.CommonName
 	}
 
-	resp, err := client.Logical().Write(url, data)
+	resp, err := CBWrite(b, s, url, data)
 	if err != nil {
 		if len(c.ErrorMessage) > 0 {
 			if !strings.Contains(err.Error(), c.ErrorMessage) {
@@ -92,9 +121,9 @@ type CBGenerateIntermediate struct {
 	ImportErrorMessage string
 }
 
-func (c CBGenerateIntermediate) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
+func (c CBGenerateIntermediate) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
 	// Build CSR
-	url := mount + "/issuers/generate/intermediate/"
+	url := "issuers/generate/intermediate/"
 	data := make(map[string]interface{})
 
 	if c.Existing {
@@ -107,7 +136,7 @@ func (c CBGenerateIntermediate) Run(t *testing.T, client *api.Client, mount stri
 		data["key_name"] = c.Key
 	}
 
-	resp, err := client.Logical().Write(url, data)
+	resp, err := CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to generate CSR for issuer (%v): %v / body: %v", c.Name, err, data)
 	}
@@ -119,14 +148,14 @@ func (c CBGenerateIntermediate) Run(t *testing.T, client *api.Client, mount stri
 	csr := resp.Data["csr"].(string)
 
 	// Sign CSR
-	url = fmt.Sprintf(mount+"/issuer/%s/sign-intermediate", c.Parent)
+	url = fmt.Sprintf("issuer/%s/sign-intermediate", c.Parent)
 	data = make(map[string]interface{})
 	data["csr"] = csr
 	data["common_name"] = c.Name
 	if len(c.CommonName) > 0 {
 		data["common_name"] = c.CommonName
 	}
-	resp, err = client.Logical().Write(url, data)
+	resp, err = CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to sign CSR for issuer (%v): %v / body: %v", c.Name, err, data)
 	}
@@ -134,12 +163,12 @@ func (c CBGenerateIntermediate) Run(t *testing.T, client *api.Client, mount stri
 	knownCerts[c.Name] = strings.TrimSpace(resp.Data["certificate"].(string))
 
 	// Set the signed intermediate
-	url = mount + "/intermediate/set-signed"
+	url = "intermediate/set-signed"
 	data = make(map[string]interface{})
 	data["certificate"] = knownCerts[c.Name]
 	data["issuer_name"] = c.Name
 
-	resp, err = client.Logical().Write(url, data)
+	resp, err = CBWrite(b, s, url, data)
 	if err != nil {
 		if len(c.ImportErrorMessage) > 0 {
 			if !strings.Contains(err.Error(), c.ImportErrorMessage) {
@@ -155,13 +184,13 @@ func (c CBGenerateIntermediate) Run(t *testing.T, client *api.Client, mount stri
 
 	// Update the name since set-signed doesn't actually take an issuer name
 	// parameter.
-	rawNewCerts := resp.Data["imported_issuers"].([]interface{})
+	rawNewCerts := resp.Data["imported_issuers"].([]string)
 	if len(rawNewCerts) != 1 {
 		t.Fatalf("Expected a single new certificate during import of signed cert for %v: got %v\nresp: %v", c.Name, len(rawNewCerts), resp)
 	}
 
-	newCertId := rawNewCerts[0].(string)
-	_, err = client.Logical().Write(mount+"/issuer/"+newCertId, map[string]interface{}{
+	newCertId := rawNewCerts[0]
+	_, err = CBWrite(b, s, "issuer/"+newCertId, map[string]interface{}{
 		"issuer_name": c.Name,
 	})
 	if err != nil {
@@ -174,9 +203,9 @@ type CBDeleteIssuer struct {
 	Issuer string
 }
 
-func (c CBDeleteIssuer) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
-	url := fmt.Sprintf(mount+"/issuer/%v", c.Issuer)
-	_, err := client.Logical().Delete(url)
+func (c CBDeleteIssuer) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
+	url := fmt.Sprintf("issuer/%v", c.Issuer)
+	_, err := CBDelete(b, s, url)
 	if err != nil {
 		t.Fatalf("failed to delete issuer (%v): %v", c.Issuer, err)
 	}
@@ -190,7 +219,7 @@ type CBValidateChain struct {
 	Aliases map[string]string
 }
 
-func (c CBValidateChain) ChainToPEMs(t *testing.T, parent string, chain []string, knownCerts map[string]string) []string {
+func (c CBValidateChain) ChainToPEMs(t testing.TB, parent string, chain []string, knownCerts map[string]string) []string {
 	var result []string
 	for entryIndex, entry := range chain {
 		var chainEntry string
@@ -215,7 +244,7 @@ func (c CBValidateChain) ChainToPEMs(t *testing.T, parent string, chain []string
 	return result
 }
 
-func (c CBValidateChain) FindNameForCert(t *testing.T, cert string, knownCerts map[string]string) string {
+func (c CBValidateChain) FindNameForCert(t testing.TB, cert string, knownCerts map[string]string) string {
 	for issuer, known := range knownCerts {
 		if strings.TrimSpace(known) == strings.TrimSpace(cert) {
 			return issuer
@@ -226,7 +255,7 @@ func (c CBValidateChain) FindNameForCert(t *testing.T, cert string, knownCerts m
 	return ""
 }
 
-func (c CBValidateChain) PrettyChain(t *testing.T, chain []string, knownCerts map[string]string) []string {
+func (c CBValidateChain) PrettyChain(t testing.TB, chain []string, knownCerts map[string]string) []string {
 	var prettyChain []string
 	for _, cert := range chain {
 		prettyChain = append(prettyChain, c.FindNameForCert(t, cert, knownCerts))
@@ -235,7 +264,7 @@ func (c CBValidateChain) PrettyChain(t *testing.T, chain []string, knownCerts ma
 	return prettyChain
 }
 
-func (c CBValidateChain) ToCertificate(t *testing.T, cert string) *x509.Certificate {
+func (c CBValidateChain) ToCertificate(t testing.TB, cert string) *x509.Certificate {
 	block, _ := pem.Decode([]byte(cert))
 	if block == nil {
 		t.Fatalf("Unable to parse certificate: nil PEM block\n[%v]\n", cert)
@@ -249,17 +278,17 @@ func (c CBValidateChain) ToCertificate(t *testing.T, cert string) *x509.Certific
 	return ret
 }
 
-func (c CBValidateChain) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
+func (c CBValidateChain) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
 	for issuer, chain := range c.Chains {
-		resp, err := client.Logical().Read(mount + "/issuer/" + issuer)
+		resp, err := CBRead(b, s, "issuer/"+issuer)
 		if err != nil {
 			t.Fatalf("failed to get chain for issuer (%v): %v", issuer, err)
 		}
 
-		rawCurrentChain := resp.Data["ca_chain"].([]interface{})
+		rawCurrentChain := resp.Data["ca_chain"].([]string)
 		var currentChain []string
 		for _, entry := range rawCurrentChain {
-			currentChain = append(currentChain, strings.TrimSpace(entry.(string)))
+			currentChain = append(currentChain, strings.TrimSpace(entry))
 		}
 
 		// Ensure the issuer cert is always first.
@@ -332,13 +361,13 @@ type CBUpdateIssuer struct {
 	CAChain []string
 }
 
-func (c CBUpdateIssuer) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
-	url := mount + "/issuer/" + c.Name
+func (c CBUpdateIssuer) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
+	url := "issuer/" + c.Name
 	data := make(map[string]interface{})
 	data["issuer_name"] = c.Name
 	data["manual_chain"] = c.CAChain
 
-	_, err := client.Logical().Write(url, data)
+	_, err := CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to update issuer (%v): %v / body: %v", c.Name, err, data)
 	}
@@ -350,27 +379,27 @@ type CBIssueLeaf struct {
 	Role   string
 }
 
-func (c CBIssueLeaf) Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
+func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
 	if len(c.Role) == 0 {
 		c.Role = "testing"
 	}
 
-	url := mount + "/roles/" + c.Role
+	url := "roles/" + c.Role
 	data := make(map[string]interface{})
 	data["allow_localhost"] = true
 	data["ttl"] = "1s"
 	data["key_type"] = "ec"
 
-	_, err := client.Logical().Write(url, data)
+	_, err := CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to update role (%v): %v / body: %v", c.Role, err, data)
 	}
 
-	url = mount + "/issuer/" + c.Issuer + "/issue/" + c.Role
+	url = "issuer/" + c.Issuer + "/issue/" + c.Role
 	data = make(map[string]interface{})
 	data["common_name"] = "localhost"
 
-	resp, err := client.Logical().Write(url, data)
+	resp, err := CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to issue cert (%v via %v): %v / body: %v", c.Issuer, c.Role, err, data)
 	}
@@ -380,19 +409,19 @@ func (c CBIssueLeaf) Run(t *testing.T, client *api.Client, mount string, knownKe
 }
 
 // Stable ordering
-func ensureStableOrderingOfChains(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string) {
+func ensureStableOrderingOfChains(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
 	// Start by fetching all chains
 	certChains := make(map[string][]string)
 	for issuer := range knownCerts {
-		resp, err := client.Logical().Read(mount + "/issuer/" + issuer)
+		resp, err := CBRead(b, s, "issuer/"+issuer)
 		if err != nil {
 			t.Fatalf("failed to get chain for issuer (%v): %v", issuer, err)
 		}
 
-		rawCurrentChain := resp.Data["ca_chain"].([]interface{})
+		rawCurrentChain := resp.Data["ca_chain"].([]string)
 		var currentChain []string
 		for _, entry := range rawCurrentChain {
-			currentChain = append(currentChain, strings.TrimSpace(entry.(string)))
+			currentChain = append(currentChain, strings.TrimSpace(entry))
 		}
 
 		certChains[issuer] = currentChain
@@ -407,10 +436,10 @@ func ensureStableOrderingOfChains(t *testing.T, client *api.Client, mount string
 			Key:  name,
 			Name: name,
 		}
-		step.Run(t, client, mount, make(map[string]string), make(map[string]string))
+		step.Run(t, b, s, make(map[string]string), make(map[string]string))
 
 		before := time.Now()
-		_, err := client.Logical().Delete(mount + "/issuer/" + name)
+		_, err := CBDelete(b, s, "issuer/"+name)
 		if err != nil {
 			t.Fatalf("failed to delete temporary testing issuer %v: %v", name, err)
 		}
@@ -419,14 +448,14 @@ func ensureStableOrderingOfChains(t *testing.T, client *api.Client, mount string
 		runs = append(runs, elapsed)
 
 		for issuer := range knownCerts {
-			resp, err := client.Logical().Read(mount + "/issuer/" + issuer)
+			resp, err := CBRead(b, s, "issuer/"+issuer)
 			if err != nil {
 				t.Fatalf("failed to get chain for issuer (%v): %v", issuer, err)
 			}
 
-			rawCurrentChain := resp.Data["ca_chain"].([]interface{})
+			rawCurrentChain := resp.Data["ca_chain"].([]string)
 			for index, entry := range rawCurrentChain {
-				if strings.TrimSpace(entry.(string)) != certChains[issuer][index] {
+				if strings.TrimSpace(entry) != certChains[issuer][index] {
 					t.Fatalf("iteration %d - chain for issuer %v differed at index %d\n%v\nvs\n%v", i, issuer, index, entry, certChains[issuer][index])
 				}
 			}
@@ -453,7 +482,7 @@ func ensureStableOrderingOfChains(t *testing.T, client *api.Client, mount string
 }
 
 type CBTestStep interface {
-	Run(t *testing.T, client *api.Client, mount string, knownKeys map[string]string, knownCerts map[string]string)
+	Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string)
 }
 
 type CBTestScenario struct {
@@ -1186,33 +1215,162 @@ var chainBuildingTestCases = []CBTestScenario{
 			CBIssueLeaf{Issuer: "leaf-inter"},
 		},
 	},
+	{
+		// Test just a single root.
+		Steps: []CBTestStep{
+			CBGenerateRoot{
+				Key:  "key-root",
+				Name: "root",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root": {"self"},
+				},
+			},
+			CBIssueLeaf{Issuer: "root"},
+		},
+	},
+	{
+		// Test root + intermediate.
+		Steps: []CBTestStep{
+			CBGenerateRoot{
+				Key:  "key-root",
+				Name: "root",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter",
+				Name:   "inter",
+				Parent: "root",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root":  {"self"},
+					"inter": {"self", "root"},
+				},
+			},
+			CBIssueLeaf{Issuer: "root"},
+			CBIssueLeaf{Issuer: "inter"},
+		},
+	},
+	{
+		// Test root + intermediate, twice (simulating rotation without
+		// chaining).
+		Steps: []CBTestStep{
+			CBGenerateRoot{
+				Key:  "key-root-a",
+				Name: "root-a",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter-a",
+				Name:   "inter-a",
+				Parent: "root-a",
+			},
+			CBGenerateRoot{
+				Key:  "key-root-b",
+				Name: "root-b",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter-b",
+				Name:   "inter-b",
+				Parent: "root-b",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-a":  {"self"},
+					"inter-a": {"self", "root-a"},
+					"root-b":  {"self"},
+					"inter-b": {"self", "root-b"},
+				},
+			},
+			CBIssueLeaf{Issuer: "root-a"},
+			CBIssueLeaf{Issuer: "inter-a"},
+			CBIssueLeaf{Issuer: "root-b"},
+			CBIssueLeaf{Issuer: "inter-b"},
+		},
+	},
+	{
+		// Test root + intermediate, twice, chained a->b.
+		Steps: []CBTestStep{
+			CBGenerateRoot{
+				Key:  "key-root-a",
+				Name: "root-a",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter-a",
+				Name:   "inter-a",
+				Parent: "root-a",
+			},
+			CBGenerateRoot{
+				Key:  "key-root-b",
+				Name: "root-b",
+			},
+			CBGenerateIntermediate{
+				Key:    "key-inter-b",
+				Name:   "inter-b",
+				Parent: "root-b",
+			},
+			CBGenerateIntermediate{
+				Key:        "key-root-b",
+				Existing:   true,
+				Name:       "cross-a-b",
+				CommonName: "root-b",
+				Parent:     "root-a",
+			},
+			CBValidateChain{
+				Chains: map[string][]string{
+					"root-a":    {"self"},
+					"inter-a":   {"self", "root-a"},
+					"root-b":    {"self", "cross-a-b", "root-a"},
+					"inter-b":   {"self", "root-b", "cross-a-b", "root-a"},
+					"cross-a-b": {"self", "root-a"},
+				},
+			},
+			CBIssueLeaf{Issuer: "root-a"},
+			CBIssueLeaf{Issuer: "inter-a"},
+			CBIssueLeaf{Issuer: "root-b"},
+			CBIssueLeaf{Issuer: "inter-b"},
+			CBIssueLeaf{Issuer: "cross-a-b"},
+		},
+	},
 }
 
 func Test_CAChainBuilding(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
-
 	for testIndex, testCase := range chainBuildingTestCases {
-		mount := fmt.Sprintf("pki-test-%v", testIndex)
-		mountPKIEndpoint(t, client, mount)
+		b, s := createBackendWithStorage(t)
+
 		knownKeys := make(map[string]string)
 		knownCerts := make(map[string]string)
 		for stepIndex, testStep := range testCase.Steps {
 			t.Logf("Running %v / %v", testIndex, stepIndex)
-			testStep.Run(t, client, mount, knownKeys, knownCerts)
+			testStep.Run(t, b, s, knownKeys, knownCerts)
 		}
 
 		t.Logf("Checking stable ordering of chains...")
-		ensureStableOrderingOfChains(t, client, mount, knownKeys, knownCerts)
+		ensureStableOrderingOfChains(t, b, s, knownKeys, knownCerts)
+	}
+}
+
+func BenchmarkChainBuilding(benchies *testing.B) {
+	for testIndex, testCase := range chainBuildingTestCases {
+		name := "test-case-" + strconv.Itoa(testIndex)
+		benchies.Run(name, func(bench *testing.B) {
+			// Stop the timer as we setup the infra and certs.
+			bench.StopTimer()
+			bench.ResetTimer()
+
+			b, s := createBackendWithStorage(bench)
+
+			knownKeys := make(map[string]string)
+			knownCerts := make(map[string]string)
+			for _, testStep := range testCase.Steps {
+				testStep.Run(bench, b, s, knownKeys, knownCerts)
+			}
+
+			// Run the benchmark.
+			bench.StartTimer()
+			for n := 0; n < bench.N; n++ {
+				rebuildIssuersChains(context.Background(), s, nil)
+			}
+		})
 	}
 }
