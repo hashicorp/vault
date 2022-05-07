@@ -271,3 +271,11 @@ func WithRegion(region string) LoginOption {
 		return nil
 	}
 }
+
+func WithCredentials(id, secret, token string) LoginOption {
+	return func(a *AWSAuth) error {
+		credentials := credentials.NewStaticCredentials(id, secret, token)
+		a.creds = credentials
+		return nil
+	}
+}
