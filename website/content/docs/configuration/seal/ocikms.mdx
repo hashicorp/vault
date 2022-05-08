@@ -49,6 +49,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `auth_type_api_key` `(boolean: false)`: Specifies if using API key to authenticate to OCI KMS service.
   If it is `false`, Vault authenticates using the instance principal from the compute instance. See Authentication section for details. Default is `false`.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+
 ## Authentication
 
 Authentication-related values must be provided, either as environment
