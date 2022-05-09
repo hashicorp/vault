@@ -56,6 +56,8 @@ export default class LineChart extends Component {
       );
     }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
+    const dataMax = max(filteredData.map((d) => d[this.yKey]));
+    const domainMax = Math.ceil(dataMax / 10) * 10; // we want to round UP to the nearest tens place ex. dataMax = 102, domainMax = 110
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
@@ -63,15 +65,8 @@ export default class LineChart extends Component {
     chartSvg.selectAll('g').remove().exit().data(filteredData).enter();
 
     // DEFINE AXES SCALES
-    const yScale = scaleLinear()
-      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
-      .range([0, 100])
-      .nice();
-
-    const yAxisScale = scaleLinear()
-      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
-      .range([SVG_DIMENSIONS.height, 0])
-      .nice();
+    const yScale = scaleLinear().domain([0, domainMax]).range([0, 100]).nice();
+    const yAxisScale = scaleLinear().domain([0, domainMax]).range([SVG_DIMENSIONS.height, 0]).nice();
 
     // use full dataset (instead of filteredData) so x-axis spans months with and without data
     const xScale = scalePoint()
@@ -81,7 +76,7 @@ export default class LineChart extends Component {
 
     // CUSTOMIZE AND APPEND AXES
     const yAxis = axisLeft(yAxisScale)
-      .ticks(5)
+      .ticks(4)
       .tickPadding(10)
       .tickSizeInner(-SVG_DIMENSIONS.width) // makes grid lines length of svg
       .tickFormat(formatNumbers);
