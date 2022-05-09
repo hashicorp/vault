@@ -1,7 +1,5 @@
 package audit
 
-// TODO SW add mount accessor tests somewhere in this package?
-
 import (
 	"context"
 	"io"
