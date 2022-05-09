@@ -144,6 +144,15 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
 
+    // TODO CMB - add assertion so double charts show for single historical month
+    // TODO and check for empty state there
+    // assert
+    // .dom('[data-test-chart-container="new-clients"] [data-test-empty-state-subtext]')
+    // .includesText(
+    //   'There are no new clients for this namespace during this time period.',
+    //   'Shows empty state if no new client counts'
+    // );
+
     // check chart displays correct elements and values
     for (const key in CHART_ELEMENTS) {
       let namespaceNumber = by_namespace.length < 10 ? by_namespace.length : 10;
@@ -274,7 +283,7 @@ module('Acceptance | clients history tab', function (hooks) {
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
-    assert.dom('[data-test-alert-banner]').includesText('Vault was upgraded');
+    assert.dom('[data-test-alert-banner="alert"]').includesText('Vault was upgraded');
   });
 
   test('Shows empty if license start date is current month', async function (assert) {

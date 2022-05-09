@@ -133,6 +133,7 @@
           {{#if this.byMonthTotalClients}}
             <Clients::RunningTotal
               @chartLegend={{this.chartLegend}}
+              @selectedNamespace={{this.selectedNamespace}}
               @lineChartData={{this.byMonthTotalClients}}
               @barChartData={{this.byMonthNewClients}}
               @runningTotals={{this.totalUsageCounts}}
@@ -143,8 +144,10 @@
           {{#if this.hasAttributionData}}
             <Clients::Attribution
               @chartLegend={{this.chartLegend}}
-              @totalClientsData={{this.totalClientsData}}
               @totalUsageCounts={{this.totalUsageCounts}}
+              @newUsageCounts={{this.newUsageCounts}}
+              @totalClientAttribution={{this.totalClientAttribution}}
+              @newClientAttribution={{this.newClientAttribution}}
               @selectedNamespace={{this.selectedNamespace}}
               @startTimeDisplay={{this.startTimeDisplay}}
               @endTimeDisplay={{this.endTimeDisplay}}

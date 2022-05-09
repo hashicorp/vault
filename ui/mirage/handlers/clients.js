@@ -1,15 +1,128 @@
-import {
-  differenceInCalendarMonths,
-  formatRFC3339,
-  formatISO,
-  isAfter,
-  isBefore,
-  sub,
-  isSameMonth,
-  startOfMonth,
-} from 'date-fns';
+import { addDays, formatISO, formatRFC3339, isAfter, isBefore, sub, isSameMonth, startOfMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 const MOCK_MONTHLY_DATA = [
+  {
+    timestamp: '2021-05-01T00:00:00Z',
+    counts: {
+      distinct_entities: 0,
+      entity_clients: 25,
+      non_entity_tokens: 0,
+      non_entity_clients: 20,
+      clients: 50,
+    },
+    namespaces: [
+      {
+        namespace_id: 'root',
+        namespace_path: '',
+        counts: {
+          distinct_entities: 0,
+          entity_clients: 13,
+          non_entity_tokens: 0,
+          non_entity_clients: 7,
+          clients: 20,
+        },
+        mounts: [
+          {
+            mount_path: 'auth/up2/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 8,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 8,
+            },
+          },
+          {
+            mount_path: 'auth/up1/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_tokens: 0,
+              non_entity_clients: 7,
+              clients: 7,
+            },
+          },
+        ],
+      },
+      {
+        namespace_id: 's07UR',
+        namespace_path: 'ns1/',
+        counts: {
+          distinct_entities: 0,
+          entity_clients: 5,
+          non_entity_tokens: 0,
+          non_entity_clients: 5,
+          clients: 10,
+        },
+        mounts: [
+          {
+            mount_path: 'auth/up1/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_tokens: 0,
+              non_entity_clients: 5,
+              clients: 5,
+            },
+          },
+          {
+            mount_path: 'auth/up2/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 5,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 5,
+            },
+          },
+        ],
+      },
+    ],
+    new_clients: {
+      counts: {
+        distinct_entities: 0,
+        entity_clients: 3,
+        non_entity_tokens: 0,
+        non_entity_clients: 2,
+        clients: 5,
+      },
+      namespaces: [
+        {
+          namespace_id: 'root',
+          namespace_path: '',
+          counts: {
+            distinct_entities: 0,
+            entity_clients: 3,
+            non_entity_tokens: 0,
+            non_entity_clients: 2,
+            clients: 5,
+          },
+          mounts: [
+            {
+              mount_path: 'auth/up2/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 3,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 3,
+              },
+            },
+            {
+              mount_path: 'auth/up1/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 0,
+                non_entity_tokens: 0,
+                non_entity_clients: 2,
+                clients: 2,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     timestamp: '2021-10-01T00:00:00Z',
     counts: {
@@ -661,14 +774,7 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
   const endDateByMonth = parseAPITimestamp(monthlyData[0].timestamp);
   let transformedMonthlyArray = [...monthlyData];
   if (isBefore(queryStartDate, startDateByMonth)) {
-    // no data for months before (upgraded to 1.10 during billing period)
-    let i = 0;
-    do {
-      i++;
-      let timestamp = formatRFC3339(sub(startDateByMonth, { months: i }));
-      // TODO CMB update this when we confirm what combined data looks like
-      transformedMonthlyArray.push({ timestamp });
-    } while (i < differenceInCalendarMonths(startDateByMonth, queryStartDate));
+    return transformedMonthlyArray;
   }
   if (isAfter(queryStartDate, startDateByMonth)) {
     let index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
@@ -708,11 +814,13 @@ export default function (server) {
   });
 
   server.get('sys/license/status', function () {
+    const startTime = new Date();
+
     return {
       data: {
         autoloading_used: true,
         autoloaded: {
-          expiration_time: '2022-05-17T23:59:59.999Z',
+          expiration_time: formatRFC3339(addDays(startTime, 365)),
           features: [
             'HSM',
             'Performance Replication',
@@ -732,10 +840,10 @@ export default function (server) {
           ],
           license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
           performance_standby_count: 9999,
-          start_time: '2021-01-17T00:00:00Z',
+          start_time: formatRFC3339(startTime)
         },
         persisted_autoload: {
-          expiration_time: '2022-05-17T23:59:59.999Z',
+          expiration_time: formatRFC3339(addDays(startTime, 365)),
           features: [
             'HSM',
             'Performance Replication',
@@ -755,7 +863,7 @@ export default function (server) {
           ],
           license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
           performance_standby_count: 9999,
-          start_time: '2021-01-17T00:00:00Z',
+          start_time: formatRFC3339(startTime)
         },
       },
     };
@@ -974,6 +1082,14 @@ export default function (server) {
                   clients: 35,
                   entity_clients: 20,
                   non_entity_clients: 15,
+                },
+              },
+              {
+                mount_path: 'auth_userpass_3158c012',
+                counts: {
+                  clients: 2,
+                  entity_clients: 2,
+                  non_entity_clients: 0,
                 },
               },
             ],

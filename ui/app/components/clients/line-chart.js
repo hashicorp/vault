@@ -47,17 +47,20 @@ export default class LineChart extends Component {
   }
 
   @action
-  renderChart(element, args) {
-    const dataset = args[0];
+  renderChart(element, [chartData]) {
+    const dataset = chartData;
     const upgradeData = [];
-    if (args[1]) {
-      args[1].forEach((versionData) =>
+    if (this.args.upgradeData) {
+      this.args.upgradeData.forEach((versionData) =>
         upgradeData.push({ month: parseAPITimestamp(versionData.timestampInstalled, 'M/yy'), ...versionData })
       );
     }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
+
+    // clear out DOM before appending anything
+    chartSvg.selectAll('g').remove().exit().data(filteredData).enter();
 
     // DEFINE AXES SCALES
     const yScale = scaleLinear()
@@ -154,10 +157,11 @@ export default class LineChart extends Component {
 
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
-      // TODO: how to genericize this?
+      // TODO: how to generalize this?
+      let { new_clients } = data || null;
       this.tooltipMonth = formatChartDate(data[this.xKey]);
       this.tooltipTotal = data[this.yKey] + ' total clients';
-      this.tooltipNew = data?.new_clients[this.yKey] + ' new clients';
+      this.tooltipNew = (new_clients ? new_clients[this.yKey] : '0') + ' new clients';
       this.tooltipUpgradeText = '';
       let upgradeInfo = findUpgradeData(data);
       if (upgradeInfo) {

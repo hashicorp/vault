@@ -1663,9 +1663,17 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		}
 	}
 
-	// Sort the months in the descending order of activity
+	// Sort the months in ascending order of timestamps
 	sort.Slice(months, func(i, j int) bool {
-		return months[i].Counts.Clients > months[j].Counts.Clients
+		firstTimestamp, errOne := time.Parse(time.RFC3339, months[i].Timestamp)
+		secondTimestamp, errTwo := time.Parse(time.RFC3339, months[j].Timestamp)
+		if errOne == nil && errTwo == nil {
+			return firstTimestamp.Before(secondTimestamp)
+		}
+		// Keep the nondeterministic ordering in storage
+		a.logger.Error("unable to parse activity log timestamps", "timestamp",
+			months[i].Timestamp, "error", errOne, "timestamp", months[j].Timestamp, "error", errTwo)
+		return i < j
 	})
 
 	// Within each month sort everything by descending order of activity
@@ -2476,9 +2484,17 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 		}
 	}
 
-	// Sort the months in the descending order of activity
+	// Sort the months in ascending order of timestamps
 	sort.Slice(months, func(i, j int) bool {
-		return months[i].Counts.Clients > months[j].Counts.Clients
+		firstTimestamp, errOne := time.Parse(time.RFC3339, months[i].Timestamp)
+		secondTimestamp, errTwo := time.Parse(time.RFC3339, months[j].Timestamp)
+		if errOne == nil && errTwo == nil {
+			return firstTimestamp.Before(secondTimestamp)
+		}
+		// Keep the nondeterministic ordering in storage
+		a.logger.Error("unable to parse activity log timestamps for partial client count",
+			"timestamp", months[i].Timestamp, "error", errOne, "timestamp", months[j].Timestamp, "error", errTwo)
+		return i < j
 	})
 
 	// Within each month sort everything by descending order of activity
