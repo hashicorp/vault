@@ -56,6 +56,8 @@ export default class LineChart extends Component {
       );
     }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
+    const dataMax = max(filteredData.map((d) => d[this.yKey]));
+    const domainMax = Math.ceil(dataMax / 10) * 10; // we want to round UP to the nearest tens place ex. dataMax = 102, domainMax = 110
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
@@ -63,15 +65,8 @@ export default class LineChart extends Component {
     chartSvg.selectAll('g').remove().exit().data(filteredData).enter();
 
     // DEFINE AXES SCALES
-    const yScale = scaleLinear()
-      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
-      .range([0, 100])
-      .nice();
-
-    const yAxisScale = scaleLinear()
-      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
-      .range([SVG_DIMENSIONS.height, 0])
-      .nice();
+    const yScale = scaleLinear().domain([0, domainMax]).range([0, 100]).nice();
+    const yAxisScale = scaleLinear().domain([0, domainMax]).range([SVG_DIMENSIONS.height, 0]).nice();
 
     // use full dataset (instead of filteredData) so x-axis spans months with and without data
     const xScale = scalePoint()
@@ -158,10 +153,9 @@ export default class LineChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
       // TODO: how to generalize this?
-      let { new_clients } = data || null;
       this.tooltipMonth = formatChartDate(data[this.xKey]);
       this.tooltipTotal = data[this.yKey] + ' total clients';
-      this.tooltipNew = (new_clients ? new_clients[this.yKey] : '0') + ' new clients';
+      this.tooltipNew = (data?.new_clients[this.yKey] || '0') + ' new clients';
       this.tooltipUpgradeText = '';
       let upgradeInfo = findUpgradeData(data);
       if (upgradeInfo) {

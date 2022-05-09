@@ -9,6 +9,7 @@ import {
   startOfMonth,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+
 const MOCK_MONTHLY_DATA = [
   {
     timestamp: '2021-05-01T00:00:00Z',
@@ -16,7 +17,7 @@ const MOCK_MONTHLY_DATA = [
       distinct_entities: 0,
       entity_clients: 25,
       non_entity_tokens: 0,
-      non_entity_clients: 20,
+      non_entity_clients: 25,
       clients: 50,
     },
     namespaces: [
@@ -983,6 +984,26 @@ export default function (server) {
                   non_entity_tokens: 5023,
                   non_entity_clients: 5023,
                   clients: 11212,
+                },
+              },
+              {
+                mount_path: 'auth/up2/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 50,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 23,
+                  clients: 73,
+                },
+              },
+              {
+                mount_path: 'auth/up1/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 25,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 15,
+                  clients: 40,
                 },
               },
             ],

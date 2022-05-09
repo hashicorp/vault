@@ -1,3 +1,4 @@
+{{! TODO Add conditional, show charts if data available, otherwise show stat text boxes  }}
 <div class="chart-wrapper stacked-charts">
   <div class="single-chart-grid">
     <div class="chart-header has-bottom-margin-xl">
@@ -37,8 +38,17 @@
   </div>
 
   <div class="single-chart-grid">
-    <div class="chart-container-wide">
-      <Clients::VerticalBarChart @dataset={{@barChartData}} @chartLegend={{@chartLegend}} />
+    <div class={{concat (unless this.hasAverageNewClients "chart-empty-state ") "chart-container-wide"}}>
+      <Clients::VerticalBarChart
+        @dataset={{if this.hasAverageNewClients @barChartData false}}
+        @chartLegend={{@chartLegend}}
+        @noDataTitle="No new clients"
+        @noDataMessage={{concat
+          "There are no new clients for this "
+          (if @selectedAuthMethod "auth method" "namespace")
+          " in this date range"
+        }}
+      />
     </div>
 
     <div class="chart-subTitle">
@@ -74,4 +84,5 @@
       <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
     </div>
   </div>
+
 </div>
