@@ -52,7 +52,7 @@ func hasTrailingSpace(s string) bool {
 func hasTrailingSlash(s string) bool {
 	s = strings.TrimSpace(s)
 
-	if s[len(s) - 1] == '/' {
+	if s[len(s)-1] == '/' {
 		return true
 	}
 
