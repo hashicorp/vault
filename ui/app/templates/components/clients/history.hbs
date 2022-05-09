@@ -155,7 +155,7 @@
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
-          {{#if this.byMonthActivityData}}
+          {{#if this.hasMultipleMonthsData}}
             <Clients::MonthlyUsage
               @chartLegend={{this.chartLegend}}
               @verticalBarChartData={{this.byMonthActivityData}}

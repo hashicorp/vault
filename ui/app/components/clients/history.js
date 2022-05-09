@@ -339,6 +339,10 @@ export default class History extends Component {
     }
   }
 
+  get hasMultipleMonthsData() {
+    return this.byMonthTotalClients && this.byMonthTotalClients.length > 1;
+  }
+
   @action
   handleCurrentBillingPeriod() {
     this.handleClientActivityQuery(0, 0, 'reset');
