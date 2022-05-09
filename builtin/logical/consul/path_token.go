@@ -139,14 +139,10 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	return s, nil
 }
 
-func parseServiceIdentities(data string) []*api.ACLServiceIdentity {
+func parseServiceIdentities(data []string) []*api.ACLServiceIdentity {
 	aclServiceIdentities := []*api.ACLServiceIdentity{}
-	if data == "" {
-		return aclServiceIdentities
-	}
 
-	parsedServiceIdentities := strings.Split(data, ";")
-	for _, serviceIdentity := range parsedServiceIdentities {
+	for _, serviceIdentity := range data {
 		entry := &api.ACLServiceIdentity{}
 		components := strings.Split(serviceIdentity, ":")
 		entry.ServiceName = components[0]
