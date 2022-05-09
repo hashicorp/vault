@@ -1,4 +1,13 @@
-import { addDays, formatISO, formatRFC3339, isAfter, isBefore, sub, isSameMonth, startOfMonth } from 'date-fns';
+import {
+  addDays,
+  formatISO,
+  formatRFC3339,
+  isAfter,
+  isBefore,
+  sub,
+  isSameMonth,
+  startOfMonth,
+} from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 const MOCK_MONTHLY_DATA = [
   {
@@ -840,7 +849,7 @@ export default function (server) {
           ],
           license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
           performance_standby_count: 9999,
-          start_time: formatRFC3339(startTime)
+          start_time: formatRFC3339(startTime),
         },
         persisted_autoload: {
           expiration_time: formatRFC3339(addDays(startTime, 365)),
@@ -863,7 +872,7 @@ export default function (server) {
           ],
           license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
           performance_standby_count: 9999,
-          start_time: formatRFC3339(startTime)
+          start_time: formatRFC3339(startTime),
         },
       },
     };
