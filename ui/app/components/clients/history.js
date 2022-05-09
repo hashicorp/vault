@@ -195,7 +195,7 @@ export default class History extends Component {
 
   get byMonthNewClients() {
     if (this.byMonthActivityData) {
-      return this.byMonthActivityData.map((m) => m.new_clients);
+      return this.byMonthActivityData?.map((m) => m.new_clients);
     }
     return null;
   }
