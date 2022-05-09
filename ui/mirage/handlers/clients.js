@@ -1,4 +1,3 @@
-import { parseAPITimestamp } from 'core/utils/date-formatters';
 import {
   addDays,
   formatISO,
@@ -9,6 +8,7 @@ import {
   isSameMonth,
   startOfMonth,
 } from 'date-fns';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 const MOCK_MONTHLY_DATA = [
   {

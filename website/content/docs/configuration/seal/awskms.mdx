@@ -59,11 +59,15 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   and decryption. May also be specified by the `VAULT_AWSKMS_SEAL_KEY_ID`
   environment variable.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
 - `endpoint` `(string: "")`: The KMS API endpoint to be used to make AWS KMS
   requests. May also be specified by the `AWS_KMS_ENDPOINT` environment
   variable. This is useful, for example, when connecting to KMS over a [VPC
   Endpoint](https://docs.aws.amazon.com/kms/latest/developerguide/kms-vpc-endpoint.html).
   If not set, Vault will use the default API endpoint for your region.
+
+Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication
 

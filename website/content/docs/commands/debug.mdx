@@ -57,6 +57,9 @@ pertains to the local node and the request should not be forwarded.
 Additionally, host information is not available on the OpenBSD platform due to
 library limitations in fetching the data without enabling `cgo`.
 
+[Enterprise] Telemetry can be gathered from a DR Secondary active node via the
+`metrics` target if [unauthenticated_metrics_access](/docs/configuration/listener/tcp#unauthenticated_metrics_access) is enabled.
+
 ## Output Layout
 
 The output of the bundled information, once decompressed, is contained within a
