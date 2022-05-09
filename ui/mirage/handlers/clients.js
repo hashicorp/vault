@@ -10,6 +10,97 @@ import {
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
+const MOCK_MONTHLY_DATA_SINGLE = [
+  {
+    timestamp: '2021-06-01T00:00:00Z',
+    counts: {
+      distinct_entities: 0,
+      entity_clients: 2,
+      non_entity_tokens: 0,
+      non_entity_clients: 3,
+      clients: 5,
+    },
+    namespaces: [
+      {
+        namespace_id: 'root',
+        namespace_path: '',
+        counts: {
+          distinct_entities: 0,
+          entity_clients: 2,
+          non_entity_tokens: 0,
+          non_entity_clients: 3,
+          clients: 5,
+        },
+        mounts: [
+          {
+            mount_path: 'auth/up1/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_tokens: 0,
+              non_entity_clients: 3,
+              clients: 3,
+            },
+          },
+          {
+            mount_path: 'auth/up2/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 2,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 2,
+            },
+          },
+        ],
+      },
+    ],
+    new_clients: {
+      counts: {
+        distinct_entities: 0,
+        entity_clients: 2,
+        non_entity_tokens: 0,
+        non_entity_clients: 3,
+        clients: 5,
+      },
+      namespaces: [
+        {
+          namespace_id: 'root',
+          namespace_path: '',
+          counts: {
+            distinct_entities: 0,
+            entity_clients: 2,
+            non_entity_tokens: 0,
+            non_entity_clients: 3,
+            clients: 5,
+          },
+          mounts: [
+            {
+              mount_path: 'auth/up1/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 0,
+                non_entity_tokens: 0,
+                non_entity_clients: 3,
+                clients: 3,
+              },
+            },
+            {
+              mount_path: 'auth/up2/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 2,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 2,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
+];
 const MOCK_MONTHLY_DATA = [
   {
     timestamp: '2021-05-01T00:00:00Z',
@@ -895,6 +986,7 @@ export default function (server) {
     const { start_time, end_time } = req.queryParams;
     // fake client counting start date so warning shows if user queries earlier start date
     const counts_start = '2020-12-31T00:00:00Z';
+    const monthsPayload = start_time === end_time ? MOCK_MONTHLY_DATA_SINGLE : MOCK_MONTHLY_DATA;
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',
@@ -1010,7 +1102,7 @@ export default function (server) {
           },
         ],
         end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
-        months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
+        months: handleMockQuery(start_time, end_time, monthsPayload),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
           distinct_entities: 37389,
