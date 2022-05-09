@@ -156,6 +156,10 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return nil, err
 	}
 
+	return respondReadIssuer(issuer)
+}
+
+func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 	var respManualChain []string
 	for _, entity := range issuer.ManualChain {
 		respManualChain = append(respManualChain, string(entity))
@@ -169,7 +173,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 			"certificate":             issuer.Certificate,
 			"manual_chain":            respManualChain,
 			"ca_chain":                issuer.CAChain,
-			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior,
+			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior.String(),
 			"usage":                   issuer.Usage.Names(),
 		},
 	}, nil
@@ -299,23 +303,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		}
 	}
 
-	var respManualChain []string
-	for _, entity := range issuer.ManualChain {
-		respManualChain = append(respManualChain, string(entity))
-	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"issuer_id":               issuer.ID,
-			"issuer_name":             issuer.Name,
-			"key_id":                  issuer.KeyID,
-			"certificate":             issuer.Certificate,
-			"manual_chain":            respManualChain,
-			"ca_chain":                issuer.CAChain,
-			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior,
-			"usage":                   issuer.Usage.Names(),
-		},
-	}, nil
+	return respondReadIssuer(issuer)
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

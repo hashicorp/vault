@@ -689,6 +689,20 @@ const (
 	PermitNotAfterBehavior
 )
 
+var notAfterBehaviorNames = map[NotAfterBehavior]string{
+	ErrNotAfterBehavior:      "err",
+	TruncateNotAfterBehavior: "truncate",
+	PermitNotAfterBehavior:   "permit",
+}
+
+func (n NotAfterBehavior) String() string {
+	if name, ok := notAfterBehaviorNames[n]; ok && len(name) > 0 {
+		return name
+	}
+
+	return "unknown"
+}
+
 type CAInfoBundle struct {
 	ParsedCertBundle
 	URLs                 *URLEntries
