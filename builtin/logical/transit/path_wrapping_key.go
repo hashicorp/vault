@@ -76,6 +76,6 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 
 const (
 	pathWrappingKeyHelpSyn  = "Returns the public key to use for wrapping imported keys"
-	pathWrappingKeyHelpDesc = "This path is used to retrieve the RSA-4096 wrapping key" +
+	pathWrappingKeyHelpDesc = "This path is used to retrieve the RSA-4096 wrapping key " +
 		"for wrapping keys that are being imported into transit."
 )
