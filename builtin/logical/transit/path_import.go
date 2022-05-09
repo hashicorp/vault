@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"time"
 
+	"strconv"
+
 	"github.com/google/tink/go/kwp/subtle"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"strconv"
 )
 
 const EncryptedKeyBytes = 512
@@ -52,7 +53,8 @@ keys for encryption operations.`,
 
 			"convergent_encryption": {
 				Type: framework.TypeBool,
-				Description: `Whether to support convergent encryption.
+				Description: `This field is not currently supported for import operations!
+Whether to support convergent encryption.
 This is only supported when using a key with
 key derivation enabled and will require all
 requests to carry both a context and 96-bit
@@ -139,6 +141,10 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 
 	if autoRotatePeriod > 0 && !allowRotation {
 		return nil, errors.New("allow_rotation must be set to true if auto-rotation is enabled")
+	}
+
+	if convergent {
+		return nil, errors.New("import cannot be used on keys with convergent encryption enabled")
 	}
 
 	polReq := keysutil.PolicyRequest{
@@ -253,7 +259,7 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	wrappedAESKey := ciphertext[:EncryptedKeyBytes]
 	wrappedImportKey := ciphertext[EncryptedKeyBytes:]
 
-	wrappingKey, err := getWrappingKey(ctx, storage)
+	wrappingKey, err := b.getWrappingKey(ctx, storage)
 	if err != nil {
 		return nil, err
 	}
