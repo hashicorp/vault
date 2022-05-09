@@ -12,7 +12,7 @@ description: >-
 ## Overview
 
 -> **Note**: All versions of [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-have support for Disaster Recovery replication. Performance Replication requires 
+have support for Disaster Recovery replication. Performance Replication requires
 Vault Enterprise Premium.
 
 Many organizations have infrastructure that spans multiple datacenters. Vault
@@ -49,18 +49,18 @@ relationships.
 
 ![](/img/replication-overview.png)
 
-The following table shows a capability comparison between disaster recovery and performance replications. 
+The following table shows a capability comparison between Disaster Recovery and Performance Replication.
 
-| Capability                                                                                                           | Disaster Recovery | Performance                                                                                                                                                                        |
+| Capability                                                                                                           | Disaster Recovery | Performance Replication                                                                                                                                                                        |
 | -------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mirrors the configuration of a primary cluster                                                                       | Yes               | Yes                                                                                                                                                                                |
 | Mirrors the configuration of a primary cluster’s backends (i.e., auth methods, secrets engines, audit devices, etc.) | Yes               | Yes                                                                                                                                                                                |
 | Mirrors the tokens and leases for applications and users interacting with the primary cluster                        | Yes               | No. Secondaries keep track of their own tokens and leases. When the secondary is promoted, applications must reauthenticate and obtain new leases from the newly-promoted primary. |
-| Allows the secondary cluster to handle client requests                                                               | No                | Yes                                            |                                                                                  
+| Allows the secondary cluster to handle client requests                                                               | No                | Yes                                            |
 
 ## Performance Replication
 
-In performance replication, secondaries keep track of their own tokens and leases
+In Performance Replication, secondaries keep track of their own tokens and leases
 but share the underlying configuration, policies, and supporting secrets (K/V values,
 encryption keys for `transit`, etc).
 
@@ -71,10 +71,10 @@ in `transit`, etc.) can be satisfied by the local secondary, allowing Vault to s
 relatively horizontally with the number of secondaries rather than vertically as
 in the past.
 
-### Paths Filter 
+### Paths Filter
 
 The primary cluster's mount configuration gets replicated across its secondary
-clusters when you enable performance replication. In some cases, you may not
+clusters when you enable Performance Replication. In some cases, you may not
 want all data to be replicated. For example, your primary cluster is in the EU
 region, and you have a secondary cluster outside of the EU region. [General Data
 Protection Regulation (GDPR)](https://www.eugdpr.org/) requires that personally
@@ -84,7 +84,7 @@ protection regulation as the EU.
 
 To comply with GDPR, leverage Vault's **paths filter**  feature to abide by
 data movements and sovereignty regulations while ensuring performance access
-across geographically distributed regions. 
+across geographically distributed regions.
 
 You can set filters based on the mount path of the secrets engines and
 namespaces.
@@ -100,14 +100,14 @@ Local secrets engines and auth methods are not replicated or removed by
 replication.
 
 **Example:** When you enable a secrets engine on a secondary cluster, use the
-`-local` flag.  
+`-local` flag.
 
-```shell-session 
+```shell-session
 $ vault secrets enable -local -path=us_west_data kv-v2
 ```
 
 -> **Learn:** Refer to the [Performance Replication with Paths
-Filter](https://learn.hashicorp.com/tutorials/vault/paths-filter) tutorial for 
+Filter](https://learn.hashicorp.com/tutorials/vault/paths-filter) tutorial for
 step-by-step instructions.
 
 
