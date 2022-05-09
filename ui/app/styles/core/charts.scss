@@ -6,6 +6,29 @@
 }
 
 // GRID LAYOUT //
+.single-month-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2em;
+  width: 100%;
+}
+.single-month-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2em;
+  // grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+}
+.single-month-section-title {
+  grid-column-start: 1;
+  grid-column-end: span col3-end;
+}
+.single-month-breakdown-direct {
+  grid-column-start: 1;
+}
+.single-month-breakdown-nonentity {
+  grid-column-start: 2;
+}
 .stacked-charts {
   display: grid;
   width: 100%;
