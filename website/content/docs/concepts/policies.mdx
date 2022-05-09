@@ -334,6 +334,10 @@ path take precedence over permissions on parameters.
 
 ### Parameter Constraints
 
+-> **Note:**: The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the version 2 kv store.
+
+See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
+
 In Vault, data is represented as `key=value` pairs. Vault policies can
 optionally further restrict paths based on the keys and data at those keys when
 evaluating the permissions for a path. The optional finer-grained control
