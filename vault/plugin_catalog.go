@@ -16,6 +16,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-secure-stdlib/base62"
+	semver "github.com/hashicorp/go-version"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -621,12 +622,15 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 
 // Delete is used to remove an external plugin from the catalog. Builtin plugins
 // can not be deleted.
-func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType consts.PluginType) error {
+func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType consts.PluginType, pluginVersion string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	// Check the name under which the plugin exists, but if it's unfound, don't return any error.
-	pluginKey := pluginType.String() + "/" + name
+	pluginKey := path.Join(pluginType.String(), name)
+	if pluginVersion != "" {
+		pluginKey = path.Join(pluginKey, pluginVersion)
+	}
 	out, err := c.catalogView.Get(ctx, pluginKey)
 	if err != nil || out == nil {
 		pluginKey = name
@@ -685,18 +689,11 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	return retList, nil
 }
 
-type VersionedPlugin struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	Version string `json:"version"`
-	SHA256  string `json:"sha256,omitempty"`
-}
-
-func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]VersionedPlugin, error) {
+func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	var result []VersionedPlugin
+	var result []pluginutil.VersionedPlugin
 
 	// Collect keys for external plugins in the barrier.
 	plugins, err := logical.CollectKeys(ctx, c.catalogView)
@@ -707,10 +704,11 @@ func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType con
 	// Get the builtin plugins.
 	builtinPlugins := c.builtinRegistry.Keys(pluginType)
 	for _, plugin := range builtinPlugins {
-		result = append(result, VersionedPlugin{
+		result = append(result, pluginutil.VersionedPlugin{
 			Name:    plugin,
 			Type:    pluginType.String(),
 			Version: version.GetVersion().Version + "+builtin",
+			Builtin: true,
 		})
 	}
 
@@ -718,6 +716,7 @@ func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType con
 		// Some keys will be prepended with the plugin type, but other ones won't.
 		// Users don't expect to see the plugin type, so we need to strip that here.
 		var normalizedName, version string
+		var semanticVersion *semver.Version
 		parts := strings.Split(plugin, "/")
 
 		switch len(parts) {
@@ -731,17 +730,22 @@ func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType con
 			}
 		case 3: // Versioned, with type
 			normalizedName, version = parts[1], parts[2]
+			semanticVersion, err = semver.NewVersion(version)
+			if err != nil {
+				return nil, fmt.Errorf("unexpected error parsing version from plugin catalog entry %q: %w", plugin, err)
+			}
 		default:
 			return nil, fmt.Errorf("unexpected entry in plugin catalog: %s", plugin)
 		}
 
 		// Only list user-added plugins if they're of the given type.
 		if entry, err := c.get(ctx, normalizedName, pluginType, version); err == nil && entry != nil {
-			result = append(result, VersionedPlugin{
-				Name:    normalizedName,
-				Type:    pluginType.String(),
-				Version: version,
-				SHA256:  hex.EncodeToString(entry.Sha256),
+			result = append(result, pluginutil.VersionedPlugin{
+				Name:            normalizedName,
+				Type:            pluginType.String(),
+				Version:         version,
+				SHA256:          hex.EncodeToString(entry.Sha256),
+				SemanticVersion: semanticVersion,
 			})
 		}
 	}

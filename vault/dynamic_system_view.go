@@ -251,6 +251,18 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, plugin
 	return r, nil
 }
 
+// ListVersionedPlugins returns information about all plugins of a certain
+// typein the catalog, including any versioning information stored for them.
+func (d dynamicSystemView) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
+	return d.core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
+}
+
 // MlockEnabled returns the configuration setting for enabling mlock on plugins.
 func (d dynamicSystemView) MlockEnabled() bool {
 	return d.core.enableMlock

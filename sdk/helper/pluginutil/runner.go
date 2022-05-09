@@ -6,6 +6,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"google.golang.org/grpc"
@@ -80,6 +81,19 @@ func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, 
 		Logger(logger),
 		MetadataMode(true),
 	)
+}
+
+// VersionedPlugin holds any versioning information stored about a plugin in the
+// plugin catalog.
+type VersionedPlugin struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Version string `json:"version"`
+	SHA256  string `json:"sha256,omitempty"`
+	Builtin bool   `json:"builtin"`
+
+	// Pre-parsed semver struct of the Version field
+	SemanticVersion *version.Version `json:"-"`
 }
 
 // CtxCancelIfCanceled takes a context cancel func and a context. If the context is

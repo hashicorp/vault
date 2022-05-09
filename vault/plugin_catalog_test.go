@@ -84,7 +84,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Delete the plugin
-	err = core.pluginCatalog.Delete(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase)
+	err = core.pluginCatalog.Delete(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}

@@ -183,3 +183,7 @@ func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType,
 		},
 	}, nil
 }
+
+func (v testSystemView) ListVersionedPlugins(_ context.Context, _ consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	panic("not needed")
+}

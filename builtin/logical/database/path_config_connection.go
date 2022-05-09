@@ -5,12 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-version"
 
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -273,6 +277,39 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
 			config.PluginVersion = pluginVersionRaw.(string)
+		}
+		if config.PluginVersion != "" {
+			semanticVersion, err := version.NewVersion(config.PluginVersion)
+			if err != nil {
+				return logical.ErrorResponse("version %q is not a valid semantic version: %s", config.PluginVersion, err), nil
+			}
+
+			// Canonicalize the version.
+			config.PluginVersion = semanticVersion.String()
+		} else {
+			// No version provided. Pin to the current latest version if any versioned
+			// plugins are registered.
+			plugins, err := b.System().ListVersionedPlugins(ctx, consts.PluginTypeDatabase)
+			if err != nil {
+				return nil, err
+			}
+
+			var versionedCandidates []pluginutil.VersionedPlugin
+			for _, plugin := range plugins {
+				if !plugin.Builtin && plugin.Name == config.PluginName && plugin.SemanticVersion != nil {
+					versionedCandidates = append(versionedCandidates, plugin)
+				}
+			}
+
+			if len(versionedCandidates) != 0 {
+				// Sort in reverse order.
+				sort.Slice(versionedCandidates, func(i, j int) bool {
+					return versionedCandidates[i].SemanticVersion.GreaterThan(versionedCandidates[j].SemanticVersion)
+				})
+
+				config.PluginVersion = versionedCandidates[0].Version
+				b.logger.Debug(fmt.Sprintf("pinning %s database plugin version %s from candidates %v", config.PluginName, config.PluginVersion, versionedCandidates))
+			}
 		}
 
 		if allowedRolesRaw, ok := data.GetOk("allowed_roles"); ok {
