@@ -268,9 +268,10 @@ export default class History extends Component {
     if (!auth) {
       return namespaceData;
     }
-    const mountData = namespaceData.map((namespace) => namespace.mounts_by_key[auth]);
-    // TODO CMB come up with a better check when testing, if there is no mount data (data from pre 1.10) the array will contain undefined.
-    return mountData.includes(undefined) ? null : mountData;
+    const mountData = namespaceData
+      .map((namespace) => namespace.mounts_by_key[auth])
+      .filter((d) => d !== undefined);
+    return mountData.length === 0 ? null : mountData;
   }
 
   @action
