@@ -81,7 +81,7 @@ export default class LineChart extends Component {
 
     // CUSTOMIZE AND APPEND AXES
     const yAxis = axisLeft(yAxisScale)
-      .ticks(4)
+      .ticks(5)
       .tickPadding(10)
       .tickSizeInner(-SVG_DIMENSIONS.width) // makes grid lines length of svg
       .tickFormat(formatNumbers);

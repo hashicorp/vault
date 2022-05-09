@@ -264,9 +264,11 @@ export default class History extends Component {
     if (!namespace && !auth) {
       return this.getActivityResponse?.byMonth;
     }
-    const namespaceData = this.getActivityResponse?.byMonth.map((m) => m.namespaces_by_key[namespace]);
+    const namespaceData = this.getActivityResponse?.byMonth
+      .map((m) => m.namespaces_by_key[namespace])
+      .filter((d) => d !== undefined);
     if (!auth) {
-      return namespaceData;
+      return namespaceData.length === 0 ? null : namespaceData;
     }
     const mountData = namespaceData
       .map((namespace) => namespace.mounts_by_key[auth])
