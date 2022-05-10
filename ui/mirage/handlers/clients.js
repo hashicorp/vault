@@ -1,229 +1,7 @@
-import {
-  addDays,
-  formatISO,
-  formatRFC3339,
-  isAfter,
-  isBefore,
-  sub,
-  isSameMonth,
-  startOfMonth,
-} from 'date-fns';
+import { formatISO, isAfter, isBefore, sub, isSameMonth, startOfMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
-const MOCK_MONTHLY_DATA_SINGLE = [
-  {
-    timestamp: '2021-06-01T00:00:00Z',
-    counts: {
-      distinct_entities: 0,
-      entity_clients: 2,
-      non_entity_tokens: 0,
-      non_entity_clients: 3,
-      clients: 5,
-    },
-    namespaces: [
-      {
-        namespace_id: 'root',
-        namespace_path: '',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 2,
-          non_entity_tokens: 0,
-          non_entity_clients: 3,
-          clients: 5,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 3,
-              clients: 3,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 2,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 2,
-            },
-          },
-        ],
-      },
-    ],
-    new_clients: {
-      counts: {
-        distinct_entities: 0,
-        entity_clients: 2,
-        non_entity_tokens: 0,
-        non_entity_clients: 3,
-        clients: 5,
-      },
-      namespaces: [
-        {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 2,
-            non_entity_tokens: 0,
-            non_entity_clients: 3,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 3,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 2,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 2,
-              },
-            },
-          ],
-        },
-      ],
-    },
-  },
-];
 const MOCK_MONTHLY_DATA = [
-  {
-    timestamp: '2021-05-01T00:00:00Z',
-    counts: {
-      distinct_entities: 0,
-      entity_clients: 25,
-      non_entity_tokens: 0,
-      non_entity_clients: 25,
-      clients: 50,
-    },
-    namespaces: [
-      {
-        namespace_id: 'root',
-        namespace_path: '',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 13,
-          non_entity_tokens: 0,
-          non_entity_clients: 7,
-          clients: 20,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 8,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 8,
-            },
-          },
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 7,
-              clients: 7,
-            },
-          },
-        ],
-      },
-      {
-        namespace_id: 's07UR',
-        namespace_path: 'ns1/',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 5,
-          non_entity_tokens: 0,
-          non_entity_clients: 5,
-          clients: 10,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 5,
-              clients: 5,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 5,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 5,
-            },
-          },
-        ],
-      },
-    ],
-    new_clients: {
-      counts: {
-        distinct_entities: 0,
-        entity_clients: 3,
-        non_entity_tokens: 0,
-        non_entity_clients: 2,
-        clients: 5,
-      },
-      namespaces: [
-        {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 3,
-            non_entity_tokens: 0,
-            non_entity_clients: 2,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 3,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 2,
-                clients: 2,
-              },
-            },
-          ],
-        },
-      ],
-    },
-  },
   {
     timestamp: '2021-10-01T00:00:00Z',
     counts: {
@@ -914,61 +692,61 @@ export default function (server) {
     };
   });
 
-  server.get('sys/license/status', function () {
-    const startTime = new Date();
+  // server.get('sys/license/status', function () {
+  //   const startTime = new Date();
 
-    return {
-      data: {
-        autoloading_used: true,
-        autoloaded: {
-          expiration_time: formatRFC3339(addDays(startTime, 365)),
-          features: [
-            'HSM',
-            'Performance Replication',
-            'DR Replication',
-            'MFA',
-            'Sentinel',
-            'Seal Wrapping',
-            'Control Groups',
-            'Performance Standby',
-            'Namespaces',
-            'KMIP',
-            'Entropy Augmentation',
-            'Transform Secrets Engine',
-            'Lease Count Quotas',
-            'Key Management Secrets Engine',
-            'Automated Snapshots',
-          ],
-          license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
-          performance_standby_count: 9999,
-          start_time: formatRFC3339(startTime),
-        },
-        persisted_autoload: {
-          expiration_time: formatRFC3339(addDays(startTime, 365)),
-          features: [
-            'HSM',
-            'Performance Replication',
-            'DR Replication',
-            'MFA',
-            'Sentinel',
-            'Seal Wrapping',
-            'Control Groups',
-            'Performance Standby',
-            'Namespaces',
-            'KMIP',
-            'Entropy Augmentation',
-            'Transform Secrets Engine',
-            'Lease Count Quotas',
-            'Key Management Secrets Engine',
-            'Automated Snapshots',
-          ],
-          license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
-          performance_standby_count: 9999,
-          start_time: formatRFC3339(startTime),
-        },
-      },
-    };
-  });
+  //   return {
+  //     data: {
+  //       autoloading_used: true,
+  //       autoloaded: {
+  //         expiration_time: formatRFC3339(addDays(startTime, 365)),
+  //         features: [
+  //           'HSM',
+  //           'Performance Replication',
+  //           'DR Replication',
+  //           'MFA',
+  //           'Sentinel',
+  //           'Seal Wrapping',
+  //           'Control Groups',
+  //           'Performance Standby',
+  //           'Namespaces',
+  //           'KMIP',
+  //           'Entropy Augmentation',
+  //           'Transform Secrets Engine',
+  //           'Lease Count Quotas',
+  //           'Key Management Secrets Engine',
+  //           'Automated Snapshots',
+  //         ],
+  //         license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
+  //         performance_standby_count: 9999,
+  //         start_time: formatRFC3339(startTime),
+  //       },
+  //       persisted_autoload: {
+  //         expiration_time: formatRFC3339(addDays(startTime, 365)),
+  //         features: [
+  //           'HSM',
+  //           'Performance Replication',
+  //           'DR Replication',
+  //           'MFA',
+  //           'Sentinel',
+  //           'Seal Wrapping',
+  //           'Control Groups',
+  //           'Performance Standby',
+  //           'Namespaces',
+  //           'KMIP',
+  //           'Entropy Augmentation',
+  //           'Transform Secrets Engine',
+  //           'Lease Count Quotas',
+  //           'Key Management Secrets Engine',
+  //           'Automated Snapshots',
+  //         ],
+  //         license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
+  //         performance_standby_count: 9999,
+  //         start_time: formatRFC3339(startTime),
+  //       },
+  //     },
+  //   };
+  // });
 
   server.get('sys/internal/counters/config', function () {
     return {
@@ -986,7 +764,6 @@ export default function (server) {
     const { start_time, end_time } = req.queryParams;
     // fake client counting start date so warning shows if user queries earlier start date
     const counts_start = '2020-12-31T00:00:00Z';
-    const monthsPayload = start_time === end_time ? MOCK_MONTHLY_DATA_SINGLE : MOCK_MONTHLY_DATA;
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',
@@ -1102,7 +879,7 @@ export default function (server) {
           },
         ],
         end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
-        months: handleMockQuery(start_time, end_time, monthsPayload),
+        months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
           distinct_entities: 37389,
