@@ -340,7 +340,7 @@ export default class History extends Component {
   }
 
   get hasMultipleMonthsData() {
-    return this.byMonthTotalClients && this.byMonthTotalClients.length > 1;
+    return this.byMonthActivityData && this.byMonthActivityData.length > 1;
   }
 
   @action

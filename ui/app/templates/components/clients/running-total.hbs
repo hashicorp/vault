@@ -15,11 +15,11 @@
         </p>
         <p class="data-details">{{this.showSingleMonth.new.total}}</p>
       </div>
-      <div class="single-month-breakdown-direct">
-        <StatText @label="Direct entities" @value={{this.showSingleMonth.new.entityClients}} @size="m" />
+      <div class="single-month-breakdown-entity">
+        <StatText @label="Entity clients" @value={{this.showSingleMonth.new.entityClients}} @size="m" />
       </div>
       <div class="single-month-breakdown-nonentity">
-        <StatText @label="Non-entity tokens" @value={{this.showSingleMonth.new.nonEntityClients}} @size="m" />
+        <StatText @label="Non-entity clients" @value={{this.showSingleMonth.new.nonEntityClients}} @size="m" />
       </div>
     </div>
     <div class="single-month-stats">
@@ -30,11 +30,11 @@
         </p>
         <p class="data-details">{{this.showSingleMonth.total.total}}</p>
       </div>
-      <div class="single-month-breakdown-direct">
-        <StatText @label="Direct entities" @value={{this.showSingleMonth.total.entityClients}} @size="m" />
+      <div class="single-month-breakdown-entity">
+        <StatText @label="Entity clients" @value={{this.showSingleMonth.total.entityClients}} @size="m" />
       </div>
       <div class="single-month-breakdown-nonentity">
-        <StatText @label="Non-entity tokens" @value={{this.showSingleMonth.total.nonEntityClients}} @size="m" />
+        <StatText @label="Non-entity clients" @value={{this.showSingleMonth.total.nonEntityClients}} @size="m" />
       </div>
     </div>
   </div>

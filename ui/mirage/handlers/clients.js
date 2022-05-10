@@ -1,4 +1,4 @@
-import { formatISO, isAfter, isBefore, sub, isSameMonth, startOfMonth } from 'date-fns';
+import { formatISO, isAfter, isBefore, sub, isSameMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 const MOCK_MONTHLY_DATA = [
@@ -883,7 +883,7 @@ export default function (server) {
             ],
           },
         ],
-        end_time: end_time || formatISO(startOfMonth(sub(new Date(), { months: 1 }))),
+        end_time: end_time || formatISO(endOfMonth(sub(new Date(), { months: 1 }))),
         months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {

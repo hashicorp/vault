@@ -16,7 +16,6 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2em;
-  // grid-template-rows: repeat(3, 1fr);
   width: 100%;
   margin-bottom: 1rem;
 }
@@ -24,7 +23,7 @@
   grid-column-start: 1;
   grid-column-end: span col3-end;
 }
-.single-month-breakdown-direct {
+.single-month-breakdown-entity {
   grid-column-start: 1;
 }
 .single-month-breakdown-nonentity {
