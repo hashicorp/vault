@@ -145,11 +145,14 @@ type GetPluginInput struct {
 
 // GetPluginResponse is the response from the GetPlugin call.
 type GetPluginResponse struct {
-	Args    []string `json:"args"`
-	Builtin bool     `json:"builtin"`
-	Command string   `json:"command"`
-	Name    string   `json:"name"`
-	SHA256  string   `json:"sha256"`
+	Args           []string `json:"args"`
+	Builtin        bool     `json:"builtin"`
+	Command        string   `json:"command"`
+	Name           string   `json:"name"`
+	SHA256         string   `json:"sha256"`
+	Version        string   `json:"version"`
+	RunningVersion string   `json:"running_version"`
+	RunningSHA     string   `json:"running_sha"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.
@@ -175,6 +178,7 @@ func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*Get
 		Data *GetPluginResponse
 	}
 	err = resp.DecodeJSON(&result)
+	fmt.Printf("GetPluginWithContext %+v\n", result.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +200,10 @@ type RegisterPluginInput struct {
 	Command string `json:"command,omitempty"`
 
 	// SHA256 is the shasum of the plugin.
-	SHA256 string `json:"sha256,omitempty"`
+	SHA256         string `json:"sha256,omitempty"`
+	Version        string `json:"version"`
+	RunningVersion string `json:"running_version"`
+	RunningSHA     string `json:"running_sha"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

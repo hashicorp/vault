@@ -146,4 +146,7 @@ type VersionInfo struct {
 	Sha     string
 }
 
-var EmptyVersion = VersionInfo{"", ""}
+var (
+	EmptyVersion   = VersionInfo{"", ""}
+	BuiltinVersion = VersionInfo{"builtin", ""}
+)

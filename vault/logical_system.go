@@ -543,12 +543,16 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		}
 	}
 
+	version := b.Core.pluginCatalog.getPluginVersion(ctx, b.Logger(), plugin)
 	data := map[string]interface{}{
-		"name":    plugin.Name,
-		"args":    plugin.Args,
-		"command": command,
-		"sha256":  hex.EncodeToString(plugin.Sha256),
-		"builtin": plugin.Builtin,
+		"name":            plugin.Name,
+		"args":            plugin.Args,
+		"command":         command,
+		"sha256":          hex.EncodeToString(plugin.Sha256),
+		"builtin":         plugin.Builtin,
+		"version":         plugin.Version,
+		"running_version": version.Version,
+		"running_sha":     version.Sha,
 	}
 
 	return &logical.Response{

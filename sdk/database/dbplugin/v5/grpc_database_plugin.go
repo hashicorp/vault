@@ -25,7 +25,7 @@ type GRPCDatabasePlugin struct {
 	FactoryFunc Factory
 	Impl        Database
 
-	// Embeding this will disable the netRPC protocol
+	// Embedding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
 }
 
@@ -54,13 +54,15 @@ func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) err
 	}
 
 	proto.RegisterDatabaseServer(s, &server)
+	proto.RegisterDatabaseVersionServer(s, &server)
 	return nil
 }
 
 func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	client := gRPCClient{
-		client:  proto.NewDatabaseClient(c),
-		doneCtx: doneCtx,
+		client:        proto.NewDatabaseClient(c),
+		versionClient: proto.NewDatabaseVersionClient(c),
+		doneCtx:       doneCtx,
 	}
 	return client, nil
 }

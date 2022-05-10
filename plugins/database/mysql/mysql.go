@@ -9,7 +9,7 @@ import (
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 )
@@ -31,12 +31,20 @@ const (
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
+var _ dbplugin.DatabaseVersion = (*MySQL)(nil)
 
 type MySQL struct {
 	*mySQLConnectionProducer
 
 	usernameProducer        template.StringTemplate
 	defaultUsernameTemplate string
+}
+
+func (_ *MySQL) Version() dbplugin.DatabaseVersionInfo {
+	return dbplugin.DatabaseVersionInfo{
+		Version: "someversion",
+		Sha:     "somesha",
+	}
 }
 
 // New implements builtinplugins.BuiltinFactory

@@ -93,3 +93,15 @@ service Database {
     rpc Type(Empty) returns (TypeResponse);
     rpc Close(Empty) returns (Empty);
 }
+
+// Optional version interface.
+message VersionRequest {}
+
+message VersionResponse {
+    string version = 1;
+    string sha = 2;
+}
+
+service DatabaseVersion {
+    rpc Version(VersionRequest) returns (VersionResponse);
+}

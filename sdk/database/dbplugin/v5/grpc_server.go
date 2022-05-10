@@ -15,9 +15,11 @@ import (
 )
 
 var _ proto.DatabaseServer = &gRPCServer{}
+var _ proto.DatabaseVersionServer = &gRPCServer{}
 
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
+	proto.UnimplementedDatabaseVersionServer
 
 	// holds the non-multiplexed Database
 	// when this is set the plugin does not support multiplexing
@@ -305,6 +307,22 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 	}
 
 	return &proto.Empty{}, nil
+}
+
+func (g *gRPCServer) Version(ctx context.Context, _ *proto.VersionRequest) (*proto.VersionResponse, error) {
+	impl, err := g.getOrCreateDatabase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if dbImpl, ok := impl.(DatabaseVersion); ok {
+		version := dbImpl.Version()
+		return &proto.VersionResponse{
+			Version: version.Version,
+			Sha:     version.Sha,
+		}, nil
+	}
+	return nil, fmt.Errorf("database plugin does not support Version() interface")
 }
 
 func getStatementsFromProto(protoStmts *proto.Statements) (statements Statements) {

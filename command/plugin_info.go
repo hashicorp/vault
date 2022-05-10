@@ -107,11 +107,14 @@ func (c *PluginInfoCommand) Run(args []string) int {
 	}
 
 	data := map[string]interface{}{
-		"args":    resp.Args,
-		"builtin": resp.Builtin,
-		"command": resp.Command,
-		"name":    resp.Name,
-		"sha256":  resp.SHA256,
+		"args":            resp.Args,
+		"builtin":         resp.Builtin,
+		"command":         resp.Command,
+		"name":            resp.Name,
+		"sha256":          resp.SHA256,
+		"version":         resp.Version,
+		"running_version": resp.RunningVersion,
+		"running_sha":     resp.RunningSHA,
 	}
 
 	if c.flagField != "" {

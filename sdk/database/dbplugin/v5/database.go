@@ -33,6 +33,15 @@ type Database interface {
 	Close() error
 }
 
+type DatabaseVersionInfo struct {
+	Version string
+	Sha     string
+}
+
+type DatabaseVersion interface {
+	Version() DatabaseVersionInfo
+}
+
 // ///////////////////////////////////////////////////////////////////////////
 // Database Request & Response Objects
 // These request and response objects are *not* protobuf types because gRPC does not

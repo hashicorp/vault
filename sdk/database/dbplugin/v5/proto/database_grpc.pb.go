@@ -279,3 +279,89 @@ var Database_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "sdk/database/dbplugin/v5/proto/database.proto",
 }
+
+// DatabaseVersionClient is the client API for DatabaseVersion service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type DatabaseVersionClient interface {
+	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error)
+}
+
+type databaseVersionClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDatabaseVersionClient(cc grpc.ClientConnInterface) DatabaseVersionClient {
+	return &databaseVersionClient{cc}
+}
+
+func (c *databaseVersionClient) Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error) {
+	out := new(VersionResponse)
+	err := c.cc.Invoke(ctx, "/dbplugin.v5.DatabaseVersion/Version", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DatabaseVersionServer is the server API for DatabaseVersion service.
+// All implementations must embed UnimplementedDatabaseVersionServer
+// for forward compatibility
+type DatabaseVersionServer interface {
+	Version(context.Context, *VersionRequest) (*VersionResponse, error)
+	mustEmbedUnimplementedDatabaseVersionServer()
+}
+
+// UnimplementedDatabaseVersionServer must be embedded to have forward compatible implementations.
+type UnimplementedDatabaseVersionServer struct {
+}
+
+func (UnimplementedDatabaseVersionServer) Version(context.Context, *VersionRequest) (*VersionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
+}
+func (UnimplementedDatabaseVersionServer) mustEmbedUnimplementedDatabaseVersionServer() {}
+
+// UnsafeDatabaseVersionServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DatabaseVersionServer will
+// result in compilation errors.
+type UnsafeDatabaseVersionServer interface {
+	mustEmbedUnimplementedDatabaseVersionServer()
+}
+
+func RegisterDatabaseVersionServer(s grpc.ServiceRegistrar, srv DatabaseVersionServer) {
+	s.RegisterService(&DatabaseVersion_ServiceDesc, srv)
+}
+
+func _DatabaseVersion_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DatabaseVersionServer).Version(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/dbplugin.v5.DatabaseVersion/Version",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DatabaseVersionServer).Version(ctx, req.(*VersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// DatabaseVersion_ServiceDesc is the grpc.ServiceDesc for DatabaseVersion service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DatabaseVersion_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "dbplugin.v5.DatabaseVersion",
+	HandlerType: (*DatabaseVersionServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Version",
+			Handler:    _DatabaseVersion_Version_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "sdk/database/dbplugin/v5/proto/database.proto",
+}

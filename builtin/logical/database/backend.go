@@ -32,9 +32,11 @@ type dbPluginInstance struct {
 	sync.RWMutex
 	database databaseVersionWrapper
 
-	id     string
-	name   string
-	closed bool
+	id      string
+	name    string
+	closed  bool
+	version string
+	sha     string
 }
 
 func (dbi *dbPluginInstance) Close() error {

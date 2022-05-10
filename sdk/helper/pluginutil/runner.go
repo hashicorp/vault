@@ -5,7 +5,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -53,6 +53,8 @@ type PluginRunner struct {
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
+	RunningVersion string                      `json:"running_version" structs:"running_version"`
+	RunningSha     string                      `json:"running_sha" structs:"running_sha"`
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

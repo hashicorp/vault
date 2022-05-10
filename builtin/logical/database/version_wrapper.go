@@ -16,8 +16,9 @@ import (
 )
 
 type databaseVersionWrapper struct {
-	v4 v4.Database
-	v5 v5.Database
+	v4        v4.Database
+	v5        v5.Database
+	v5Version v5.DatabaseVersion
 }
 
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
@@ -227,6 +228,16 @@ func (d databaseVersionWrapper) Close() error {
 
 	// v4 Database
 	return d.v4.Close()
+}
+
+// Version of the underlying database. Returns empty version info on error.
+func (d databaseVersionWrapper) Version() v5.DatabaseVersionInfo {
+	if d.isV5() {
+		if versionImpl, ok := d.v5.(v5.DatabaseVersion); ok {
+			return versionImpl.Version()
+		}
+	}
+	return v5.DatabaseVersionInfo{}
 }
 
 // /////////////////////////////////////////////////////////////////////////////////

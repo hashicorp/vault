@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
@@ -32,7 +32,8 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 )
 
 var (
-	_ dbplugin.Database = &PostgreSQL{}
+	_ dbplugin.Database        = &PostgreSQL{}
+	_ dbplugin.DatabaseVersion = &PostgreSQL{}
 
 	// postgresEndStatement is basically the word "END" but
 	// surrounded by a word boundary to differentiate it from
@@ -70,6 +71,13 @@ type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
 	usernameProducer template.StringTemplate
+}
+
+func (_ *PostgreSQL) Version() dbplugin.DatabaseVersionInfo {
+	return dbplugin.DatabaseVersionInfo{
+		Version: "someversion",
+		Sha:     "somesha",
+	}
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {

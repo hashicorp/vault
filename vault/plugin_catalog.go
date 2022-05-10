@@ -13,12 +13,13 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	semver "github.com/hashicorp/go-version"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -359,6 +360,60 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	}
 
 	return consts.PluginTypeUnknown, nil
+}
+
+// getPluginVersion will attempt to run the plugin to determine its version.
+// On error, it will return logical.EmptyVersion.
+func (c *PluginCatalog) getPluginVersion(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (version logical.VersionInfo) {
+	version = logical.EmptyVersion
+
+	if plugin.Builtin {
+		return logical.BuiltinVersion
+	}
+
+	// try as a database plugin
+	config := pluginutil.PluginClientConfig{
+		Name:            plugin.Name,
+		PluginSets:      v5.PluginSets,
+		PluginType:      consts.PluginTypeDatabase,
+		Version:         plugin.Version,
+		HandshakeConfig: v5.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  true,
+		AutoMTLS:        true,
+	}
+
+	// Attempt to run as database V5 or V6 multiplexed plugin
+	c.logger.Debug("attempting to load database plugin as v5", "name", plugin.Name)
+	v5Client, err := c.newPluginClient(ctx, plugin, config)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		defer c.cleanupExternalPlugin(plugin.Name, v5Client.id)
+		dbc := proto.NewDatabaseVersionClient(v5Client.clientConn)
+		versionResp, err := dbc.Version(ctx, &proto.VersionRequest{})
+		if err != nil {
+			c.logger.Info("Could not load version from database v5 plugin", "err", err)
+			return
+		}
+		version.Version = versionResp.Version
+		version.Sha = versionResp.Sha
+	}
+	c.logger.Info("Couldn't load as v5 database plugin", "err", err)
+	// otherwise it is a backend or database v4 plugin
+	// v4 database plugins don't support Version, so we skip that check and just try it as a backend plugin
+	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		err := client.Setup(ctx, &logical.BackendConfig{})
+		if err != nil {
+			logger.Info("Could not setup backend plugin to determine version", "err", err)
+			return
+		}
+		defer client.Cleanup(ctx)
+		version = client.Version()
+	} else {
+		logger.Info("Could not run backend plugin to determine version", "err", err)
+	}
+	return
 }
 
 // isDatabasePlugin returns true if the plugin supports multiplexing. An error
