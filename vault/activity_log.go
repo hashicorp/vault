@@ -483,6 +483,23 @@ func (a *ActivityLog) getMostRecentActivityLogSegment(ctx context.Context) ([]ti
 	return timeutil.GetMostRecentContiguousMonths(logTimes), nil
 }
 
+// getMostRecentActivityLogSegment gets the times (in UTC) associated with the most recent
+// contiguous set of activity logs, sorted in decreasing order (latest to earliest)
+func (a *ActivityLog) getMostRecentNonContiguousActivityLogSegments(ctx context.Context) ([]time.Time, error) {
+	logTimes, err := a.availableLogs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(logTimes) <= 12 {
+		return logTimes, nil
+	}
+	contiguousMonths := timeutil.GetMostRecentContiguousMonths(logTimes)
+	if len(contiguousMonths) >= 12 {
+		return contiguousMonths, nil
+	}
+	return logTimes[:12], nil
+}
+
 // getLastEntitySegmentNumber returns the (non-negative) last segment number for the :startTime:, if it exists
 func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime time.Time) (uint64, bool, error) {
 	p, err := a.view.List(ctx, activityEntityBasePath+fmt.Sprint(startTime.Unix())+"/")
@@ -510,7 +527,8 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 // WalkEntitySegments loads each of the entity segments for a particular start time
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.EntityActivityLog, time.Time)) error {
+	walkFn func(*activity.EntityActivityLog, time.Time),
+) error {
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -540,7 +558,8 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 // WalkTokenSegments loads each of the token segments (expected 1) for a particular start time
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.TokenCount)) error {
+	walkFn func(*activity.TokenCount),
+) error {
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -1986,7 +2005,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	lastMonth := intent.PreviousMonth
 	a.logger.Info("computing queries", "month", time.Unix(lastMonth, 0).UTC())
 
-	times, err := a.getMostRecentActivityLogSegment(ctx)
+	times, err := a.getMostRecentNonContiguousActivityLogSegments(ctx)
 	if err != nil {
 		a.logger.Warn("could not list recent segments", "error", err)
 		return err
