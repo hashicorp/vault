@@ -30,8 +30,10 @@ const (
 	DefaultLegacyUserNameTemplate = `{{ printf "v-%s-%s-%s" (.RoleName | truncate 4) (random 20) | truncate 16 }}`
 )
 
-var _ dbplugin.Database = (*MySQL)(nil)
-var _ dbplugin.DatabaseVersion = (*MySQL)(nil)
+var (
+	_ dbplugin.Database        = (*MySQL)(nil)
+	_ dbplugin.DatabaseVersion = (*MySQL)(nil)
+)
 
 type MySQL struct {
 	*mySQLConnectionProducer
