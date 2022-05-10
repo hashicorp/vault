@@ -74,11 +74,16 @@ Usage: vault operator generate-root [options] [KEY]
 
   Start a root token generation:
 
+      $ vault operator generate-root -init
+
+  Start a root token generation by providing key:
+
       $ vault operator generate-root -init -otp="..."
       $ vault operator generate-root -init -pgp-key="..."
 
   Enter an unseal key to progress root token generation:
 
+      $ vault operator generate-root
       $ vault operator generate-root -otp="..."
 
 ` + c.Flags().Help()
