@@ -1870,8 +1870,6 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 				factorFound = true
 				break
 			}
-		} else {
-			return errors.New("factor did not return user factor")
 		}
 	}
 
