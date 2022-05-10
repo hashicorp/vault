@@ -9,11 +9,12 @@
     </div>
     <div class="single-month-stats">
       <div class="single-month-section-title">
-        <h2 class="chart-title">New clients</h2>
-        <p class="chart-subtext">
-          This is the number of clients which were created in Vault for the first time in the selected month.
-        </p>
-        <p class="data-details">{{this.showSingleMonth.new.total}}</p>
+        <StatText
+          @label="New clients"
+          @subText="This is the number of clients which were created in Vault for the first time in the selected month."
+          @value={{this.showSingleMonth.new.total}}
+          @size="l"
+        />
       </div>
       <div class="single-month-breakdown-entity">
         <StatText @label="Entity clients" @value={{this.showSingleMonth.new.entityClients}} @size="m" />
@@ -24,11 +25,12 @@
     </div>
     <div class="single-month-stats">
       <div class="single-month-section-title">
-        <h2 class="chart-title">Total monthly clients</h2>
-        <p class="chart-subtext">
-          This is the number of total clients which used Vault for the given month, both new and previous.
-        </p>
-        <p class="data-details">{{this.showSingleMonth.total.total}}</p>
+        <StatText
+          @label="Total monthly clients"
+          @subText="This is the number of total clients which used Vault for the given month, both new and previous."
+          @value={{this.showSingleMonth.total.total}}
+          @size="l"
+        />
       </div>
       <div class="single-month-breakdown-entity">
         <StatText @label="Entity clients" @value={{this.showSingleMonth.total.entityClients}} @size="m" />
