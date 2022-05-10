@@ -111,6 +111,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchValid(&b),
 			pathFetchListCerts(&b),
 			pathRevoke(&b),
+			pathRevokeByRole(&b),
 			pathTidy(&b),
 			pathTidyStatus(&b),
 		},
