@@ -3,10 +3,13 @@ package transit
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"hash"
 	"time"
 
 	"strconv"
@@ -29,11 +32,15 @@ func (b *backend) pathImport() *framework.Path {
 			},
 			"type": {
 				Type: framework.TypeString,
-				Description: `
-The type of key being imported. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
+				Description: `The type of key being imported. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
 (asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
+			},
+			"hash_function": {
+				Type: framework.TypeString,
+				Description: `The hash function used as a random oracle in the OAEP wrapping of the user-generated,
+ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384", or "SHA512"`,
 			},
 			"ciphertext": {
 				Type: framework.TypeString,
@@ -133,6 +140,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
+	hashFnStr := d.Get("hash_function").(string)
 	exportable := d.Get("exportable").(bool)
 	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
 	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
@@ -183,6 +191,11 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
 	}
 
+	hashFn, err := parseHashFn(hashFnStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
@@ -200,7 +213,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
-	key, err := b.decryptImportedKey(ctx, req.Storage, ciphertext)
+	key, err := b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +228,18 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 
 func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	hashFnStr := d.Get("hash_function").(string)
 	ciphertextString := d.Get("ciphertext").(string)
 
 	polReq := keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 		Upsert:  false,
+	}
+
+	hashFn, err := parseHashFn(hashFnStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
@@ -246,7 +265,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
-	importKey, err := b.decryptImportedKey(ctx, req.Storage, ciphertext)
+	importKey, err := b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
 	err = p.Import(ctx, req.Storage, importKey, b.GetRandomReader())
 	if err != nil {
 		return nil, err
@@ -255,7 +274,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	return nil, nil
 }
 
-func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storage, ciphertext []byte) ([]byte, error) {
+func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storage, ciphertext []byte, hashFn hash.Hash) ([]byte, error) {
 	wrappedAESKey := ciphertext[:EncryptedKeyBytes]
 	wrappedImportKey := ciphertext[EncryptedKeyBytes:]
 
@@ -268,7 +287,7 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	}
 
 	rsaKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
-	aesKey, err := rsa.DecryptOAEP(sha256.New(), b.GetRandomReader(), rsaKey, wrappedAESKey, []byte{})
+	aesKey, err := rsa.DecryptOAEP(hashFn, b.GetRandomReader(), rsaKey, wrappedAESKey, []byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -284,6 +303,23 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	}
 
 	return importKey, nil
+}
+
+func parseHashFn(hashFn string) (hash.Hash, error) {
+	switch hashFn {
+	case "sha1":
+		return sha1.New(), nil
+	case "sha224":
+		return sha256.New224(), nil
+	case "sha256":
+		return sha256.New(), nil
+	case "sha384":
+		return sha512.New384(), nil
+	case "sha512":
+		return sha512.New(), nil
+	default:
+		return nil, fmt.Errorf("unknown hash function: %s", hashFn)
+	}
 }
 
 const pathImportWriteSyn = "Imports an externally-generated key into a new transit key"
