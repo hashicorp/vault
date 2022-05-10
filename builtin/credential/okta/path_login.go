@@ -189,9 +189,12 @@ func pathVerify(b *backend) *framework.Path {
 				Description: "Nonce",
 			},
 		},
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathVerify,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.pathVerify,
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
+			},
 		},
 	}
 }
