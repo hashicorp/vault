@@ -56,7 +56,6 @@ func Backend() *backend {
 		BackendType: logical.TypeCredential,
 	}
 	b.verifyCache = cache.New(5*time.Minute, time.Minute)
-	b.verifyCache.SetDefault("test", 55)
 
 	return &b
 }

@@ -35,8 +35,10 @@ func pathLogin(b *backend) *framework.Path {
 				Description: "TOTP passcode.",
 			},
 			"nonce": {
-				Type:        framework.TypeString,
-				Description: "Nonce",
+				Type: framework.TypeString,
+				Description: `Nonce provided if performing login that requires 
+number verification challenge. Logins through the vault login CLI command will 
+automatically generate a nonce`,
 			},
 			"provider": {
 				Type:        framework.TypeString,
@@ -185,8 +187,9 @@ func pathVerify(b *backend) *framework.Path {
 		Pattern: `verify/(?P<nonce>.+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"nonce": {
-				Type:        framework.TypeString,
-				Description: "Nonce",
+				Type: framework.TypeString,
+				Description: `Nonce provided during a login request to
+retrieve the number verification challenge for the matching request.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
