@@ -74,27 +74,12 @@ updated attributes.
 | :----- | :-------------------- |
 | `POST` | `/consul/roles/:name` |
 
-### Parameters for Consul versions 1.7 and above
-
-- `consul_namespace` `(string: "")` <EnterpriseAlert inline /> - Specifies the Consul namespace the token
-  will be generated within. The namespace must exist, and the policies or roles assigned to the
-  Vault role must also exist inside the given Consul namespace. If not provided, the "default"
-  namespace is used.
-
 ### Parameters for Consul versions 1.11 and above
 
 - `partition` `(string: "")` <EnterpriseAlert inline /> - Specifies the Consul admin partition the token
   will be generated within. The partition must exist, and the policies or roles assigned to the
   Vault role must also exist inside the given partition. If not provided, the "default"
   partition is used.
-
-To create a client token within a particular Consul namespace:
-
-```json
-{
-  "consul_namespace": "ns1"
-}
-```
 
 To create a client token within a particular Consul admin partition:
 
@@ -104,7 +89,34 @@ To create a client token within a particular Consul admin partition:
 }
 ```
 
-### Parameters for Consul versions 1.4 and above
+### Parameters for Consul versions 1.8 and above
+
+- `consul_namespace` `(string: "")` <EnterpriseAlert inline /> - Specifies the Consul namespace the token
+  will be generated within. The namespace must exist, and the policies or roles assigned to the
+  Vault role must also exist inside the given Consul namespace. If not provided, the "default"
+  namespace is used.
+
+- `node_identities` `(list: <node identity or identities>)` - The list of node identities to
+assign to the generated token. This may be a comma-separated list to attach multiple node identities
+to a token.
+
+To create a client token within a particular Consul namespace:
+
+```json
+{
+  "consul_namespace": "ns1"
+}
+```
+
+To create a client token with node identities attached:
+
+```json
+{
+  "node_identities": "client-1:dc1,client-2:dc1"
+}
+```
+
+### Parameters for Consul versions 1.5 and above
 
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
@@ -124,6 +136,10 @@ To create a client token within a particular Consul admin partition:
 
 - `consul_roles` `(list: <role or roles>)` – The list of Consul roles to assign to the
   generated token. Either `policies` or `consul_roles` are required for Consul 1.5 and above.
+
+- `service_identities` `(list: <service identity or identities>)` - The list of
+  service identities to assign to the generated token. This may be a semicolon-separated list to
+  attach multiple service identities to a token.
 
 - `local` `(bool: false)` - Indicates that the token should not be replicated
   globally and instead be local to the current datacenter. Only available in Consul
@@ -160,6 +176,14 @@ To create a client token with defined roles:
 ```json
 {
   "consul_roles": "role-a,role-b"
+}
+```
+
+To create a client token with service identities attached:
+
+```json
+{
+  "service_identities": "myservice-1:dc1,dc2;myservice-2:dc1"
 }
 ```
 
