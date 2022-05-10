@@ -74,6 +74,10 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not generate keys until migration has completed"), nil
+	}
+
 	keyName, err := getKeyName(ctx, req.Storage, data)
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
 		return nil, err
@@ -155,7 +159,7 @@ func pathImportKey(b *backend) *framework.Path {
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.CreateOperation: &framework.PathOperation{
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathImportKeyHandler,
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -178,6 +182,10 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	// got a consistent view.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot import keys until migration has completed"), nil
+	}
 
 	keyValueInterface, isOk := data.GetOk("pem_bundle")
 	if !isOk {

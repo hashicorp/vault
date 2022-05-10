@@ -707,30 +707,7 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 }
 
 func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-	csrTemplate := x509.CertificateRequest{
-		Subject: pkix.Name{
-			Country:      []string{"MyCountry"},
-			PostalCode:   []string{"MyPostalCode"},
-			SerialNumber: "MySerialNumber",
-			CommonName:   "my@example.com",
-		},
-		DNSNames: []string{
-			"name1.example.com",
-			"name2.example.com",
-			"name3.example.com",
-		},
-		EmailAddresses: []string{
-			"name1@example.com",
-			"name2@example.com",
-			"name3@example.com",
-		},
-		IPAddresses: []net.IP{
-			net.ParseIP("::ff:1:2:3:4"),
-			net.ParseIP("::ff:5:6:7:8"),
-		},
-	}
-
-	_, _, csrPem := generateCSR(t, &csrTemplate, "rsa", 2048)
+	csrTemplate, csrPem := generateTestCsr(t, certutil.RSAPrivateKey, 2048)
 
 	ret := []logicaltest.TestStep{
 		{
@@ -818,6 +795,34 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 	}
 	return ret
+}
+
+func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			Country:      []string{"MyCountry"},
+			PostalCode:   []string{"MyPostalCode"},
+			SerialNumber: "MySerialNumber",
+			CommonName:   "my@example.com",
+		},
+		DNSNames: []string{
+			"name1.example.com",
+			"name2.example.com",
+			"name3.example.com",
+		},
+		EmailAddresses: []string{
+			"name1@example.com",
+			"name2@example.com",
+			"name3@example.com",
+		},
+		IPAddresses: []net.IP{
+			net.ParseIP("::ff:1:2:3:4"),
+			net.ParseIP("::ff:5:6:7:8"),
+		},
+	}
+
+	_, _, csrPem := generateCSR(t, &csrTemplate, string(keyType), keyBits)
+	return csrTemplate, csrPem
 }
 
 // Generates steps to test out various role permutations
