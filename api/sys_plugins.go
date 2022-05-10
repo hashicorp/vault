@@ -178,7 +178,6 @@ func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*Get
 		Data *GetPluginResponse
 	}
 	err = resp.DecodeJSON(&result)
-	fmt.Printf("GetPluginWithContext %+v\n", result.Data)
 	if err != nil {
 		return nil, err
 	}
