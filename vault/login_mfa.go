@@ -1839,7 +1839,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	} else {
 		filterPrefix = "profile.login eq"
 	}
-	filterQuery := fmt.Sprintf("%s \"%s\"", filterPrefix, username)
+	filterQuery := fmt.Sprintf("%s %q", filterPrefix, username)
 	filter := query.NewQueryParams(query.WithFilter(filterQuery))
 
 	users, _, err := client.User.ListUsers(ctx, filter)
