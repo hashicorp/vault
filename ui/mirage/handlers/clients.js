@@ -3,7 +3,7 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 const MOCK_MONTHLY_DATA = [
   {
-    timestamp: '2021-10-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 1 }))),
     counts: {
       distinct_entities: 0,
       entity_clients: 20,
@@ -125,7 +125,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: '2021-09-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 2 }))),
     counts: {
       distinct_entities: 0,
       entity_clients: 17,
@@ -346,7 +346,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: '2021-08-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 3 }))),
     counts: {
       distinct_entities: 0,
       entity_clients: 7,
@@ -468,7 +468,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: '2021-07-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 4 }))),
     counts: {
       distinct_entities: 0,
       entity_clients: 5,
@@ -557,7 +557,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: '2021-06-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 5 }))),
     counts: {
       distinct_entities: 0,
       entity_clients: 2,
@@ -652,13 +652,16 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
   const startDateByMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
   const endDateByMonth = parseAPITimestamp(monthlyData[0].timestamp);
   let transformedMonthlyArray = [...monthlyData];
+  // If query wants months previous to the data we have, return the full array
   if (isBefore(queryStartDate, startDateByMonth)) {
     return transformedMonthlyArray;
   }
+  // If query is after earliest month in array, return latest to month that matches query
   if (isAfter(queryStartDate, startDateByMonth)) {
     let index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
     transformedMonthlyArray = transformedMonthlyArray.slice(0, index + 1);
   }
+  // If query end is before last month in array, return only through end query
   if (isBefore(queryEndDate, endDateByMonth)) {
     let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
     transformedMonthlyArray = transformedMonthlyArray.slice(index);
@@ -692,61 +695,63 @@ export default function (server) {
     };
   });
 
-  // server.get('sys/license/status', function () {
-  //   const startTime = new Date();
+  /*
+  server.get('sys/license/status', function () {
+    const startTime = new Date();
 
-  //   return {
-  //     data: {
-  //       autoloading_used: true,
-  //       autoloaded: {
-  //         expiration_time: formatRFC3339(addDays(startTime, 365)),
-  //         features: [
-  //           'HSM',
-  //           'Performance Replication',
-  //           'DR Replication',
-  //           'MFA',
-  //           'Sentinel',
-  //           'Seal Wrapping',
-  //           'Control Groups',
-  //           'Performance Standby',
-  //           'Namespaces',
-  //           'KMIP',
-  //           'Entropy Augmentation',
-  //           'Transform Secrets Engine',
-  //           'Lease Count Quotas',
-  //           'Key Management Secrets Engine',
-  //           'Automated Snapshots',
-  //         ],
-  //         license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
-  //         performance_standby_count: 9999,
-  //         start_time: formatRFC3339(startTime),
-  //       },
-  //       persisted_autoload: {
-  //         expiration_time: formatRFC3339(addDays(startTime, 365)),
-  //         features: [
-  //           'HSM',
-  //           'Performance Replication',
-  //           'DR Replication',
-  //           'MFA',
-  //           'Sentinel',
-  //           'Seal Wrapping',
-  //           'Control Groups',
-  //           'Performance Standby',
-  //           'Namespaces',
-  //           'KMIP',
-  //           'Entropy Augmentation',
-  //           'Transform Secrets Engine',
-  //           'Lease Count Quotas',
-  //           'Key Management Secrets Engine',
-  //           'Automated Snapshots',
-  //         ],
-  //         license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
-  //         performance_standby_count: 9999,
-  //         start_time: formatRFC3339(startTime),
-  //       },
-  //     },
-  //   };
-  // });
+    return {
+      data: {
+        autoloading_used: true,
+        autoloaded: {
+          expiration_time: formatRFC3339(addDays(startTime, 365)),
+          features: [
+            'HSM',
+            'Performance Replication',
+            'DR Replication',
+            'MFA',
+            'Sentinel',
+            'Seal Wrapping',
+            'Control Groups',
+            'Performance Standby',
+            'Namespaces',
+            'KMIP',
+            'Entropy Augmentation',
+            'Transform Secrets Engine',
+            'Lease Count Quotas',
+            'Key Management Secrets Engine',
+            'Automated Snapshots',
+          ],
+          license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
+          performance_standby_count: 9999,
+          start_time: formatRFC3339(startTime),
+        },
+        persisted_autoload: {
+          expiration_time: formatRFC3339(addDays(startTime, 365)),
+          features: [
+            'HSM',
+            'Performance Replication',
+            'DR Replication',
+            'MFA',
+            'Sentinel',
+            'Seal Wrapping',
+            'Control Groups',
+            'Performance Standby',
+            'Namespaces',
+            'KMIP',
+            'Entropy Augmentation',
+            'Transform Secrets Engine',
+            'Lease Count Quotas',
+            'Key Management Secrets Engine',
+            'Automated Snapshots',
+          ],
+          license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
+          performance_standby_count: 9999,
+          start_time: formatRFC3339(startTime),
+        },
+      },
+    };
+  });
+  */
 
   server.get('sys/internal/counters/config', function () {
     return {
@@ -878,7 +883,7 @@ export default function (server) {
             ],
           },
         ],
-        end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
+        end_time: end_time || formatISO(startOfMonth(sub(new Date(), { months: 1 }))),
         months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
