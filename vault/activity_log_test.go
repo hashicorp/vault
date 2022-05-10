@@ -3576,3 +3576,4 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		t.Errorf("bad client count. expected %d, got %d", len(clients), clientCount)
 	}
 }
+
