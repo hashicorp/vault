@@ -152,7 +152,6 @@ type GetPluginResponse struct {
 	SHA256         string   `json:"sha256"`
 	Version        string   `json:"version"`
 	RunningVersion string   `json:"running_version"`
-	RunningSHA     string   `json:"running_sha"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.
@@ -202,7 +201,6 @@ type RegisterPluginInput struct {
 	SHA256         string `json:"sha256,omitempty"`
 	Version        string `json:"version"`
 	RunningVersion string `json:"running_version"`
-	RunningSHA     string `json:"running_sha"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

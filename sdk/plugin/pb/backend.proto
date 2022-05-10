@@ -407,7 +407,6 @@ message TypeReply {
 message VersionReply {
 	string name = 1;
 	string version = 2;
-	string sha = 3;
 }
 
 message InvalidateKeyArgs {

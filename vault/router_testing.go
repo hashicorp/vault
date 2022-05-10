@@ -118,7 +118,6 @@ func (n *NoopBackend) Type() logical.BackendType {
 func (n *NoopBackend) Version() logical.VersionInfo {
 	return logical.VersionInfo{
 		Version: "",
-		Sha:     "",
 	}
 }
 

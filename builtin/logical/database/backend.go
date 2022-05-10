@@ -35,7 +35,6 @@ type dbPluginInstance struct {
 	name    string
 	closed  bool
 	version string
-	sha     string
 }
 
 func (dbi *dbPluginInstance) Close() error {

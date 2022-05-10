@@ -165,7 +165,6 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			},
 		},
 		PluginVersion: versionInfo.Version,
-		PluginSha:     versionInfo.Sha,
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
@@ -552,7 +551,6 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		"builtin":         plugin.Builtin,
 		"version":         plugin.Version,
 		"running_version": version.Version,
-		"running_sha":     version.Sha,
 	}
 
 	return &logical.Response{
@@ -871,7 +869,6 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"uuid":                    entry.UUID,
 		"version":                 entry.Version,
 		"running_version":         entry.RunningVersion,
-		"running_sha":             entry.RunningSha,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -1113,7 +1110,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
 		RunningVersion:        versionInfo.Version,
-		RunningSha:            versionInfo.Sha,
 	}
 
 	// Attempt mount
@@ -2344,7 +2340,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
 		RunningVersion:        versionInfo.Version,
-		RunningSha:            versionInfo.Sha,
 	}
 
 	// Attempt enabling
@@ -2832,7 +2827,6 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 		Options:        options,
 		Local:          local,
 		RunningVersion: versionInfo.Version,
-		RunningSha:     versionInfo.Sha,
 	}
 
 	// Attempt enabling

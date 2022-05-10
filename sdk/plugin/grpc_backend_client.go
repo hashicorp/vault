@@ -286,11 +286,9 @@ func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
 	if err != nil {
 		return logical.VersionInfo{
 			Version: "",
-			Sha:     "",
 		}
 	}
 	return logical.VersionInfo{
 		Version: reply.Version,
-		Sha:     reply.Sha,
 	}
 }

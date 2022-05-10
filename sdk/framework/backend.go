@@ -98,8 +98,6 @@ type Backend struct {
 
 	// PluginVersion is the optional version that will be self-reported.
 	PluginVersion string
-	// PluginSha is the optional version that will be self-reported.
-	PluginSha string
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
@@ -454,7 +452,6 @@ func (b *Backend) Secret(k string) *Secret {
 func (b *Backend) Version() logical.VersionInfo {
 	return logical.VersionInfo{
 		Version: b.PluginVersion,
-		Sha:     b.PluginSha,
 	}
 }
 

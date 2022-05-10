@@ -144,10 +144,9 @@ type Auditor interface {
 
 type VersionInfo struct {
 	Version string
-	Sha     string
 }
 
 var (
-	EmptyVersion   = VersionInfo{"", ""}
-	BuiltinVersion = VersionInfo{version.GetVersion().Version + "-builtin", ""}
+	EmptyVersion   = VersionInfo{""}
+	BuiltinVersion = VersionInfo{version.GetVersion().Version + "-builtin"}
 )

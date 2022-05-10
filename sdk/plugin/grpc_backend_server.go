@@ -166,6 +166,5 @@ func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *pb.Empty) (*pb
 	version := b.backend.Version()
 	return &pb.VersionReply{
 		Version: version.Version,
-		Sha:     version.Sha,
 	}, nil
 }

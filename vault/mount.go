@@ -306,7 +306,6 @@ type MountEntry struct {
 	MountState            string            `json:"mount_state,omitempty"`             // The current mount state.  The only non-empty mount state right now is "unmounting"
 	NamespaceID           string            `json:"namespace_id"`
 	RunningVersion        string            `json:"running_version"` // Self-reported version of the running plugin
-	RunningSha            string            `json:"sha"`             // Self-reported sha of the running plugin
 
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
@@ -1486,7 +1485,6 @@ func (c *Core) defaultMountTable() *MountTable {
 			},
 			Version:        versionInfo.Version,
 			RunningVersion: versionInfo.Version,
-			RunningSha:     versionInfo.Sha,
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1524,7 +1522,6 @@ func (c *Core) requiredMountTable() *MountTable {
 		BackendAwareUUID: cubbyholeBackendUUID,
 		Version:          versionInfo.Version,
 		RunningVersion:   versionInfo.Version,
-		RunningSha:       versionInfo.Sha,
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1554,7 +1551,6 @@ func (c *Core) requiredMountTable() *MountTable {
 		},
 		Version:        versionInfo.Version,
 		RunningVersion: versionInfo.Version,
-		RunningSha:     versionInfo.Sha,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1582,7 +1578,6 @@ func (c *Core) requiredMountTable() *MountTable {
 		},
 		Version:        versionInfo.Version,
 		RunningVersion: versionInfo.Version,
-		RunningSha:     versionInfo.Sha,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

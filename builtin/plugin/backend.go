@@ -74,7 +74,6 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		PathsSpecial:  paths,
 		BackendType:   btype,
 		PluginVersion: runningVersionInfo.Version,
-		PluginSha:     runningVersionInfo.Sha,
 	}
 
 	b.config = conf

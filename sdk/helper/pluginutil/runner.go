@@ -54,7 +54,6 @@ type PluginRunner struct {
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 	RunningVersion string                      `json:"running_version" structs:"running_version"`
-	RunningSha     string                      `json:"running_sha" structs:"running_sha"`
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

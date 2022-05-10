@@ -756,7 +756,6 @@ func (n *rawHTTP) Type() logical.BackendType {
 func (n *rawHTTP) Version() logical.VersionInfo {
 	return logical.VersionInfo{
 		Version: "",
-		Sha:     "",
 	}
 }
 

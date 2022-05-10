@@ -114,7 +114,6 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		"sha256":          resp.SHA256,
 		"version":         resp.Version,
 		"running_version": resp.RunningVersion,
-		"running_sha":     resp.RunningSHA,
 	}
 
 	if c.flagField != "" {
