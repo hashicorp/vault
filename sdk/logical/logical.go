@@ -4,6 +4,7 @@ import (
 	"context"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // BackendType is the type of backend that is being implemented
@@ -148,5 +149,5 @@ type VersionInfo struct {
 
 var (
 	EmptyVersion   = VersionInfo{"", ""}
-	BuiltinVersion = VersionInfo{"builtin", ""}
+	BuiltinVersion = VersionInfo{version.GetVersion().Version + "-builtin", ""}
 )

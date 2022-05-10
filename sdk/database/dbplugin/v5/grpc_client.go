@@ -31,7 +31,6 @@ func (c gRPCClient) Version() DatabaseVersionInfo {
 	}
 	return DatabaseVersionInfo{
 		Version: version.Version,
-		Sha:     version.Sha,
 	}
 }
 

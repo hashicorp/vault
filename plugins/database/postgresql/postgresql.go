@@ -76,7 +76,6 @@ type PostgreSQL struct {
 func (_ *PostgreSQL) Version() dbplugin.DatabaseVersionInfo {
 	return dbplugin.DatabaseVersionInfo{
 		Version: "someversion",
-		Sha:     "somesha",
 	}
 }
 

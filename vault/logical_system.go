@@ -84,7 +84,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		mfaBackend: NewPolicyMFABackend(core, logger),
 	}
 
-	versionInfo := version.GetVersion()
+	versionInfo := logical.BuiltinVersion
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
@@ -165,7 +165,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			},
 		},
 		PluginVersion: versionInfo.Version,
-		PluginSha:     strings.Trim(versionInfo.Revision, "'"),
+		PluginSha:     versionInfo.Sha,
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)

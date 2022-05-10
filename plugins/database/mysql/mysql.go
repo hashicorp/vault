@@ -43,7 +43,6 @@ type MySQL struct {
 func (_ *MySQL) Version() dbplugin.DatabaseVersionInfo {
 	return dbplugin.DatabaseVersionInfo{
 		Version: "someversion",
-		Sha:     "somesha",
 	}
 }
 

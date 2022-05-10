@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/hashicorp/vault/sdk/version"
 )
 
 const (
@@ -354,11 +353,7 @@ func (b *databaseBackend) clean(ctx context.Context) {
 }
 
 func (b *databaseBackend) Version() logical.VersionInfo {
-	versionInfo := version.GetVersion()
-	return logical.VersionInfo{
-		Version: versionInfo.Version,
-		Sha:     strings.Trim(versionInfo.Revision, "'"),
-	}
+	return logical.BuiltinVersion
 }
 
 const backendHelp = `

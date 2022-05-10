@@ -319,7 +319,6 @@ func (g *gRPCServer) Version(ctx context.Context, _ *proto.VersionRequest) (*pro
 		version := dbImpl.Version()
 		return &proto.VersionResponse{
 			Version: version.Version,
-			Sha:     version.Sha,
 		}, nil
 	}
 	return nil, fmt.Errorf("database plugin does not support Version() interface")

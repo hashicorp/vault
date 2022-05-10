@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
-	"github.com/hashicorp/vault/sdk/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -368,7 +367,8 @@ func (c *PluginCatalog) getPluginVersion(ctx context.Context, logger log.Logger,
 	version = logical.EmptyVersion
 
 	if plugin.Builtin {
-		return logical.BuiltinVersion
+		version = logical.BuiltinVersion
+		return
 	}
 
 	// try as a database plugin
@@ -396,7 +396,6 @@ func (c *PluginCatalog) getPluginVersion(ctx context.Context, logger log.Logger,
 			return
 		}
 		version.Version = versionResp.Version
-		version.Sha = versionResp.Sha
 	}
 	c.logger.Info("Couldn't load as v5 database plugin", "err", err)
 	// otherwise it is a backend or database v4 plugin
@@ -762,7 +761,7 @@ func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType con
 		result = append(result, pluginutil.VersionedPlugin{
 			Name:    plugin,
 			Type:    pluginType.String(),
-			Version: version.GetVersion().Version + "+builtin",
+			Version: logical.BuiltinVersion.Version,
 			Builtin: true,
 		})
 	}

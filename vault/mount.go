@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -1473,7 +1472,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
 		}
 
-		versionInfo := version.GetVersion()
+		versionInfo := logical.BuiltinVersion
 		kvMount := &MountEntry{
 			Table:            mountTableType,
 			Path:             "secret/",
@@ -1487,7 +1486,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			},
 			Version:        versionInfo.Version,
 			RunningVersion: versionInfo.Version,
-			RunningSha:     strings.Trim(versionInfo.Revision, "'"),
+			RunningSha:     versionInfo.Sha,
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1498,7 +1497,7 @@ func (c *Core) defaultMountTable() *MountTable {
 // requiredMountTable() creates a mount table with entries required
 // to be available
 func (c *Core) requiredMountTable() *MountTable {
-	versionInfo := version.GetVersion()
+	versionInfo := logical.BuiltinVersion
 	table := &MountTable{
 		Type: mountTableType,
 	}
@@ -1525,7 +1524,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		BackendAwareUUID: cubbyholeBackendUUID,
 		Version:          versionInfo.Version,
 		RunningVersion:   versionInfo.Version,
-		RunningSha:       strings.Trim(versionInfo.Revision, "'"),
+		RunningSha:       versionInfo.Sha,
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1555,7 +1554,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		},
 		Version:        versionInfo.Version,
 		RunningVersion: versionInfo.Version,
-		RunningSha:     strings.Trim(versionInfo.Revision, "'"),
+		RunningSha:     versionInfo.Sha,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1583,7 +1582,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		},
 		Version:        versionInfo.Version,
 		RunningVersion: versionInfo.Version,
-		RunningSha:     strings.Trim(versionInfo.Revision, "'"),
+		RunningSha:     versionInfo.Sha,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

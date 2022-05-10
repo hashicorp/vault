@@ -35,7 +35,6 @@ type Database interface {
 
 type DatabaseVersionInfo struct {
 	Version string
-	Sha     string
 }
 
 type DatabaseVersion interface {
