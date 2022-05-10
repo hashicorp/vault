@@ -1,6 +1,6 @@
 import Route from '@ember/routing/route';
 
-export default class ConfigureRoute extends Route {
+export default class MfaConfigureRoute extends Route {
   model() {
     return {};
   }

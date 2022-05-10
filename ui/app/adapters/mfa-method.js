@@ -3,24 +3,26 @@ import ApplicationAdapter from './application';
 export default class MfaMethodAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  urlForQuery(methodType) {
-    let baseUrl = this.buildURL() + '/identity/mfa/method';
-    if (methodType) {
-      return `${baseUrl}/${methodType}`;
-    }
-    return baseUrl;
+  pathForType() {
+    return 'identity/mfa/method';
   }
 
-  queryRecord(type, id) {
-    return this.ajax(this.urlForQuery(type), 'POST', {
+  queryRecord(store, type, query) {
+    const { id } = query;
+    if (!id) {
+      return;
+    }
+    const url = this.urlForQuery(query, type.modelName);
+    return this.ajax(url, 'POST', {
       data: {
         id,
       },
     });
   }
 
-  query() {
-    return this.ajax(this.urlForQuery(), 'GET', {
+  query(store, type, query) {
+    const url = this.urlForQuery(query, type.modelName);
+    return this.ajax(url, 'GET', {
       data: {
         list: true,
       },
