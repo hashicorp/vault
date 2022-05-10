@@ -40,20 +40,14 @@ func sanitizePath(s string) string {
 
 // hasTrailingSpace checks to see if there is trailing space
 func hasTrailingSpace(s string) bool {
-	x := strings.TrimSuffix(s, " ")
-
-	return x != s
+	return strings.HasSuffix(s, " ")
 }
 
 // hasTrailingSlash boolean checks if a trailing slash exists
 func hasTrailingSlash(s string) bool {
 	s = strings.TrimSuffix(s, " ")
 
-	if s[len(s)-1] == '/' {
-		return true
-	}
-
-	return false
+	return strings.HasSuffix(s, "/")
 }
 
 // ensureTrailingSlash ensures the given string has a trailing slash.
