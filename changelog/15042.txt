@@ -1,3 +1,0 @@
-```release-note:improvement
-storage/raft: Use larger timeouts at startup to reduce likelihood of inducing elections.
-```
