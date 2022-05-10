@@ -443,6 +443,7 @@ func resolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 	return KeyRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI key for reference: %v", reference)}
 }
 
+// fetchIssuerById returns an issuerEntry based on issuerId, if none found an error is returned.
 func fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerID) (*issuerEntry, error) {
 	if len(issuerId) == 0 {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: empty issuer identifier")}
@@ -713,6 +714,10 @@ func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfigEntr
 	return issuerConfig, nil
 }
 
+// Lookup within storage the value of reference, assuming the string is a reference to an issuer entry,
+// returning the converted issuerID or an error if not found. This method will not properly resolve the
+// special legacyBundleShimID value as we do not want to confuse our special value and a user-provided name of the
+// same value.
 func resolveIssuerReference(ctx context.Context, s logical.Storage, reference string) (issuerID, error) {
 	if reference == defaultRef {
 		// Handle fetching the default issuer.
@@ -782,8 +787,23 @@ func resolveIssuerCRLPath(ctx context.Context, b *backend, s logical.Storage, re
 }
 
 // Builds a certutil.CertBundle from the specified issuer identifier,
-// optionally loading the key or not.
+// optionally loading the key or not. This method supports loading legacy
+// bundles using the legacyBundleShimID issuerId, and if no entry is found will return an error.
 func fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, id issuerID, loadKey bool) (*issuerEntry, *certutil.CertBundle, error) {
+	if id == legacyBundleShimID {
+		// We have not completed the migration, or started a request in legacy mode, so
+		// attempt to load the bundle from the legacy location
+		issuer, bundle, err := getLegacyCertBundle(ctx, s)
+		if err != nil {
+			return nil, nil, err
+		}
+		if issuer == nil || bundle == nil {
+			return nil, nil, errutil.UserError{Err: "no legacy cert bundle exists"}
+		}
+
+		return issuer, bundle, err
+	}
+
 	issuer, err := fetchIssuerById(ctx, s, id)
 	if err != nil {
 		return nil, nil, err
