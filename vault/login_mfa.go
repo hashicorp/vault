@@ -1825,7 +1825,6 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	ctx, client, err := okta.NewClient(ctx,
 		okta.WithToken(oktaConfig.APIToken),
 		okta.WithOrgUrl(orgURL),
-
 		// Do not use cache or polling MFA will not refresh
 		okta.WithCache(false),
 	)
@@ -1833,13 +1832,11 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("error creating client: %s", err)
 	}
 
-	var filterPrefix string
+	filterField := "profile.login"
 	if oktaConfig.PrimaryEmail {
-		filterPrefix = "profile.email eq"
-	} else {
-		filterPrefix = "profile.login eq"
+		filterField = "profile.email"
 	}
-	filterQuery := fmt.Sprintf("%s %q", filterPrefix, username)
+	filterQuery := fmt.Sprintf("%s eq %q", filterField, username)
 	filter := query.NewQueryParams(query.WithFilter(filterQuery))
 
 	users, _, err := client.User.ListUsers(ctx, filter)
