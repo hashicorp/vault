@@ -16,6 +16,7 @@ import (
 const (
 	latestMigrationVersion = 1
 	legacyBundleShimID     = issuerID("legacy-entry-shim-id")
+	legacyBundleShimKeyID  = keyID("legacy-entry-shim-key-id")
 )
 
 type legacyBundleMigrationLog struct {
@@ -177,6 +178,7 @@ func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, 
 	// the fields in the CAInfoBundle; everything else doesn't matter.
 	issuer := &issuerEntry{
 		ID:                   legacyBundleShimID,
+		KeyID:                legacyBundleShimKeyID,
 		Name:                 "legacy-entry-shim",
 		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
 	}
