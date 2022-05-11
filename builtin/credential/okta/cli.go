@@ -58,7 +58,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		for {
 			resp, _ := c.Logical().Read(fmt.Sprintf("auth/%s/verify/%s", mount, nonce))
 			if resp != nil {
-				fmt.Printf("In Okta Verify, tap the number '%s'\n", resp.Data["correctAnswer"].(json.Number))
+				fmt.Fprintf(os.Stderr, "In Okta Verify, tap the number %q\n", resp.Data["correct_answer"].(json.Number))
 				return
 			}
 			time.Sleep(time.Second)

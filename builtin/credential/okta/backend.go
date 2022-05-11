@@ -253,6 +253,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 				// Store number challenge if found
 				numberChallenge := result.Embedded.Factor.Embedded.Challenge.CorrectAnswer
 				if numberChallenge != nil {
+					if nonce == "" {
+						return nil, logical.ErrorResponse("nonce must be provided during login request when presented with number challenge"), nil, nil
+					}
+
 					b.verifyCache.SetDefault(nonce, *numberChallenge)
 				}
 

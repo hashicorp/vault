@@ -38,7 +38,7 @@ func pathLogin(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `Nonce provided if performing login that requires 
 number verification challenge. Logins through the vault login CLI command will 
-automatically generate a nonce`,
+automatically generate a nonce.`,
 			},
 			"provider": {
 				Type:        framework.TypeString,
@@ -194,9 +194,7 @@ retrieve the number verification challenge for the matching request.`,
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathVerify,
-				ForwardPerformanceSecondary: true,
-				ForwardPerformanceStandby:   true,
+				Callback: b.pathVerify,
 			},
 		},
 	}
@@ -212,7 +210,7 @@ func (b *backend) pathVerify(ctx context.Context, req *logical.Request, d *frame
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"correctAnswer": correctRaw.(int),
+			"correct_answer": correctRaw.(int),
 		},
 	}
 
