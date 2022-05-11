@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"strconv"
@@ -108,6 +109,32 @@ func (c CBGenerateRoot) Run(t testing.TB, b *backend, s logical.Storage, knownKe
 	}
 
 	knownCerts[c.Name] = resp.Data["certificate"].(string)
+
+	// Validate key_id matches.
+	url = "key/" + c.Key
+	resp, err = CBRead(b, s, url)
+	if err != nil {
+		t.Fatalf("failed to fetch key for name %v: %v", c.Key, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to fetch key for name %v: nil response", c.Key)
+	}
+
+	expectedKeyId := resp.Data["key_id"]
+
+	url = "issuer/" + c.Name
+	resp, err = CBRead(b, s, url)
+	if err != nil {
+		t.Fatalf("failed to fetch issuer for name %v: %v", c.Name, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to fetch issuer for name %v: nil response", c.Name)
+	}
+
+	actualKeyId := resp.Data["key_id"]
+	if expectedKeyId != actualKeyId {
+		t.Fatalf("expected issuer %v to have key matching %v but got mismatch: %v vs %v", c.Name, c.Key, actualKeyId, expectedKeyId)
+	}
 }
 
 // Generate an intermediate. Might not really be an intermediate; might be
@@ -196,6 +223,32 @@ func (c CBGenerateIntermediate) Run(t testing.TB, b *backend, s logical.Storage,
 	if err != nil {
 		t.Fatalf("failed to update name for issuer (%v/%v): %v", c.Name, newCertId, err)
 	}
+
+	// Validate key_id matches.
+	url = "key/" + c.Key
+	resp, err = CBRead(b, s, url)
+	if err != nil {
+		t.Fatalf("failed to fetch key for name %v: %v", c.Key, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to fetch key for name %v: nil response", c.Key)
+	}
+
+	expectedKeyId := resp.Data["key_id"]
+
+	url = "issuer/" + c.Name
+	resp, err = CBRead(b, s, url)
+	if err != nil {
+		t.Fatalf("failed to fetch issuer for name %v: %v", c.Name, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to fetch issuer for name %v: nil response", c.Name)
+	}
+
+	actualKeyId := resp.Data["key_id"]
+	if expectedKeyId != actualKeyId {
+		t.Fatalf("expected issuer %v to have key matching %v but got mismatch: %v vs %v", c.Name, c.Key, actualKeyId, expectedKeyId)
+	}
 }
 
 // Delete an issuer; breaks chains.
@@ -264,7 +317,7 @@ func (c CBValidateChain) PrettyChain(t testing.TB, chain []string, knownCerts ma
 	return prettyChain
 }
 
-func (c CBValidateChain) ToCertificate(t testing.TB, cert string) *x509.Certificate {
+func ToCertificate(t testing.TB, cert string) *x509.Certificate {
 	block, _ := pem.Decode([]byte(cert))
 	if block == nil {
 		t.Fatalf("Unable to parse certificate: nil PEM block\n[%v]\n", cert)
@@ -273,6 +326,26 @@ func (c CBValidateChain) ToCertificate(t testing.TB, cert string) *x509.Certific
 	ret, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		t.Fatalf("Unable to parse certificate: %v\n[%v]\n", err, cert)
+	}
+
+	return ret
+}
+
+func ToCRL(t testing.TB, crl string, issuer *x509.Certificate) *pkix.CertificateList {
+	block, _ := pem.Decode([]byte(crl))
+	if block == nil {
+		t.Fatalf("Unable to parse CRL: nil PEM block\n[%v]\n", crl)
+	}
+
+	ret, err := x509.ParseCRL(block.Bytes)
+	if err != nil {
+		t.Fatalf("Unable to parse CRL: %v\n[%v]\n", err, crl)
+	}
+
+	if issuer != nil {
+		if err := issuer.CheckCRLSignature(ret); err != nil {
+			t.Fatalf("Unable to check CRL signature: %v\n[%v]\n[%v]\n", err, crl, issuer)
+		}
 	}
 
 	return ret
@@ -333,14 +406,14 @@ func (c CBValidateChain) Run(t testing.TB, b *backend, s logical.Storage, knownK
 		// parent comes before the child.
 		for thisIndex, thisCertPem := range currentChain[1:] {
 			thisIndex += 1 // Absolute index.
-			parentCert := c.ToCertificate(t, thisCertPem)
+			parentCert := ToCertificate(t, thisCertPem)
 
 			// Iterate backwards; prefer the most recent cert to the older
 			// certs.
 			foundCert := false
 			for otherIndex := thisIndex - 1; otherIndex >= 0; otherIndex-- {
 				otherCertPem := currentChain[otherIndex]
-				childCert := c.ToCertificate(t, otherCertPem)
+				childCert := ToCertificate(t, otherCertPem)
 
 				if err := childCert.CheckSignatureFrom(parentCert); err == nil {
 					foundCert = true
@@ -373,7 +446,7 @@ func (c CBUpdateIssuer) Run(t testing.TB, b *backend, s logical.Storage, knownKe
 	}
 }
 
-// Issue a leaf
+// Issue a leaf, revoke it, and then validate it appears on the CRL.
 type CBIssueLeaf struct {
 	Issuer string
 	Role   string
@@ -384,10 +457,11 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 		c.Role = "testing"
 	}
 
+	// Write a role
 	url := "roles/" + c.Role
 	data := make(map[string]interface{})
 	data["allow_localhost"] = true
-	data["ttl"] = "1s"
+	data["ttl"] = "200s"
 	data["key_type"] = "ec"
 
 	_, err := CBWrite(b, s, url, data)
@@ -395,6 +469,7 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 		t.Fatalf("failed to update role (%v): %v / body: %v", c.Role, err, data)
 	}
 
+	// Issue the certificate.
 	url = "issuer/" + c.Issuer + "/issue/" + c.Role
 	data = make(map[string]interface{})
 	data["common_name"] = "localhost"
@@ -405,6 +480,87 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 	}
 	if resp == nil {
 		t.Fatalf("failed to issue cert (%v via %v): nil response / body: %v", c.Issuer, c.Role, data)
+	}
+
+	api_serial := resp.Data["serial_number"].(string)
+	raw_cert := resp.Data["certificate"].(string)
+	cert := ToCertificate(t, raw_cert)
+	raw_issuer := resp.Data["issuing_ca"].(string)
+	issuer := ToCertificate(t, raw_issuer)
+
+	// Validate issuer and signatures are good.
+	if strings.TrimSpace(raw_issuer) != strings.TrimSpace(knownCerts[c.Issuer]) {
+		t.Fatalf("signing certificate ended with wrong certificate for issuer %v:\n[%v]\n\nvs\n\n[%v]\n", c.Issuer, raw_issuer, knownCerts[c.Issuer])
+	}
+
+	if err := cert.CheckSignatureFrom(issuer); err != nil {
+		t.Fatalf("failed to verify signature on issued certificate from %v: %v\n[%v]\n[%v]\n", c.Issuer, err, raw_cert, raw_issuer)
+	}
+
+	// Revoke the certificate.
+	url = "revoke"
+	data = make(map[string]interface{})
+	data["serial_number"] = api_serial
+	resp, err = CBWrite(b, s, url, data)
+	if err != nil {
+		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: %v", api_serial, c.Role, c.Issuer, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: nil response", api_serial, c.Role, c.Issuer)
+	}
+	if _, ok := resp.Data["revocation_time"]; !ok {
+		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: expected response parameter revocation_time was missing from response:\n%v", api_serial, c.Role, c.Issuer, resp.Data)
+	}
+
+	// Verify it is on this issuer's CRL.
+	url = "issuer/" + c.Issuer + "/crl"
+	resp, err = CBRead(b, s, url)
+	if err != nil {
+		t.Fatalf("failed to fetch CRL for issuer %v: %v", c.Issuer, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to fetch CRL for issuer %v: nil response", c.Issuer)
+	}
+
+	raw_crl := resp.Data["crl"].(string)
+	crl := ToCRL(t, raw_crl, issuer)
+
+	foundCert := false
+	for _, revoked := range crl.TBSCertList.RevokedCertificates {
+		// t.Logf("[%v] revoked serial number: %v -- vs -- %v", index, revoked.SerialNumber, cert.SerialNumber)
+		if revoked.SerialNumber.Cmp(cert.SerialNumber) == 0 {
+			// t.Logf("found revoked cert at index: %v", index)
+			foundCert = true
+			break
+		}
+	}
+
+	if !foundCert {
+		// If CRL building is broken, this is useful for finding which issuer's
+		// CRL the revoked cert actually appears on.
+		for issuerName := range knownCerts {
+			url = "issuer/" + issuerName + "/crl"
+			resp, err = CBRead(b, s, url)
+			if err != nil {
+				t.Fatalf("failed to fetch CRL for issuer %v: %v", issuerName, err)
+			}
+			if resp == nil {
+				t.Fatalf("failed to fetch CRL for issuer %v: nil response", issuerName)
+			}
+
+			raw_crl := resp.Data["crl"].(string)
+			crl := ToCRL(t, raw_crl, nil)
+
+			for index, revoked := range crl.TBSCertList.RevokedCertificates {
+				// t.Logf("[%v] revoked serial number: %v -- vs -- %v", index, revoked.SerialNumber, cert.SerialNumber)
+				if revoked.SerialNumber.Cmp(cert.SerialNumber) == 0 {
+					t.Logf("found revoked cert at index: %v for unexpected issuer: %v", index, issuerName)
+					break
+				}
+			}
+		}
+
+		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer:\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, raw_issuer)
 	}
 }
 
@@ -1367,9 +1523,10 @@ func BenchmarkChainBuilding(benchies *testing.B) {
 			}
 
 			// Run the benchmark.
+			ctx := context.Background()
 			bench.StartTimer()
 			for n := 0; n < bench.N; n++ {
-				rebuildIssuersChains(context.Background(), s, nil)
+				rebuildIssuersChains(ctx, s, nil)
 			}
 		})
 	}
