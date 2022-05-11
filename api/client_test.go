@@ -1201,3 +1201,115 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, client.Namespace())
 	}
 }
+
+func TestVaultHttpProxyUsedWhenNoProxyEnvVarDoesntIncludeRequestHost(t *testing.T) {
+	const VaultHttpProxy string = "VAULT_HTTP_PROXY"
+	const NoProxy string = "NO_PROXY"
+
+	oldVaultProxy := os.Getenv(VaultHttpProxy)
+	os.Setenv(VaultHttpProxy, "https://hashicorp.com")
+	defer os.Setenv(VaultHttpProxy, oldVaultProxy)
+
+	oldNoProxy := os.Getenv(NoProxy)
+	os.Setenv(NoProxy, "terraform.com")
+	defer os.Setenv(NoProxy, oldNoProxy)
+
+	c := DefaultConfig()
+	err := c.ReadEnvironment()
+	if err != nil {
+		t.Fatalf("Expected no error reading config, found error %v", err)
+	}
+
+	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
+	proxyUrl, err := c.HttpClient.Transport.(*http.Transport).Proxy(r)
+
+	if err != nil {
+		t.Fatalf("Expected no error resolving proxy, found error %v", err)
+	} else if proxyUrl == nil || proxyUrl.String() == "" {
+		t.Fatalf("Expected proxy to be resolved but no proxy returned")
+	}
+}
+
+func TestVaultHttpProxyStillUsedWhenNoProxyEnvVarIncludesRequestHost(t *testing.T) {
+	const VaultHttpProxy string = "VAULT_HTTP_PROXY"
+	const NoProxy string = "NO_PROXY"
+
+	oldVaultProxy := os.Getenv(VaultHttpProxy)
+	os.Setenv(VaultHttpProxy, "https://hashicorp.com")
+	defer os.Setenv(VaultHttpProxy, oldVaultProxy)
+
+	oldNoProxy := os.Getenv(NoProxy)
+	os.Setenv(NoProxy, "terraform.com,vaultproject.io")
+	defer os.Setenv(NoProxy, oldNoProxy)
+
+	c := DefaultConfig()
+	err := c.ReadEnvironment()
+	if err != nil {
+		t.Fatalf("Expected no error reading config, found error %v", err)
+	}
+
+	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
+	proxyUrl, err := c.HttpClient.Transport.(*http.Transport).Proxy(r)
+
+	if err != nil {
+		t.Fatalf("Expected no error resolving proxy, found error %v", err)
+	} else if proxyUrl == nil || proxyUrl.String() == "" {
+		t.Fatalf("Expected proxy to be resolved but no proxy returned")
+	}
+}
+
+func TestVaultAddrProxyUsedWhenNoProxyEnvVarDoesntIncludeRequestHost(t *testing.T) {
+	const VaultProxyAddr string = "VAULT_PROXY_ADDR"
+	const NoProxy string = "NO_PROXY"
+
+	oldVaultProxy := os.Getenv(VaultProxyAddr)
+	os.Setenv(VaultProxyAddr, "https://hashicorp.com")
+	defer os.Setenv(VaultProxyAddr, oldVaultProxy)
+
+	oldNoProxy := os.Getenv(NoProxy)
+	os.Setenv(NoProxy, "terraform.com")
+	defer os.Setenv(NoProxy, oldNoProxy)
+
+	c := DefaultConfig()
+	err := c.ReadEnvironment()
+	if err != nil {
+		t.Fatalf("Expected no error reading config, found error %v", err)
+	}
+
+	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
+	proxyUrl, err := c.HttpClient.Transport.(*http.Transport).Proxy(r)
+
+	if err != nil {
+		t.Fatalf("Expected no error resolving proxy, found error %v", err)
+	} else if proxyUrl == nil || proxyUrl.String() == "" {
+		t.Fatalf("Expected proxy to be resolved but no proxy returned")
+	}
+}
+
+func TestVaultProxyAddrStillUsedWhenNoProxyEnvVarIncludesRequestHost(t *testing.T) {
+	const VaultProxyAddr string = "VAULT_PROXY_ADDR"
+	const NoProxy string = "NO_PROXY"
+
+	oldVaultProxy := os.Getenv(VaultProxyAddr)
+	os.Setenv(VaultProxyAddr, "https://hashicorp.com")
+	defer os.Setenv(VaultProxyAddr, oldVaultProxy)
+
+	oldNoProxy := os.Getenv(NoProxy)
+	os.Setenv(NoProxy, "terraform.com,vaultproject.io")
+	defer os.Setenv(NoProxy, oldNoProxy)
+
+	c := DefaultConfig()
+	err := c.ReadEnvironment()
+	if err != nil {
+		t.Fatalf("Expected no error reading config, found error %v", err)
+	}
+
+	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
+	proxyUrl, err := c.HttpClient.Transport.(*http.Transport).Proxy(r)
+
+	if err != nil {
+		t.Fatalf("Expected no error resolving proxy, found error %v", err)
+	} else if proxyUrl == nil || proxyUrl.String() == "" {
+		t.Fatalf("Expected proxy to be resolved but no proxy returned")
+	}
+}
