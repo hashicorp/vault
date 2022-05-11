@@ -25,7 +25,7 @@ import (
 )
 
 // Setup helpers
-func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -40,7 +40,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
-func mountPKIEndpoint(t *testing.T, client *api.Client, path string) {
+func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 	var err error
 	err = client.Sys().Mount(path, &api.MountInput{
 		Type: "pki",
