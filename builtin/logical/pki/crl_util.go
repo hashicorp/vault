@@ -328,7 +328,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		}
 		issuerIDCertMap[issuer] = thisCert
 
-		subject := string(thisCert.RawIssuer)
+		subject := string(thisCert.RawSubject)
 		if _, ok := keySubjectIssuersMap[thisEntry.KeyID]; !ok {
 			keySubjectIssuersMap[thisEntry.KeyID] = make(map[string][]issuerID)
 		}
