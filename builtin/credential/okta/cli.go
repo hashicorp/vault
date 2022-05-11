@@ -54,14 +54,24 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	nonce := base62.MustRandom(20)
 	data["nonce"] = nonce
 
+	// Create a done channel to signal termination of the login so that we can
+	// clean up the goroutine
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+
 	go func() {
 		for {
+			select {
+			case <-doneCh:
+				return
+			case <-time.After(time.Second):
+			}
+
 			resp, _ := c.Logical().Read(fmt.Sprintf("auth/%s/verify/%s", mount, nonce))
 			if resp != nil {
 				fmt.Fprintf(os.Stderr, "In Okta Verify, tap the number %q\n", resp.Data["correct_answer"].(json.Number))
 				return
 			}
-			time.Sleep(time.Second)
 		}
 	}()
 
