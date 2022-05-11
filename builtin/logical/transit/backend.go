@@ -46,6 +46,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathConfig(),
 			b.pathRotate(),
 			b.pathRewrap(),
+			b.pathWrappingKey(),
 			b.pathKeys(),
 			b.pathListKeys(),
 			b.pathExportKeys(),
