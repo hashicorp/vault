@@ -268,7 +268,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 				}
 
 				select {
-				case <-time.After(500 * time.Millisecond):
+				case <-time.After(1 * time.Second):
 					// Continue
 				case <-ctx.Done():
 					return nil, logical.ErrorResponse("exiting pending mfa challenge"), nil, nil
