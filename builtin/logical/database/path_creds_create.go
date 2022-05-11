@@ -90,12 +90,6 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
-		if err != nil {
-			b.CloseIfShutdown(dbi, err)
-			return nil, fmt.Errorf("unable to generate password: %w", err)
-		}
-
 		newUserReq := v5.NewUserRequest{
 			UsernameConfig: v5.UsernameMetadata{
 				DisplayName: req.DisplayName,
@@ -107,21 +101,75 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			RollbackStatements: v5.Statements{
 				Commands: role.Statements.Rollback,
 			},
-			Password:   password,
 			Expiration: expiration,
 		}
 
-		// Overwriting the password in the event this is a legacy database plugin and the provided password is ignored
+		respData := make(map[string]interface{})
+
+		// Generate the credential based on the role's credential type
+		switch role.CredentialType {
+		case v5.CredentialTypePassword:
+			generator, err := newPasswordGenerator(role.CredentialConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Fall back to database config-level password policy if not set on role
+			if generator.PasswordPolicy == "" {
+				generator.PasswordPolicy = dbConfig.PasswordPolicy
+			}
+
+			// Generate the password
+			password, err := generator.generate(ctx, b, dbi.database)
+			if err != nil {
+				b.CloseIfShutdown(dbi, err)
+				return nil, fmt.Errorf("failed to generate password: %s", err)
+			}
+
+			// Set input credential
+			newUserReq.CredentialType = v5.CredentialTypePassword
+			newUserReq.Password = password
+
+			// Set output credential
+			respData["password"] = password
+
+		case v5.CredentialTypeRSAPrivateKey:
+			generator, err := newRSAKeyGenerator(role.CredentialConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Generate the RSA key pair
+			public, private, err := generator.generate(b.GetRandomReader())
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate RSA key pair: %s", err)
+			}
+
+			// Set input credential
+			newUserReq.CredentialType = v5.CredentialTypeRSAPrivateKey
+			newUserReq.PublicKey = public
+
+			// Set output credential
+			respData["rsa_private_key"] = string(private)
+		}
+
+		// Overwriting the password in the event this is a legacy database
+		// plugin and the provided password is ignored
 		newUserResp, password, err := dbi.database.NewUser(ctx, newUserReq)
 		if err != nil {
 			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
+		respData["username"] = newUserResp.Username
 
-		respData := map[string]interface{}{
-			"username": newUserResp.Username,
-			"password": password,
+		// Database plugins using the v4 interface generate and return the password.
+		// If the returned password is not equal to the credential, then we need to
+		// set the credential to the password returned from the v4 database plugin.
+		if role.CredentialType == v5.CredentialTypePassword &&
+			password != respData["password"] {
+			respData["password"] = password
 		}
+
 		internal := map[string]interface{}{
 			"username":              newUserResp.Username,
 			"role":                  name,
@@ -158,14 +206,22 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 			return nil, fmt.Errorf("%q is not an allowed role", name)
 		}
 
+		respData := map[string]interface{}{
+			"username":            role.StaticAccount.Username,
+			"ttl":                 role.StaticAccount.CredentialTTL().Seconds(),
+			"rotation_period":     role.StaticAccount.RotationPeriod.Seconds(),
+			"last_vault_rotation": role.StaticAccount.LastVaultRotation,
+		}
+
+		switch role.CredentialType {
+		case v5.CredentialTypePassword:
+			respData["password"] = role.StaticAccount.Password
+		case v5.CredentialTypeRSAPrivateKey:
+			respData["rsa_private_key"] = string(role.StaticAccount.PrivateKey)
+		}
+
 		return &logical.Response{
-			Data: map[string]interface{}{
-				"username":            role.StaticAccount.Username,
-				"password":            role.StaticAccount.Password,
-				"ttl":                 role.StaticAccount.PasswordTTL().Seconds(),
-				"rotation_period":     role.StaticAccount.RotationPeriod.Seconds(),
-				"last_vault_rotation": role.StaticAccount.LastVaultRotation,
-			},
+			Data: respData,
 		}, nil
 	}
 }
