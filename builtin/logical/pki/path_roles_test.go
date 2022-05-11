@@ -10,21 +10,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-
-	var err error
-	b := Backend(config)
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Assume for our tests we have performed the migration already.
-	b.pkiStorageVersion.Store(1)
-	return b, config.StorageView
-}
-
 func TestPki_RoleGenerateLease(t *testing.T) {
 	var resp *logical.Response
 	var err error

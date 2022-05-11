@@ -1,10 +1,10 @@
 package pki
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"strings"
 
@@ -349,15 +349,12 @@ func importKey(mkc managedKeyContext, s logical.Storage, keyValue string, keyNam
 }
 
 func (i issuerEntry) GetCertificate() (*x509.Certificate, error) {
-	block, extra := pem.Decode([]byte(i.Certificate))
-	if block == nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: invalid PEM: %v", i.ID)}
-	}
-	if len(strings.TrimSpace(string(extra))) > 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate for issuer (%v): trailing PEM data: %v", i.ID, string(extra))}
+	cert, err := parseCertificateFromBytes([]byte(i.Certificate))
+	if err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: %s: %v", err.Error(), i.ID)}
 	}
 
-	return x509.ParseCertificate(block.Bytes)
+	return cert, nil
 }
 
 func (i issuerEntry) EnsureUsage(usage issuerUsage) error {
@@ -513,19 +510,23 @@ func importIssuer(ctx managedKeyContext, s logical.Storage, certValue string, is
 	// Discussed further in #11960 and RFC 7468.
 	certValue = strings.TrimSpace(certValue) + "\n"
 
-	// Before we can import a known issuer, we first need to know if the issuer
-	// exists in storage already. This means iterating through all known
-	// issuers and comparing their private value against this value.
-	knownIssuers, err := listIssuers(ctx.ctx, s)
+	// Extracting the certificate is necessary for two reasons: first, it lets
+	// us fetch the serial number; second, for the public key comparison with
+	// known keys.
+	issuerCert, err := parseCertificateFromBytes([]byte(certValue))
 	if err != nil {
 		return nil, false, err
 	}
 
-	// Before we return below, we need to iterate over _all_ keys and see if
-	// one of them a public key matching this certificate, and if so, update our
-	// link accordingly. We fetch the list of keys up front, even may not need
-	// it, to give ourselves a better chance of succeeding below.
-	knownKeys, err := listKeys(ctx.ctx, s)
+	// Ensure this certificate is a usable as a CA certificate.
+	if !issuerCert.BasicConstraintsValid || !issuerCert.IsCA {
+		return nil, false, errutil.UserError{Err: "Refusing to import non-CA certificate"}
+	}
+
+	// Before we can import a known issuer, we first need to know if the issuer
+	// exists in storage already. This means iterating through all known
+	// issuers and comparing their private value against this value.
+	knownIssuers, err := listIssuers(ctx.ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
@@ -535,8 +536,11 @@ func importIssuer(ctx managedKeyContext, s logical.Storage, certValue string, is
 		if err != nil {
 			return nil, false, err
 		}
-
-		if existingIssuer.Certificate == certValue {
+		existingIssuerCert, err := existingIssuer.GetCertificate()
+		if err != nil {
+			return nil, false, err
+		}
+		if areCertificatesEqual(existingIssuerCert, issuerCert) {
 			// Here, we don't need to stitch together the key entries,
 			// because the last run should've done that for us (or, when
 			// importing a key).
@@ -559,20 +563,16 @@ func importIssuer(ctx managedKeyContext, s logical.Storage, certValue string, is
 		return nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
 	}
 
-	// Extracting the certificate is necessary for two reasons: first, it lets
-	// us fetch the serial number; second, for the public key comparison with
-	// known keys.
-	issuerCert, err := result.GetCertificate()
+	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
+
+	// Before we return below, we need to iterate over _all_ keys and see if
+	// one of them a public key matching this certificate, and if so, update our
+	// link accordingly. We fetch the list of keys up front, even may not need
+	// it, to give ourselves a better chance of succeeding below.
+	knownKeys, err := listKeys(ctx.ctx, s)
 	if err != nil {
 		return nil, false, err
 	}
-
-	// Ensure this certificate is a usable as a CA certificate.
-	if !issuerCert.BasicConstraintsValid || !issuerCert.IsCA {
-		return nil, false, errutil.UserError{Err: "Refusing to import non-CA certificate"}
-	}
-
-	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
 
 	// Now, for each key, try and compute the issuer<->key link. We delay
 	// writing issuer to storage as we won't need to update the key, only
@@ -618,6 +618,10 @@ func importIssuer(ctx managedKeyContext, s logical.Storage, certValue string, is
 
 	// All done; return our new key reference.
 	return &result, false, nil
+}
+
+func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool {
+	return bytes.Compare(cert1.Raw, cert2.Raw) == 0
 }
 
 func setLocalCRLConfig(ctx context.Context, s logical.Storage, mapping *localCRLConfigEntry) error {
