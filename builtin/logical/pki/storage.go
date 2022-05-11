@@ -24,6 +24,9 @@ const (
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
 	legacyCRLPath               = "crl"
+
+	// Used as a quick sanity check for a reference id lookups...
+	uuidLength = 36
 )
 
 type keyID string
@@ -409,19 +412,22 @@ func resolveKeyReference(ctx context.Context, s logical.Storage, reference strin
 		return config.DefaultKeyId, nil
 	}
 
-	keys, err := listKeys(ctx, s)
-	if err != nil {
-		return keyID("list-error"), err
-	}
-
-	// Cheaper to list keys and check if an id is a match...
-	for _, keyId := range keys {
-		if keyId == keyID(reference) {
-			return keyId, nil
+	// Lookup by a direct get first to see if our reference is an ID, this is quick and cached.
+	if len(reference) == uuidLength {
+		entry, err := s.Get(ctx, keyPrefix+reference)
+		if err != nil {
+			return keyID("key-read"), err
+		}
+		if entry != nil {
+			return keyID(reference), nil
 		}
 	}
 
 	// ... than to pull all keys from storage.
+	keys, err := listKeys(ctx, s)
+	if err != nil {
+		return keyID("list-error"), err
+	}
 	for _, keyId := range keys {
 		key, err := fetchKeyById(ctx, s, keyId)
 		if err != nil {
@@ -721,19 +727,23 @@ func resolveIssuerReference(ctx context.Context, s logical.Storage, reference st
 		return config.DefaultIssuerId, nil
 	}
 
+	// Lookup by a direct get first to see if our reference is an ID, this is quick and cached.
+	if len(reference) == uuidLength {
+		entry, err := s.Get(ctx, issuerPrefix+reference)
+		if err != nil {
+			return issuerID("issuer-read"), err
+		}
+		if entry != nil {
+			return issuerID(reference), nil
+		}
+	}
+
+	// ... than to pull all issuers from storage.
 	issuers, err := listIssuers(ctx, s)
 	if err != nil {
 		return issuerID("list-error"), err
 	}
 
-	// Cheaper to list issuers and check if an id is a match...
-	for _, issuerId := range issuers {
-		if issuerId == issuerID(reference) {
-			return issuerId, nil
-		}
-	}
-
-	// ... than to pull all issuers from storage.
 	for _, issuerId := range issuers {
 		issuer, err := fetchIssuerById(ctx, s, issuerId)
 		if err != nil {

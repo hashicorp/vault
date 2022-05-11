@@ -340,7 +340,7 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context) {
 		b.Logger().Info("PKI migration is required, reading cert bundle from legacy ca location")
 		b.pkiStorageVersion.Store(0)
 	} else {
-		b.Logger().Debug("PKI migration completed, reading cert bundle from key/issuer storage")
+		b.Logger().Debug("PKI migration previously completed, reading cert bundle from key/issuer storage")
 		b.pkiStorageVersion.Store(1)
 	}
 }
