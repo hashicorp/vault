@@ -97,6 +97,10 @@ func pathReplaceRoot(b *backend) *framework.Path {
 }
 
 func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot read defaults until migration has completed"), nil
+	}
+
 	config, err := getIssuersConfig(ctx, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse("Error loading issuers configuration: " + err.Error()), nil
@@ -114,6 +118,10 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 	// got a consistent view.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot update defaults until migration has completed"), nil
+	}
 
 	newDefault := data.Get(defaultRef).(string)
 	if len(newDefault) == 0 || newDefault == defaultRef {
@@ -192,6 +200,10 @@ func pathConfigKeys(b *backend) *framework.Path {
 }
 
 func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot read key defaults until migration has completed"), nil
+	}
+
 	config, err := getKeysConfig(ctx, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse("Error loading keys configuration: " + err.Error()), nil
@@ -209,6 +221,10 @@ func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request,
 	// got a consistent view.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Cannot update key defaults until migration has completed"), nil
+	}
 
 	newDefault := data.Get(defaultRef).(string)
 	if len(newDefault) == 0 || newDefault == defaultRef {

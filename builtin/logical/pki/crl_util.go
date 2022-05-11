@@ -125,7 +125,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	for _, issuer := range issuers {
-		signingBundle, caErr := fetchCAInfo(ctx, b, req, issuer.String(), ReadOnlyUsage)
+		signingBundle, caErr := fetchCAInfoByIssuerId(ctx, b, req, issuer, ReadOnlyUsage)
 		if caErr != nil {
 			switch caErr.(type) {
 			case errutil.UserError:
@@ -306,7 +306,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	for _, issuer := range issuers {
 		// We don't strictly need this call, but by requesting the bundle, the
 		// legacy path is automatically ignored.
-		thisEntry, _, err := fetchCertBundle(ctx, b, req.Storage, issuer.String())
+		thisEntry, _, err := fetchCertBundleByIssuerId(ctx, req.Storage, issuer, false)
 		if err != nil {
 			return fmt.Errorf("error building CRLs: unable to fetch specified issuer (%v): %v", issuer, err)
 		}
@@ -510,7 +510,7 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 
 		// If we have a CertificateIssuer field on the revocation entry,
 		// prefer it to manually checking each issuer signature, assuming it
-		// appears valid. Its highly unlikely for two different issuers
+		// appears valid. It's highly unlikely for two different issuers
 		// to have the same id (after the first was deleted).
 		if len(revInfo.CertificateIssuer) > 0 {
 			issuerId := revInfo.CertificateIssuer
@@ -596,17 +596,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 	revokedCerts = revoked
 
 WRITE:
-	_, bundle, caErr := fetchCertBundleByIssuerId(ctx, req.Storage, thisIssuerId, true /* need the signing key */)
-	if caErr != nil {
-		switch caErr.(type) {
-		case errutil.UserError:
-			return errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
-		default:
-			return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
-		}
-	}
-
-	signingBundle, caErr := parseCABundle(ctx, b, req, bundle)
+	signingBundle, caErr := fetchCAInfoByIssuerId(ctx, b, req, thisIssuerId, CRLSigningUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
