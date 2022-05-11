@@ -35,7 +35,7 @@ func pathRoles(b *backend) *framework.Path {
 for 'client' tokens. Required for Consul pre-1.4.`,
 			},
 
-			"policies": {
+			"consul_policies": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `List of policies to attach to the token. Either "policies"
 or "consul_roles" are required for Consul 1.5 and above, or just "policies" if
@@ -84,19 +84,19 @@ required. Defaults to 'client'.`,
 created within. Defaults to 'default'. Available in Consul 1.7 and above.`,
 			},
 
-			"partition": {
+			"consul_partition": {
 				Type: framework.TypeString,
 				Description: `Indicates which admin partition that the token
 will be created within. Defaults to 'default'. Available in Consul 1.11 and above.`,
 			},
 
-			"service_identities": {
+			"consul_service_identities": {
 				Type: framework.TypeStringSlice,
 				Description: `List of Service Identities to attach to the
 token, separated by semicolons. Available in Consul 1.5 or above.`,
 			},
 
-			"node_identities": {
+			"consul_node_identities": {
 				Type: framework.TypeStringSlice,
 				Description: `List of Node Identities to attach to the
 token. Available in Consul 1.8.1 or above.`,
@@ -149,23 +149,23 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 			"token_type":       roleConfigData.TokenType,
 			"local":            roleConfigData.Local,
 			"consul_namespace": roleConfigData.ConsulNamespace,
-			"partition":        roleConfigData.Partition,
+			"consul_partition": roleConfigData.Partition,
 		},
 	}
 	if roleConfigData.Policy != "" {
 		resp.Data["policy"] = base64.StdEncoding.EncodeToString([]byte(roleConfigData.Policy))
 	}
 	if len(roleConfigData.Policies) > 0 {
-		resp.Data["policies"] = roleConfigData.Policies
+		resp.Data["consul_policies"] = roleConfigData.Policies
 	}
 	if len(roleConfigData.ConsulRoles) > 0 {
 		resp.Data["consul_roles"] = roleConfigData.ConsulRoles
 	}
 	if len(roleConfigData.ServiceIdentities) > 0 {
-		resp.Data["service_identities"] = roleConfigData.ServiceIdentities
+		resp.Data["consul_service_identities"] = roleConfigData.ServiceIdentities
 	}
 	if len(roleConfigData.NodeIdentities) > 0 {
-		resp.Data["node_identities"] = roleConfigData.NodeIdentities
+		resp.Data["consul_node_identities"] = roleConfigData.NodeIdentities
 	}
 
 	return resp, nil
@@ -174,10 +174,10 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
-	policies := d.Get("policies").([]string)
+	policies := d.Get("consul_policies").([]string)
 	roles := d.Get("consul_roles").([]string)
-	serviceIdentities := d.Get("service_identities").([]string)
-	nodeIdentities := d.Get("node_identities").([]string)
+	serviceIdentities := d.Get("consul_service_identities").([]string)
+	nodeIdentities := d.Get("consul_node_identities").([]string)
 
 	switch tokenType {
 	case "client":
@@ -217,7 +217,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	name := d.Get("name").(string)
 	local := d.Get("local").(bool)
 	namespace := d.Get("consul_namespace").(string)
-	partition := d.Get("partition").(string)
+	partition := d.Get("consul_partition").(string)
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
 		Policy:            string(policyRaw),
 		Policies:          policies,
@@ -252,14 +252,14 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 
 type roleConfig struct {
 	Policy            string        `json:"policy"`
-	Policies          []string      `json:"policies"`
+	Policies          []string      `json:"consul_policies"`
 	ConsulRoles       []string      `json:"consul_roles"`
-	ServiceIdentities []string      `json:"service_identities"`
-	NodeIdentities    []string      `json:"node_identities"`
+	ServiceIdentities []string      `json:"consul_service_identities"`
+	NodeIdentities    []string      `json:"consul_node_identities"`
 	TTL               time.Duration `json:"lease"`
 	MaxTTL            time.Duration `json:"max_ttl"`
 	TokenType         string        `json:"token_type"`
 	Local             bool          `json:"local"`
 	ConsulNamespace   string        `json:"consul_namespace"`
-	Partition         string        `json:"partition"`
+	Partition         string        `json:"consul_partition"`
 }

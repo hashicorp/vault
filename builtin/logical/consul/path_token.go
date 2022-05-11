@@ -127,7 +127,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		"accessor":         token.AccessorID,
 		"local":            token.Local,
 		"consul_namespace": token.Namespace,
-		"partition":        token.Partition,
+		"consul_partition": token.Partition,
 	}, map[string]interface{}{
 		"token":   token.AccessorID,
 		"role":    role,
