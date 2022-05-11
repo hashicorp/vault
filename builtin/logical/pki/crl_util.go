@@ -61,7 +61,9 @@ func (cb *crlBuilder) rebuild(ctx context.Context, b *backend, request *logical.
 
 // requestRebuildIfActiveNode will schedule a rebuild of the CRL from the next read or write api call assuming we are the active node of a cluster
 func (cb *crlBuilder) requestRebuildIfActiveNode(b *backend) {
-	// Only schedule us on active nodes, ignoring secondary nodes, the active can/should rebuild the CRL.
+	// Only schedule us on active nodes, as the active node is the only node that can rebuild/write the CRL.
+	// Note 1: The CRL is cluster specific, so this does need to run on the active node of a performance secondary cluster.
+	// Note 2: This is called by the storage invalidation function, so it should not block.
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
 		b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
 		b.Logger().Debug("Ignoring request to schedule a CRL rebuild, not on active node.")
@@ -69,19 +71,24 @@ func (cb *crlBuilder) requestRebuildIfActiveNode(b *backend) {
 	}
 
 	b.Logger().Info("Scheduling PKI CRL rebuild.")
-	cb.m.Lock()
-	defer cb.m.Unlock()
-	atomic.StoreUint32(&cb.forceRebuild, 1)
+	// Set the flag to 1, we don't care if we aren't the ones that actually swap it to 1.
+	atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
 }
 
 func (cb *crlBuilder) _doRebuild(ctx context.Context, b *backend, request *logical.Request, forceNew bool, ignoreForceFlag bool) error {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	if cb.forceRebuild == 1 || ignoreForceFlag {
-		defer atomic.StoreUint32(&cb.forceRebuild, 0)
+	// Re-read the lock in case someone beat us to the punch between the previous load op.
+	forceBuildFlag := atomic.LoadUint32(&cb.forceRebuild)
+	if forceBuildFlag == 1 || ignoreForceFlag {
+		// Reset our original flag back to 0 before we start the rebuilding. This may lead to another round of
+		// CRL building, but we want to avoid the race condition caused by clearing the flag after we completed (An
+		// update/revocation occurred attempting to set the flag, after we listed the certs but before we wrote
+		// the CRL, so we missed the update and cleared the flag.)
+		atomic.CompareAndSwapUint32(&cb.forceRebuild, 1, 0)
 
 		// if forceRebuild was requested, that should force a complete rebuild even if requested not too by forceNew
-		myForceNew := cb.forceRebuild == 1 || forceNew
+		myForceNew := forceBuildFlag == 1 || forceNew
 		return buildCRLs(ctx, b, request, myForceNew)
 	}
 

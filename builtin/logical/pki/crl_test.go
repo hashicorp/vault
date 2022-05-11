@@ -154,6 +154,52 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 	require.Equal(t, 0, len(crl.RevokedCertificates))
 }
 
+func TestCrlRebuilder(t *testing.T) {
+	ctx := context.Background()
+	b, s := createBackendWithStorage(t)
+	mkc := newManagedKeyContext(ctx, b, "test")
+
+	// Write out the issuer/key to storage without going through the api call as replication would.
+	bundle := genCertBundle(t, b, s)
+	_, _, err := writeCaBundle(mkc, s, bundle, "", "")
+	require.NoError(t, err)
+
+	req := &logical.Request{Storage: s}
+	cb := crlBuilder{}
+
+	// Force an initial build
+	err = cb.rebuild(ctx, b, req, true)
+	require.NoError(t, err, "Failed to rebuild CRL")
+
+	resp := requestCrlFromBackend(t, s, b)
+	crl1 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
+
+	// We shouldn't rebuild within this call.
+	err = cb.rebuildIfForced(ctx, b, req)
+	require.NoError(t, err, "Failed to rebuild if forced CRL")
+	resp = requestCrlFromBackend(t, s, b)
+	crl2 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
+	require.Equal(t, crl1.ThisUpdate, crl2.ThisUpdate, "According to the update field, we rebuilt the CRL")
+
+	// Make sure we have ticked over to the next second
+	for {
+		diff := time.Now().Sub(crl1.ThisUpdate)
+		if diff.Seconds() >= 1 {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// This should rebuild the CRL
+	cb.requestRebuildIfActiveNode(b)
+	err = cb.rebuildIfForced(ctx, b, req)
+	require.NoError(t, err, "Failed to rebuild if forced CRL")
+	resp = requestCrlFromBackend(t, s, b)
+	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
+	require.True(t, crl1.ThisUpdate.Before(crl3.ThisUpdate),
+		"initial crl time: %#v not before next crl rebuild time: %#v", crl1.ThisUpdate, crl3.ThisUpdate)
+}
+
 func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical.Response {
 	crlReq := &logical.Request{
 		Operation: logical.ReadOperation,
