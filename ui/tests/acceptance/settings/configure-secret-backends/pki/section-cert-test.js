@@ -71,7 +71,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   };
 
   test('cert config: generate', async function (assert) {
-    assert.expect(11);
+    assert.expect(10);
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
@@ -91,11 +91,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.form.back();
     await page.form.generateCA();
     await settled();
-
-    assert.ok(
-      page.flash.latestMessage.includes('You tried to generate a new root CA'),
-      'shows warning message'
-    );
   });
 
   test('cert config: upload', async function (assert) {
