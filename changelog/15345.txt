@@ -1,0 +1,3 @@
+```release-note:bug
+core/cli: fix `generate-root` command help message, list `vault operator generate-root -init` first.
+```
