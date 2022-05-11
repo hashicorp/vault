@@ -6,11 +6,7 @@ export default Route.extend({
     // left blank so we render the template immediately
   },
   afterModel() {
-    let queryString = window.location.search;
-    // Check if url is encoded
-    if (this.containsEncodedComponents(queryString)) {
-      queryString = decodeURIComponent(queryString);
-    }
+    const queryString = decodeURIComponent(window.location.search);
     // Since state param can also contain namespace, fetch the values using native url api.
     // For instance, state params value can be state=st_123456,ns=d4fq
     // Ember paramsFor used to strip out the value after the "=" sign. In short ns value was not being passed along.
@@ -27,9 +23,5 @@ export default Route.extend({
   setupController(controller) {
     this._super(...arguments);
     controller.set('pageContainer', document.querySelector('.page-container'));
-  },
-  // Helper function to check if url is encoded
-  containsEncodedComponents(x) {
-    return decodeURI(x) !== decodeURIComponent(x);
   },
 });
