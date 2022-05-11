@@ -1,9 +1,6 @@
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
 
-export default class MfaRoute extends Route {
-  @service router;
-
+export default class MfaEnforcementsRoute extends Route {
   queryParams = {
     page: {
       refreshModel: true,
@@ -12,7 +9,7 @@ export default class MfaRoute extends Route {
 
   model(params) {
     return this.store
-      .lazyPaginatedQuery('mfa-method', {
+      .lazyPaginatedQuery('mfa-login-enforcement', {
         responsePath: 'data.keys',
         page: params.page || 1,
       })
@@ -23,11 +20,6 @@ export default class MfaRoute extends Route {
           throw err;
         }
       });
-  }
-  afterModel(model) {
-    if (model.length === 0) {
-      this.router.transitionTo('vault.cluster.access.mfa.configure');
-    }
   }
   setupController(controller, model) {
     controller.set('model', model);

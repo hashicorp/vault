@@ -59,9 +59,13 @@ Router.map(function () {
           this.route('section', { path: '/:section_name' });
         });
         this.route('mfa', function () {
-          // lookup
-          this.route('index', { path: '/' });
           this.route('configure', { path: '/landing' });
+          this.route('methods', { path: '/' });
+          this.route('method', { path: '/method/:method_id' }, function () {
+            this.route('index', { path: '/' });
+          });
+          this.route('enforcements', { path: '/enforcement-list' });
+          this.route('enforcement', { path: '/enforcement/:id' });
         });
         this.route('leases', function () {
           // lookup

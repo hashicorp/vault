@@ -1,9 +1,13 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Multi-factor Authentication
+      {{this.model.type}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-List view
+<Toolbar>
+  <ToolbarActions />
+</Toolbar>
+
+{{this.model.id}}
