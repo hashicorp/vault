@@ -148,5 +148,5 @@ type VersionInfo struct {
 
 var (
 	EmptyVersion   = VersionInfo{""}
-	BuiltinVersion = VersionInfo{version.GetVersion().Version + "-builtin"}
+	BuiltinVersion = VersionInfo{version.GetVersion().Version + "+builtin"}
 )
