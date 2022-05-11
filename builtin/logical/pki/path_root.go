@@ -26,27 +26,7 @@ import (
 )
 
 func pathGenerateRoot(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "root/generate/" + framework.GenericNameRegex("exported"),
-
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathCAGenerateRoot,
-				// Read more about why these flags are set in backend.go
-				ForwardPerformanceStandby:   true,
-				ForwardPerformanceSecondary: true,
-			},
-		},
-
-		HelpSynopsis:    pathGenerateRootHelpSyn,
-		HelpDescription: pathGenerateRootHelpDesc,
-	}
-
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
-	ret.Fields = addCAKeyGenerationFields(ret.Fields)
-	ret.Fields = addCAIssueFields(ret.Fields)
-
-	return ret
+	return buildPathGenerateRoot(b, "root/generate/"+framework.GenericNameRegex("exported"))
 }
 
 func pathDeleteRoot(b *backend) *framework.Path {
@@ -68,94 +48,67 @@ func pathDeleteRoot(b *backend) *framework.Path {
 	return ret
 }
 
-func pathSignIntermediate(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "root/sign-intermediate",
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathCASignIntermediate,
-			},
-		},
+func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
 
-		HelpSynopsis:    pathSignIntermediateHelpSyn,
-		HelpDescription: pathSignIntermediateHelpDesc,
+	if !b.useLegacyBundleCaStorage() {
+		issuers, err := listIssuers(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		keys, err := listKeys(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete all issuers and keys. Ignore deleting the default since we're
+		// explicitly deleting everything.
+		for _, issuer := range issuers {
+			if _, err = deleteIssuer(ctx, req.Storage, issuer); err != nil {
+				return nil, err
+			}
+		}
+		for _, key := range keys {
+			if _, err = deleteKey(ctx, req.Storage, key); err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
-	ret.Fields = addCAIssueFields(ret.Fields)
-
-	ret.Fields["csr"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Default:     "",
-		Description: `PEM-format CSR to be signed.`,
+	// Delete legacy CA bundle.
+	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
 	}
 
-	ret.Fields["use_csr_values"] = &framework.FieldSchema{
-		Type:    framework.TypeBool,
-		Default: false,
-		Description: `If true, then:
-1) Subject information, including names and alternate
-names, will be preserved from the CSR rather than
-using values provided in the other parameters to
-this path;
-2) Any key usages requested in the CSR will be
-added to the basic set of key usages used for CA
-certs signed by this path; for instance,
-the non-repudiation flag;
-3) Extensions requested in the CSR will be copied
-into the issued certificate.`,
+	// Delete legacy CRL bundle.
+	if err := req.Storage.Delete(ctx, legacyCRLPath); err != nil {
+		return nil, err
 	}
 
-	return ret
-}
-
-func pathSignSelfIssued(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "root/sign-self-issued",
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathCASignSelfIssued,
-			},
-		},
-
-		Fields: map[string]*framework.FieldSchema{
-			"certificate": {
-				Type:        framework.TypeString,
-				Description: `PEM-format self-issued certificate to be signed.`,
-			},
-			"require_matching_certificate_algorithms": {
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
-			},
-		},
-
-		HelpSynopsis:    pathSignSelfIssuedHelpSyn,
-		HelpDescription: pathSignSelfIssuedHelpDesc,
-	}
-
-	return ret
-}
-
-func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, req.Storage.Delete(ctx, "config/ca_bundle")
+	// Return a warning about preferring to delete issuers and keys
+	// explicitly versus deleting everything.
+	resp := &logical.Response{}
+	resp.AddWarning("DELETE /root deletes all keys and issuers; prefer the new DELETE /key/:key_ref and DELETE /issuer/:issuer_ref for finer granularity, unless removal of all keys and issuers is desired.")
+	return resp, nil
 }
 
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
 	var err error
 
-	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
-	if err != nil {
-		return nil, err
-	}
-	if entry != nil {
-		resp := &logical.Response{}
-		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. "+
-			"If you really want to destroy the original root certificate, please issue a delete against %s root.", req.MountPoint))
-		return resp, nil
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
 	}
 
-	exported, format, role, errorResp := b.getGenerationParams(ctx, data, req.MountPoint)
+	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data, req.MountPoint)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -164,6 +117,25 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if ok {
 		maxPathLength := maxPathLengthIface.(int)
 		role.MaxPathLength = &maxPathLength
+	}
+
+	issuerName, err := getIssuerName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	// Handle the aliased path specifying the new issuer name as "next", but
+	// only do it if its not in use.
+	if strings.HasPrefix(req.Path, "root/rotate/") && len(issuerName) == 0 {
+		// err is nil when the issuer name is in use.
+		_, err = resolveIssuerReference(ctx, req.Storage, "next")
+		if err != nil {
+			issuerName = "next"
+		}
+	}
+
+	keyName, err := getKeyName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	input := &inputBundle{
@@ -232,14 +204,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Store it as the CA bundle
-	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
+	myIssuer, myKey, err := writeCaBundle(newManagedKeyContext(ctx, b, req.MountPoint), req.Storage, cb, issuerName, keyName)
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
+	resp.Data["issuer_id"] = myIssuer.ID
+	resp.Data["key_id"] = myKey.ID
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
@@ -251,17 +221,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
 
-	// For ease of later use, also store just the certificate at a known
-	// location
-	entry.Key = "ca"
-	entry.Value = parsedBundle.CertificateBytes
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
 	// Build a fresh CRL
-	err = buildCRL(ctx, b, req, true)
+	err = b.crlBuilder.rebuild(ctx, b, req, true)
 	if err != nil {
 		return nil, err
 	}
@@ -273,8 +234,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	return resp, nil
 }
 
-func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+
+	issuerName := getIssuerRef(data)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
 
 	format := getFormat(data)
 	if format == "" {
@@ -301,7 +267,6 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
-		AllowExpirationPastCA:     true,
 		NotAfter:                  data.Get("not_after").(string),
 	}
 	*role.AllowWildcardCertificates = true
@@ -311,7 +276,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -322,6 +287,11 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 				"error fetching CA certificate: %s", caErr)}
 		}
 	}
+
+	// Since we are signing an intermediate, we explicitly want to override
+	// the leaf NotAfterBehavior to permit issuing intermediates longer than
+	// the life of this issuer.
+	signingBundle.LeafNotAfterBehavior = certutil.PermitNotAfterBehavior
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
@@ -417,8 +387,13 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	return resp, nil
 }
 
-func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+
+	issuerName := getIssuerRef(data)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
 
 	certPem := data.Get("certificate").(string)
 	block, _ := pem.Decode([]byte(certPem))
@@ -442,7 +417,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req)
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -550,24 +525,4 @@ Deletes the root CA key to allow a new one to be generated.
 
 const pathDeleteRootHelpDesc = `
 See the API documentation for more information.
-`
-
-const pathSignIntermediateHelpSyn = `
-Issue an intermediate CA certificate based on the provided CSR.
-`
-
-const pathSignIntermediateHelpDesc = `
-see the API documentation for more information.
-`
-
-const pathSignSelfIssuedHelpSyn = `
-Signs another CA's self-issued certificate.
-`
-
-const pathSignSelfIssuedHelpDesc = `
-Signs another CA's self-issued certificate. This is most often used for rolling roots; unless you know you need this you probably want to use sign-intermediate instead.
-
-Note that this is a very privileged operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and only verification that it is self-issued will be performed.
-
-Configured URLs for CRLs/OCSP/etc. will be copied over and the issuer will be this mount's CA cert. Other than that, all other values will be used verbatim.
 `

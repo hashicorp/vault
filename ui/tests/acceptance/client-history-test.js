@@ -15,6 +15,7 @@ import {
   SELECTORS,
   sendResponse,
 } from '../helpers/clients';
+import { waitFor } from '@ember/test-waiters';
 
 const searchSelect = create(ss);
 
@@ -210,7 +211,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    await settled();
+    await waitFor('[data-test-horizontal-bar-chart]');
     assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
 
@@ -266,11 +267,13 @@ module('Acceptance | clients history tab', function (hooks) {
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
       this.get('/v1/sys/version-history', () =>
         sendResponse({
-          keys: ['1.9.0'],
-          key_info: {
-            '1.9.0': {
-              previous_version: null,
-              timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
+          data: {
+            keys: ['1.9.0'],
+            key_info: {
+              '1.9.0': {
+                previous_version: null,
+                timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
+              },
             },
           },
         })

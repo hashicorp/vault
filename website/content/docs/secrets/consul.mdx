@@ -38,39 +38,39 @@ management tool.
     If you have already bootstrapped the ACL system of your Consul cluster, you
     will need to give Vault a management token:
 
-     - In Consul versions below 1.4, acquire a [management token][consul-mgmt-token] from Consul, using the
-       `acl_master_token` from your Consul configuration file or another management
-       token:
+    In Consul versions below 1.4, acquire a [management token][consul-mgmt-token] from Consul, using the
+    `acl_master_token` from your Consul configuration file or another management
+    token:
 
-        ```sh
-        $ curl \
-            --header "X-Consul-Token: my-management-token" \
-            --request PUT \
-            --data '{"Name": "sample", "Type": "management"}' \
-            https://consul.rocks/v1/acl/create
-        ```
+    ```sh
+    $ curl \
+        --header "X-Consul-Token: my-management-token" \
+        --request PUT \
+        --data '{"Name": "sample", "Type": "management"}' \
+        https://consul.rocks/v1/acl/create
+    ```
 
-        Vault must have a management type token so that it can create and revoke ACL
-        tokens. The response will return a new token:
+    Vault must have a management type token so that it can create and revoke ACL
+    tokens. The response will return a new token:
 
-        ```json
-        {
-        "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
-        }
-        ```
+    ```json
+    {
+    "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
+    }
+    ```
 
-     - For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
+    For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
 
-        ```shell-session
-        $ CONSUL_HTTP_TOKEN="<management-token>" consul acl token create -policy-name="global-management"
-        AccessorID:   865dc5e9-e585-3180-7b49-4ddc0fc45135
-        SecretID:     ef35f0f1-885b-0cab-573c-7c91b65a7a7e
-        Description:
-        Local:        false
-        Create Time:  2018-10-22 17:40:24.128188 -0700 PDT
-        Policies:
-            00000000-0000-0000-0000-000000000001 - global-management
-        ```
+    ```shell-session
+    $ CONSUL_HTTP_TOKEN="<management-token>" consul acl token create -policy-name="global-management"
+    AccessorID:   865dc5e9-e585-3180-7b49-4ddc0fc45135
+    SecretID:     ef35f0f1-885b-0cab-573c-7c91b65a7a7e
+    Description:
+    Local:        false
+    Create Time:  2018-10-22 17:40:24.128188 -0700 PDT
+    Policies:
+        00000000-0000-0000-0000-000000000001 - global-management
+    ```
 
 1.  Configure Vault to connect and authenticate to Consul:
 
@@ -82,7 +82,8 @@ management tool.
     ```
 
 1.  Configure a role that maps a name in Vault to a Consul ACL policy. Depending on your Consul version,
-    you will either provide a policy document and a token_type, or a set of policies.
+    you will either provide a policy document and a token_type, a list of policies or roles, or a set of
+    service or node identities.
     When users generate credentials, they are generated against this role.
 
     For Consul versions below 1.4, the policy must be base64-encoded. The policy language is
@@ -103,11 +104,23 @@ management tool.
     Success! Data written to: consul/roles/my-role
     ```
 
-    For Consul versions 1.5 and above, [generate a role in Consul](https://www.consul.io/api/acl/roles), and
-    proceed to link it to the role:
+    For Consul versions 1.5 and above, [generate a role in Consul](https://www.consul.io/api/acl/roles) and
+    proceed to link it to the role, or [attach a Consul service identity](https://www.consul.io/commands/acl/token/create#service-identity) to the role:
 
     ```shell-session
     $ vault write consul/roles/my-role consul_roles="api-server"
+    Success! Data written to: consul/roles/my-role
+    ```
+
+    ```shell-session
+    $ vault write consul/roles/my-role service_identities="myservice:dc1,dc2"
+    Success! Data written to: consul/roles/my-role
+    ```
+
+    For Consul versions 1.8 and above, [attach a Consul node identity](https://www.consul.io/commands/acl/token/create#node-identity) to the role.
+
+    ```shell-session
+    $ vault write consul/roles/my-role node_identities="server-1:dc1"
     Success! Data written to: consul/roles/my-role
     ```
 
