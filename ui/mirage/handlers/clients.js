@@ -654,6 +654,11 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
   const dataEarliestMonth = parseAPITimestamp(monthlyData[0].timestamp);
   const dataLatestMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
   let transformedMonthlyArray = [...monthlyData];
+  // If query end is before last month in array, return only through end query
+  if (isBefore(queryEndDate, dataLatestMonth)) {
+    let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
+    return transformedMonthlyArray.slice(0, index + 1);
+  }
   // If query wants months previous to the data we have, return the full array
   if (isBefore(queryStartDate, dataEarliestMonth)) {
     return transformedMonthlyArray;
@@ -661,12 +666,7 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
   // If query is after earliest month in array, return latest to month that matches query
   if (isAfter(queryStartDate, dataEarliestMonth)) {
     let index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
-    transformedMonthlyArray = transformedMonthlyArray.slice(0, index + 1);
-  }
-  // If query end is before last month in array, return only through end query
-  if (isBefore(queryEndDate, dataLatestMonth)) {
-    let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
-    transformedMonthlyArray = transformedMonthlyArray.slice(index);
+    return transformedMonthlyArray.slice(index);
   }
   return transformedMonthlyArray;
 };
@@ -680,19 +680,19 @@ export default function (server) {
         key_info: {
           '1.9.0': {
             previous_version: null,
-            timestamp_installed: '2021-07-03T10:23:16Z',
+            timestamp_installed: formatISO(sub(new Date(), { months: 4 })),
           },
           '1.9.1': {
             previous_version: '1.9.0',
-            timestamp_installed: '2021-08-03T10:23:16Z',
+            timestamp_installed: formatISO(sub(new Date(), { months: 3 })),
           },
           '1.9.2': {
             previous_version: '1.9.1',
-            timestamp_installed: '2021-09-03T10:23:16Z',
+            timestamp_installed: formatISO(sub(new Date(), { months: 2 })),
           },
           '1.10.1': {
             previous_version: '1.9.2',
-            timestamp_installed: '2021-10-03T10:23:16Z',
+            timestamp_installed: formatISO(sub(new Date(), { months: 1 })),
           },
         },
       },
