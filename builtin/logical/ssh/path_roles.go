@@ -28,7 +28,7 @@ const (
 	// Present version of the sshRole struct; when adding a new field or are
 	// needing to perform a migration, increment this struct and read the note
 	// in checkUpgrade(...).
-	roleEntryVersion = 2
+	roleEntryVersion = 3
 )
 
 // Structure that represents a role in SSH backend. This is a common role structure
@@ -368,8 +368,7 @@ func pathRoles(b *backend) *framework.Path {
 				Type:    framework.TypeDurationSecond,
 				Default: 30,
 				Description: `
-                The duration before now the SSH cert needs to be signed.
-				`,
+   				The duration that the SSH certificate should be backdated by at issuance.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Not before duration",
 					Value: 30,
@@ -683,6 +682,11 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 
 	SKIPVERSION2:
 		err = nil
+	}
+
+	if result.Version < 3 {
+		modified = true
+		result.NotBeforeDuration = 30 * time.Second
 	}
 
 	// Add new migrations just before here.
