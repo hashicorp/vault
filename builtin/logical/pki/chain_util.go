@@ -81,7 +81,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	// are the same across multiple calls to rebuildIssuersChains with the same
 	// input data.
 	sort.SliceStable(issuers, func(i, j int) bool {
-		return issuers[i] < issuers[j]
+		return issuers[i] > issuers[j]
 	})
 
 	// We expect each of these maps to be the size of the number of issuers
@@ -351,9 +351,33 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 		// ...and add all parents into it. Note that we have to tell if
 		// that parent was already visited or not.
 		if ok && len(parentCerts) > 0 {
+			// Split children into two categories: roots and intermediates.
+			// When building a straight-line chain, we want to prefer the
+			// root (thus, ending the verification) to any cross-signed
+			// intermediates. If a root is cross-signed, we'll include it's
+			// cross-signed cert in _its_ chain, thus ignoring our duplicate
+			// parent here.
+			//
+			// Why? When you step from the present node ("issuer") onto one
+			// of its parents, if you step onto a root, it is a no-op: you
+			// can still visit all of the neighbors (because any neighbors,
+			// if they exist, must be cross-signed alternative paths).
+			// However, if you directly step onto the cross-signed, now you're
+			// taken in an alternative direction (via its chain), and must
+			// revisit any roots later.
+			var roots []issuerID
+			var intermediates []issuerID
+			for _, parentCertId := range parentCerts {
+				if bytes.Equal(issuerIdCertMap[parentCertId].RawSubject, issuerIdCertMap[parentCertId].RawIssuer) {
+					roots = append(roots, parentCertId)
+				} else {
+					intermediates = append(intermediates, parentCertId)
+				}
+			}
+
 			includedParentCerts := make(map[string]bool, len(parentCerts)+1)
 			includedParentCerts[entry.Certificate] = true
-			for _, parentCert := range parentCerts {
+			for _, parentCert := range append(roots, intermediates...) {
 				// See discussion of the algorithm above as to why this is
 				// in the correct order. However, note that we do need to
 				// exclude duplicate certs, hence the map above.
@@ -533,7 +557,7 @@ func processAnyCliqueOrCycle(
 			// cross-signing chains; the latter ensures that any cliques can be
 			// strictly bypassed from cycles (but the chain construction later
 			// ensures we pull in the cliques into the cycles).
-			foundCycles, err := findCyclesNearClique(processedIssuers, issuerIdChildrenMap, allCliqueNodes)
+			foundCycles, err := findCyclesNearClique(processedIssuers, issuerIdCertMap, issuerIdChildrenMap, allCliqueNodes)
 			if err != nil {
 				// Cycle is too large.
 				return toVisit, err
@@ -685,7 +709,7 @@ func processAnyCliqueOrCycle(
 		// Cliques should've been processed by now, if they were necessary
 		// for processable cycles, so ignore them from here to avoid
 		// bloating our search paths.
-		cycles, err := findAllCyclesWithNode(processedIssuers, issuerIdChildrenMap, issuer, allCliqueNodes)
+		cycles, err := findAllCyclesWithNode(processedIssuers, issuerIdCertMap, issuerIdChildrenMap, issuer, allCliqueNodes)
 		if err != nil {
 			// To large of cycle.
 			return nil, err
@@ -965,6 +989,7 @@ func canonicalizeCycle(cycle []issuerID) []issuerID {
 
 func findCyclesNearClique(
 	processedIssuers map[issuerID]bool,
+	issuerIdCertMap map[issuerID]*x509.Certificate,
 	issuerIdChildrenMap map[issuerID][]issuerID,
 	cliqueNodes []issuerID,
 ) ([][]issuerID, error) {
@@ -993,7 +1018,7 @@ func findCyclesNearClique(
 		}
 
 		// Find cycles containing this node.
-		newCycles, err := findAllCyclesWithNode(processedIssuers, issuerIdChildrenMap, child, excludeNodes)
+		newCycles, err := findAllCyclesWithNode(processedIssuers, issuerIdCertMap, issuerIdChildrenMap, child, excludeNodes)
 		if err != nil {
 			// Found too large of a cycle
 			return nil, err
@@ -1009,11 +1034,17 @@ func findCyclesNearClique(
 		excludeNodes = append(excludeNodes, child)
 	}
 
+	// Sort cycles from longest->shortest.
+	sort.SliceStable(knownCycles, func(i, j int) bool {
+		return len(knownCycles[i]) < len(knownCycles[j])
+	})
+
 	return knownCycles, nil
 }
 
 func findAllCyclesWithNode(
 	processedIssuers map[issuerID]bool,
+	issuerIdCertMap map[issuerID]*x509.Certificate,
 	issuerIdChildrenMap map[issuerID][]issuerID,
 	source issuerID,
 	exclude []issuerID,
@@ -1112,6 +1143,7 @@ func findAllCyclesWithNode(
 			if _, ok := pathsTo[child]; !ok {
 				pathsTo[child] = make([][]issuerID, 0)
 			}
+
 			for _, path := range pathsTo[current] {
 				if child != source {
 					// We only care about source->source cycles. If this
@@ -1160,7 +1192,7 @@ func findAllCyclesWithNode(
 				}
 			}
 
-			// Visit this child next.
+			// Add this child as a candidate to visit next.
 			visitQueue = append(visitQueue, child)
 
 			// If there's a new parent or we found a new path, then we should
@@ -1205,6 +1237,11 @@ func findAllCyclesWithNode(
 		reversed := reversedCycle(truncatedCycle)
 		cycles = appendCycleIfNotExisting(cycles, reversed)
 	}
+
+	// Sort cycles from longest->shortest.
+	sort.SliceStable(cycles, func(i, j int) bool {
+		return len(cycles[i]) > len(cycles[j])
+	})
 
 	return cycles, nil
 }

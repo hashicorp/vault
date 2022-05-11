@@ -1319,6 +1319,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			PolicyIdentifiers:             data.role.PolicyIdentifiers,
 			BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 			NotBeforeDuration:             data.role.NotBeforeDuration,
+			ForceAppendCaChain:            caSign != nil,
 		},
 		SigningBundle: caSign,
 		CSR:           csr,

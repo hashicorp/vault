@@ -871,16 +871,25 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	}
 
 	if data.SigningBundle != nil {
-		if len(data.SigningBundle.Certificate.AuthorityKeyId) > 0 &&
-			!bytes.Equal(data.SigningBundle.Certificate.AuthorityKeyId, data.SigningBundle.Certificate.SubjectKeyId) {
+		if (len(data.SigningBundle.Certificate.AuthorityKeyId) > 0 &&
+			!bytes.Equal(data.SigningBundle.Certificate.AuthorityKeyId, data.SigningBundle.Certificate.SubjectKeyId)) ||
+			data.Params.ForceAppendCaChain {
+			var chain []*CertBlock
 
-			result.CAChain = []*CertBlock{
-				{
+			signingChain := data.SigningBundle.CAChain
+			// Some bundles already include the root included in the chain, so don't include it twice.
+			if len(signingChain) == 0 || !bytes.Equal(signingChain[0].Bytes, data.SigningBundle.CertificateBytes) {
+				chain = append(chain, &CertBlock{
 					Certificate: data.SigningBundle.Certificate,
 					Bytes:       data.SigningBundle.CertificateBytes,
-				},
+				})
 			}
-			result.CAChain = append(result.CAChain, data.SigningBundle.CAChain...)
+
+			if len(signingChain) > 0 {
+				chain = append(chain, signingChain...)
+			}
+
+			result.CAChain = chain
 		}
 	}
 
@@ -1158,7 +1167,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
 	}
 
-	result.CAChain = data.SigningBundle.GetCAChain()
+	result.CAChain = data.SigningBundle.GetFullChain()
 
 	return result, nil
 }
