@@ -562,6 +562,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		if err := ParseStorage(result, o, "storage"); err != nil {
 			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
+		result.found(result.Storage.Type, result.Storage.Type)
 	} else {
 		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
@@ -966,4 +967,9 @@ func (c *Config) Prune() {
 		c.Telemetry.FoundKeys = nil
 		c.Telemetry.UnusedKeys = nil
 	}
+}
+
+func (c *Config) found(s, k string) {
+	delete(c.UnusedKeys, s)
+	c.FoundKeys = append(c.FoundKeys, k)
 }
