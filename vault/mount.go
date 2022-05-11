@@ -13,7 +13,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/builtin/plugin/v5"
+	v5 "github.com/hashicorp/vault/builtin/plugin/v5"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -1427,9 +1427,9 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
 		}
 
-		f = plugin.Factory
+		f = v5.Factory
 		if !plug.Builtin {
-			f = wrapFactoryCheckPerms(c, plugin.Factory)
+			f = wrapFactoryCheckPerms(c, v5.Factory)
 		}
 	}
 

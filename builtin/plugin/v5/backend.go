@@ -1,4 +1,4 @@
-package plugin
+package v5
 
 import (
 	"context"
