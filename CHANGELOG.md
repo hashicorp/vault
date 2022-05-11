@@ -13,6 +13,7 @@ CHANGES:
 endpoints in favor of [autoloaded licenses](https://www.vaultproject.io/docs/enterprise/license/autoloading).
 * replication (enterprise): The `/sys/replication/performance/primary/mount-filter` endpoint has been removed. Please use [Paths Filter](https://www.vaultproject.io/api-docs/system/replication/replication-performance#create-paths-filter) instead.
 * ui: Upgrade Ember to version 3.28 [[GH-14763](https://github.com/hashicorp/vault/pull/14763)]
+
 FEATURES:
 
 * **Allows Multiple Issuer Certificates to enable Non-Disruptive
@@ -120,12 +121,9 @@ BUG FIXES:
 
 BUG FIXES:
 
-BUG FIXES:
-
 * auth: load login MFA configuration upon restart [[GH-15261](https://github.com/hashicorp/vault/pull/15261)]
 * core/config: Only ask the system about network interfaces when address configs contain a template having the format: {{ ... }} [[GH-15224](https://github.com/hashicorp/vault/pull/15224)]
 * core: pre-calculate namespace specific paths when tainting a route during postUnseal [[GH-15067](https://github.com/hashicorp/vault/pull/15067)]
-
 
 ## 1.10.2
 ### April 29, 2022
