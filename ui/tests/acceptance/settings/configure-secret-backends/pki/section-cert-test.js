@@ -127,7 +127,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.csrField(csrVal).submit();
     await settled();
-    assert.dom(SELECTORS.caChain).doesNotExist('does not display empty CA chain');
+    assert.dom(SELECTORS.caChain).exists('full CA chain is shown');
     assert.dom(SELECTORS.privateKey).doesNotExist('does not display empty private key');
     await click('.masked-input-toggle');
     intermediateCert = document.querySelector('[data-test-masked-input]').innerText;
