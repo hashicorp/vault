@@ -10,7 +10,7 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { id } = query;
     if (!id) {
-      return;
+      throw new Error('MFA method ID is required to fetch the details.');
     }
     const url = this.urlForQuery(query, type.modelName);
     return this.ajax(url, 'POST', {
