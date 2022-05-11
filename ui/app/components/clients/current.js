@@ -84,10 +84,10 @@ export default class Current extends Component {
     }
     if (this.upgradeDuringCurrentMonth.length === 2) {
       let versions = this.upgradeDuringCurrentMonth.map((upgrade) => upgrade.id).join(' and ');
-      return `Vault was upgraded to ${versions} during this month`;
+      return `Vault was upgraded to ${versions} during this month.`;
     } else {
       let version = this.upgradeDuringCurrentMonth[0];
-      return `Vault was upgraded to ${version.id} on this month`;
+      return `Vault was upgraded to ${version.id} on this month.`;
     }
   }
 
