@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -23,9 +24,31 @@ func pathConfigLease(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigLeaseRead,
-			logical.UpdateOperation: b.pathConfigLeaseWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Summary:     "Read operation summary",
+				Description: "Read operation description",
+				Callback:    b.pathConfigLeaseRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"ttl": {
+								Type:        framework.TypeDurationSecond,
+								Description: "Default ttl for credentials.",
+							},
+							"max_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Description: "Maximum time a set of credentials can be valid for.",
+							},
+						},
+					}},
+					http.StatusInternalServerError: {{Description: "something bad happened"}},
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigLeaseWrite,
+			},
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,
