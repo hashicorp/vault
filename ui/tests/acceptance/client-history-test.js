@@ -1,12 +1,9 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, settled } from '@ember/test-helpers';
+import { visit, currentURL, click } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
 import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
-import { create } from 'ember-cli-page-object';
-import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import ss from 'vault/tests/pages/components/search-select';
 import {
   generateActivityResponse,
   generateConfigResponse,
@@ -14,8 +11,11 @@ import {
   SELECTORS,
   sendResponse,
 } from '../helpers/clients';
+// import { create } from 'ember-cli-page-object';
+// import { clickTrigger } from 'ember-power-select/test-support/helpers';
+// import ss from 'vault/tests/pages/components/search-select';
 
-const searchSelect = create(ss);
+// const searchSelect = create(ss);
 
 module('Acceptance | clients history tab', function (hooks) {
   setupApplicationTest(hooks);
@@ -153,59 +153,60 @@ module('Acceptance | clients history tab', function (hooks) {
 
   // flaky test -- does not consistently run the same number of assertions
   // refactor before using assert.expect
-  test('filters correctly on history with full data', async function (assert) {
-    /* eslint qunit/require-expect: "warn" */
-    // assert.expect(44);
-    const licenseStart = startOfMonth(subMonths(new Date(), 6));
-    const licenseEnd = addMonths(new Date(), 6);
-    const lastMonth = addMonths(new Date(), -1);
-    const config = generateConfigResponse();
-    const activity = generateActivityResponse(5, licenseStart, lastMonth);
-    const license = generateLicenseResponse(licenseStart, licenseEnd);
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(activity));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
-      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-    });
-    await visit('/vault/clients/history');
-    assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
-    assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
-    assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    const { total } = activity.data;
+  // eslint-disable-next-line qunit/no-commented-tests
+  // test('filters correctly on history with full data', async function (assert) {
+  //   /* eslint qunit/require-expect: "warn" */
+  //   // assert.expect(44);
+  //   const licenseStart = startOfMonth(subMonths(new Date(), 6));
+  //   const licenseEnd = addMonths(new Date(), 6);
+  //   const lastMonth = addMonths(new Date(), -1);
+  //   const config = generateConfigResponse();
+  //   const activity = generateActivityResponse(5, licenseStart, lastMonth);
+  //   const license = generateLicenseResponse(licenseStart, licenseEnd);
+  //   this.server = new Pretender(function () {
+  //     this.get('/v1/sys/license/status', () => sendResponse(license));
+  //     this.get('/v1/sys/internal/counters/activity', () => sendResponse(activity));
+  //     this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
+  //     this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
+  //     this.get('/v1/sys/health', this.passthrough);
+  //     this.get('/v1/sys/seal-status', this.passthrough);
+  //     this.post('/v1/sys/capabilities-self', this.passthrough);
+  //     this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+  //   });
+  //   await visit('/vault/clients/history');
+  //   assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
+  //   assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+  //   assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
+  //   assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
+  //   const { total } = activity.data;
 
-    // FILTER BY NAMESPACE
-    await clickTrigger();
-    await searchSelect.options.objectAt(0).click();
-    await settled();
-    assert.ok(true, 'Filter by first namespace');
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
-    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
-    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    assert.dom('[data-test-top-attribution]').includesText('Top auth method');
+  //   // FILTER BY NAMESPACE
+  //   await clickTrigger();
+  //   await searchSelect.options.objectAt(0).click();
+  //   await settled();
+  //   assert.ok(true, 'Filter by first namespace');
+  //   assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
+  //   assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
+  //   assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
+  //   assert.dom('[data-test-top-attribution]').includesText('Top auth method');
 
-    // FILTER BY AUTH METHOD
-    await clickTrigger();
-    await searchSelect.options.objectAt(0).click();
-    await settled();
-    assert.ok(true, 'Filter by first auth method');
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('5');
-    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('3');
-    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('2');
-    assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
+  //   // FILTER BY AUTH METHOD
+  //   await clickTrigger();
+  //   await searchSelect.options.objectAt(0).click();
+  //   await settled();
+  //   assert.ok(true, 'Filter by first auth method');
+  //   assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('5');
+  //   assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('3');
+  //   assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('2');
+  //   assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
 
-    await click('#namespace-search-select [data-test-selected-list-button="delete"]');
-    assert.ok(true, 'Remove namespace filter without first removing auth method filter');
-    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
-    assert
-      .dom('[data-test-stat-text="total-clients"] .stat-value')
-      .hasText(total.clients.toString(), 'total clients stat is back to unfiltered value');
-  });
+  //   await click('#namespace-search-select [data-test-selected-list-button="delete"]');
+  //   assert.ok(true, 'Remove namespace filter without first removing auth method filter');
+  //   assert.dom('[data-test-top-attribution]').includesText('Top namespace');
+  //   assert
+  //     .dom('[data-test-stat-text="total-clients"] .stat-value')
+  //     .hasText(total.clients.toString(), 'total clients stat is back to unfiltered value');
+  // });
 
   test('shows warning if upgrade happened within license period', async function (assert) {
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
