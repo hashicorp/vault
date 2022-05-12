@@ -337,7 +337,8 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 
 			expected := tc.expected
 			actual := make(map[string]interface{})
-			for _, key := range []string{"username", "password", "last_vault_rotation", "rotation_period"} {
+			dataKeys := []string{"username", "password", "last_vault_rotation", "rotation_period"}
+			for _, key := range dataKeys {
 				if v, ok := resp.Data[key]; ok {
 					actual[key] = v
 				}
