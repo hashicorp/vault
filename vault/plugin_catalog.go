@@ -331,9 +331,21 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	}
 	merr = multierror.Append(merr, err)
 
+	pluginType, err := c.getBackendPluginType(ctx, plugin)
+	if err == nil {
+		return pluginType, nil
+	}
+	merr = multierror.Append(merr, err)
+
+	return consts.PluginTypeUnknown, merr
+}
+
+// getBackendPluginType returns an error if the plugin is not a backend plugin.
+func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (consts.PluginType, error) {
+	merr := &multierror.Error{}
 	// Attempt to run as backend plugin
 	config := pluginutil.PluginClientConfig{
-		Name:            plugin.Name,
+		Name:            pluginRunner.Name,
 		PluginSets:      backendplugin.PluginSet,
 		HandshakeConfig: backendplugin.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
@@ -341,23 +353,28 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 		AutoMTLS:        true,
 	}
 
-	c.logger.Debug("attempting to load credential backend plugin", "name", plugin.Name)
-	pc, err := c.newPluginClient(ctx, plugin, config)
-	if err != nil {
-		merr = multierror.Append(merr, err)
-		logger.Warn("unknown plugin type", "plugin name", plugin.Name, "error", merr.Error())
-		return consts.PluginTypeUnknown, err
+	var client logical.Backend
+	// Attempt to run as backend V5 plugin
+	c.logger.Debug("attempting to load credential backend plugin", "name", pluginRunner.Name)
+	pc, err := c.newPluginClient(ctx, pluginRunner, config)
+	if err == nil {
+		// dispense the plugin so we can get its type
+		client, err = backendplugin.Dispense(ctx, pc.ClientProtocol, pc)
+
+		defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
+	} else {
+		merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend v4: %w", err))
+		config.AutoMTLS = false
+		// attemtp to run as a v4 backend plugin
+		client, err = backendplugin.NewPluginClient(ctx, nil, config)
 	}
 
-	// dispense the plugin so we can get its type
-	client, err := backendplugin.Dispense(ctx, pc.ClientProtocol, pc)
 	if err == nil {
 		err := client.Setup(ctx, &logical.BackendConfig{})
 		if err != nil {
 			return consts.PluginTypeUnknown, err
 		}
 		backendType := client.Type()
-		c.cleanupExternalPlugin(plugin.Name, pc.id)
 
 		switch backendType {
 		case logical.TypeCredential:
@@ -367,20 +384,23 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 		}
 	} else {
 		merr = multierror.Append(merr, err)
+		return consts.PluginTypeUnknown, err
 	}
 
 	if client == nil || client.Type() == logical.TypeUnknown {
-		logger.Warn("unknown plugin type",
-			"plugin name", plugin.Name,
+		c.logger.Warn("unknown plugin type",
+			"plugin name", pluginRunner.Name,
 			"error", merr.Error())
 	} else {
-		logger.Warn("unsupported plugin type",
-			"plugin name", plugin.Name,
+		c.logger.Warn("unsupported plugin type",
+			"plugin name", pluginRunner.Name,
 			"plugin type", client.Type().String(),
 			"error", merr.Error())
 	}
 
-	return consts.PluginTypeUnknown, nil
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
+
+	return consts.PluginTypeUnknown, merr.ErrorOrNil()
 }
 
 // isDatabasePlugin returns an error if the plugin is not a database plugin.
