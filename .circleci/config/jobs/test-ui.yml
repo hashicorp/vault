@@ -8,9 +8,13 @@ steps:
   - restore_cache:
       keys:
         - v3-deps-{{ checksum "ui/yarn.lock" }}
-  # - run:
-  #     name: yarn install
-  #     command: cd ui && yarn install
+  - run:
+      name: yarn install
+      command: cd ui && yarn install && npm rebuild node-sass
+  - run:
+      name: Install UI dependencies
+      command: |
+        export PATH="${PWD}/bin:${PATH}"
   - save_cache:
       key: v3-deps-{{ checksum "ui/yarn.lock" }}
       paths:
