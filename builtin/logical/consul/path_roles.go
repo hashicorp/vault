@@ -48,7 +48,7 @@ using Consul 1.4.`,
 or "consul_roles" are required for Consul 1.5 and above.`,
 			},
 
-			"local": {
+			"consul_local": {
 				Type: framework.TypeBool,
 				Description: `Indicates that the token should not be replicated globally 
 and instead be local to the current datacenter. Available in Consul 1.4 and above.`,
@@ -62,12 +62,12 @@ a 'management' token, the "policy", "policies", and "consul_roles" parameters ar
 required. Defaults to 'client'.`,
 			},
 
-			"ttl": {
+			"consul_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "TTL for the Consul token created from the role.",
 			},
 
-			"max_ttl": {
+			"consul_max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Max TTL for the Consul token created from the role.",
 			},
@@ -144,10 +144,10 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"lease":            int64(roleConfigData.TTL.Seconds()),
-			"ttl":              int64(roleConfigData.TTL.Seconds()),
-			"max_ttl":          int64(roleConfigData.MaxTTL.Seconds()),
+			"consul_ttl":       int64(roleConfigData.TTL.Seconds()),
+			"consul_max_ttl":   int64(roleConfigData.MaxTTL.Seconds()),
 			"token_type":       roleConfigData.TokenType,
-			"local":            roleConfigData.Local,
+			"consul_local":     roleConfigData.Local,
 			"consul_namespace": roleConfigData.ConsulNamespace,
 			"consul_partition": roleConfigData.Partition,
 		},
@@ -198,7 +198,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	}
 
 	var ttl time.Duration
-	ttlRaw, ok := d.GetOk("ttl")
+	ttlRaw, ok := d.GetOk("consul_ttl")
 	if ok {
 		ttl = time.Second * time.Duration(ttlRaw.(int))
 	} else {
@@ -215,7 +215,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	}
 
 	name := d.Get("name").(string)
-	local := d.Get("local").(bool)
+	local := d.Get("consul_local").(bool)
 	namespace := d.Get("consul_namespace").(string)
 	partition := d.Get("consul_partition").(string)
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
@@ -257,9 +257,9 @@ type roleConfig struct {
 	ServiceIdentities []string      `json:"consul_service_identities"`
 	NodeIdentities    []string      `json:"consul_node_identities"`
 	TTL               time.Duration `json:"lease"`
-	MaxTTL            time.Duration `json:"max_ttl"`
+	MaxTTL            time.Duration `json:"consul_max_ttl"`
 	TokenType         string        `json:"token_type"`
-	Local             bool          `json:"local"`
+	Local             bool          `json:"consul_local"`
 	ConsulNamespace   string        `json:"consul_namespace"`
 	Partition         string        `json:"consul_partition"`
 }
