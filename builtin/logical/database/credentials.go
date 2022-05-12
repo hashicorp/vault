@@ -57,9 +57,9 @@ func (pg passwordGenerator) generate(ctx context.Context, b *databaseBackend, wr
 	return b.System().GeneratePasswordFromPolicy(ctx, pg.PasswordPolicy)
 }
 
-// toKVPairs returns the configuration of the passwordGenerator
+// configMap returns the configuration of the passwordGenerator
 // as a map from string to string.
-func (pg passwordGenerator) toKVPairs() map[string]string {
+func (pg passwordGenerator) configMap() map[string]string {
 	return interfaceValuesToString(structs.Map(pg))
 }
 
@@ -155,9 +155,9 @@ func (kg *rsaKeyGenerator) generate(r io.Reader) ([]byte, []byte, error) {
 	return pem.EncodeToMemory(publicBlock), pem.EncodeToMemory(privateBlock), nil
 }
 
-// toKVPairs returns the configuration of the rsaKeyGenerator
+// configMap returns the configuration of the rsaKeyGenerator
 // as a map from string to string.
-func (kg rsaKeyGenerator) toKVPairs() map[string]string {
+func (kg rsaKeyGenerator) configMap() map[string]string {
 	return interfaceValuesToString(structs.Map(kg))
 }
 

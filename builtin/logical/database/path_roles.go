@@ -641,14 +641,14 @@ func (r *roleEntry) setCredentialConfig(config map[string]string) error {
 		if err != nil {
 			return err
 		}
-		r.CredentialConfig = generator.toKVPairs()
+		r.CredentialConfig = generator.configMap()
 
 	case v5.CredentialTypeRSAPrivateKey:
 		generator, err := newRSAKeyGenerator(config)
 		if err != nil {
 			return err
 		}
-		r.CredentialConfig = generator.toKVPairs()
+		r.CredentialConfig = generator.configMap()
 	}
 
 	return nil

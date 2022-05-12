@@ -324,7 +324,7 @@ func Test_passwordGenerator_generate(t *testing.T) {
 	}
 }
 
-func Test_passwordGenerator_toKVPairs(t *testing.T) {
+func Test_passwordGenerator_configMap(t *testing.T) {
 	type args struct {
 		config map[string]string
 	}
@@ -363,7 +363,7 @@ func Test_passwordGenerator_toKVPairs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pg, err := newPasswordGenerator(tt.args.config)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, pg.toKVPairs())
+			assert.Equal(t, tt.want, pg.configMap())
 		})
 	}
 }
@@ -462,7 +462,7 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 	}
 }
 
-func Test_rsaKeyGenerator_toKVPairs(t *testing.T) {
+func Test_rsaKeyGenerator_configMap(t *testing.T) {
 	type args struct {
 		config map[string]string
 	}
@@ -533,7 +533,7 @@ func Test_rsaKeyGenerator_toKVPairs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			kg, err := newRSAKeyGenerator(tt.args.config)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, kg.toKVPairs())
+			assert.Equal(t, tt.want, kg.configMap())
 		})
 	}
 }
