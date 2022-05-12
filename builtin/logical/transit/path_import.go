@@ -283,7 +283,7 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 		return nil, errors.New("provided ciphertext is too short")
 	}
 
-	wrappedAESKey := ciphertext[:EncryptedKeyBytes]
+	wrappedEphKey := ciphertext[:EncryptedKeyBytes]
 	wrappedImportKey := ciphertext[EncryptedKeyBytes:]
 
 	wrappingKey, err := b.getWrappingKey(ctx, storage)
@@ -294,8 +294,8 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 		return nil, fmt.Errorf("error importing key: wrapping key was nil")
 	}
 
-	rsaKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
-	aesKey, err := rsa.DecryptOAEP(hashFn, b.GetRandomReader(), rsaKey, wrappedAESKey, []byte{})
+	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
+	ephKey, err := rsa.DecryptOAEP(hashFn, b.GetRandomReader(), privWrappingKey, wrappedEphKey, []byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -304,12 +304,17 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	// isn't a guarantee against memory analysis! See the documentation for the
 	// `vault.memzero` utility function for more information.
 	defer func() {
-		for i := range aesKey {
-			aesKey[i] = 0
+		for i := range ephKey {
+			ephKey[i] = 0
 		}
 	}()
 
-	kwp, err := subtle.NewKWP(aesKey)
+	// Ensure the ephemeral AES key is 256-bit
+	if len(ephKey) != 32 {
+		return nil, errors.New("expected ephemeral AES key to be 256-bit")
+	}
+
+	kwp, err := subtle.NewKWP(ephKey)
 	if err != nil {
 		return nil, err
 	}
