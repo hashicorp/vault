@@ -9,9 +9,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/google/tink/go/kwp/subtle"
@@ -19,32 +19,40 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func TestTransit_Import(t *testing.T) {
-	// Set up shared backend for subtests
-	b, s := createBackendWithStorage(t)
+var keyTypes = []string{
+	"aes256-gcm96",
+	"aes128-gcm96",
+	"chacha20-poly1305",
+	"ed25519",
+	"ecdsa-p256",
+	"ecdsa-p384",
+	"ecdsa-p521",
+	"rsa-2048",
+	"rsa-3072",
+	"rsa-4096",
+}
 
-	keyTypes := []string{
-		"aes256-gcm96",
-		"aes128-gcm96",
-		"chacha20-poly1305",
-		"ed25519",
-		"ecdsa-p256",
-		"ecdsa-p384",
-		"ecdsa-p521",
-		"rsa-2048",
-		"rsa-3072",
-		"rsa-4096",
-	}
-	hashFns := []string{
-		"SHA256",
-		"SHA1",
-		"SHA224",
-		"SHA384",
-		"SHA512",
+var hashFns = []string{
+	"SHA256",
+	"SHA1",
+	"SHA224",
+	"SHA384",
+	"SHA512",
+}
+
+var keysLock sync.RWMutex
+var keys = map[string]interface{}{}
+
+func generateKeys(t *testing.T) {
+	t.Helper()
+
+	keysLock.Lock()
+	defer keysLock.Unlock()
+
+	if len(keys) > 0 {
+		return
 	}
 
-	// Generate a key for each type
-	keys := map[string]interface{}{}
 	for _, keyType := range keyTypes {
 		key, err := generateKey(keyType)
 		if err != nil {
@@ -52,6 +60,25 @@ func TestTransit_Import(t *testing.T) {
 		}
 		keys[keyType] = key
 	}
+}
+
+func getKey(t *testing.T, keyType string) interface{} {
+	t.Helper()
+
+	keysLock.RLock()
+	defer keysLock.RUnlock()
+
+	key, ok := keys[keyType]
+	if !ok {
+		t.Fatalf("no pre-generated key of type: %s", keyType)
+	}
+
+	return key
+}
+
+func TestTransit_Import(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
 
 	t.Run(
 		"import into a key fails before wrapping key is read",
@@ -65,14 +92,8 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to generate key ID: %s", err)
 			}
-			targetKey, err := uuid.GenerateRandomBytes(32)
-			if err != nil {
-				t.Fatalf("failed to generate target key: %s", err)
-			}
-			importBlob, err := wrapTargetKeyForImport(&fakeWrappingKey.PublicKey, targetKey, "aes256-gcm96", "SHA256")
-			if err != nil {
-				t.Fatalf("failed to wrap target key for import: %s", err)
-			}
+			targetKey := getKey(t, "aes256-gcm96")
+			importBlob := wrapTargetKeyForImport(t, &fakeWrappingKey.PublicKey, targetKey, "aes256-gcm96", "SHA256")
 			req := &logical.Request{
 				Storage:   s,
 				Operation: logical.UpdateOperation,
@@ -116,15 +137,8 @@ func TestTransit_Import(t *testing.T) {
 				t.Fatalf("unexpected error creating key: %s", err)
 			}
 
-			// Roll an AES256 key and import
-			targetKey, err := uuid.GenerateRandomBytes(32)
-			if err != nil {
-				t.Fatalf("failed to generate target key: %s", err)
-			}
-			importBlob, err := wrapTargetKeyForImport(pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
-			if err != nil {
-				t.Fatalf("failed to wrap target key for import: %s", err)
-			}
+			targetKey := getKey(t, "aes256-gcm96")
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
 			req = &logical.Request{
 				Storage:   s,
 				Operation: logical.UpdateOperation,
@@ -141,10 +155,7 @@ func TestTransit_Import(t *testing.T) {
 	)
 
 	for _, keyType := range keyTypes {
-		priv, ok := keys[keyType]
-		if !ok {
-			t.Fatalf("no pre-generated key for type: %s", keyType)
-		}
+		priv := getKey(t, keyType)
 		for _, hashFn := range hashFns {
 			t.Run(
 				fmt.Sprintf("%s/%s", keyType, hashFn),
@@ -153,10 +164,7 @@ func TestTransit_Import(t *testing.T) {
 					if err != nil {
 						t.Fatalf("failed to generate key ID: %s", err)
 					}
-					importBlob, err := wrapTargetKeyForImport(pubWrappingKey, priv, keyType, hashFn)
-					if err != nil {
-						t.Fatalf("failed to wrap target key for import: %s", err)
-					}
+					importBlob := wrapTargetKeyForImport(t, pubWrappingKey, priv, keyType, hashFn)
 					req := &logical.Request{
 						Storage:   s,
 						Operation: logical.UpdateOperation,
@@ -249,14 +257,8 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to generate key ID: %s", err)
 			}
-			targetKey, ok := keys["aes256-gcm96"]
-			if !ok {
-				t.Fatalf("no pre-generated key for type: aes256-gcm96")
-			}
-			importBlob, err := wrapTargetKeyForImport(pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
-			if err != nil {
-				t.Fatalf("failed to wrap key: %s", err)
-			}
+			targetKey := getKey(t, "aes256-gcm96")
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
 			req := &logical.Request{
 				Storage:   s,
 				Operation: logical.UpdateOperation,
@@ -280,16 +282,10 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to generate key ID: %s", err)
 			}
-			targetKey, ok := keys["aes256-gcm96"]
-			if !ok {
-				t.Fatalf("no pre-generated key for type: aes256-gcm96")
-			}
+			targetKey := getKey(t, "aes256-gcm96")
 
 			// Import key
-			importBlob, err := wrapTargetKeyForImport(pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
-			if err != nil {
-				t.Fatalf("failed to wrap key: %s", err)
-			}
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
 			req := &logical.Request{
 				Storage:   s,
 				Operation: logical.UpdateOperation,
@@ -324,16 +320,10 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to generate key ID: %s", err)
 			}
-			targetKey, ok := keys["aes256-gcm96"]
-			if !ok {
-				t.Fatalf("no pre-generated key for type: aes256-gcm96")
-			}
+			targetKey := getKey(t, "aes256-gcm96")
 
 			// Import key
-			importBlob, err := wrapTargetKeyForImport(pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
-			if err != nil {
-				t.Fatalf("failed to wrap key: %s", err)
-			}
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
 			req := &logical.Request{
 				Storage:   s,
 				Operation: logical.UpdateOperation,
@@ -363,31 +353,176 @@ func TestTransit_Import(t *testing.T) {
 }
 
 func TestTransit_ImportVersion(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+
+	t.Run(
+		"import into a key version fails before wrapping key is read",
+		func(t *testing.T) {
+			fakeWrappingKey, err := rsa.GenerateKey(rand.Reader, 4096)
+			if err != nil {
+				t.Fatalf("failed to generate fake wrapping key: %s", err)
+			}
+			// Roll an AES256 key and import
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+			targetKey := getKey(t, "aes256-gcm96")
+			importBlob := wrapTargetKeyForImport(t, &fakeWrappingKey.PublicKey, targetKey, "aes256-gcm96", "SHA256")
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err == nil {
+				t.Fatal("import_version prior to wrapping key generation incorrectly succeeded")
+			}
+		},
+	)
+
+	// Retrieve public wrapping key
+	wrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || wrappingKey == nil {
+		t.Fatalf("failed to retrieve public wrapping key: %s", err)
+	}
+	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
+	pubWrappingKey := &privWrappingKey.PublicKey
+
+	t.Run(
+		"import into a non-existent key fails",
+		func(t *testing.T) {
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+			targetKey := getKey(t, "aes256-gcm96")
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err == nil {
+				t.Fatal("import_version into a non-existent key incorrectly succeeded")
+			}
+		},
+	)
+
+	t.Run(
+		"import into an internally-generated key fails",
+		func(t *testing.T) {
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Roll a key within Transit
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s", keyID),
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to generate a key within transit: %s", err)
+			}
+
+			// Attempt to import into newly generated key
+			targetKey := getKey(t, "aes256-gcm96")
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err == nil {
+				t.Fatal("import_version into an internally-generated key incorrectly succeeded")
+			}
+		},
+	)
+
+	t.Run(
+		"imported key version type must match existing key type",
+		func(t *testing.T) {
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Import an RSA key
+			targetKey := getKey(t, "rsa-2048")
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "rsa-2048", "SHA256")
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+					"type":       "rsa-2048",
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to generate a key within transit: %s", err)
+			}
+
+			// Attempt to import an AES key version into existing RSA key
+			targetKey = getKey(t, "aes256-gcm96")
+			importBlob = wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err == nil {
+				t.Fatal("import_version into a key of a different type incorrectly succeeded")
+			}
+		},
+	)
 }
 
-func wrapTargetKeyForImport(wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) (string, error) {
+func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
+	t.Helper()
+
 	// Generate an ephemeral AES-256 key
 	ephKey, err := uuid.GenerateRandomBytes(32)
 	if err != nil {
-		return "", err
+		t.Fatalf("failed to wrap target key for import: %s", err)
 	}
 
 	// Parse the hash function name into an actual function
 	hashFn, err := parseHashFn(hashFnName)
 	if err != nil {
-		return "", err
+		t.Fatalf("failed to wrap target key for import: %s", err)
 	}
 
 	// Wrap ephemeral AES key with public wrapping key
 	ephKeyWrapped, err := rsa.EncryptOAEP(hashFn, rand.Reader, wrappingKey, ephKey, []byte{})
 	if err != nil {
-		return "", err
+		t.Fatalf("failed to wrap target key for import: %s", err)
 	}
 
 	// Create KWP instance for wrapping target key
 	kwp, err := subtle.NewKWP(ephKey)
 	if err != nil {
-		return "", err
+		t.Fatalf("failed to wrap target key for import: %s", err)
 	}
 
 	// Format target key for wrapping
@@ -397,24 +532,24 @@ func wrapTargetKeyForImport(wrappingKey *rsa.PublicKey, targetKey interface{}, t
 	case "aes128-gcm96", "aes256-gcm96", "chacha20-poly1305":
 		preppedTargetKey, ok = targetKey.([]byte)
 		if !ok {
-			return "", errors.New("target key not provided in byte format")
+			t.Fatal("failed to wrap target key for import: symmetric key not provided in byte format")
 		}
 	default:
 		preppedTargetKey, err = x509.MarshalPKCS8PrivateKey(targetKey)
 		if err != nil {
-			return "", err
+			t.Fatalf("failed to wrap target key for import: %s", err)
 		}
 	}
 
 	// Wrap target key with KWP
 	targetKeyWrapped, err := kwp.Wrap(preppedTargetKey)
 	if err != nil {
-		return "", err
+		t.Fatalf("failed to wrap target key for import: %s", err)
 	}
 
 	// Combined wrapped keys into a single blob and base64 encode
 	wrappedKeys := append(ephKeyWrapped, targetKeyWrapped...)
-	return base64.RawURLEncoding.EncodeToString(wrappedKeys), nil
+	return base64.RawURLEncoding.EncodeToString(wrappedKeys)
 }
 
 func generateKey(keyType string) (interface{}, error) {

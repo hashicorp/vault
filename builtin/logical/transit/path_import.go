@@ -129,6 +129,12 @@ func (b *backend) pathImportVersion() *framework.Path {
 				Description: `The base64-encoded ciphertext of the keys. The AES key should be encrypted using OAEP 
 with the wrapping key and then concatenated with the import key, wrapped by the AES key.`,
 			},
+			"hash_function": {
+				Type:    framework.TypeString,
+				Default: "SHA256",
+				Description: `The hash function used as a random oracle in the OAEP wrapping of the user-generated,
+ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384", or "SHA512"`,
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathImportVersionWrite,
