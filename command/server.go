@@ -189,9 +189,9 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Target:     &c.flagLogLevel,
 		Default:    notSetValue,
 		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
 	})
 
 	f.StringVar(&StringVar{
