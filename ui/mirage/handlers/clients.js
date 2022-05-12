@@ -1,24 +1,16 @@
-import {
-  addDays,
-  formatISO,
-  formatRFC3339,
-  isAfter,
-  isBefore,
-  sub,
-  isSameMonth,
-  startOfMonth,
-} from 'date-fns';
+import { formatISO, isAfter, isBefore, sub, isSameMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
+// Oldest to newest
 const MOCK_MONTHLY_DATA = [
   {
-    timestamp: '2021-05-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 5 }))),
     counts: {
       distinct_entities: 0,
-      entity_clients: 25,
+      entity_clients: 2,
       non_entity_tokens: 0,
-      non_entity_clients: 25,
-      clients: 50,
+      non_entity_clients: 3,
+      clients: 5,
     },
     namespaces: [
       {
@@ -26,37 +18,93 @@ const MOCK_MONTHLY_DATA = [
         namespace_path: '',
         counts: {
           distinct_entities: 0,
-          entity_clients: 13,
+          entity_clients: 2,
           non_entity_tokens: 0,
-          non_entity_clients: 7,
-          clients: 20,
+          non_entity_clients: 3,
+          clients: 5,
         },
         mounts: [
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 8,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 8,
-            },
-          },
           {
             mount_path: 'auth/up1/',
             counts: {
               distinct_entities: 0,
               entity_clients: 0,
               non_entity_tokens: 0,
-              non_entity_clients: 7,
-              clients: 7,
+              non_entity_clients: 3,
+              clients: 3,
+            },
+          },
+          {
+            mount_path: 'auth/up2/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 2,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 2,
             },
           },
         ],
       },
+    ],
+    new_clients: {
+      counts: {
+        distinct_entities: 0,
+        entity_clients: 2,
+        non_entity_tokens: 0,
+        non_entity_clients: 3,
+        clients: 5,
+      },
+      namespaces: [
+        {
+          namespace_id: 'root',
+          namespace_path: '',
+          counts: {
+            distinct_entities: 0,
+            entity_clients: 2,
+            non_entity_tokens: 0,
+            non_entity_clients: 3,
+            clients: 5,
+          },
+          mounts: [
+            {
+              mount_path: 'auth/up1/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 0,
+                non_entity_tokens: 0,
+                non_entity_clients: 3,
+                clients: 3,
+              },
+            },
+            {
+              mount_path: 'auth/up2/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 2,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 2,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 4 }))),
+    counts: {
+      distinct_entities: 0,
+      entity_clients: 5,
+      non_entity_tokens: 0,
+      non_entity_clients: 5,
+      clients: 10,
+    },
+    namespaces: [
       {
-        namespace_id: 's07UR',
-        namespace_path: 'ns1/',
+        namespace_id: 'root',
+        namespace_path: '',
         counts: {
           distinct_entities: 0,
           entity_clients: 5,
@@ -66,22 +114,22 @@ const MOCK_MONTHLY_DATA = [
         },
         mounts: [
           {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 5,
-              clients: 5,
-            },
-          },
-          {
             mount_path: 'auth/up2/',
             counts: {
               distinct_entities: 0,
               entity_clients: 5,
               non_entity_tokens: 0,
               non_entity_clients: 0,
+              clients: 5,
+            },
+          },
+          {
+            mount_path: 'auth/up1/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_tokens: 0,
+              non_entity_clients: 5,
               clients: 5,
             },
           },
@@ -134,51 +182,18 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: '2021-10-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 3 }))),
     counts: {
       distinct_entities: 0,
-      entity_clients: 20,
+      entity_clients: 7,
       non_entity_tokens: 0,
-      non_entity_clients: 20,
-      clients: 40,
+      non_entity_clients: 8,
+      clients: 15,
     },
     namespaces: [
       {
         namespace_id: 'root',
         namespace_path: '',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 8,
-          non_entity_tokens: 0,
-          non_entity_clients: 7,
-          clients: 15,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 8,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 8,
-            },
-          },
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 7,
-              clients: 7,
-            },
-          },
-        ],
-      },
-      {
-        namespace_id: 's07UR',
-        namespace_path: 'ns1/',
         counts: {
           distinct_entities: 0,
           entity_clients: 5,
@@ -209,44 +224,77 @@ const MOCK_MONTHLY_DATA = [
           },
         ],
       },
+      {
+        namespace_id: 's07UR',
+        namespace_path: 'ns1/',
+        counts: {
+          distinct_entities: 0,
+          entity_clients: 2,
+          non_entity_tokens: 0,
+          non_entity_clients: 3,
+          clients: 5,
+        },
+        mounts: [
+          {
+            mount_path: 'auth/up1/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 0,
+              non_entity_tokens: 0,
+              non_entity_clients: 3,
+              clients: 3,
+            },
+          },
+          {
+            mount_path: 'auth/up2/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 2,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 2,
+            },
+          },
+        ],
+      },
     ],
     new_clients: {
       counts: {
         distinct_entities: 0,
-        entity_clients: 3,
+        entity_clients: 2,
         non_entity_tokens: 0,
-        non_entity_clients: 2,
+        non_entity_clients: 3,
         clients: 5,
       },
       namespaces: [
         {
-          namespace_id: 'root',
-          namespace_path: '',
+          namespace_id: 's07UR',
+          namespace_path: 'ns1/',
           counts: {
             distinct_entities: 0,
-            entity_clients: 3,
+            entity_clients: 2,
             non_entity_tokens: 0,
-            non_entity_clients: 2,
+            non_entity_clients: 3,
             clients: 5,
           },
           mounts: [
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 3,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 3,
-              },
-            },
             {
               mount_path: 'auth/up1/',
               counts: {
                 distinct_entities: 0,
                 entity_clients: 0,
                 non_entity_tokens: 0,
-                non_entity_clients: 2,
+                non_entity_clients: 3,
+                clients: 3,
+              },
+            },
+            {
+              mount_path: 'auth/up2/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 2,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
                 clients: 2,
               },
             },
@@ -256,7 +304,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: '2021-09-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 2 }))),
     counts: {
       distinct_entities: 0,
       entity_clients: 17,
@@ -477,13 +525,13 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: '2021-08-01T00:00:00Z',
+    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 1 }))),
     counts: {
       distinct_entities: 0,
-      entity_clients: 7,
+      entity_clients: 20,
       non_entity_tokens: 0,
-      non_entity_clients: 8,
-      clients: 15,
+      non_entity_clients: 20,
+      clients: 40,
     },
     namespaces: [
       {
@@ -491,30 +539,30 @@ const MOCK_MONTHLY_DATA = [
         namespace_path: '',
         counts: {
           distinct_entities: 0,
-          entity_clients: 5,
+          entity_clients: 8,
           non_entity_tokens: 0,
-          non_entity_clients: 5,
-          clients: 10,
+          non_entity_clients: 7,
+          clients: 15,
         },
         mounts: [
+          {
+            mount_path: 'auth/up2/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 8,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 8,
+            },
+          },
           {
             mount_path: 'auth/up1/',
             counts: {
               distinct_entities: 0,
               entity_clients: 0,
               non_entity_tokens: 0,
-              non_entity_clients: 5,
-              clients: 5,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 5,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 5,
+              non_entity_clients: 7,
+              clients: 7,
             },
           },
         ],
@@ -524,95 +572,6 @@ const MOCK_MONTHLY_DATA = [
         namespace_path: 'ns1/',
         counts: {
           distinct_entities: 0,
-          entity_clients: 2,
-          non_entity_tokens: 0,
-          non_entity_clients: 3,
-          clients: 5,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 3,
-              clients: 3,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 2,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 2,
-            },
-          },
-        ],
-      },
-    ],
-    new_clients: {
-      counts: {
-        distinct_entities: 0,
-        entity_clients: 2,
-        non_entity_tokens: 0,
-        non_entity_clients: 3,
-        clients: 5,
-      },
-      namespaces: [
-        {
-          namespace_id: 's07UR',
-          namespace_path: 'ns1/',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 2,
-            non_entity_tokens: 0,
-            non_entity_clients: 3,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 3,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 2,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 2,
-              },
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    timestamp: '2021-07-01T00:00:00Z',
-    counts: {
-      distinct_entities: 0,
-      entity_clients: 5,
-      non_entity_tokens: 0,
-      non_entity_clients: 5,
-      clients: 10,
-    },
-    namespaces: [
-      {
-        namespace_id: 'root',
-        namespace_path: '',
-        counts: {
-          distinct_entities: 0,
           entity_clients: 5,
           non_entity_tokens: 0,
           non_entity_clients: 5,
@@ -620,22 +579,22 @@ const MOCK_MONTHLY_DATA = [
         },
         mounts: [
           {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 5,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 5,
-            },
-          },
-          {
             mount_path: 'auth/up1/',
             counts: {
               distinct_entities: 0,
               entity_clients: 0,
               non_entity_tokens: 0,
               non_entity_clients: 5,
+              clients: 5,
+            },
+          },
+          {
+            mount_path: 'auth/up2/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 5,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
               clients: 5,
             },
           },
@@ -687,112 +646,27 @@ const MOCK_MONTHLY_DATA = [
       ],
     },
   },
-  {
-    timestamp: '2021-06-01T00:00:00Z',
-    counts: {
-      distinct_entities: 0,
-      entity_clients: 2,
-      non_entity_tokens: 0,
-      non_entity_clients: 3,
-      clients: 5,
-    },
-    namespaces: [
-      {
-        namespace_id: 'root',
-        namespace_path: '',
-        counts: {
-          distinct_entities: 0,
-          entity_clients: 2,
-          non_entity_tokens: 0,
-          non_entity_clients: 3,
-          clients: 5,
-        },
-        mounts: [
-          {
-            mount_path: 'auth/up1/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 0,
-              non_entity_tokens: 0,
-              non_entity_clients: 3,
-              clients: 3,
-            },
-          },
-          {
-            mount_path: 'auth/up2/',
-            counts: {
-              distinct_entities: 0,
-              entity_clients: 2,
-              non_entity_tokens: 0,
-              non_entity_clients: 0,
-              clients: 2,
-            },
-          },
-        ],
-      },
-    ],
-    new_clients: {
-      counts: {
-        distinct_entities: 0,
-        entity_clients: 2,
-        non_entity_tokens: 0,
-        non_entity_clients: 3,
-        clients: 5,
-      },
-      namespaces: [
-        {
-          namespace_id: 'root',
-          namespace_path: '',
-          counts: {
-            distinct_entities: 0,
-            entity_clients: 2,
-            non_entity_tokens: 0,
-            non_entity_clients: 3,
-            clients: 5,
-          },
-          mounts: [
-            {
-              mount_path: 'auth/up1/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 0,
-                non_entity_tokens: 0,
-                non_entity_clients: 3,
-                clients: 3,
-              },
-            },
-            {
-              mount_path: 'auth/up2/',
-              counts: {
-                distinct_entities: 0,
-                entity_clients: 2,
-                non_entity_tokens: 0,
-                non_entity_clients: 0,
-                clients: 2,
-              },
-            },
-          ],
-        },
-      ],
-    },
-  },
 ];
 const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) => {
   const queryStartDate = parseAPITimestamp(queryStartTimestamp);
   const queryEndDate = parseAPITimestamp(queryEndTimestamp);
-  const startDateByMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
-  const endDateByMonth = parseAPITimestamp(monthlyData[0].timestamp);
+  // monthlyData is oldest to newest
+  const dataEarliestMonth = parseAPITimestamp(monthlyData[0].timestamp);
+  const dataLatestMonth = parseAPITimestamp(monthlyData[monthlyData.length - 1].timestamp);
   let transformedMonthlyArray = [...monthlyData];
-  if (isBefore(queryStartDate, startDateByMonth)) {
+  // If query end is before last month in array, return only through end query
+  if (isBefore(queryEndDate, dataLatestMonth)) {
+    let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
+    return transformedMonthlyArray.slice(0, index + 1);
+  }
+  // If query wants months previous to the data we have, return the full array
+  if (isBefore(queryStartDate, dataEarliestMonth)) {
     return transformedMonthlyArray;
   }
-  if (isAfter(queryStartDate, startDateByMonth)) {
+  // If query is after earliest month in array, return latest to month that matches query
+  if (isAfter(queryStartDate, dataEarliestMonth)) {
     let index = monthlyData.findIndex((e) => isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp)));
-    transformedMonthlyArray = transformedMonthlyArray.slice(0, index + 1);
-  }
-  if (isBefore(queryEndDate, endDateByMonth)) {
-    let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
-    transformedMonthlyArray = transformedMonthlyArray.slice(index);
+    return transformedMonthlyArray.slice(index);
   }
   return transformedMonthlyArray;
 };
@@ -801,28 +675,31 @@ export default function (server) {
   // 1.10 API response
   server.get('sys/version-history', function () {
     return {
-      keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1'],
-      key_info: {
-        '1.9.0': {
-          previous_version: null,
-          timestamp_installed: '2021-07-03T10:23:16Z',
-        },
-        '1.9.1': {
-          previous_version: '1.9.0',
-          timestamp_installed: '2021-08-03T10:23:16Z',
-        },
-        '1.9.2': {
-          previous_version: '1.9.1',
-          timestamp_installed: '2021-09-03T10:23:16Z',
-        },
-        '1.10.1': {
-          previous_version: '1.9.2',
-          timestamp_installed: '2021-10-03T10:23:16Z',
+      data: {
+        keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1'],
+        key_info: {
+          '1.9.0': {
+            previous_version: null,
+            timestamp_installed: formatISO(sub(new Date(), { months: 4 })),
+          },
+          '1.9.1': {
+            previous_version: '1.9.0',
+            timestamp_installed: formatISO(sub(new Date(), { months: 3 })),
+          },
+          '1.9.2': {
+            previous_version: '1.9.1',
+            timestamp_installed: formatISO(sub(new Date(), { months: 2 })),
+          },
+          '1.10.1': {
+            previous_version: '1.9.2',
+            timestamp_installed: formatISO(sub(new Date(), { months: 1 })),
+          },
         },
       },
     };
   });
 
+  /*
   server.get('sys/license/status', function () {
     const startTime = new Date();
 
@@ -878,6 +755,7 @@ export default function (server) {
       },
     };
   });
+  */
 
   server.get('sys/internal/counters/config', function () {
     return {
@@ -1009,7 +887,7 @@ export default function (server) {
             ],
           },
         ],
-        end_time: end_time || formatISO(sub(new Date(), { months: 1 })),
+        end_time: end_time || formatISO(endOfMonth(sub(new Date(), { months: 1 }))),
         months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {

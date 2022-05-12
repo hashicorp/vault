@@ -525,6 +525,16 @@ func testUnknownFieldValidation(t *testing.T) {
 	}
 }
 
+func testUnknownFieldValidationStorageAndListener(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/storage-listener-config.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(config.UnusedKeys) != 0 {
+		t.Fatalf("unused keys for valid config are %+v\n", config.UnusedKeys)
+	}
+}
+
 func testLoadConfigFile_json(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config.hcl.json")
 	if err != nil {

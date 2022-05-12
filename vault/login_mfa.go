@@ -1831,6 +1831,8 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	if err != nil {
 		return fmt.Errorf("error creating client: %s", err)
 	}
+	// Disable client side rate limiting
+	client.RateRemainingFloor = 0
 
 	filterField := "profile.login"
 	if oktaConfig.PrimaryEmail {

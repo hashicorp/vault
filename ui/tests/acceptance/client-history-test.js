@@ -100,7 +100,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
-    assert.expect(26);
+    assert.expect(25);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);
@@ -141,7 +141,6 @@ module('Acceptance | clients history tab', function (hooks) {
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText(non_entity_clients.toString(), 'non-entity clients stat is correct');
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
 
     // TODO CMB - add assertion so double charts show for single historical month
@@ -210,8 +209,6 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    await settled();
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
 
     // check chart displays correct elements and values
@@ -266,11 +263,13 @@ module('Acceptance | clients history tab', function (hooks) {
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
       this.get('/v1/sys/version-history', () =>
         sendResponse({
-          keys: ['1.9.0'],
-          key_info: {
-            '1.9.0': {
-              previous_version: null,
-              timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
+          data: {
+            keys: ['1.9.0'],
+            key_info: {
+              '1.9.0': {
+                previous_version: null,
+                timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
+              },
             },
           },
         })
