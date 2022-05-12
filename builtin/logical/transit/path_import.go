@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"strings"
 	"time"
 
 	"strconv"
@@ -31,14 +32,16 @@ func (b *backend) pathImport() *framework.Path {
 				Description: "The name of the key",
 			},
 			"type": {
-				Type: framework.TypeString,
+				Type:    framework.TypeString,
+				Default: "aes256-gcm96",
 				Description: `The type of key being imported. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
 (asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 			"hash_function": {
-				Type: framework.TypeString,
+				Type:    framework.TypeString,
+				Default: "SHA256",
 				Description: `The hash function used as a random oracle in the OAEP wrapping of the user-generated,
 ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384", or "SHA512"`,
 			},
@@ -275,6 +278,11 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 }
 
 func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storage, ciphertext []byte, hashFn hash.Hash) ([]byte, error) {
+	// Bounds check the ciphertext to avoid panics
+	if len(ciphertext) <= EncryptedKeyBytes {
+		return nil, errors.New("provided ciphertext is too short")
+	}
+
 	wrappedAESKey := ciphertext[:EncryptedKeyBytes]
 	wrappedImportKey := ciphertext[EncryptedKeyBytes:]
 
@@ -292,6 +300,15 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 		return nil, err
 	}
 
+	// Zero out the ephemeral AES key just to be extra cautious. Note that this
+	// isn't a guarantee against memory analysis! See the documentation for the
+	// `vault.memzero` utility function for more information.
+	defer func() {
+		for i := range aesKey {
+			aesKey[i] = 0
+		}
+	}()
+
 	kwp, err := subtle.NewKWP(aesKey)
 	if err != nil {
 		return nil, err
@@ -306,16 +323,16 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 }
 
 func parseHashFn(hashFn string) (hash.Hash, error) {
-	switch hashFn {
-	case "sha1":
+	switch strings.ToUpper(hashFn) {
+	case "SHA1":
 		return sha1.New(), nil
-	case "sha224":
+	case "SHA224":
 		return sha256.New224(), nil
-	case "sha256":
+	case "SHA256":
 		return sha256.New(), nil
-	case "sha384":
+	case "SHA384":
 		return sha512.New384(), nil
-	case "sha512":
+	case "SHA512":
 		return sha512.New(), nil
 	default:
 		return nil, fmt.Errorf("unknown hash function: %s", hashFn)
