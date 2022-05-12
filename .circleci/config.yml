@@ -33,20 +33,6 @@ jobs:
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
-    - run:
-        command: |
-          case "$CIRCLE_BRANCH" in
-          main|ui/*|backport/ui/*|release/*|merge*) ;;
-          *) # If the branch being tested doesn't match one of the above patterns,
-             # we don't need to run test-ui and can abort the job.
-             circleci-agent step halt
-             ;;
-          esac
-
-          # exit with success either way
-          exit 0
-        name: Check branch name
-        working_directory: ~/
     - checkout
     - restore_cache:
         key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
@@ -1088,6 +1074,11 @@ workflows:
         requires:
         - pre-flight-checks
     - test-ui:
+        filters:
+          branches:
+            only: main
+          tags:
+            only: run-ui-test
         requires:
         - install-ui-dependencies
         - build-go-dev
