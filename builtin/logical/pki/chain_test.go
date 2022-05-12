@@ -452,11 +452,7 @@ type CBIssueLeaf struct {
 	Role   string
 }
 
-func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
-	if len(c.Role) == 0 {
-		c.Role = "testing"
-	}
-
+func (c CBIssueLeaf) IssueLeaf(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) *logical.Response {
 	// Write a role
 	url := "roles/" + c.Role
 	data := make(map[string]interface{})
@@ -482,7 +478,6 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 		t.Fatalf("failed to issue cert (%v via %v): nil response / body: %v", c.Issuer, c.Role, data)
 	}
 
-	api_serial := resp.Data["serial_number"].(string)
 	raw_cert := resp.Data["certificate"].(string)
 	cert := ToCertificate(t, raw_cert)
 	raw_issuer := resp.Data["issuing_ca"].(string)
@@ -497,11 +492,21 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 		t.Fatalf("failed to verify signature on issued certificate from %v: %v\n[%v]\n[%v]\n", c.Issuer, err, raw_cert, raw_issuer)
 	}
 
+	return resp
+}
+
+func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string, issueResponse *logical.Response) {
+	api_serial := issueResponse.Data["serial_number"].(string)
+	raw_cert := issueResponse.Data["certificate"].(string)
+	cert := ToCertificate(t, raw_cert)
+	raw_issuer := issueResponse.Data["issuing_ca"].(string)
+	issuer := ToCertificate(t, raw_issuer)
+
 	// Revoke the certificate.
-	url = "revoke"
-	data = make(map[string]interface{})
+	url := "revoke"
+	data := make(map[string]interface{})
 	data["serial_number"] = api_serial
-	resp, err = CBWrite(b, s, url, data)
+	resp, err := CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: %v", api_serial, c.Role, c.Issuer, err)
 	}
@@ -562,6 +567,15 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 
 		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer:\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, raw_issuer)
 	}
+}
+
+func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
+	if len(c.Role) == 0 {
+		c.Role = "testing"
+	}
+
+	resp := c.IssueLeaf(t, b, s, knownKeys, knownCerts)
+	c.RevokeLeaf(t, b, s, knownKeys, knownCerts, resp)
 }
 
 // Stable ordering
