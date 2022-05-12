@@ -10,7 +10,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/mitchellh/mapstructure"
 )
@@ -20,7 +19,7 @@ import (
 type passwordGenerator struct {
 	// PasswordPolicy is the named password policy used to generate passwords.
 	// If empty (default), a random string of 20 characters will be generated.
-	PasswordPolicy string `mapstructure:"password_policy" structs:"password_policy,omitempty"`
+	PasswordPolicy string `mapstructure:"password_policy"`
 }
 
 // newPasswordGenerator returns a new passwordGenerator using the given config.
@@ -60,7 +59,14 @@ func (pg passwordGenerator) generate(ctx context.Context, b *databaseBackend, wr
 // configMap returns the configuration of the passwordGenerator
 // as a map from string to string.
 func (pg passwordGenerator) configMap() map[string]string {
-	return interfaceValuesToString(structs.Map(pg))
+	config := make(map[string]string)
+
+	// Configuration without defaults are included if not empty
+	if pg.PasswordPolicy != "" {
+		config["password_policy"] = pg.PasswordPolicy
+	}
+
+	return config
 }
 
 // rsaKeyGenerator generates RSA key pair credentials.
@@ -68,11 +74,11 @@ func (pg passwordGenerator) configMap() map[string]string {
 type rsaKeyGenerator struct {
 	// Format is the output format of the generated private key.
 	// Options include: 'pkcs8' (default)
-	Format string `mapstructure:"format" structs:"format"`
+	Format string `mapstructure:"format"`
 
 	// KeyBits is the bit size of the RSA key to generate.
 	// Options include: 2048 (default), 3072, and 4096
-	KeyBits int `mapstructure:"key_bits" structs:"key_bits"`
+	KeyBits int `mapstructure:"key_bits"`
 }
 
 // newRSAKeyGenerator returns a new rsaKeyGenerator using the given config.
@@ -158,7 +164,13 @@ func (kg *rsaKeyGenerator) generate(r io.Reader) ([]byte, []byte, error) {
 // configMap returns the configuration of the rsaKeyGenerator
 // as a map from string to string.
 func (kg rsaKeyGenerator) configMap() map[string]string {
-	return interfaceValuesToString(structs.Map(kg))
+	config := make(map[string]string)
+
+	// Configuration with defaults are always included
+	config["format"] = kg.Format
+	config["key_bits"] = fmt.Sprintf("%v", kg.KeyBits)
+
+	return config
 }
 
 // interfaceValuesToString returns the result of converting the given
