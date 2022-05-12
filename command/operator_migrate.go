@@ -36,10 +36,10 @@ type OperatorMigrateCommand struct {
 
 	PhysicalBackends map[string]physical.Factory
 	flagConfig       string
+	flagLogLevel     string
 	flagStart        string
 	flagReset        bool
 	logger           log.Logger
-	flagLogLevel     string
 	ShutdownCh       chan struct{}
 }
 
