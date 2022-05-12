@@ -687,6 +687,7 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 	if result.Version < 3 {
 		modified = true
 		result.NotBeforeDuration = 30 * time.Second
+		result.Version = 3
 	}
 
 	// Add new migrations just before here.
