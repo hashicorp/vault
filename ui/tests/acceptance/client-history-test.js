@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, settled, find } from '@ember/test-helpers';
+import { visit, currentURL, click, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
@@ -8,7 +8,6 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import {
-  CHART_ELEMENTS,
   generateActivityResponse,
   generateConfigResponse,
   generateLicenseResponse,
@@ -129,7 +128,6 @@ module('Acceptance | clients history tab', function (hooks) {
         'Date range shows dates correctly parsed activity response'
       );
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    const { by_namespace } = activity.data;
     const { clients, entity_clients, non_entity_clients } = activity.data.total;
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-value')
@@ -151,26 +149,6 @@ module('Acceptance | clients history tab', function (hooks) {
     //   'There are no new clients for this namespace during this time period.',
     //   'Shows empty state if no new client counts'
     // );
-
-    // check chart displays correct elements and values
-    for (const key in CHART_ELEMENTS) {
-      let namespaceNumber = by_namespace.length < 10 ? by_namespace.length : 10;
-      let group = find(CHART_ELEMENTS[key]);
-      let elementArray = Array.from(group.children);
-      assert.equal(elementArray.length, namespaceNumber, `renders correct number of ${key}`);
-      if (key === 'totalValues') {
-        elementArray.forEach((element, i) => {
-          assert.equal(element.innerHTML, `${by_namespace[i].counts.clients}`, 'displays correct value');
-        });
-      }
-      if (key === 'yLabels') {
-        elementArray.forEach((element, i) => {
-          assert
-            .dom(element.children[1])
-            .hasTextContaining(`${by_namespace[i].namespace_path}`, 'displays correct namespace label');
-        });
-      }
-    }
   });
 
   // flaky test -- does not consistently run the same number of assertions
@@ -199,7 +177,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    const { total, by_namespace } = activity.data;
+    const { total } = activity.data;
 
     // FILTER BY NAMESPACE
     await clickTrigger();
@@ -210,27 +188,6 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
-
-    // check chart displays correct elements and values
-    for (const key in CHART_ELEMENTS) {
-      const { mounts } = by_namespace[0];
-      let mountNumber = mounts.length < 10 ? mounts.length : 10;
-      let group = find(CHART_ELEMENTS[key]);
-      let elementArray = Array.from(group.children);
-      assert.equal(elementArray.length, mountNumber, `renders correct number of ${key}`);
-      if (key === 'totalValues') {
-        elementArray.forEach((element, i) => {
-          assert.equal(element.innerHTML, `${mounts[i].counts.clients}`, 'displays correct value');
-        });
-      }
-      if (key === 'yLabels') {
-        elementArray.forEach((element, i) => {
-          assert
-            .dom(element.children[1])
-            .hasTextContaining(`${mounts[i].mount_path}`, 'displays correct auth label');
-        });
-      }
-    }
 
     // FILTER BY AUTH METHOD
     await clickTrigger();
