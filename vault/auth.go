@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
-	v5 "github.com/hashicorp/vault/builtin/plugin/v5"
+	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -919,9 +919,9 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
 		}
 
-		f = v5.Factory
+		f = plugin.NewBackendWrapper
 		if !plug.Builtin {
-			f = wrapFactoryCheckPerms(c, v5.Factory)
+			f = wrapFactoryCheckPerms(c, plugin.NewBackendWrapper)
 		}
 	}
 
