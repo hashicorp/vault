@@ -28,42 +28,27 @@ jobs:
         - ui/node_modules
   test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
-    resource_class: xlarge
+    - environment:
+        JOBS: 2
+      image: docker.mirror.hashicorp.services/circleci/node:14-browsers
     steps:
     - checkout
     - restore_cache:
-        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
-        name: Restore yarn cache
-    - attach_workspace:
-        at: .
+        keys:
+        - v3-deps-{{ checksum "ui/yarn.lock" }}
     - run:
-        command: |
-          set -x
-
-          # Install Chrome
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
-            | apt-key add -
-          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" \
-            | tee /etc/apt/sources.list.d/google-chrome.list
-          apt-get update
-          apt-get -y install google-chrome-stable
-          rm /etc/apt/sources.list.d/google-chrome.list
-          rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
-          # Add ./bin to the PATH so vault binary can be run by Ember tests
-          export PATH="${PWD}/bin:${PATH}"
-
-          # Run Ember tests
-          cd ui
-          mkdir -p test-results/qunit
-          yarn test:oss
-        name: Test UI
-    - store_artifacts:
-        path: ui/test-results
+        command: cd ui && yarn install# --frozen-lockfile
+        name: yarn install
+    - save_cache:
+        key: v3-deps-{{ checksum "ui/yarn.lock" }}
+        paths:
+        - ./ui/node_modules
+    - run:
+        command: mkdir -p test-results/qunit && cd ui && yarn test:oss
+        name: Ember tests
     - store_test_results:
+        path: ui/test-results
+    - store_artifacts:
         path: ui/test-results
   test-ui-browserstack:
     docker:
