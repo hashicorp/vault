@@ -1889,8 +1889,8 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	// VerifyFactor does not return the transaction id, parse it from the poll href
 	type linksObj struct {
 		Poll struct {
-			Href string `json:"href"`
-		} `json:"poll"`
+			Href string `mapstructure:"href"`
+		} `mapstructure:"poll"`
 	}
 	links := new(linksObj)
 	if err := mapstructure.WeakDecode(result.Links, links); err != nil {
