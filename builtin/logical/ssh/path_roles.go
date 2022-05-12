@@ -28,7 +28,7 @@ const (
 	// Present version of the sshRole struct; when adding a new field or are
 	// needing to perform a migration, increment this struct and read the note
 	// in checkUpgrade(...).
-	roleEntryVersion = 2
+	roleEntryVersion = 3
 )
 
 // Structure that represents a role in SSH backend. This is a common role structure
@@ -65,6 +65,7 @@ type sshRole struct {
 	AllowedUserKeyTypesLengths map[string][]int  `mapstructure:"allowed_user_key_types_lengths" json:"allowed_user_key_types_lengths"`
 	AlgorithmSigner            string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
 	Version                    int               `mapstructure:"role_version" json:"role_version"`
+	NotBeforeDuration          time.Duration     `mapstructure:"not_before_duration" json:"not_before_duration"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -363,6 +364,16 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Signing Algorithm",
 				},
 			},
+			"not_before_duration": {
+				Type:    framework.TypeDurationSecond,
+				Default: 30,
+				Description: `
+   				The duration that the SSH certificate should be backdated by at issuance.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Not before duration",
+					Value: 30,
+				},
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -555,6 +566,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		KeyType:                   KeyTypeCA,
 		AlgorithmSigner:           signer,
 		Version:                   roleEntryVersion,
+		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -672,6 +684,12 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 		err = nil
 	}
 
+	if result.Version < 3 {
+		modified = true
+		result.NotBeforeDuration = 30 * time.Second
+		result.Version = 3
+	}
+
 	// Add new migrations just before here.
 	//
 	// Condition copied from PKI builtin.
@@ -739,6 +757,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_extensions_template": role.DefaultExtensionsTemplate,
 			"allowed_user_key_lengths":    role.AllowedUserKeyTypesLengths,
 			"algorithm_signer":            role.AlgorithmSigner,
+			"not_before_duration":         role.NotBeforeDuration,
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{
