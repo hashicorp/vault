@@ -1,0 +1,3 @@
+```release-note:feature
+auth/mfa: add support for sending requesting client's IP address to Duo MFA authentication actions
+```

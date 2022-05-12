@@ -67,6 +67,8 @@ message DuoConfig {
 	string push_info = 4;
 	// @inject_tag: sentinel:"-"
 	bool use_passcode = 5;
+	// @inject_tag: sentinel:"-"
+	bool forward_request_addr = 6;
 }
 
 // OktaConfig contains Okta configuration parameters required to perform Okta

@@ -1099,11 +1099,12 @@ func parseDuoConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 	}
 
 	config := &mfa.DuoConfig{
-		SecretKey:      secretKey,
-		IntegrationKey: integrationKey,
-		APIHostname:    apiHostname,
-		PushInfo:       d.Get("push_info").(string),
-		UsePasscode:    d.Get("use_passcode").(bool),
+		SecretKey:          secretKey,
+		IntegrationKey:     integrationKey,
+		APIHostname:        apiHostname,
+		PushInfo:           d.Get("push_info").(string),
+		UsePasscode:        d.Get("use_passcode").(bool),
+		ForwardRequestAddr: d.Get("forward_request_addr").(bool),
 	}
 
 	mConfig.Config = &mfa.Config_DuoConfig{
@@ -1332,6 +1333,7 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 	case *mfa.Config_DuoConfig:
 		duoConfig := mConfig.GetDuoConfig()
 		respData["api_hostname"] = duoConfig.APIHostname
+		respData["forward_request_addr"] = duoConfig.ForwardRequestAddr
 		respData["pushinfo"] = duoConfig.PushInfo
 		respData["mount_accessor"] = mConfig.MountAccessor
 		respData["username_template"] = mConfig.UsernameFormat
@@ -1764,6 +1766,10 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		if duoConfig.PushInfo != "" {
 			options = append(options, authapi.AuthPushinfo(duoConfig.PushInfo))
 		}
+	}
+
+	if duoConfig.ForwardRequestAddr {
+		options = append(options, authapi.AuthIpAddr(reqConnectionRemoteAddr))
 	}
 
 	options = append(options, authapi.AuthUsername(username))

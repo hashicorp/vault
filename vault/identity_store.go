@@ -356,6 +356,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: `If true, the user is reminded to use the passcode upon MFA validation. This option does not enforce using the passcode. Defaults to false.`,
 				},
+				"forward_request_addr": {
+					Type:        framework.TypeBool,
+					Description: `If true, forwards the clients address to Duo during authentication. Defaults to false.`,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
