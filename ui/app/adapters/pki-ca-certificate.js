@@ -36,7 +36,7 @@ export default ApplicationAdapter.extend({
       // The type parameter is serialized but is part of the URL. This means
       // we'll get an unknown parameter warning back from the server if we
       // send it. Remove it instead.
-      delete data['type'];
+      delete data.type;
     }
 
     return this.ajax(this.url(snapshot, action), 'POST', { data }).then((response) => {
