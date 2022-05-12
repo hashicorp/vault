@@ -99,7 +99,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
-    assert.expect(25);
+    assert.expect(9);
     const licenseStart = startOfMonth(subMonths(new Date(), 6));
     const licenseEnd = addMonths(new Date(), 6);
     const lastMonth = addMonths(new Date(), -1);
