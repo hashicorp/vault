@@ -90,6 +90,7 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
     assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
     await settled();
+
     // FILTER BY NAMESPACE
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
@@ -98,8 +99,7 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
     assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
-    assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
-
+    await settled();
     // FILTER BY AUTH METHOD
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
