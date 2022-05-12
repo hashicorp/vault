@@ -89,7 +89,7 @@ module('Acceptance | clients current', function (hooks) {
       .hasText(non_entity_clients.toString());
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
     assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
-
+    await settled();
     // FILTER BY NAMESPACE
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
