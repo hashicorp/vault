@@ -1608,7 +1608,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	auth := resp.Auth
 
 	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
-	source = strings.Replace(source, "/", "-", -1)
+	source = strings.ReplaceAll(source, "/", "-")
 
 	// Prepend the source to the display name
 	auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")

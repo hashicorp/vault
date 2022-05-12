@@ -159,7 +159,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	var certEntry *logical.StorageEntry
 
 	hyphenSerial := normalizeSerial(serial)
-	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 
 	switch {
 	// Revoked goes first as otherwise crl get hardcoded paths which fail if

@@ -68,7 +68,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 		t.Fatalf("err: should not have been able to set a second value")
 	}
 
-	expected := []string{strings.Replace(pubKey1, "\n", "", -1), strings.Replace(pubKey2, "\n", "", -1)}
+	expected := []string{strings.ReplaceAll(pubKey1, "\n", ""), strings.ReplaceAll(pubKey2, "\n", "")}
 	if !reflect.DeepEqual(pkf.String(), fmt.Sprint(expected)) {
 		t.Fatalf("Bad: %#v", pkf)
 	}

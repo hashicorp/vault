@@ -76,7 +76,7 @@ func TestTransit_HMAC(t *testing.T) {
 		}
 
 		// Now verify
-		req.Path = strings.Replace(req.Path, "hmac", "verify", -1)
+		req.Path = strings.ReplaceAll(req.Path, "hmac", "verify")
 		req.Data["hmac"] = value.(string)
 		resp, err = b.HandleRequest(context.Background(), req)
 		if err != nil {

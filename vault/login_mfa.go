@@ -1738,13 +1738,13 @@ func formatUsername(format string, alias *identity.Alias, entity *identity.Entit
 	}
 
 	username := format
-	username = strings.Replace(username, "{{alias.name}}", alias.Name, -1)
-	username = strings.Replace(username, "{{entity.name}}", entity.Name, -1)
+	username = strings.ReplaceAll(username, "{{alias.name}}", alias.Name)
+	username = strings.ReplaceAll(username, "{{entity.name}}", entity.Name)
 	for k, v := range alias.Metadata {
-		username = strings.Replace(username, fmt.Sprintf("{{alias.metadata.%s}}", k), v, -1)
+		username = strings.ReplaceAll(username, fmt.Sprintf("{{alias.metadata.%s}}", k), v)
 	}
 	for k, v := range entity.Metadata {
-		username = strings.Replace(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v, -1)
+		username = strings.ReplaceAll(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v)
 	}
 	return username
 }

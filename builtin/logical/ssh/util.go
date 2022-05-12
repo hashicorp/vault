@@ -238,7 +238,7 @@ func convertMapToIntSlice(initial map[string]interface{}) (map[string][]int, err
 // Serve a template processor for custom format inputs
 func substQuery(tpl string, data map[string]string) string {
 	for k, v := range data {
-		tpl = strings.Replace(tpl, fmt.Sprintf("{{%s}}", k), v, -1)
+		tpl = strings.ReplaceAll(tpl, fmt.Sprintf("{{%s}}", k), v)
 	}
 
 	return tpl

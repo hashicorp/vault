@@ -711,7 +711,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 
 	// Replace connection url with templated version
 	req.Operation = logical.UpdateOperation
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 	data["connection_url"] = connURL
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1267,7 +1267,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection
 	data := map[string]interface{}{

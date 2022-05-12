@@ -148,7 +148,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 		}
 
-		colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 		if colonSerial == certutil.GetHexFormatted(parsedBundle.Certificate.SerialNumber.Bytes(), ":") {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
