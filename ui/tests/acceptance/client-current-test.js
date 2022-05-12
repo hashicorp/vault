@@ -91,9 +91,6 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
     assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
     assert.dom('[data-test-chart-container="total-clients"]').exists();
-    assert
-      .dom('[data-test-chart-container="total-clients"] [data-test-horizontal-bar-chart]')
-      .exists('Shows totals attribution bar chart');
 
     // check chart displays correct elements and values
     for (const key in CHART_ELEMENTS) {
@@ -124,9 +121,6 @@ module('Acceptance | clients current', function (hooks) {
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
     assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
     assert.dom('[data-test-chart-container="total-clients"]').exists();
-    assert
-      .dom('[data-test-chart-container="total-clients"] [data-test-horizontal-bar-chart]')
-      .exists('Still shows totals attribution bar chart');
     assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
     assert.dom('[data-test-chart-container="total-clients"]').exists();
 
@@ -209,10 +203,6 @@ module('Acceptance | clients current', function (hooks) {
       .hasText(non_entity_clients.toString());
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
     assert.dom('[data-test-chart-container="new-clients"]').doesNotExist();
-    assert.dom('[data-test-chart-container="total-clients"]').exists();
-    assert
-      .dom('[data-test-chart-container="total-clients"] [data-test-horizontal-bar-chart]')
-      .exists('Shows totals attribution bar chart');
     assert.dom('[data-test-chart-container="total-clients"]').exists();
 
     // Filter by namespace

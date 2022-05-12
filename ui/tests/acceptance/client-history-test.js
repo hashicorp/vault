@@ -15,7 +15,6 @@ import {
   SELECTORS,
   sendResponse,
 } from '../helpers/clients';
-import { waitFor } from '@ember/test-waiters';
 
 const searchSelect = create(ss);
 
@@ -142,7 +141,6 @@ module('Acceptance | clients history tab', function (hooks) {
       .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
       .hasText(non_entity_clients.toString(), 'non-entity clients stat is correct');
     assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
 
     // TODO CMB - add assertion so double charts show for single historical month
@@ -211,8 +209,6 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
     assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('10');
-    await waitFor('[data-test-horizontal-bar-chart]');
-    assert.dom('[data-test-horizontal-bar-chart]').exists('Shows attribution bar chart');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
 
     // check chart displays correct elements and values
