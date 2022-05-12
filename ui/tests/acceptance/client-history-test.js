@@ -6,6 +6,8 @@ import authPage from 'vault/tests/pages/auth';
 import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import ENV from 'vault/config/environment';
 import ss from 'vault/tests/pages/components/search-select';
 import {
   CHART_ELEMENTS,
@@ -21,7 +23,14 @@ const searchSelect = create(ss);
 
 module('Acceptance | clients history tab', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
+  hooks.before(function () {
+    ENV['ember-cli-mirage'].handler = 'clients';
+  });
+  hooks.after(function () {
+    ENV['ember-cli-mirage'].handler = null;
+  });
   hooks.beforeEach(function () {
     return authPage.login();
   });
@@ -35,6 +44,7 @@ module('Acceptance | clients history tab', function (hooks) {
     const licenseEnd = addMonths(new Date(), 6);
     const license = generateLicenseResponse(licenseStart, licenseEnd);
     const config = generateConfigResponse({ enabled: 'default-disable' });
+    this.server.get(('v1/sys/license/status', () => sendResponse(license)));
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(license));
       this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
@@ -44,6 +54,9 @@ module('Acceptance | clients history tab', function (hooks) {
       this.get('/v1/sys/seal-status', this.passthrough);
       this.post('/v1/sys/capabilities-self', this.passthrough);
       this.get('/v1/sys/feature-flags', this.passthrough);
+    });
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      console.log(req.queryParams);
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
