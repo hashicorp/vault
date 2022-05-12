@@ -23,6 +23,36 @@ func TestTransit_Import(t *testing.T) {
 	// Set up shared backend for subtests
 	b, s := createBackendWithStorage(t)
 
+	keyTypes := []string{
+		"aes256-gcm96",
+		"aes128-gcm96",
+		"chacha20-poly1305",
+		"ed25519",
+		"ecdsa-p256",
+		"ecdsa-p384",
+		"ecdsa-p521",
+		"rsa-2048",
+		"rsa-3072",
+		"rsa-4096",
+	}
+	hashFns := []string{
+		"SHA256",
+		"SHA1",
+		"SHA224",
+		"SHA384",
+		"SHA512",
+	}
+
+	// Generate a key for each type
+	keys := map[string]interface{}{}
+	for _, keyType := range keyTypes {
+		key, err := generateKey(keyType)
+		if err != nil {
+			t.Fatalf("failed to generate %s key: %s", keyType, err)
+		}
+		keys[keyType] = key
+	}
+
 	t.Run(
 		"import into a key fails before wrapping key is read",
 		func(t *testing.T) {
@@ -110,30 +140,10 @@ func TestTransit_Import(t *testing.T) {
 		},
 	)
 
-	// Check for all combinations of supported key type and hash function
-	keyTypes := []string{
-		"aes256-gcm96",
-		"aes128-gcm96",
-		"chacha20-poly1305",
-		"ed25519",
-		"ecdsa-p256",
-		"ecdsa-p384",
-		"ecdsa-p521",
-		"rsa-2048",
-		"rsa-3072",
-		"rsa-4096",
-	}
-	hashFns := []string{
-		"SHA256",
-		"SHA1",
-		"SHA224",
-		"SHA384",
-		"SHA512",
-	}
 	for _, keyType := range keyTypes {
-		priv, err := generateKey(keyType)
-		if err != nil {
-			t.Fatalf("failed to generate key: %s", err)
+		priv, ok := keys[keyType]
+		if !ok {
+			t.Fatalf("no pre-generated key for type: %s", keyType)
 		}
 		for _, hashFn := range hashFns {
 			t.Run(
@@ -239,9 +249,9 @@ func TestTransit_Import(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to generate key ID: %s", err)
 			}
-			targetKey, err := generateKey("aes256-gcm96")
-			if err != nil {
-				t.Fatalf("failed to generate key: %s", err)
+			targetKey, ok := keys["aes256-gcm96"]
+			if !ok {
+				t.Fatalf("no pre-generated key for type: aes256-gcm96")
 			}
 			importBlob, err := wrapTargetKeyForImport(pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
 			if err != nil {
@@ -259,6 +269,94 @@ func TestTransit_Import(t *testing.T) {
 			_, err = b.HandleRequest(context.Background(), req)
 			if err == nil {
 				t.Fatal("import of convergent key incorrectly succeeded")
+			}
+		},
+	)
+
+	t.Run(
+		"allow_rotation=true enables rotation within vault",
+		func(t *testing.T) {
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+			targetKey, ok := keys["aes256-gcm96"]
+			if !ok {
+				t.Fatalf("no pre-generated key for type: aes256-gcm96")
+			}
+
+			// Import key
+			importBlob, err := wrapTargetKeyForImport(pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
+			if err != nil {
+				t.Fatalf("failed to wrap key: %s", err)
+			}
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"allow_rotation": true,
+					"ciphertext":     importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import key: %s", err)
+			}
+
+			// Rotate key
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/rotate", keyID),
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to rotate key: %s", err)
+			}
+		},
+	)
+
+	t.Run(
+		"allow_rotation=false disables rotation within vault",
+		func(t *testing.T) {
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+			targetKey, ok := keys["aes256-gcm96"]
+			if !ok {
+				t.Fatalf("no pre-generated key for type: aes256-gcm96")
+			}
+
+			// Import key
+			importBlob, err := wrapTargetKeyForImport(pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
+			if err != nil {
+				t.Fatalf("failed to wrap key: %s", err)
+			}
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"allow_rotation": false,
+					"ciphertext":     importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import key: %s", err)
+			}
+
+			// Rotate key
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/rotate", keyID),
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err == nil {
+				t.Fatal("rotation of key with allow_rotation incorrectly succeeded")
 			}
 		},
 	)
