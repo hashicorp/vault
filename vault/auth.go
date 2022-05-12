@@ -909,22 +909,6 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		t = alias
 	}
 
-	f, ok := c.credentialBackends[t]
-	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential)
-		if err != nil {
-			return nil, err
-		}
-		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
-		}
-
-		f = plugin.NewBackendWrapper
-		if !plug.Builtin {
-			f = wrapFactoryCheckPerms(c, plugin.NewBackendWrapper)
-		}
-	}
-
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {
@@ -948,6 +932,22 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
+	}
+
+	f, ok := c.credentialBackends[t]
+	if !ok {
+		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential)
+		if err != nil {
+			return nil, err
+		}
+		if plug == nil {
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+		}
+
+		f = plugin.NewBackendWrapper(ctx, config)
+		if !plug.Builtin {
+			f = wrapFactoryCheckPerms(c, plugin.NewBackendWrapper(ctx, config))
+		}
 	}
 
 	b, err := f(ctx, config)
