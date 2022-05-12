@@ -36,9 +36,6 @@ jobs:
     - restore_cache:
         keys:
         - v3-deps-{{ checksum "ui/yarn.lock" }}
-    - run:
-        command: cd ui && yarn install# --frozen-lockfile
-        name: yarn install
     - save_cache:
         key: v3-deps-{{ checksum "ui/yarn.lock" }}
         paths:
