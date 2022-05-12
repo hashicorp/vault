@@ -172,13 +172,3 @@ func (kg rsaKeyGenerator) configMap() map[string]string {
 
 	return config
 }
-
-// interfaceValuesToString returns the result of converting the given
-// map[string]interface{} into a map[string]string.
-func interfaceValuesToString(in map[string]interface{}) map[string]string {
-	out := make(map[string]string)
-	for key, value := range in {
-		out[key] = fmt.Sprintf("%v", value)
-	}
-	return out
-}
