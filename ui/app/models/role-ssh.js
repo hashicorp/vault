@@ -36,7 +36,7 @@ const CA_FIELDS = [
   'allowSubdomains',
   'allowUserKeyIds',
   'keyIdFormat',
-  'notBeforeDuration'
+  'notBeforeDuration',
 ];
 
 export default Model.extend({
