@@ -380,24 +380,22 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 			// Generate a new WAL entry and credential
 			output.WALID = ""
-		default:
-			// Use the credential from the existing WAL entry
-			switch wal.CredentialType {
-			case v5.CredentialTypePassword:
-				updateReq.CredentialType = v5.CredentialTypePassword
-				updateReq.Password = &v5.ChangePassword{
-					NewPassword: wal.NewPassword,
-					Statements:  statements,
-				}
-				input.Role.StaticAccount.Password = wal.NewPassword
-			case v5.CredentialTypeRSAPrivateKey:
-				updateReq.CredentialType = v5.CredentialTypeRSAPrivateKey
-				updateReq.PublicKey = &v5.ChangePublicKey{
-					NewPublicKey: wal.NewPublicKey,
-					Statements:   statements,
-				}
-				input.Role.StaticAccount.PrivateKey = wal.NewPrivateKey
+		case wal.CredentialType == v5.CredentialTypePassword:
+			// Roll forward by using the credential in the existing WAL entry
+			updateReq.CredentialType = v5.CredentialTypePassword
+			updateReq.Password = &v5.ChangePassword{
+				NewPassword: wal.NewPassword,
+				Statements:  statements,
 			}
+			input.Role.StaticAccount.Password = wal.NewPassword
+		case wal.CredentialType == v5.CredentialTypeRSAPrivateKey:
+			// Roll forward by using the credential in the existing WAL entry
+			updateReq.CredentialType = v5.CredentialTypeRSAPrivateKey
+			updateReq.PublicKey = &v5.ChangePublicKey{
+				NewPublicKey: wal.NewPublicKey,
+				Statements:   statements,
+			}
+			input.Role.StaticAccount.PrivateKey = wal.NewPrivateKey
 		}
 	}
 
