@@ -1825,6 +1825,8 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	} else {
 		client = okta.NewClient(cleanhttp.DefaultClient(), oktaConfig.OrgName, oktaConfig.APIToken, oktaConfig.Production)
 	}
+	// Disable client side rate limiting
+	client.RateRemainingFloor = 0
 
 	var filterOpts *okta.UserListFilterOptions
 	if oktaConfig.PrimaryEmail {
