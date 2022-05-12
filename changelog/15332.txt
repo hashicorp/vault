@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/mfa: correct Duo documentation usage of `username_template` to `username_format`
+```
