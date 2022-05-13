@@ -1,4 +1,5 @@
 import Model, { attr } from '@ember-data/model';
+import { capitalize } from '@ember/string';
 
 export default class MfaMethod extends Model {
   // common
@@ -34,4 +35,8 @@ export default class MfaMethod extends Model {
   @attr('number') digits;
   @attr('number') skew;
   @attr('number') max_validation_attempts;
+
+  get name() {
+    return this.type === 'totp' ? this.type.toUpperCase() : capitalize(this.type);
+  }
 }

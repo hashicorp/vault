@@ -38,6 +38,11 @@
   input[type='radio']:focus + label {
     box-shadow: 0 0 10px 1px rgba($blue, 0.4), inset 0 0 0 0.15rem $white;
   }
+
+  &.is-disabled {
+    opacity: 0.6;
+    box-shadow: none;
+  }
 }
 .radio-card:first-child {
   margin-left: 0;

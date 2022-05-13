@@ -1,0 +1,106 @@
+<div ...attributes>
+  <FormFieldLabel
+    for="name"
+    @label="Name"
+    @subText="The name for this enforcement. Giving it a name means that you can refer to it again later. This name will not be editable later."
+  />
+  <input
+    data-test-input="name"
+    autocomplete="off"
+    spellcheck="false"
+    value={{@model.name}}
+    class="input field"
+    {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
+  />
+  <div class="field">
+    <FormFieldLabel for="methods" @label="MFA methods" @subText="The MFA method(s) that this enforcement will apply to." />
+    <SearchSelect
+      @placeholder="Type to search for existing MFA methods"
+      @shouldRenderName={{true}}
+      @disallowNewItems={{true}}
+      @models={{array "mfa-method"}}
+      @onChange={{this.onMethodChange}}
+    />
+  </div>
+
+  <div>
+    <FormFieldLabel
+      for="targets"
+      @label="Targets"
+      @subText="The list of authentication types, authentication mounts, groups, and/or entities that will require this MFA configuration."
+    />
+    {{#each this.targets as |target|}}
+      <div class="is-flex-center has-border-top-light">
+        <InfoTableRow @label={{target.label}} class="is-flex-1 has-no-shadow">
+          {{#if target.value.id}}
+            {{target.value.name}}
+            <span class="tag has-left-margin-s">{{target.value.id}}</span>
+          {{else}}
+            {{target.value}}
+          {{/if}}
+        </InfoTableRow>
+        <button type="button" class="button" {{on "click" (fn this.removeTarget target)}}>
+          <Icon @name="trash" />
+        </button>
+      </div>
+    {{/each}}
+    <div class="is-flex-row {{if this.targets 'has-top-padding-s has-border-top-light'}}">
+      <Select
+        @options={{this.targetTypes}}
+        @labelAttribute="label"
+        @valueAttribute="type"
+        @selectedValue={{this.selectedTargetType}}
+        @onChange={{this.onTargetSelect}}
+      />
+      <div class="has-left-margin-s is-flex-1">
+        {{#if (eq this.selectedTargetType "accessor")}}
+          <MountAccessorSelect @showAccessor={{true}} @noDefault={{true}} @onChange={{this.setTargetValue}} />
+        {{else if (eq this.selectedTargetType "method")}}
+          <Select
+            @options={{this.authMethods}}
+            @labelAttribute="displayName"
+            @valueAttribute="value"
+            @isFullwidth={{true}}
+            @noDefault={{true}}
+            @selectedValue={{this.selectedTargetValue}}
+            @onChange={{this.setTargetValue}}
+          />
+        {{else}}
+          <SearchSelect
+            @placeholder="Search for an existing target"
+            @options={{this.searchSelect.options}}
+            {{! workaround since there is no way provided by component to externally clear selected options }}
+            @selectedOptions={{this.searchSelect.selected}}
+            @shouldRenderName={{true}}
+            @selectLimit={{1}}
+            @onChange={{this.setTargetValue}}
+          />
+        {{/if}}
+      </div>
+      <button
+        type="button"
+        class="button has-left-margin-s"
+        disabled={{not this.selectedTargetValue}}
+        {{on "click" this.addTarget}}
+      >
+        Add
+      </button>
+    </div>
+  </div>
+  {{#if @hasActions}}
+    <hr />
+    <div class="has-top-padding-s">
+      <button
+        type="button"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
+        {{on "click" (perform this.save)}}
+      >
+        {{if @model.isNew "Create" "Update"}}
+      </button>
+      <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
+        Cancel
+      </button>
+    </div>
+  {{/if}}
+</div>
