@@ -510,7 +510,8 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 // WalkEntitySegments loads each of the entity segments for a particular start time
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.EntityActivityLog, time.Time)) error {
+	walkFn func(*activity.EntityActivityLog, time.Time),
+) error {
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -540,7 +541,8 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 // WalkTokenSegments loads each of the token segments (expected 1) for a particular start time
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.TokenCount)) error {
+	walkFn func(*activity.TokenCount),
+) error {
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -1646,7 +1648,6 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		monthResponse := &ResponseMonth{
 			Timestamp: time.Unix(monthsRecord.Timestamp, 0).UTC().Format(time.RFC3339),
 		}
-
 		if int(monthsRecord.Counts.EntityClients+monthsRecord.Counts.NonEntityClients) != 0 {
 			nsResponse, err := prepareNSResponse(monthsRecord.Namespaces)
 			if err != nil {
@@ -1698,10 +1699,38 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			})
 		}
 	}
-
+	months = modifyResponseMonths(months, startTime, endTime)
 	responseData["months"] = months
 
 	return responseData, nil
+}
+
+// modifyResponseMonths fills out various parts of the query structure to help
+// activity log clients parse the returned query.
+func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Time) []*ResponseMonth {
+	if len(months) == 0 {
+		return months
+	}
+	start = timeutil.StartOfMonth(start)
+	end = timeutil.EndOfMonth(end)
+	modifiedResponseMonths := make([]*ResponseMonth, 0)
+	firstMonth, err := time.Parse(time.RFC3339, months[0].Timestamp)
+	lastMonth, err2 := time.Parse(time.RFC3339, months[len(months)-1].Timestamp)
+	if err != nil || err2 != nil {
+		return months
+	}
+	for start.Before(firstMonth) {
+		monthPlaceholder := &ResponseMonth{Timestamp: start.UTC().Format(time.RFC3339)}
+		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
+		start = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
+	}
+	modifiedResponseMonths = append(modifiedResponseMonths, months...)
+	for lastMonth.Before(end) {
+		monthPlaceholder := &ResponseMonth{Timestamp: end.UTC().Format(time.RFC3339)}
+		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
+		end = timeutil.EndOfMonth(timeutil.StartOfMonth(end).AddDate(0, -1, 0))
+	}
+	return modifiedResponseMonths
 }
 
 type activityConfig struct {
