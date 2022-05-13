@@ -6,6 +6,7 @@ ARG BIN_NAME
 # and the version to download. Example: NAME=vault PRODUCT_VERSION=1.2.3.
 ARG NAME=vault
 ARG PRODUCT_VERSION
+ARG PRODUCT_REVISION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
 
