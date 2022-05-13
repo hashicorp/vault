@@ -340,6 +340,7 @@ const (
 
 const pathImportVersionWriteSyn = "Imports an externally-generated key into an " +
 	"existing imported key"
+
 const pathImportVersionWriteDesc = "This path is used to import a new version of an " +
 	"externally-generated key into an existing import key. The import_version endpoint " +
 	"only supports importing key material into existing imported keys."
