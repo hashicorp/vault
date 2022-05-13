@@ -1,13 +1,6 @@
 name: build
 
-on:
-  push:
-    # Sequence of patterns matched against refs/heads
-    branches:    
-      # Push events on main branch
-      - main
-  workflow_dispatch:
-    # Allow manual dispatch of CRT to allow triggering it from PR branches.
+on: [ workflow_dispatch, push ]
 
 env:
   PKG_NAME: "vault"
