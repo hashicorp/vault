@@ -1087,7 +1087,16 @@
       },
       {
         "title": "PKI (Certificates)",
-        "path": "secrets/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/pki"
+          },
+          {
+            "title": "Quick Start",
+            "path": "secrets/pki/quick-start"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
