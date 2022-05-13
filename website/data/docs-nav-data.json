@@ -1098,11 +1098,11 @@
           },
           {
             "title": "Quick Start - Root CA Setup",
-            "path": "secrets/pki/quick-start"
+            "path": "secrets/pki/quick-start-root-ca"
           },
           {
             "title": "Quick Start - Intermediate CA Setup",
-            "path": "secrets/pki/intermediate-ca"
+            "path": "secrets/pki/quick-start-intermediate-ca"
           },
           {
             "title": "Considerations",
