@@ -401,6 +401,17 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 		for k, v := range secret.Auth.Metadata {
 			out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
 		}
+
+		if secret.Auth.MFARequirement != nil {
+			out = append(out, fmt.Sprintf("mfa_request_id %s %s", hopeDelim, secret.Auth.MFARequirement.MFARequestID))
+
+			for k, constraintSet := range secret.Auth.MFARequirement.MFAConstraints {
+				for _, constraint := range constraintSet.Any {
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_id %s %s", k, constraint.Type, hopeDelim, constraint.ID))
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_uses_passcode %s %t", k, constraint.Type, hopeDelim, constraint.UsesPasscode))
+				}
+			}
+		}
 	}
 
 	if secret.WrapInfo != nil {
