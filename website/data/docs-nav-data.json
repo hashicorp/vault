@@ -1093,11 +1093,15 @@
             "path": "secrets/pki"
           },
           {
-            "title": "Quick Start",
+            "title": "Setup and Usage",
+            "path": "secrets/pki/setup"
+          },
+          {
+            "title": "Quick Start - Root CA Setup",
             "path": "secrets/pki/quick-start"
           },
           {
-            "title": "Intermediate CA Setup",
+            "title": "Quick Start - Intermediate CA Setup",
             "path": "secrets/pki/intermediate-ca"
           },
           {
