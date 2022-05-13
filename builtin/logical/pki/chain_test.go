@@ -432,15 +432,34 @@ func (c CBValidateChain) Run(t testing.TB, b *backend, s logical.Storage, knownK
 type CBUpdateIssuer struct {
 	Name    string
 	CAChain []string
+	Usage   string
 }
 
 func (c CBUpdateIssuer) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
 	url := "issuer/" + c.Name
 	data := make(map[string]interface{})
 	data["issuer_name"] = c.Name
-	data["manual_chain"] = c.CAChain
 
-	_, err := CBWrite(b, s, url, data)
+	resp, err := CBRead(b, s, url)
+	if err != nil {
+		t.Fatalf("failed to read issuer (%v): %v", c.Name, err)
+	}
+
+	if len(c.CAChain) == 1 && c.CAChain[0] == "existing" {
+		data["manual_chain"] = resp.Data["manual_chain"]
+	} else {
+		data["manual_chain"] = c.CAChain
+	}
+
+	if c.Usage == "existing" {
+		data["usage"] = resp.Data["usage"]
+	} else if len(c.Usage) == 0 {
+		data["usage"] = "read-only,issuing-certificates,crl-signing"
+	} else {
+		data["usage"] = c.Usage
+	}
+
+	_, err = CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to update issuer (%v): %v / body: %v", c.Name, err, data)
 	}
@@ -452,11 +471,7 @@ type CBIssueLeaf struct {
 	Role   string
 }
 
-func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
-	if len(c.Role) == 0 {
-		c.Role = "testing"
-	}
-
+func (c CBIssueLeaf) IssueLeaf(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string, errorMessage string) *logical.Response {
 	// Write a role
 	url := "roles/" + c.Role
 	data := make(map[string]interface{})
@@ -476,13 +491,20 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 
 	resp, err := CBWrite(b, s, url, data)
 	if err != nil {
+		if len(errorMessage) >= 0 {
+			if !strings.Contains(err.Error(), errorMessage) {
+				t.Fatalf("failed to issue cert (%v via %v): %v / body: %v\nExpected error message: %v", c.Issuer, c.Role, err, data, errorMessage)
+			}
+
+			return nil
+		}
+
 		t.Fatalf("failed to issue cert (%v via %v): %v / body: %v", c.Issuer, c.Role, err, data)
 	}
 	if resp == nil {
 		t.Fatalf("failed to issue cert (%v via %v): nil response / body: %v", c.Issuer, c.Role, data)
 	}
 
-	api_serial := resp.Data["serial_number"].(string)
 	raw_cert := resp.Data["certificate"].(string)
 	cert := ToCertificate(t, raw_cert)
 	raw_issuer := resp.Data["issuing_ca"].(string)
@@ -497,11 +519,21 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 		t.Fatalf("failed to verify signature on issued certificate from %v: %v\n[%v]\n[%v]\n", c.Issuer, err, raw_cert, raw_issuer)
 	}
 
+	return resp
+}
+
+func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string, issueResponse *logical.Response, hasCRL bool, isDefault bool) {
+	api_serial := issueResponse.Data["serial_number"].(string)
+	raw_cert := issueResponse.Data["certificate"].(string)
+	cert := ToCertificate(t, raw_cert)
+	raw_issuer := issueResponse.Data["issuing_ca"].(string)
+	issuer := ToCertificate(t, raw_issuer)
+
 	// Revoke the certificate.
-	url = "revoke"
-	data = make(map[string]interface{})
+	url := "revoke"
+	data := make(map[string]interface{})
 	data["serial_number"] = api_serial
-	resp, err = CBWrite(b, s, url, data)
+	resp, err := CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: %v", api_serial, c.Role, c.Issuer, err)
 	}
@@ -510,6 +542,15 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 	}
 	if _, ok := resp.Data["revocation_time"]; !ok {
 		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: expected response parameter revocation_time was missing from response:\n%v", api_serial, c.Role, c.Issuer, resp.Data)
+	}
+
+	if !hasCRL && isDefault {
+		// Nothing further we can test here. We could re-enable CRL building
+		// and check that it works, but that seems like a stretch. Other
+		// issuers might be functionally the same as this issuer (and thus
+		// this CRL will still be issued), but that requires more work to
+		// check and verify.
+		return
 	}
 
 	// Verify it is on this issuer's CRL.
@@ -525,14 +566,36 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 	raw_crl := resp.Data["crl"].(string)
 	crl := ToCRL(t, raw_crl, issuer)
 
-	foundCert := false
-	for _, revoked := range crl.TBSCertList.RevokedCertificates {
-		// t.Logf("[%v] revoked serial number: %v -- vs -- %v", index, revoked.SerialNumber, cert.SerialNumber)
-		if revoked.SerialNumber.Cmp(cert.SerialNumber) == 0 {
-			// t.Logf("found revoked cert at index: %v", index)
-			foundCert = true
-			break
+	foundCert := requireSerialNumberInCRL(nil, crl.TBSCertList, api_serial)
+	if !foundCert {
+		if !hasCRL && !isDefault {
+			// Update the issuer we expect to find this on.
+			resp, err := CBRead(b, s, "config/issuers")
+			if err != nil {
+				t.Fatalf("failed to read default issuer config: %v", err)
+			}
+			if resp == nil {
+				t.Fatalf("failed to read default issuer config: nil response")
+			}
+			defaultID := resp.Data["default"].(issuerID).String()
+			c.Issuer = defaultID
+			issuer = nil
 		}
+
+		// Verify it is on the default issuer's CRL.
+		url = "issuer/" + c.Issuer + "/crl"
+		resp, err = CBRead(b, s, url)
+		if err != nil {
+			t.Fatalf("failed to fetch CRL for issuer %v: %v", c.Issuer, err)
+		}
+		if resp == nil {
+			t.Fatalf("failed to fetch CRL for issuer %v: nil response", c.Issuer)
+		}
+
+		raw_crl = resp.Data["crl"].(string)
+		crl = ToCRL(t, raw_crl, issuer)
+
+		foundCert = requireSerialNumberInCRL(nil, crl.TBSCertList, api_serial)
 	}
 
 	if !foundCert {
@@ -561,6 +624,55 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 		}
 
 		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer:\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, raw_issuer)
+	}
+}
+
+func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys map[string]string, knownCerts map[string]string) {
+	if len(c.Role) == 0 {
+		c.Role = "testing"
+	}
+
+	resp, err := CBRead(b, s, "config/issuers")
+	if err != nil {
+		t.Fatalf("failed to read default issuer config: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to read default issuer config: nil response")
+	}
+	defaultID := resp.Data["default"].(issuerID).String()
+
+	resp, err = CBRead(b, s, "issuer/"+c.Issuer)
+	if err != nil {
+		t.Fatalf("failed to read issuer %v: %v", c.Issuer, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to read issuer %v: nil response", c.Issuer)
+	}
+	ourID := resp.Data["issuer_id"].(issuerID).String()
+	areDefault := ourID == defaultID
+
+	for _, usage := range []string{"read-only", "crl-signing", "issuing-certificates", "issuing-certificates,crl-signing"} {
+		ui := CBUpdateIssuer{
+			Name:    c.Issuer,
+			CAChain: []string{"existing"},
+			Usage:   usage,
+		}
+		ui.Run(t, b, s, knownKeys, knownCerts)
+
+		ilError := "requested usage issuing-certificates for issuer"
+		hasIssuing := strings.Contains(usage, "issuing-certificates")
+		if hasIssuing {
+			ilError = ""
+		}
+
+		hasCRL := strings.Contains(usage, "crl-signing")
+
+		resp := c.IssueLeaf(t, b, s, knownKeys, knownCerts, ilError)
+		if resp == nil && !hasIssuing {
+			continue
+		}
+
+		c.RevokeLeaf(t, b, s, knownKeys, knownCerts, resp, hasCRL, areDefault)
 	}
 }
 
