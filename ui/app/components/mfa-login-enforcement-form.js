@@ -64,15 +64,15 @@ export default class MfaLoginEnforcementForm extends Component {
     this.searchSelect.selected = [];
     const options = this.searchSelectOptions || {};
     if (!this.searchSelectOptions) {
-      try {
-        const types = ['identity/group', 'identity/entity'];
-        for (const type of types) {
+      const types = ['identity/group', 'identity/entity'];
+      for (const type of types) {
+        try {
           options[type] = (await this.store.query(type, {})).toArray();
+        } catch (error) {
+          options[type] = [];
         }
-        this.searchSelectOptions = options;
-      } catch (error) {
-        // JLR TODO - swallowing error for now
       }
+      this.searchSelectOptions = options;
     }
     if (this.selectedTargetType.includes('identity')) {
       this.searchSelect.options = [...options[this.selectedTargetType]];

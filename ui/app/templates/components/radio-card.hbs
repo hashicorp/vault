@@ -1,4 +1,8 @@
-<div class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}" ...attributes>
+<label
+  for="radio-card"
+  class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
+  ...attributes
+>
   <div class="radio-card-row">
     <div>
       <Icon @name={{@icon}} @size="24" class="has-text-grey-light" />
@@ -21,6 +25,6 @@
       @groupValue={{this.config.mode}}
       @onChange={{@onChange}}
     />
-    <label></label>
+    <label for="radio-card-button"></label>
   </div>
-</div>
+</label>
