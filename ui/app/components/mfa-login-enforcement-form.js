@@ -11,7 +11,7 @@ import { task } from 'ember-concurrency';
  *
  * @example
  * ```js
- * <MfaLoginEnforcementForm @model={{this.model}} @mfaMethod={{this.mfaMethod}} />
+ * <MfaLoginEnforcementForm @model={{this.model}} @mfaMethod={{this.mfaMethod}} @hasActions={{true}} @onSave={{this.onSave}} @onClose={{this.onClose}} />
  * ```
  * @callback onSave
  * @callback onClose
@@ -36,7 +36,6 @@ export default class MfaLoginEnforcementForm extends Component {
   searchSelectOptions = null;
 
   @tracked name;
-  @tracked mfaMethods = [];
   @tracked targets = [];
   @tracked selectedTargetType = 'accessor';
   @tracked selectedTargetValue = null;
@@ -54,9 +53,10 @@ export default class MfaLoginEnforcementForm extends Component {
   }
 
   async flattenTargets() {
-    for (let target of this.targetTypes) {
-      const targetArray = await this.args.model[target.key];
-      this.targets.addObjects(targetArray);
+    for (let { label, key } of this.targetTypes) {
+      const targetArray = await this.args.model[key];
+      const targets = targetArray.map((value) => ({ label, key, value }));
+      this.targets.addObjects(targets);
     }
   }
   async resetTargetState() {
