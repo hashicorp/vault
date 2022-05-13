@@ -13,7 +13,6 @@ import (
 // that can be used to make operations on the underlying database plugin.
 func NewBackendWrapper(ctx context.Context, conf *logical.BackendConfig) logical.Factory {
 	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-		var newBackend logical.Backend
 		newBackend, err := v5.Factory(ctx, conf)
 		if err == nil {
 			return newBackend, nil
@@ -22,12 +21,13 @@ func NewBackendWrapper(ctx context.Context, conf *logical.BackendConfig) logical
 		merr := &multierror.Error{}
 		merr = multierror.Append(merr, err)
 
+		// legacy backends will be lazy-loaded and do not support multiplexing
 		legacyBackend, err := Factory(ctx, conf)
 		if err == nil {
 			return legacyBackend, nil
 		}
 		merr = multierror.Append(merr, err)
 
-		return newBackend, fmt.Errorf("invalid backend version: %s", merr)
+		return nil, fmt.Errorf("invalid backend version: %s", merr)
 	}
 }

@@ -264,7 +264,6 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			pluginutil.MetadataMode(config.IsMetadataMode),
 			pluginutil.MLock(c.mlockPlugins),
 			pluginutil.AutoMTLS(config.AutoMTLS),
-			// TODO(JM): remove this once secrets/auth plugins use AutoMTLS?
 			pluginutil.Runner(config.Wrapper),
 		)
 		if err != nil {
@@ -349,7 +348,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 		PluginSets:      backendplugin.PluginSet,
 		HandshakeConfig: backendplugin.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
-		IsMetadataMode:  true,
+		IsMetadataMode:  false,
 		AutoMTLS:        true,
 	}
 
@@ -360,31 +359,37 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	if err == nil {
 		// dispense the plugin so we can get its type
 		client, err = backendplugin.Dispense(ctx, pc.ClientProtocol, pc)
-
-		defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
+		if err != nil {
+			merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend v5: %w", err))
+		} else {
+			c.logger.Debug("successfully dispensed v5 backend plugin", "name", pluginRunner.Name)
+			defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
+		}
 	} else {
-		merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend v4: %w", err))
+		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
 		config.AutoMTLS = false
+		config.IsMetadataMode = true
 		// attemtp to run as a v4 backend plugin
-		client, err = backendplugin.NewPluginClient(ctx, nil, config)
+		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+		if err != nil {
+			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
+			return consts.PluginTypeUnknown, merr.ErrorOrNil()
+		}
+		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
+		defer client.Cleanup(ctx)
 	}
 
-	if err == nil {
-		err := client.Setup(ctx, &logical.BackendConfig{})
-		if err != nil {
-			return consts.PluginTypeUnknown, err
-		}
-		backendType := client.Type()
-
-		switch backendType {
-		case logical.TypeCredential:
-			return consts.PluginTypeCredential, nil
-		case logical.TypeLogical:
-			return consts.PluginTypeSecrets, nil
-		}
-	} else {
-		merr = multierror.Append(merr, err)
+	err = client.Setup(ctx, &logical.BackendConfig{})
+	if err != nil {
 		return consts.PluginTypeUnknown, err
+	}
+	backendType := client.Type()
+
+	switch backendType {
+	case logical.TypeCredential:
+		return consts.PluginTypeCredential, nil
+	case logical.TypeLogical:
+		return consts.PluginTypeSecrets, nil
 	}
 
 	if client == nil || client.Type() == logical.TypeUnknown {
@@ -398,7 +403,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 			"error", merr.Error())
 	}
 
-	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend plugin: %w", err))
 
 	return consts.PluginTypeUnknown, merr.ErrorOrNil()
 }

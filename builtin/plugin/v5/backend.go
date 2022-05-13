@@ -1,4 +1,4 @@
-package v5
+package plugin
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	sys := conf.System
 
-	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, false)
+	raw, err := bplugin.NewBackendV5(ctx, name, pluginType, sys, conf, false)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
 	b.Backend.Cleanup(ctx)
 
-	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
+	nb, err := bplugin.NewBackendV5(ctx, pluginName, pluginType, b.config.System, b.config, false)
 	if err != nil {
 		return err
 	}
