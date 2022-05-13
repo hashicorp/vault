@@ -118,6 +118,6 @@ If you wish to migrate to Login MFA, follow these steps and guidelines to migrat
 
    -the new endpoints yield an ID instead of allowing you to define a name
 
-   -the new non-TOTP endpoints have a username_format field instead of username_format+mount_accessor fields; see [Templated Policies](/docs/concepts/policies#templated-policies) for the username_template format.
+   -the new non-TOTP endpoints have a username_format field instead of username_format+mount_accessor fields; see [Templated Policies](/docs/concepts/policies#templated-policies) for the username_format format.
 
 1. Instead of writing sentinel EGP rules to require that logins use MFA, use the `identity/mfa/login_enforcement` endpoint to specify the MFA methods.
