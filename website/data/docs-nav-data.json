@@ -1097,6 +1097,10 @@
             "path": "secrets/pki/quick-start"
           },
           {
+            "title": "Intermediate CA Setup",
+            "path": "secrets/pki/intermediate-ca"
+          },
+          {
             "title": "Considerations",
             "path": "secrets/pki/considerations"
           }
