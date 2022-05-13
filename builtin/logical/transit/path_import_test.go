@@ -40,8 +40,10 @@ var hashFns = []string{
 	"SHA512",
 }
 
-var keysLock sync.RWMutex
-var keys = map[string]interface{}{}
+var (
+	keysLock sync.RWMutex
+	keys     = map[string]interface{}{}
+)
 
 func generateKeys(t *testing.T) {
 	t.Helper()

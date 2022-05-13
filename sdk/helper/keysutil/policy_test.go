@@ -8,12 +8,13 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"golang.org/x/crypto/ed25519"
 	"reflect"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"

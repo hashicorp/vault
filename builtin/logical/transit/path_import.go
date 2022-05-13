@@ -10,10 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"strconv"
 	"strings"
 	"time"
-
-	"strconv"
 
 	"github.com/google/tink/go/kwp/subtle"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -27,7 +26,7 @@ func (b *backend) pathImport() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/import",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the key",
 			},
@@ -120,7 +119,7 @@ func (b *backend) pathImportVersion() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/import_version",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the key",
 			},
@@ -350,10 +349,12 @@ func parseHashFn(hashFn string) (hash.Hash, error) {
 	}
 }
 
-const pathImportWriteSyn = "Imports an externally-generated key into a new transit key"
-const pathImportWriteDesc = "This path is used to import an externally-generated " +
-	"key into Vault. The import operation creates a new key and cannot be used to " +
-	"replace an existing key."
+const (
+	pathImportWriteSyn  = "Imports an externally-generated key into a new transit key"
+	pathImportWriteDesc = "This path is used to import an externally-generated " +
+		"key into Vault. The import operation creates a new key and cannot be used to " +
+		"replace an existing key."
+)
 
 const pathImportVersionWriteSyn = "Imports an externally-generated key into an " +
 	"existing imported key"
