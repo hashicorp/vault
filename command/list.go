@@ -15,6 +15,8 @@ var (
 
 type ListCommand struct {
 	*BaseCommand
+
+	flagDetailed bool
 }
 
 func (c *ListCommand) Synopsis() string {
@@ -42,7 +44,18 @@ Usage: vault list [options] PATH
 }
 
 func (c *ListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	f := set.NewFlagSet("List Options")
+
+	f.BoolVar(&BoolVar{
+		Name:    "detailed",
+		Target:  &c.flagDetailed,
+		Default: false,
+		EnvVar:  "VAULT_DETAILED_LISTS",
+		Usage:   "Enables additional metadata during some LIST operations",
+	})
+
+	return set
 }
 
 func (c *ListCommand) AutocompleteArgs() complete.Predictor {
@@ -117,6 +130,9 @@ func (c *ListCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("No entries found at %s", path))
 		return 2
 	}
+
+	// Hijack the secret's data to show the list with information.
+	secret.Data[doListWithInfoConstant] = c.flagDetailed
 
 	return OutputList(c.UI, secret)
 }

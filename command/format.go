@@ -20,6 +20,11 @@ const (
 	// hopeDelim is the delimiter to use when splitting columns. We call it a
 	// hopeDelim because we hope that it's never contained in a secret.
 	hopeDelim = "♨"
+
+	// We hijack the secret's Data field, adding this constant in on list
+	// requests, to know if we should show the additional key_info from a
+	// ListResponseWithInfo.
+	doListWithInfoConstant = "vault_cli_do_list_with_info"
 )
 
 type FormatOptions struct {
@@ -320,6 +325,19 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	t.printWarnings(ui, secret)
 
+	// Determine if we have additional information from a ListResponseWithInfo endpoint.
+	var additionalInfo map[string]interface{}
+	if secret != nil {
+		if rawShouldListWithInfo, ok := secret.Data[doListWithInfoConstant]; ok {
+			shouldListWithInfo := rawShouldListWithInfo.(bool)
+			if additional, ok := secret.Data["key_info"]; shouldListWithInfo && ok && len(additional.(map[string]interface{})) > 0 {
+				additionalInfo = additional.(map[string]interface{})
+			}
+
+			delete(secret.Data, doListWithInfoConstant)
+		}
+	}
+
 	switch data := data.(type) {
 	case []interface{}:
 	case []string:
@@ -342,10 +360,64 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		}
 		sort.Strings(keys)
 
-		// Prepend the header
-		keys = append([]string{"Keys"}, keys...)
+		// If we have a ListResponseWithInfo endpoint, we'll need to show
+		// additional headers. To satisfy the table outputter, we'll need
+		// to concat them with the deliminator.
+		var headers []string
+		header := "Keys"
+		if len(additionalInfo) > 0 {
+			for _, rawValues := range additionalInfo {
+				values := rawValues.(map[string]interface{})
+				for key := range values {
+					haveKey := false
+					for _, title := range headers {
+						if title == key {
+							haveKey = true
+							break
+						}
+					}
 
-		ui.Output(tableOutput(keys, &columnize.Config{
+					if !haveKey {
+						headers = append(headers, key)
+					}
+				}
+			}
+
+			sort.Strings(headers)
+			header = header + hopeDelim + strings.Join(headers, hopeDelim)
+		}
+
+		// Finally, if we have a ListResponseWithInfo, we'll need to update
+		// the returned rows to not just have the keys (in the sorted order),
+		// but also have the values for each header (in their sorted order).
+		rows := keys
+		if len(additionalInfo) > 0 && len(headers) > 0 {
+			for index, row := range rows {
+				formatted := []string{row}
+				if rawValues, ok := additionalInfo[row]; ok {
+					values := rawValues.(map[string]interface{})
+					for _, header := range headers {
+						if rawValue, ok := values[header]; ok {
+							if looksLikeDuration(header) {
+								rawValue = humanDurationInt(rawValue)
+							}
+
+							formatted = append(formatted, fmt.Sprintf("%v", rawValue))
+						} else {
+							// Show a default empty n/a when this field is
+							// missing from the additional information.
+							formatted = append(formatted, "n/a")
+						}
+					}
+				}
+
+				rows[index] = strings.Join(formatted, hopeDelim)
+			}
+		}
+
+		// Prepend the header to the formatted rows.
+		output := append([]string{header}, rows...)
+		ui.Output(tableOutput(output, &columnize.Config{
 			Delim: hopeDelim,
 		}))
 	}
