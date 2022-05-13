@@ -1,0 +1,3 @@
+```release-note:bug
+login/mfa: Fixed erroneous success message in case of two-phase MFA, and fixed MFA information missing from table format.
+```
