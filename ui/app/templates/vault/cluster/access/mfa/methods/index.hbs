@@ -10,7 +10,7 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.configure"}}>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.methods.create"}}>
       New MFA method
     </ToolbarLink>
   </ToolbarActions>
@@ -18,7 +18,7 @@
 
 {{#if this.model.meta.total}}
   {{#each this.model as |item|}}
-    <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.method" item.id}}>
+    <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.methods.method" item.id}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>

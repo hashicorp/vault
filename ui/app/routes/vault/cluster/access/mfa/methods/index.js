@@ -26,7 +26,7 @@ export default class MfaMethodsRoute extends Route {
   }
   afterModel(model) {
     if (model.length === 0) {
-      this.router.transitionTo('vault.cluster.access.mfa.configure');
+      this.router.transitionTo('vault.cluster.access.mfa');
     }
   }
   setupController(controller, model) {
