@@ -60,23 +60,6 @@ allows for per-transaction unique
 keys for encryption operations.`,
 			},
 
-			"convergent_encryption": {
-				Type: framework.TypeBool,
-				Description: `This field is not currently supported for import operations!
-Whether to support convergent encryption.
-This is only supported when using a key with
-key derivation enabled and will require all
-requests to carry both a context and 96-bit
-(12-byte) nonce. The given nonce will be used
-in place of a randomly generated nonce. As a
-result, when the same context and nonce are
-supplied, the same ciphertext is generated. It
-is *very important* when using this mode that
-you ensure that all nonces are unique for a
-given context. Failing to do so will severely
-impact the ciphertext's security.`,
-			},
-
 			"exportable": {
 				Type: framework.TypeBool,
 				Description: `Enables keys to be exportable.
@@ -146,7 +129,6 @@ ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384",
 func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
-	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
 	hashFnStr := d.Get("hash_function").(string)
 	exportable := d.Get("exportable").(bool)
@@ -155,19 +137,19 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	ciphertextString := d.Get("ciphertext").(string)
 	allowRotation := d.Get("allow_rotation").(bool)
 
-	if autoRotatePeriod > 0 && !allowRotation {
-		return nil, errors.New("allow_rotation must be set to true if auto-rotation is enabled")
+	// Ensure the caller didn't supply "convergent_encryption" as a field, since it's not supported on import.
+	if _, ok := d.Raw["convergent_encryption"]; ok {
+		return nil, errors.New("import cannot be used on keys with convergent encryption enabled")
 	}
 
-	if convergent {
-		return nil, errors.New("import cannot be used on keys with convergent encryption enabled")
+	if autoRotatePeriod > 0 && !allowRotation {
+		return nil, errors.New("allow_rotation must be set to true if auto-rotation is enabled")
 	}
 
 	polReq := keysutil.PolicyRequest{
 		Storage:                  req.Storage,
 		Name:                     name,
 		Derived:                  derived,
-		Convergent:               convergent,
 		Exportable:               exportable,
 		AllowPlaintextBackup:     allowPlaintextBackup,
 		AutoRotatePeriod:         autoRotatePeriod,
