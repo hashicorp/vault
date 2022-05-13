@@ -12,16 +12,23 @@
     class="input field"
     {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
   />
-  <div class="field">
-    <FormFieldLabel for="methods" @label="MFA methods" @subText="The MFA method(s) that this enforcement will apply to." />
-    <SearchSelect
-      @placeholder="Type to search for existing MFA methods"
-      @shouldRenderName={{true}}
-      @disallowNewItems={{true}}
-      @models={{array "mfa-method"}}
-      @onChange={{this.onMethodChange}}
-    />
-  </div>
+
+  {{#unless @mfaMethod}}
+    <div class="field">
+      <FormFieldLabel for="methods" @label="MFA methods" @subText="The MFA method(s) that this enforcement will apply to." />
+      {{! component only computes inputValue on init -- ensure Ember Data hasMany promise has resolved }}
+      {{#if @model.mfa_methods.isFulfilled}}
+        <SearchSelect
+          @placeholder="Type to search for existing MFA methods"
+          @inputValue={{map-by "id" @model.mfa_methods}}
+          @shouldRenderName={{true}}
+          @disallowNewItems={{true}}
+          @models={{array "mfa-method"}}
+          @onChange={{this.onMethodChange}}
+        />
+      {{/if}}
+    </div>
+  {{/unless}}
 
   <div>
     <FormFieldLabel

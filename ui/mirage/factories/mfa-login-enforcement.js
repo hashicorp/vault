@@ -13,7 +13,7 @@ export default Factory.extend({
     // initialize arrays and stub some data if not provided
     if (!record.name) {
       // use random string for generated name
-      record.name = (Math.random() + 1).toString(36).substring(2);
+      record.update('name', (Math.random() + 1).toString(36).substring(2));
     }
     if (!record.mfa_method_ids) {
       // aggregate all existing methods and choose a random one
@@ -24,13 +24,17 @@ export default Factory.extend({
         }
         return methods;
       }, []);
+      // if no methods were found create one since it is a required for login enforcements
+      if (!methods.length) {
+        methods.push(server.create('mfa-totp-method'));
+      }
       const method = methods.length ? methods[Math.floor(Math.random() * methods.length)] : null;
-      record.mfa_method_ids = method ? [method.id] : [];
+      record.update('mfa_method_ids', method ? [method.id] : []);
     }
     const keys = ['auth_method_accessors', 'auth_method_types', 'identity_group_ids', 'identity_entity_ids'];
     keys.forEach((key) => {
       if (!record[key]) {
-        record[key] = key === 'auth_method_types' ? ['userpass'] : [];
+        record.update(key, key === 'auth_method_types' ? ['userpass'] : []);
       }
     });
   },

@@ -1,6 +1,6 @@
 import ApplicationSerializer from './application';
 
-export default class KeymgmtProviderSerializer extends ApplicationSerializer {
+export default class MfaLoginEnforcementSerializer extends ApplicationSerializer {
   primaryKey = 'name';
 
   // change keys for hasMany relationships with ids in the name
@@ -17,6 +17,16 @@ export default class KeymgmtProviderSerializer extends ApplicationSerializer {
   normalize(model, data) {
     this.transformHasManyKeys(data, 'model');
     return super.normalize(model, data);
+  }
+  normalizeItems(payload) {
+    if (payload.data) {
+      if (payload.data?.keys && Array.isArray(payload.data.keys)) {
+        return payload.data.keys.map((key) => payload.data.key_info[key]);
+      }
+      Object.assign(payload, payload.data);
+      delete payload.data;
+    }
+    return payload;
   }
   serialize() {
     const json = super.serialize(...arguments);

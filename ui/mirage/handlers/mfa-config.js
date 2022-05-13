@@ -1,5 +1,4 @@
 import { Response } from 'miragejs';
-import { dasherize } from '@ember/string';
 
 export default function (server) {
   const methods = ['totp', 'duo', 'okta', 'pingid'];
@@ -30,13 +29,26 @@ export default function (server) {
 
   const dbKeyFromType = (type) => `mfa${type.charAt(0).toUpperCase()}${type.slice(1)}Methods`;
 
-  const generateListResponse = (schema, key) => {
-    let records = schema.db[key].where({});
+  const generateListResponse = (schema, isMethod) => {
+    let records = [];
+    if (isMethod) {
+      methods.forEach((method) => {
+        records.addObjects(schema.db[dbKeyFromType(method)].where({}));
+      });
+    } else {
+      records = schema.db.mfaLoginEnforcements.where({});
+    }
     // seed the db with a few records if none exist
     if (!records.length) {
-      records = server.createList(dasherize(key).slice(0, -1), 3).toArray();
+      if (isMethod) {
+        methods.forEach((type) => {
+          records.push(server.create(`mfa-${type}-method`));
+        });
+      } else {
+        records = server.createList('mfa-login-enforcement', 4).toArray();
+      }
     }
-    const dataKey = key === 'mfaLoginEnforcements' ? 'name' : 'id';
+    const dataKey = isMethod ? 'id' : 'name';
     const data = records.reduce(
       (resp, record) => {
         resp.key_info[record[dataKey]] = record;
@@ -52,15 +64,26 @@ export default function (server) {
   };
 
   // list methods
-  server.get('/identity/mfa/method/:type', (schema, { params: { type } }) => {
-    return validate(type, null, () => generateListResponse(schema, dbKeyFromType(type)));
+  server.get('/identity/mfa/method/', (schema) => {
+    return generateListResponse(schema, true);
   });
   // fetch method by id
-  server.get('/identity/mfa/method/:type/:id', (schema, { params: { type, id } }) => {
-    return validate(type, null, () => {
-      const record = schema.db[dbKeyFromType(type)].find(id);
-      return !record ? new Response(404, {}, { errors: [] }) : { data: record };
-    });
+  server.get('/identity/mfa/method/:id', (schema, { params: { id } }) => {
+    let record;
+    for (const method of methods) {
+      record = schema.db[dbKeyFromType(method)].find(id);
+      if (record) {
+        break;
+      }
+    }
+    // inconvenient when testing edit route to return a 404 on refresh since mirage memory is cleared
+    // flip this variable to test 404 state if needed
+    const shouldError = false;
+    // create a new record so data is always returned
+    if (!record && !shouldError) {
+      return { data: server.create('mfa-totp-method') };
+    }
+    return !record ? new Response(404, {}, { errors: [] }) : { data: record };
   });
   // create method
   server.post('/identity/mfa/method/:type', (schema, { params: { type }, requestBody }) => {
@@ -87,11 +110,18 @@ export default function (server) {
   });
   // list enforcements
   server.get('/identity/mfa/login-enforcement', (schema) => {
-    return generateListResponse(schema, 'mfaLoginEnforcements');
+    return generateListResponse(schema);
   });
   // fetch enforcement by name
   server.get('/identity/mfa/login-enforcement/:name', (schema, { params: { name } }) => {
     const record = schema.db.mfaLoginEnforcements.findBy({ name });
+    // inconvenient when testing edit route to return a 404 on refresh since mirage memory is cleared
+    // flip this variable to test 404 state if needed
+    const shouldError = false;
+    // create a new record so data is always returned
+    if (!record && !shouldError) {
+      return { data: server.create('mfa-login-enforcement', { name }) };
+    }
     return !record ? new Response(404, {}, { errors: [] }) : { data: record };
   });
   // create/update enforcement
@@ -119,16 +149,19 @@ export default function (server) {
       return new Response(
         400,
         {},
-        'One of auth_method_accessors, auth_method_types, identity_group_ids, identity_entity_ids must be specified'
+        {
+          errors: [
+            'One of auth_method_accessors, auth_method_types, identity_group_ids, identity_entity_ids must be specified',
+          ],
+        }
       );
     }
-    data.name = name;
     if (schema.db.mfaLoginEnforcements.findBy({ name })) {
       schema.db.mfaLoginEnforcements.update({ name }, data);
     } else {
       schema.db.mfaLoginEnforcements.insert(data);
     }
-    return {};
+    return { ...data, id: data.name };
   });
   // delete enforcement
   server.delete('/identity/mfa/login-enforcement/:name', (schema, { params: { name } }) => {

@@ -1,0 +1,61 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Multi-factor Authentication
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Mfa::Nav />
+
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.enforcements.create"}}>
+      New enforcement
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if this.model.meta.total}}
+  {{#each this.model as |item|}}
+    <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.enforcements.enforcement" item.id}}>
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Icon @name="lock" />
+            <span class="has-text-weight-semibold has-text-black">
+              {{item.name}}
+            </span>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu @name="auth-backend-nav">
+              <nav class="menu">
+                <ul class="menu-list">
+                  <li>
+                    <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement" @model={{item.name}}>
+                      Details
+                    </LinkTo>
+                  </li>
+                  <li>
+                    <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement.edit" @model={{item.name}}>
+                      Edit
+                    </LinkTo>
+                  </li>
+                </ul>
+              </nav>
+            </PopupMenu>
+          </div>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+{{/if}}
+{{#if (gt this.model.meta.lastPage 1)}}
+  <ListPagination
+    @page={{this.model.meta.currentPage}}
+    @lastPage={{this.model.meta.lastPage}}
+    @link="vault.cluster.access.mfa.enforcements"
+  />
+{{/if}}
