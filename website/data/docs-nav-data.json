@@ -1095,6 +1095,10 @@
           {
             "title": "Quick Start",
             "path": "secrets/pki/quick-start"
+          },
+          {
+            "title": "Considerations",
+            "path": "secrets/pki/considerations"
           }
         ]
       },
