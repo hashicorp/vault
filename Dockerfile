@@ -72,10 +72,10 @@ CMD ["server", "-dev"]
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
 
 ARG BIN_NAME
-# NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
-# and the version to download. Example: NAME=vault PRODUCT_VERSION=1.2.3.
-ARG NAME=vault
+# PRODUCT_VERSION is the version built dist/$TARGETOS/$TARGETARCH/$BIN_NAME,
+# which we COPY in later. Example: PRODUCT_VERSION=1.2.3.
 ARG PRODUCT_VERSION
+ARG PRODUCT_REVISION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
 
