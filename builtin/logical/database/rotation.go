@@ -342,6 +342,12 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		return output, fmt.Errorf("%q is not an allowed role", input.RoleName)
 	}
 
+	// If the plugin doesn't support the credential type, return an error
+	if !dbConfig.SupportsCredentialType(input.Role.CredentialType) {
+		return output, fmt.Errorf("unsupported credential_type: %q",
+			input.Role.CredentialType.String())
+	}
+
 	// Get the Database object
 	dbi, err := b.GetConnection(ctx, s, input.Role.DBName)
 	if err != nil {

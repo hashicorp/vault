@@ -71,6 +71,22 @@ type InitializeResponse struct {
 	Config map[string]interface{}
 }
 
+// SupportedCredentialTypesKey is used to get and set the supported
+// CredentialType values in database plugins and Vault.
+const SupportedCredentialTypesKey = "supported_credential_types"
+
+// SetSupportedCredentialTypes sets the CredentialType values that are
+// supported by the database plugin. It can be used by database plugins
+// to communicate what CredentialType values it supports managing.
+func (ir InitializeResponse) SetSupportedCredentialTypes(credTypes []CredentialType) {
+	sct := make([]string, 0, len(credTypes))
+	for _, t := range credTypes {
+		sct = append(sct, t.String())
+	}
+
+	ir.Config[SupportedCredentialTypesKey] = sct
+}
+
 // ///////////////////////////////////////////////////////
 // NewUser()
 // ///////////////////////////////////////////////////////

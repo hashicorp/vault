@@ -72,6 +72,12 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return nil, fmt.Errorf("%q is not an allowed role", name)
 		}
 
+		// If the plugin doesn't support the credential type, return an error
+		if !dbConfig.SupportsCredentialType(role.CredentialType) {
+			return logical.ErrorResponse("unsupported credential_type: %q",
+				role.CredentialType.String()), nil
+		}
+
 		// Get the Database object
 		dbi, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
