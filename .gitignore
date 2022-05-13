@@ -30,7 +30,11 @@ _testmain.go
 
 # Generated Web UI goes here
 /http/web_ui/*.*
-/http/web_ui/**/*.*
+/http/web_ui/assets/*.*
+/http/web_ui/eco/*.*
+/http/web_ui/ember-svg-jar/*
+/http/web_ui/engines-dist/*
+/http/web_ui/fonts/*
 
 # Vault-specific
 example.hcl
