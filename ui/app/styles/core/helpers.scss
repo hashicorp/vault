@@ -164,6 +164,9 @@
   font-size: $size-8;
   text-transform: lowercase;
 }
+.has-top-padding-s {
+  padding-top: $spacing-s;
+}
 .has-bottom-margin-xs {
   margin-bottom: $spacing-xs;
 }
@@ -184,6 +187,9 @@
 }
 .has-top-margin-s {
   margin-top: $spacing-s;
+}
+.has-top-margin-m {
+  margin-top: $spacing-m;
 }
 .has-top-margin-l {
   margin-top: $spacing-l;
@@ -211,6 +217,9 @@
 }
 .has-left-margin-xl {
   margin-left: $spacing-xl;
+}
+.has-right-margin-m {
+  margin-right: $spacing-m;
 }
 .has-right-margin-l {
   margin-right: $spacing-l;
