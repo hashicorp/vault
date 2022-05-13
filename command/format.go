@@ -103,6 +103,23 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 	if err != nil {
 		return err
 	}
+
+	if secret != nil {
+		if rawShouldListWithInfo, ok := secret.Data[doListWithInfoConstant]; ok {
+			shouldListWithInfo := rawShouldListWithInfo.(bool)
+			delete(secret.Data, doListWithInfoConstant)
+
+			// Show the raw JSON of the LIST call, rather than only the
+			// list of keys.
+			if shouldListWithInfo {
+				b, err = j.Format(secret)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	ui.Output(string(b))
 	return nil
 }
