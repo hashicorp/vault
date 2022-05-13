@@ -14,6 +14,7 @@ project "vault" {
       "release/1.8.x",
       "release/1.9.x",
       "release/1.10.x",
+      "dev-image-publishing-support",
     ]
   }
 }
@@ -171,6 +172,20 @@ event "verify" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "verify"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
+
+event "promote-dev-docker" {
+  depends = ["verify"]
+  action "promote-dev-docker" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "promote-dev-docker"
+    depends = ["verify"]
   }
 
   notification {
