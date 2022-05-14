@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -59,7 +60,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 			},
 			expectedResp: map[string]interface{}{
 				"credential_type":   v5.CredentialTypePassword.String(),
-				"credential_config": map[string]string{},
+				"credential_config": map[string]interface{}{},
 			},
 		},
 		{
@@ -72,7 +73,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 			},
 			expectedResp: map[string]interface{}{
 				"credential_type": v5.CredentialTypePassword.String(),
-				"credential_config": map[string]string{
+				"credential_config": map[string]interface{}{
 					"password_policy": "test-policy",
 				},
 			},
@@ -84,8 +85,8 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 			},
 			expectedResp: map[string]interface{}{
 				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
-				"credential_config": map[string]string{
-					"key_bits": "2048",
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("2048"),
 					"format":   "pkcs8",
 				},
 			},
@@ -100,8 +101,8 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 			},
 			expectedResp: map[string]interface{}{
 				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
-				"credential_config": map[string]string{
-					"key_bits": "2048",
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("2048"),
 					"format":   "pkcs8",
 				},
 			},
@@ -116,8 +117,8 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 			},
 			expectedResp: map[string]interface{}{
 				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
-				"credential_config": map[string]string{
-					"key_bits": "3072",
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("3072"),
 					"format":   "pkcs8",
 				},
 			},
@@ -132,8 +133,8 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 			},
 			expectedResp: map[string]interface{}{
 				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
-				"credential_config": map[string]string{
-					"key_bits": "4096",
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("4096"),
 					"format":   "pkcs8",
 				},
 			},

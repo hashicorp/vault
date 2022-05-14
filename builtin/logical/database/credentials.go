@@ -19,13 +19,13 @@ import (
 type passwordGenerator struct {
 	// PasswordPolicy is the named password policy used to generate passwords.
 	// If empty (default), a random string of 20 characters will be generated.
-	PasswordPolicy string `mapstructure:"password_policy"`
+	PasswordPolicy string `mapstructure:"password_policy,omitempty"`
 }
 
 // newPasswordGenerator returns a new passwordGenerator using the given config.
 // Default values will be set on the returned passwordGenerator if not provided
 // in the config.
-func newPasswordGenerator(config map[string]string) (passwordGenerator, error) {
+func newPasswordGenerator(config map[string]interface{}) (passwordGenerator, error) {
 	var pg passwordGenerator
 	if err := mapstructure.WeakDecode(config, &pg); err != nil {
 		return pg, err
@@ -58,15 +58,12 @@ func (pg passwordGenerator) generate(ctx context.Context, b *databaseBackend, wr
 
 // configMap returns the configuration of the passwordGenerator
 // as a map from string to string.
-func (pg passwordGenerator) configMap() map[string]string {
-	config := make(map[string]string)
-
-	// Configuration without defaults are included if not empty
-	if pg.PasswordPolicy != "" {
-		config["password_policy"] = pg.PasswordPolicy
+func (pg passwordGenerator) configMap() (map[string]interface{}, error) {
+	config := make(map[string]interface{})
+	if err := mapstructure.WeakDecode(pg, &config); err != nil {
+		return nil, err
 	}
-
-	return config
+	return config, nil
 }
 
 // rsaKeyGenerator generates RSA key pair credentials.
@@ -74,17 +71,17 @@ func (pg passwordGenerator) configMap() map[string]string {
 type rsaKeyGenerator struct {
 	// Format is the output format of the generated private key.
 	// Options include: 'pkcs8' (default)
-	Format string `mapstructure:"format"`
+	Format string `mapstructure:"format,omitempty"`
 
 	// KeyBits is the bit size of the RSA key to generate.
 	// Options include: 2048 (default), 3072, and 4096
-	KeyBits int `mapstructure:"key_bits"`
+	KeyBits int `mapstructure:"key_bits,omitempty"`
 }
 
 // newRSAKeyGenerator returns a new rsaKeyGenerator using the given config.
 // Default values will be set on the returned rsaKeyGenerator if not provided
 // in the given config.
-func newRSAKeyGenerator(config map[string]string) (rsaKeyGenerator, error) {
+func newRSAKeyGenerator(config map[string]interface{}) (rsaKeyGenerator, error) {
 	var kg rsaKeyGenerator
 	if err := mapstructure.WeakDecode(config, &kg); err != nil {
 		return kg, err
@@ -163,12 +160,10 @@ func (kg *rsaKeyGenerator) generate(r io.Reader) ([]byte, []byte, error) {
 
 // configMap returns the configuration of the rsaKeyGenerator
 // as a map from string to string.
-func (kg rsaKeyGenerator) configMap() map[string]string {
-	config := make(map[string]string)
-
-	// Configuration with defaults are always included
-	config["format"] = kg.Format
-	config["key_bits"] = fmt.Sprintf("%v", kg.KeyBits)
-
-	return config
+func (kg rsaKeyGenerator) configMap() (map[string]interface{}, error) {
+	config := make(map[string]interface{})
+	if err := mapstructure.WeakDecode(kg, &config); err != nil {
+		return nil, err
+	}
+	return config, nil
 }

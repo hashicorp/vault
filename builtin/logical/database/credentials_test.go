@@ -16,7 +16,7 @@ import (
 
 func Test_newPasswordGenerator(t *testing.T) {
 	type args struct {
-		config map[string]string
+		config map[string]interface{}
 	}
 	tests := []struct {
 		name    string
@@ -36,7 +36,7 @@ func Test_newPasswordGenerator(t *testing.T) {
 		{
 			name: "newPasswordGenerator without password_policy",
 			args: args{
-				config: map[string]string{},
+				config: map[string]interface{}{},
 			},
 			want: passwordGenerator{
 				PasswordPolicy: "",
@@ -45,7 +45,7 @@ func Test_newPasswordGenerator(t *testing.T) {
 		{
 			name: "newPasswordGenerator with password_policy",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"password_policy": "test-policy",
 				},
 			},
@@ -68,7 +68,7 @@ func Test_newPasswordGenerator(t *testing.T) {
 
 func Test_newRSAKeyGenerator(t *testing.T) {
 	type args struct {
-		config map[string]string
+		config map[string]interface{}
 	}
 	tests := []struct {
 		name    string
@@ -89,7 +89,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with empty config",
 			args: args{
-				config: map[string]string{},
+				config: map[string]interface{}{},
 			},
 			want: rsaKeyGenerator{
 				Format:  "pkcs8",
@@ -99,7 +99,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with zero value format",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"format": "",
 				},
 			},
@@ -111,7 +111,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with zero value key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "0",
 				},
 			},
@@ -123,7 +123,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with format",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"format": "pkcs8",
 				},
 			},
@@ -135,7 +135,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with format case insensitive",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"format": "PKCS8",
 				},
 			},
@@ -147,7 +147,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with 3072 key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "3072",
 				},
 			},
@@ -159,7 +159,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with 4096 key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "4096",
 				},
 			},
@@ -171,7 +171,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with invalid key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "4097",
 				},
 			},
@@ -180,7 +180,7 @@ func Test_newRSAKeyGenerator(t *testing.T) {
 		{
 			name: "newRSAKeyGenerator with invalid format",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"format": "pkcs1",
 				},
 			},
@@ -205,7 +205,7 @@ func Test_passwordGenerator_generate(t *testing.T) {
 	b.Setup(context.Background(), config)
 
 	type args struct {
-		config  map[string]string
+		config  map[string]interface{}
 		mock    func() interface{}
 		passGen logical.PasswordGenerator
 	}
@@ -249,7 +249,7 @@ func Test_passwordGenerator_generate(t *testing.T) {
 		{
 			name: "v5: generate password with non-existing policy",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"password_policy": "not-created",
 				},
 				mock: func() interface{} {
@@ -261,7 +261,7 @@ func Test_passwordGenerator_generate(t *testing.T) {
 		{
 			name: "v5: generate password with existing policy",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"password_policy": "test-policy",
 				},
 				mock: func() interface{} {
@@ -276,7 +276,7 @@ func Test_passwordGenerator_generate(t *testing.T) {
 		{
 			name: "v5: generate password with existing policy static",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"password_policy": "test-policy",
 				},
 				mock: func() interface{} {
@@ -326,35 +326,35 @@ func Test_passwordGenerator_generate(t *testing.T) {
 
 func Test_passwordGenerator_configMap(t *testing.T) {
 	type args struct {
-		config map[string]string
+		config map[string]interface{}
 	}
 	tests := []struct {
 		name string
 		args args
-		want map[string]string
+		want map[string]interface{}
 	}{
 		{
 			name: "nil config results in empty map",
 			args: args{
 				config: nil,
 			},
-			want: map[string]string{},
+			want: map[string]interface{}{},
 		},
 		{
 			name: "empty config results in empty map",
 			args: args{
-				config: map[string]string{},
+				config: map[string]interface{}{},
 			},
-			want: map[string]string{},
+			want: map[string]interface{}{},
 		},
 		{
 			name: "input config is equal to output config",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"password_policy": "test-policy",
 				},
 			},
-			want: map[string]string{
+			want: map[string]interface{}{
 				"password_policy": "test-policy",
 			},
 		},
@@ -363,14 +363,16 @@ func Test_passwordGenerator_configMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pg, err := newPasswordGenerator(tt.args.config)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, pg.configMap())
+			cm, err := pg.configMap()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, cm)
 		})
 	}
 }
 
 func Test_rsaKeyGenerator_generate(t *testing.T) {
 	type args struct {
-		config map[string]string
+		config map[string]interface{}
 	}
 	tests := []struct {
 		name string
@@ -385,13 +387,13 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 		{
 			name: "generate RSA key with empty default config",
 			args: args{
-				config: map[string]string{},
+				config: map[string]interface{}{},
 			},
 		},
 		{
 			name: "generate RSA key with 2048 key_bits and format",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "2048",
 					"format":   "pkcs8",
 				},
@@ -400,7 +402,7 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 		{
 			name: "generate RSA key with 2048 key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "2048",
 				},
 			},
@@ -408,7 +410,7 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 		{
 			name: "generate RSA key with 3072 key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "3072",
 				},
 			},
@@ -416,7 +418,7 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 		{
 			name: "generate RSA key with 4096 key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"key_bits": "4096",
 				},
 			},
@@ -464,68 +466,68 @@ func Test_rsaKeyGenerator_generate(t *testing.T) {
 
 func Test_rsaKeyGenerator_configMap(t *testing.T) {
 	type args struct {
-		config map[string]string
+		config map[string]interface{}
 	}
 	tests := []struct {
 		name string
 		args args
-		want map[string]string
+		want map[string]interface{}
 	}{
 		{
 			name: "nil config results in defaults",
 			args: args{
 				config: nil,
 			},
-			want: map[string]string{
+			want: map[string]interface{}{
 				"format":   "pkcs8",
-				"key_bits": "2048",
+				"key_bits": 2048,
 			},
 		},
 		{
 			name: "empty config results in defaults",
 			args: args{
-				config: map[string]string{},
+				config: map[string]interface{}{},
 			},
-			want: map[string]string{
+			want: map[string]interface{}{
 				"format":   "pkcs8",
-				"key_bits": "2048",
+				"key_bits": 2048,
 			},
 		},
 		{
 			name: "config with format",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"format": "pkcs8",
 				},
 			},
-			want: map[string]string{
+			want: map[string]interface{}{
 				"format":   "pkcs8",
-				"key_bits": "2048",
+				"key_bits": 2048,
 			},
 		},
 		{
 			name: "config with key_bits",
 			args: args{
-				config: map[string]string{
-					"key_bits": "4096",
+				config: map[string]interface{}{
+					"key_bits": 4096,
 				},
 			},
-			want: map[string]string{
+			want: map[string]interface{}{
 				"format":   "pkcs8",
-				"key_bits": "4096",
+				"key_bits": 4096,
 			},
 		},
 		{
 			name: "config with format and key_bits",
 			args: args{
-				config: map[string]string{
+				config: map[string]interface{}{
 					"format":   "pkcs8",
-					"key_bits": "3072",
+					"key_bits": 3072,
 				},
 			},
-			want: map[string]string{
+			want: map[string]interface{}{
 				"format":   "pkcs8",
-				"key_bits": "3072",
+				"key_bits": 3072,
 			},
 		},
 	}
@@ -533,7 +535,9 @@ func Test_rsaKeyGenerator_configMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			kg, err := newRSAKeyGenerator(tt.args.config)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, kg.configMap())
+			cm, err := kg.configMap()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, cm)
 		})
 	}
 }

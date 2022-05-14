@@ -545,7 +545,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		credentialConfig = data.Get("credential_config").(map[string]string)
 	}
 	if err := role.setCredentialConfig(credentialConfig); err != nil {
-		return logical.ErrorResponse("invalid credential_config: %s", err), nil
+		return logical.ErrorResponse("credential_config validation failed: %s", err), nil
 	}
 
 	// lvr represents the roles' LastVaultRotation
@@ -607,13 +607,13 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
-	DBName           string            `json:"db_name"`
-	Statements       v4.Statements     `json:"statements"`
-	DefaultTTL       time.Duration     `json:"default_ttl"`
-	MaxTTL           time.Duration     `json:"max_ttl"`
-	CredentialType   v5.CredentialType `json:"credential_type"`
-	CredentialConfig map[string]string `json:"credential_config"`
-	StaticAccount    *staticAccount    `json:"static_account" mapstructure:"static_account"`
+	DBName           string                 `json:"db_name"`
+	Statements       v4.Statements          `json:"statements"`
+	DefaultTTL       time.Duration          `json:"default_ttl"`
+	MaxTTL           time.Duration          `json:"max_ttl"`
+	CredentialType   v5.CredentialType      `json:"credential_type"`
+	CredentialConfig map[string]interface{} `json:"credential_config"`
+	StaticAccount    *staticAccount         `json:"static_account" mapstructure:"static_account"`
 }
 
 // setCredentialType sets the credential type for the role given its string form.
@@ -635,20 +635,32 @@ func (r *roleEntry) setCredentialType(credentialType string) error {
 // for the role using the role's credential type. It will also populate
 // all default values. Returns an error if the configuration is invalid.
 func (r *roleEntry) setCredentialConfig(config map[string]string) error {
+	c := make(map[string]interface{})
+	for k, v := range config {
+		c[k] = v
+	}
+
 	switch r.CredentialType {
 	case v5.CredentialTypePassword:
-		generator, err := newPasswordGenerator(config)
+		generator, err := newPasswordGenerator(c)
 		if err != nil {
 			return err
 		}
-		r.CredentialConfig = generator.configMap()
-
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		r.CredentialConfig = cm
 	case v5.CredentialTypeRSAPrivateKey:
-		generator, err := newRSAKeyGenerator(config)
+		generator, err := newRSAKeyGenerator(c)
 		if err != nil {
 			return err
 		}
-		r.CredentialConfig = generator.configMap()
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		r.CredentialConfig = cm
 	}
 
 	return nil
