@@ -264,7 +264,6 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 		"db_name":             role.DBName,
 		"rotation_statements": role.Statements.Rotation,
 		"credential_type":     role.CredentialType.String(),
-		"credential_config":   role.CredentialConfig,
 	}
 
 	// guard against nil StaticAccount; shouldn't happen but we'll be safe
@@ -277,6 +276,9 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 		}
 	}
 
+	if len(role.CredentialConfig) > 0 {
+		data["credential_config"] = role.CredentialConfig
+	}
 	if len(role.Statements.Rotation) == 0 {
 		data["rotation_statements"] = []string{}
 	}
@@ -304,7 +306,9 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		"default_ttl":           role.DefaultTTL.Seconds(),
 		"max_ttl":               role.MaxTTL.Seconds(),
 		"credential_type":       role.CredentialType.String(),
-		"credential_config":     role.CredentialConfig,
+	}
+	if len(role.CredentialConfig) > 0 {
+		data["credential_config"] = role.CredentialConfig
 	}
 	if len(role.Statements.Creation) == 0 {
 		data["creation_statements"] = []string{}
@@ -650,7 +654,9 @@ func (r *roleEntry) setCredentialConfig(config map[string]string) error {
 		if err != nil {
 			return err
 		}
-		r.CredentialConfig = cm
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
 	case v5.CredentialTypeRSAPrivateKey:
 		generator, err := newRSAKeyGenerator(c)
 		if err != nil {
@@ -660,7 +666,9 @@ func (r *roleEntry) setCredentialConfig(config map[string]string) error {
 		if err != nil {
 			return err
 		}
-		r.CredentialConfig = cm
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
 	}
 
 	return nil

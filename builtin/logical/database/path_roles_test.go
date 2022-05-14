@@ -60,7 +60,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 			},
 			expectedResp: map[string]interface{}{
 				"credential_type":   v5.CredentialTypePassword.String(),
-				"credential_config": map[string]interface{}{},
+				"credential_config": nil,
 			},
 		},
 		{
