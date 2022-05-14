@@ -2178,9 +2178,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
 	roleData := map[string]interface{}{
-		"ttl":      "4h",
-		"max_ttl":  "8h",
-		"key_type": keyType,
+		"ttl":                 "4h",
+		"max_ttl":             "8h",
+		"key_type":            keyType,
+		"not_before_duration": "2h",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
