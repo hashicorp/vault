@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: pki/sign-verbatim uses not_before_duration defined role
+```
