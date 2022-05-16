@@ -39,6 +39,11 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
+	config, err := getIssuersConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
 	// For each issuer, we need not only the identifier (as returned by
 	// listIssuers), but also the name of the issuer. This means we have to
 	// fetch the actual issuer object as well.
@@ -51,6 +56,7 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 		responseKeys = append(responseKeys, string(identifier))
 		responseInfo[string(identifier)] = map[string]interface{}{
 			"issuer_name": issuer.Name,
+			"is_default":  identifier == config.DefaultIssuerId,
 		}
 	}
 
