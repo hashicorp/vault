@@ -68,6 +68,6 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const backend = snapshot.attr('backend');
-    return this.ajax(`/v1/${backend}/root`, 'DELETE');
+    return this.ajax(`/v1/${backend}/issuer/default`, 'DELETE');
   },
 });

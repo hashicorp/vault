@@ -166,6 +166,9 @@ export default Component.extend({
             `The default issuer for ${backend} has been deleted. Its key material was preserved; to restore the issuer, import the public certificate.`
           );
         })
+        .catch((e) => {
+          this.set('errors', e.errors);
+        })
         .finally(() => {
           this.set('loading', false);
           this.send('refresh');

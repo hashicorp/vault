@@ -4,7 +4,11 @@
     {{#if this.needsConfig}}
       Configure CA Certificate
     {{else}}
-      Add CA Certificate
+      {{#if this.model.certificate}}
+        Generated Certificate
+      {{else}}
+        Add CA Certificate
+      {{/if}}
     {{/if}}
   </h2>
   {{#if (or this.model.certificate this.model.csr)}}
@@ -59,13 +63,6 @@
   {{else}}
     <form {{action "saveCA" on="submit"}} data-test-generate-root-cert="true">
       <NamespaceReminder @mode="save" @noun="PKI change" />
-      {{#if this.model.uploadPemBundle}}
-        <AlertBanner
-          @type="warning"
-          @message="If you have already set a certificate and key, they will be overridden with the successful saving of a new PEM bundle."
-          data-test-warning
-        />
-      {{/if}}
       <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
         <div class="field is-grouped">
@@ -84,18 +81,6 @@
               Cancel
             </button>
           </div>
-        </div>
-        <div class="control">
-          {{#if this.model.canDeleteRoot}}
-            <ConfirmAction
-              @buttonClasses="button"
-              @confirmTitle="Delete default issuer?"
-              @confirmMessage="The default issuer certificate will be deleted, but its key material preserved."
-              @onConfirmAction={{action "deleteCA"}}
-            >
-              Delete
-            </ConfirmAction>
-          {{/if}}
         </div>
       </div>
     </form>
@@ -251,6 +236,18 @@
       >
         Set signed intermediate
       </button>
+    </div>
+    <div class="control">
+      {{#if this.model.canDeleteRoot}}
+        <ConfirmAction
+          @buttonClasses="button"
+          @confirmTitle="Delete default issuer?"
+          @confirmMessage="The default issuer certificate will be deleted, but its key material preserved."
+          @onConfirmAction={{action "deleteCA"}}
+        >
+          Delete
+        </ConfirmAction>
+      {{/if}}
     </div>
   </div>
 {{/if}}
