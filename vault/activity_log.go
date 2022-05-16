@@ -1665,7 +1665,6 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		monthResponse := &ResponseMonth{
 			Timestamp: time.Unix(monthsRecord.Timestamp, 0).UTC().Format(time.RFC3339),
 		}
-
 		if int(monthsRecord.Counts.EntityClients+monthsRecord.Counts.NonEntityClients) != 0 {
 			nsResponse, err := prepareNSResponse(monthsRecord.Namespaces)
 			if err != nil {
@@ -1717,10 +1716,38 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			})
 		}
 	}
-
+	months = modifyResponseMonths(months, startTime, endTime)
 	responseData["months"] = months
 
 	return responseData, nil
+}
+
+// modifyResponseMonths fills out various parts of the query structure to help
+// activity log clients parse the returned query.
+func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Time) []*ResponseMonth {
+	if len(months) == 0 {
+		return months
+	}
+	start = timeutil.StartOfMonth(start)
+	end = timeutil.EndOfMonth(end)
+	modifiedResponseMonths := make([]*ResponseMonth, 0)
+	firstMonth, err := time.Parse(time.RFC3339, months[0].Timestamp)
+	lastMonth, err2 := time.Parse(time.RFC3339, months[len(months)-1].Timestamp)
+	if err != nil || err2 != nil {
+		return months
+	}
+	for start.Before(firstMonth) {
+		monthPlaceholder := &ResponseMonth{Timestamp: start.UTC().Format(time.RFC3339)}
+		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
+		start = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
+	}
+	modifiedResponseMonths = append(modifiedResponseMonths, months...)
+	for lastMonth.Before(end) {
+		lastMonth = timeutil.StartOfMonth(lastMonth.AddDate(0, 1, 0))
+		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
+		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
+	}
+	return modifiedResponseMonths
 }
 
 type activityConfig struct {

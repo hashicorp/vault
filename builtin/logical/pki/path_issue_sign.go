@@ -212,6 +212,9 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		if role.GenerateLease != nil {
 			*entry.GenerateLease = *role.GenerateLease
 		}
+		if role.NotBeforeDuration > 0 {
+			entry.NotBeforeDuration = role.NotBeforeDuration
+		}
 		entry.NoStore = role.NoStore
 		entry.Issuer = role.Issuer
 	}
