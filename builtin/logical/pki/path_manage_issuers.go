@@ -181,10 +181,9 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("private keys found in the PEM bundle but not allowed by the path; use /issuers/import/bundle"), nil
 	}
 
-	mkc := newManagedKeyContext(ctx, b, req.MountPoint)
 	for keyIndex, keyPem := range keys {
 		// Handle import of private key.
-		key, existing, err := importKeyFromBytes(mkc, req.Storage, keyPem, "")
+		key, existing, err := importKeyFromBytes(ctx, b, req.Storage, keyPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing key %v: %v", keyIndex, err)), nil
 		}
@@ -195,7 +194,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	for certIndex, certPem := range issuers {
-		cert, existing, err := importIssuer(mkc, req.Storage, certPem, "")
+		cert, existing, err := importIssuer(ctx, b, req.Storage, certPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing issuer %v: %v\n%v", certIndex, err, certPem)), nil
 		}

@@ -63,7 +63,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		data.Raw["exported"] = "existing"
 	}
 
-	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data, req.MountPoint)
+	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -130,7 +130,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		}
 	}
 
-	myKey, _, err := importKey(newManagedKeyContext(ctx, b, req.MountPoint), req.Storage, csrb.PrivateKey, keyName, csrb.PrivateKeyType)
+	myKey, _, err := importKey(ctx, b, req.Storage, csrb.PrivateKey, keyName, csrb.PrivateKeyType)
 	if err != nil {
 		return nil, err
 	}
