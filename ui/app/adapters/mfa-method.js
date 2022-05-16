@@ -9,8 +9,8 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
 
   createOrUpdate(store, type, snapshot) {
     const data = store.serializerFor(type.modelName).serialize(snapshot);
-    let id = snapshot.id;
-    return this.ajax(`${this.urlForQuery(type.modelName, snapshot)}/${data.type}/${id}`, 'POST', {
+    const { id } = snapshot;
+    return this.ajax(this.buildURL(type.modelName, data.type, id, 'POST'), 'POST', {
       data,
     }).then(() => {
       // TODO: Check how 204's are handled by ember
@@ -31,19 +31,6 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
     return this.createOrUpdate(...arguments);
   }
 
-  queryRecord(store, type, query) {
-    const { id } = query;
-    if (!id) {
-      throw new Error('MFA method ID is required to fetch the details.');
-    }
-    const url = this.urlForQuery(query, type.modelName);
-    return this.ajax(url, 'POST', {
-      data: {
-        id,
-      },
-    });
-  }
-
   query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
     return this.ajax(url, 'GET', {
@@ -51,5 +38,12 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
         list: true,
       },
     });
+  }
+
+  buildURL(modelName, type, id, requestType) {
+    if (requestType === 'POST') {
+      return `${super.buildURL(modelName, null, null, null)}/${type}/${id}`;
+    }
+    return super.buildURL(...arguments);
   }
 }
