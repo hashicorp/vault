@@ -118,6 +118,7 @@ COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 # storage backend, if desired; the server will be started with /vault/config as
 # the configuration directory so you can add additional config files in that
 # location.
+ENV HOME /home/vault
 RUN mkdir -p /vault/logs && \
     mkdir -p /vault/file && \
     mkdir -p /vault/config && \
