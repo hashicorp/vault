@@ -464,6 +464,7 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 	// finished before we load from storage.
 	lock := locksutil.LockForKey(lm.keyLocks, req.Name)
 	lock.Lock()
+	defer lock.Unlock()
 
 	// Load it from storage
 	p, err = lm.getPolicyFromStorage(ctx, req.Storage, req.Name)
@@ -493,8 +494,6 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 	if lm.useCache {
 		lm.cache.Store(req.Name, p)
 	}
-
-	lock.Unlock()
 
 	return nil
 }
