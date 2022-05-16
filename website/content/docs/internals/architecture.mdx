@@ -33,16 +33,15 @@ When the Vault server is started, it must be provided with a storage backend so
 that data is available across restarts. The HTTP API similarly must be started
 by the Vault server on start so that clients can interact with it.
 
-Once started, the Vault is in a _sealed_ state. Before any operation can be
-performed on the Vault it must be unsealed. This is done by providing the unseal
-keys. When the Vault is initialized it generates an encryption key which is used
-to protect all the data. That key is protected by a root key. By default,
-Vault uses a technique known as [Shamir's secret sharing
-algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing) to split the
-root key into 5 shares, any 3 of which are required to reconstruct the master
-key.
+When a Vault server is started, it starts in a _sealed_ state. In this state, while Vault is configured to know where and how to access the physical storage, it does not know how to decrpyt any of it. Vault needs the _encyption key_ in order to decrypt the data. However, the encryption key is also stored with the data. So, to decrypt the encryption key, you will need to gain access to the root key, and in order to obtain the root key, Vault must be in a _unsealed_ state. _Unsealing_ is the process of obtaining the plaintext root key necessary to read the decyrption key to decrypt the data and allow access to the Vault.
 
-[![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
+But, there is one additional mechanism to keep in mind and that is since the root key is stored alongside all other Vault data, it too is considered encrypted and requires what's called an _unseal key_ to descrypt it.
+
+The default Vault config uses a Shamir seal. Instead of distributing the unseal key as a single key to an operator, Vault uses an algorithm known as [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the key into shards. A certain threshold of shards is required to reconstruct the unseal key, which is then used to decrypt the root key.
+
+**This is the unseal process:** the shards are added one at a time (in any order) until enough shards are present to reconstruct the key and decrypt the root key.
+
+Refer to the [Seal/Unseal](/docs/concepts/seal#seal-unseal) documentation for further details.
 
 The number of shares and the minimum threshold required can both be specified.
 Shamir's technique can be disabled, and the root key can be used directly for
