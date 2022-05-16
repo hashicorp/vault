@@ -1417,6 +1417,21 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		t = alias
 	}
 
+	f, ok := c.logicalBackends[t]
+	if !ok {
+		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets)
+		if err != nil {
+			return nil, err
+		}
+		if plug == nil {
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+		}
+
+		f = plugin.Factory
+		if !plug.Builtin {
+			f = wrapFactoryCheckPerms(c, plugin.Factory)
+		}
+	}
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {
@@ -1440,22 +1455,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
-	}
-
-	f, ok := c.logicalBackends[t]
-	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets)
-		if err != nil {
-			return nil, err
-		}
-		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
-		}
-
-		f = plugin.NewBackendWrapper(ctx, config)
-		if !plug.Builtin {
-			f = wrapFactoryCheckPerms(c, plugin.NewBackendWrapper(ctx, config))
-		}
 	}
 
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)

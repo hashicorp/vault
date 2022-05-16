@@ -9,7 +9,9 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
+	"github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
+	v5 "github.com/hashicorp/vault/builtin/plugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -23,13 +25,24 @@ var (
 
 // Factory returns a configured plugin logical.Backend.
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	merr := &multierror.Error{}
 	_, ok := conf.Config["plugin_name"]
 	if !ok {
 		return nil, fmt.Errorf("plugin_name not provided")
 	}
-	b, err := Backend(ctx, conf)
+	b, err := v5.Backend(ctx, conf)
+	if err == nil {
+		if err := b.Setup(ctx, conf); err != nil {
+			return nil, err
+		}
+		return b, nil
+	}
+	merr = multierror.Append(merr, err)
+
+	b, err = Backend(ctx, conf)
 	if err != nil {
-		return nil, err
+		merr = multierror.Append(merr, err)
+		return nil, fmt.Errorf("invalid backend version: %s", merr)
 	}
 
 	if err := b.Setup(ctx, conf); err != nil {

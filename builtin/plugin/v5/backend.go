@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"fmt"
 	"net/rpc"
 	"sync"
 
@@ -11,23 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	bplugin "github.com/hashicorp/vault/sdk/plugin"
 )
-
-// Factory returns a configured plugin logical.Backend.
-func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	_, ok := conf.Config["plugin_name"]
-	if !ok {
-		return nil, fmt.Errorf("plugin_name not provided")
-	}
-	b, err := Backend(ctx, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := b.Setup(ctx, conf); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
