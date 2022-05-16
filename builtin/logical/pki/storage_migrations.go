@@ -22,6 +22,8 @@ const (
 type legacyBundleMigrationLog struct {
 	Hash             string    `json:"hash" structs:"hash" mapstructure:"hash"`
 	Created          time.Time `json:"created" structs:"created" mapstructure:"created"`
+	CreatedIssuer    issuerID  `json:"issuer_id" structs:"issuer_id" mapstructure:"issuer_id"`
+	CreatedKey       keyID     `json:"key_id" structs:"key_id" mapstructure:"key_id"`
 	MigrationVersion int       `json:"migrationVersion" structs:"migrationVersion" mapstructure:"migrationVersion"`
 }
 
@@ -79,6 +81,8 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 		return nil
 	}
 
+	var issuerIdentifier issuerID
+	var keyIdentifier keyID
 	b.Logger().Info("performing PKI migration to new keys/issuers layout")
 	if migrationInfo.legacyBundle != nil {
 		anIssuer, aKey, err := writeCaBundle(ctx, b, s, migrationInfo.legacyBundle, "current", "current")
@@ -87,6 +91,8 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 		}
 		b.Logger().Debug("Migration generated the following ids and set them as defaults",
 			"issuer id", anIssuer.ID, "key id", aKey.ID)
+		issuerIdentifier = anIssuer.ID
+		keyIdentifier = aKey.ID
 	} else {
 		b.Logger().Debug("No legacy CA certs found, no migration required.")
 	}
@@ -100,6 +106,8 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigrationLog{
 		Hash:             migrationInfo.legacyBundleHash,
 		Created:          time.Now(),
+		CreatedIssuer:    issuerIdentifier,
+		CreatedKey:       keyIdentifier,
 		MigrationVersion: latestMigrationVersion,
 	})
 	if err != nil {
