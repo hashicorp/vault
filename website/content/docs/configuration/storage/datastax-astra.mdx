@@ -1,0 +1,104 @@
+---
+layout: docs
+page_title: DataStax Astra DB - Storage Backends - Configuration
+description: |-
+  DataStax Astra DB is a cloud-native Cassandra-as-a-Service Built on Apache Cassandra
+  designed to simplify cloud-native application development. The Astra DB storage backend is used to persist Vault's data in an Astra cluster.
+---
+
+# DataStax Astra DB Storage Backend
+
+DataStax Astra DB is a cloud-native Cassandra-as-a-Service Built on [Apache
+Cassandra][cassandra] designed to simplify cloud-native application development. You will be using [cql-proxy](https://github.com/datastax/cql-proxy#getting-started) to connect Vault with Astra.
+CQL Proxy is designed to forward your application's CQL traffic to an appropriate database service. It listens on a local address and securely forwards that traffic.
+The Astra DB storage backend is used to persist Vault's data in an Astra cluster. 
+  
+
+- **No High Availability** – the Astra DB storage backend does not support high
+  availability.
+
+- **Community Supported** – the Astra DB storage backend is supported by the
+  community. While it has undergone review by HashiCorp employees, they may not
+  be as knowledgeable about the technology. If you encounter problems with it,
+  you may be referred to the original author, or reach out to an [Astra](https://www.datastax.com/) Onboarding Engineer via Intercom.
+
+## Prerequisites
+1. Create an Astra DB Account 
+2. Create a database and keyspace named **vault**
+3. Create an Application Token and obtain your Database ID
+4. Clone the [CQL Proxy](https://github.com/datastax/cql-proxy#locally-build-and-run) repo and spin up the proxy using 
+your Application Token and Database ID obtained from Step 3. 
+You should receive a message like this once successful:
+```
+{"level":"info","ts":1652485630.179831,"caller":"proxy/proxy.go:222","msg":"proxy is listening","address":"[::]:9042"}
+```
+
+## Setup
+Add the following script to your configuration file:
+
+```hcl
+storage "cassandra" {
+  hosts            = "localhost"
+  consistency      = "LOCAL_QUORUM"
+  protocol_version = 3
+}
+```
+
+The Astra DB storage backend does not automatically create the keyspace and
+table. You must make sure you created your keyspace **vault** as specified in the **Prerequisites**, then
+navigate to your CQL Console in the Astra UI and submit the following command to create the table:
+
+```
+CREATE TABLE vault.entries (
+    bucket text,
+    key text,
+    value blob,
+    PRIMARY KEY (bucket, key)
+) WITH CLUSTERING ORDER BY (key ASC);
+```
+
+## `cassandra` Parameters
+
+- `hosts` `(string: "127.0.0.1")` – Comma-separated list of Cassandra hosts to
+  connect to.
+
+- `keyspace` `(string: "vault")` Cassandra keyspace to use.
+
+- `table` `(string: "entries")` – Table within the `keyspace` in which to store
+  data.
+
+- `consistency` `(string: "LOCAL_QUORUM")` Consistency level to use when
+  reading/writing data. If set, must be one of `"ANY"`, `"ONE"`, `"TWO"`,
+  `"THREE"`, `"QUORUM"`, `"ALL"`, `"LOCAL_QUORUM"`, `"EACH_QUORUM"`, or
+  `"LOCAL_ONE"`.
+
+- `protocol_version` `(int: 2)` Cassandra protocol version to use.
+
+- `username` `(string: "")` – Username to use when authenticating with the
+  Cassandra hosts.
+
+- `password` `(string: "")` – Password to use when authenticating with the
+  Cassandra hosts.
+
+- `connection_timeout` `(int: 0)` - A timeout in seconds to wait until a
+  connection is established with the Cassandra hosts.
+
+- `tls` `(int: 0)` – If `1`, indicates the connection with the Cassandra hosts
+  should use TLS.
+
+- `pem_bundle_file` `(string: "")` - Specifies a file containing a
+  certificate and private key; a certificate, private key, and issuing CA
+  certificate; or just a CA certificate.
+
+- `pem_json_file` `(string: "")` - Specifies a JSON file containing a certificate
+  and private key; a certificate, private key, and issuing CA certificate;
+  or just a CA certificate.
+
+- `tls_skip_verify` `(int: 0)` - If `1`, then TLS host verification
+  will be disabled for Cassandra. Defaults to `0`.
+
+- `tls_min_version` `(string: "tls12")` - Minimum TLS version to use. Accepted
+  values are `tls10`, `tls11`, `tls12` or `tls13`. Defaults to `tls12`.
+
+[cassandra]: http://cassandra.apache.org/
+[replication-options]: https://docs.datastax.com/en/cassandra/2.1/cassandra/architecture/architectureDataDistributeReplication_c.html

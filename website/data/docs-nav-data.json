@@ -311,6 +311,10 @@
             "path": "configuration/storage/couchdb"
           },
           {
+            "title": "DataStax Astra DB",
+            "path": "configuration/storage/datastax-astra"
+          },
+          {
             "title": "DynamoDB",
             "path": "configuration/storage/dynamodb"
           },
