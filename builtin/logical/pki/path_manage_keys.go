@@ -83,7 +83,6 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	mkc := newManagedKeyContext(ctx, b, req.MountPoint)
 	exportPrivateKey := false
 	var keyBundle certutil.KeyBundle
 	var actualPrivateKeyType certutil.PrivateKeyType
@@ -113,7 +112,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 			return nil, err
 		}
 
-		keyBundle, actualPrivateKeyType, err = createKmsKeyBundle(mkc, keyId)
+		keyBundle, actualPrivateKeyType, err = createKmsKeyBundle(ctx, b, keyId)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +125,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	key, _, err := importKey(mkc, req.Storage, privateKeyPemString, keyName, keyBundle.PrivateKeyType)
+	key, _, err := importKey(ctx, b, req.Storage, privateKeyPemString, keyName, keyBundle.PrivateKeyType)
 	if err != nil {
 		return nil, err
 	}
@@ -194,8 +193,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	keyValue := keyValueInterface.(string)
 	keyName := data.Get(keyNameParam).(string)
 
-	mkc := newManagedKeyContext(ctx, b, req.MountPoint)
-	key, existed, err := importKeyFromBytes(mkc, req.Storage, keyValue, keyName)
+	key, existed, err := importKeyFromBytes(ctx, b, req.Storage, keyValue, keyName)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

@@ -108,7 +108,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
 	}
 
-	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data, req.MountPoint)
+	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -204,7 +204,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Store it as the CA bundle
-	myIssuer, myKey, err := writeCaBundle(newManagedKeyContext(ctx, b, req.MountPoint), req.Storage, cb, issuerName, keyName)
+	myIssuer, myKey, err := writeCaBundle(ctx, b, req.Storage, cb, issuerName, keyName)
 	if err != nil {
 		return nil, err
 	}

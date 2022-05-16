@@ -121,7 +121,7 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
-	parsedBundle, err := parseCABundle(ctx, b, req, bundle)
+	parsedBundle, err := parseCABundle(ctx, b, bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
