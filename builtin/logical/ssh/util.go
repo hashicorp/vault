@@ -171,6 +171,7 @@ func createSSHComm(logger log.Logger, username, ip string, port int, hostkey str
 			ssh.PublicKeys(signer),
 		},
 		HostKeyCallback: insecureIgnoreHostWarning(logger),
+		Timeout:         1 * time.Minute,
 	}
 
 	connfunc := func() (net.Conn, error) {
