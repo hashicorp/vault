@@ -35,7 +35,7 @@ by the Vault server on start so that clients can interact with it.
 
 When a Vault server is started, it starts in a _sealed_ state. In this state, while Vault is configured to know where and how to access the physical storage, it does not know how to decrpyt any of it. Vault needs the _encyption key_ in order to decrypt the data. However, the encryption key is also stored with the data. So, to decrypt the encryption key, you will need to gain access to the root key, and in order to obtain the root key, Vault must be in a _unsealed_ state. _Unsealing_ is the process of obtaining the plaintext root key necessary to read the decyrption key to decrypt the data and allow access to the Vault.
 
-But, there is one additional mechanism to keep in mind and that is since the root key is stored alongside all other Vault data, it too is considered encrypted and requires what's called an _unseal key_ to descrypt it.
+But, there is one additional mechanism to keep in mind and that is since the root key is stored alongside all other Vault data, it too is considered encrypted and requires what's called an _unseal key_ to decrypt it.
 
 The default Vault config uses a Shamir seal. Instead of distributing the unseal key as a single key to an operator, Vault uses an algorithm known as [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the key into shards. A certain threshold of shards is required to reconstruct the unseal key, which is then used to decrypt the root key.
 
