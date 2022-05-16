@@ -13,6 +13,7 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
     return this.ajax(`${this.urlForQuery(type.modelName, snapshot)}/${data.type}/${id}`, 'POST', {
       data,
     }).then(() => {
+      // TODO: Check how 204's are handled by ember
       return {
         data: {
           id,
