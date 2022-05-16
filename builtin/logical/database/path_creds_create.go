@@ -136,9 +136,6 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			newUserReq.CredentialType = v5.CredentialTypePassword
 			newUserReq.Password = password
 
-			// Set output credential
-			respData["password"] = password
-
 		case v5.CredentialTypeRSAPrivateKey:
 			generator, err := newRSAKeyGenerator(role.CredentialConfig)
 			if err != nil {
@@ -169,10 +166,8 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		respData["username"] = newUserResp.Username
 
 		// Database plugins using the v4 interface generate and return the password.
-		// If the returned password is not equal to the credential, then we need to
-		// set the credential to the password returned from the v4 database plugin.
-		if role.CredentialType == v5.CredentialTypePassword &&
-			password != respData["password"] {
+		// Set the password response to what is returned by the NewUser request.
+		if role.CredentialType == v5.CredentialTypePassword {
 			respData["password"] = password
 		}
 
