@@ -1886,7 +1886,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("expected WAITING status for push status, got %q", result.FactorResult)
 	}
 
-	// VerifyFactor does not return the transaction id, parse it from the poll href
+	// Parse links to get polling link
 	type linksObj struct {
 		Poll struct {
 			Href string `mapstructure:"href"`
@@ -1896,11 +1896,19 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	if err := mapstructure.WeakDecode(result.Links, links); err != nil {
 		return err
 	}
-	ss := strings.Split(links.Poll.Href, "/")
-	transactionID := ss[len(ss)-1]
+	// Strip the org URL from the fully qualified poll URL
+	url := strings.Replace(links.Poll.Href, orgURL, "", 1)
 
 	for {
-		result, _, err = client.UserFactor.GetFactorTransactionStatus(ctx, user.Id, userFactor.Id, transactionID)
+		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
+		// the VerifyFactor respone. This code effectively reimplements that method.
+		rq := client.CloneRequestExecutor()
+		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url, nil)
+		if err != nil {
+			return err
+		}
+		var result *okta.VerifyUserFactorResponse
+		_, err = rq.Do(ctx, req, &result)
 		if err != nil {
 			return err
 		}
