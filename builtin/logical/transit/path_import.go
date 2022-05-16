@@ -156,7 +156,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		AllowImportedKeyRotation: allowRotation,
 	}
 
-	switch keyType {
+	switch strings.ToLower(keyType) {
 	case "aes128-gcm96":
 		polReq.KeyType = keysutil.KeyType_AES128_GCM96
 	case "aes256-gcm96":
