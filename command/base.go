@@ -56,6 +56,7 @@ type BaseCommand struct {
 
 	flagFormat           string
 	flagField            string
+	flagDetailed         bool
 	flagOutputCurlString bool
 	flagOutputPolicy     bool
 	flagNonInteractive   bool
@@ -304,6 +305,7 @@ const (
 	FlagSetHTTP
 	FlagSetOutputField
 	FlagSetOutputFormat
+	FlagSetOutputDetailed
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -496,11 +498,11 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 		}
 
-		if bit&(FlagSetOutputField|FlagSetOutputFormat) != 0 {
-			f := set.NewFlagSet("Output Options")
+		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed) != 0 {
+			outputSet := set.NewFlagSet("Output Options")
 
 			if bit&FlagSetOutputField != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "field",
 					Target:     &c.flagField,
 					Default:    "",
@@ -513,7 +515,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			}
 
 			if bit&FlagSetOutputFormat != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "format",
 					Target:     &c.flagFormat,
 					Default:    "table",
@@ -521,6 +523,16 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Completion: complete.PredictSet("table", "json", "yaml", "pretty"),
 					Usage: `Print the output in the given format. Valid formats
 						are "table", "json", "yaml", or "pretty".`,
+				})
+			}
+
+			if bit&FlagSetOutputDetailed != 0 {
+				outputSet.BoolVar(&BoolVar{
+					Name:    "detailed",
+					Target:  &c.flagDetailed,
+					Default: false,
+					EnvVar:  EnvVaultDetailed,
+					Usage:   "Enables additional metadata during some operations",
 				})
 			}
 		}

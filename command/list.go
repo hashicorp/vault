@@ -15,8 +15,6 @@ var (
 
 type ListCommand struct {
 	*BaseCommand
-
-	flagDetailed bool
 }
 
 func (c *ListCommand) Synopsis() string {
@@ -44,17 +42,7 @@ Usage: vault list [options] PATH
 }
 
 func (c *ListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
-	f := set.NewFlagSet("List Options")
-
-	f.BoolVar(&BoolVar{
-		Name:    "detailed",
-		Target:  &c.flagDetailed,
-		Default: false,
-		EnvVar:  "VAULT_DETAILED_LISTS",
-		Usage:   "Enables additional metadata during some LIST operations",
-	})
-
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed)
 	return set
 }
 
@@ -129,11 +117,6 @@ func (c *ListCommand) Run(args []string) int {
 	if !ok {
 		c.UI.Error(fmt.Sprintf("No entries found at %s", path))
 		return 2
-	}
-
-	switch ui := c.UI.(type) {
-	case *VaultUI:
-		ui.detailed = c.flagDetailed
 	}
 
 	return OutputList(c.UI, secret)
