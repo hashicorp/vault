@@ -125,9 +125,9 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
 		"token":            token.SecretID,
 		"accessor":         token.AccessorID,
-		"consul_local":     token.Local,
+		"local":            token.Local,
 		"consul_namespace": token.Namespace,
-		"consul_partition": token.Partition,
+		"partition":        token.Partition,
 	}, map[string]interface{}{
 		"token":   token.AccessorID,
 		"role":    role,
