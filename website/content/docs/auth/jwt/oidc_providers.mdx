@@ -431,7 +431,7 @@ log in.
    ```bash
    vault write auth/jwt/role/my-role \
       role_type="jwt" \
-      bound_audiences="${ISSUER}" \
+      bound_audiences="https://kubernetes.default.svc" \
       user_claim="sub" \
       bound_subject="system:serviceaccount:default:default" \
       policies="default" \
