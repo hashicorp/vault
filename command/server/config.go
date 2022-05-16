@@ -368,7 +368,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	if fi.IsDir() {
 		// check permissions on the config directory
-		if os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+		if os.Getenv(consts.VaultEnableFilePermissionsCheckEnv) == "true" {
 			err = osutil.OwnerPermissionsMatch(path, 0, 0)
 			if err != nil {
 				return nil, err
@@ -409,7 +409,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	if os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+	if os.Getenv(consts.VaultEnableFilePermissionsCheckEnv) == "true" {
 		// check permissions of the config file
 		err = osutil.OwnerPermissionsMatch(path, 0, 0)
 		if err != nil {

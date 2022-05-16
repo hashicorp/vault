@@ -3270,7 +3270,7 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 }
 
 func (c *Core) CheckPluginPerms(pluginName string) (err error) {
-	if c.pluginDirectory != "" && os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+	if c.pluginDirectory != "" && os.Getenv(consts.VaultEnableFilePermissionsCheckEnv) == "true" {
 		err = osutil.OwnerPermissionsMatch(c.pluginDirectory, c.pluginFileUid, c.pluginFilePermissions)
 		if err != nil {
 			return err
