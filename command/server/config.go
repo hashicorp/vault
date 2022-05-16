@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -506,6 +507,9 @@ func ParseConfig(d, source string) (*Config, error) {
 		pluginFilePermissions, err := strconv.ParseInt(octalPermissionsString, 8, 64)
 		if err != nil {
 			return nil, err
+		}
+		if pluginFilePermissions < math.MinInt || pluginFilePermissions > math.MaxInt {
+			return nil, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
 		}
 		result.PluginFilePermissions = int(pluginFilePermissions)
 	}

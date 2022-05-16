@@ -2,6 +2,15 @@ package pki
 
 import "github.com/hashicorp/vault/sdk/framework"
 
+const (
+	issuerRefParam = "issuer_ref"
+	keyNameParam   = "key_name"
+	keyRefParam    = "key_ref"
+	keyIdParam     = "key_id"
+	keyTypeParam   = "key_type"
+	keyBitsParam   = "key_bits"
+)
+
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
 // and signing
 func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
@@ -131,6 +140,8 @@ be larger than the role max TTL.`,
 		Description: `Set the not after field of the certificate with specified date value.
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
+
+	fields = addIssuerRefField(fields)
 
 	return fields
 }
@@ -308,6 +319,9 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 			Value: "rsa",
 		},
 	}
+
+	fields = addKeyRefNameFields(fields)
+
 	return fields
 }
 
@@ -328,5 +342,61 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		},
 	}
 
+	fields = addIssuerNameField(fields)
+
+	return fields
+}
+
+func addIssuerRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addIssuerNameField(fields)
+	fields = addIssuerRefField(fields)
+	return fields
+}
+
+func addIssuerNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["issuer_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name to the generated issuer, the name
+must be unique across all issuers and not be the reserved value 'default'`,
+	}
+	return fields
+}
+
+func addIssuerRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[issuerRefParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing issuer; either "default"
+for the configured default issuer, an identifier or the name assigned
+to the issuer.`,
+		Default: defaultRef,
+	}
+	return fields
+}
+
+func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addKeyNameField(fields)
+	fields = addKeyRefField(fields)
+	return fields
+}
+
+func addKeyNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[keyNameParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name for the key that will be generated,
+the name must be unique across all keys and not be the reserved value
+'default'`,
+	}
+
+	return fields
+}
+
+func addKeyRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[keyRefParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing key; either "default"
+for the configured default key, an identifier or the name assigned
+to the key.`,
+		Default: defaultRef,
+	}
 	return fields
 }

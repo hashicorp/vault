@@ -26,7 +26,10 @@ a plugin is basic command-line skills and basic knowledge of the
 
 Your plugin implementation needs to satisfy the interface for the plugin
 type you want to build. You can find these definitions in the docs for the
-backend running the plugin.
+backend running the plugin. 
+
+~> Note: Plugins should be prepared to handle multiple concurrent requests 
+from Vault.
 
 ```go
 package main
