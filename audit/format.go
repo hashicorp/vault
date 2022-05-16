@@ -135,6 +135,20 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
 	}
 
+	if auth.PolicyResults != nil {
+		reqEntry.Auth.PolicyResults = &AuditPolicyResults{
+			Allowed: auth.PolicyResults.Allowed,
+		}
+
+		for _, p := range auth.PolicyResults.GrantingPolicies {
+			reqEntry.Auth.PolicyResults.GrantingPolicies = append(reqEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
+				Name:        p.Name,
+				NamespaceId: p.NamespaceId,
+				Type:        p.Type,
+			})
+		}
+	}
+
 	if req.WrapInfo != nil {
 		reqEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
@@ -277,6 +291,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ID:                  req.ID,
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
+			ClientID:            req.ClientID,
 			Operation:           req.Operation,
 			MountType:           req.MountType,
 			MountAccessor:       req.MountAccessor,
@@ -305,6 +320,20 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			WrapInfo:      respWrapInfo,
 			Headers:       resp.Headers,
 		},
+	}
+
+	if auth.PolicyResults != nil {
+		respEntry.Auth.PolicyResults = &AuditPolicyResults{
+			Allowed: auth.PolicyResults.Allowed,
+		}
+
+		for _, p := range auth.PolicyResults.GrantingPolicies {
+			respEntry.Auth.PolicyResults.GrantingPolicies = append(respEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
+				Name:        p.Name,
+				NamespaceId: p.NamespaceId,
+				Type:        p.Type,
+			})
+		}
 	}
 
 	if !auth.IssueTime.IsZero() {
@@ -381,6 +410,7 @@ type AuditAuth struct {
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
 	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
+	PolicyResults             *AuditPolicyResults `json:"policy_results,omitempty"`
 	Metadata                  map[string]string   `json:"metadata,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
@@ -388,6 +418,17 @@ type AuditAuth struct {
 	TokenType                 string              `json:"token_type,omitempty"`
 	TokenTTL                  int64               `json:"token_ttl,omitempty"`
 	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
+}
+
+type AuditPolicyResults struct {
+	Allowed          bool         `json:"allowed"`
+	GrantingPolicies []PolicyInfo `json:"granting_policies,omitempty"`
+}
+
+type PolicyInfo struct {
+	Name        string `json:"name,omitempty"`
+	NamespaceId string `json:"namespace_id,omitempty"`
+	Type        string `json:"type"`
 }
 
 type AuditSecret struct {
