@@ -1726,7 +1726,7 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 	}
 	modifiedResponseMonths = append(modifiedResponseMonths, months...)
 	for lastMonth.Before(end) {
-		lastMonth = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
+		lastMonth = timeutil.StartOfMonth(lastMonth.AddDate(0, 1, 0))
 		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
 	}
