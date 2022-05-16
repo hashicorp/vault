@@ -4,7 +4,7 @@
     {{#if this.needsConfig}}
       Configure CA Certificate
     {{else}}
-      Replace CA Certificate
+      Add CA Certificate
     {{/if}}
   </h2>
   {{#if (or this.model.certificate this.model.csr)}}
@@ -89,8 +89,8 @@
           {{#if this.model.canDeleteRoot}}
             <ConfirmAction
               @buttonClasses="button"
-              @confirmTitle="Delete this CA key?"
-              @confirmMessage="This CA certificate will still be available for reading until a new certificate/key is generated or uploaded."
+              @confirmTitle="Delete default issuer?"
+              @confirmMessage="The default issuer certificate will be deleted, but its key material preserved."
               @onConfirmAction={{action "deleteCA"}}
             >
               Delete
@@ -231,7 +231,7 @@
         {{#if this.needsConfig}}
           Configure CA
         {{else}}
-          Replace CA
+          Add CA
         {{/if}}
       </button>
     </div>

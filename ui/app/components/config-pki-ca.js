@@ -140,15 +140,10 @@ export default Component.extend({
       const isUpload = this.model.uploadPemBundle;
       model
         .save({ adapterOptions: { method } })
-        .then((m) => {
+        .then(() => {
           if (method === 'setSignedIntermediate' || isUpload) {
             this.send('refresh');
             this.flashMessages.success('The certificate for this backend has been updated.');
-          } else if (!m.get('certificate') && !m.get('csr')) {
-            // if there's no certificate, it wasn't generated and the generation was a noop
-            this.flashMessages.warning(
-              'You tried to generate a new root CA, but one currently exists. To replace the existing one, delete it first and then generate again.'
-            );
           }
         })
         .catch((e) => {
@@ -168,7 +163,7 @@ export default Component.extend({
         .destroyRecord()
         .then(() => {
           this.flashMessages.success(
-            `The CA key for ${backend} has been deleted. The old CA certificate will still be accessible for reading until a new certificate/key is generated or uploaded.`
+            `The default issuer for ${backend} has been deleted. Its key material was preserved; to restore the issuer, import the public certificate.`
           );
         })
         .finally(() => {
