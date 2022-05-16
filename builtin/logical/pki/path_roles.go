@@ -726,6 +726,18 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	if len(entry.Issuer) == 0 {
 		entry.Issuer = defaultRef
 	}
+	// Check that the issuers reference set resolves to something
+	issuerId, err := resolveIssuerReference(ctx, req.Storage, entry.Issuer)
+	if issuerId == IssuerRefNotFound {
+		if resp == nil {
+			resp = &logical.Response{}
+		}
+		if entry.Issuer == defaultRef {
+			resp.AddWarning("Issuing Certificate was set to default, but no default issuing certificate (configurable at /config/issuers) is currently set")
+		} else {
+			resp.AddWarning(fmt.Sprintf("Issuing Certificate was set to %s but no issuing certificate currently has that name", entry.Issuer))
+		}
+	}
 
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
