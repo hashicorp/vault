@@ -44,6 +44,11 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 
+	config, err := getKeysConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, identifier := range entries {
 		key, err := fetchKeyById(ctx, req.Storage, identifier)
 		if err != nil {
@@ -53,6 +58,8 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 		responseKeys = append(responseKeys, string(identifier))
 		responseInfo[string(identifier)] = map[string]interface{}{
 			keyNameParam: key.Name,
+			"is_default": identifier == config.DefaultKeyId,
+			"key_type":   key.PrivateKeyType,
 		}
 
 	}
