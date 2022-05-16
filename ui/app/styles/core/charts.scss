@@ -6,6 +6,29 @@
 }
 
 // GRID LAYOUT //
+.single-month-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2em;
+  width: 100%;
+}
+.single-month-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2em;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.single-month-section-title {
+  grid-column-start: 1;
+  grid-column-end: span col3-end;
+}
+.single-month-breakdown-entity {
+  grid-column-start: 1;
+}
+.single-month-breakdown-nonentity {
+  grid-column-start: 2;
+}
 .stacked-charts {
   display: grid;
   width: 100%;
@@ -101,10 +124,13 @@
 }
 
 .chart-empty-state {
-  height: 100%;
-  width: 100%;
+  place-self: center stretch;
   grid-row-end: span 3;
   grid-column-end: span 3;
+  max-width: none;
+  padding-right: 20px;
+  padding-left: 20px;
+
   > div {
     box-shadow: none !important;
   }

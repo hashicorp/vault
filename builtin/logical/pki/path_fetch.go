@@ -16,8 +16,10 @@ func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `ca(/pem)?`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -30,8 +32,10 @@ func pathFetchCAChain(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `(cert/)?ca_chain`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -44,8 +48,10 @@ func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl(/pem)?`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -65,8 +71,10 @@ hyphen-separated octal`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -87,8 +95,10 @@ hyphen-separated octal`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -101,8 +111,10 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/crl`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -115,8 +127,10 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathFetchCertList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathFetchCertList,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -124,7 +138,7 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (response *logical.Response, retErr error) {
 	entries, err := req.Storage.List(ctx, "certs/")
 	if err != nil {
 		return nil, err
@@ -165,14 +179,14 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			contentType = "application/pkix-cert"
 		}
 	case req.Path == "crl" || req.Path == "crl/pem":
-		serial = "crl"
+		serial = legacyCRLPath
 		contentType = "application/pkix-crl"
 		if req.Path == "crl/pem" {
 			pemType = "X509 CRL"
 			contentType = "application/x-pem-file"
 		}
 	case req.Path == "cert/crl":
-		serial = "crl"
+		serial = legacyCRLPath
 		pemType = "X509 CRL"
 	case strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/raw"):
 		serial = data.Get("serial").(string)
@@ -190,8 +204,9 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		goto reply
 	}
 
-	if serial == "ca_chain" {
-		caInfo, err := fetchCAInfo(ctx, b, req)
+	// Prefer fetchCAInfo to fetchCertBySerial for CA certificates.
+	if serial == "ca_chain" || serial == "ca" {
+		caInfo, err := fetchCAInfo(ctx, b, req, defaultRef, ReadOnlyUsage)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -203,32 +218,37 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			}
 		}
 
-		caChain := caInfo.GetCAChain()
-		var certStr string
-		for _, ca := range caChain {
-			block := pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: ca.Bytes,
+		if serial == "ca_chain" {
+			rawChain := caInfo.GetFullChain()
+			var chainStr string
+			for _, ca := range rawChain {
+				block := pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: ca.Bytes,
+				}
+				chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 			}
-			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
-		}
-		certificate = []byte(strings.TrimSpace(certStr))
+			fullChain = []byte(strings.TrimSpace(chainStr))
+			certificate = fullChain
+		} else if serial == "ca" {
+			certificate = caInfo.Certificate.Raw
 
-		rawChain := caInfo.GetFullChain()
-		var chainStr string
-		for _, ca := range rawChain {
-			block := pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: ca.Bytes,
+			if len(pemType) != 0 {
+				block := pem.Block{
+					Type:  pemType,
+					Bytes: certificate,
+				}
+
+				// This is convoluted on purpose to ensure that we don't have trailing
+				// newlines via various paths
+				certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 			}
-			chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
-		fullChain = []byte(strings.TrimSpace(chainStr))
 
 		goto reply
 	}
 
-	certEntry, funcErr = fetchCertBySerial(ctx, req, req.Path, serial)
+	certEntry, funcErr = fetchCertBySerial(ctx, b, req, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -256,7 +276,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 	}
 
-	revokedEntry, funcErr = fetchCertBySerial(ctx, req, "revoked/", serial)
+	revokedEntry, funcErr = fetchCertBySerial(ctx, b, req, "revoked/", serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:

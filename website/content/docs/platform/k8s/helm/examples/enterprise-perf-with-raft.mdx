@@ -120,7 +120,7 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-secondary-1.vault-secondary-intern
 
 ## Enable Performance Replication On Primary
 
-With the initial clusters setup, we can now configure them for performance replication.
+With the initial clusters setup, we can now configure them for Performance Replication.
 
 First, on the primary cluster, enable replication:
 
@@ -138,7 +138,7 @@ The token in the output will be used when configuring the secondary cluster.
 
 ## Enable Performance Replication On Secondary
 
-Using the token created in the last step, enable performance replication on the secondary:
+Using the token created in the last step, enable Performance Replication on the secondary:
 
 ```shell
 kubectl exec -ti vault-secondary-0 -- vault write sys/replication/performance/secondary/enable token=<TOKEN FROM PRIMARY>

@@ -64,7 +64,7 @@ elRplAzrMF4=
     assert.dom(SELECTORS.issuingCa).exists('displays masked issuing CA');
     assert.dom(SELECTORS.privateKey).exists('displays masked private key');
     assert.dom(SELECTORS.serialNumber).exists('displays serial number');
-    assert.dom(SELECTORS.caChain).doesNotExist('does not display empty masked CA chain');
+    assert.dom(SELECTORS.caChain).exists('displays the CA chain');
 
     await generatePage.back();
     await settled();
