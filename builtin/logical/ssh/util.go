@@ -222,17 +222,13 @@ func convertMapToStringValue(initial map[string]interface{}) map[string]string {
 }
 
 func convertMapToIntSlice(initial map[string]interface{}) (map[string][]int, error) {
+	var err error
 	result := map[string][]int{}
 
 	for key, value := range initial {
-		sliced, err := parseutil.ParseIntSlice(value)
+		result[key], err = parseutil.SafeParseIntSlice(value, 0 /* no upper bound on number of keys lengths per key type */)
 		if err != nil {
 			return nil, err
-		}
-
-		result[key] = make([]int, 0, len(sliced))
-		for _, value := range sliced {
-			result[key] = append(result[key], int(value))
 		}
 	}
 
