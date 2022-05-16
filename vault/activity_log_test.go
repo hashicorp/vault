@@ -2776,7 +2776,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 	}
 }
 
-// TestActivityLog_Precompute_SkipMonth will put two non-contiguous chunks od
+// TestActivityLog_Precompute_SkipMonth will put two non-contiguous chunks of
 // data in the activity log, and then run precomputedQueryWorker. Finally it
 // will perform a query get over the skip month and expect a query for the entire
 // time segment (non-contiguous)
