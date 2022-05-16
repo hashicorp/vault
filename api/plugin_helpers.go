@@ -17,6 +17,10 @@ import (
 )
 
 var (
+	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
+	// setting a TLSProviderFunc for a plugin.
+	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS"
+
 	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
 	// to bootstrap mounting plugins.
 	PluginMetadataModeEnv = "VAULT_PLUGIN_METADATA_MODE"
@@ -120,7 +124,7 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 // VaultPluginTLSProviderContext is run inside a plugin and retrieves the response
 // wrapped TLS certificate from vault. It returns a configured TLS Config.
 func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
-	if os.Getenv(PluginMetadataModeEnv) == "true" {
+	if os.Getenv(PluginAutoMTLSEnv) == "true" || os.Getenv(PluginMetadataModeEnv) == "true" {
 		return nil
 	}
 
