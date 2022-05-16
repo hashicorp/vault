@@ -77,29 +77,26 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 
 	if !migrationInfo.isRequired {
 		// No migration was deemed to be required.
-		b.Logger().Debug("existing migration found and was considered valid, skipping migration.")
 		return nil
 	}
 
 	var issuerIdentifier issuerID
 	var keyIdentifier keyID
-	b.Logger().Info("performing PKI migration to new keys/issuers layout")
 	if migrationInfo.legacyBundle != nil {
+		b.Logger().Info("performing PKI migration to new keys/issuers layout")
 		anIssuer, aKey, err := writeCaBundle(ctx, b, s, migrationInfo.legacyBundle, "current", "current")
 		if err != nil {
 			return err
 		}
-		b.Logger().Debug("Migration generated the following ids and set them as defaults",
+		b.Logger().Info("Migration generated the following ids and set them as defaults",
 			"issuer id", anIssuer.ID, "key id", aKey.ID)
 		issuerIdentifier = anIssuer.ID
 		keyIdentifier = aKey.ID
-	} else {
-		b.Logger().Debug("No legacy CA certs found, no migration required.")
-	}
 
-	// Since we do not have all the mount information available we must schedule
-	// the CRL to be rebuilt at a later time.
-	b.crlBuilder.requestRebuildIfActiveNode(b)
+		// Since we do not have all the mount information available we must schedule
+		// the CRL to be rebuilt at a later time.
+		b.crlBuilder.requestRebuildIfActiveNode(b)
+	}
 
 	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
 	// if they were upgraded prior to the primary cluster's migration occurred.
@@ -114,7 +111,6 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 		return err
 	}
 
-	b.Logger().Info("successfully completed migration to new keys/issuers layout")
 	return nil
 }
 

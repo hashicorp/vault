@@ -344,10 +344,8 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock b
 	}
 
 	if info.isRequired {
-		b.Logger().Info("PKI migration is required, reading cert bundle from legacy ca location")
 		b.pkiStorageVersion.Store(0)
 	} else {
-		b.Logger().Debug("PKI migration previously completed, reading cert bundle from key/issuer storage")
 		b.pkiStorageVersion.Store(1)
 	}
 }
@@ -360,6 +358,7 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		// as a go routine to not block this call due to the lock grabbing
 		// within updatePkiStorageVersion.
 		go func() {
+			b.Logger().Info("Detected a migration completed, resetting pki storage version")
 			b.updatePkiStorageVersion(ctx, true)
 			b.crlBuilder.requestRebuildIfActiveNode(b)
 		}()
