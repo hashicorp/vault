@@ -1,3 +1,3 @@
 ```release-note:bug
-auth: Fixed erroneous success message when using vault login in case of two-phase MFA, and fixed MFA information missing from table format when using vault login.
+auth: Fixed erroneous success message and token info when using vault login in case of two-phase MFA, and fixed MFA information missing from table format when using vault login.
 ```
