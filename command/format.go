@@ -350,7 +350,6 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		if additional, ok := secret.Data["key_info"]; shouldListWithInfo && ok && len(additional.(map[string]interface{})) > 0 {
 			additionalInfo = additional.(map[string]interface{})
 		}
-
 	}
 
 	switch data := data.(type) {
@@ -381,24 +380,31 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		var headers []string
 		header := "Keys"
 		if len(additionalInfo) > 0 {
-			for _, rawValues := range additionalInfo {
+			seenHeaders := make(map[string]bool)
+			for key, rawValues := range additionalInfo {
+				// Most endpoints use the well-behaved ListResponseWithInfo.
+				// However, some use a hand-rolled equivalent, where the
+				// returned "keys" doesn't match the key of the "key_info"
+				// member (namely, /sys/policies/egp). We seek to exclude
+				// headers only visible from "non-visitable" key_info rows,
+				// to make table output less confusing. These non-visitable
+				// rows will still be visible in the JSON output.
+				index := sort.SearchStrings(keys, key)
+				if index < len(keys) && keys[index] != key {
+					continue
+				}
+
 				values := rawValues.(map[string]interface{})
 				for key := range values {
-					haveKey := false
-					for _, title := range headers {
-						if title == key {
-							haveKey = true
-							break
-						}
-					}
-
-					if !haveKey {
-						headers = append(headers, key)
-					}
+					seenHeaders[key] = true
 				}
 			}
 
+			for key := range seenHeaders {
+				headers = append(headers, key)
+			}
 			sort.Strings(headers)
+
 			header = header + hopeDelim + strings.Join(headers, hopeDelim)
 		}
 
