@@ -40,6 +40,8 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 		"Hash value (%s) should not have been empty", logEntry.Hash)
 	require.True(t, startTime.Before(logEntry.Created),
 		"created log entry time (%v) was before our start time(%v)?", logEntry.Created, startTime)
+	require.Empty(t, logEntry.CreatedIssuer)
+	require.Empty(t, logEntry.CreatedKey)
 
 	require.False(t, b.useLegacyBundleCaStorage(), "post migration we are still told to use legacy storage")
 
@@ -91,6 +93,8 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 		"Hash value (%s) should not have been empty", logEntry.Hash)
 	require.True(t, startTime.Before(logEntry.Created),
 		"created log entry time (%v) was before our start time(%v)?", logEntry.Created, startTime)
+	require.Equal(t, logEntry.CreatedIssuer, issuerIds[0])
+	require.Equal(t, logEntry.CreatedKey, keyIds[0])
 
 	issuerId := issuerIds[0]
 	keyId := keyIds[0]
