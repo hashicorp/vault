@@ -10,7 +10,7 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
   createOrUpdate(store, type, snapshot) {
     const data = store.serializerFor(type.modelName).serialize(snapshot);
     const { id } = snapshot;
-    return this.ajax(this.buildURL(type.modelName, data.type, id, 'POST'), 'POST', {
+    return this.ajax(this.buildURL(type.modelName, id, snapshot, 'POST'), 'POST', {
       data,
     }).then(() => {
       // TODO: Check how 204's are handled by ember
@@ -40,9 +40,9 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
     });
   }
 
-  buildURL(modelName, type, id, requestType) {
+  buildURL(modelName, id, snapshot, requestType) {
     if (requestType === 'POST') {
-      return `${super.buildURL(modelName, null, null, null)}/${type}/${id}`;
+      return `${super.buildURL(modelName)}/${snapshot.attr('type')}/${snapshot.id}`;
     }
     return super.buildURL(...arguments);
   }
