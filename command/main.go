@@ -19,7 +19,8 @@ import (
 
 type VaultUI struct {
 	cli.Ui
-	format string
+	format   string
+	detailed bool
 }
 
 // setupEnv parses args and may replace them and sets some env vars to known

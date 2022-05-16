@@ -131,8 +131,10 @@ func (c *ListCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Hijack the secret's data to show the list with information.
-	secret.Data[doListWithInfoConstant] = c.flagDetailed
+	switch ui := c.UI.(type) {
+	case *VaultUI:
+		ui.detailed = c.flagDetailed
+	}
 
 	return OutputList(c.UI, secret)
 }

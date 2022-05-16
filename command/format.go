@@ -20,11 +20,6 @@ const (
 	// hopeDelim is the delimiter to use when splitting columns. We call it a
 	// hopeDelim because we hope that it's never contained in a secret.
 	hopeDelim = "♨"
-
-	// We hijack the secret's Data field, adding this constant in on list
-	// requests, to know if we should show the additional key_info from a
-	// ListResponseWithInfo.
-	doListWithInfoConstant = "vault_cli_do_list_with_info"
 )
 
 type FormatOptions struct {
@@ -91,6 +86,15 @@ func Format(ui cli.Ui) string {
 	return format
 }
 
+func Detailed(ui cli.Ui) bool {
+	switch ui := ui.(type) {
+	case *VaultUI:
+		return ui.detailed
+	}
+
+	return false
+}
+
 // An output formatter for json output of an object
 type JsonFormatter struct{}
 
@@ -105,17 +109,14 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 	}
 
 	if secret != nil {
-		if rawShouldListWithInfo, ok := secret.Data[doListWithInfoConstant]; ok {
-			shouldListWithInfo := rawShouldListWithInfo.(bool)
-			delete(secret.Data, doListWithInfoConstant)
+		shouldListWithInfo := Detailed(ui)
 
-			// Show the raw JSON of the LIST call, rather than only the
-			// list of keys.
-			if shouldListWithInfo {
-				b, err = j.Format(secret)
-				if err != nil {
-					return err
-				}
+		// Show the raw JSON of the LIST call, rather than only the
+		// list of keys.
+		if shouldListWithInfo {
+			b, err = j.Format(secret)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -345,14 +346,11 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 	// Determine if we have additional information from a ListResponseWithInfo endpoint.
 	var additionalInfo map[string]interface{}
 	if secret != nil {
-		if rawShouldListWithInfo, ok := secret.Data[doListWithInfoConstant]; ok {
-			shouldListWithInfo := rawShouldListWithInfo.(bool)
-			if additional, ok := secret.Data["key_info"]; shouldListWithInfo && ok && len(additional.(map[string]interface{})) > 0 {
-				additionalInfo = additional.(map[string]interface{})
-			}
-
-			delete(secret.Data, doListWithInfoConstant)
+		shouldListWithInfo := Detailed(ui)
+		if additional, ok := secret.Data["key_info"]; shouldListWithInfo && ok && len(additional.(map[string]interface{})) > 0 {
+			additionalInfo = additional.(map[string]interface{})
 		}
+
 	}
 
 	switch data := data.(type) {
