@@ -2830,6 +2830,7 @@ func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
 	// Here, it means that we can't insert everything *first* and do multiple
 	// test cases, we have to write logs incrementally.
 	doInsert := func(i int) {
+		t.Helper()
 		segment := toInsert[i]
 		eal := &activity.EntityActivityLog{
 			Clients: segment.Clients,

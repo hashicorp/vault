@@ -149,7 +149,7 @@ func (s *PrecomputedQueryStore) getMaxEndTime(ctx context.Context, startTime tim
 		}
 		endTime := time.Unix(val, 0).UTC()
 		s.logger.Trace("end time in consideration is", "end time", endTime, "end time bound", endTimeBound)
-		if endTime.After(maxEndTime) && (endTime.Before(endTimeBound) || endTime.Equal(endTimeBound)) {
+		if endTime.After(maxEndTime) && !endTime.After(endTimeBound) {
 			s.logger.Trace("end time has been updated")
 			maxEndTime = endTime
 		}
