@@ -7,6 +7,29 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
     return 'identity/mfa/method';
   }
 
+  createOrUpdate(store, type, snapshot) {
+    const data = store.serializerFor(type.modelName).serialize(snapshot);
+    let id = snapshot.id;
+    return this.ajax(`${this.urlForQuery(type.modelName, snapshot)}/${data.type}/${id}`, 'POST', {
+      data,
+    }).then(() => {
+      return {
+        data: {
+          id,
+          ...data,
+        },
+      };
+    });
+  }
+
+  createRecord() {
+    return this.createOrUpdate(...arguments);
+  }
+
+  updateRecord() {
+    return this.createOrUpdate(...arguments);
+  }
+
   queryRecord(store, type, query) {
     const { id } = query;
     if (!id) {
