@@ -2248,7 +2248,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 	cert := certs[0]
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
-		t.Fatalf("sign-verbatim did not properly cap validity period on signed CSR")
+		t.Fatalf("sign-verbatim did not properly cap validity period (notAfter) on signed CSR: was %v vs requested %v but should've been %v", cert.NotAfter, time.Now().Add(12*time.Hour), time.Now().Add(8*time.Hour))
+	}
+	if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+		t.Fatalf("sign-verbatim did not properly cap validity period (notBefore) on signed CSR: was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 	}
 
 	// Now check signing a certificate using the not_after input using the Y10K value
