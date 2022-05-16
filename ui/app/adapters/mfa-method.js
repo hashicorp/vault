@@ -42,7 +42,8 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
 
   buildURL(modelName, id, snapshot, requestType) {
     if (requestType === 'POST') {
-      return `${super.buildURL(modelName)}/${snapshot.attr('type')}/${snapshot.id}`;
+      let url = `${super.buildURL(modelName)}/${snapshot.attr('type')}`;
+      return id ? `${url}/${id}` : url;
     }
     return super.buildURL(...arguments);
   }
