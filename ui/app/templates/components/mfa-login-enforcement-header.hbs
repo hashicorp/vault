@@ -1,4 +1,16 @@
 <PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.mfa.enforcements.index">
+            Enforcements
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
   <p.levelLeft>
     <h1 class="title {{if @heading 'is-3' 'is-5'}}">
       {{#if @heading}}
