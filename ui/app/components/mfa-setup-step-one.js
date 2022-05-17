@@ -60,8 +60,8 @@ export default class MfaSetupStepOne extends Component {
           w.includes('Entity already has a secret for MFA method')
         );
         if (alreadyGenerated) {
-          // replace warning because it comes in with extra quotes: "Entity already has a secret for MFA method ""' "
-          this.warning = 'Entity already has a secret for MFA method';
+          this.warning =
+            'A QR code has already been generated, scanned, and MFA set up for this entity. If a new code is required, contact your administrator.';
           return 'reset_method';
         }
         this.warning = warnings; // in case other kinds of warnings comes through.
