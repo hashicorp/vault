@@ -3,41 +3,48 @@ package redis
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/phayes/freeport"
 )
 
 func getBackend(t *testing.T) (*backend, context.Context, logical.Storage, string, func()) {
-	path, err := exec.LookPath("redis-server")
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     "redis",
+		ImageTag:      "7",
+		ContainerName: "reddis",
+		Ports:         []string{"6379/tcp"},
+	})
 	if err != nil {
-		t.Skipf("redis-server must be installed to run this test")
+		t.Fatalf("could not start docker redis: %s", err)
 	}
 
-	port, err := freeport.GetFreePort()
-	if err != nil {
-		t.Fatalf("failed to get free port: %s", err)
-	}
+	ctx := context.Background()
+	svc, err := runner.StartService(ctx, func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		client := redis.NewClient(&redis.Options{
+			Addr: fmt.Sprintf("%s:%d", host, port),
+		})
+		if result := client.Ping(ctx); result.Err() != nil {
+			return nil, result.Err()
+		}
 
-	cmd := exec.Command(path, "--port", strconv.Itoa(port))
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("failed to start redis server: %s", err)
+		return docker.NewServiceHostPort(host, port), nil
+	})
+	if err != nil {
+		t.Fatalf("could not start docker redis: %s", err)
 	}
 
 	b := Backend()
-	ctx := context.Background()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	if err := b.Setup(ctx, config); err != nil {
 		t.Fatal(err)
 	}
 
-	return b, ctx, config.StorageView, fmt.Sprintf("localhost:%d", port), func() { cmd.Process.Kill() }
+	return b, ctx, config.StorageView, svc.Config.Address(), svc.Cleanup
 }
 
 func setConfig(t *testing.T, b *backend, ctx context.Context, s logical.Storage, addr string, rotate bool) {

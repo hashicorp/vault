@@ -21,7 +21,7 @@
 /builtin/logical/nomad/       @hashicorp/vault-ecosystem
 /builtin/logical/postgresql/  @hashicorp/vault-ecosystem
 /builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem
-/builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem @remilapeyre
+/builtin/logical/redis/    @hashicorp/vault-ecosystem @remilapeyre
 
 /command/agent/               @hashicorp/vault-ecosystem
 /plugins/                     @hashicorp/vault-ecosystem
