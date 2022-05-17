@@ -14,10 +14,10 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.6.6
 	github.com/hashicorp/go-rootcerts v1.0.2
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.4
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.5
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/sdk v0.4.1
-	github.com/mitchellh/mapstructure v1.4.2
+	github.com/mitchellh/mapstructure v1.5.0
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	gopkg.in/square/go-jose.v2 v2.5.1
