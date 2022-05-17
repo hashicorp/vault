@@ -13,13 +13,15 @@
         {{qr-code text=@qrCode colorLight="#F7F7F7" width=155 height=155 correctLevel="L"}}
       </div>
     </div>
-    <div class="info-table-row has-no-shadow has-top-margin-s">
-      <div class="column info-table-row-edit"><Icon @name="alert-triangle-fill" class="has-text-highlight" /></div>
-      <p class="is-size-8">
-        After you leave this page, this QR code will be removed and
-        <strong>cannot</strong>
-        be regenerated.
-      </p>
+    <div class="has-top-margin-s">
+      <div class="info-table-row has-no-shadow">
+        <div class="column info-table-row-edit"><Icon @name="alert-triangle-fill" class="has-text-highlight" /></div>
+        <p class="is-size-8">
+          After you leave this page, this QR code will be removed and
+          <strong>cannot</strong>
+          be regenerated.
+        </p>
+      </div>
     </div>
   {{/if}}
   <div class="is-flex-start has-top-margin-l">
