@@ -72,7 +72,7 @@
         <button class="button has-left-margin-xs" type="button" {{on "click" this.cancel}}>
           Cancel
         </button>
-      {{else}}
+      {{else if this.type}}
         <button class="button is-primary" type="button" {{on "click" this.createMethod}}>
           Next
         </button>
