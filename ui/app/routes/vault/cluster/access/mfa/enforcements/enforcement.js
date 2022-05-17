@@ -1,7 +1,7 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
-export default class MfaLoginEnforcementReadRoute extends Route {
+export default class MfaLoginEnforcementRoute extends Route {
   @service store;
 
   model({ name }) {

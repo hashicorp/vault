@@ -61,7 +61,6 @@ export default class MfaLoginEnforcementForm extends Component {
   }
   async resetTargetState() {
     this.selectedTargetValue = null;
-    this.searchSelect.selected = [];
     const options = this.searchSelectOptions || {};
     if (!this.searchSelectOptions) {
       const types = ['identity/group', 'identity/entity'];
@@ -75,7 +74,10 @@ export default class MfaLoginEnforcementForm extends Component {
       this.searchSelectOptions = options;
     }
     if (this.selectedTargetType.includes('identity')) {
-      this.searchSelect.options = [...options[this.selectedTargetType]];
+      this.searchSelect = {
+        selected: [],
+        options: [...options[this.selectedTargetType]],
+      };
     }
   }
 

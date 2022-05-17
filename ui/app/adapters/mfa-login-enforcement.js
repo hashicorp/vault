@@ -9,7 +9,9 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
 
   _saveRecord(store, { modelName }, snapshot) {
     const data = store.serializerFor(modelName).serialize(snapshot);
-    return this.ajax(this.urlForUpdateRecord(modelName, snapshot), 'POST', { data }).then(() => data);
+    return this.ajax(this.urlForUpdateRecord(snapshot.attr('name'), modelName, snapshot), 'POST', {
+      data,
+    }).then(() => data);
   }
   // create does not return response similar to PUT request
   async createRecord() {
