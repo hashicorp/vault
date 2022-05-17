@@ -153,28 +153,6 @@ export default Component.extend({
           this.set('loading', false);
         });
     },
-    deleteCA() {
-      this.set('loading', true);
-      const model = this.model;
-      const backend = model.get('backend');
-      //TODO Is there better way to do this? This forces the saved state so Ember Data will make a server call.
-      model.send('pushedData');
-      model
-        .destroyRecord()
-        .then(() => {
-          this.flashMessages.success(
-            `The default issuer for ${backend} has been deleted. Its key material was preserved; to restore the issuer, import the public certificate.`
-          );
-        })
-        .catch((e) => {
-          this.set('errors', e.errors);
-        })
-        .finally(() => {
-          this.set('loading', false);
-          this.send('refresh');
-          this.createOrReplaceModel();
-        });
-    },
     refresh() {
       this.setProperties({
         setSignedIntermediate: false,
