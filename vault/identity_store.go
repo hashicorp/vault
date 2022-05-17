@@ -142,6 +142,30 @@ func (i *IdentityStore) paths() []*framework.Path {
 func mfaPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
+			Pattern: "mfa/method" + genericOptionalUUIDRegex("method_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodReadGlobal,
+					Summary:  "Read the current configuration for the given ID regardless of the MFA method type",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodListGlobal,
+					Summary:  "List MFA method configurations for all MFA methods",
+				},
+			},
+		},
+		{
 			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
@@ -189,7 +213,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodTOTPRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -303,7 +327,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodOKTARead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -359,7 +383,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodDuoRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -399,7 +423,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodPingIDRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
