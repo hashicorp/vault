@@ -63,16 +63,22 @@ func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, e
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
+
+	entries := &certutil.URLEntries{
+		IssuingCertificates:   []string{},
+		CRLDistributionPoints: []string{},
+		OCSPServers:           []string{},
 	}
 
-	var entries certutil.URLEntries
-	if err := entry.DecodeJSON(&entries); err != nil {
+	if entry == nil {
+		return entries, nil
+	}
+
+	if err := entry.DecodeJSON(entries); err != nil {
 		return nil, err
 	}
 
-	return &entries, nil
+	return entries, nil
 }
 
 func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLEntries) error {
@@ -97,9 +103,6 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 	if err != nil {
 		return nil, err
 	}
-	if entries == nil {
-		return nil, nil
-	}
 
 	resp := &logical.Response{
 		Data: structs.New(entries).Map(),
@@ -112,13 +115,6 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
-	}
-	if entries == nil {
-		entries = &certutil.URLEntries{
-			IssuingCertificates:   []string{},
-			CRLDistributionPoints: []string{},
-			OCSPServers:           []string{},
-		}
 	}
 
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
