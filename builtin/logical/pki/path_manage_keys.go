@@ -82,7 +82,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 
 	keyName, err := getKeyName(ctx, req.Storage, data)
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	exportPrivateKey := false
@@ -189,7 +189,10 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	}
 
 	pemBundle := data.Get("pem_bundle").(string)
-	keyName := data.Get(keyNameParam).(string)
+	keyName, err := getKeyName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 
 	pemBytes := []byte(pemBundle)
 	var pemBlock *pem.Block
