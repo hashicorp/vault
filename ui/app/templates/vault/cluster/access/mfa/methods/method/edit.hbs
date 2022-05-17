@@ -2,16 +2,16 @@
   <p.levelLeft>
     <h1 class="title is-3">
       Configure
-      {{this.model.name}}
+      {{this.model.method.name}}
       MFA
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 <Mfa::MethodForm
-  @model={{this.model}}
+  @model={{this.model.method}}
   @isEditMode={{true}}
   @hasActions={{true}}
-  @onSave={{transition-to "vault.cluster.access.mfa.methods.method" this.model.id}}
-  @onClose={{transition-to "vault.cluster.access.mfa.methods.method" this.model.id}}
+  @onSave={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}
+  @onClose={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}
 />
