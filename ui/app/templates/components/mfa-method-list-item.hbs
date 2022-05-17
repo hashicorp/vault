@@ -1,0 +1,43 @@
+<LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.methods.method" @model.id}}>
+  <div class="level is-mobile">
+    <div class="level-left">
+      <div class="is-flex-row">
+        <Icon @size="24" @name={{@model.type}} class="has-text-grey" />
+        <div>
+          <span class="has-text-weight-semibold has-text-black">
+            {{if (eq @model.type "totp") (uppercase @model.type) @model.type}}
+          </span>
+          <span class="tag has-left-margin-xs">
+            {{@model.id}}
+          </span>
+          <div class="has-top-margin-xs">
+            <code class="is-size-9">
+              Namespace:
+              {{@model.namespace_id}}
+            </code>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="level-right is-flex is-paddingless is-marginless">
+      <div class="level-item">
+        <PopupMenu>
+          <nav class="menu">
+            <ul class="menu-list">
+              <li>
+                <LinkTo @route="vault.cluster.access.mfa.methods.method" @model={{@model.id}}>
+                  Details
+                </LinkTo>
+              </li>
+              <li>
+                <LinkTo @route="vault.cluster.access.mfa.methods.method.edit" @model={{@model.id}}>
+                  Edit
+                </LinkTo>
+              </li>
+            </ul>
+          </nav>
+        </PopupMenu>
+      </div>
+    </div>
+  </div>
+</LinkedBlock>

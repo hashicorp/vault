@@ -18,22 +18,7 @@
 
 {{#if this.model.meta.total}}
   {{#each this.model as |item|}}
-    <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.methods.method" item.id}}>
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <span class="has-text-weight-semibold has-text-black">
-              <Icon @size="24" @name={{item.type}} />
-              {{item.name}}
-            </span>
-            <br />
-            <code class="has-text-grey is-size-8">
-              {{item.id}}
-            </code>
-          </div>
-        </div>
-      </div>
-    </LinkedBlock>
+    <MfaMethodListItem @model={{item}} />
   {{/each}}
 {{/if}}
 {{#if (gt this.model.meta.lastPage 1)}}
