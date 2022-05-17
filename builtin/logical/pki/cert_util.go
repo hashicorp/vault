@@ -143,13 +143,6 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
-	if entries == nil {
-		entries = &certutil.URLEntries{
-			IssuingCertificates:   []string{},
-			CRLDistributionPoints: []string{},
-			OCSPServers:           []string{},
-		}
-	}
 	caInfo.URLs = entries
 
 	return caInfo, nil
@@ -632,13 +625,6 @@ func generateCert(ctx context.Context,
 			entries, err := getURLs(ctx, input.req)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-			}
-			if entries == nil {
-				entries = &certutil.URLEntries{
-					IssuingCertificates:   []string{},
-					CRLDistributionPoints: []string{},
-					OCSPServers:           []string{},
-				}
 			}
 			data.Params.URLs = entries
 
