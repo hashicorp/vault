@@ -23,7 +23,7 @@ func TestExtractVersionMetadata(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    *Secret
-		expected *VersionMetadata
+		expected *KVVersionMetadata
 	}{
 		{
 			name: "a secret",
@@ -41,7 +41,7 @@ func TestExtractVersionMetadata(t *testing.T) {
 					},
 				},
 			},
-			expected: &VersionMetadata{
+			expected: &KVVersionMetadata{
 				Version:        10,
 				CreatedTime:    expectedCreatedTimeParsed,
 				DeletionTime:   time.Time{},
@@ -65,7 +65,7 @@ func TestExtractVersionMetadata(t *testing.T) {
 					},
 				},
 			},
-			expected: &VersionMetadata{
+			expected: &KVVersionMetadata{
 				Version:        10,
 				CreatedTime:    expectedCreatedTimeParsed,
 				DeletionTime:   expectedDeletionTimeParsed,
@@ -93,7 +93,7 @@ func TestExtractVersionMetadata(t *testing.T) {
 					},
 				},
 			},
-			expected: &VersionMetadata{
+			expected: &KVVersionMetadata{
 				Version:      10,
 				CreatedTime:  expectedCreatedTimeParsed,
 				DeletionTime: time.Time{},
