@@ -9,6 +9,7 @@
     autocomplete="off"
     spellcheck="false"
     value={{@model.name}}
+    disabled={{not @model.isNew}}
     class="input field"
     {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
   />
