@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/chrismalek/oktasdk-go/okta"
 	duoapi "github.com/duosecurity/duo_api_golang"
 	"github.com/duosecurity/duo_api_golang/authapi"
 	"github.com/golang-jwt/jwt/v4"
@@ -36,6 +35,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/mitchellh/mapstructure"
+	"github.com/okta/okta-sdk-golang/v2/okta"
+	"github.com/okta/okta-sdk-golang/v2/okta/query"
 	"github.com/patrickmn/go-cache"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
@@ -1863,31 +1864,33 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("failed to get Okta configuration for method %q", mConfig.Name)
 	}
 
-	var client *okta.Client
-	if oktaConfig.BaseURL != "" {
-		var err error
-		client, err = okta.NewClientWithDomain(cleanhttp.DefaultClient(), oktaConfig.OrgName, oktaConfig.BaseURL, oktaConfig.APIToken)
-		if err != nil {
-			return errwrap.Wrapf("error getting Okta client: {{err}}", err)
-		}
-	} else {
-		client = okta.NewClient(cleanhttp.DefaultClient(), oktaConfig.OrgName, oktaConfig.APIToken, oktaConfig.Production)
+	baseURL := oktaConfig.BaseURL
+	if baseURL == "" {
+		baseURL = "okta.com"
 	}
-	// Disable client side rate limiting
-	client.RateRemainingFloor = 0
+	orgURL, err := url.Parse(fmt.Sprintf("https://%s.%s", oktaConfig.OrgName, baseURL))
+	if err != nil {
+		return err
+	}
 
-	var filterOpts *okta.UserListFilterOptions
+	ctx, client, err := okta.NewClient(ctx,
+		okta.WithToken(oktaConfig.APIToken),
+		okta.WithOrgUrl(orgURL.String()),
+		// Do not use cache or polling MFA will not refresh
+		okta.WithCache(false),
+	)
+	if err != nil {
+		return fmt.Errorf("error creating client: %s", err)
+	}
+
+	filterField := "profile.login"
 	if oktaConfig.PrimaryEmail {
-		filterOpts = &okta.UserListFilterOptions{
-			EmailEqualTo: username,
-		}
-	} else {
-		filterOpts = &okta.UserListFilterOptions{
-			LoginEqualTo: username,
-		}
+		filterField = "profile.email"
 	}
+	filterQuery := fmt.Sprintf("%s eq %q", filterField, username)
+	filter := query.NewQueryParams(query.WithFilter(filterQuery))
 
-	users, _, err := client.Users.ListWithFilter(filterOpts)
+	users, _, err := client.User.ListUsers(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -1898,50 +1901,34 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("more than one user found for e-mail address")
 	}
 
-	user := &users[0]
+	user := users[0]
 
-	_, err = client.Users.PopulateMFAFactors(user)
+	factors, _, err := client.UserFactor.ListFactors(ctx, user.Id)
 	if err != nil {
 		return err
 	}
 
-	if len(user.MFAFactors) == 0 {
+	if len(factors) == 0 {
 		return fmt.Errorf("no MFA factors found for user")
 	}
 
-	var factorID string
-	for _, factor := range user.MFAFactors {
-		if factor.FactorType == "push" {
-			factorID = factor.ID
-			break
+	var factorFound bool
+	var userFactor *okta.UserFactor
+	for _, factor := range factors {
+		if factor.IsUserFactorInstance() {
+			userFactor = factor.(*okta.UserFactor)
+			if userFactor.FactorType == "push" {
+				factorFound = true
+				break
+			}
 		}
 	}
 
-	if factorID == "" {
+	if !factorFound {
 		return fmt.Errorf("no push-type MFA factor found for user")
 	}
 
-	type pollInfo struct {
-		ValidationURL string `json:"href"`
-	}
-
-	type pushLinks struct {
-		Poll pollInfo `json:"poll"`
-	}
-
-	type pushResult struct {
-		Expiration   time.Time `json:"expiresAt"`
-		FactorResult string    `json:"factorResult"`
-		Links        pushLinks `json:"_links"`
-	}
-
-	req, err := client.NewRequest("POST", fmt.Sprintf("users/%s/factors/%s/verify", user.ID, factorID), nil)
-	if err != nil {
-		return err
-	}
-
-	var result pushResult
-	_, err = client.Do(req, &result)
+	result, _, err := client.UserFactor.VerifyFactor(ctx, user.Id, userFactor.Id, okta.VerifyFactorRequest{}, userFactor, nil)
 	if err != nil {
 		return err
 	}
@@ -1950,16 +1937,36 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("expected WAITING status for push status, got %q", result.FactorResult)
 	}
 
+	// Parse links to get polling link
+	type linksObj struct {
+		Poll struct {
+			Href string `mapstructure:"href"`
+		} `mapstructure:"poll"`
+	}
+	links := new(linksObj)
+	if err := mapstructure.WeakDecode(result.Links, links); err != nil {
+		return err
+	}
+	// Strip the org URL from the fully qualified poll URL
+	url, err := url.Parse(strings.Replace(links.Poll.Href, orgURL.String(), "", 1))
+	if err != nil {
+		return err
+	}
+
 	for {
-		req, err := client.NewRequest("GET", result.Links.Poll.ValidationURL, nil)
+		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
+		// the VerifyFactor respone. This code effectively reimplements that method.
+		rq := client.CloneRequestExecutor()
+		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url.String(), nil)
 		if err != nil {
 			return err
 		}
-		var result pushResult
-		_, err = client.Do(req, &result)
+		var result *okta.VerifyUserFactorResponse
+		_, err = rq.Do(ctx, req, &result)
 		if err != nil {
 			return err
 		}
+
 		switch result.FactorResult {
 		case "WAITING":
 		case "SUCCESS":
