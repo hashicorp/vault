@@ -1,10 +1,13 @@
 package okta
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	pwd "github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
 )
@@ -47,6 +50,30 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if provider, ok := m["provider"]; ok {
 		data["provider"] = provider
 	}
+
+	nonce := base62.MustRandom(20)
+	data["nonce"] = nonce
+
+	// Create a done channel to signal termination of the login so that we can
+	// clean up the goroutine
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+
+	go func() {
+		for {
+			select {
+			case <-doneCh:
+				return
+			case <-time.After(time.Second):
+			}
+
+			resp, _ := c.Logical().Read(fmt.Sprintf("auth/%s/verify/%s", mount, nonce))
+			if resp != nil {
+				fmt.Fprintf(os.Stderr, "In Okta Verify, tap the number %q\n", resp.Data["correct_answer"].(json.Number))
+				return
+			}
+		}
+	}()
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
 	secret, err := c.Logical().Write(path, data)

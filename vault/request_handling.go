@@ -385,6 +385,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		RootPrivsRequired: rootPath,
 	})
 
+	auth.PolicyResults = &logical.PolicyResults{
+		Allowed: authResults.Allowed,
+	}
+
 	if !authResults.Allowed {
 		retErr := authResults.Error
 
@@ -408,6 +412,13 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
 		return auth, te, retErr
+	}
+
+	if authResults.ACLResults != nil && len(authResults.ACLResults.GrantingPolicies) > 0 {
+		auth.PolicyResults.GrantingPolicies = authResults.ACLResults.GrantingPolicies
+	}
+	if authResults.SentinelResults != nil && len(authResults.SentinelResults.GrantingPolicies) > 0 {
+		auth.PolicyResults.GrantingPolicies = append(auth.PolicyResults.GrantingPolicies, authResults.SentinelResults.GrantingPolicies...)
 	}
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count

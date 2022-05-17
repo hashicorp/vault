@@ -122,6 +122,7 @@ export default class Attribution extends Component {
       ...otherColumns,
     ];
   }
+
   generateCsvData() {
     const totalAttribution = this.args.totalClientAttribution;
     const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;

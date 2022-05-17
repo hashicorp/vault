@@ -185,12 +185,19 @@ export default class History extends Component {
     return this.queriedActivityResponse || this.args.model.activity;
   }
 
-  get byMonthTotalClients() {
-    return this.getActivityResponse?.byMonth;
+  get byMonthActivityData() {
+    if (this.selectedNamespace) {
+      return this.filteredActivityByMonth;
+    } else {
+      return this.getActivityResponse?.byMonth;
+    }
   }
 
   get byMonthNewClients() {
-    return this.byMonthTotalClients.map((m) => m.new_clients);
+    if (this.byMonthActivityData) {
+      return this.byMonthActivityData?.map((m) => m.new_clients);
+    }
+    return null;
   }
 
   get hasAttributionData() {
@@ -201,37 +208,34 @@ export default class History extends Component {
     return !!this.totalClientAttribution && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
   }
 
-  // top level TOTAL client counts for given date range
+  // (object) top level TOTAL client counts for given date range
   get totalUsageCounts() {
-    return this.selectedNamespace ? this.filteredActivity : this.getActivityResponse.total;
+    return this.selectedNamespace ? this.filteredActivityByNamespace : this.getActivityResponse.total;
   }
 
-  get newUsageCounts() {
-    return this.selectedNamespace
-      ? this.filteredNewClientAttribution
-      : this.byMonthTotalClients[0]?.new_clients;
+  // (object) single month new client data with total counts + array of namespace breakdown
+  get newClientCounts() {
+    return this.isDateRange ? null : this.byMonthActivityData[0]?.new_clients;
   }
 
   // total client data for horizontal bar chart in attribution component
   get totalClientAttribution() {
     if (this.selectedNamespace) {
-      return this.filteredActivity?.mounts || null;
+      return this.filteredActivityByNamespace?.mounts || null;
     } else {
-      return this.getActivityResponse?.byNamespace;
+      return this.getActivityResponse?.byNamespace || null;
     }
   }
 
   // new client data for horizontal bar chart
   get newClientAttribution() {
-    // new client attribution only available in a single, historical month
-    if (this.isDateRange) {
-      return null;
-    }
-    // only a single month is returned from the api
+    // new client attribution only available in a single, historical month (not a date range)
+    if (this.isDateRange) return null;
+
     if (this.selectedNamespace) {
-      return this.filteredNewClientAttribution?.mounts || null;
+      return this.newClientCounts?.mounts || null;
     } else {
-      return this.byMonthTotalClients[0]?.new_clients.namespaces || null;
+      return this.newClientCounts?.namespaces || null;
     }
   }
 
@@ -239,7 +243,8 @@ export default class History extends Component {
     return this.getActivityResponse.responseTimestamp;
   }
 
-  get filteredActivity() {
+  // FILTERS
+  get filteredActivityByNamespace() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
     if (!namespace && !auth) {
@@ -253,19 +258,22 @@ export default class History extends Component {
       .mounts?.find((mount) => mount.label === auth);
   }
 
-  get filteredNewClientAttribution() {
+  get filteredActivityByMonth() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
-    // new client data is only available by month
-    const newClientsData = this.byMonthTotalClients[0]?.new_clients;
-    if (!newClientsData) return null;
-    if (this.isDateRange) return null;
-    if (!namespace && !auth) return newClientsData;
-
-    const foundNamespace = newClientsData.namespaces.find((ns) => ns.label === namespace);
-    if (!foundNamespace) return null;
-    if (!auth) return foundNamespace;
-    return foundNamespace.mounts?.find((mount) => mount.label === auth);
+    if (!namespace && !auth) {
+      return this.getActivityResponse?.byMonth;
+    }
+    const namespaceData = this.getActivityResponse?.byMonth
+      .map((m) => m.namespaces_by_key[namespace])
+      .filter((d) => d !== undefined);
+    if (!auth) {
+      return namespaceData.length === 0 ? null : namespaceData;
+    }
+    const mountData = namespaceData
+      .map((namespace) => namespace.mounts_by_key[auth])
+      .filter((d) => d !== undefined);
+    return mountData.length === 0 ? null : mountData;
   }
 
   @action
@@ -331,6 +339,10 @@ export default class History extends Component {
     }
   }
 
+  get hasMultipleMonthsData() {
+    return this.byMonthActivityData && this.byMonthActivityData.length > 1;
+  }
+
   @action
   handleCurrentBillingPeriod() {
     this.handleClientActivityQuery(0, 0, 'reset');
@@ -346,7 +358,7 @@ export default class History extends Component {
       this.selectedAuthMethod = null;
     } else {
       // Side effect: set auth namespaces
-      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+      const mounts = this.filteredActivityByNamespace.mounts?.map((mount) => ({
         id: mount.label,
         name: mount.label,
       }));

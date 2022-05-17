@@ -323,7 +323,7 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 		c.c.SetToken(wrappingToken)
 	}
 
-	secret, err = c.Read(wrappedResponseLocation)
+	secret, err = c.ReadWithContext(ctx, wrappedResponseLocation)
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("error reading %q: {{err}}", wrappedResponseLocation), err)
 	}

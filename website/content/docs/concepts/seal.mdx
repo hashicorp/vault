@@ -81,7 +81,7 @@ access to the root key shards.
 
 ## Auto Unseal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the seal provider (HSM or cloud KMS) must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information. 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the seal provider (HSM or cloud KMS) must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
 
 Auto Unseal was developed to aid in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
@@ -130,8 +130,7 @@ available during the migration. For example, migration from Auto Unseal to Shami
 seal will require that the service backing the Auto Unseal is accessible during
 the migration.
 
-~> **NOTE**: Seal migration from Auto Unseal to Auto Unseal of the same type (e.g. AWSKMS to AWSKMS with a different key) is supported since Vault 1.6.0.
-Seal migration from One Auto Unseal type (AWS KMS) to different Auto Unseal type (HSM, Azure KMS, etc.) is also supported on older versions as well.
+~> **NOTE**: Seal migration from Auto Unseal to Auto Unseal of the same type is supported since Vault 1.6.0. However, there is a current limitation that prevents migrating from AWSKMS to AWSKMS; all other seal migrations of the same type are supported. Seal migration from One Auto Unseal type (AWS KMS) to different Auto Unseal type (HSM, Azure KMS, etc.) is also supported on older versions as well.
 
 ### Migration post Vault 1.5.1
 

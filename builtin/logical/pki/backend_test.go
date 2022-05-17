@@ -9,16 +9,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"hash"
-	"io/ioutil"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -281,18 +277,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 
 func TestBackend_CSRValues(t *testing.T) {
 	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
+	b, _ := createBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -308,18 +293,7 @@ func TestBackend_CSRValues(t *testing.T) {
 
 func TestBackend_URLsCRUD(t *testing.T) {
 	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
+	b, _ := createBackendWithStorage(t)
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
@@ -354,18 +328,8 @@ func TestBackend_Roles(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			initTest.Do(setCerts)
-			defaultLeaseTTLVal := time.Hour * 24
-			maxLeaseTTLVal := time.Hour * 24 * 32
-			b, err := Factory(context.Background(), &logical.BackendConfig{
-				Logger: nil,
-				System: &logical.StaticSystemView{
-					DefaultLeaseTTLVal: defaultLeaseTTLVal,
-					MaxLeaseTTLVal:     maxLeaseTTLVal,
-				},
-			})
-			if err != nil {
-				t.Fatalf("Unable to create backend: %s", err)
-			}
+			b, _ := createBackendWithStorage(t)
+
 			testCase := logicaltest.TestCase{
 				LogicalBackend: b,
 				Steps: []logicaltest.TestStep{
@@ -743,30 +707,7 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 }
 
 func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-	csrTemplate := x509.CertificateRequest{
-		Subject: pkix.Name{
-			Country:      []string{"MyCountry"},
-			PostalCode:   []string{"MyPostalCode"},
-			SerialNumber: "MySerialNumber",
-			CommonName:   "my@example.com",
-		},
-		DNSNames: []string{
-			"name1.example.com",
-			"name2.example.com",
-			"name3.example.com",
-		},
-		EmailAddresses: []string{
-			"name1@example.com",
-			"name2@example.com",
-			"name3@example.com",
-		},
-		IPAddresses: []net.IP{
-			net.ParseIP("::ff:1:2:3:4"),
-			net.ParseIP("::ff:5:6:7:8"),
-		},
-	}
-
-	_, _, csrPem := generateCSR(t, &csrTemplate, "rsa", 2048)
+	csrTemplate, csrPem := generateTestCsr(t, certutil.RSAPrivateKey, 2048)
 
 	ret := []logicaltest.TestStep{
 		{
@@ -854,6 +795,34 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 	}
 	return ret
+}
+
+func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			Country:      []string{"MyCountry"},
+			PostalCode:   []string{"MyPostalCode"},
+			SerialNumber: "MySerialNumber",
+			CommonName:   "my@example.com",
+		},
+		DNSNames: []string{
+			"name1.example.com",
+			"name2.example.com",
+			"name3.example.com",
+		},
+		EmailAddresses: []string{
+			"name1@example.com",
+			"name2@example.com",
+			"name3@example.com",
+		},
+		IPAddresses: []net.IP{
+			net.ParseIP("::ff:1:2:3:4"),
+			net.ParseIP("::ff:5:6:7:8"),
+		},
+	}
+
+	_, _, csrPem := generateCSR(t, &csrTemplate, string(keyType), keyBits)
+	return csrTemplate, csrPem
 }
 
 // Generates steps to test out various role permutations
@@ -1748,14 +1717,127 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	return ret
 }
 
-func TestBackend_PathFetchValidRaw(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+func TestRolesAltIssuer(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create two issuers.
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "root a - example.com",
+		"issuer_name": "root-a",
+		"key_type":    "ec",
+	})
 	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootAPem := resp.Data["certificate"].(string)
+	rootACert := parseCert(t, rootAPem)
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "root b - example.com",
+		"issuer_name": "root-b",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootBPem := resp.Data["certificate"].(string)
+	rootBCert := parseCert(t, rootBPem)
+
+	// Create three roles: one with no assignment, one with explicit root-a,
+	// one with explicit root-b.
+	_, err = client.Logical().Write("pki/roles/use-default", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/roles/use-root-a", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"issuer_ref":        "root-a",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/roles/use-root-b", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"issuer_ref":        "root-b",
+	})
+	require.NoError(t, err)
+
+	// Now issue certs against these roles.
+	resp, err = client.Logical().Write("pki/issue/use-default", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem := resp.Data["certificate"].(string)
+	leafCert := parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootACert)
+	require.NoError(t, err, "should be signed by root-a but wasn't")
+
+	resp, err = client.Logical().Write("pki/issue/use-root-a", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem = resp.Data["certificate"].(string)
+	leafCert = parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootACert)
+	require.NoError(t, err, "should be signed by root-a but wasn't")
+
+	resp, err = client.Logical().Write("pki/issue/use-root-b", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem = resp.Data["certificate"].(string)
+	leafCert = parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootBCert)
+	require.NoError(t, err, "should be signed by root-b but wasn't")
+
+	// Update the default issuer to be root B and make sure that the
+	// use-default role updates.
+	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
+		"default": "root-b",
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/issue/use-default", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "5s",
+	})
+	require.NoError(t, err)
+	leafPem = resp.Data["certificate"].(string)
+	leafCert = parseCert(t, leafPem)
+	err = leafCert.CheckSignatureFrom(rootBCert)
+	require.NoError(t, err, "should be signed by root-b but wasn't")
+}
+
+func TestBackend_PathFetchValidRaw(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1773,7 +1855,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 	rootCaAsPem := resp.Data["certificate"].(string)
 
-	// The ca_chain call at least for now does not return the root CA authority
+	// Chain should contain the root.
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.ReadOperation,
 		Path:       "ca_chain",
@@ -1785,7 +1867,9 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed read ca_chain, %#v", resp)
 	}
-	require.Equal(t, []byte{}, resp.Data[logical.HTTPRawBody], "ca_chain response should have been empty")
+	if strings.Count(string(resp.Data[logical.HTTPRawBody].([]byte)), rootCaAsPem) != 1 {
+		t.Fatalf("expected raw chain to contain the root cert")
+	}
 
 	// The ca/pem should return us the actual CA...
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -1884,15 +1968,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 
 func TestBackend_PathFetchCertList(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2034,15 +2110,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 
 func runTestSignVerbatim(t *testing.T, keyType string) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2110,9 +2178,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
 	roleData := map[string]interface{}{
-		"ttl":      "4h",
-		"max_ttl":  "8h",
-		"key_type": keyType,
+		"ttl":                 "4h",
+		"max_ttl":             "8h",
+		"key_type":            keyType,
+		"not_before_duration": "2h",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -2179,7 +2248,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 	cert := certs[0]
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
-		t.Fatalf("sign-verbatim did not properly cap validity period on signed CSR")
+		t.Fatalf("sign-verbatim did not properly cap validity period (notAfter) on signed CSR: was %v vs requested %v but should've been %v", cert.NotAfter, time.Now().Add(12*time.Hour), time.Now().Add(8*time.Hour))
+	}
+	if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+		t.Fatalf("sign-verbatim did not properly cap validity period (notBefore) on signed CSR: was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 	}
 
 	// Now check signing a certificate using the not_after input using the Y10K value
@@ -2275,92 +2347,108 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
-
 	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
+	mountPKIEndpoint(t, client, "pki")
+
+	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("expected ca info")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	keyId1 := resp.Data["key_id"]
+	issuerId1 := resp.Data["issuer_id"]
+
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
-	if err != nil {
-		t.Fatalf("error reading ca_chain: %v", err)
-	}
+	require.NoError(t, err, "error reading ca_chain: %v", err)
 
 	r1Data := resp.Data
 
-	// Try again, make sure it's a 204 and same CA
+	// Calling generate/internal should generate a new CA as well.
 	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("expected a warning")
-	}
-	if resp.Data != nil || len(resp.Warnings) == 0 {
-		t.Fatalf("bad response: %#v", *resp)
-	}
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	keyId2 := resp.Data["key_id"]
+	issuerId2 := resp.Data["issuer_id"]
+
+	// Make sure that we actually generated different issuer and key values
+	require.NotEqual(t, keyId1, keyId2)
+	require.NotEqual(t, issuerId1, issuerId2)
+
+	// Now because the issued CA's have no links, the call to ca_chain should return the same data (ca chain from default)
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
-	if err != nil {
-		t.Fatalf("error reading ca_chain: %v", err)
-	}
+	require.NoError(t, err, "error reading ca_chain: %v", err)
+
 	r2Data := resp.Data
 	if !reflect.DeepEqual(r1Data, r2Data) {
 		t.Fatal("got different ca certs")
 	}
 
-	resp, err = client.Logical().Delete("pki/root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatal("expected nil response")
-	}
-	// Make sure it behaves the same
-	resp, err = client.Logical().Delete("pki/root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatal("expected nil response")
-	}
-
-	_, err = client.Logical().Read("pki/cert/ca_chain")
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
-		"common_name": "myvault.com",
+	// Now let's validate that the import bundle is idempotent.
+	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
+	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("expected ca info")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	firstImportedKeys := resp.Data["imported_keys"].([]interface{})
+	firstImportedIssuers := resp.Data["imported_issuers"].([]interface{})
+
+	require.NotContains(t, firstImportedKeys, keyId1)
+	require.NotContains(t, firstImportedKeys, keyId2)
+	require.NotContains(t, firstImportedIssuers, issuerId1)
+	require.NotContains(t, firstImportedIssuers, issuerId2)
+
+	// Performing this again should result in no key/issuer ids being imported/generated.
+	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	secondImportedKeys := resp.Data["imported_keys"]
+	secondImportedIssuers := resp.Data["imported_issuers"]
+
+	require.Nil(t, secondImportedKeys)
+	require.Nil(t, secondImportedIssuers)
+
+	resp, err = client.Logical().Delete("pki/root")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, 1, len(resp.Warnings))
+
+	// Make sure we can delete twice...
+	resp, err = client.Logical().Delete("pki/root")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, 1, len(resp.Warnings))
 
 	_, err = client.Logical().Read("pki/cert/ca_chain")
-	if err != nil {
-		t.Fatal(err)
+	require.Error(t, err, "expected an error fetching deleted ca_chain")
+
+	// We should be able to import the same ca bundle as before and get a different key/issuer ids
+	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	postDeleteImportedKeys := resp.Data["imported_keys"]
+	postDeleteImportedIssuers := resp.Data["imported_issuers"]
+
+	// Make sure that we actually generated different issuer and key values, then the previous import
+	require.NotNil(t, postDeleteImportedKeys)
+	require.NotNil(t, postDeleteImportedIssuers)
+	require.NotEqual(t, postDeleteImportedKeys, firstImportedKeys)
+	require.NotEqual(t, postDeleteImportedIssuers, firstImportedIssuers)
+
+	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	require.NoError(t, err)
+
+	caChainPostDelete := resp.Data
+	if reflect.DeepEqual(r1Data, caChainPostDelete) {
+		t.Fatal("ca certs from ca_chain were the same post delete, should have changed.")
 	}
 }
 
@@ -2463,15 +2551,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 func TestBackend_SignSelfIssued(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2585,7 +2665,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signingBundle, err := fetchCAInfo(context.Background(), b, &logical.Request{Storage: storage})
+	signingBundle, err := fetchCAInfo(context.Background(), b, &logical.Request{Storage: storage}, defaultRef, ReadOnlyUsage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2610,15 +2690,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // require_matching_certificate_algorithms flag.
 func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, storage := createBackendWithStorage(t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2711,23 +2783,6 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error due to mismatched algorithms")
 	}
-}
-
-func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.PrivateKey) (string, *x509.Certificate) {
-	t.Helper()
-	selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cert, err := x509.ParseCertificate(selfSigned)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: selfSigned,
-	})))
-	return pemSS, cert
 }
 
 // This is a really tricky test because the Go stdlib asn1 package is incapable
@@ -3595,6 +3650,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"province":                           []interface{}{},
 		"street_address":                     []interface{}{},
 		"code_signing_flag":                  false,
+		"issuer_ref":                         "default",
 	}
 
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
@@ -3839,25 +3895,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Get CRL and ensure the tidied cert is still in the list after the tidy
 	// operation since it's not past the NotAfter (ttl) value yet.
-	req := client.NewRequest("GET", "/v1/pki/crl")
-	resp, err := client.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	crlBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if len(crlBytes) == 0 {
-		t.Fatalf("expected CRL in response body")
-	}
-
-	crl, err := x509.ParseDERCRL(crlBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	crl := getParsedCrl(t, client, "pki")
 
 	revokedCerts := crl.TBSCertList.RevokedCertificates
 	if len(revokedCerts) == 0 {
@@ -3970,25 +4008,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		}
 	}
 
-	req = client.NewRequest("GET", "/v1/pki/crl")
-	resp, err = client.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	crlBytes, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if len(crlBytes) == 0 {
-		t.Fatalf("expected CRL in response body")
-	}
-
-	crl, err = x509.ParseDERCRL(crlBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	crl = getParsedCrl(t, client, "pki")
 
 	revokedCerts = crl.TBSCertList.RevokedCertificates
 	if len(revokedCerts) != 0 {
@@ -4062,9 +4082,23 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	fullChain := resp.Data["ca_chain"].(string)
-	if !strings.Contains(fullChain, rootCert) {
-		t.Fatal("expected full chain to contain root certificate")
-	}
+	requireCertInCaChainString(t, fullChain, rootCert, "expected root cert within root cert/ca_chain")
+
+	// Make sure when we issue a leaf certificate we get the full chain back.
+	resp, err = client.Logical().Write("pki-root/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+	})
+	require.NoError(t, err, "error setting up pki root role: %v", err)
+
+	resp, err = client.Logical().Write("pki-root/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "5m",
+	})
+	require.NoError(t, err, "error issuing certificate from pki root: %v", err)
+	fullChainArray := resp.Data["ca_chain"].([]interface{})
+	requireCertInCaChainArray(t, fullChainArray, rootCert, "expected root cert within root issuance pki-root/issue/example")
 
 	// Now generate an intermediate at /pki-intermediate, signed by the root.
 	err = client.Sys().Mount("pki-intermediate", &api.MountInput{
@@ -4125,13 +4159,30 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 		t.Fatal("expected intermediate chain information")
 	}
 
+	// Verify we have a proper CRL now
+	crl := getParsedCrl(t, client, "pki-intermediate")
+	require.Equal(t, 0, len(crl.TBSCertList.RevokedCertificates))
+
 	fullChain = resp.Data["ca_chain"].(string)
-	if !strings.Contains(fullChain, intermediateCert) {
-		t.Fatal("expected full chain to contain intermediate certificate")
-	}
-	if !strings.Contains(fullChain, rootCert) {
-		t.Fatal("expected full chain to contain root certificate")
-	}
+	requireCertInCaChainString(t, fullChain, intermediateCert, "expected full chain to contain intermediate certificate from pki-intermediate/cert/ca_chain")
+	requireCertInCaChainString(t, fullChain, rootCert, "expected full chain to contain root certificate from pki-intermediate/cert/ca_chain")
+
+	// Make sure when we issue a leaf certificate we get the full chain back.
+	resp, err = client.Logical().Write("pki-intermediate/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+	})
+	require.NoError(t, err, "error setting up pki intermediate role: %v", err)
+
+	resp, err = client.Logical().Write("pki-intermediate/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "5m",
+	})
+	require.NoError(t, err, "error issuing certificate from pki intermediate: %v", err)
+	fullChainArray = resp.Data["ca_chain"].([]interface{})
+	requireCertInCaChainArray(t, fullChainArray, intermediateCert, "expected full chain to contain intermediate certificate from pki-intermediate/issue/example")
+	requireCertInCaChainArray(t, fullChainArray, rootCert, "expected full chain to contain root certificate from pki-intermediate/issue/example")
 
 	// Finally, import this signing cert chain into a new mount to ensure
 	// "external" CAs behave as expected.
@@ -4163,11 +4214,11 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	fullChain = resp.Data["ca_chain"].(string)
-	if !strings.Contains(fullChain, intermediateCert) {
-		t.Fatal("expected full chain to contain intermediate certificate")
+	if strings.Count(fullChain, intermediateCert) != 1 {
+		t.Fatalf("expected full chain to contain intermediate certificate; got %v occurrences", strings.Count(fullChain, intermediateCert))
 	}
-	if !strings.Contains(fullChain, rootCert) {
-		t.Fatal("expected full chain to contain root certificate")
+	if strings.Count(fullChain, rootCert) != 1 {
+		t.Fatalf("expected full chain to contain root certificate; got %v occurrences", strings.Count(fullChain, rootCert))
 	}
 
 	// Now issue a short-lived certificate from our pki-external.
@@ -4189,6 +4240,23 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	// Verify that the certificates are signed by the intermediary CA key...
 	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
+}
+
+func requireCertInCaChainArray(t *testing.T, chain []interface{}, cert string, msgAndArgs ...interface{}) {
+	var fullChain string
+	for _, caCert := range chain {
+		fullChain = fullChain + "\n" + caCert.(string)
+	}
+
+	requireCertInCaChainString(t, fullChain, cert, msgAndArgs)
+}
+
+func requireCertInCaChainString(t *testing.T, chain string, cert string, msgAndArgs ...interface{}) {
+	count := strings.Count(chain, cert)
+	if count != 1 {
+		failMsg := fmt.Sprintf("Found %d occurrances of the cert in the provided chain", count)
+		require.FailNow(t, failMsg, msgAndArgs...)
+	}
 }
 
 type MultiBool int
@@ -4637,6 +4705,334 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 	t.Log(fmt.Sprintf("Key size regression expanded matrix test scenarios: %d", tested))
 }
 
+func TestRootWithExistingKey(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+
+	mountPKIEndpoint(t, client, "pki-root")
+
+	// Fail requests if type is existing, and we specify the key_type param
+	ctx := context.Background()
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/root/generate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
+
+	// Fail requests if type is existing, and we specify the key_bits param
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/root/generate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_bits":    "2048",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
+
+	// Fail if the specified key does not exist.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer1",
+		"key_ref":     "my-key1",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
+
+	// Fail if the specified key name is default.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer1",
+		"key_name":    "Default",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as key name")
+
+	// Fail if the specified issuer name is default.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "DEFAULT",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as issuer name")
+
+	// Create the first CA
+	resp, err := client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+		"issuer_name": "my-issuer1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp.Data["certificate"])
+	myIssuerId1 := resp.Data["issuer_id"]
+	myKeyId1 := resp.Data["key_id"]
+	require.NotEmpty(t, myIssuerId1)
+	require.NotEmpty(t, myKeyId1)
+
+	// Fetch the parsed CRL; it should be empty as we've not revoked anything
+	parsedCrl := getParsedCrlForIssuer(t, client, "pki-root", "my-issuer1")
+	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
+
+	// Fail if the specified issuer name is re-used.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer1",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "issuer name already in use")
+
+	// Create the second CA
+	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+		"issuer_name": "my-issuer2",
+		"key_name":    "root-key2",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp.Data["certificate"])
+	myIssuerId2 := resp.Data["issuer_id"]
+	myKeyId2 := resp.Data["key_id"]
+	require.NotEmpty(t, myIssuerId2)
+	require.NotEmpty(t, myKeyId2)
+
+	// Fetch the parsed CRL; it should be empty as we've not revoked anything
+	parsedCrl = getParsedCrlForIssuer(t, client, "pki-root", "my-issuer2")
+	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
+
+	// Fail if the specified key name is re-used.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer3",
+		"key_name":    "root-key2",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key name already in use")
+
+	// Create a third CA re-using key from CA 1
+	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"issuer_name": "my-issuer3",
+		"key_ref":     myKeyId1,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp.Data["certificate"])
+	myIssuerId3 := resp.Data["issuer_id"]
+	myKeyId3 := resp.Data["key_id"]
+	require.NotEmpty(t, myIssuerId3)
+	require.NotEmpty(t, myKeyId3)
+
+	// Fetch the parsed CRL; it should be empty as we've not revoking anything.
+	parsedCrl = getParsedCrlForIssuer(t, client, "pki-root", "my-issuer3")
+	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
+	// Signatures should be the same since this is just a reissued cert. We
+	// use signature as a proxy for "these two CRLs are equal".
+	firstCrl := getParsedCrlForIssuer(t, client, "pki-root", "my-issuer1")
+	require.Equal(t, parsedCrl.SignatureValue, firstCrl.SignatureValue)
+
+	require.NotEqual(t, myIssuerId1, myIssuerId2)
+	require.NotEqual(t, myIssuerId1, myIssuerId3)
+	require.NotEqual(t, myKeyId1, myKeyId2)
+	require.Equal(t, myKeyId1, myKeyId3)
+
+	resp, err = client.Logical().ListWithContext(ctx, "pki-root/issuers")
+	require.NoError(t, err)
+	require.Equal(t, 3, len(resp.Data["keys"].([]interface{})))
+	require.Contains(t, resp.Data["keys"], myIssuerId1)
+	require.Contains(t, resp.Data["keys"], myIssuerId2)
+	require.Contains(t, resp.Data["keys"], myIssuerId3)
+}
+
+func TestIntermediateWithExistingKey(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+
+	mountPKIEndpoint(t, client, "pki-root")
+
+	// Fail requests if type is existing, and we specify the key_type param
+	ctx := context.Background()
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/intermediate/generate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
+
+	// Fail requests if type is existing, and we specify the key_bits param
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/intermediate/generate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_bits":    "2048",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
+
+	// Fail if the specified key does not exist.
+	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_ref":     "my-key1",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
+
+	// Create the first intermediate CA
+	resp, err := client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+	})
+	require.NoError(t, err)
+	// csr1 := resp.Data["csr"]
+	myKeyId1 := resp.Data["key_id"]
+	require.NotEmpty(t, myKeyId1)
+
+	// Create the second intermediate CA
+	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+		"key_name":    "interkey1",
+	})
+	require.NoError(t, err)
+	// csr2 := resp.Data["csr"]
+	myKeyId2 := resp.Data["key_id"]
+	require.NotEmpty(t, myKeyId2)
+
+	// Create a third intermediate CA re-using key from intermediate CA 1
+	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/intermediate/existing", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_ref":     myKeyId1,
+	})
+	require.NoError(t, err)
+	// csr3 := resp.Data["csr"]
+	myKeyId3 := resp.Data["key_id"]
+	require.NotEmpty(t, myKeyId3)
+
+	require.NotEqual(t, myKeyId1, myKeyId2)
+	require.Equal(t, myKeyId1, myKeyId3, "our new ca did not seem to reuse the key as we expected.")
+}
+
+func TestIssuanceTTLs(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"ttl":         "15s",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().Write("pki/roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "1s",
+	})
+	require.NoError(t, err, "expected issuance to succeed due to shorter ttl than cert ttl")
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
+
+	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+		"issuer_name":             "root",
+		"leaf_not_after_behavior": "permit",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.NoError(t, err, "expected issuance to succeed due to permitted longer TTL")
+
+	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+		"issuer_name":             "root",
+		"leaf_not_after_behavior": "truncate",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.NoError(t, err, "expected issuance to succeed due to truncated ttl")
+
+	// Sleep until the parent cert expires.
+	time.Sleep(16 * time.Second)
+
+	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+		"issuer_name":             "root",
+		"leaf_not_after_behavior": "err",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Even 1s ttl should now fail.
+	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+		"ttl":         "1s",
+	})
+	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
+}
+
+func TestSealWrappedStorageConfigured(t *testing.T) {
+	b, _ := createBackendWithStorage(t)
+	wrappedEntries := b.Backend.PathsSpecial.SealWrapStorage
+
+	// Make sure our legacy bundle is within the list
+	// NOTE: do not convert these test values to constants, we should always have these paths within seal wrap config
+	require.Contains(t, wrappedEntries, "config/ca_bundle", "Legacy bundle missing from seal wrap")
+	// The trailing / is important as it treats the entire folder requiring seal wrapping, not just config/key
+	require.Contains(t, wrappedEntries, "config/key/", "key prefix with trailing / missing from seal wrap.")
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string
@@ -4646,90 +5042,3 @@ var (
 	edCAKey   string
 	edCACert  string
 )
-
-func mountPKIEndpoint(t *testing.T, client *api.Client, path string) {
-	var err error
-	err = client.Sys().Mount(path, &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	require.NoError(t, err, "failed mounting pki endpoint")
-}
-
-func requireSignedBy(t *testing.T, cert x509.Certificate, key crypto.PublicKey) {
-	switch key.(type) {
-	case *rsa.PublicKey:
-		requireRSASignedBy(t, cert, key.(*rsa.PublicKey))
-	case *ecdsa.PublicKey:
-		requireECDSASignedBy(t, cert, key.(*ecdsa.PublicKey))
-	case ed25519.PublicKey:
-		requireED25519SignedBy(t, cert, key.(ed25519.PublicKey))
-	default:
-		require.Fail(t, "unknown public key type %#v", key)
-	}
-}
-
-func requireRSASignedBy(t *testing.T, cert x509.Certificate, key *rsa.PublicKey) {
-	require.Contains(t, []x509.SignatureAlgorithm{x509.SHA256WithRSA, x509.SHA512WithRSA},
-		cert.SignatureAlgorithm, "only sha256 signatures supported")
-
-	var hasher hash.Hash
-	var hashAlgo crypto.Hash
-
-	switch cert.SignatureAlgorithm {
-	case x509.SHA256WithRSA:
-		hasher = sha256.New()
-		hashAlgo = crypto.SHA256
-	case x509.SHA512WithRSA:
-		hasher = sha512.New()
-		hashAlgo = crypto.SHA512
-	}
-
-	hasher.Write(cert.RawTBSCertificate)
-	hashData := hasher.Sum(nil)
-
-	err := rsa.VerifyPKCS1v15(key, hashAlgo, hashData, cert.Signature)
-	require.NoError(t, err, "the certificate was not signed by the expected public rsa key.")
-}
-
-func requireECDSASignedBy(t *testing.T, cert x509.Certificate, key *ecdsa.PublicKey) {
-	require.Contains(t, []x509.SignatureAlgorithm{x509.ECDSAWithSHA256, x509.ECDSAWithSHA512},
-		cert.SignatureAlgorithm, "only ecdsa signatures supported")
-
-	var hasher hash.Hash
-	switch cert.SignatureAlgorithm {
-	case x509.ECDSAWithSHA256:
-		hasher = sha256.New()
-	case x509.ECDSAWithSHA512:
-		hasher = sha512.New()
-	}
-
-	hasher.Write(cert.RawTBSCertificate)
-	hashData := hasher.Sum(nil)
-
-	verify := ecdsa.VerifyASN1(key, hashData, cert.Signature)
-	require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
-}
-
-func requireED25519SignedBy(t *testing.T, cert x509.Certificate, key ed25519.PublicKey) {
-	require.Equal(t, x509.PureEd25519, cert.SignatureAlgorithm)
-	ed25519.Verify(key, cert.RawTBSCertificate, cert.Signature)
-}
-
-func parseCert(t *testing.T, pemCert string) x509.Certificate {
-	block, _ := pem.Decode([]byte(pemCert))
-	require.NotNil(t, block, "failed to decode PEM block")
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	require.NoError(t, err)
-	return *cert
-}
-
-func requireMatchingPublicKeys(t *testing.T, cert x509.Certificate, key crypto.PublicKey) {
-	certPubKey := cert.PublicKey
-	require.True(t, reflect.DeepEqual(certPubKey, key),
-		"public keys mismatched: got: %v, expected: %v", certPubKey, key)
-}

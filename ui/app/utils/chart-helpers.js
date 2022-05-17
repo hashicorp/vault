@@ -1,4 +1,5 @@
 import { format } from 'd3-format';
+import { mean } from 'd3-array';
 
 // COLOR THEME:
 export const LIGHT_AND_DARK_BLUE = ['#BFD4FF', '#1563FF'];
@@ -24,4 +25,11 @@ export function formatTooltipNumber(value) {
   }
   // formats a number according to the locale
   return new Intl.NumberFormat().format(value);
+}
+
+export function calculateAverageClients(dataset, objectKey) {
+  // dataset is an array of objects (consumed by the chart components)
+  // objectKey is the key of the integer we want to calculate, ex: 'entity_clients', 'non_entity_clients', 'clients'
+  let getIntegers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0)); // if undefined no data, so return 0
+  return getIntegers.length !== 0 ? Math.round(mean(getIntegers)) : null;
 }

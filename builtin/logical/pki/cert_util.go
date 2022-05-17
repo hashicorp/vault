@@ -11,6 +11,7 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -64,18 +65,8 @@ var (
 	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
 
 	// OIDs for X.509 certificate extensions used below.
-	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
+	oidExtensionSubjectAltName = []int{2, 5, 29, 17}
 )
-
-func oidInExtensions(oid asn1.ObjectIdentifier, extensions []pkix.Extension) bool {
-	for _, e := range extensions {
-		if e.Id.Equal(oid) {
-			return true
-		}
-	}
-	return false
-}
 
 func getFormat(data *framework.FieldData) string {
 	format := data.Get("format").(string)
@@ -89,23 +80,48 @@ func getFormat(data *framework.FieldData) string {
 	return format
 }
 
-// Fetches the CA info. Unlike other certificates, the CA info is stored
-// in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request) (*certutil.CAInfoBundle, error) {
-	bundleEntry, err := req.Storage.Get(ctx, "config/ca_bundle")
+// fetchCAInfo will fetch the CA info, will return an error if no ca info exists, this does NOT support
+// loading using the legacyBundleShimID and should be used with care. This should be called only once
+// within the request path otherwise you run the risk of a race condition with the issuer migration on perf-secondaries.
+func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	var issuerId issuerID
+
+	if b.useLegacyBundleCaStorage() {
+		// We have not completed the migration so attempt to load the bundle from the legacy location
+		b.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
+		issuerId = legacyBundleShimID
+	} else {
+		var err error
+		issuerId, err = resolveIssuerReference(ctx, req.Storage, issuerRef)
+		if err != nil {
+			// Usually a bad label from the user or mis-configured default.
+			return nil, errutil.UserError{Err: err.Error()}
+		}
+	}
+
+	return fetchCAInfoByIssuerId(ctx, b, req, issuerId, usage)
+}
+
+// fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
+// This does support the loading using the legacyBundleShimID
+func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request, issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	entry, bundle, err := fetchCertBundleByIssuerId(ctx, req.Storage, issuerId, true)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
-	}
-	if bundleEntry == nil {
-		return nil, errutil.UserError{Err: "backend must be configured with a CA certificate/key"}
+		switch err.(type) {
+		case errutil.UserError:
+			return nil, err
+		case errutil.InternalError:
+			return nil, err
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+		}
 	}
 
-	var bundle certutil.CertBundle
-	if err := bundleEntry.DecodeJSON(&bundle); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode local CA certificate/key: %v", err)}
+	if err := entry.EnsureUsage(usage); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
-	parsedBundle, err := parseCABundle(ctx, b, req, &bundle)
+	parsedBundle, err := parseCABundle(ctx, b, bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
@@ -113,19 +129,19 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request) (*certut
 	if parsedBundle.Certificate == nil {
 		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 	}
+	if parsedBundle.PrivateKey == nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
+	}
 
-	caInfo := &certutil.CAInfoBundle{ParsedCertBundle: *parsedBundle, URLs: nil}
+	caInfo := &certutil.CAInfoBundle{
+		ParsedCertBundle:     *parsedBundle,
+		URLs:                 nil,
+		LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
+	}
 
 	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-	}
-	if entries == nil {
-		entries = &certutil.URLEntries{
-			IssuingCertificates:   []string{},
-			CRLDistributionPoints: []string{},
-			OCSPServers:           []string{},
-		}
 	}
 	caInfo.URLs = entries
 
@@ -133,8 +149,11 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request) (*certut
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
-// separate pathing for CA, CRL, and revoked certificates.
-func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
+// separate pathing for CRL, and revoked certificates.
+//
+// Support for fetching CA certificates was removed, due to the new issuers
+// changes.
+func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
 	var path, legacyPath string
 	var err error
 	var certEntry *logical.StorageEntry
@@ -143,15 +162,19 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
 
 	switch {
-	// Revoked goes first as otherwise ca/crl get hardcoded paths which fail if
+	// Revoked goes first as otherwise crl get hardcoded paths which fail if
 	// we actually want revocation info
 	case strings.HasPrefix(prefix, "revoked/"):
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
-	case serial == "ca":
-		path = "ca"
-	case serial == "crl":
-		path = "crl"
+	case serial == legacyCRLPath:
+		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
+			return nil, err
+		}
+		path, err = resolveIssuerCRLPath(ctx, b, req.Storage, defaultRef)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		legacyPath = "certs/" + colonSerial
 		path = "certs/" + hyphenSerial
@@ -602,13 +625,6 @@ func generateCert(ctx context.Context,
 			entries, err := getURLs(ctx, input.req)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-			}
-			if entries == nil {
-				entries = &certutil.URLEntries{
-					IssuingCertificates:   []string{},
-					CRLDistributionPoints: []string{},
-					OCSPServers:           []string{},
-				}
 			}
 			data.Params.URLs = entries
 
@@ -1250,13 +1266,22 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		} else {
 			notAfter = time.Now().Add(ttl)
 		}
-		// If it's not self-signed, verify that the issued certificate won't be
-		// valid past the lifetime of the CA certificate
-		if caSign != nil &&
-			notAfter.After(caSign.Certificate.NotAfter) && !data.role.AllowExpirationPastCA {
-
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), caSign.Certificate.NotAfter.Format(time.RFC3339Nano))}
+		if caSign != nil && notAfter.After(caSign.Certificate.NotAfter) {
+			// If it's not self-signed, verify that the issued certificate
+			// won't be valid past the lifetime of the CA certificate, and
+			// act accordingly. This is dependent based on the issuers's
+			// LeafNotAfterBehavior argument.
+			switch caSign.LeafNotAfterBehavior {
+			case certutil.PermitNotAfterBehavior:
+				// Explicitly do nothing.
+			case certutil.TruncateNotAfterBehavior:
+				notAfter = caSign.Certificate.NotAfter
+			case certutil.ErrNotAfterBehavior:
+				fallthrough
+			default:
+				return nil, errutil.UserError{Err: fmt.Sprintf(
+					"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), caSign.Certificate.NotAfter.Format(time.RFC3339Nano))}
+			}
 		}
 	}
 
@@ -1278,6 +1303,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			PolicyIdentifiers:             data.role.PolicyIdentifiers,
 			BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 			NotBeforeDuration:             data.role.NotBeforeDuration,
+			ForceAppendCaChain:            caSign != nil,
 		},
 		SigningBundle: caSign,
 		CSR:           csr,
@@ -1509,4 +1535,16 @@ func stringToOid(in string) (asn1.ObjectIdentifier, error) {
 		ret = append(ret, i)
 	}
 	return ret, nil
+}
+
+func parseCertificateFromBytes(certBytes []byte) (*x509.Certificate, error) {
+	block, extra := pem.Decode(certBytes)
+	if block == nil {
+		return nil, errors.New("unable to parse certificate: invalid PEM")
+	}
+	if len(strings.TrimSpace(string(extra))) > 0 {
+		return nil, errors.New("unable to parse certificate: trailing PEM data")
+	}
+
+	return x509.ParseCertificate(block.Bytes)
 }
