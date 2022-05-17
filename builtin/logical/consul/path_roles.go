@@ -35,7 +35,6 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `Policy document, base64 encoded. Required
 for 'client' tokens. Required for Consul pre-1.4.`,
-				Deprecated: true,
 			},
 
 			"token_type": {
@@ -44,18 +43,18 @@ for 'client' tokens. Required for Consul pre-1.4.`,
 				Description: `Which type of token to create: 'client' or 'management'. If
 a 'management' token, the "policy", "policies", and "consul_roles" parameters are not
 required. Defaults to 'client'.`,
-				Deprecated: true,
 			},
 
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `Use "consul_policies" instead.`,
+				Deprecated:  true,
 			},
 
 			"consul_policies": {
 				Type: framework.TypeCommaStringSlice,
-				Description: `List of policies to attach to the token. Either "policies"
-or "consul_roles" are required for Consul 1.5 and above, or just "policies" if
+				Description: `List of policies to attach to the token. Either "consul_policies"
+or "consul_roles" are required for Consul 1.5 and above, or just "consul_policies" if
 using Consul 1.4.`,
 			},
 
@@ -152,6 +151,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
+			"lease":            int64(roleConfigData.TTL.Seconds()),
 			"ttl":              int64(roleConfigData.TTL.Seconds()),
 			"max_ttl":          int64(roleConfigData.MaxTTL.Seconds()),
 			"token_type":       roleConfigData.TokenType,
