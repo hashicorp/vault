@@ -56,7 +56,7 @@ and consider if they're appropriate for your deployment.
 
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
-  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created. When set to `-`, defaults to the value of `global.enabled`.
+  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created. When set to `"-"`, defaults to the value of `global.enabled`.
 
   - `externalVaultAddr` (`string: ""`) - External vault server address for the injector to use. Setting this will disable deployment of the vault server, and only deploy the injector.
     A service account with token review permissions is automatically created if `server.serviceAccount.create=true` is set for the external Vault server to use.
@@ -126,7 +126,7 @@ and consider if they're appropriate for your deployment.
 
   - `webhook` - Values that control the Mutating Webhook Configuration.
 
-    - `failurePolicy` (`string: "Ignore"`) - Configures failurePolicy of the webhook. To block pod creation while the webhook is unavailable, set the policy to `Fail`. See [Failure Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy).
+    - `failurePolicy` (`string: "Ignore"`) - Configures failurePolicy of the webhook. To block pod creation while the webhook is unavailable, set the policy to `"Fail"`. See [Failure Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy).
 
     - `matchPolicy` (`string: "Exact"`) - Specifies the approach to accepting changes based on the rules of the MutatingWebhookConfiguration. See [Match Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy).
 
@@ -140,7 +140,7 @@ and consider if they're appropriate for your deployment.
           sidecar-injector: enabled
       ```
 
-    - `objectSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what objects can be effected by mutation.. See [Matching requests: object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector).
+    - `objectSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what objects can be affected by mutation. See [Matching requests: object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector).
 
       ```yaml
       objectSelector:
