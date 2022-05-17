@@ -529,8 +529,6 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 		},
 	}
 
-	os.Setenv(consts.VaultDisableFilePermissionsCheckEnv, "true")
-
 	// Create a tempdir, cluster.Cleanup will clean up this directory
 	tempDir, err := ioutil.TempDir("", "vault-test-cluster")
 	if err != nil {
@@ -603,7 +601,6 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 			"test": plugin.Factory,
 		},
 	}
-	os.Setenv(consts.VaultDisableFilePermissionsCheckEnv, "true")
 	// Create a tempdir, cluster.Cleanup will clean up this directory
 	tempDir, err := ioutil.TempDir("", "vault-test-cluster")
 	if err != nil {
