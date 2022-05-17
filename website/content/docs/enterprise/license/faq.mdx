@@ -4,7 +4,7 @@ page_title: Frequently Asked Questions (FAQ)
 description: An overview of license.
 ---
 
-# Frequently Asked Questions (FAQ)
+# License FAQ
 
 This FAQ section is for the license changes introduced in Vault Enterprise 1.8.
 
@@ -25,6 +25,10 @@ This FAQ section is for the license changes introduced in Vault Enterprise 1.8.
 - [Q: What is the migration path for customers who want to migrate from their existing perpetually licensed binaries to the current license on storage flow?](#q-what-is-the-migration-path-for-customers-who-want-to-migrate-from-their-existing-perpetually-licensed-binaries-to-the-current-license-on-storage-flow)
 - [Q: What is the path for customers who want to downgrade/rollback from Vault 1.8 or later (auto-loading) to a pre- Vault 1.8 (license in storage)?](#q-what-is-the-path-for-customers-who-want-to-downgrade-rollback-from-vault-1-8-or-later-auto-loading-to-a-pre-vault-1-8-license-in-storage)
 - [Q: Is there a limited time for support of licenses that are in storage?](#q-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage)
+- [Q: What are the steps to upgrade from one autoloaded license to another autoloaded license?](#q-what-are-the-steps-to-upgrade-from-one-autoloaded-license-to-another-autoloaded-license)
+- [Q: What are the Vault ADP module licensing changes introduced in 1.8?](#q-what-are-the-vault-adp-module-licensing-changes-introduced-in-1-8)
+- [Q: How can the new ADP modules be purchased and what features are customer entitled to as part of that purchase?](#q-how-can-the-new-adp-modules-be-purchased-and-what-features-are-customer-entitled-to-as-part-of-that-purchase)
+- [Q: What is the impact to customers based on these ADP module licensing changes?](#q-what-is-the-impact-to-customers-based-on-these-adp-module-licensing-changes)
 
 ### Q: When will these licensing changes be released for Vault?
 
@@ -117,3 +121,50 @@ The downgrade procedure remains the same for Vault customers who are currently o
 ### Q: Is there a limited time for support of licenses that are in storage?
 
 The support of licenses installed by alternative means often leads to difficulties providing the appropriate support. To provide the support expected by our customers, we plan to scale support for licenses in storage for Vault. With this plan, Vault customers have up to a 1-year migration period, or until the release of Vault 1.11, to migrate their licenses from in-storage to auto-loading. Starting with Vault 1.11, licensing endpoints that are put in storage will be removed, and Vault will no longer check for valid licenses in storage. This change requires that all customers have auto-loaded licenses to upgrade to 1.11(+) successfully.
+
+### Q: What are the steps to upgrade from one autoloaded license to another autoloaded license?
+
+Follow these steps to migrate from one autoloaded license to another autoloaded license.
+
+1. Use the [vault license inspect](/docs/commands/license/inspect) command to compare the new license against the output of the [vault license get](/docs/commands/license/get) command. This is to ensure that you have the correct license.
+1. Backup the old license file in a safe location.
+1. Replace the old license file on each Vault server with the new one.
+1. Invoke the [reload command](/api-docs/system/config-reload#reload-license-file) on each individual Vault server, starting with the standbys and doing the leader last. Invoking in this manner reduces possible disruptions if something was performed incorrectly with the above steps. You can either use the [reload command](/api-docs/system/config-reload#reload-license-file) or send a SIGHUP.
+1. On each node, ensure that the new license is in use by using the [vault license get](/docs/commands/license/get) command and/or checking the logs.
+
+# ADP Licensing
+
+This FAQ section is for the Advanced Data Protection (ADP) license changes introduced in Vault Enterprise 1.8.
+
+### Q: What are the Vault ADP module licensing changes introduced in 1.8?
+
+As of Vault Enterprise 1.8, the functionality formerly sold as the Vault ADP module is now separated between two new modules:
+
+**ADP-KM** includes:
+
+- [Key Management Secrets Engine (KMSE)](/docs/secrets/key-management)
+- [Key Management Interoperability (KMIP)](/docs/secrets/kmip)
+- [MSSQL Transparent Data Encryption (TDE)](https://www.hashicorp.com/blog/enabling-transparent-data-encryption-for-microsoft-sql-with-vault)
+
+**ADP-Transform** includes:
+
+- [Transform Secrets Engine (TSE)](/docs/secrets/transform)
+
+### Q: How can the new ADP modules be purchased and what features are customer entitled to as part of that purchase?
+
+**ADP-KM includes**:
+
+- This is the first Vault Enterprise module that can be purchased standalone. This means it can be purchased without the purchase of a Vault Enterprise Standard license.
+- ADP-KM still requires a Vault Enterprise binary. The Vault Enterprise Standard license is automatically included with the ADP-KM module, but customers are contractually prohibited from using any features besides those in Vault OSS and ADP-KM (KMSE and KMIP).
+
+**ADP-Transform includes**:
+
+- This module cannot be purchased as a standalone. It requires a Vault Enterprise binary, and customers must purchase the base Vault Enterprise Standard license (at least) to use the corresponding Enterprise features.
+- The ADP-Transform SKU can be applied as an add-on. This workflow is similar to the consolidated ADP SKU.
+
+### Q: What is the impact to customers based on these ADP module licensing changes?
+
+Customers need to be aware of the following as a result of these changes:
+
+- **New customers** may choose to purchase either or both of these modules. The old (consolidated) module is not available to them as an option.
+- **Existing customers** may continue with the consolidated Vault ADP module uninterrupted. They will only be converted to one or both new ADP modules the next time they make a change to their licensing details (i.e. contract change).

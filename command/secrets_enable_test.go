@@ -166,7 +166,6 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		if diff := deep.Equal([]string{"key1,key2"}, mountInfo.Config.AllowedManagedKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AllowedManagedKeys. Difference is: %v", diff)
 		}
-
 	})
 
 	t.Run("communication_failure", func(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -15,11 +16,23 @@ import (
 )
 
 func pathIssue(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "issue/" + framework.GenericNameRegex("role"),
+	pattern := "issue/" + framework.GenericNameRegex("role")
+	return buildPathIssue(b, pattern)
+}
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathIssue,
+func pathIssuerIssue(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/issue/" + framework.GenericNameRegex("role")
+	return buildPathIssue(b, pattern)
+}
+
+func buildPathIssue(b *backend, pattern string) *framework.Path {
+	ret := &framework.Path{
+		Pattern: pattern,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("issue", roleRequired, b.pathIssue),
+			},
 		},
 
 		HelpSynopsis:    pathIssueHelpSyn,
@@ -31,11 +44,23 @@ func pathIssue(b *backend) *framework.Path {
 }
 
 func pathSign(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "sign/" + framework.GenericNameRegex("role"),
+	pattern := "sign/" + framework.GenericNameRegex("role")
+	return buildPathSign(b, pattern)
+}
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathSign,
+func pathIssuerSign(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign/" + framework.GenericNameRegex("role")
+	return buildPathSign(b, pattern)
+}
+
+func buildPathSign(b *backend, pattern string) *framework.Path {
+	ret := &framework.Path{
+		Pattern: pattern,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("sign", roleRequired, b.pathSign),
+			},
 		},
 
 		HelpSynopsis:    pathSignHelpSyn,
@@ -53,19 +78,32 @@ func pathSign(b *backend) *framework.Path {
 	return ret
 }
 
-func pathSignVerbatim(b *backend) *framework.Path {
-	ret := &framework.Path{
-		Pattern: "sign-verbatim" + framework.OptionalParamRegex("role"),
+func pathIssuerSignVerbatim(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-verbatim"
+	return buildPathIssuerSignVerbatim(b, pattern)
+}
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathSignVerbatim,
+func pathSignVerbatim(b *backend) *framework.Path {
+	pattern := "sign-verbatim" + framework.OptionalParamRegex("role")
+	return buildPathIssuerSignVerbatim(b, pattern)
+}
+
+func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
+	ret := &framework.Path{
+		Pattern: pattern,
+		Fields:  map[string]*framework.FieldSchema{},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+			},
 		},
 
-		HelpSynopsis:    pathSignHelpSyn,
-		HelpDescription: pathSignHelpDesc,
+		HelpSynopsis:    pathIssuerSignVerbatimHelpSyn,
+		HelpDescription: pathIssuerSignVerbatimHelpDesc,
 	}
 
-	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addNonCACommonFields(ret.Fields)
 
 	ret.Fields["csr"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
@@ -104,20 +142,29 @@ this value to an empty list.`,
 	return ret
 }
 
+const (
+	pathIssuerSignVerbatimHelpSyn  = `Issue a certificate directly based on the provided CSR.`
+	pathIssuerSignVerbatimHelpDesc = `
+This API endpoint allows for directly signing the specified certificate
+signing request (CSR) without the typical role-based validation. This
+allows for attributes from the CSR to be directly copied to the resulting
+certificate.
+
+Usually the role-based sign operations (/sign and /issue) are preferred to
+this operation.
+
+Note that this is a very privileged operation and should be extremely
+restricted in terms of who is allowed to use it. All values will be taken
+directly from the incoming CSR. No further verification of attribute are
+performed, except as permitted by this endpoint's parameters.
+
+See the API documentation for more information about required parameters.
+`
+)
+
 // pathIssue issues a certificate and private key from given parameters,
 // subject to role restrictions
-func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role").(string)
-
-	// Get the role
-	role, err := b.getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
-	}
-
+func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
 	if role.KeyType == "any" {
 		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
@@ -127,47 +174,31 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 
 // pathSign issues a certificate from a submitted CSR, subject to role
 // restrictions
-func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role").(string)
-
-	// Get the role
-	role, err := b.getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
-	}
-
+func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
 	return b.pathIssueSignCert(ctx, req, data, role, true, false)
 }
 
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
-func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role").(string)
-
-	// Get the role if one was specified
-	role, err := b.getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-
+func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
 	entry := &roleEntry{
-		AllowLocalhost:       true,
-		AllowAnyName:         true,
-		AllowIPSANs:          true,
-		EnforceHostnames:     false,
-		KeyType:              "any",
-		UseCSRCommonName:     true,
-		UseCSRSANs:           true,
-		AllowedURISANs:       []string{"*"},
-		AllowedSerialNumbers: []string{"*"},
-		GenerateLease:        new(bool),
-		KeyUsage:             data.Get("key_usage").([]string),
-		ExtKeyUsage:          data.Get("ext_key_usage").([]string),
-		ExtKeyUsageOIDs:      data.Get("ext_key_usage_oids").([]string),
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		UseCSRCommonName:          true,
+		UseCSRSANs:                true,
+		AllowedOtherSANs:          []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		AllowedURISANs:            []string{"*"},
+		GenerateLease:             new(bool),
+		KeyUsage:                  data.Get("key_usage").([]string),
+		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
 	}
+	*entry.AllowWildcardCertificates = true
 
 	*entry.GenerateLease = false
 
@@ -181,7 +212,15 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		if role.GenerateLease != nil {
 			*entry.GenerateLease = *role.GenerateLease
 		}
+		if role.NotBeforeDuration > 0 {
+			entry.NotBeforeDuration = role.NotBeforeDuration
+		}
 		entry.NoStore = role.NoStore
+		entry.Issuer = role.Issuer
+	}
+
+	if len(entry.Issuer) == 0 {
+		entry.Issuer = defaultRef
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
@@ -189,8 +228,34 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// If storing the certificate and on a performance standby, forward this request on to the primary
-	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby|consts.ReplicationPerformanceSecondary) {
+	// Allow performance secondaries to generate and store certificates locally to them.
+	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
+	}
+
+	// We prefer the issuer from the role in two cases:
+	//
+	// 1. On the legacy sign-verbatim paths, as we always provision an issuer
+	//    in both the role and role-less cases, and
+	// 2. On the legacy sign/:role or issue/:role paths, as the issuer was
+	//    set on the role directly (either via upgrade or not). Note that
+	//    the updated issuer/:ref/{sign,issue}/:role path is not affected,
+	//    and we instead pull the issuer out of the path instead (which
+	//    allows users with access to those paths to manually choose their
+	//    issuer in desired scenarios).
+	var issuerName string
+	if strings.HasPrefix(req.Path, "sign-verbatim/") || strings.HasPrefix(req.Path, "sign/") || strings.HasPrefix(req.Path, "issue/") {
+		issuerName = role.Issuer
+		if len(issuerName) == 0 {
+			issuerName = defaultRef
+		}
+	} else {
+		// Otherwise, we must have a newer API which requires an issuer
+		// reference. Fetch it in this case
+		issuerName = getIssuerRef(data)
+		if len(issuerName) == 0 {
+			return logical.ErrorResponse("missing issuer reference"), nil
+		}
 	}
 
 	format := getFormat(data)
@@ -200,14 +265,16 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, req)
-	switch caErr.(type) {
-	case errutil.UserError:
-		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case errutil.InternalError:
-		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"error fetching CA certificate: %s", caErr)}
+	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName, IssuanceUsage)
+	if caErr != nil {
+		switch caErr.(type) {
+		case errutil.UserError:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"could not fetch the CA certificate (was one set?): %s", caErr)}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf(
+				"error fetching CA certificate: %s", caErr)}
+		}
 	}
 
 	input := &inputBundle{
@@ -287,6 +354,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			respData["private_key_type"] = cb.PrivateKeyType
 		}
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
 
 	var resp *logical.Response

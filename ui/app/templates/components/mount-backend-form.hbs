@@ -1,16 +1,15 @@
 <PageHeader as |p|>
   <p.levelLeft>
-    <h1 class="title is-3" data-test-mount-form-header="true">
+    <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
       {{#if this.showEnable}}
-        {{#with (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
-          <Icon @name={{or typeInfo.glyph typeInfo.type}} class="has-text-grey-light" />
-
+        {{#let (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
+          <Icon @name={{or typeInfo.glyph typeInfo.type}} @size="24" class="has-text-grey-light" />
           {{#if (eq this.mountType "auth")}}
             {{concat "Enable " typeInfo.displayName " Authentication Method"}}
           {{else}}
             {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
           {{/if}}
-        {{/with}}
+        {{/let}}
       {{else if (eq this.mountType "auth")}}
         Enable an Authentication Method
       {{else}}
@@ -22,13 +21,13 @@
 <form {{action (perform this.mountBackend) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="enable" @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}} />
-    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} />
+    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
     {{#if this.showEnable}}
       <FormFieldGroups
         @model={{this.mountModel}}
         @onChange={{action "onTypeChange"}}
         @renderGroup="default"
-        @validationMessages={{this.validationMessages}}
+        @modelValidations={{this.modelValidations}}
         @onKeyUp={{action "onKeyUp"}}
       />
       <FormFieldGroups @model={{this.mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
@@ -47,8 +46,9 @@
               @groupName="mount-type"
               @onRadioChange={{queue (action (mut this.mountModel.type)) (action "onTypeChange" "type")}}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
+              {{! TODO: verify that keymgmt is in the ADP module }}
               @tooltipMessage={{if
-                (or (eq type.type "transform") (eq type.type "kmip"))
+                (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
                 (concat
                   type.displayName
                   " is part of the Advanced Data Protection module, which is not included in your enterprise license."
@@ -67,7 +67,7 @@
         <button
           type="submit"
           data-test-mount-submit="true"
-          class="button is-primary {{if this.mountBackend.isRunning "loading"}}"
+          class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
           disabled={{or this.mountBackend.isRunning this.isFormInvalid}}
         >
           {{#if (eq this.mountType "auth")}}

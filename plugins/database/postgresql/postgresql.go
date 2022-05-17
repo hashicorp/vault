@@ -48,7 +48,6 @@ var (
 	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
 )
 
-// New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
@@ -181,7 +180,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"username": username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -230,7 +229,7 @@ func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, 
 				"username":   username,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -274,7 +273,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				"password":   req.Password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 			continue
@@ -292,7 +291,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				"password":   req.Password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -344,7 +343,7 @@ func (p *PostgreSQL) customDeleteUser(ctx context.Context, username string, revo
 				"name":     username,
 				"username": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -437,7 +436,7 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revocationStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}

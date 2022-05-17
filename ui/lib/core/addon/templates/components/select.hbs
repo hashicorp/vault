@@ -3,14 +3,19 @@
     {{this.label}}
   </label>
 {{/if}}
-<div class="control {{if this.isInline "select is-inline-block"}}">
-  <div class="select {{if this.isFullwidth "is-fullwidth"}}">
+<div class="control {{if this.isInline 'select is-inline-block'}}">
+  <div class="select {{if this.isFullwidth 'is-fullwidth'}}">
     <select
       class="select"
       id="select-{{this.elementId}}"
       onchange={{action this.onChange value="target.value"}}
       data-test-select={{this.name}}
     >
+      {{#if this.noDefault}}
+        <option value="">
+          Select one
+        </option>
+      {{/if}}
       {{#each this.options as |op|}}
         <option
           value={{or (get op this.valueAttribute) op}}

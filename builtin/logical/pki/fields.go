@@ -2,6 +2,15 @@ package pki
 
 import "github.com/hashicorp/vault/sdk/framework"
 
+const (
+	issuerRefParam = "issuer_ref"
+	keyNameParam   = "key_name"
+	keyRefParam    = "key_ref"
+	keyIdParam     = "key_id"
+	keyTypeParam   = "key_type"
+	keyBitsParam   = "key_bits"
+)
+
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
 // and signing
 func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
@@ -20,9 +29,10 @@ Defaults to false (CN is included).`,
 		Type:    framework.TypeString,
 		Default: "pem",
 		Description: `Format for returned data. Can be "pem", "der",
-or "pem_bundle". If "pem_bundle" any private
+or "pem_bundle". If "pem_bundle", any private
 key and issuing cert will be appended to the
-certificate pem. Defaults to "pem".`,
+certificate pem. If "der", the value will be
+base64 encoded. Defaults to "pem".`,
 		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "pem",
@@ -106,9 +116,11 @@ email addresses.`,
 
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `The requested serial number, if any. If you want
-more than one, specify alternative names in
-the alt_names map using OID 2.5.4.5.`,
+		Description: `The Subject's requested serial number, if any.
+See RFC 4519 Section 2.31 'serialNumber' for a description of this field.
+If you want more than one, specify alternative names in the alt_names
+map using OID 2.5.4.5. This has no impact on the final certificate's
+Serial Number field.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
@@ -122,6 +134,14 @@ be larger than the role max TTL.`,
 			Name: "TTL",
 		},
 	}
+
+	fields["not_after"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Set the not after field of the certificate with specified date value.
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
+
+	fields = addIssuerRefField(fields)
 
 	return fields
 }
@@ -224,14 +244,16 @@ this value.`,
 
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `The requested serial number, if any. If you want
-more than one, specify alternative names in
-the alt_names map using OID 2.5.4.5.`,
+		Description: `The Subject's requested serial number, if any.
+See RFC 4519 Section 2.31 'serialNumber' for a description of this field.
+If you want more than one, specify alternative names in the alt_names
+map using OID 2.5.4.5. This has no impact on the final certificate's
+Serial Number field.`,
 	}
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
-                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
 	return fields
@@ -242,10 +264,25 @@ the alt_names map using OID 2.5.4.5.`,
 func addCAKeyGenerationFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields["exported"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `Must be "internal" or "exported". If set to
+		Description: `Must be "internal", "exported" or "kms". If set to
 "exported", the generated private key will be
 returned. This is your *only* chance to retrieve
 the private key!`,
+		AllowedValues: []interface{}{"internal", "external", "kms"},
+	}
+
+	fields["managed_key_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The name of the managed key to use when the exported
+type is kms. When kms type is the key type, this field or managed_key_id
+is required. Ignored for other types.`,
+	}
+
+	fields["managed_key_id"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The name of the managed key to use when the exported
+type is kms. When kms type is the key type, this field or managed_key_name
+is required. Ignored for other types.`,
 	}
 
 	fields["key_bits"] = &framework.FieldSchema{
@@ -282,6 +319,9 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 			Value: "rsa",
 		},
 	}
+
+	fields = addKeyRefNameFields(fields)
+
 	return fields
 }
 
@@ -302,5 +342,61 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		},
 	}
 
+	fields = addIssuerNameField(fields)
+
+	return fields
+}
+
+func addIssuerRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addIssuerNameField(fields)
+	fields = addIssuerRefField(fields)
+	return fields
+}
+
+func addIssuerNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["issuer_name"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name to the generated issuer, the name
+must be unique across all issuers and not be the reserved value 'default'`,
+	}
+	return fields
+}
+
+func addIssuerRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[issuerRefParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing issuer; either "default"
+for the configured default issuer, an identifier or the name assigned
+to the issuer.`,
+		Default: defaultRef,
+	}
+	return fields
+}
+
+func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields = addKeyNameField(fields)
+	fields = addKeyRefField(fields)
+	return fields
+}
+
+func addKeyNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[keyNameParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Provide a name for the key that will be generated,
+the name must be unique across all keys and not be the reserved value
+'default'`,
+	}
+
+	return fields
+}
+
+func addKeyRefField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields[keyRefParam] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Reference to a existing key; either "default"
+for the configured default key, an identifier or the name assigned
+to the key.`,
+		Default: defaultRef,
+	}
 	return fields
 }

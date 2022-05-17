@@ -13,7 +13,7 @@
         </p>
       {{/if}}
     {{else}}
-      <h3 class="empty-state-title" data-test-empty-state-title>
+      <h3 class={{concat "empty-state-title" (if this.subTitle " has-bottom-margin-m")}} data-test-empty-state-title>
         {{this.title}}
       </h3>
       {{#if this.subTitle}}

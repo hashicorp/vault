@@ -92,7 +92,7 @@ the value can also be specified by the `VAULT_API_ADDR` environment variable,
 which takes precedence.
 
 What the [`api_addr`](/docs/configuration#api_addr) value should be set to
-depends on how Vault is set up.  There are two common scenarios: Vault servers
+depends on how Vault is set up. There are two common scenarios: Vault servers
 accessed directly by clients, and Vault servers accessed via a load balancer.
 
 In both cases, the [`api_addr`](/docs/configuration#api_addr) should be a full
@@ -104,8 +104,8 @@ When clients are able to access Vault directly, the
 [`api_addr`](/docs/configuration#api_addr) for each node should be that node's
 address. For instance, if there are two Vault nodes:
 
-* `A`, accessed via `https://a.vault.mycompany.com:8200`
-* `B`, accessed via `https://b.vault.mycompany.com:8200`
+- `A`, accessed via `https://a.vault.mycompany.com:8200`
+- `B`, accessed via `https://b.vault.mycompany.com:8200`
 
 Then node `A` would set its
 [`api_addr`](/docs/configuration#api_addr) to
@@ -169,13 +169,12 @@ variable, which takes precedence.
 ## Storage Support
 
 Currently there are several storage backends that support high availability
-mode, including [Consul](/docs/storage/consul),
-[ZooKeeper](/docs/storage/zookeeper) and [etcd](/docs/storage/etcd). These may
+mode, including [Consul](/docs/configuration/storage/consul),
+[ZooKeeper](/docs/configuration/storage/zookeeper) and [etcd](/docs/configuration/storage/etcd). These may
 change over time, and the [configuration page](/docs/configuration) should be
 referenced.
 
-The [Consul backend](/docs/storage/consul) is the recommended HA backend, as it is used in production
-by HashiCorp and its customers with commercial support.
+HashiCorp recommends [Vault Integrated Storage](/docs/configuration/storage/raft) as the default HA backend for new deployments of Vault. [Consul Storage Backend](/docs/configuration/storage/consul) is also a supported option and used by many production deployments. See the [comparison chart](/docs/configuration/storage#integrated-storage-vs-consul-as-vault-storage) for help deciding which option is best for you.
 
 If you're interested in implementing another backend or adding HA support to
 another backend, we'd love your contributions. Adding HA support requires

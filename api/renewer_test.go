@@ -24,28 +24,28 @@ func TestRenewer_NewRenewer(t *testing.T) {
 		err  bool
 	}{
 		{
-			"nil",
-			nil,
-			nil,
-			true,
+			name: "nil",
+			i:    nil,
+			e:    nil,
+			err:  true,
 		},
 		{
-			"missing_secret",
-			&RenewerInput{
+			name: "missing_secret",
+			i: &RenewerInput{
 				Secret: nil,
 			},
-			nil,
-			true,
+			e:   nil,
+			err: true,
 		},
 		{
-			"default_grace",
-			&RenewerInput{
+			name: "default_grace",
+			i: &RenewerInput{
 				Secret: &Secret{},
 			},
-			&Renewer{
+			e: &Renewer{
 				secret: &Secret{},
 			},
-			false,
+			err: false,
 		},
 	}
 
@@ -98,67 +98,78 @@ func TestLifetimeWatcher(t *testing.T) {
 		expectRenewal        bool
 	}{
 		{
-			time.Second,
-			"no_error",
-			60,
-			60,
-			func(_ string, _ int) (*Secret, error) {
+			maxTestTime:          time.Second,
+			name:                 "no_error",
+			leaseDurationSeconds: 60,
+			incrementSeconds:     60,
+			renew: func(_ string, _ int) (*Secret, error) {
 				return renewedSecret, nil
 			},
-			nil,
-			true,
+			expectError:   nil,
+			expectRenewal: true,
 		},
 		{
-			5 * time.Second,
-			"one_error",
-			15,
-			15,
-			func(_ string, _ int) (*Secret, error) {
+			maxTestTime:          time.Second,
+			name:                 "short_increment_duration",
+			leaseDurationSeconds: 60,
+			incrementSeconds:     10,
+			renew: func(_ string, _ int) (*Secret, error) {
+				return renewedSecret, nil
+			},
+			expectError:   nil,
+			expectRenewal: true,
+		},
+		{
+			maxTestTime:          5 * time.Second,
+			name:                 "one_error",
+			leaseDurationSeconds: 15,
+			incrementSeconds:     15,
+			renew: func(_ string, _ int) (*Secret, error) {
 				if caseOneErrorCount == 0 {
 					caseOneErrorCount++
 					return nil, fmt.Errorf("renew failure")
 				}
 				return renewedSecret, nil
 			},
-			nil,
-			true,
+			expectError:   nil,
+			expectRenewal: true,
 		},
 		{
-			15 * time.Second,
-			"many_errors",
-			15,
-			15,
-			func(_ string, _ int) (*Secret, error) {
+			maxTestTime:          15 * time.Second,
+			name:                 "many_errors",
+			leaseDurationSeconds: 15,
+			incrementSeconds:     15,
+			renew: func(_ string, _ int) (*Secret, error) {
 				if caseManyErrorsCount == 3 {
 					return renewedSecret, nil
 				}
 				caseManyErrorsCount++
 				return nil, fmt.Errorf("renew failure")
 			},
-			nil,
-			true,
+			expectError:   nil,
+			expectRenewal: true,
 		},
 		{
-			15 * time.Second,
-			"only_errors",
-			15,
-			15,
-			func(_ string, _ int) (*Secret, error) {
+			maxTestTime:          15 * time.Second,
+			name:                 "only_errors",
+			leaseDurationSeconds: 15,
+			incrementSeconds:     15,
+			renew: func(_ string, _ int) (*Secret, error) {
 				return nil, fmt.Errorf("renew failure")
 			},
-			nil,
-			false,
+			expectError:   nil,
+			expectRenewal: false,
 		},
 		{
-			15 * time.Second,
-			"negative_lease_duration",
-			-15,
-			15,
-			func(_ string, _ int) (*Secret, error) {
+			maxTestTime:          15 * time.Second,
+			name:                 "negative_lease_duration",
+			leaseDurationSeconds: -15,
+			incrementSeconds:     15,
+			renew: func(_ string, _ int) (*Secret, error) {
 				return renewedSecret, nil
 			},
-			nil,
-			true,
+			expectError:   nil,
+			expectRenewal: true,
 		},
 	}
 
@@ -174,8 +185,10 @@ func TestLifetimeWatcher(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			doneCh := make(chan error, 1)
 			go func() {
-				v.doneCh <- v.doRenewWithOptions(false, false, tc.leaseDurationSeconds, "myleaseID", tc.renew, time.Second)
+				doneCh <- v.doRenewWithOptions(false, false,
+					tc.leaseDurationSeconds, "myleaseID", tc.renew, time.Second)
 			}()
 			defer v.Stop()
 
@@ -189,12 +202,15 @@ func TestLifetimeWatcher(t *testing.T) {
 				if r.Secret != renewedSecret {
 					t.Fatalf("expected secret %v, got %v", renewedSecret, r.Secret)
 				}
-			case err := <-v.DoneCh():
+			case err := <-doneCh:
 				if tc.expectError != nil && !errors.Is(err, tc.expectError) {
 					t.Fatalf("expected error %q, got: %v", tc.expectError, err)
 				}
+				if tc.expectError == nil && err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
 				if tc.expectRenewal {
-					t.Fatal("expected at least one renewal")
+					t.Fatalf("expected at least one renewal, got donech result: %v", err)
 				}
 			}
 		})

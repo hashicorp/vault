@@ -18,8 +18,10 @@ func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleList,
+			},
 		},
 
 		HelpSynopsis:    pathListRolesHelpSyn,
@@ -43,18 +45,20 @@ func pathRoles(b *backend) *framework.Path {
 
 			"ttl": {
 				Type: framework.TypeDurationSecond,
-				Description: `The lease duration if no specific lease duration is
-requested. The lease duration controls the expiration
-of certificates issued by this backend. Defaults to
-the value of max_ttl.`,
+				Description: `The lease duration (validity period of the
+certificate) if no specific lease duration is requested.
+The lease duration controls the expiration of certificates
+issued by this backend. Defaults to the system default
+value or the value of max_ttl, whichever is shorter.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "TTL",
 				},
 			},
 
 			"max_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: "The maximum allowed lease duration",
+				Type: framework.TypeDurationSecond,
+				Description: `The maximum allowed lease duration. If not
+set, defaults to the system maximum lease TTL.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Max TTL",
 				},
@@ -63,8 +67,8 @@ the value of max_ttl.`,
 			"allow_localhost": {
 				Type:    framework.TypeBool,
 				Default: true,
-				Description: `Whether to allow "localhost" as a valid common
-name in a request`,
+				Description: `Whether to allow "localhost" and "localdomain"
+as a valid common name in a request, independent of allowed_domains value.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: true,
 				},
@@ -72,11 +76,12 @@ name in a request`,
 
 			"allowed_domains": {
 				Type: framework.TypeCommaStringSlice,
-				Description: `If set, clients can request certificates for
-subdomains directly beneath these domains, including
-the wildcard subdomains. See the documentation for more
-information. This parameter accepts a comma-separated 
-string or list of domains.`,
+				Description: `Specifies the domains this role is allowed
+to issue certificates for. This is used with the allow_bare_domains,
+allow_subdomains, and allow_glob_domains to determine matches for the
+common name, DNS-typed SAN entries, and Email-typed SAN entries of
+certificates. See the documentation for more information. This parameter
+accepts a comma-separated string or list of domains.`,
 			},
 			"allowed_domains_template": {
 				Type: framework.TypeBool,
@@ -87,38 +92,46 @@ string or list of domains.`,
 			"allow_bare_domains": {
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates
-for the base domains themselves, e.g. "example.com".
-This is a separate option as in some cases this can
-be considered a security threat.`,
+for the base domains themselves, e.g. "example.com" of domains listed
+in allowed_domains. This is a separate option as in some cases this can
+be considered a security threat. See the documentation for more
+information.`,
 			},
 
 			"allow_subdomains": {
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
-subdomains of the CNs allowed by the other role options,
-including wildcard subdomains. See the documentation for
-more information.`,
+subdomains of domains listed in allowed_domains, including wildcard
+subdomains. See the documentation for more information.`,
 			},
 
 			"allow_glob_domains": {
 				Type: framework.TypeBool,
-				Description: `If set, domains specified in "allowed_domains"
-can include glob patterns, e.g. "ftp*.example.com". See
-the documentation for more information.`,
+				Description: `If set, domains specified in allowed_domains
+can include shell-style glob patterns, e.g. "ftp*.example.com".
+See the documentation for more information.`,
+			},
+
+			"allow_wildcard_certificates": {
+				Type: framework.TypeBool,
+				Description: `If set, allows certificates with wildcards in
+the common name to be issued, conforming to RFC 6125's Section 6.4.3; e.g.,
+"*.example.net" or "b*z.example.net". See the documentation for more
+information.`,
 			},
 
 			"allow_any_name": {
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
-any CN they like. See the documentation for more
-information.`,
+any domain, regardless of allowed_domains restrictions.
+See the documentation for more information.`,
 			},
 
 			"enforce_hostnames": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, only valid host names are allowed for
-CN and SANs. Defaults to true.`,
+CN and DNS SANs, and the host part of email addresses. Defaults to true.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: true,
 				},
@@ -128,7 +141,7 @@ CN and SANs. Defaults to true.`,
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, IP Subject Alternative Names are allowed.
-Any valid IP is accepted.`,
+Any valid IP is accepted and No authorization checking is performed.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Allow IP Subject Alternative Names",
 					Value: true,
@@ -137,21 +150,21 @@ Any valid IP is accepted.`,
 
 			"allowed_uri_sans": {
 				Type: framework.TypeCommaStringSlice,
-				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
+				Description: `If set, an array of allowed URIs for URI Subject Alternative Names.
 Any valid URI is accepted, these values support globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Allowed URI Subject Alternative Names",
 				},
 			},
 
-			"allowed_uri_sans_template": &framework.FieldSchema{
+			"allowed_uri_sans_template": {
 				Type: framework.TypeBool,
 				Description: `If set, Allowed URI SANs can be specified using identity template policies.
 				Non-templated URI SANs are also permitted.`,
 				Default: false,
 			},
 
-			"allowed_other_sans": &framework.FieldSchema{
+			"allowed_other_sans": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -168,7 +181,7 @@ Any valid URI is accepted, these values support globbing.`,
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, certificates are flagged for server auth use.
-Defaults to true.`,
+Defaults to true. See also RFC 5280 Section 4.2.1.12.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: true,
 				},
@@ -178,7 +191,7 @@ Defaults to true.`,
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, certificates are flagged for client auth use.
-Defaults to true.`,
+Defaults to true. See also RFC 5280 Section 4.2.1.12.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: true,
 				},
@@ -187,21 +200,21 @@ Defaults to true.`,
 			"code_signing_flag": {
 				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for code signing
-use. Defaults to false.`,
+use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 			},
 
 			"email_protection_flag": {
 				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for email
-protection use. Defaults to false.`,
+protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
 			},
 
 			"key_type": {
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
-"ec" and "ed25519" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+"ec", "ed25519" and "any" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec", "ed25519", "any"},
 			},
 
 			"key_bits": {
@@ -213,7 +226,7 @@ protection use. Defaults to false.`,
 ed25519.`,
 			},
 
-			"signature_bits": &framework.FieldSchema{
+			"signature_bits": {
 				Type:    framework.TypeInt,
 				Default: 0,
 				Description: `The number of bits to use in the signature
@@ -222,7 +235,7 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 			},
 
-			"key_usage": &framework.FieldSchema{
+			"key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 				Description: `A comma-separated string or list of key usages (not extended
@@ -230,7 +243,8 @@ key usages). Valid values can be found at
 https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
 To remove all key usages from being set, set
-this value to an empty list.`,
+this value to an empty list. See also RFC 5280
+Section 4.2.1.3.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: "DigitalSignature,KeyAgreement,KeyEncipherment",
 				},
@@ -243,7 +257,8 @@ this value to an empty list.`,
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 To remove all key usages from being set, set
-this value to an empty list.`,
+this value to an empty list. See also RFC 5280
+Section 4.2.1.12.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Extended Key Usage",
 				},
@@ -263,7 +278,7 @@ this value to an empty list.`,
 				Description: `If set, when used with a signing profile,
 the common name in the CSR will be used. This
 does *not* include any requested Subject Alternative
-Names. Defaults to true.`,
+Names; use use_csr_sans for that. Defaults to true.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Use CSR Common Name",
 					Value: true,
@@ -275,7 +290,8 @@ Names. Defaults to true.`,
 				Default: true,
 				Description: `If set, when used with a signing profile,
 the SANs in the CSR will be used. This does *not*
-include the Common Name (cn). Defaults to true.`,
+include the Common Name (cn); use use_csr_common_name
+for that. Defaults to true.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Use CSR Subject Alternative Names",
 					Value: true,
@@ -368,7 +384,7 @@ for "generate_lease".`,
 
 			"policy_identifiers": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: `A comma-separated string or list of policy oids.`,
+				Description: `A comma-separated string or list of policy OIDs.`,
 			},
 
 			"basic_constraints_valid_for_non_ca": {
@@ -389,14 +405,32 @@ for "generate_lease".`,
 			"not_after": {
 				Type: framework.TypeString,
 				Description: `Set the not after field of the certificate with specified date value.
-                              The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ.`,
+			},
+			"issuer_ref": {
+				Type: framework.TypeString,
+				Description: `Reference to the issuer used to sign requests
+serviced by this role.`,
+				Default: defaultRef,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleCreate,
-			logical.DeleteOperation: b.pathRoleDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoleRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleCreate,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoleDelete,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathRoleHelpSyn,
@@ -472,6 +506,15 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		result.AllowedBaseDomain = ""
 		modified = true
 	}
+	if result.AllowWildcardCertificates == nil {
+		// While not the most secure default, when AllowWildcardCertificates isn't
+		// explicitly specified in the stored Role, we automatically upgrade it to
+		// true to preserve compatibility with previous versions of Vault. Once this
+		// field is set, this logic will not be triggered any more.
+		result.AllowWildcardCertificates = new(bool)
+		*result.AllowWildcardCertificates = true
+		modified = true
+	}
 
 	// Upgrade generate_lease in role
 	if result.GenerateLease == nil {
@@ -501,6 +544,14 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 	if result.OrganizationOld != "" {
 		result.Organization = strings.Split(result.OrganizationOld, ",")
 		result.OrganizationOld = ""
+		modified = true
+	}
+
+	// Set the issuer field to default if not set. We want to do this
+	// unconditionally as we should probably never have an empty issuer
+	// on a stored roles.
+	if len(result.Issuer) == 0 {
+		result.Issuer = defaultRef
 		modified = true
 	}
 
@@ -549,7 +600,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	return resp, nil
 }
 
-func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
@@ -560,6 +611,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 
 func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+	var resp *logical.Response
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
@@ -571,6 +623,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:               data.Get("allow_subdomains").(bool),
 		AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
+		AllowWildcardCertificates:     new(bool), // Handled specially below
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
 		AllowedURISANsTemplate:        data.Get("allowed_uri_sans_template").(bool),
 		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
@@ -603,6 +656,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		NotAfter:                      data.Get("not_after").(string),
+		Issuer:                        data.Get("issuer_ref").(string),
 	}
 
 	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
@@ -620,6 +674,10 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	// no_store implies generate_lease := false
 	if entry.NoStore {
 		*entry.GenerateLease = false
+		if data.Get("generate_lease").(bool) {
+			resp = &logical.Response{}
+			resp.AddWarning("mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority")
+		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
 	}
@@ -652,6 +710,23 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	}
 
+	allowWildcardCertificates, present := data.GetOk("allow_wildcard_certificates")
+	if !present {
+		// While not the most secure default, when AllowWildcardCertificates isn't
+		// explicitly specified in the request, we automatically set it to true to
+		// preserve compatibility with previous versions of Vault.
+		allowWildcardCertificates = true
+	}
+	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
+
+	// Ensure issuers ref is set to a non-empty value. Note that we never
+	// resolve the reference (to an issuerId) at role creation time; instead,
+	// resolve it at use time. This allows values such as `default` or other
+	// user-assigned names to "float" and change over time.
+	if len(entry.Issuer) == 0 {
+		entry.Issuer = defaultRef
+	}
+
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
 	if err != nil {
@@ -661,7 +736,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func parseKeyUsages(input []string) int {
@@ -760,6 +835,7 @@ type roleEntry struct {
 	AllowTokenDisplayName         bool          `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
 	AllowSubdomains               bool          `json:"allow_subdomains" mapstructure:"allow_subdomains"`
 	AllowGlobDomains              bool          `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
+	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty" mapstructure:"allow_wildcard_certificates"`
 	AllowAnyName                  bool          `json:"allow_any_name" mapstructure:"allow_any_name"`
 	EnforceHostnames              bool          `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
 	AllowIPSANs                   bool          `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
@@ -797,8 +873,7 @@ type roleEntry struct {
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 	NotAfter                      string        `json:"not_after" mapstructure:"not_after"`
-	// Used internally for signing intermediates
-	AllowExpirationPastCA bool
+	Issuer                        string        `json:"issuer" mapstructure:"issuer"`
 }
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
@@ -812,6 +887,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"allow_token_displayname":            r.AllowTokenDisplayName,
 		"allow_subdomains":                   r.AllowSubdomains,
 		"allow_glob_domains":                 r.AllowGlobDomains,
+		"allow_wildcard_certificates":        r.AllowWildcardCertificates,
 		"allow_any_name":                     r.AllowAnyName,
 		"allowed_uri_sans_template":          r.AllowedURISANsTemplate,
 		"enforce_hostnames":                  r.EnforceHostnames,
@@ -844,6 +920,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 		"not_after":                          r.NotAfter,
+		"issuer_ref":                         r.Issuer,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

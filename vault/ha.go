@@ -62,6 +62,8 @@ func (c *Core) Standby() (bool, error) {
 }
 
 // PerfStandby checks if the vault is a performance standby
+// This function cannot be used during request handling
+// because this causes a deadlock with the statelock.
 func (c *Core) PerfStandby() bool {
 	c.stateLock.RLock()
 	perfStandby := c.perfStandby

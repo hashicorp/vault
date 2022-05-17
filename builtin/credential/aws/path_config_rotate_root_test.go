@@ -37,7 +37,6 @@ func TestPathConfigRotateRoot(t *testing.T) {
 	config.StorageView = storage
 
 	b, err := Backend(config)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,6 +72,9 @@ func TestPathConfigRotateRoot(t *testing.T) {
 		t.Fatalf("expected new access key buzz2 but received %s", resp.Data["access_key"])
 	}
 	newClientConf, err := b.nonLockedClientConfigEntry(ctx, req.Storage)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp.Data["access_key"].(string) != newClientConf.AccessKey {
 		t.Fatalf("expected new access key buzz2 to be saved to storage but receieved %s", clientConf.AccessKey)
 	}

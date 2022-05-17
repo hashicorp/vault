@@ -6,8 +6,6 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  defaultSerializer: 'role',
-
   createOrUpdate(store, type, snapshot, requestType) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);

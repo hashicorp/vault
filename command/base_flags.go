@@ -4,12 +4,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/posener/complete"
 )
 
@@ -207,8 +209,8 @@ type IntVar struct {
 func (f *FlagSet) IntVar(i *IntVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
-			initial = int(i)
+		if i, err := parseutil.SafeParseInt(v); err == nil {
+			initial = i
 		}
 	}
 
@@ -242,13 +244,15 @@ func newIntValue(def int, target *int, hidden bool) *intValue {
 }
 
 func (i *intValue) Set(s string) error {
-	v, err := strconv.ParseInt(s, 0, 64)
+	v, err := parseutil.SafeParseInt(s)
 	if err != nil {
 		return err
 	}
-
-	*i.target = int(v)
-	return nil
+	if v >= math.MinInt && v <= math.MaxInt {
+		*i.target = int(v)
+		return nil
+	}
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
 func (i *intValue) Get() interface{} { return int(*i.target) }
@@ -374,9 +378,12 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	if v >= 0 && v <= math.MaxUint {
+		*i.target = uint(v)
+		return nil
+	}
 
-	*i.target = uint(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 }
 
 func (i *uintValue) Get() interface{} { return uint(*i.target) }

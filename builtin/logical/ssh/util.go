@@ -171,6 +171,7 @@ func createSSHComm(logger log.Logger, username, ip string, port int, hostkey str
 			ssh.PublicKeys(signer),
 		},
 		HostKeyCallback: insecureIgnoreHostWarning(logger),
+		Timeout:         1 * time.Minute,
 	}
 
 	connfunc := func() (net.Conn, error) {
@@ -220,15 +221,17 @@ func convertMapToStringValue(initial map[string]interface{}) map[string]string {
 	return result
 }
 
-func convertMapToIntValue(initial map[string]interface{}) (map[string]int, error) {
-	result := map[string]int{}
+func convertMapToIntSlice(initial map[string]interface{}) (map[string][]int, error) {
+	var err error
+	result := map[string][]int{}
+
 	for key, value := range initial {
-		v, err := parseutil.ParseInt(value)
+		result[key], err = parseutil.SafeParseIntSlice(value, 0 /* no upper bound on number of keys lengths per key type */)
 		if err != nil {
 			return nil, err
 		}
-		result[key] = int(v)
 	}
+
 	return result, nil
 }
 

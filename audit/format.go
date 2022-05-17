@@ -115,6 +115,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
 			MountType:           req.MountType,
+			MountAccessor:       req.MountAccessor,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -123,6 +124,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			Data:                          req.Data,
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
+			RemotePort:                    getRemotePort(req),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
@@ -131,6 +133,20 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 	if !auth.IssueTime.IsZero() {
 		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
+	}
+
+	if auth.PolicyResults != nil {
+		reqEntry.Auth.PolicyResults = &AuditPolicyResults{
+			Allowed: auth.PolicyResults.Allowed,
+		}
+
+		for _, p := range auth.PolicyResults.GrantingPolicies {
+			reqEntry.Auth.PolicyResults.GrantingPolicies = append(reqEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
+				Name:        p.Name,
+				NamespaceId: p.NamespaceId,
+				Type:        p.Type,
+			})
+		}
 	}
 
 	if req.WrapInfo != nil {
@@ -275,8 +291,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ID:                  req.ID,
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
+			ClientID:            req.ClientID,
 			Operation:           req.Operation,
 			MountType:           req.MountType,
+			MountAccessor:       req.MountAccessor,
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -285,21 +303,37 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Data:                          req.Data,
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
+			RemotePort:                    getRemotePort(req),
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 		},
 
 		Response: &AuditResponse{
-			MountType: req.MountType,
-			Auth:      respAuth,
-			Secret:    respSecret,
-			Data:      resp.Data,
-			Warnings:  resp.Warnings,
-			Redirect:  resp.Redirect,
-			WrapInfo:  respWrapInfo,
-			Headers:   resp.Headers,
+			MountType:     req.MountType,
+			MountAccessor: req.MountAccessor,
+			Auth:          respAuth,
+			Secret:        respSecret,
+			Data:          resp.Data,
+			Warnings:      resp.Warnings,
+			Redirect:      resp.Redirect,
+			WrapInfo:      respWrapInfo,
+			Headers:       resp.Headers,
 		},
+	}
+
+	if auth.PolicyResults != nil {
+		respEntry.Auth.PolicyResults = &AuditPolicyResults{
+			Allowed: auth.PolicyResults.Allowed,
+		}
+
+		for _, p := range auth.PolicyResults.GrantingPolicies {
+			respEntry.Auth.PolicyResults.GrantingPolicies = append(respEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
+				Name:        p.Name,
+				NamespaceId: p.NamespaceId,
+				Type:        p.Type,
+			})
+		}
 	}
 
 	if !auth.IssueTime.IsZero() {
@@ -341,6 +375,7 @@ type AuditRequest struct {
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
+	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
 	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
@@ -348,20 +383,22 @@ type AuditRequest struct {
 	Data                          map[string]interface{} `json:"data,omitempty"`
 	PolicyOverride                bool                   `json:"policy_override,omitempty"`
 	RemoteAddr                    string                 `json:"remote_address,omitempty"`
+	RemotePort                    int                    `json:"remote_port,omitempty"`
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
 }
 
 type AuditResponse struct {
-	Auth      *AuditAuth             `json:"auth,omitempty"`
-	MountType string                 `json:"mount_type,omitempty"`
-	Secret    *AuditSecret           `json:"secret,omitempty"`
-	Data      map[string]interface{} `json:"data,omitempty"`
-	Warnings  []string               `json:"warnings,omitempty"`
-	Redirect  string                 `json:"redirect,omitempty"`
-	WrapInfo  *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers   map[string][]string    `json:"headers,omitempty"`
+	Auth          *AuditAuth             `json:"auth,omitempty"`
+	MountType     string                 `json:"mount_type,omitempty"`
+	MountAccessor string                 `json:"mount_accessor,omitempty"`
+	Secret        *AuditSecret           `json:"secret,omitempty"`
+	Data          map[string]interface{} `json:"data,omitempty"`
+	Warnings      []string               `json:"warnings,omitempty"`
+	Redirect      string                 `json:"redirect,omitempty"`
+	WrapInfo      *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers       map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {
@@ -373,6 +410,7 @@ type AuditAuth struct {
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
 	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
+	PolicyResults             *AuditPolicyResults `json:"policy_results,omitempty"`
 	Metadata                  map[string]string   `json:"metadata,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
@@ -380,6 +418,17 @@ type AuditAuth struct {
 	TokenType                 string              `json:"token_type,omitempty"`
 	TokenTTL                  int64               `json:"token_ttl,omitempty"`
 	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
+}
+
+type AuditPolicyResults struct {
+	Allowed          bool         `json:"allowed"`
+	GrantingPolicies []PolicyInfo `json:"granting_policies,omitempty"`
+}
+
+type PolicyInfo struct {
+	Name        string `json:"name,omitempty"`
+	NamespaceId string `json:"namespace_id,omitempty"`
+	Type        string `json:"type"`
 }
 
 type AuditSecret struct {
@@ -406,6 +455,14 @@ func getRemoteAddr(req *logical.Request) string {
 		return req.Connection.RemoteAddr
 	}
 	return ""
+}
+
+// getRemotePort safely gets the remote port avoiding a nil pointer
+func getRemotePort(req *logical.Request) int {
+	if req != nil && req.Connection != nil {
+		return req.Connection.RemotePort
+	}
+	return 0
 }
 
 func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {

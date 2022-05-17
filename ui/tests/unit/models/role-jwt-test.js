@@ -1,3 +1,4 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { DOMAIN_STRINGS, PROVIDER_WITH_LOGO } from 'vault/models/role-jwt';
@@ -22,6 +23,7 @@ module('Unit | Model | role-jwt', function (hooks) {
   });
 
   test('it provides a providerName for listed known providers', function (assert) {
+    assert.expect(12);
     Object.keys(DOMAIN_STRINGS).forEach((domainPart) => {
       let model = this.owner.lookup('service:store').createRecord('role-jwt', {
         authUrl: `http://provider-${domainPart}.com`,

@@ -1,4 +1,4 @@
-// +build openbsd,arm
+//go:build openbsd && arm
 
 package diagnose
 

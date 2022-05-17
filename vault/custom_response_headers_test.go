@@ -73,6 +73,10 @@ func TestConfigCustomHeaders(t *testing.T) {
 	}
 
 	uiHeaders, err := uiConfig.Headers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	listenerCustomHeaders := NewListenerCustomHeader(rawListenerConfig, logger, uiHeaders)
 	if listenerCustomHeaders == nil || len(listenerCustomHeaders) != 1 {
 		t.Fatalf("failed to get custom header configuration")
@@ -171,6 +175,9 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	}
 
 	h, err = b.(*SystemBackend).Core.uiConfig.Headers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if h.Get("X-CustomUiHeader") != "Ui header value" {
 		t.Fatalf("failed to set a header that is not in custom response headers")
 	}

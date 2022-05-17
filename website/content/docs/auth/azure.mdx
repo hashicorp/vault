@@ -16,6 +16,11 @@ signed by Azure Active Directory for the configured tenant.
 This method supports authentication for system-assigned and user-assigned
 managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview) for more information about these resources.
 
+~> System-assigned identities are unique to every virtual machine in Azure. If the
+virtual machines using Azure auth are recreated frequently, using system-assigned
+identities could result in a lot of Vault entities. For environments with high ephemeral
+workloads, user-assigned identities are recommended.
+
 ## Prerequisites:
 
 The following documentation assumes that the method has been
@@ -37,7 +42,7 @@ The next sections review how the authN/Z workflows work. If you
 have already reviewed these sections, here are some quick links to:
 
 - [Usage](/docs/secrets/azure#usage)
-- [API documentation](/api/auth/azure) docs.
+- [API documentation](/api-docs/auth/azure) docs.
 
 ## Authentication
 
@@ -61,7 +66,7 @@ For example:
 
 ```shell-session
 $ vault write auth/azure/login role="dev-role" \
-     jwt="$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.hashicorp.com%2F' -H Metadata:true | jq -r '.access_token')" \
+     jwt="$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F' -H Metadata:true | jq -r '.access_token')" \
      subscription_id=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .subscriptionId')  \
      resource_group_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .resourceGroupName') \
      vm_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .name')
@@ -112,7 +117,7 @@ tool.
    ```text
    $ vault write auth/azure/config \
        tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
-       resource=https://vault.hashicorp.com \
+       resource=https://management.azure.com/ \
        client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
        client_secret=IT3B2XfZvWnfB98s1cie8EMe7zWg483Xy8zY004=
    ```
@@ -134,7 +139,7 @@ tool.
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
 
-   For the complete list of role options, please see the [API documentation](/api/auth/azure).
+   For the complete list of role options, please see the [API documentation](/api-docs/auth/azure).
 
 ### Via the API
 
@@ -175,7 +180,7 @@ method as an external plugin. The azure plugin method is integrated into Vault a
 a builtin method by default.
 
 Assuming you have saved the binary `vault-plugin-auth-azure` to some folder and
-configured the [plugin directory](/docs/internals/plugins#plugin-directory)
+configured the [plugin directory](/docs/plugins/plugin-architecture#plugin-directory)
 for your server at `path/to/plugins`:
 
 1. Enable the plugin in the catalog:
@@ -194,28 +199,28 @@ for your server at `path/to/plugins`:
 
 ## Azure Debug Logs
 
-The Azure auth plugin supports debug logging which includes additional information 
+The Azure auth plugin supports debug logging which includes additional information
 about requests and responses from the Azure API.
 
 To enable the Azure debug logs, set the following environment variable on the Vault
 server:
 
 ```shell
-AZURE_SDK_GO_LOGGING=debug
+AZURE_GO_SDK_LOG_LEVEL=DEBUG
 ```
 
 ## API
 
-The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api/auth/azure) for more details.
+The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api-docs/auth/azure) for more details.
 
 ## Code Example
 
-The following code snippet demonstrates the Azure auth method to authenticate
+The following example demonstrates the Azure auth method to authenticate
 with Vault.
 
-<CodeTabs heading="azure auth example">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -225,7 +230,7 @@ import (
 	"fmt"
 
 	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api/auth/azure"
+	auth "github.com/hashicorp/vault/api-docs/auth/azure"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault via Azure authentication.
@@ -278,7 +283,7 @@ func getSecretWithAzureAuth() (string, error) {
 ```
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;
@@ -295,7 +300,7 @@ using VaultSharp.V1.Commons;
 
 namespace Examples
 {
-    public class AzureAuthExample 
+    public class AzureAuthExample
     {
         public class InstanceMetadata
         {
@@ -307,7 +312,7 @@ namespace Examples
         const string MetadataEndPoint = "http://169.254.169.254/metadata/instance?api-version=2017-08-01";
         const string AccessTokenEndPoint = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/";
 
-        /// <summary> 
+        /// <summary>
         /// Fetches a key-value secret (kv-v2) after authenticating to Vault via Azure authentication.
         /// This example assumes you have a configured Azure AD Application.
         /// </summary>
@@ -323,7 +328,7 @@ namespace Examples
             if(String.IsNullOrEmpty(roleName))
             {
                 throw new System.ArgumentNullException("Vault Role Name");
-            }   
+            }
 
             string jwt = GetJWT();
             InstanceMetadata metadata = GetMetadata();
@@ -332,16 +337,16 @@ namespace Examples
             var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
 
             IVaultClient vaultClient = new VaultClient(vaultClientSettings);
-        
+
             // We can retrieve the secret from the VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-            
+
             var password = kv2Secret.Data.Data["password"];
-            
+
             return password.ToString();
         }
-    
+
         /// <summary>
         /// Query Azure Resource Manage for metadata about the Azure instance
         /// </summary>
@@ -356,7 +361,7 @@ namespace Examples
             StreamReader streamResponse = new StreamReader(metadataResponse.GetResponseStream());
             string stringResponse = streamResponse.ReadToEnd();
             var resultsDict = JsonConvert.DeserializeObject<Dictionary<string, InstanceMetadata>>(stringResponse);
-            
+
             return resultsDict["compute"];
         }
 
@@ -372,7 +377,7 @@ namespace Examples
             HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 
             // Pipe response Stream to a StreamReader and extract access token
-            StreamReader streamResponse = new StreamReader(response.GetResponseStream()); 
+            StreamReader streamResponse = new StreamReader(response.GetResponseStream());
             string stringResponse = streamResponse.ReadToEnd();
             var resultsDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(stringResponse);
 

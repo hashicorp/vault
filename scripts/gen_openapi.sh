@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -9,6 +9,9 @@ set -e
 #   1. Vault has been checked out at an appropriate version and built
 #   2. vault executable is in your path
 #   3. Vault isn't already running
+#   4. jq is installed
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 echo "Starting Vault..."
 if pgrep -x "vault" > /dev/null
@@ -23,59 +26,54 @@ VAULT_PID=$!
 
 echo "Mounting all builtin backends..."
 
-#  auth backends
-vault auth enable alicloud
-vault auth enable app-id
-vault auth enable approle
-vault auth enable aws
-vault auth enable azure
-vault auth enable centrify
-vault auth enable cert
-vault auth enable cf
-vault auth enable gcp
-vault auth enable github
-vault auth enable jwt
-vault auth enable kerberos
-vault auth enable kubernetes
-vault auth enable ldap
-vault auth enable oci
-vault auth enable oidc
-vault auth enable okta
-vault auth enable radius
-vault auth enable userpass
+# Read auth backends
+codeLinesStarted=false
+inQuotesRegex='".*"'
+while read -r line; do
+    if [[ $line == *"credentialBackends:"* ]] ; then
+        codeLinesStarted=true
+    elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
+        break
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
+        backend=${BASH_REMATCH[0]}
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
+        vault auth enable "${plugin}"
+    fi
+done <../../vault/helper/builtinplugins/registry.go
 
-# secrets backends
-vault secrets enable ad
-vault secrets enable alicloud
-vault secrets enable aws
-vault secrets enable azure
-vault secrets enable cassandra
-vault secrets enable consul
-vault secrets enable database
-vault secrets enable gcp
-vault secrets enable gcpkms
-vault secrets enable kv
-vault secrets enable mongodb
-vault secrets enable mongodbatlas
-vault secrets enable mssql
-vault secrets enable mysql
-vault secrets enable nomad
-vault secrets enable openldap
-vault secrets enable pki
-vault secrets enable postgresql
-vault secrets enable rabbitmq
-vault secrets enable redis
-vault secrets enable ssh
-vault secrets enable terraform
-vault secrets enable totp
-vault secrets enable transit
+# Read secrets backends
+codeLinesStarted=false
+while read -r line; do
+    if [[ $line == *"logicalBackends:"* ]] ; then
+        codeLinesStarted=true
+    elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
+        break
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
+        backend=${BASH_REMATCH[0]}
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
+        vault secrets enable "${plugin}"
+    fi
+done <../../vault/helper/builtinplugins/registry.go
+
 
 # Enable enterprise features
-if [[ ! -z "$VAULT_LICENSE" ]]
-then
+entRegFile=../../vault/helper/builtinplugins/registry_util_ent.go
+if [ -f $entRegFile ] && [[ -n "$VAULT_LICENSE" ]]; then
   vault write sys/license text="$VAULT_LICENSE"
-  vault secrets enable kmip
-  vault secrets enable transform
+
+  inQuotesRegex='".*"'
+  codeLinesStarted=false
+  while read -r line; do
+        if [[ $line == *"ExternalPluginsEnt"* ]] ; then
+        codeLinesStarted=true
+    elif [ $codeLinesStarted = true ] && [[ $line = *"}"* ]]  ; then
+        break
+    elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
+        backend=${BASH_REMATCH[0]}
+        plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
+        vault secrets enable "${plugin}"
+    fi
+  done <$entRegFile
 fi
 
 # Output OpenAPI, optionally formatted
@@ -88,4 +86,5 @@ fi
 kill $VAULT_PID
 sleep 1
 
-echo "\nopenapi.json generated."
+echo
+echo "openapi.json generated"

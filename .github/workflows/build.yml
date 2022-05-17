@@ -1,11 +1,6 @@
 name: build
 
-on:
-  push:
-    # Sequence of patterns matched against refs/heads
-    branches:    
-      # Push events on main branch
-      - main
+on: [ workflow_dispatch, push ]
 
 env:
   PKG_NAME: "vault"
@@ -16,13 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       product-version: ${{ steps.get-product-version.outputs.product-version }}
+      product-base-version: ${{ steps.get-product-version.outputs.product-base-version }}
     steps:
       - uses: actions/checkout@v2
       - name: get product version
         id: get-product-version
         run: |
           make version
+          IFS="-" read BASE_VERSION _other <<< "$(make version)"
           echo "::set-output name=product-version::$(make version)"
+          echo "::set-output name=product-base-version::${BASE_VERSION}"
+
+  get-build-date:
+    runs-on: ubuntu-latest
+    outputs:
+      build-date: ${{ steps.get-build-date.outputs.build-date }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: get build date
+        id: get-build-date
+        run: |
+          make build-date
+          echo "::set-output name=build-date::$(make build-date)"
 
   generate-metadata-file:
     needs: get-product-version
@@ -34,7 +44,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Generate metadata file
         id: generate-metadata-file
-        uses: hashicorp/actions-generate-metadata@main
+        uses: hashicorp/actions-generate-metadata@v1
         with:
           version: ${{ needs.get-product-version.outputs.product-version }}
           product: ${{ env.PKG_NAME }}
@@ -45,13 +55,13 @@ jobs:
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
 
   build-other:
-    needs: get-product-version
+    needs: [ get-product-version, get-build-date ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [ freebsd, windows, netbsd, openbsd, solaris ]
         goarch: [ "386", "amd64", "arm" ]
-        go: [ "1.17.5" ]
+        go: [ "1.17.9" ]
         exclude:
           - goos: solaris
             goarch: 386
@@ -89,7 +99,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -97,13 +107,13 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   build-linux:
-    needs: get-product-version
+    needs: [ get-product-version, get-build-date ]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux]
         goarch: ["arm", "arm64", "386", "amd64"]
-        go: ["1.17.5"]
+        go: ["1.17.9"]
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
@@ -135,7 +145,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -143,7 +153,7 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
       - name: Package
-        uses: hashicorp/actions-packaging-linux@v1.2
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
@@ -174,13 +184,13 @@ jobs:
           path: out/${{ env.DEB_PACKAGE }}
 
   build-darwin:
-    needs: get-product-version
+    needs: [ get-product-version, get-build-date ]
     runs-on: macos-latest
     strategy:
       matrix:
         goos: [ darwin ]
         goarch: [ "amd64", "arm64" ]
-        go: [ "1.17.5" ]
+        go: [ "1.17.9" ]
       fail-fast: true
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
@@ -207,10 +217,11 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GO_TAGS: "${{ env.GO_TAGS }} netcgo"
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_REVISION="$(git rev-parse HEAD)" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -241,3 +252,26 @@ jobs:
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
+
+  build-ubi:
+    name: Red Hat UBI ${{ matrix.arch }} build
+    needs:
+      - get-product-version
+      - build-linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["amd64"]
+    env:
+      repo: ${{github.event.repository.name}}
+      version: ${{needs.get-product-version.outputs.product-version}}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Build (Action)
+        uses: hashicorp/actions-docker-build@v1
+        with:
+          version: ${{env.version}}
+          target: ubi
+          arch: ${{matrix.arch}}
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi

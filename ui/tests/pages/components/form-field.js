@@ -15,7 +15,7 @@ export default {
   hasSearchSelect: isPresent('[data-test-component=search-select]'),
   hasTextFile: isPresent('[data-test-component=text-file]'),
   hasTTLPicker: isPresent('[data-test-toggle-input="Foo"]'),
-  hasJSONEditor: isPresent('[data-test-component=json-editor]'),
+  hasJSONEditor: isPresent('[data-test-component="code-mirror-modifier"]'),
   hasJSONClearButton: isPresent('[data-test-json-clear-button]'),
   hasSelect: isPresent('select'),
   hasInput: isPresent('input'),

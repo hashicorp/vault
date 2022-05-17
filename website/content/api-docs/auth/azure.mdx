@@ -29,17 +29,25 @@ virtual machine.
 ### Parameters
 
 - `tenant_id` `(string: <required>)` - The tenant id for the Azure Active Directory organization.
-- `resource` `(string: <required>)` - The configured URL for the application registered in Azure Active Directory.
+  This value can also be provided with the `AZURE_TENANT_ID` environment variable.
+- `resource` `(string: <required>)` - The resource URL for the application registered in Azure Active Directory.
+  The value is expected to match the audience (`aud` claim) of the [JWT](/api-docs/auth/azure#jwt)
+  provided to the login API. See the [resource](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http)
+  parameter for how the audience is set when requesting a JWT access token from the Azure Instance Metadata Service (IMDS) endpoint.
+  This value can also be provided with the `AZURE_AD_RESOURCE` environment variable.
 - `environment` `(string: 'AzurePublicCloud')` - The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.
+  This value can also be provided with the `AZURE_ENVIRONMENT` environment variable.
 - `client_id` `(string: '')` - The client id for credentials to query the Azure APIs. Currently read permissions to query compute resources are required.
+  This value can also be provided with the `AZURE_CLIENT_ID` environment variable.
 - `client_secret` `(string: '')` - The client secret for credentials to query the Azure APIs.
+  This value can also be provided with the `AZURE_CLIENT_SECRET` environment variable.
 
 ### Sample Payload
 
 ```json
 {
   "tenant_id": "kd83...",
-  "resource": "https://vault.hashicorp.com/",
+  "resource": "https://management.azure.com/",
   "client_id": "12ud...",
   "client_secret": "DUJDS3..."
 }
@@ -77,7 +85,7 @@ $ curl \
 {
   "data":{
     "tenant_id": "kd83...",
-    "resource": "https://vault.hashicorp.com/",
+    "resource": "https://management.azure.com/",
     "client_id": "12ud...",
     "client_secret": "DUJDS3..."
   },
@@ -261,7 +269,9 @@ entity and then authorizes the entity for the given role.
 
 - `role` `(string: <required>)` - Name of the role against which the login is being
   attempted.
-- `jwt` `(string: <required>)` - Signed [JSON Web Token](https://tools.ietf.org/html/rfc7519) (JWT) from Azure MSI.
+- `jwt` `(string: <required>)` - Signed [JSON Web Token](https://tools.ietf.org/html/rfc7519) (JWT)
+  from Azure MSI. See [Azure documentation](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token)
+  for details on how to acquire a JWT access token through instance metadata.
 - `subscription_id` `(string: <required>)` - The subscription ID for the machine that
   generated the MSI token. This information can be obtained through instance
   metadata.

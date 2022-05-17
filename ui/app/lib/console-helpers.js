@@ -5,7 +5,7 @@ import { parse } from 'shell-quote';
 const supportedCommands = ['read', 'write', 'list', 'delete'];
 const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
-export function extractDataAndFlags(data, flags) {
+export function extractDataAndFlags(method, data, flags) {
   return data.concat(flags).reduce(
     (accumulator, val) => {
       // will be "key=value" or "-flag=value" or "foo=bar=baz"
@@ -16,6 +16,10 @@ export function extractDataAndFlags(data, flags) {
         let flagName = item.replace(/^-/, '');
         if (flagName === 'wrap-ttl') {
           flagName = 'wrapTTL';
+        } else if (method === 'write') {
+          if (flagName === 'f' || flagName === '-force') {
+            flagName = 'force';
+          }
         }
         accumulator.flags[flagName] = value || true;
         return accumulator;

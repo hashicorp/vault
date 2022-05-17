@@ -81,6 +81,10 @@ const (
 	// path to a license file on disk
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 
+	// DisableSSCTokens is an env var used to disable index bearing
+	// token functionality
+	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
+
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
 	flagNameAddress = "address"
@@ -271,6 +275,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"auth list": func() (cli.Command, error) {
 			return &AuthListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"auth move": func() (cli.Command, error) {
+			return &AuthMoveCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -653,6 +662,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"version-history": func() (cli.Command, error) {
+			return &VersionHistoryCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"write": func() (cli.Command, error) {
 			return &WriteCommand{
 				BaseCommand: getBaseCommand(),
@@ -715,6 +729,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"kv metadata put": func() (cli.Command, error) {
 			return &KVMetadataPutCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"kv metadata patch": func() (cli.Command, error) {
+			return &KVMetadataPatchCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

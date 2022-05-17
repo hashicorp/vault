@@ -22,17 +22,15 @@
   {{/if}}
   {{! template-lint-configure simple-unless "warn" }}
   {{#unless (gte this.selectedOptions.length this.selectLimit)}}
-    <PowerSelectWithCreate
+    <PowerSelect
+      @eventType="click"
+      @placeholder={{this.placeholder}}
+      @searchEnabled={{true}}
+      @search={{action "searchAndSuggest"}}
       @options={{this.options}}
-      @search={{this.search}}
-      @onChange={{action "selectOption"}}
-      @onCreate={{action "createOption"}}
+      @onChange={{action "selectOrCreate"}}
       @placeholderComponent={{component "search-select-placeholder"}}
-      @renderInPlace={{true}}
-      @searchField="searchText"
       @verticalPosition="below"
-      @showCreateWhen={{action "hideCreateOptionOnSameID"}}
-      @buildSuggestion={{action "constructSuggestion"}}
       as |option|
     >
       {{#if this.shouldRenderName}}
@@ -43,7 +41,7 @@
       {{else}}
         {{option.id}}
       {{/if}}
-    </PowerSelectWithCreate>
+    </PowerSelect>
   {{/unless}}
   <ul class="search-select-list">
     {{#each this.selectedOptions as |selected|}}
@@ -82,4 +80,7 @@
       </li>
     {{/each}}
   </ul>
+  {{#if (has-block)}}
+    {{yield}}
+  {{/if}}
 {{/if}}

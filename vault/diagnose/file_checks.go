@@ -40,11 +40,11 @@ func CheckFilePerms(info fs.FileInfo) (bool, []string) {
 	hasSomeWrite := false
 
 	// Check owner perms
-	if mode&0400 != 0 {
+	if mode&0o400 != 0 {
 		hasSomeRead = true
 		hasOwnerRead = true
 	}
-	if mode&0200 != 0 {
+	if mode&0o200 != 0 {
 		hasSomeWrite = true
 		hasOwnerWrite = true
 	}
@@ -56,22 +56,22 @@ func CheckFilePerms(info fs.FileInfo) (bool, []string) {
 	// These are "other" perms.
 	// These don't count has "some read" or "some write" permissions because there should
 	// never be a case when these permissions are set.
-	if mode&0007 != 0 {
+	if mode&0o007 != 0 {
 		hasOnlyOwnerRW = false
 		errors = append(errors, fmt.Sprintf(FileTooPermissiveWarning+": perms are %s", mode.String()))
 	}
 
 	// Check group permissions
-	if mode&0040 != 0 {
+	if mode&0o040 != 0 {
 		hasOnlyOwnerRW = false
 		hasSomeRead = true
 	}
-	if mode&0020 != 0 {
+	if mode&0o020 != 0 {
 		hasOnlyOwnerRW = false
 		hasSomeWrite = true
 	}
 
-	//check that owners have read and write permissions
+	// check that owners have read and write permissions
 	if !hasSomeRead || !hasSomeWrite {
 		errors = append(errors, fmt.Sprintf(FilePermissionsMissingWarning+": perms are %s", mode.String()))
 	}

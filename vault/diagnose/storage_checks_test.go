@@ -10,7 +10,6 @@ import (
 )
 
 func TestStorageTimeout(t *testing.T) {
-
 	testCases := []struct {
 		errSubString string
 		mb           physical.Backend

@@ -48,8 +48,8 @@ Defaults to 72 hours.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathTidyWrite,
-				ForwardPerformanceStandby:   true,
+				Callback:                  b.pathTidyWrite,
+				ForwardPerformanceStandby: true,
 			},
 		},
 
@@ -63,8 +63,8 @@ func pathTidyStatus(b *backend) *framework.Path {
 		Pattern: "tidy-status$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathTidyStatusRead,
-				ForwardPerformanceStandby:   true,
+				Callback:                  b.pathTidyStatusRead,
+				ForwardPerformanceStandby: true,
 			},
 		},
 		HelpSynopsis:    pathTidyStatusHelpSyn,
@@ -225,7 +225,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 
 				if rebuildCRL {
-					if err := buildCRL(ctx, b, req, false); err != nil {
+					if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
 						return err
 					}
 				}
@@ -247,7 +247,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
-func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
 	// but only if the PKI backend is not a local mount.
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
@@ -284,7 +284,7 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 
-	switch(b.tidyStatus.state) {
+	switch b.tidyStatus.state {
 	case tidyStatusStarted:
 		resp.Data["state"] = "Running"
 	case tidyStatusFinished:

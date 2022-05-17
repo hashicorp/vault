@@ -1,9 +1,9 @@
-<div class="auth-form">
+<div class="auth-form" data-test-auth-form>
   {{#if this.hasMethodsWithPath}}
     <nav class="tabs is-marginless">
       <ul>
         {{#each this.methodsToShow as |method|}}
-          {{#with (or method.path method.type) as |methodKey|}}
+          {{#let (or method.path method.type) as |methodKey|}}
             <li
               class={{if
                 (and this.selectedAuthIsPath (eq (or this.selectedAuthBackend.path this.selectedAuthBackend.type) methodKey))
@@ -21,7 +21,7 @@
                 {{or method.id (capitalize method.type)}}
               </LinkTo>
             </li>
-          {{/with}}
+          {{/let}}
         {{/each}}
         {{#if this.hasMethodsWithPath}}
           <li class={{unless this.selectedAuthIsPath "is-active" ""}} data-test-auth-method>
@@ -53,7 +53,7 @@
       <Select
         @label="Method"
         @name="auth-method"
-        @options={{supported-auth-backends}}
+        @options={{this.authMethods}}
         @valueAttribute={{"type"}}
         @labelAttribute={{"typeDisplay"}}
         @isFullwidth={{true}}
@@ -68,7 +68,6 @@
         @onToken={{action (mut this.token)}}
         @namespace={{this.namespace}}
         @onNamespace={{action (mut this.namespace)}}
-        @onSelectedAuth={{action (mut this.selectedAuth)}}
         @onSubmit={{action "doSubmit"}}
         @onRoleName={{action (mut this.roleName)}}
         @roleName={{this.roleName}}
@@ -157,7 +156,7 @@
           data-test-auth-submit={{true}}
           type="submit"
           disabled={{this.authenticate.isRunning}}
-          class="button is-primary {{if this.authenticate.isRunning "is-loading"}}"
+          class="button is-primary {{if this.authenticate.isRunning 'is-loading'}}"
           id="auth-submit"
         >
           Sign In

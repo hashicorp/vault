@@ -1,31 +1,19 @@
 .status-indicator-button {
   &[data-status='good'] {
-    .status-indicator-icon-dot {
-      fill: $green-light;
-    }
-
-    .status-indicator-icon-ring {
-      fill: $green-dark;
+    .status-indicator-color {
+      color: $green-light;
     }
   }
 
   &[data-status='mixed'] {
-    .status-indicator-icon-dot {
-      fill: $yellow;
-    }
-
-    .status-indicator-icon-ring {
-      fill: $yellow-dark;
+    .status-indicator-color {
+      color: $yellow;
     }
   }
 
   &[data-status='bad'] {
-    .status-indicator-icon-dot {
-      fill: $red;
-    }
-
-    .status-indicator-icon-ring {
-      fill: $red-dark;
+    .status-indicator-color {
+      color: $red;
     }
   }
 }

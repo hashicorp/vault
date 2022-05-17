@@ -71,7 +71,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     assert.ok(transformationsPage.isEmpty, 'renders empty state');
     assert
-      .dom('.is-active[data-test-secret-list-tab="Transformations"]')
+      .dom('.active[data-test-secret-list-tab="Transformations"]')
       .exists('Has Transformations tab which is active');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
     assert.dom('[data-test-secret-list-tab="Templates"]').exists('Has Templates tab');

@@ -435,7 +435,7 @@ func TestRedshift_CustomUsernameTemplate(t *testing.T) {
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
+		"connection_url":    connURL,
 		"username_template": "{{.DisplayName}}-{{random 10}}",
 	}
 
@@ -537,7 +537,7 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 		"name":     username,
 		"password": password,
 	}
-	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+	if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 		t.Fatal(err)
 	}
 	// Commit the transaction

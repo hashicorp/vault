@@ -76,9 +76,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('isCopyable', false);
 
     await render(hbs`
-      <InfoTableRow 
+      <InfoTableRow
         @label={{this.label}}
-        @value={{this.value}} 
+        @value={{this.value}}
         @tooltipText="Foo bar"
         @isTooltipCopyable={{this.isCopyable}}
       />
@@ -156,10 +156,108 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @value={{this.value}}
       @label={{this.label}}
       @alwaysRender={{true}}>
-      Block content is here 
+      Block content is here
       </InfoTableRow>`);
 
     let block = document.querySelector('[data-test-value-div]').textContent.trim();
     assert.equal(block, 'Block content is here', 'renders block passed through');
+  });
+
+  test('Row renders when block content even if alwaysRender = false', async function (assert) {
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @alwaysRender={{false}}>
+      Block content
+    </InfoTableRow>`);
+    assert.dom('[data-test-value-div]').exists('renders block');
+    assert.dom('[data-test-value-div]').hasText('Block content', 'renders block');
+  });
+
+  test('Row does not render empty block content when alwaysRender = false', async function (assert) {
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @alwaysRender={{false}} />`);
+    assert.dom('[data-test-component="info-table-row"]').doesNotExist();
+  });
+
+  test('Has dashed label if none provided', async function (assert) {
+    await render(hbs`<InfoTableRow
+        @value={{this.value}}
+      />`);
+    assert.dom('[data-test-component="info-table-row"]').exists();
+    assert.dom('[data-test-icon="minus"]').exists('renders dash when no label');
+  });
+  test('Truncates the label if too long', async function (assert) {
+    this.set('label', 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz');
+    await render(hbs`<InfoTableRow
+        @label={{this.label}}
+        @value={{this.value}}
+      />`);
+    assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
+    assert.dom('[data-test-label-div].label-overflow').exists('Label has class label-overflow');
+    await triggerEvent('[data-test-row-label]', 'mouseenter');
+    assert.dom('[data-test-label-tooltip]').exists('Label tooltip exists on hover');
+  });
+  test('Renders if block value and alwaysrender=false', async function (assert) {
+    await render(hbs`<InfoTableRow @alwaysRender={{false}}>{{this.value}}</InfoTableRow>`);
+    assert.dom('[data-test-component="info-table-row"]').exists();
+  });
+  test('Does not render if value is empty and alwaysrender=false', async function (assert) {
+    await render(hbs`<InfoTableRow @alwaysRender={{false}} @value="" />`);
+    assert.dom('[data-test-component="info-table-row"]').doesNotExist();
+  });
+  test('Renders dash for value if value empty and alwaysRender=true', async function (assert) {
+    await render(hbs`<InfoTableRow
+        @label={{this.label}}
+        @alwaysRender={{true}}
+      />`);
+    assert.dom('[data-test-component="info-table-row"]').exists();
+    assert.dom('[data-test-value-div] [data-test-icon="minus"]').exists('renders dash for value');
+  });
+  test('Renders block over @value or @defaultShown', async function (assert) {
+    await render(hbs`<InfoTableRow
+        @label={{this.label}}
+        @value="bar"
+        @defaultShown="baz"
+      >
+        foo
+      </InfoTableRow>`);
+    assert.dom('[data-test-component="info-table-row"]').exists();
+    assert.dom('[data-test-value-div]').hasText('foo', 'renders block value');
+  });
+  test('Renders icons if value is boolean', async function (assert) {
+    this.set('value', true);
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+    />`);
+
+    assert.dom('[data-test-boolean-true]').exists('check icon exists');
+    assert.dom('[data-test-value-div]').hasText('Yes', 'Renders yes text');
+    this.set('value', false);
+    assert.dom('[data-test-boolean-false]').exists('x icon exists');
+    assert.dom('[data-test-value-div]').hasText('No', 'renders no text');
+  });
+  test('Renders data-test attrs passed from parent', async function (assert) {
+    this.set('value', true);
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      data-test-foo-bar
+    />`);
+
+    assert.dom('[data-test-foo-bar]').exists();
+  });
+
+  test('Formats the value as date when formatDate present', async function (assert) {
+    let yearString = new Date().getFullYear().toString();
+    this.set('value', new Date());
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatDate={{'yyyy'}}
+    />`);
+
+    assert.dom('[data-test-value-div]').hasText(yearString, 'Renders date with passed format');
   });
 });

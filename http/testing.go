@@ -49,7 +49,7 @@ func TestServerWithListener(tb testing.TB, ln net.Listener, addr string, core *v
 	props := &vault.HandlerProperties{
 		Core: core,
 		// This is needed for testing custom response headers
-		ListenerConfig: &configutil.Listener {
+		ListenerConfig: &configutil.Listener{
 			Address: ip,
 		},
 	}

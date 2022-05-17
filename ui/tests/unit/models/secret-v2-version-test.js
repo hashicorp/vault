@@ -6,6 +6,7 @@ module('Unit | Model | secret-v2-version', function (hooks) {
   setupTest(hooks);
 
   test('deleted is true for a past deletionTime', function (assert) {
+    assert.expect(1);
     let model;
     run(() => {
       model = run(() =>
@@ -13,11 +14,12 @@ module('Unit | Model | secret-v2-version', function (hooks) {
           deletionTime: '2000-10-14T00:00:00.000000Z',
         })
       );
-      assert.equal(model.get('deleted'), true);
+      assert.true(model.get('deleted'));
     });
   });
 
   test('deleted is false for a future deletionTime', function (assert) {
+    assert.expect(1);
     let model;
     run(() => {
       model = run(() =>
@@ -25,7 +27,7 @@ module('Unit | Model | secret-v2-version', function (hooks) {
           deletionTime: '2999-10-14T00:00:00.000000Z',
         })
       );
-      assert.equal(model.get('deleted'), false);
+      assert.false(model.get('deleted'));
     });
   });
 });

@@ -168,7 +168,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 		}
 	}
 
-	opts := boltOptions()
+	opts := boltOptions(dbPath)
 	start := time.Now()
 	boltDB, err := bolt.Open(dbPath, 0o600, opts)
 	if err != nil {
@@ -784,7 +784,15 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 
 	snapshotInstaller, ok := r.(*boltSnapshotInstaller)
 	if !ok {
-		return errors.New("expected snapshot installer object")
+		wrapper, ok := r.(raft.ReadCloserWrapper)
+		if !ok {
+			return fmt.Errorf("expected ReadCloserWrapper object, got: %T", r)
+		}
+		snapshotInstallerRaw := wrapper.WrappedReadCloser()
+		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
+		if !ok {
+			return fmt.Errorf("expected snapshot installer object, got: %T", snapshotInstallerRaw)
+		}
 	}
 
 	f.l.Lock()

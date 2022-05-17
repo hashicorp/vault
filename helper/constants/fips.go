@@ -1,4 +1,4 @@
-// +build !fips_140_3
+//go:build !fips
 
 package constants
 

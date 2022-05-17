@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import EmberObject from '@ember/object';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
@@ -18,6 +18,7 @@ const authService = Service.extend({
   async authenticate() {
     return fetch('http://localhost:2000');
   },
+  handleError() {},
   setLastFetch() {},
 });
 
@@ -25,6 +26,7 @@ const workingAuthService = Service.extend({
   authenticate() {
     return resolve({});
   },
+  handleError() {},
   setLastFetch() {},
 });
 
@@ -53,23 +55,25 @@ module('Integration | Component | auth form', function (hooks) {
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
   test('it renders error on CSP violation', async function (assert) {
+    assert.expect(2);
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', authService);
     this.auth = this.owner.lookup('service:auth');
     this.set('cluster', EmberObject.create({ standby: true }));
     this.set('selectedAuth', 'token');
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
-    assert.equal(component.errorText, '');
+    assert.false(component.errorMessagePresent, false);
     component.login();
     // because this is an ember-concurrency backed service,
     // we have to manually force settling the run queue
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.equal(component.errorText, CSP_ERR_TEXT);
     });
   });
 
   test('it renders with vault style errors', async function (assert) {
+    assert.expect(1);
     let server = new Pretender(function () {
       this.get('/v1/auth/**', () => {
         return [
@@ -92,6 +96,7 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it renders AdapterError style errors', async function (assert) {
+    assert.expect(1);
     let server = new Pretender(function () {
       this.get('/v1/auth/**', () => {
         return [400, { 'Content-Type': 'application/json' }];
@@ -237,7 +242,7 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
     await render(hbs`<AuthForm @cluster={{cluster}} @wrappedToken={{wrappedToken}} />`);
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await settled();
     assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
     assert.equal(
@@ -265,7 +270,7 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('wrappedToken', '54321');
     await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
 
     await settled();
     assert.equal(

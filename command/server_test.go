@@ -1,4 +1,4 @@
-// +build !race,!hsm,!fips_140_3
+//go:build !race && !hsm && !fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -115,7 +115,6 @@ func TestServer_ReloadListener(t *testing.T) {
 	defer os.RemoveAll(td)
 
 	wg := &sync.WaitGroup{}
-
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
 	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)

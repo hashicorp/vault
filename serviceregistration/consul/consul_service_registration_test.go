@@ -50,7 +50,7 @@ func testConsulServiceRegistrationConfig(t *testing.T, conf *consulConf) *servic
 // TestConsul_ServiceRegistration tests whether consul ServiceRegistration works
 func TestConsul_ServiceRegistration(t *testing.T) {
 	// Prepare a docker-based consul instance
-	cleanup, config := consul.PrepareTestContainer(t, "")
+	cleanup, config := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanup()
 
 	// Create a consul client
@@ -318,7 +318,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 		}
 		c.disableRegistration = true
 
-		if c.disableRegistration == false {
+		if !c.disableRegistration {
 			addr := os.Getenv("CONSUL_HTTP_ADDR")
 			if addr == "" {
 				continue

@@ -233,14 +233,16 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 }
 
 func (s *SinkConfig) wrapToken(client *api.Client, wrapTTL time.Duration, token string) (string, error) {
-	wrapClient, err := client.Clone()
+	wrapClient, err := client.CloneWithHeaders()
 	if err != nil {
 		return "", fmt.Errorf("error deriving client for wrapping, not writing out to sink: %w)", err)
 	}
+
 	wrapClient.SetToken(token)
 	wrapClient.SetWrappingLookupFunc(func(string, string) string {
 		return wrapTTL.String()
 	})
+
 	secret, err := wrapClient.Logical().Write("sys/wrapping/wrap", map[string]interface{}{
 		"token": token,
 	})

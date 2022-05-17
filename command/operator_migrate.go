@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
@@ -35,6 +36,7 @@ type OperatorMigrateCommand struct {
 
 	PhysicalBackends map[string]physical.Factory
 	flagConfig       string
+	flagLogLevel     string
 	flagStart        string
 	flagReset        bool
 	logger           log.Logger
@@ -96,6 +98,16 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Usage:  "Reset the migration lock. No migration will occur.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "log-level",
+		Target:     &c.flagLogLevel,
+		Default:    "info",
+		EnvVar:     "VAULT_LOG_LEVEL",
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
+		Usage: "Log verbosity level. Supported values (in order of detail) are " +
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\". These are not case sensitive.",
+	})
+
 	return set
 }
 
@@ -108,13 +120,20 @@ func (c *OperatorMigrateCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *OperatorMigrateCommand) Run(args []string) int {
-	c.logger = logging.NewVaultLogger(log.Info)
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
+
+	c.flagLogLevel = strings.ToLower(c.flagLogLevel)
+	validLevels := []string{"trace", "debug", "info", "warn", "error"}
+	if !strutil.StrListContains(validLevels, c.flagLogLevel) {
+		c.UI.Error(fmt.Sprintf("%s is an unknown log level. Valid log levels are: %s", c.flagLogLevel, validLevels))
+		return 1
+	}
+	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
 
 	if c.flagConfig == "" {
 		c.UI.Error("Must specify exactly one config path using -config")

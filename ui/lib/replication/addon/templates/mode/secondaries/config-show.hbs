@@ -3,14 +3,14 @@
     {{#if this.model.config.mode}}
       <ToolbarLink
         @params={{array "mode.secondaries.config-edit" this.model.config.id}}
-        @data-test-replication-link="edit-mount-config"
+        data-test-replication-link="edit-mount-config"
       >
         Edit config
       </ToolbarLink>
     {{else}}
       <ToolbarLink
         @params={{array "mode.secondaries.config-create" this.model.config.id}}
-        @data-test-replication-link="create-mount-config"
+        data-test-replication-link="create-mount-config"
       >
         Create config
       </ToolbarLink>
@@ -25,7 +25,7 @@
 </div>
 {{#if this.model.config.mode}}
   <div class="box is-fullwidth is-shadowless">
-    <InfoTableRow @label="Mode" @value={{this.model.config.mode}} @data-test-mount-config-mode={{true}} />
+    <InfoTableRow @label="Mode" @value={{this.model.config.mode}} data-test-mount-config-mode={{true}} />
     <InfoTableRow @label="Paths" @value={{this.model.config.paths}}>
       <ul class="list--comma" data-test-mount-config-paths={{true}}>
         {{#each this.model.config.paths as |path|}}

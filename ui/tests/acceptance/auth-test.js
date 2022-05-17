@@ -1,3 +1,4 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
@@ -57,6 +58,7 @@ module('Acceptance | auth', function (hooks) {
   });
 
   test('it sends the right attributes when authenticating', async function (assert) {
+    assert.expect(8);
     let backends = supportedAuthBackends();
     await visit('/vault/auth');
     for (let backend of backends.reverse()) {
@@ -110,15 +112,9 @@ module('Acceptance | auth', function (hooks) {
     assert.dom('[data-test-allow-expiration]').doesNotExist('hides beacon when the api is used again');
   });
 
-  test('it shows the push notification warning only for okta auth method after submit', async function (assert) {
+  test('it shows the push notification warning after submit', async function (assert) {
     await visit('/vault/auth');
     await component.selectMethod('token');
-    await click('[data-test-auth-submit]');
-    assert
-      .dom('[data-test-auth-message="push"]')
-      .doesNotExist('message is not shown for other authentication methods');
-
-    await component.selectMethod('okta');
     await click('[data-test-auth-submit]');
     assert.dom('[data-test-auth-message="push"]').exists('shows push notification message');
   });

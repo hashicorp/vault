@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kv: add subkeys endpoint to retrieve a secret's stucture without its values
+```

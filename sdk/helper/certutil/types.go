@@ -58,6 +58,7 @@ const (
 	RSAPrivateKey     PrivateKeyType = "rsa"
 	ECPrivateKey      PrivateKeyType = "ec"
 	Ed25519PrivateKey PrivateKeyType = "ed25519"
+	ManagedPrivateKey PrivateKeyType = "ManagedPrivateKey"
 )
 
 // TLSUsage controls whether the intended usage of a *tls.Config
@@ -77,9 +78,10 @@ type BlockType string
 
 // Well-known formats
 const (
-	PKCS1Block BlockType = "RSA PRIVATE KEY"
-	PKCS8Block BlockType = "PRIVATE KEY"
-	ECBlock    BlockType = "EC PRIVATE KEY"
+	UnknownBlock BlockType = ""
+	PKCS1Block   BlockType = "RSA PRIVATE KEY"
+	PKCS8Block   BlockType = "PRIVATE KEY"
+	ECBlock      BlockType = "EC PRIVATE KEY"
 )
 
 // ParsedPrivateKeyContainer allows common key setting for certs and CSRs
@@ -136,6 +138,25 @@ type ParsedCSRBundle struct {
 	CSR             *x509.CertificateRequest
 }
 
+type KeyBundle struct {
+	PrivateKeyType  PrivateKeyType
+	PrivateKeyBytes []byte
+	PrivateKey      crypto.Signer
+}
+
+func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
+	switch signer.(type) {
+	case *rsa.PrivateKey:
+		return RSAPrivateKey
+	case *ecdsa.PrivateKey:
+		return ECPrivateKey
+	case ed25519.PrivateKey:
+		return Ed25519PrivateKey
+	default:
+		return UnknownPrivateKey
+	}
+}
+
 // ToPEMBundle converts a string-based certificate bundle
 // to a PEM-based string certificate bundle in trust path
 // order, leaf certificate first
@@ -158,46 +179,21 @@ func (c *CertBundle) ToPEMBundle() string {
 // ToParsedCertBundle converts a string-based certificate bundle
 // to a byte-based raw certificate bundle
 func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
-	result := &ParsedCertBundle{}
+	return c.ToParsedCertBundleWithExtractor(extractAndSetPrivateKey)
+}
+
+// PrivateKeyExtractor extract out a private key from the passed in
+// CertBundle and set the appropriate bits within the ParsedCertBundle.
+type PrivateKeyExtractor func(c *CertBundle, parsedBundle *ParsedCertBundle) error
+
+func (c *CertBundle) ToParsedCertBundleWithExtractor(privateKeyExtractor PrivateKeyExtractor) (*ParsedCertBundle, error) {
 	var err error
 	var pemBlock *pem.Block
+	result := &ParsedCertBundle{}
 
-	if len(c.PrivateKey) > 0 {
-		pemBlock, _ = pem.Decode([]byte(c.PrivateKey))
-		if pemBlock == nil {
-			return nil, errutil.UserError{Err: "Error decoding private key from cert bundle"}
-		}
-
-		result.PrivateKeyBytes = pemBlock.Bytes
-		result.PrivateKeyFormat = BlockType(strings.TrimSpace(pemBlock.Type))
-
-		switch result.PrivateKeyFormat {
-		case ECBlock:
-			result.PrivateKeyType, c.PrivateKeyType = ECPrivateKey, ECPrivateKey
-		case PKCS1Block:
-			c.PrivateKeyType, result.PrivateKeyType = RSAPrivateKey, RSAPrivateKey
-		case PKCS8Block:
-			t, err := getPKCS8Type(pemBlock.Bytes)
-			if err != nil {
-				return nil, errutil.UserError{Err: fmt.Sprintf("Error getting key type from pkcs#8: %v", err)}
-			}
-			result.PrivateKeyType = t
-			switch t {
-			case ECPrivateKey:
-				c.PrivateKeyType = ECPrivateKey
-			case RSAPrivateKey:
-				c.PrivateKeyType = RSAPrivateKey
-			case Ed25519PrivateKey:
-				c.PrivateKeyType = Ed25519PrivateKey
-			}
-		default:
-			return nil, errutil.UserError{Err: fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
-		}
-
-		result.PrivateKey, err = result.getSigner()
-		if err != nil {
-			return nil, errutil.UserError{Err: fmt.Sprintf("Error getting signer: %s", err)}
-		}
+	err = privateKeyExtractor(c, result)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(c.Certificate) > 0 {
@@ -256,6 +252,52 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 	}
 
 	return result, nil
+}
+
+func extractAndSetPrivateKey(c *CertBundle, parsedBundle *ParsedCertBundle) error {
+	if len(c.PrivateKey) == 0 {
+		return nil
+	}
+
+	pemBlock, _ := pem.Decode([]byte(c.PrivateKey))
+	if pemBlock == nil {
+		return errutil.UserError{Err: "Error decoding private key from cert bundle"}
+	}
+
+	parsedBundle.PrivateKeyBytes = pemBlock.Bytes
+	parsedBundle.PrivateKeyFormat = BlockType(strings.TrimSpace(pemBlock.Type))
+
+	switch parsedBundle.PrivateKeyFormat {
+	case ECBlock:
+		parsedBundle.PrivateKeyType, c.PrivateKeyType = ECPrivateKey, ECPrivateKey
+	case PKCS1Block:
+		c.PrivateKeyType, parsedBundle.PrivateKeyType = RSAPrivateKey, RSAPrivateKey
+	case PKCS8Block:
+		t, err := getPKCS8Type(pemBlock.Bytes)
+		if err != nil {
+			return errutil.UserError{Err: fmt.Sprintf("Error getting key type from pkcs#8: %v", err)}
+		}
+		parsedBundle.PrivateKeyType = t
+		switch t {
+		case ECPrivateKey:
+			c.PrivateKeyType = ECPrivateKey
+		case RSAPrivateKey:
+			c.PrivateKeyType = RSAPrivateKey
+		case Ed25519PrivateKey:
+			c.PrivateKeyType = Ed25519PrivateKey
+		case ManagedPrivateKey:
+			c.PrivateKeyType = ManagedPrivateKey
+		}
+	default:
+		return errutil.UserError{Err: fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
+	}
+
+	var err error
+	parsedBundle.PrivateKey, err = parsedBundle.getSigner()
+	if err != nil {
+		return errutil.UserError{Err: fmt.Sprintf("Error getting signer: %s", err)}
+	}
+	return nil
 }
 
 // ToCertBundle converts a byte-based raw DER certificate bundle
@@ -505,6 +547,9 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 		case Ed25519PrivateKey:
 			result.PrivateKeyType = "ed25519"
 			block.Type = "PRIVATE KEY"
+		case ManagedPrivateKey:
+			result.PrivateKeyType = ManagedPrivateKey
+			block.Type = "PRIVATE KEY"
 		default:
 			return nil, errutil.InternalError{Err: "Could not determine private key type when creating block"}
 		}
@@ -613,7 +658,6 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 
 	if tlsCert.Certificate != nil && len(tlsCert.Certificate) > 0 {
 		tlsConfig.Certificates = []tls.Certificate{tlsCert}
-		tlsConfig.BuildNameToCertificate()
 	}
 
 	return tlsConfig, nil
@@ -637,9 +681,32 @@ type URLEntries struct {
 	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
 }
 
+type NotAfterBehavior int
+
+const (
+	ErrNotAfterBehavior NotAfterBehavior = iota
+	TruncateNotAfterBehavior
+	PermitNotAfterBehavior
+)
+
+var notAfterBehaviorNames = map[NotAfterBehavior]string{
+	ErrNotAfterBehavior:      "err",
+	TruncateNotAfterBehavior: "truncate",
+	PermitNotAfterBehavior:   "permit",
+}
+
+func (n NotAfterBehavior) String() string {
+	if name, ok := notAfterBehaviorNames[n]; ok && len(name) > 0 {
+		return name
+	}
+
+	return "unknown"
+}
+
 type CAInfoBundle struct {
 	ParsedCertBundle
-	URLs *URLEntries
+	URLs                 *URLEntries
+	LeafNotAfterBehavior NotAfterBehavior
 }
 
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {
@@ -651,13 +718,26 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 		(len(b.Certificate.AuthorityKeyId) == 0 &&
 			!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject)) {
 
+		chain = b.GetFullChain()
+	}
+
+	return chain
+}
+
+func (b *CAInfoBundle) GetFullChain() []*CertBlock {
+	var chain []*CertBlock
+
+	// Some bundles already include the root included in the chain,
+	// so don't include it twice.
+	if len(b.CAChain) == 0 || !bytes.Equal(b.CAChain[0].Bytes, b.CertificateBytes) {
 		chain = append(chain, &CertBlock{
 			Certificate: b.Certificate,
 			Bytes:       b.CertificateBytes,
 		})
-		if b.CAChain != nil && len(b.CAChain) > 0 {
-			chain = append(chain, b.CAChain...)
-		}
+	}
+
+	if len(b.CAChain) > 0 {
+		chain = append(chain, b.CAChain...)
 	}
 
 	return chain
@@ -699,6 +779,7 @@ type CreationParameters struct {
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 	SignatureBits                 int
+	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert
 	UseCSRValues        bool
@@ -785,4 +866,31 @@ func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.ExtKeyUsage&MicrosoftKernelCodeSigningExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
 	}
+}
+
+// SetParsedPrivateKey sets the private key parameters on the bundle
+func (p *KeyBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateKeyType PrivateKeyType, privateKeyBytes []byte) {
+	p.PrivateKey = privateKey
+	p.PrivateKeyType = privateKeyType
+	p.PrivateKeyBytes = privateKeyBytes
+}
+
+func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
+	block := pem.Block{}
+
+	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
+		block.Bytes = p.PrivateKeyBytes
+		switch p.PrivateKeyType {
+		case RSAPrivateKey:
+			block.Type = "RSA PRIVATE KEY"
+		case ECPrivateKey:
+			block.Type = "EC PRIVATE KEY"
+		default:
+			block.Type = "PRIVATE KEY"
+		}
+		privateKeyPemString := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		return privateKeyPemString, nil
+	}
+
+	return "", errutil.InternalError{Err: "No Private Key Bytes to Wrap"}
 }

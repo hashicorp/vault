@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: Change OpenAPI code generator to extract request objects into /components/schemas and reference them by name.
+```
