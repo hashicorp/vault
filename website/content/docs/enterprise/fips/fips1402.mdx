@@ -1,0 +1,159 @@
+---
+layout: docs
+page_title: Vault Enterprise FIPS 140-2 Inside
+description: |-
+  Vault Enterprise features a special build with FIPS 140-2 support built into
+  the Vault binary. This can directly be used for FIPS compliance.
+---
+
+# FIPS 140-2 Inside
+
+-> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+
+Special builds of Vault Enterprise (marked with a `fips1402` feature name)
+include built-in support for FIPS 140-2 compliance. Unlike using Seal Wrap
+for FIPS compliance, this binary has no external dependencies on a HSM.
+
+To use this feature, you must have an active or trial license for Vault
+Enterprise Plus (HSMs). To start a trial, contact [HashiCorp
+sales](mailto:sales@hashicorp.com).
+
+## Using FIPS 140-2 Vault Enterprise
+
+FIPS 140-2 Inside versions of Vault Enterprise behave like non-FIPS versions
+of Vault. No restrictions are placed on algorithms; it is up to the operator
+to ensure Vault remains in a FIPS-compliant mode of operation. This means
+configuring some Secrets Engines to permit a limited set of algorithms (e.g.,
+forbidding ed25519-based CAs with PKI Secrets Engines).
+
+Because Vault Enterprise may return secrets in plain text, it is important to
+ensure the Vault server's `listener` configuration section utilizes TLS. This
+ensures secrets are transmitted securely from Server to Client. Additionally,
+note that TLSv1.3 will not work with FIPS 140-2 Inside, as HKDF is not a
+certified primitive. If TLSv1.3 is desired, it is suggested to front Vault
+Server with a FIPS-certified load balancer.
+
+A non-exhaustive list of potential compliance issues include:
+
+ - Using Ed25519 or ChaCha20+Poly1305 keys with the Transit Secrets Engine,
+ - Using Ed25519 keys as CAs in the PKI or SSH Secrets Engines,
+ - Using FF3-1/FPE in Transform Secrets Engine, or
+ - Using a Derived Key (using HKDF) for Agent auto-authing or the Transit
+   Secrets Engine.
+
+Hashicorp can only provide general guidance regarding using Vault Enterprise
+in a FIPS-compliant manner. We are not a NIST-certified testing laboratory
+and thus organizations may need to consult an approved auditor for final
+information.
+
+## Technical Details
+
+Vault Enterprise's FIPS 140-2 Inside binaries rely on a special version of the
+Go toolchain which include a FIPS-validated BoringCrypto version. To ensure
+your version of Vault Enterprise includes FIPS support, after starting the
+server, make sure you see a line with `Fips: Enabled`, such as:
+
+```
+                    Fips: FIPS 140-2 Enabled, BoringCrypto version 7
+```
+
+~> **Note**: FIPS 140-2 Inside binaries depend on cgo, which require that a
+   GNU C Library (glibc) Linux distribution be used to run Vault. We've
+   additionally opted to certify only on the AMD64 architecture at this time.
+   This means these binaries will not work on Alpine Linux based containers.
+
+### FIPS 140-2 Inside and External Plugins
+
+Vault Enterprise's built-in plugins are compiled into the Vault binary using
+the same Go toolchain version that compiled the core Vault; this results in
+these plugins having FIPS 140-2 compliance status as well. This same guarantee
+does not apply to external plugins.
+
+### Validating FIPS 140-2 Inside
+
+To validate that the FIPS 140-2 Inside binary correctly includes BoringCrypto,
+run `go tool nm` on the binary to get a symbol dump. On non-FIPS builds,
+searching for `goboringcrypto` in the output will yield no results, but on
+FIPS-enabled builds, you'll see many results with this:
+
+```
+$ go tool nm vault | grep -i goboringcrypto
+  4014d0 T _cgo_6880f0fbb71e_Cfunc__goboringcrypto_AES_cbc_encrypt
+  4014f0 T _cgo_6880f0fbb71e_Cfunc__goboringcrypto_AES_ctr128_encrypt
+  401520 T _cgo_6880f0fbb71e_Cfunc__goboringcrypto_AES_decrypt
+  401540 T _cgo_6880f0fbb71e_Cfunc__goboringcrypto_AES_encrypt
+  401560 T _cgo_6880f0fbb71e_Cfunc__goboringcrypto_AES_set_decrypt_key
+...additional lines elided...
+```
+
+All FIPS cryptographic modules must execute startup tests. BoringCrypto uses
+the `_goboringcrypto_BORINGSSL_bcm_power_on_self_test` symbol for this. To
+ensure the Vault Enterprise binary is correctly executing startup tests, use
+[GDB](https://www.sourceware.org/gdb/) to stop execution on this function to
+ensure it gets hit.
+
+```
+$ gdb --args vault server -dev
+...GDB startup messages elided...
+(gdb) break _goboringcrypto_BORINGSSL_bcm_power_on_self_test
+...breakpoint location elided...
+(gdb) run
+...additional GDB output elided...
+Thread 1 "vault" hit Breakpoint 1, 0x0000000000454950 in _goboringcrypto_BORINGSSL_bcm_power_on_self_test ()
+(gdb) backtrace
+#0  0x0000000000454950 in _goboringcrypto_BORINGSSL_bcm_power_on_self_test ()
+#1  0x00000000005da8f0 in runtime.asmcgocall () at /usr/local/hashicorp-fips-go-devel/src/runtime/asm_amd64.s:765
+#2  0x00007fffd07a5a18 in ?? ()
+#3  0x00007fffffffdf28 in ?? ()
+#4  0x000000000057ebce in runtime.persistentalloc.func1 () at /usr/local/hashicorp-fips-go-devel/src/runtime/malloc.go:1371
+#5  0x00000000005d8a49 in runtime.systemstack () at /usr/local/hashicorp-fips-go-devel/src/runtime/asm_amd64.s:383
+#6  0x00000000005dd189 in runtime.newproc (siz=6129989, fn=0x5d88fb <runtime.rt0_go+315>) at <autogenerated>:1
+#7  0x0000000000000000 in ?? ()
+```
+
+Exact output may vary.
+
+<div {...{"className":"alert alert-warning g-type-body"}}>
+
+**Note**: When executing Vault Enterprise within GDB, GDB must rewrite
+parts of the binary to permit stopping on the specified breakpoint. This
+results in the HMAC of the contained BoringCrypto library changing,
+breaking the FIPS integrity check. If execution were to be continued
+in the example above via the `continue` command, a message like the
+following would be emitted:
+
+```
+Continuing.
+FIPS integrity test failed.
+Expected: 18d35ae031f649825a4269d68d2e62583d060a31d359690f97b9c8bf8120cdf75b405f74be7018094da7eb5261f2f86d0f481cc3b5a9c7c432268d94bf91aad9
+Calculated: 111502a3201de3b23f54b29d79ca6a1a754f94ecfc57a379444aac0d3ada68bf3c06834e6d84e68599bdf763e28e2c994fcdaeac84adabd180b59cad5fc980bb
+
+Thread 1 "vault" received signal SIGABRT, Aborted.
+```
+
+This is expected. Rerunning Vault without GDB (or with no breakpoints
+set -- e.g., `delete 1`) will still result in this function executing, but
+with the FIPS integrity check succeeding.
+
+</div>
+
+### BoringCrypto Certification
+
+BoringCrypto Version 7 uses the following FIPS 140-2 Certificate and software
+version:
+
+ - NIST CMVP [Certificate #3678](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/3678).
+ - BoringSSL Release [`ae223d6138807a13006342edfeef32e813246b39`](https://github.com/google/boringssl/commit/ae223d6138807a13006342edfeef32e813246b39).
+
+The following algorithms were certified as part of this release:
+
+ - RSA in all key sizes greater than or equal to 2048 bits (tested at 2048
+   and 3072 bits),
+ - ECDSA and ECDH with P-224 (not accessible from Vault), P-256, P-384, and
+   P-521,
+ - AES symmetric encryption with 128/192/256-bit CBC, ECB, and CRT modes and
+   128/256-bit GCM modes,
+ - SHA-1 and SHA-2 (224, 256,384, and 512-bit variants),
+ - HMAC+SHA-2 with 224, 256, 384, and 512-bit variants of SHA-2,
+ - TLSv1.0/TLSv1.1 and TLSv1.2 KDFs,
+ - AES-256 based CRT_DRBG CS-PRNG.
