@@ -150,25 +150,9 @@ and consider if they're appropriate for your deployment.
 
     - `annotations` (`string or object: {}`) - Defines additional annotations to attach to the webhook. This can either be YAML or a YAML-formatted multi-line templated string.
 
-  - `namespaceSelector` (`dictionary: {}`) - Deprecated: please use 'webhook.namespaceSelector' instead.
+  - `namespaceSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.namespaceSelector`](/docs/platform/k8s/helm/configuration#namespaceselector) instead.
 
-    ```yaml
-    # Selectors are defined as a YAML dictionary.
-    # In this example, all namespaces with the label "injection: enabled" are eligible:
-    namespaceSelector:
-      matchLabels:
-        injection: enabled
-    ```
-
-  - `objectSelector` (`dictionary: {}`) -
-
-    ```yaml
-    # Selectors are defined as a YAML dictionary.
-    # In this example, all namespaces with the label "injection: enabled" are eligible:
-    objectSelector:
-      matchLabels:
-        injection: enabled
-    ```
+  - `objectSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.objectSelector`](/docs/platform/k8s/helm/configuration#objectselector) instead.
 
   - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
 
@@ -233,9 +217,9 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-  - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use `webhook.failurePolicy` instead.
+  - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use [`webhook.failurePolicy`](/docs/platform/k8s/helm/configuration#failurepolicy) instead.
 
-  - `webhookAnnotations` (`dictionary: {}`) - Deprecated: please use 'webhook.annotations' instead
+  - `webhookAnnotations` (`dictionary: {}`) - Deprecated: please use [`webhook.annotations`](/docs/platform/k8s/helm/configuration#annotations-1) instead.
 
   - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
 
