@@ -74,7 +74,14 @@ export default TtlForm.extend({
 
     if (typeOf(value) === 'number') {
       // if the passed value is a number, assume unit is seconds
-      time = value;
+      if (value % secondsMap.d === 0) {
+        unit = 'd';
+      } else if (value % secondsMap.h === 0) {
+        unit = 'h';
+      } else if (value % secondsMap.m === 0) {
+        unit = 'm';
+      }
+      time = convertFromSeconds(value, unit);
     } else {
       try {
         const seconds = Duration.parse(value).seconds();
