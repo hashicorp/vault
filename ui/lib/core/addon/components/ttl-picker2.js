@@ -74,6 +74,7 @@ export default TtlForm.extend({
 
     if (typeOf(value) === 'number') {
       // if the passed value is a number, assume unit is seconds
+      // then check if the value can be converted into a larger unit
       if (value % secondsMap.d === 0) {
         unit = 'd';
       } else if (value % secondsMap.h === 0) {
