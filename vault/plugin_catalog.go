@@ -58,6 +58,7 @@ type PluginCatalog struct {
 type externalPlugin struct {
 	// name is the plugin name
 	name string
+	pid  int
 
 	// connections holds client connections by ID
 	connections map[string]*pluginClient
@@ -174,11 +175,11 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 		if len(extPlugin.connections) == 0 {
 			delete(c.externalPlugins, name)
 		}
-		c.logger.Debug("killed external plugin process", "name", name, "id", id)
+		c.logger.Debug("killed external plugin process", "name", name, "pid", extPlugin.pid)
 	} else if len(extPlugin.connections) == 0 || pc.client.Exited() {
 		pc.client.Kill()
 		delete(c.externalPlugins, name)
-		c.logger.Debug("killed external multiplexed plugin process", "name", name, "id", id)
+		c.logger.Debug("killed external multiplexed plugin process", "name", name, "pid", extPlugin.pid)
 	}
 
 	return nil
@@ -290,6 +291,12 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	rpcClient, err := pc.client.Client()
 	if err != nil {
 		return nil, err
+	}
+
+	// get the external plugin pid
+	conf := pc.client.ReattachConfig()
+	if conf != nil {
+		extPlugin.pid = conf.Pid
 	}
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
