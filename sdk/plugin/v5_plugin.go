@@ -24,10 +24,24 @@ type BackendPluginClientV5 struct {
 	logical.Backend
 }
 
+type ContextKey string
+
+func (c ContextKey) String() string {
+	return "v5plugin" + string(c)
+}
+
+var ContextKeyPluginReload = ContextKey("plugin-reload")
+
 // Cleanup cleans up the go-plugin client and the plugin catalog
 func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
+	_, ok := ctx.Value(ContextKeyPluginReload).(string)
+	if !ok {
+		b.Backend.Cleanup(ctx)
+		b.client.Close()
+		return
+	}
 	b.Backend.Cleanup(ctx)
-	b.client.Close()
+	b.client.Reload()
 }
 
 // NewBackend will return an instance of an RPC-based client implementation of the backend for

@@ -78,6 +78,7 @@ type pluginClient struct {
 	client      *plugin.Client
 	clientConn  grpc.ClientConnInterface
 	cleanupFunc func() error
+	reloadFunc  func() error
 
 	plugin.ClientProtocol
 }
@@ -139,6 +140,30 @@ func (d *pluginClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc,
 
 func (p *pluginClient) Conn() grpc.ClientConnInterface {
 	return p.clientConn
+}
+
+func (p *pluginClient) Reload() error {
+	p.logger.Debug("reload external plugin process")
+	return p.reloadFunc()
+}
+
+// reloadExternalPlugin
+// This should be called with the write lock held.
+func (c *PluginCatalog) reloadExternalPlugin(name, id string) error {
+	extPlugin, ok := c.externalPlugins[name]
+	if !ok {
+		return fmt.Errorf("plugin client not found")
+	}
+	pc, ok := extPlugin.connections[id]
+	if !ok {
+		return fmt.Errorf("connection not found for client id: %s", id)
+	}
+
+	delete(c.externalPlugins, name)
+	pc.client.Kill()
+	c.logger.Debug("killed external plugin process for reload", "name", name, "pid", extPlugin.pid)
+
+	return nil
 }
 
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
@@ -251,6 +276,11 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			c.lock.Lock()
 			defer c.lock.Unlock()
 			return c.cleanupExternalPlugin(pluginRunner.Name, id)
+		},
+		reloadFunc: func() error {
+			c.lock.Lock()
+			defer c.lock.Unlock()
+			return c.reloadExternalPlugin(pluginRunner.Name, id)
 		},
 	}
 
