@@ -1517,12 +1517,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					}
 				}
 			} else if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) == 0 {
-				// two-phase login MFA requests should be forwarded
-				// to the active node, as the validation should only
-				// happen in that node
-				if c.perfStandby {
-					return nil, nil, logical.ErrPerfStandbyPleaseForward
-				}
 				mfaRequestID, err := uuid.GenerateUUID()
 				if err != nil {
 					return nil, nil, err
@@ -1552,7 +1546,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					TimeOfStorage:         time.Now(),
 					RequestID:             mfaRequestID,
 				}
-				err = c.SaveMFAResponseAuth(respAuth)
+				err = possiblyForwardSaveCachedAuthResponse(ctx, c, respAuth)
 				if err != nil {
 					return nil, nil, err
 				}
