@@ -36,3 +36,7 @@ func extractManagedKeyId(privateKeyBytes []byte) (UUIDKey, error) {
 func createKmsKeyBundle(ctx context.Context, b *backend, keyId managedKeyId) (certutil.KeyBundle, certutil.PrivateKeyType, error) {
 	return certutil.KeyBundle{}, certutil.UnknownPrivateKey, errEntOnly
 }
+
+func getManagedKeyInfo(ctx context.Context, b *backend, keyId managedKeyId) (*managedKeyInfo, error) {
+	return nil, errEntOnly
+}
