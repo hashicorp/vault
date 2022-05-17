@@ -214,10 +214,10 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	{
 		// create a config
 		mfaConfigData := map[string]interface{}{
-			"username_template": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
-			"secret_key":        secret_key,
-			"integration_key":   integration_key,
-			"api_hostname":      api_hostname,
+			"username_format": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
+			"secret_key":      secret_key,
+			"integration_key": integration_key,
+			"api_hostname":    api_hostname,
 		}
 		resp, err := client.Logical().Write("identity/mfa/method/duo", mfaConfigData)
 

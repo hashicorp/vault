@@ -300,7 +300,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"username_template": {
+				"username_format": {
 					Type:        framework.TypeString,
 					Description: `A template string for mapping Identity names to MFA method names. Values to substitute should be placed in {{}}. For example, "{{entity.name}}@example.com". If blank, the Entity's name field will be used as-is.`,
 				},
@@ -356,7 +356,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"username_template": {
+				"username_format": {
 					Type:        framework.TypeString,
 					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
 				},
@@ -412,7 +412,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"username_template": {
+				"username_format": {
 					Type:        framework.TypeString,
 					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
 				},

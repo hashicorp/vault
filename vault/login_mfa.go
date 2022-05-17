@@ -311,7 +311,7 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 	}
 
 	mConfig.Type = methodType
-	usernameRaw, ok := d.GetOk("username_template")
+	usernameRaw, ok := d.GetOk("username_format")
 	if ok {
 		mConfig.UsernameFormat = usernameRaw.(string)
 	}
@@ -1377,13 +1377,13 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 			respData["production"] = oktaConfig.Production
 		}
 		respData["mount_accessor"] = mConfig.MountAccessor
-		respData["username_template"] = mConfig.UsernameFormat
+		respData["username_format"] = mConfig.UsernameFormat
 	case *mfa.Config_DuoConfig:
 		duoConfig := mConfig.GetDuoConfig()
 		respData["api_hostname"] = duoConfig.APIHostname
 		respData["pushinfo"] = duoConfig.PushInfo
 		respData["mount_accessor"] = mConfig.MountAccessor
-		respData["username_template"] = mConfig.UsernameFormat
+		respData["username_format"] = mConfig.UsernameFormat
 		respData["use_passcode"] = duoConfig.UsePasscode
 	case *mfa.Config_PingIDConfig:
 		pingConfig := mConfig.GetPingIDConfig()
