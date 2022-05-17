@@ -1107,6 +1107,10 @@
           {
             "title": "Considerations",
             "path": "secrets/pki/considerations"
+          },
+          {
+            "title": "Rotation Primitives",
+            "path": "secrets/pki/rotation-primitives"
           }
         ]
       },
