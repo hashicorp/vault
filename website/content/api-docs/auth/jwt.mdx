@@ -113,6 +113,9 @@ entities attempting to login. At least one of the bound values must be set.
 - `user_claim` `(string: <required>)` - The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login. The claim value must be a string.
+- `user_claim_json_pointer` `(bool: false)` - Specifies if the `user_claim` value uses
+  [JSON pointer](/docs/auth/jwt#claim-specifications-and-json-pointer) syntax for
+  referencing claims. By default, the `user_claim` value will not use JSON pointer.
 - `clock_skew_leeway` `(int or string: <optional>)` - The amount of leeway to add to all claims to
   account for clock skew, in seconds. Defaults to `60` seconds if set to `0` and can be disabled
   if set to `-1`. Accepts an integer number of seconds, or a Go duration format string. Only applicable

@@ -48,24 +48,27 @@ export default class VerticalBarChart extends Component {
   }
 
   @action
-  registerListener(element, args) {
-    const dataset = args[0];
+  renderChart(element, [chartData]) {
+    const dataset = chartData;
     const filteredData = dataset.filter((e) => Object.keys(e).includes('clients')); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     const stackedData = stackFunction(filteredData);
     const chartSvg = select(element);
+    const dataMax = max(filteredData.map((d) => d[this.yKey]));
+    const domainMax = Math.ceil(dataMax / 10) * 10; // we want to round UP to the nearest tens place ex. dataMax = 102, domainMax = 110
+
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     // DEFINE DATA BAR SCALES
-    const yScale = scaleLinear()
-      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
-      .range([0, 100])
-      .nice();
+    const yScale = scaleLinear().domain([0, domainMax]).range([0, 100]).nice();
 
     const xScale = scaleBand()
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
       .paddingInner(0.85);
+
+    // clear out DOM before appending anything
+    chartSvg.selectAll('g').remove().exit().data(stackedData).enter();
 
     const dataBars = chartSvg
       .selectAll('g')

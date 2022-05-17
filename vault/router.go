@@ -535,10 +535,12 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry not found.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
-	defer metrics.MeasureSince([]string{
-		"route", string(req.Operation),
-		strings.Replace(mount, "/", "-", -1),
-	}, time.Now())
+	if !existenceCheck {
+		defer metrics.MeasureSince([]string{
+			"route", string(req.Operation),
+			strings.Replace(mount, "/", "-", -1),
+		}, time.Now())
+	}
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend
