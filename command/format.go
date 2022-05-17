@@ -385,21 +385,32 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	}
 
 	if secret.Auth != nil {
-		out = append(out, fmt.Sprintf("token %s %s", hopeDelim, secret.Auth.ClientToken))
-		out = append(out, fmt.Sprintf("token_accessor %s %s", hopeDelim, secret.Auth.Accessor))
-		// If the lease duration is 0, it's likely a root token, so output the
-		// duration as "infinity" to clear things up.
-		if secret.Auth.LeaseDuration == 0 {
-			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
-		} else {
-			out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
-		}
-		out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
-		out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
-		out = append(out, fmt.Sprintf("identity_policies %s %q", hopeDelim, secret.Auth.IdentityPolicies))
-		out = append(out, fmt.Sprintf("policies %s %q", hopeDelim, secret.Auth.Policies))
-		for k, v := range secret.Auth.Metadata {
-			out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
+		if secret.Auth.MFARequirement != nil {
+			out = append(out, fmt.Sprintf("mfa_request_id %s %s", hopeDelim, secret.Auth.MFARequirement.MFARequestID))
+
+			for k, constraintSet := range secret.Auth.MFARequirement.MFAConstraints {
+				for _, constraint := range constraintSet.Any {
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_id %s %s", k, constraint.Type, hopeDelim, constraint.ID))
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_uses_passcode %s %t", k, constraint.Type, hopeDelim, constraint.UsesPasscode))
+				}
+			}
+		} else { // Token information only makes sense if no further MFA requirement (i.e. if we actually have a token)
+			out = append(out, fmt.Sprintf("token %s %s", hopeDelim, secret.Auth.ClientToken))
+			out = append(out, fmt.Sprintf("token_accessor %s %s", hopeDelim, secret.Auth.Accessor))
+			// If the lease duration is 0, it's likely a root token, so output the
+			// duration as "infinity" to clear things up.
+			if secret.Auth.LeaseDuration == 0 {
+				out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
+			} else {
+				out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
+			}
+			out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
+			out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
+			out = append(out, fmt.Sprintf("identity_policies %s %q", hopeDelim, secret.Auth.IdentityPolicies))
+			out = append(out, fmt.Sprintf("policies %s %q", hopeDelim, secret.Auth.Policies))
+			for k, v := range secret.Auth.Metadata {
+				out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
+			}
 		}
 	}
 
