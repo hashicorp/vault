@@ -1820,11 +1820,14 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 	if baseURL == "" {
 		baseURL = "okta.com"
 	}
-	orgURL := fmt.Sprintf("https://%s.%s", oktaConfig.OrgName, baseURL)
+	orgURL, err := url.Parse(fmt.Sprintf("https://%s.%s", oktaConfig.OrgName, baseURL))
+	if err != nil {
+		return err
+	}
 
 	ctx, client, err := okta.NewClient(ctx,
 		okta.WithToken(oktaConfig.APIToken),
-		okta.WithOrgUrl(orgURL),
+		okta.WithOrgUrl(orgURL.String()),
 		// Do not use cache or polling MFA will not refresh
 		okta.WithCache(false),
 	)
@@ -1897,13 +1900,16 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return err
 	}
 	// Strip the org URL from the fully qualified poll URL
-	url := strings.Replace(links.Poll.Href, orgURL, "", 1)
+	url, err := url.Parse(strings.Replace(links.Poll.Href, orgURL.String(), "", 1))
+	if err != nil {
+		return err
+	}
 
 	for {
 		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
 		// the VerifyFactor respone. This code effectively reimplements that method.
 		rq := client.CloneRequestExecutor()
-		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url, nil)
+		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url.String(), nil)
 		if err != nil {
 			return err
 		}
