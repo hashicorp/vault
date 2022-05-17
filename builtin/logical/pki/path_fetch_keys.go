@@ -61,7 +61,6 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 		responseInfo[string(identifier)] = map[string]interface{}{
 			keyNameParam: key.Name,
 			"is_default": identifier == config.DefaultKeyId,
-			"key_type":   key.PrivateKeyType,
 		}
 
 	}
