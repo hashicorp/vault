@@ -173,7 +173,7 @@ func pathImportKey(b *backend) *framework.Path {
 }
 
 const (
-	pathImportKeyHelpSyn  = `Import a specified key.`
+	pathImportKeyHelpSyn  = `Import the specified key.`
 	pathImportKeyHelpDesc = `This endpoint allows importing a specified issuer key from a pem bundle.
 If key_name is set, that will be set on the key, assuming the key did not exist previously.`
 )
