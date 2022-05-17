@@ -13,7 +13,7 @@ export default class MfaMethodCreateController extends Controller {
   methodNames = ['TOTP', 'Duo', 'Okta', 'PingID'];
 
   @tracked type = null;
-  @tracked method;
+  @tracked method = null;
   @tracked enforcement;
   @tracked enforcementPreference;
 
@@ -32,9 +32,20 @@ export default class MfaMethodCreateController extends Controller {
   get isTotp() {
     return this.type === 'totp';
   }
+  get showForms() {
+    return this.type && this.method;
+  }
 
   @action
+  onTypeSelect(type) {
+    this.method = null;
+    this.type = type;
+  }
+  @action
   createMethod() {
+    if (this.method) {
+      this.method.unloadRecord();
+    }
     this.method = this.store.createRecord('mfa-method', { type: this.type });
   }
   @action

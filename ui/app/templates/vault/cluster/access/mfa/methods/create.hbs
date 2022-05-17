@@ -11,9 +11,8 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
 <div class="has-border-top-light has-top-padding-l">
-  {{#if this.method}}
+  {{#if this.showForms}}
     <h3 class="is-size-4 has-text-semibold">Settings</h3>
     <p class="has-border-top-light has-top-padding-l">
       {{this.description}}
@@ -37,7 +36,7 @@
     </p>
     <div class="is-flex-row has-top-margin-xl">
       {{#each this.methodNames as |methodName|}}
-        <RadioCard @value={{lowercase methodName}} @groupValue={{this.type}} @onChange={{fn (mut this.type)}}>
+        <RadioCard @value={{lowercase methodName}} @groupValue={{this.type}} @onChange={{this.onTypeSelect}}>
           <div class="radio-card-row is-flex-v-centered">
             <div>
               <Icon
@@ -65,7 +64,7 @@
 
   <div class="has-top-margin-l has-border-top-light">
     <div class="has-top-margin-l has-bottom-margin-l">
-      {{#if this.method}}
+      {{#if this.showForms}}
         <button class="button is-primary" type="button" {{on "click" (perform this.save)}}>
           Continue
         </button>
