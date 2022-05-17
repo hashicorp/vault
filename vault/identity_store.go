@@ -221,7 +221,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodTOTPDelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -335,7 +335,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodOKTADelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -391,7 +391,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodDUODelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -431,7 +431,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodPingIDDelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
