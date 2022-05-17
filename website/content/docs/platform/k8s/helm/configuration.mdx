@@ -267,7 +267,7 @@ and consider if they're appropriate for your deployment.
 
 - `server` - Values that configure running a Vault server within Kubernetes.
 
-  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault server will be created. When set to `-`, defaults to the value of `global.enabled`.
+  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault server will be created. When set to `"-"`, defaults to the value of `global.enabled`.
 
   - `enterpriseLicense` - This value refers to a Kubernetes secret that you have created that contains your enterprise license. If you are not using an enterprise image or if you plan to introduce the license key via another route, then leave secretName blank ("") or set it to null. Requires Vault Enterprise 1.8 or later.
 
