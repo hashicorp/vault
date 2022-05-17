@@ -12,22 +12,32 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="has-border-top-light">
+<div class="has-border-top-light has-top-padding-l">
   {{#if this.method}}
-    {{! display forms }}
+    <h3 class="is-size-4 has-text-semibold">Settings</h3>
+    <p class="has-border-top-light has-top-padding-l">
+      {{this.description}}
+      <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+    </p>
+    <Mfa::MethodForm @model={{this.method}} class="is-box-shadowless" />
+    <MfaLoginEnforcementHeader
+      @isInline={{true}}
+      @radioCardGroupValue={{this.enforcementPreference}}
+      @onRadioCardSelect={{this.onEnforcementPreferenceChange}}
+      @onEnforcementSelect={{fn (mut this.enforcement)}}
+    />
+    {{#if (eq this.enforcementPreference "new")}}
+      <MfaLoginEnforcementForm @model={{this.enforcement}} @isInline={{true}} class="has-top-margin-l" />
+    {{/if}}
   {{else}}
-    <p class="has-top-margin-l">
+    <p>
       Multi-factor authentication (MFA) allows you to set up another layer of security on top of existing authentication
       methods. Vault has four available methods.
       <DocLink @path="/api-docs/secret/identity/mfa">Learn more.</DocLink>
     </p>
     <div class="is-flex-row has-top-margin-xl">
       {{#each this.methodNames as |methodName|}}
-        <RadioCard
-          @value={{lowercase methodName}}
-          @groupValue={{this.selectedType}}
-          @onChange={{fn (mut this.selectedType)}}
-        >
+        <RadioCard @value={{lowercase methodName}} @groupValue={{this.type}} @onChange={{fn (mut this.type)}}>
           <div class="radio-card-row is-flex-v-centered">
             <div>
               <Icon
@@ -43,25 +53,30 @@
         </RadioCard>
       {{/each}}
     </div>
-    {{#if this.selectedType}}
+    {{#if this.type}}
       <p class="has-top-margin-l">
-        {{#if (eq this.selectedType "totp")}}
-          Once set up, TOTP requires a passcode to be presented alongside a Vault token when invoking an API request. The
-          passcode will be validated against the TOTP key present in the identity of the caller in Vault.
-        {{else}}
-          Once set up, the
-          {{this.formattedSelectedType}}
-          MFA method will require a push confirmation on mobile before login.
-        {{/if}}
-        <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.selectedType}}>Learn more.</DocLink>
+        {{this.description}}
+        <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
       </p>
       {{! in a future release cards may be displayed to choose from either template or custom config for TOTP }}
       {{! if template is selected a user could choose a predefined config for common authenticators and the values would be populated on the model }}
-      <div class="has-top-margin-l has-border-top-light">
-        <button class="button is-primary has-top-margin-l" type="button" {{on "click" this.createMethod}}>
-          Next
-        </button>
-      </div>
     {{/if}}
   {{/if}}
+
+  <div class="has-top-margin-l has-border-top-light">
+    <div class="has-top-margin-l has-bottom-margin-l">
+      {{#if this.method}}
+        <button class="button is-primary" type="button" {{on "click" (perform this.save)}}>
+          Continue
+        </button>
+        <button class="button has-left-margin-xs" type="button" {{on "click" this.cancel}}>
+          Cancel
+        </button>
+      {{else}}
+        <button class="button is-primary" type="button" {{on "click" this.createMethod}}>
+          Next
+        </button>
+      {{/if}}
+    </div>
+  </div>
 </div>
