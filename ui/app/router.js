@@ -65,6 +65,7 @@ Router.map(function () {
             this.route('create');
             this.route('method', { path: '/:id' }, function () {
               this.route('edit');
+              this.route('enforcements');
             });
           });
           this.route('enforcements', function () {
