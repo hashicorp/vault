@@ -2,9 +2,12 @@ package pki
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 
 	"github.com/hashicorp/vault/sdk/logical"
 
@@ -72,6 +75,13 @@ func (u UUIDKey) String() string {
 
 func (n NameKey) String() string {
 	return string(n)
+}
+
+type managedKeyInfo struct {
+	publicKey crypto.PublicKey
+	keyType   certutil.PrivateKeyType
+	name      NameKey
+	uuid      UUIDKey
 }
 
 // getManagedKeyId returns a NameKey or a UUIDKey, whichever was specified in the
