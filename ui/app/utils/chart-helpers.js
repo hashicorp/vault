@@ -8,7 +8,7 @@ export const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
 export const GREY = '#EBEEF2';
 
 // TRANSLATIONS:
-export const TRANSLATE = { right: 11, left: -11 };
+export const TRANSLATE = { left: -11 };
 export const SVG_DIMENSIONS = { height: 190, width: 500 };
 
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
