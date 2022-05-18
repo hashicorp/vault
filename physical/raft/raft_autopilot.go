@@ -499,6 +499,7 @@ func (b *RaftBackend) StopAutopilot() {
 		return
 	}
 	b.autopilot.Stop()
+	b.autopilot = nil
 	b.followerHeartbeatTicker.Stop()
 }
 

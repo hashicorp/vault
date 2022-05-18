@@ -152,8 +152,9 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/autopilot/state",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.verifyDROperationTokenOnSecondary(b.handleStorageRaftAutopilotState(), false),
-					Summary:  "Returns the state of the raft cluster under integrated storage as seen by autopilot.",
+					Callback:                  b.verifyDROperationTokenOnSecondary(b.handleStorageRaftAutopilotState(), false),
+					Summary:                   "Returns the state of the raft cluster under integrated storage as seen by autopilot.",
+					ForwardPerformanceStandby: true,
 				},
 			},
 
