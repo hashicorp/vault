@@ -54,6 +54,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
+	github.com/google/tink/go v1.4.0
 	github.com/hashicorp/cap v0.1.1
 	github.com/hashicorp/consul-template v0.29.0
 	github.com/hashicorp/consul/api v1.12.0
@@ -274,7 +275,6 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/google/tink/go v1.4.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
