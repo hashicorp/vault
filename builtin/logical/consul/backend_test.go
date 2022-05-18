@@ -99,7 +99,14 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 				testBackendRenewRevoke(t, "1.4.4")
 			})
 
-			testBackendRenewRevoke14(t, "")
+			t.Run("param-policies", func(t *testing.T) {
+				t.Parallel()
+				testBackendRenewRevoke14(t, "", "policies")
+			})
+			t.Run("param-consul_policies", func(t *testing.T) {
+				t.Parallel()
+				testBackendRenewRevoke14(t, "", "consul_policies")
+			})
 		})
 	})
 }
@@ -209,7 +216,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	}
 }
 
-func testBackendRenewRevoke14(t *testing.T, version string) {
+func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -238,8 +245,8 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 
 	req.Path = "roles/test"
 	req.Data = map[string]interface{}{
-		"consul_policies": []string{"test"},
-		"lease":           "6h",
+		policiesParam: []string{"test"},
+		"lease":       "6h",
 	}
 	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
