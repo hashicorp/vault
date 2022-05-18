@@ -56,7 +56,7 @@ and consider if they're appropriate for your deployment.
 
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
-  - `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
+  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created. When set to `"-"`, defaults to the value of `global.enabled`.
 
   - `externalVaultAddr` (`string: ""`) - External vault server address for the injector to use. Setting this will disable deployment of the vault server, and only deploy the injector.
     A service account with token review permissions is automatically created if `server.serviceAccount.create=true` is set for the external Vault server to use.
@@ -71,7 +71,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "0.14.2"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "0.16.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -79,7 +79,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: "1.9.2"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.10.3"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `agentDefaults` - Values that configure the injected Vault Agent containers default values.
 
@@ -124,25 +124,35 @@ and consider if they're appropriate for your deployment.
         cpu: '250m'
     ```
 
-  - `namespaceSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If set to null, all non-system namespaces are eligible for injection.
+  - `webhook` - Values that control the Mutating Webhook Configuration.
 
-    ```yaml
-    # Selectors are defined as a YAML dictionary.
-    # In this example, all namespaces with the label "injection: enabled" are eligible:
-    namespaceSelector:
-      matchLabels:
-        injection: enabled
-    ```
+    - `failurePolicy` (`string: "Ignore"`) - Configures failurePolicy of the webhook. To block pod creation while the webhook is unavailable, set the policy to `"Fail"`. See [Failure Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy).
 
-  - `objectSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what objects can be effected by mutation.
+    - `matchPolicy` (`string: "Exact"`) - Specifies the approach to accepting changes based on the rules of the MutatingWebhookConfiguration. See [Match Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy).
 
-    ```yaml
-    # Selectors are defined as a YAML dictionary.
-    # In this example, all namespaces with the label "injection: enabled" are eligible:
-    objectSelector:
-      matchLabels:
-        injection: enabled
-    ```
+    - `timeoutSeconds` (`int: 30`) - Specifies the number of seconds before the webhook request will be ignored or fails. If it is ignored or fails depends on the `failurePolicy`. See [timeouts](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts).
+
+    - `namespaceSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If unset, all non-system namespaces are eligible for injection. See [Matching requests: namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector).
+
+      ```yaml
+      namespaceSelector:
+        matchLabels:
+          sidecar-injector: enabled
+      ```
+
+    - `objectSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what objects can be affected by mutation. See [Matching requests: object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector).
+
+      ```yaml
+      objectSelector:
+        matchLabels:
+          sidecar-injector: enabled
+      ```
+
+    - `annotations` (`string or object: {}`) - Defines additional annotations to attach to the webhook. This can either be YAML or a YAML-formatted multi-line templated string.
+
+  - `namespaceSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.namespaceSelector`](/docs/platform/k8s/helm/configuration#namespaceselector) instead.
+
+  - `objectSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.objectSelector`](/docs/platform/k8s/helm/configuration#objectselector) instead.
 
   - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
 
@@ -186,6 +196,9 @@ and consider if they're appropriate for your deployment.
           topologyKey: kubernetes.io/hostname
     ```
 
+  - `topologySpreadConstraints` (`array: []`) - [Topology settings](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/)
+    for injector pods. This can either be YAML or a YAML-formatted multi-line templated string.
+
   - `tolerations` (`array: []`) - Toleration Settings for injector pods. This should be either a multi-line string or YAML matching the Toleration array.
 
   - `nodeSelector` (`dictionary: {}`) - nodeSelector labels for injector pod assignment, formatted as a muli-line string or YAML map.
@@ -204,10 +217,9 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-  - `failurePolicy` (`string: "Ignore"`) - When set to `Fail`, an error calling the webhook causes the admission to fail and the API request to be rejected.
-    When set to `Ignore`, an error calling the webhook is ignored and the API request is allowed to continue. Allowed values: `Fail`, `Ignore`.
+  - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use [`webhook.failurePolicy`](/docs/platform/k8s/helm/configuration#failurepolicy) instead.
 
-  - `webhookAnnotations` (`dictionary: {}`) - Extra annotations to attach to the MutatingWebhookConfiguration. This can either be YAML or a YAML-formatted multi-line templated string.
+  - `webhookAnnotations` (`dictionary: {}`) - Deprecated: please use [`webhook.annotations`](/docs/platform/k8s/helm/configuration#annotations-1) instead.
 
   - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
 
@@ -255,7 +267,7 @@ and consider if they're appropriate for your deployment.
 
 - `server` - Values that configure running a Vault server within Kubernetes.
 
-  - `enabled` (`boolean: true`) - When set to `true`, the Vault server will be created.
+  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault server will be created. When set to `"-"`, defaults to the value of `global.enabled`.
 
   - `enterpriseLicense` - This value refers to a Kubernetes secret that you have created that contains your enterprise license. If you are not using an enterprise image or if you plan to introduce the license key via another route, then leave secretName blank ("") or set it to null. Requires Vault Enterprise 1.8 or later.
 
@@ -267,7 +279,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the containers running Vault.
 
-    - `tag` (`string: "1.9.2"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.10.3"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -544,6 +556,9 @@ and consider if they're appropriate for your deployment.
         topologyKey: kubernetes.io/hostname
   ```
 
+  - `topologySpreadConstraints` (`array: []`) - [Topology settings](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/)
+    for server pods. This can either be YAML or a YAML-formatted multi-line templated string.
+
   - `tolerations` (`array: []`) - This value defines the [tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) that are acceptable when being scheduled. This should be either a multi-line string or YAML matching the Toleration array in a PodSpec.
 
   ```yaml
@@ -614,6 +629,8 @@ and consider if they're appropriate for your deployment.
     - `targetPort` (`int: 8200`) - Port on which the service is listening.
 
     - `nodePort` (`int:`) - When type is set to `NodePort`, the bound node port can be configured using this value. A random port will be assigned if this is left blank.
+
+    - `publishNotReadyAddresses` (`boolean: true`) - If true, do not wait for server pods to be ready before adding them to the service pool.
 
     - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service. This can either be YAML or a YAML-formatted multi-line templated string.
 
@@ -717,10 +734,11 @@ and consider if they're appropriate for your deployment.
     - `enabled` (`boolean: true`) -
       Enables `standalone` mode for the Vault server. This mode uses the `file` storage backend and requires a volume for persistence (`dataStorage`).
 
-    - `config` (`string: "{}"`) -
+    - `config` (`string or object: "{}"`) -
       A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
       This will be saved as-is into a ConfigMap that is read by the Vault servers.
       This can be used to add additional configuration that isn't directly exposed by the chart.
+      If an object is provided, it will be written as JSON.
 
     ```yaml
     # ExtraConfig values are formatted as a multi-line string:
@@ -751,6 +769,9 @@ and consider if they're appropriate for your deployment.
     - `apiAddr`: (`string: "{}"`) -
       Set the API address configuration for a Vault cluster. If set to an empty string, the pod IP address is used.
 
+    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](https://www.vaultproject.io/docs/configuration#cluster_addr) confuguration for Vault HA.
+      If null, defaults to `https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201`.
+
     - `raft` - This configures `raft` integrated storage mode for the Vault server.
 
       - `enabled` (`boolean: false`) -
@@ -758,10 +779,11 @@ and consider if they're appropriate for your deployment.
 
       - `setNodeId` (`boolean: false`) - Set the Node Raft ID to the name of the pod.
 
-      - `config` (`string: "{}"`) -
+      - `config` (`string or object: "{}"`) -
         A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
         This will be saved as-is into a ConfigMap that is read by the Vault servers.
         This can be used to add additional configuration that isn't directly exposed by the chart.
+        If an object is provided, it will be written as JSON.
 
     - `replicas` (`int: 5`) -
       The number of pods to deploy to create a highly available cluster of Vault servers.
@@ -769,10 +791,11 @@ and consider if they're appropriate for your deployment.
     - `updatePartition` (`int: 0`) -
       If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables partition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 
-    - `config` (`string: "{}"`) -
+    - `config` (`string or object: "{}"`) -
       A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
       This will be saved as-is into a ConfigMap that is read by the Vault servers.
       This can be used to add additional configuration that isn't directly exposed by the chart.
+      If an object is provided, it will be written as JSON.
 
     ```yaml
     # ExtraConfig values are formatted as a multi-line string:
@@ -872,7 +895,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-csi-provider"`) - The name of the Docker image for the Vault CSI Provider.
 
-    - `tag` (`string: "0.4.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
+    - `tag` (`string: "1.1.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists locally.
 
@@ -925,6 +948,8 @@ and consider if they're appropriate for your deployment.
         foo: bar
       ```
 
+    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for the CSI provider daemonset.
+
     - `providersDir` (`string: "/etc/kubernetes/secrets-store-csi-providers"`) - Provider host path (must match the CSI provider's path)
 
     - `kubeletRootDir` (`string: "/var/lib/kubelet"`) - Kubelet host path
@@ -943,6 +968,8 @@ and consider if they're appropriate for your deployment.
         foo: bar
       ```
 
+    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for CSI provider pods.
+
     - `tolerations` (`array: []`) - Toleration Settings for CSI pods. This should be a multi-line string or YAML matching the Toleration array in a PodSpec.
 
   - `priorityClassName` (`string: ""`) - Priority class for CSI Provider pods
@@ -960,6 +987,8 @@ and consider if they're appropriate for your deployment.
       annotations: |
         foo: bar
       ```
+
+    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for the CSI provider service account.
 
   - `readinessProbe` - Values that configure the readiness probe for the Vault CSI Provider pods.
 
