@@ -907,15 +907,17 @@ func checkForRolesReferencing(issuerId string, ctx context.Context, storage logi
 		if err != nil {
 			return false, 0, err
 		}
-		var role roleEntry
-		err = entry.DecodeJSON(&role)
-		if err != nil {
-			return false, inUseBy, err
-		}
-		if role.Issuer == issuerId {
-			inUseBy = inUseBy + 1
-			if inUseBy >= maxRolesToFindOnIssuerChange {
-				return true, inUseBy, nil
+		if entry != nil { // If nil, someone deleted an entry since we haven't taken a lock here so just continue
+			var role roleEntry
+			err = entry.DecodeJSON(&role)
+			if err != nil {
+				return false, inUseBy, err
+			}
+			if role.Issuer == issuerId {
+				inUseBy = inUseBy + 1
+				if inUseBy >= maxRolesToFindOnIssuerChange {
+					return true, inUseBy, nil
+				}
 			}
 		}
 		checkedRoles = checkedRoles + 1
