@@ -64,7 +64,7 @@ export default class VerticalBarChart extends Component {
     const xScale = scaleBand()
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
-      .paddingInner(0.85);
+      .padding(0.8);
 
     // clear out DOM before appending anything
     chartSvg.selectAll('g').remove().exit().data(stackedData).enter();
@@ -82,6 +82,7 @@ export default class VerticalBarChart extends Component {
       .enter()
       .append('rect')
       .attr('width', '7px')
+      .attr('transform', () => (dataset.length > 3 ? 'translate(0)' : `translate(${TRANSLATE.left})`)) // only translate bars for smaller datasets
       .attr('class', 'data-bar')
       .attr('height', (stackedData) => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data[this.xKey])) // uses destructuring because was data.data.month
@@ -109,7 +110,6 @@ export default class VerticalBarChart extends Component {
     // WIDER SELECTION AREA FOR TOOLTIP HOVER
     const greyBars = chartSvg
       .append('g')
-      .attr('transform', `translate(${TRANSLATE.left})`)
       .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
