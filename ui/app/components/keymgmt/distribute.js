@@ -201,10 +201,15 @@ export default class KeymgmtDistribute extends Component {
   }
 
   @action
-  handleProvider(evt) {
-    this.formData.provider = evt.target.value;
-    if (evt.target.value) {
-      this.getProviderType(evt.target.value);
+  handleProvider(selection) {
+    let providerName = selection[0];
+    if (typeof selection === 'string') {
+      // Handles case if no list permissions and fallback component is used
+      providerName = selection;
+    }
+    this.formData.provider = providerName;
+    if (providerName) {
+      this.getProviderType(providerName);
     }
   }
   @action
