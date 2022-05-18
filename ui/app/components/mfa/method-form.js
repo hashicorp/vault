@@ -11,7 +11,6 @@ import { task } from 'ember-concurrency';
  * <Mfa::MethodForm @model={{this.model}} @hasActions={{true}} @onSave={{this.onSave}} @onClose={{this.onClose}} />
  * ```
  * @param {Object} model - MFA method model
- * @param {boolean} [isEditMode] - whether the form is used for edit flow or not
  * @param {boolean} [hasActions] - whether the action buttons will be rendered or not
  * @param {onSave} [onSave] - callback when save is successful
  * @param {onClose} [onClose] - callback when cancel is triggered

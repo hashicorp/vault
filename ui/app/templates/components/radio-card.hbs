@@ -3,19 +3,23 @@
   class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
   ...attributes
 >
-  <div class="radio-card-row">
-    <div>
-      <Icon @name={{@icon}} @size="24" class="has-text-grey-light" />
+  {{#if (has-block)}}
+    {{yield}}
+  {{else}}
+    <div class="radio-card-row">
+      <div>
+        <Icon @name={{@icon}} @size="24" class="has-text-grey-light" />
+      </div>
+      <div class="has-left-margin-s">
+        <h5 class="radio-card-message-title">
+          {{@title}}
+        </h5>
+        <p class="radio-card-message-body">
+          {{@description}}
+        </p>
+      </div>
     </div>
-    <div class="has-left-margin-s">
-      <h5 class="radio-card-message-title">
-        {{@title}}
-      </h5>
-      <p class="radio-card-message-body">
-        {{@description}}
-      </p>
-    </div>
-  </div>
+  {{/if}}
   <div class="radio-card-radio-row">
     <RadioButton
       name="config-mode"
