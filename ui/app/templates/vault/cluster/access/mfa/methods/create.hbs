@@ -26,7 +26,12 @@
       @onEnforcementSelect={{fn (mut this.enforcement)}}
     />
     {{#if (eq this.enforcementPreference "new")}}
-      <MfaLoginEnforcementForm @model={{this.enforcement}} @isInline={{true}} class="has-top-margin-l" />
+      <MfaLoginEnforcementForm
+        @model={{this.enforcement}}
+        @isInline={{true}}
+        @modelErrors={{this.enforcementErrors}}
+        class="has-top-margin-l"
+      />
     {{/if}}
   {{else}}
     <p>
@@ -72,7 +77,7 @@
           Cancel
         </button>
       {{else if this.type}}
-        <button class="button is-primary" type="button" {{on "click" this.createMethod}}>
+        <button class="button is-primary" type="button" {{on "click" this.createModels}}>
           Next
         </button>
       {{/if}}

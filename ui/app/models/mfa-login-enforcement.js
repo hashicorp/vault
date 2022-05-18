@@ -2,7 +2,31 @@ import Model, { attr, hasMany } from '@ember-data/model';
 import ArrayProxy from '@ember/array/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { withModelValidations } from 'vault/decorators/model-validations';
+import { isPresent } from '@ember/utils';
 
+const validations = {
+  name: [{ type: 'presence', message: 'Name is required' }],
+  mfa_methods: [{ type: 'presence', message: 'At least one MFA method is required' }],
+  targets: [
+    {
+      validator(model) {
+        // avoid async fetch of records here and access relationship ids to check for presence
+        const entityIds = model.hasMany('identity_entities').ids();
+        const groupIds = model.hasMany('identity_groups').ids();
+        return (
+          isPresent(model.auth_method_accessors) ||
+          isPresent(model.auth_method_types) ||
+          isPresent(entityIds) ||
+          isPresent(groupIds)
+        );
+      },
+      message:
+        "At least one target is required. If you've selected one, click 'Add' to make sure it's added to this enforcement.",
+    },
+  ],
+};
+@withModelValidations(validations)
 export default class MfaLoginEnforcementModel extends Model {
   @attr('string') name;
   @hasMany('mfa-method') mfa_methods;

@@ -6,7 +6,8 @@ export default class MfaLoginEnforcementCreateRoute extends Route {
     // if route was refreshed after type select recreate method model
     const { type } = controller;
     if (type) {
-      controller.set('method', this.store.createRecord('mfa-method', { type }));
+      // create method and enforcement models for forms if type is selected
+      controller.createModels();
     }
   }
   resetController(controller, isExiting) {
