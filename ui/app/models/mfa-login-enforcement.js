@@ -7,7 +7,7 @@ import { isPresent } from '@ember/utils';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
-  mfa_methods: [{ type: 'presence', message: 'At least 1 MFA method is required' }],
+  mfa_methods: [{ type: 'presence', message: 'At least one MFA method is required' }],
   targets: [
     {
       validator(model) {
@@ -21,7 +21,7 @@ const validations = {
           isPresent(groupIds)
         );
       },
-      message: 'At least 1 target is required',
+      message: 'At least one target is required',
     },
   ],
 };
