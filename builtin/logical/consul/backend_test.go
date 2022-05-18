@@ -107,6 +107,10 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 				t.Parallel()
 				testBackendRenewRevoke14(t, "", "consul_policies")
 			})
+			t.Run("both-params", func(t *testing.T) {
+				t.Parallel()
+				testBackendRenewRevoke14(t, "", "both")
+			})
 		})
 	})
 }
@@ -245,12 +249,35 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 
 	req.Path = "roles/test"
 	req.Data = map[string]interface{}{
-		policiesParam: []string{"test"},
-		"lease":       "6h",
+		"lease": "6h",
 	}
+	if policiesParam == "both" {
+		req.Data["policies"] = []string{"wrong-name"}
+		req.Data["consul_policies"] = []string{"test"}
+	} else {
+		req.Data[policiesParam] = []string{"test"}
+	}
+
 	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	read := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.ReadOperation,
+		Path:      "roles/test",
+		Data:      connData,
+	}
+	roleResp, err := b.HandleRequest(context.Background(), read)
+
+	t.Logf("Response consul_policies '%s' should match '[test]'", roleResp.Data["consul_policies"])
+	expectExtract := roleResp.Data["consul_policies"]
+	respExtract := roleResp.Data[policiesParam]
+	if respExtract != nil {
+		if expectExtract.([]string)[0] != respExtract.([]string)[0] {
+			t.Errorf("mismatch: response consul_policies '%s' does not match '[test]'", roleResp.Data["consul_policies"])
+		}
 	}
 
 	req.Operation = logical.ReadOperation
