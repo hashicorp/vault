@@ -31,6 +31,10 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
     return this.createOrUpdate(...arguments);
   }
 
+  urlForDeleteRecord(id, modelName, snapshot) {
+    return this.buildURL(modelName, id, snapshot, 'POST');
+  }
+
   query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
     return this.ajax(url, 'GET', {

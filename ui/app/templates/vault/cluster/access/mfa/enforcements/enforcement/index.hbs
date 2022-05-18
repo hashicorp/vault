@@ -81,7 +81,7 @@
   {{/each}}
 {{else if (eq this.tab "methods")}}
   {{#each this.model.mfa_methods as |method|}}
-    <MfaMethodListItem @model={{method}} />
+    <Mfa::MethodListItem @model={{method}} />
   {{/each}}
 {{/if}}
 

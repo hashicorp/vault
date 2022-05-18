@@ -18,38 +18,7 @@
 
 {{#if this.model.meta.total}}
   {{#each this.model as |item|}}
-    <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.enforcements.enforcement" item.id}}>
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name="lock" />
-            <span class="has-text-weight-semibold has-text-black">
-              {{item.name}}
-            </span>
-          </div>
-        </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement" @model={{item.name}}>
-                      Details
-                    </LinkTo>
-                  </li>
-                  <li>
-                    <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement.edit" @model={{item.name}}>
-                      Edit
-                    </LinkTo>
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
-        </div>
-      </div>
-    </LinkedBlock>
+    <Mfa::LoginEnforcementListItem @model={{item}} />
   {{/each}}
 {{/if}}
 {{#if (gt this.model.meta.lastPage 1)}}
