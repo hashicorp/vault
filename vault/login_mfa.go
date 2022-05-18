@@ -182,6 +182,15 @@ func (i *IdentityStore) handleMFAMethodListPingID(ctx context.Context, req *logi
 	return i.handleMFAMethodList(ctx, req, d, mfaMethodTypePingID)
 }
 
+func (i *IdentityStore) handleMFAMethodListGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponseWithInfo(keys, configInfo), nil
+}
+
 func (i *IdentityStore) handleMFAMethodList(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, methodType)
 	if err != nil {
@@ -191,7 +200,27 @@ func (i *IdentityStore) handleMFAMethodList(ctx context.Context, req *logical.Re
 	return logical.ListResponseWithInfo(keys, configInfo), nil
 }
 
-func (i *IdentityStore) handleMFAMethodRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) handleMFAMethodTOTPRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeTOTP)
+}
+
+func (i *IdentityStore) handleMFAMethodOKTARead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeOkta)
+}
+
+func (i *IdentityStore) handleMFAMethodDuoRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeDuo)
+}
+
+func (i *IdentityStore) handleMFAMethodPingIDRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypePingID)
+}
+
+func (i *IdentityStore) handleMFAMethodReadGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, "")
+}
+
+func (i *IdentityStore) handleMFAMethodReadCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	methodID := d.Get("method_id").(string)
 	if methodID == "" {
 		return logical.ErrorResponse("missing method ID"), nil
@@ -220,6 +249,11 @@ func (i *IdentityStore) handleMFAMethodRead(ctx context.Context, req *logical.Re
 	if !(ns.ID == mfaNs.ID || mfaNs.HasParent(ns) || ns.HasParent(mfaNs)) {
 		return logical.ErrorResponse("request namespace does not match method namespace"), logical.ErrPermissionDenied
 	}
+
+	if methodType != "" && respData["type"] != methodType {
+		return logical.ErrorResponse("failed to find the method ID under MFA type %s.", methodType), nil
+	}
+
 	return &logical.Response{
 		Data: respData,
 	}, nil
@@ -458,6 +492,10 @@ func (i *IdentityStore) handleLoginMFAAdminDestroyUpdate(ctx context.Context, re
 
 	if mConfig.ID == "" {
 		return nil, fmt.Errorf("configuration for method ID %q does not contain an identifier", methodID)
+	}
+
+	if mConfig.Type != mfaMethodTypeTOTP {
+		return nil, fmt.Errorf("method ID does not match TOTP type")
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -1188,10 +1226,20 @@ func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) 
 	ws := memdb.NewWatchSet()
 	txn := b.db.Txn(false)
 
-	// get all the configs for the given type
-	iter, err := txn.Get(b.methodTable, "type", methodType)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+	var iter memdb.ResultIterator
+	switch {
+	case methodType == "":
+		// get all the configs
+		iter, err = txn.Get(b.methodTable, "id")
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+		}
+	default:
+		// get all the configs for the given type
+		iter, err = txn.Get(b.methodTable, "type", methodType)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+		}
 	}
 
 	ws.Add(iter.WatchCh())

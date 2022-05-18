@@ -1,0 +1,3 @@
+```release-note:improvement
+cli/debug: added support for retrieving metrics from DR clusters if `unauthenticated_metrics_access` is enabled
+```

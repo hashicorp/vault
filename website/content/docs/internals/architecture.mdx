@@ -33,16 +33,20 @@ When the Vault server is started, it must be provided with a storage backend so
 that data is available across restarts. The HTTP API similarly must be started
 by the Vault server on start so that clients can interact with it.
 
-Once started, the Vault is in a _sealed_ state. Before any operation can be
-performed on the Vault it must be unsealed. This is done by providing the unseal
-keys. When the Vault is initialized it generates an encryption key which is used
-to protect all the data. That key is protected by a root key. By default,
-Vault uses a technique known as [Shamir's secret sharing
-algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing) to split the
-root key into 5 shares, any 3 of which are required to reconstruct the master
-key.
+When a Vault server is started, it starts in a _sealed_ state. Before any
+operation can be performed on the Vault, it must be _unsealed_. This is done by
+providing the unseal keys. When the Vault is initialized, it generates an
+encryption key which is used to protect all Vault data. This key is protected by
+a root key. By default, Vault uses [Shamir's Secret
+Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the
+root key into a configured number of shards (referred as key shares or unseal
+keys). A certain threshold of shards is required to reconstruct the root key,
+which is then used to decrypt the Vault's encryption key. 
 
-[![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
+![Unseal keys](/img/unseal.png)
+
+Refer to the [Seal/Unseal](/docs/concepts/seal#seal-unseal) documentation for
+further details.
 
 The number of shares and the minimum threshold required can both be specified.
 Shamir's technique can be disabled, and the root key can be used directly for
@@ -50,6 +54,10 @@ unsealing. Once Vault retrieves the encryption key, it is able to decrypt the
 data in the storage backend, and enters the _unsealed_ state. Once unsealed,
 Vault loads all of the configured audit devices, auth methods, and secrets
 engines.
+
+-> The default Vault configuration uses a Shamir seal; however, Vault can be [auto
+unseal](/docs/concepts/seal#auto-unseal) by a trusted cloud key management
+system (KMS) or hardware security module (HSM) to increase security.
 
 The configuration of those audit devices, auth methods, and secrets engines must
 be stored in Vault since they are security sensitive. Only users with the
