@@ -109,8 +109,8 @@ export default class VerticalBarChart extends Component {
     // WIDER SELECTION AREA FOR TOOLTIP HOVER
     const greyBars = chartSvg
       .append('g')
-      .style('fill', `${GREY}`)
       .attr('transform', `translate(${TRANSLATE.left})`)
+      .style('fill', `${GREY}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
