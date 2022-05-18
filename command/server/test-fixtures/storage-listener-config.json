@@ -1,17 +1,17 @@
 {
-     "api_addr": "https://localhost:8200",
-     "default_lease_ttl": "6h",
-     "disable_mlock": true,
-     "listener": {
-         "tcp": {
-             "address": "0.0.0.0:8200"
-         }
-     },
-     "log_level": "info",
-     "storage": {
-         "consul": {
-             "address": "127.0.0.1:8500"
-         }
-     },
-     "ui": true
- } 
+    "api_addr": "https://localhost:8200",
+    "default_lease_ttl": "6h",
+    "disable_mlock": true,
+    "listener": {
+        "tcp": {
+            "address": "0.0.0.0:8200"
+        }
+    },
+    "log_level": "info",
+    "storage": {
+        "consul": {
+            "address": "127.0.0.1:8500"
+        }
+    },
+    "ui": true
+} 

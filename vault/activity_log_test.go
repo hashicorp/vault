@@ -2357,11 +2357,11 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 			"deleted-ccccc",
 			5.0,
 		},
-		// august-september values
+		// january-september values
 		{
 			"identity.nonentity.active.reporting_period",
 			"root",
-			1220.0,
+			1223.0,
 		},
 		{
 			"identity.nonentity.active.reporting_period",
@@ -2399,7 +2399,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("No guage found for %v %v",
+			t.Errorf("No gauge found for %v %v",
 				g.Name, g.NamespaceLabel)
 		}
 	}
@@ -2772,6 +2772,187 @@ func TestActivityLog_Precompute(t *testing.T) {
 		if !found {
 			t.Errorf("No guage found for %v %v",
 				g.Name, g.NamespaceLabel)
+		}
+	}
+}
+
+// TestActivityLog_Precompute_SkipMonth will put two non-contiguous chunks of
+// data in the activity log, and then run precomputedQueryWorker. Finally it
+// will perform a query get over the skip month and expect a query for the entire
+// time segment (non-contiguous)
+func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	august := time.Date(2020, 8, 15, 12, 0, 0, 0, time.UTC)
+	september := timeutil.StartOfMonth(time.Date(2020, 9, 1, 0, 0, 0, 0, time.UTC))
+	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
+	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
+	december := timeutil.StartOfMonth(time.Date(2020, 12, 1, 0, 0, 0, 0, time.UTC))
+
+	core, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	a := core.activityLog
+	ctx := namespace.RootContext(nil)
+
+	entityRecords := make([]*activity.EntityRecord, 45)
+
+	for i := range entityRecords {
+		entityRecords[i] = &activity.EntityRecord{
+			ClientID:    fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
+			NamespaceID: "root",
+			Timestamp:   time.Now().Unix(),
+		}
+	}
+
+	toInsert := []struct {
+		StartTime int64
+		Segment   uint64
+		Clients   []*activity.EntityRecord
+	}{
+		{
+			august.Unix(),
+			0,
+			entityRecords[:20],
+		},
+		{
+			september.Unix(),
+			0,
+			entityRecords[20:30],
+		},
+		{
+			november.Unix(),
+			0,
+			entityRecords[30:45],
+		},
+	}
+
+	// Note that precomputedQuery worker doesn't filter
+	// for times <= the one it was asked to do. Is that a problem?
+	// Here, it means that we can't insert everything *first* and do multiple
+	// test cases, we have to write logs incrementally.
+	doInsert := func(i int) {
+		t.Helper()
+		segment := toInsert[i]
+		eal := &activity.EntityActivityLog{
+			Clients: segment.Clients,
+		}
+		data, err := proto.Marshal(eal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
+		WriteToStorage(t, core, path, data)
+	}
+
+	expectedCounts := []struct {
+		StartTime   time.Time
+		EndTime     time.Time
+		ByNamespace map[string]int
+	}{
+		// First test case
+		{
+			august,
+			timeutil.EndOfMonth(september),
+			map[string]int{
+				"root": 30,
+			},
+		},
+		// Second test case
+		{
+			august,
+			timeutil.EndOfMonth(november),
+			map[string]int{
+				"root": 45,
+			},
+		},
+	}
+
+	checkPrecomputedQuery := func(i int) {
+		t.Helper()
+		pq, err := a.queryStore.Get(ctx, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if pq == nil {
+			t.Errorf("empty result for %v -- %v", expectedCounts[i].StartTime, expectedCounts[i].EndTime)
+		}
+		if len(pq.Namespaces) != len(expectedCounts[i].ByNamespace) {
+			t.Errorf("mismatched number of namespaces, expected %v got %v",
+				len(expectedCounts[i].ByNamespace), len(pq.Namespaces))
+		}
+		for _, nsRecord := range pq.Namespaces {
+			val, ok := expectedCounts[i].ByNamespace[nsRecord.NamespaceID]
+			if !ok {
+				t.Errorf("unexpected namespace %v", nsRecord.NamespaceID)
+				continue
+			}
+			if uint64(val) != nsRecord.Entities {
+				t.Errorf("wrong number of entities in %v: expected %v, got %v",
+					nsRecord.NamespaceID, val, nsRecord.Entities)
+			}
+		}
+		if !pq.StartTime.Equal(expectedCounts[i].StartTime) {
+			t.Errorf("mismatched start time: expected %v got %v",
+				expectedCounts[i].StartTime, pq.StartTime)
+		}
+		if !pq.EndTime.Equal(expectedCounts[i].EndTime) {
+			t.Errorf("mismatched end time: expected %v got %v",
+				expectedCounts[i].EndTime, pq.EndTime)
+		}
+	}
+
+	testCases := []struct {
+		InsertUpTo   int // index in the toInsert array
+		PrevMonth    int64
+		NextMonth    int64
+		ExpectedUpTo int // index in the expectedCounts array
+	}{
+		{
+			1,
+			september.Unix(),
+			october.Unix(),
+			0,
+		},
+		{
+			2,
+			november.Unix(),
+			december.Unix(),
+			1,
+		},
+	}
+
+	inserted := -1
+	for _, tc := range testCases {
+		t.Logf("tc %+v", tc)
+
+		// Persists across loops
+		for inserted < tc.InsertUpTo {
+			inserted += 1
+			t.Logf("inserting segment %v", inserted)
+			doInsert(inserted)
+		}
+
+		intent := &ActivityIntentLog{
+			PreviousMonth: tc.PrevMonth,
+			NextMonth:     tc.NextMonth,
+		}
+		data, err := json.Marshal(intent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		WriteToStorage(t, core, "sys/counters/activity/endofmonth", data)
+
+		// Pretend we've successfully rolled over to the following month
+		a.SetStartTimestamp(tc.NextMonth)
+
+		err = a.precomputedQueryWorker(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectMissingSegment(t, core, "sys/counters/activity/endofmonth")
+
+		for i := 0; i <= tc.ExpectedUpTo; i++ {
+			checkPrecomputedQuery(i)
 		}
 	}
 }

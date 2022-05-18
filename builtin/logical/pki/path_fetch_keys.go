@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -44,6 +46,11 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 
+	config, err := getKeysConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, identifier := range entries {
 		key, err := fetchKeyById(ctx, req.Storage, identifier)
 		if err != nil {
@@ -53,6 +60,7 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 		responseKeys = append(responseKeys, string(identifier))
 		responseInfo[string(identifier)] = map[string]interface{}{
 			keyNameParam: key.Name,
+			"is_default": identifier == config.DefaultKeyId,
 		}
 
 	}
@@ -139,13 +147,31 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			keyIdParam:   key.ID,
-			keyNameParam: key.Name,
-			keyTypeParam: key.PrivateKeyType,
-		},
-	}, nil
+	respData := map[string]interface{}{
+		keyIdParam:   key.ID,
+		keyNameParam: key.Name,
+		keyTypeParam: string(key.PrivateKeyType),
+	}
+
+	if key.isManagedPrivateKey() {
+		managedKeyUUID, err := key.getManagedKeyUUID()
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("failed extracting managed key uuid from key id %s (%s): %v", key.ID, key.Name, err)}
+		}
+
+		keyInfo, err := getManagedKeyInfo(ctx, b, managedKeyUUID)
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
+		}
+
+		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
+		// type of key, not that it is a managed key.
+		respData[keyTypeParam] = string(keyInfo.keyType)
+		respData[managedKeyIdArg] = string(keyInfo.uuid)
+		respData[managedKeyNameArg] = string(keyInfo.name)
+	}
+
+	return &logical.Response{Data: respData}, nil
 }
 
 func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

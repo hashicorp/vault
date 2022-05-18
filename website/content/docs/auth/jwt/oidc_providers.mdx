@@ -270,6 +270,12 @@ vault write auth/oidc/config -<<EOF
 EOF
 ```
 
+#### Role
+
+The [user_claim](/api-docs/auth/jwt#user_claim) value of the role must be set to
+one of either `sub` or `email` for the Google Workspace group and user information
+queries to succeed.
+
 Example role:
 
 ```

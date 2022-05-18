@@ -2178,9 +2178,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
 	roleData := map[string]interface{}{
-		"ttl":      "4h",
-		"max_ttl":  "8h",
-		"key_type": keyType,
+		"ttl":                 "4h",
+		"max_ttl":             "8h",
+		"key_type":            keyType,
+		"not_before_duration": "2h",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -2247,7 +2248,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 	cert := certs[0]
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
-		t.Fatalf("sign-verbatim did not properly cap validity period on signed CSR")
+		t.Fatalf("sign-verbatim did not properly cap validity period (notAfter) on signed CSR: was %v vs requested %v but should've been %v", cert.NotAfter, time.Now().Add(12*time.Hour), time.Now().Add(8*time.Hour))
+	}
+	if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+		t.Fatalf("sign-verbatim did not properly cap validity period (notBefore) on signed CSR: was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 	}
 
 	// Now check signing a certificate using the not_after input using the Y10K value

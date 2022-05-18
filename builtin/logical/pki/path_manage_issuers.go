@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -77,6 +76,12 @@ extension with CA: true. Only needed as a
 workaround in some compatibility scenarios
 with Active Directory Certificate Services.`,
 	}
+
+	// Signature bits isn't respected on intermediate generation, as this
+	// only impacts the CSR's internal signature and doesn't impact the
+	// signed certificate's bits (that's on the /sign-intermediate
+	// endpoints). Remove it from the list of fields to avoid confusion.
+	delete(ret.Fields, "signature_bits")
 
 	return ret
 }
@@ -160,7 +165,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	for len(bytes.TrimSpace(pemBytes)) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
-			return nil, errutil.UserError{Err: "no data found in PEM block"}
+			return logical.ErrorResponse("provided PEM block contained no data"), nil
 		}
 
 		pemBlockString := string(pem.EncodeToMemory(pemBlock))
@@ -181,10 +186,9 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("private keys found in the PEM bundle but not allowed by the path; use /issuers/import/bundle"), nil
 	}
 
-	mkc := newManagedKeyContext(ctx, b, req.MountPoint)
 	for keyIndex, keyPem := range keys {
 		// Handle import of private key.
-		key, existing, err := importKeyFromBytes(mkc, req.Storage, keyPem, "")
+		key, existing, err := importKeyFromBytes(ctx, b, req.Storage, keyPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing key %v: %v", keyIndex, err)), nil
 		}
@@ -195,7 +199,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	for certIndex, certPem := range issuers {
-		cert, existing, err := importIssuer(mkc, req.Storage, certPem, "")
+		cert, existing, err := importIssuer(ctx, b, req.Storage, certPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing issuer %v: %v\n%v", certIndex, err, certPem)), nil
 		}

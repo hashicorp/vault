@@ -159,17 +159,21 @@ func parseCrlPemBytes(t *testing.T, crlPem []byte) pkix.TBSCertificateList {
 	return certList.TBSCertList
 }
 
-func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, serialNum string) {
+func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, serialNum string) bool {
 	serialsInList := make([]string, 0, len(revokeList.RevokedCertificates))
 	for _, revokeEntry := range revokeList.RevokedCertificates {
 		formattedSerial := certutil.GetHexFormatted(revokeEntry.SerialNumber.Bytes(), ":")
 		serialsInList = append(serialsInList, formattedSerial)
 		if formattedSerial == serialNum {
-			return
+			return true
 		}
 	}
 
-	t.Fatalf("the serial number %s, was not found in the CRL list containing: %v", serialNum, serialsInList)
+	if t != nil {
+		t.Fatalf("the serial number %s, was not found in the CRL list containing: %v", serialNum, serialsInList)
+	}
+
+	return false
 }
 
 func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.CertificateList {
