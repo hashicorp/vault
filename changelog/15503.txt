@@ -1,0 +1,3 @@
+```release-note:bug
+command: allow empty string to be supplied as -ns and -namespace flags to target root namespace
+```
