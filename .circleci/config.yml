@@ -99,7 +99,8 @@ jobs:
           make test-ui-browserstack
         name: Run Browserstack Tests
   build-go-dev:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -113,6 +114,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=off" >> "$BASH_ENV"
@@ -125,7 +127,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - attach_workspace:
         at: .
@@ -201,7 +203,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -362,7 +364,8 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
   fmt:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -376,6 +379,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
@@ -435,7 +439,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -645,7 +649,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -799,7 +803,8 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
   pre-flight-checks:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -813,6 +818,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
@@ -843,7 +849,11 @@ jobs:
           BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
         name: Install CircleCI CLI
     - run:
-        command: make ci-verify
+        command: |
+          set -x
+          . $BASH_ENV
+          make ci-verify
+        name: Verify CircleCI
     - add_ssh_keys:
         fingerprints:
         - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
@@ -852,12 +862,14 @@ jobs:
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.4-{{checksum "go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}
         name: Restore closest matching go modules cache
     - run:
         command: |
+          # set GOPATH explicitly to download to the right cache
+          export GOPATH=$HOME/go
           # go list ./... forces downloading some additional versions of modules that 'go mod
           # download' misses. We need this because we make use of go list itself during
           # code generation in later builds that rely on this module cache.
@@ -874,7 +886,7 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Save go modules cache
         paths:
         - /home/circleci/go/pkg/mod
@@ -921,7 +933,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |

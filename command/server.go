@@ -1627,6 +1627,9 @@ func (c *ServerCommand) Run(args []string) int {
 			// changes in kms_libraries)
 			core.ReloadManagedKeyRegistryConfig()
 
+			// Notify systemd that the server has completed reloading config
+			c.notifySystemd(systemd.SdNotifyReady)
+
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
