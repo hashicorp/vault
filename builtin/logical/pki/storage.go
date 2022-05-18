@@ -27,6 +27,9 @@ const (
 
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
+
+	maxRolesToScanOnIssuerChange = 100
+	maxRolesToFindOnIssuerChange = 10
 )
 
 type keyID string
@@ -909,4 +912,40 @@ func isKeyInUse(keyId string, ctx context.Context, s logical.Storage) (inUse boo
 	}
 
 	return false, "", nil
+}
+
+func checkForRolesReferencing(issuerId string, ctx context.Context, storage logical.Storage) (timeout bool, inUseBy int32, err error) {
+	roleEntries, err := storage.List(ctx, "role/")
+	if err != nil {
+		return false, 0, err
+	}
+
+	inUseBy = 0
+	checkedRoles := 0
+
+	for _, roleName := range roleEntries {
+		entry, err := storage.Get(ctx, "role/"+roleName)
+		if err != nil {
+			return false, 0, err
+		}
+		if entry != nil { // If nil, someone deleted an entry since we haven't taken a lock here so just continue
+			var role roleEntry
+			err = entry.DecodeJSON(&role)
+			if err != nil {
+				return false, inUseBy, err
+			}
+			if role.Issuer == issuerId {
+				inUseBy = inUseBy + 1
+				if inUseBy >= maxRolesToFindOnIssuerChange {
+					return true, inUseBy, nil
+				}
+			}
+		}
+		checkedRoles = checkedRoles + 1
+		if checkedRoles >= maxRolesToScanOnIssuerChange {
+			return true, inUseBy, nil
+		}
+	}
+
+	return false, inUseBy, nil
 }

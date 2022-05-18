@@ -248,7 +248,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	modified := false
 
+	var oldName string
 	if newName != issuer.Name {
+		oldName = issuer.Name
 		issuer.Name = newName
 		modified = true
 	}
@@ -309,7 +311,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		}
 	}
 
-	return respondReadIssuer(issuer)
+	response, err := respondReadIssuer(issuer)
+	if newName != oldName {
+		addWarningOnDereferencing(oldName, response, ctx, req.Storage)
+	}
+
+	return response, err
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -399,15 +406,25 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
+	var response *logical.Response
+	response = &logical.Response{}
+
+	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	if err != nil {
+		return nil, err
+	}
+	if issuer.Name != "" {
+		addWarningOnDereferencing(issuer.Name, response, ctx, req.Storage)
+	}
+	addWarningOnDereferencing(string(issuer.ID), response, ctx, req.Storage)
+
 	wasDefault, err := deleteIssuer(ctx, req.Storage, ref)
 	if err != nil {
 		return nil, err
 	}
-
-	var response *logical.Response
 	if wasDefault {
-		response = &logical.Response{}
 		response.AddWarning(fmt.Sprintf("Deleted issuer %v (via issuer_ref %v); this was configured as the default issuer. Operations without an explicit issuer will not work until a new default is configured.", ref, issuerName))
+		addWarningOnDereferencing(defaultRef, response, ctx, req.Storage)
 	}
 
 	// Since we've deleted an issuer, the chains might've changed. Call the
@@ -420,6 +437,21 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	return response, nil
+}
+
+func addWarningOnDereferencing(name string, resp *logical.Response, ctx context.Context, s logical.Storage) {
+	timeout, inUseBy, err := checkForRolesReferencing(name, ctx, s)
+	if err != nil || timeout {
+		if inUseBy == 0 {
+			resp.AddWarning(fmt.Sprint("Unable to check if any roles referenced this issuer by ", name))
+		} else {
+			resp.AddWarning(fmt.Sprint("The name ", name, " was in use by at least ", inUseBy, " roles"))
+		}
+	} else {
+		if inUseBy > 0 {
+			resp.AddWarning(fmt.Sprint(inUseBy, " roles reference ", name))
+		}
+	}
 }
 
 const (
