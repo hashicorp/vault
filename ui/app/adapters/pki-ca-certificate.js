@@ -65,9 +65,4 @@ export default ApplicationAdapter.extend({
   updateRecord() {
     return this.createRecordOrUpdate(...arguments);
   },
-
-  deleteRecord(store, type, snapshot) {
-    const backend = snapshot.attr('backend');
-    return this.ajax(`/v1/${backend}/root`, 'DELETE');
-  },
 });
