@@ -17,6 +17,7 @@ import { task } from 'ember-concurrency';
  * @callback onClose
  * @param {Object} model - login enforcement model
  * @param {Object} [isInline] - toggles inline display of form -- method selector and actions are hidden and should be handled externally
+ * @param {Object} [modelErrors] - model validations state object if handling actions externally when displaying inline
  * @param {onSave} [onSave] - triggered on save success
  * @param {onClose} [onClose] - triggered on cancel
  */
@@ -42,6 +43,7 @@ export default class MfaLoginEnforcementForm extends Component {
     options: [],
     selected: [],
   };
+  @tracked modelErrors;
 
   constructor() {
     super(...arguments);
@@ -83,15 +85,25 @@ export default class MfaLoginEnforcementForm extends Component {
   get selectedTarget() {
     return this.targetTypes.findBy('type', this.selectedTargetType);
   }
+  get errors() {
+    return this.args.modelErrors || this.modelErrors;
+  }
 
   @task
   *save() {
-    try {
-      yield this.args.model.save();
-      this.args.onSave();
-    } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+    this.modelErrors = {};
+    // check validity state first and abort if invalid
+    const { isValid, state } = this.args.model.validate();
+    if (!isValid) {
+      this.modelErrors = state;
+    } else {
+      try {
+        yield this.args.model.save();
+        this.args.onSave();
+      } catch (error) {
+        const message = error.errors ? error.errors.join('. ') : error.message;
+        this.flashMessages.danger(message);
+      }
     }
   }
 
@@ -142,7 +154,7 @@ export default class MfaLoginEnforcementForm extends Component {
   removeTarget(target) {
     this.targets.removeObject(target);
     // remove target from appropriate model property
-    this.args.model[target.key].addObject(target.value);
+    this.args.model[target.key].removeObject(target.value);
   }
   @action
   cancel() {

@@ -13,6 +13,9 @@
     class="input field"
     {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
   />
+  {{#if this.errors.name.errors}}
+    <AlertInline @type="danger" @message={{join ", " this.errors.name.errors}} />
+  {{/if}}
 
   {{#unless @isInline}}
     <div class="field">
@@ -27,6 +30,9 @@
           @models={{array "mfa-method"}}
           @onChange={{this.onMethodChange}}
         />
+      {{/if}}
+      {{#if this.errors.mfa_methods.errors}}
+        <AlertInline @type="danger" @message={{join ", " this.errors.mfa_methods.errors}} />
       {{/if}}
     </div>
   {{/unless}}
@@ -94,6 +100,9 @@
         Add
       </button>
     </div>
+    {{#if this.errors.targets.errors}}
+      <AlertInline @type="danger" @message={{join ", " this.errors.targets.errors}} />
+    {{/if}}
   </div>
   {{#unless @isInline}}
     <hr />

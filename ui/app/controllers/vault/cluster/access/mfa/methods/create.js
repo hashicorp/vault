@@ -15,7 +15,9 @@ export default class MfaMethodCreateController extends Controller {
   @tracked type = null;
   @tracked method = null;
   @tracked enforcement;
-  @tracked enforcementPreference;
+  @tracked enforcementPreference = 'new';
+  @tracked methodErrors;
+  @tracked enforcementErrors;
 
   get description() {
     if (this.type === 'totp') {
@@ -38,15 +40,24 @@ export default class MfaMethodCreateController extends Controller {
 
   @action
   onTypeSelect(type) {
+    // set any form related properties to default values
     this.method = null;
+    this.enforcement = null;
+    this.methodErrors = null;
+    this.enforcementErrors = null;
+    this.enforcementPreference = 'new';
     this.type = type;
   }
   @action
-  createMethod() {
+  createModels() {
     if (this.method) {
       this.method.unloadRecord();
     }
+    if (this.enforcement) {
+      this.enforcement.unloadRecord();
+    }
     this.method = this.store.createRecord('mfa-method', { type: this.type });
+    this.enforcement = this.store.createRecord('mfa-login-enforcement');
   }
   @action
   onEnforcementPreferenceChange(preference) {
@@ -66,21 +77,44 @@ export default class MfaMethodCreateController extends Controller {
   }
   @task
   *save() {
-    // JLR TODO: add model validations and check them first before proceeding
-    try {
-      // first save method
-      yield this.method.save();
-      this.enforcement.mfa_methods.addObject(this.method);
+    const isValid = this.checkValidityState();
+    if (isValid) {
       try {
-        // now save enforcement and catch error separately
-        yield this.enforcement.save();
-        this.router.transitionTo('vault.cluster.access.mfa.methods.method', this.method.id);
+        // first save method
+        yield this.method.save();
+        if (this.enforcement) {
+          this.enforcement.mfa_methods.addObject(this.method);
+          try {
+            // now save enforcement and catch error separately
+            yield this.enforcement.save();
+            this.router.transitionTo('vault.cluster.access.mfa.methods.method', this.method.id);
+          } catch (error) {
+            this.handleError(error, 'Error saving enforcement');
+          }
+        }
       } catch (error) {
-        this.handleError(error, 'Error saving enforcement');
+        this.handleError(error, 'Error saving method');
       }
-    } catch (error) {
-      this.handleError(error, 'Error saving method');
     }
+  }
+  checkValidityState() {
+    // block saving models if either is in an invalid state
+    let isEnforcementValid = true;
+    const methodValidations = { isValid: true }; // roughing in for now until validations are created -- replace with this.method.validate();
+    if (!methodValidations.isValid) {
+      this.methodErrors = methodValidations.state;
+    }
+    // only validate enforcement if creating new
+    if (this.enforcementPreference === 'new') {
+      const enforcementValidations = this.enforcement.validate();
+      // since we are adding the method after it has been saved ignore mfa_methods validation state
+      const { name, targets } = enforcementValidations.state;
+      isEnforcementValid = name.isValid && targets.isValid;
+      if (!enforcementValidations.isValid) {
+        this.enforcementErrors = enforcementValidations.state;
+      }
+    }
+    return methodValidations.isValid && isEnforcementValid;
   }
   handleError(error, message) {
     const errorMessage = error?.errors ? `${message}: ${error.errors.join(', ')}` : message;
