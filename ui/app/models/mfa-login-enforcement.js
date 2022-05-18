@@ -21,7 +21,8 @@ const validations = {
           isPresent(groupIds)
         );
       },
-      message: 'At least one target is required',
+      message:
+        "At least one target is required. If you've selected one, click 'Add' to make sure it's added to this enforcement.",
     },
   ],
 };
