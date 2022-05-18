@@ -154,6 +154,13 @@ func (c *PluginCatalog) reloadExternalPlugin(name, id string) error {
 	if !ok {
 		return fmt.Errorf("plugin client not found")
 	}
+	if !extPlugin.multiplexingSupport {
+		err := c.cleanupExternalPlugin(name, id)
+		if err != nil {
+			return err
+		}
+	}
+
 	pc, ok := extPlugin.connections[id]
 	if !ok {
 		return fmt.Errorf("connection not found for client id: %s", id)
