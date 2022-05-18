@@ -199,7 +199,7 @@
         </EmptyState>
       {{else}}
         <InfoTableRow @label="Distributed" @value={{@model.provider}}>
-          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{concat "kms/" @model.provider}}>
+          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.provider}} @query={{hash itemType="provider"}}>
             <Icon @name="check-circle-fill" class="has-text-success" />{{@model.provider}}
           </LinkTo>
         </InfoTableRow>
