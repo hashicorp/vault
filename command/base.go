@@ -157,7 +157,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if c.flagNS != notSetValue {
 		c.flagNamespace = c.flagNS
 	}
-	if c.flagNamespace != notSetValue {
+	// Set namespace only if it was passed in AND hasn't been set to the root
+	// namespace (""). If we are explicitly passed "" then just omit the setting
+	// of the namespace and follow the default behavior
+	if c.flagNamespace != notSetValue && c.flagNamespace != "" {
 		client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
 	}
 	if c.flagPolicyOverride {

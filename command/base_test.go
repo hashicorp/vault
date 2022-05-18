@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/stretchr/testify/assert"
 )
 
 func getDefaultCliHeaders(t *testing.T) http.Header {
@@ -13,6 +16,83 @@ func getDefaultCliHeaders(t *testing.T) http.Header {
 		t.Fatal(err)
 	}
 	return cli.Headers()
+}
+
+func TestClient_NamespaceFlagSetToValue(t *testing.T) {
+	bc := &BaseCommand{}
+	bc.flagSet(FlagSetHTTP)
+	bc.flagNamespace = "juan"
+	cli, err := bc.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := cli.Headers()
+	v := h.Get(consts.NamespaceHeaderName)
+
+	// Expect the `namespace.Canonicalize` method will add a trailing slash
+	assert.Equal(t, "juan/", v, "Expected namespace not found")
+}
+
+func TestClient_NSFlagSetToValue(t *testing.T) {
+	bc := &BaseCommand{}
+	bc.flagSet(FlagSetHTTP)
+	bc.flagNS = "juan"
+	cli, err := bc.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := cli.Headers()
+	v := h.Get(consts.NamespaceHeaderName)
+
+	assert.Equal(t, "juan/", v, "Expected ns not found")
+}
+
+func TestClient_NSFlagSetToValueAndNamespaceFlagSetToDifferentValue(t *testing.T) {
+	bc := &BaseCommand{}
+	bc.flagSet(FlagSetHTTP)
+	bc.flagNS = "juan"
+	bc.flagNamespace = "john"
+	cli, err := bc.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := cli.Headers()
+	v := h.Get(consts.NamespaceHeaderName)
+
+	assert.Equal(t, "juan/", v, "Expected ns not found")
+}
+
+func TestClient_NSFlagSetToEmptyString(t *testing.T) {
+	bc := &BaseCommand{}
+	bc.flagSet(FlagSetHTTP)
+	bc.flagNS = ""
+	cli, err := bc.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := cli.Headers()
+	v := h.Get(consts.NamespaceHeaderName)
+
+	assert.Equal(t, "", v, "Expected ns was configured rather than ignored")
+}
+
+func TestClient_NamespaceFlagSetToEmptyString(t *testing.T) {
+	bc := &BaseCommand{}
+	bc.flagSet(FlagSetHTTP)
+	bc.flagNamespace = ""
+	cli, err := bc.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := cli.Headers()
+	v := h.Get(consts.NamespaceHeaderName)
+
+	assert.Equal(t, "", v, "Expected namespace was configured rather than ignored")
 }
 
 func TestClient_FlagHeader(t *testing.T) {
