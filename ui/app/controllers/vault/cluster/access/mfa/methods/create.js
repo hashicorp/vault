@@ -65,6 +65,7 @@ export default class MfaMethodCreateController extends Controller {
       this.enforcement = this.store.createRecord('mfa-login-enforcement');
     } else if (this.enforcement) {
       this.enforcement.unloadRecord();
+      this.enforcement = null;
     }
     this.enforcementPreference = preference;
   }
