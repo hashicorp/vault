@@ -123,7 +123,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     let provider, distribution;
     if (!recordOnly) {
       provider = await this.getProvider(backend, id);
-      if (provider) {
+      if (provider && !provider.permissionsError) {
         distribution = await this.getDistribution(backend, provider, id);
       }
     }
