@@ -165,6 +165,19 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if len(parsedBundle.Certificate.RawSubject) <= 2 {
+		// Strictly a subject is a SEQUENCE of SETs of SEQUENCES.
+		//
+		// The outer SEQUENCE is preserved, having byte value 30 00.
+		//
+		// Because of the tag and the length encoding each taking up
+		// at least one byte, it is impossible to have a non-empty
+		// subject in two or fewer bytes. We're also not here to validate
+		// our certificate's ASN.1 content, so let's just assume it holds
+		// and move on.
+		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
+	}
+
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
@@ -340,6 +353,19 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	if signingBundle.Certificate.NotAfter.Before(parsedBundle.Certificate.NotAfter) {
 		resp.AddWarning("The expiration time for the signed certificate is after the CA's expiration time. If the new certificate is not treated as a root, validation paths with the certificate past the issuing CA's expiration time will fail.")
+	}
+
+	if len(parsedBundle.Certificate.RawSubject) <= 2 {
+		// Strictly a subject is a SEQUENCE of SETs of SEQUENCES.
+		//
+		// The outer SEQUENCE is preserved, having byte value 30 00.
+		//
+		// Because of the tag and the length encoding each taking up
+		// at least one byte, it is impossible to have a non-empty
+		// subject in two or fewer bytes. We're also not here to validate
+		// our certificate's ASN.1 content, so let's just assume it holds
+		// and move on.
+		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
 	}
 
 	switch format {
