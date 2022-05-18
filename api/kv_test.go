@@ -85,7 +85,7 @@ func TestExtractVersionMetadata(t *testing.T) {
 						"created_time":  inputCreatedTimeStr,
 						"deletion_time": "",
 						"destroyed":     false,
-						"custom_metadata": map[string]interface{}{
+						"custom_metadata": map[string]string{
 							"foo": "abc",
 							"bar": "def",
 							"baz": "ghi",

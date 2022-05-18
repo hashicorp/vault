@@ -70,6 +70,20 @@ type KVVersionMetadata struct {
 	CustomMetadata map[string]string `mapstructure:"custom_metadata"`
 }
 
+// Currently supported options: WithCheckAndSet
+type KVOption func() (key string, value interface{})
+
+// WithCheckAndSet can optionally be passed to perform a check-and-set
+// operation. If not set, the write will be allowed. If cas is set to 0, a
+// write will only be allowed if the key doesn't exist. If set to non-zero,
+// the write will only be allowed if the key’s current version matches the
+// version specified in the cas parameter.
+func WithCheckAndSet(cas int) KVOption {
+	return func() (string, interface{}) {
+		return "cas", cas
+	}
+}
+
 func (c *Client) KVv1(mountPath string) *kvv1 {
 	return &kvv1{c: c, mountPath: mountPath}
 }
@@ -178,10 +192,27 @@ func (kv *kvv2) GetMetadata(ctx context.Context, secretPath string) (*KVMetadata
 	return extractFullMetadata(secret)
 }
 
-func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]interface{}) (*KVSecret, error) {
+func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]interface{}, opts ...KVOption) (*KVSecret, error) {
 	pathToWriteTo := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
 
-	secret, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, data)
+	wrappedData := map[string]interface{}{
+		"data": data,
+	}
+
+	// Add options such as check-and-set, etc.
+	// We leave this as an optional arg so that most users
+	// can just pass plain key-value secret data without
+	// having to remember to put the extra layer "data" in there.
+	options := make(map[string]interface{})
+	for _, opt := range opts {
+		k, v := opt()
+		options[k] = v
+	}
+	if len(opts) > 0 {
+		wrappedData["options"] = options
+	}
+
+	secret, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, wrappedData)
 	if err != nil {
 		return nil, fmt.Errorf("error writing secret to %s: %w", pathToWriteTo, err)
 	}
@@ -224,7 +255,7 @@ func (kv *kvv2) DeleteVersions(ctx context.Context, secretPath string, versions 
 		versionsMap := map[string]interface{}{
 			"versions": versionsToDelete,
 		}
-		_, err := kv.c.Logical().Write(pathToDelete, versionsMap)
+		_, err := kv.c.Logical().WriteWithContext(ctx, pathToDelete, versionsMap)
 		if err != nil {
 			return fmt.Errorf("error deleting secret at %s: %w", pathToDelete, err)
 		}
