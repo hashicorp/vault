@@ -11,13 +11,12 @@ import { task } from 'ember-concurrency';
  *
  * @example
  * ```js
- * <MfaLoginEnforcementForm @model={{this.model}} @mfaMethod={{this.mfaMethod}} @hasActions={{true}} @onSave={{this.onSave}} @onClose={{this.onClose}} />
+ * <MfaLoginEnforcementForm @model={{this.model}} @isInline={{false}} @onSave={{this.onSave}} @onClose={{this.onClose}} />
  * ```
  * @callback onSave
  * @callback onClose
  * @param {Object} model - login enforcement model
- * @param {Object} [mfaMethod] - provide when creating a login enforcement for a selected method -- otherwise search selector is displayed
- * @param {boolean} [hasActions] - whether the save and cancel actions will be displayed and handled internally or not
+ * @param {Object} [isInline] - toggles inline display of form -- method selector and actions are hidden and should be handled externally
  * @param {onSave} [onSave] - triggered on save success
  * @param {onClose} [onClose] - triggered on cancel
  */

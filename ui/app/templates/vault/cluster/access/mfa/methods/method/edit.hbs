@@ -10,7 +10,6 @@
 
 <Mfa::MethodForm
   @model={{this.model.method}}
-  @isEditMode={{true}}
   @hasActions={{true}}
   @onSave={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}
   @onClose={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}

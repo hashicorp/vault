@@ -1,0 +1,89 @@
+import Controller from '@ember/controller';
+import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import { capitalize } from '@ember/string';
+import { task } from 'ember-concurrency';
+
+export default class MfaMethodCreateController extends Controller {
+  @service flashMessages;
+  @service router;
+
+  queryParams = ['type'];
+  methodNames = ['TOTP', 'Duo', 'Okta', 'PingID'];
+
+  @tracked type = null;
+  @tracked method = null;
+  @tracked enforcement;
+  @tracked enforcementPreference;
+
+  get description() {
+    if (this.type === 'totp') {
+      return `Once set up, TOTP requires a passcode to be presented alongside a Vault token when invoking an API request.
+        The passcode will be validated against the TOTP key present in the identity of the caller in Vault.`;
+    }
+    return `Once set up, the ${this.formattedType} MFA method will require a push confirmation on mobile before login.`;
+  }
+
+  get formattedType() {
+    if (!this.type) return '';
+    return this.type === 'totp' ? this.type.toUpperCase() : capitalize(this.type);
+  }
+  get isTotp() {
+    return this.type === 'totp';
+  }
+  get showForms() {
+    return this.type && this.method;
+  }
+
+  @action
+  onTypeSelect(type) {
+    this.method = null;
+    this.type = type;
+  }
+  @action
+  createMethod() {
+    if (this.method) {
+      this.method.unloadRecord();
+    }
+    this.method = this.store.createRecord('mfa-method', { type: this.type });
+  }
+  @action
+  onEnforcementPreferenceChange(preference) {
+    if (preference === 'new') {
+      this.enforcement = this.store.createRecord('mfa-login-enforcement');
+    } else if (this.enforcement) {
+      this.enforcement.unloadRecord();
+    }
+    this.enforcementPreference = preference;
+  }
+  @action
+  cancel() {
+    this.method = null;
+    this.enforcement = null;
+    this.enforcementPreference = null;
+    this.router.transitionTo('vault.cluster.access.mfa.methods');
+  }
+  @task
+  *save() {
+    // JLR TODO: add model validations and check them first before proceeding
+    try {
+      // first save method
+      yield this.method.save();
+      this.enforcement.mfa_methods.addObject(this.method);
+      try {
+        // now save enforcement and catch error separately
+        yield this.enforcement.save();
+        this.router.transitionTo('vault.cluster.access.mfa.methods.method', this.method.id);
+      } catch (error) {
+        this.handleError(error, 'Error saving enforcement');
+      }
+    } catch (error) {
+      this.handleError(error, 'Error saving method');
+    }
+  }
+  handleError(error, message) {
+    const errorMessage = error?.errors ? `${message}: ${error.errors.join(', ')}` : message;
+    this.flashMessages.danger(errorMessage);
+  }
+}

@@ -1,4 +1,4 @@
-<div class="box is-sideless is-fullwidth is-marginless">
+<div class="box is-sideless is-fullwidth is-marginless" ...attributes>
   {{#each @model.attrs as |attr|}}
     <FormField data-test-field @attr={{attr}} @model={{@model}} />
   {{/each}}

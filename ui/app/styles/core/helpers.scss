@@ -81,6 +81,10 @@
 .is-flex-start {
   display: flex !important;
   justify-content: flex-start;
+
+  &.has-gap {
+    gap: $spacing-m;
+  }
 }
 .is-flex-full {
   flex-basis: 100%;
@@ -167,6 +171,9 @@
 .has-top-padding-s {
   padding-top: $spacing-s;
 }
+.has-top-padding-l {
+  padding-top: $spacing-l;
+}
 .has-bottom-margin-xs {
   margin-bottom: $spacing-xs;
 }
@@ -252,4 +259,7 @@ ul.bullet {
 }
 .has-text-grey-400 {
   color: $ui-gray-400;
+}
+.has-text-align-center {
+  text-align: center;
 }
