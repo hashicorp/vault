@@ -5,7 +5,7 @@ import { max } from 'd3-array';
 // eslint-disable-next-line no-unused-vars
 import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
-import { scaleLinear, scaleBand } from 'd3-scale';
+import { scaleLinear, scalePoint } from 'd3-scale';
 import { stack } from 'd3-shape';
 import {
   GREY,
@@ -61,10 +61,10 @@ export default class VerticalBarChart extends Component {
     // DEFINE DATA BAR SCALES
     const yScale = scaleLinear().domain([0, domainMax]).range([0, 100]).nice();
 
-    const xScale = scaleBand()
+    const xScale = scalePoint()
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
-      .padding(0.8);
+      .padding(0.2);
 
     // clear out DOM before appending anything
     chartSvg.selectAll('g').remove().exit().data(stackedData).enter();
@@ -82,7 +82,6 @@ export default class VerticalBarChart extends Component {
       .enter()
       .append('rect')
       .attr('width', '7px')
-      .attr('transform', () => (dataset.length > 3 ? 'translate(0)' : `translate(${TRANSLATE.left})`)) // only translate bars for smaller datasets
       .attr('class', 'data-bar')
       .attr('height', (stackedData) => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data[this.xKey])) // uses destructuring because was data.data.month
@@ -120,6 +119,7 @@ export default class VerticalBarChart extends Component {
       .enter()
       .append('rect')
       .style('cursor', 'pointer')
+      .attr('transform', `translate(${TRANSLATE.left})`)
       .attr('class', 'tooltip-rect')
       .attr('height', '100%')
       .attr('width', '30px') // three times width
