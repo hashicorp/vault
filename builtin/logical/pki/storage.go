@@ -260,6 +260,7 @@ func importKey(ctx context.Context, b *backend, s logical.Storage, keyValue stri
 		}
 	}
 
+	foundExistingKeyWithName := false
 	for _, identifier := range knownKeys {
 		existingKey, err := fetchKeyById(ctx, s, identifier)
 		if err != nil {
@@ -276,6 +277,16 @@ func importKey(ctx context.Context, b *backend, s logical.Storage, keyValue stri
 			// importing an issuer).
 			return existingKey, true, nil
 		}
+
+		// Allow us to find an existing matching key with a different name before erroring out
+		if keyName != "" && existingKey.Name == keyName {
+			foundExistingKeyWithName = true
+		}
+	}
+
+	// Another key with a different value is using the keyName so reject this request.
+	if foundExistingKeyWithName {
+		return nil, false, errutil.UserError{Err: fmt.Sprintf("an existing key is using the requested key name value: %s", keyName)}
 	}
 
 	// Haven't found a key, so we've gotta create it and write it into storage.
@@ -538,6 +549,7 @@ func importIssuer(ctx context.Context, b *backend, s logical.Storage, certValue 
 		return nil, false, err
 	}
 
+	foundExistingIssuerWithName := false
 	for _, identifier := range knownIssuers {
 		existingIssuer, err := fetchIssuerById(ctx, s, identifier)
 		if err != nil {
@@ -553,6 +565,15 @@ func importIssuer(ctx context.Context, b *backend, s logical.Storage, certValue 
 			// importing a key).
 			return existingIssuer, true, nil
 		}
+
+		// Allow us to find an existing matching issuer with a different name before erroring out
+		if issuerName != "" && existingIssuer.Name == issuerName {
+			foundExistingIssuerWithName = true
+		}
+	}
+
+	if foundExistingIssuerWithName {
+		return nil, false, errutil.UserError{Err: fmt.Sprintf("another issuer is using the requested name: %s", issuerName)}
 	}
 
 	// Haven't found an issuer, so we've gotta create it and write it into

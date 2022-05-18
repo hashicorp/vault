@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -166,7 +165,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	for len(bytes.TrimSpace(pemBytes)) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
-			return nil, errutil.UserError{Err: "no data found in PEM block"}
+			return logical.ErrorResponse("provided PEM block contained no data"), nil
 		}
 
 		pemBlockString := string(pem.EncodeToMemory(pemBlock))
