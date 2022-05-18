@@ -110,6 +110,7 @@ export default class VerticalBarChart extends Component {
     const greyBars = chartSvg
       .append('g')
       .style('fill', `${GREY}`)
+      .attr('transform', `translate(${TRANSLATE.left})`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
@@ -119,7 +120,6 @@ export default class VerticalBarChart extends Component {
       .enter()
       .append('rect')
       .style('cursor', 'pointer')
-      .attr('transform', `translate(${TRANSLATE.left})`)
       .attr('class', 'tooltip-rect')
       .attr('height', '100%')
       .attr('width', '30px') // three times width
