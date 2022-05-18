@@ -1,30 +1,28 @@
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title {{if @heading 'is-3' 'is-5'}}">
-      {{#if @heading}}
+{{#if @isInline}}
+  <h3 class="title is-5">Enforcement</h3>
+{{else}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3">
         <Icon @name="lock" @size="24" />
         {{@heading}}
-      {{else}}
-        Enforcement
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+{{/if}}
 <div class="has-border-top-light">
   <p class="has-top-margin-m">
-    {{#if @heading}}
+    {{#if @isInline}}
+      An enforcement includes the authentication types, authentication methods, groups, and entities that will require this
+      MFA method. This is optional and can be added later.
+    {{else}}
       An enforcement will define which auth types, auth mounts, groups, and/or entities will require this MFA method. Keep in
       mind that only one of these conditions needs to be satisfied. For example, if an authentication method is added here,
       all entities and groups which make use of that authentication method will be subject to an MFA request.
-      <a href="https://www.vaultproject.io/docs/auth/login-mfa" target="_blank" rel="noopener noreferrer">
-        Learn more here.
-      </a>
-    {{else}}
-      An enforcement includes the authentication types, authentication methods, groups, and entities that will require this
-      MFA method. This is optional and can be added later.
+      <DocLink @path="/docs/auth/login-mfa">Learn more here.</DocLink>
     {{/if}}
   </p>
-  {{#unless @heading}}
+  {{#if @isInline}}
     <div class="is-flex-row">
       <RadioCard
         @title="Create new"
@@ -64,5 +62,5 @@
         @onChange={{@onEnforcementSelect}}
       />
     {{/if}}
-  {{/unless}}
+  {{/if}}
 </div>

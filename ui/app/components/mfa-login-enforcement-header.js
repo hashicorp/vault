@@ -13,7 +13,8 @@ import { inject as service } from '@ember/service';
  * ```
  * @callback onRadioCardSelect
  * @callback onEnforcementSelect
- * @param {string} [heading] - displays page heading and more verbose description used in create/edit routes -- if not provided the component will render in inline form with radio cards
+ * @param {boolean} [isInline] - toggle component display when used inline with mfa method form -- overrides heading and shows radio cards and enforcement select
+ * @param {string} [heading] - page heading to display outside of inline mode
  * @param {string} [radioCardGroupValue] - selected value of the radio card group in inline mode -- new, existing or skip are the accepted values
  * @param {onRadioCardSelect} [onRadioCardSelect] - change event triggered on radio card select
  * @param {onEnforcementSelect} [onEnforcementSelect] - change event triggered on enforcement select when radioCardGroupValue is set to existing
