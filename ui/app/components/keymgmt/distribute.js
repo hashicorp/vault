@@ -39,6 +39,7 @@ export default class KeymgmtDistribute extends Component {
   @tracked isNewKey = false;
   @tracked providerType;
   @tracked formData;
+  @tracked formErrors;
 
   constructor() {
     super(...arguments);
@@ -196,7 +197,7 @@ export default class KeymgmtDistribute extends Component {
         this.args.onClose();
       })
       .catch((e) => {
-        this.flashMessages.danger(`Error distributing key: ${e.errors}`);
+        this.formErrors = `Error distributing key: ${e.errors}`;
       });
   }
 

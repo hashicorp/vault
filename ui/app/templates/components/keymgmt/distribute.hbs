@@ -133,11 +133,14 @@
       </div>
     </fieldset>
 
+    {{#if this.formErrors}}
+      <AlertBanner @type="danger" @message={{this.formErrors}} data-test-keymgmt-distribute-error />
+    {{/if}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         <button
           type="submit"
-          disabled={{or this.validationErrorCount this.error}}
+          disabled={{or this.validationErrorCount}}
           class="button is-primary"
           data-test-secret-save={{true}}
         >
