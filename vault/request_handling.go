@@ -477,7 +477,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			req.Operation == logical.PatchOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
-
 	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
@@ -1426,7 +1425,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			var err error
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
-			entity, err = c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
+			entity, entityCreated, err := c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
 			if err != nil {
 				switch auth.Alias.Local {
 				case true:
@@ -1435,8 +1434,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 						resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
 						goto CREATE_TOKEN
 					}
+					// If the entity creation via forwarding was successful, update the bool flag
+					if entity != nil && err == nil {
+						entityCreated = true
+					}
 				default:
-					entity, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+					entity, entityCreated, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
 				}
 			}
 			if err != nil {
@@ -1451,6 +1454,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			auth.EntityID = entity.ID
+			auth.EntityCreated = entityCreated
 			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases, req.MountAccessor)
 			if err != nil {
 				return nil, nil, err
