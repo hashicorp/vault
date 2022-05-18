@@ -1057,6 +1057,10 @@
         ]
       },
       {
+        "title": "Kubernetes",
+        "path": "secrets/kubernetes"
+      },
+      {
         "title": "Identity",
         "routes": [
           {
