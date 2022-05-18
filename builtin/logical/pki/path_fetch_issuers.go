@@ -410,6 +410,9 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	response = &logical.Response{}
 
 	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	if err != nil {
+		return nil, err
+	}
 	if issuer.Name != "" {
 		addWarningOnDereferencing(issuer.Name, response, ctx, req.Storage)
 	}

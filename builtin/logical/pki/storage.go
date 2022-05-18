@@ -28,7 +28,7 @@ const (
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
 
-	maxRolesToScanOnIssuerChange = 10000
+	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
 )
 
@@ -908,7 +908,8 @@ func checkForRolesReferencing(issuerId string, ctx context.Context, storage logi
 			return false, 0, err
 		}
 		var role roleEntry
-		if err := entry.DecodeJSON(&role); err != nil {
+		err = entry.DecodeJSON(&role)
+		if err != nil {
 			return false, inUseBy, err
 		}
 		if role.Issuer == issuerId {
