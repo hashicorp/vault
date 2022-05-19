@@ -29,12 +29,12 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.tab = '';
   });
 
+  // TODO: Add capabilities tests
   test('it renders show view as default', async function (assert) {
     assert.expect(8);
     await render(hbs`<Keymgmt::KeyEdit @model={{model}} @tab={{tab}} /><div id="modal-wormhole" />`);
     assert.dom('[data-test-secret-header]').hasText('Unicorns', 'Shows key name');
     assert.dom('[data-test-keymgmt-key-toolbar]').exists('Subnav toolbar exists');
-    // TODO: Add capabilities tests
     assert.dom('[data-test-tab="Details"]').exists('Details tab exists');
     assert.dom('[data-test-tab="Versions"]').exists('Versions tab exists');
     assert.dom('[data-test-keymgmt-key-destroy]').isDisabled('Destroy button is disabled');
