@@ -20,4 +20,6 @@
   {{#each this.model as |item|}}
     <Mfa::MethodListItem @model={{item}} />
   {{/each}}
+{{else}}
+  <EmptyState @title="No methods found." @message="Add a new one to get started." />
 {{/if}}
