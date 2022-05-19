@@ -54,11 +54,15 @@ func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
-	}
 
 	var result crlConfig
+	result.Expiry = b.crlLifetime.String()
+	result.Disable = false
+
+	if entry == nil {
+		return &result, nil
+	}
+
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -70,9 +74,6 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-	if config == nil {
-		return nil, nil
 	}
 
 	return &logical.Response{
@@ -87,9 +88,6 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-	if config == nil {
-		config = &crlConfig{}
 	}
 
 	if expiryRaw, ok := d.GetOk("expiry"); ok {

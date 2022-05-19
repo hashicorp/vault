@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/chrismalek/oktasdk-go/okta"
 	duoapi "github.com/duosecurity/duo_api_golang"
 	"github.com/duosecurity/duo_api_golang/authapi"
 	"github.com/golang-jwt/jwt/v4"
@@ -36,6 +35,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/mitchellh/mapstructure"
+	"github.com/okta/okta-sdk-golang/v2/okta"
+	"github.com/okta/okta-sdk-golang/v2/okta/query"
 	"github.com/patrickmn/go-cache"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
@@ -182,6 +183,15 @@ func (i *IdentityStore) handleMFAMethodListPingID(ctx context.Context, req *logi
 	return i.handleMFAMethodList(ctx, req, d, mfaMethodTypePingID)
 }
 
+func (i *IdentityStore) handleMFAMethodListGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponseWithInfo(keys, configInfo), nil
+}
+
 func (i *IdentityStore) handleMFAMethodList(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, methodType)
 	if err != nil {
@@ -191,7 +201,27 @@ func (i *IdentityStore) handleMFAMethodList(ctx context.Context, req *logical.Re
 	return logical.ListResponseWithInfo(keys, configInfo), nil
 }
 
-func (i *IdentityStore) handleMFAMethodRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) handleMFAMethodTOTPRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeTOTP)
+}
+
+func (i *IdentityStore) handleMFAMethodOKTARead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeOkta)
+}
+
+func (i *IdentityStore) handleMFAMethodDuoRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeDuo)
+}
+
+func (i *IdentityStore) handleMFAMethodPingIDRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypePingID)
+}
+
+func (i *IdentityStore) handleMFAMethodReadGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, "")
+}
+
+func (i *IdentityStore) handleMFAMethodReadCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	methodID := d.Get("method_id").(string)
 	if methodID == "" {
 		return logical.ErrorResponse("missing method ID"), nil
@@ -220,6 +250,11 @@ func (i *IdentityStore) handleMFAMethodRead(ctx context.Context, req *logical.Re
 	if !(ns.ID == mfaNs.ID || mfaNs.HasParent(ns) || ns.HasParent(mfaNs)) {
 		return logical.ErrorResponse("request namespace does not match method namespace"), logical.ErrPermissionDenied
 	}
+
+	if methodType != "" && respData["type"] != methodType {
+		return logical.ErrorResponse("failed to find the method ID under MFA type %s.", methodType), nil
+	}
+
 	return &logical.Response{
 		Data: respData,
 	}, nil
@@ -276,7 +311,7 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 	}
 
 	mConfig.Type = methodType
-	usernameRaw, ok := d.GetOk("username_template")
+	usernameRaw, ok := d.GetOk("username_format")
 	if ok {
 		mConfig.UsernameFormat = usernameRaw.(string)
 	}
@@ -458,6 +493,10 @@ func (i *IdentityStore) handleLoginMFAAdminDestroyUpdate(ctx context.Context, re
 
 	if mConfig.ID == "" {
 		return nil, fmt.Errorf("configuration for method ID %q does not contain an identifier", methodID)
+	}
+
+	if mConfig.Type != mfaMethodTypeTOTP {
+		return nil, fmt.Errorf("method ID does not match TOTP type")
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -1188,10 +1227,20 @@ func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) 
 	ws := memdb.NewWatchSet()
 	txn := b.db.Txn(false)
 
-	// get all the configs for the given type
-	iter, err := txn.Get(b.methodTable, "type", methodType)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+	var iter memdb.ResultIterator
+	switch {
+	case methodType == "":
+		// get all the configs
+		iter, err = txn.Get(b.methodTable, "id")
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+		}
+	default:
+		// get all the configs for the given type
+		iter, err = txn.Get(b.methodTable, "type", methodType)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+		}
 	}
 
 	ws.Add(iter.WatchCh())
@@ -1328,13 +1377,13 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 			respData["production"] = oktaConfig.Production
 		}
 		respData["mount_accessor"] = mConfig.MountAccessor
-		respData["username_template"] = mConfig.UsernameFormat
+		respData["username_format"] = mConfig.UsernameFormat
 	case *mfa.Config_DuoConfig:
 		duoConfig := mConfig.GetDuoConfig()
 		respData["api_hostname"] = duoConfig.APIHostname
 		respData["pushinfo"] = duoConfig.PushInfo
 		respData["mount_accessor"] = mConfig.MountAccessor
-		respData["username_template"] = mConfig.UsernameFormat
+		respData["username_format"] = mConfig.UsernameFormat
 		respData["use_passcode"] = duoConfig.UsePasscode
 	case *mfa.Config_PingIDConfig:
 		pingConfig := mConfig.GetPingIDConfig()
@@ -1815,31 +1864,33 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("failed to get Okta configuration for method %q", mConfig.Name)
 	}
 
-	var client *okta.Client
-	if oktaConfig.BaseURL != "" {
-		var err error
-		client, err = okta.NewClientWithDomain(cleanhttp.DefaultClient(), oktaConfig.OrgName, oktaConfig.BaseURL, oktaConfig.APIToken)
-		if err != nil {
-			return errwrap.Wrapf("error getting Okta client: {{err}}", err)
-		}
-	} else {
-		client = okta.NewClient(cleanhttp.DefaultClient(), oktaConfig.OrgName, oktaConfig.APIToken, oktaConfig.Production)
+	baseURL := oktaConfig.BaseURL
+	if baseURL == "" {
+		baseURL = "okta.com"
 	}
-	// Disable client side rate limiting
-	client.RateRemainingFloor = 0
+	orgURL, err := url.Parse(fmt.Sprintf("https://%s.%s", oktaConfig.OrgName, baseURL))
+	if err != nil {
+		return err
+	}
 
-	var filterOpts *okta.UserListFilterOptions
+	ctx, client, err := okta.NewClient(ctx,
+		okta.WithToken(oktaConfig.APIToken),
+		okta.WithOrgUrl(orgURL.String()),
+		// Do not use cache or polling MFA will not refresh
+		okta.WithCache(false),
+	)
+	if err != nil {
+		return fmt.Errorf("error creating client: %s", err)
+	}
+
+	filterField := "profile.login"
 	if oktaConfig.PrimaryEmail {
-		filterOpts = &okta.UserListFilterOptions{
-			EmailEqualTo: username,
-		}
-	} else {
-		filterOpts = &okta.UserListFilterOptions{
-			LoginEqualTo: username,
-		}
+		filterField = "profile.email"
 	}
+	filterQuery := fmt.Sprintf("%s eq %q", filterField, username)
+	filter := query.NewQueryParams(query.WithFilter(filterQuery))
 
-	users, _, err := client.Users.ListWithFilter(filterOpts)
+	users, _, err := client.User.ListUsers(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -1850,50 +1901,34 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("more than one user found for e-mail address")
 	}
 
-	user := &users[0]
+	user := users[0]
 
-	_, err = client.Users.PopulateMFAFactors(user)
+	factors, _, err := client.UserFactor.ListFactors(ctx, user.Id)
 	if err != nil {
 		return err
 	}
 
-	if len(user.MFAFactors) == 0 {
+	if len(factors) == 0 {
 		return fmt.Errorf("no MFA factors found for user")
 	}
 
-	var factorID string
-	for _, factor := range user.MFAFactors {
-		if factor.FactorType == "push" {
-			factorID = factor.ID
-			break
+	var factorFound bool
+	var userFactor *okta.UserFactor
+	for _, factor := range factors {
+		if factor.IsUserFactorInstance() {
+			userFactor = factor.(*okta.UserFactor)
+			if userFactor.FactorType == "push" {
+				factorFound = true
+				break
+			}
 		}
 	}
 
-	if factorID == "" {
+	if !factorFound {
 		return fmt.Errorf("no push-type MFA factor found for user")
 	}
 
-	type pollInfo struct {
-		ValidationURL string `json:"href"`
-	}
-
-	type pushLinks struct {
-		Poll pollInfo `json:"poll"`
-	}
-
-	type pushResult struct {
-		Expiration   time.Time `json:"expiresAt"`
-		FactorResult string    `json:"factorResult"`
-		Links        pushLinks `json:"_links"`
-	}
-
-	req, err := client.NewRequest("POST", fmt.Sprintf("users/%s/factors/%s/verify", user.ID, factorID), nil)
-	if err != nil {
-		return err
-	}
-
-	var result pushResult
-	_, err = client.Do(req, &result)
+	result, _, err := client.UserFactor.VerifyFactor(ctx, user.Id, userFactor.Id, okta.VerifyFactorRequest{}, userFactor, nil)
 	if err != nil {
 		return err
 	}
@@ -1902,16 +1937,36 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		return fmt.Errorf("expected WAITING status for push status, got %q", result.FactorResult)
 	}
 
+	// Parse links to get polling link
+	type linksObj struct {
+		Poll struct {
+			Href string `mapstructure:"href"`
+		} `mapstructure:"poll"`
+	}
+	links := new(linksObj)
+	if err := mapstructure.WeakDecode(result.Links, links); err != nil {
+		return err
+	}
+	// Strip the org URL from the fully qualified poll URL
+	url, err := url.Parse(strings.Replace(links.Poll.Href, orgURL.String(), "", 1))
+	if err != nil {
+		return err
+	}
+
 	for {
-		req, err := client.NewRequest("GET", result.Links.Poll.ValidationURL, nil)
+		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
+		// the VerifyFactor respone. This code effectively reimplements that method.
+		rq := client.CloneRequestExecutor()
+		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url.String(), nil)
 		if err != nil {
 			return err
 		}
-		var result pushResult
-		_, err = client.Do(req, &result)
+		var result *okta.VerifyUserFactorResponse
+		_, err = rq.Do(ctx, req, &result)
 		if err != nil {
 			return err
 		}
+
 		switch result.FactorResult {
 		case "WAITING":
 		case "SUCCESS":

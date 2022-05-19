@@ -841,6 +841,127 @@ func TestACL_CreationRace(t *testing.T) {
 	wg.Wait()
 }
 
+func TestACLGrantingPolicies(t *testing.T) {
+	ns := namespace.RootNamespace
+	policy, err := ParseACLPolicy(ns, grantingTestPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	merged, err := ParseACLPolicy(ns, grantingTestPolicyMerged)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	type tcase struct {
+		path     string
+		op       logical.Operation
+		policies []*Policy
+		expected []logical.PolicyInfo
+		allowed  bool
+	}
+
+	policyInfo := logical.PolicyInfo{
+		Name:        "granting_policy",
+		NamespaceId: "root",
+		Type:        "acl",
+	}
+	mergedInfo := logical.PolicyInfo{
+		Name:        "granting_policy_merged",
+		NamespaceId: "root",
+		Type:        "acl",
+	}
+
+	tcases := []tcase{
+		{"kv/foo", logical.ReadOperation, []*Policy{policy}, []logical.PolicyInfo{policyInfo}, true},
+		{"kv/foo", logical.UpdateOperation, []*Policy{policy}, []logical.PolicyInfo{policyInfo}, true},
+		{"kv/bad", logical.ReadOperation, []*Policy{policy}, nil, false},
+		{"kv/deny", logical.ReadOperation, []*Policy{policy}, nil, false},
+		{"kv/path/foo", logical.ReadOperation, []*Policy{policy}, []logical.PolicyInfo{policyInfo}, true},
+		{"kv/path/longer", logical.ReadOperation, []*Policy{policy}, []logical.PolicyInfo{policyInfo}, true},
+		{"kv/foo", logical.ReadOperation, []*Policy{policy, merged}, []logical.PolicyInfo{policyInfo, mergedInfo}, true},
+		{"kv/path/longer3", logical.ReadOperation, []*Policy{policy, merged}, []logical.PolicyInfo{mergedInfo}, true},
+		{"kv/bar", logical.ReadOperation, []*Policy{policy, merged}, []logical.PolicyInfo{mergedInfo}, true},
+		{"kv/deny", logical.ReadOperation, []*Policy{policy, merged}, nil, false},
+		{"kv/path/longer", logical.UpdateOperation, []*Policy{policy, merged}, []logical.PolicyInfo{policyInfo}, true},
+		{"kv/path/foo", logical.ReadOperation, []*Policy{policy, merged}, []logical.PolicyInfo{policyInfo, mergedInfo}, true},
+	}
+
+	for _, tc := range tcases {
+		request := &logical.Request{
+			Path:      tc.path,
+			Operation: tc.op,
+		}
+
+		acl, err := NewACL(ctx, tc.policies)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		authResults := acl.AllowOperation(ctx, request, false)
+		if authResults.Allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
+		}
+		if !reflect.DeepEqual(authResults.GrantingPolicies, tc.expected) {
+			t.Fatalf("bad: case %#v: got\n%#v\nexpected\n%#v\n", tc, authResults.GrantingPolicies, tc.expected)
+		}
+	}
+}
+
+var grantingTestPolicy = `
+name = "granting_policy"
+path "kv/foo" {
+	capabilities = ["update", "read"]
+}
+
+path "kv/path/*" {
+	capabilities = ["read"]
+}
+
+path "kv/path/longer" {
+	capabilities = ["update", "read"]
+}
+
+path "kv/path/longer2" {
+	capabilities = ["update"]
+}
+
+path "kv/deny" {
+	capabilities = ["deny"]
+}
+
+path "ns1/kv/foo" {
+	capabilities = ["update", "read"]
+}
+`
+
+var grantingTestPolicyMerged = `
+name = "granting_policy_merged"
+path "kv/foo" {
+	capabilities = ["update", "read"]
+}
+
+path "kv/bar" {
+	capabilities = ["update", "read"]
+}
+
+path "kv/path/*" {
+	capabilities = ["read"]
+}
+
+path "kv/path/longer" {
+	capabilities = ["read"]
+}
+
+path "kv/path/longer3" {
+	capabilities = ["read"]
+}
+
+path "kv/deny" {
+	capabilities = ["update"]
+}
+`
+
 var tokenCreationPolicy = `
 name = "tokenCreation"
 path "auth/token/create*" {

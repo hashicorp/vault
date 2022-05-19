@@ -569,28 +569,26 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 	crlLifetime := b.crlLifetime
 	var revokedCerts []pkix.RevokedCertificate
 
-	if crlInfo != nil {
-		if crlInfo.Expiry != "" {
-			crlDur, err := time.ParseDuration(crlInfo.Expiry)
-			if err != nil {
-				return errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
-			}
-			crlLifetime = crlDur
+	if crlInfo.Expiry != "" {
+		crlDur, err := time.ParseDuration(crlInfo.Expiry)
+		if err != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
+		}
+		crlLifetime = crlDur
+	}
+
+	if crlInfo.Disable {
+		if !forceNew {
+			return nil
 		}
 
-		if crlInfo.Disable {
-			if !forceNew {
-				return nil
-			}
-
-			// NOTE: in this case, the passed argument (revoked) is not added
-			// to the revokedCerts list. This is because we want to sign an
-			// **empty** CRL (as the CRL was disabled but we've specified the
-			// forceNew option). In previous versions of Vault (1.10 series and
-			// earlier), we'd have queried the certs below, whereas we now have
-			// an assignment from a pre-queried list.
-			goto WRITE
-		}
+		// NOTE: in this case, the passed argument (revoked) is not added
+		// to the revokedCerts list. This is because we want to sign an
+		// **empty** CRL (as the CRL was disabled but we've specified the
+		// forceNew option). In previous versions of Vault (1.10 series and
+		// earlier), we'd have queried the certs below, whereas we now have
+		// an assignment from a pre-queried list.
+		goto WRITE
 	}
 
 	revokedCerts = revoked

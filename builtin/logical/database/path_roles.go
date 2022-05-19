@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -87,6 +88,16 @@ func fieldsForType(roleType string) map[string]*framework.FieldSchema {
 		"db_name": {
 			Type:        framework.TypeString,
 			Description: "Name of the database this role acts on.",
+		},
+		"credential_type": {
+			Type: framework.TypeString,
+			Description: "The type of credential to manage. Options include: " +
+				"'password', 'rsa_private_key'. Defaults to 'password'.",
+			Default: "password",
+		},
+		"credential_config": {
+			Type:        framework.TypeKVPairs,
+			Description: "The configuration for the given credential_type.",
 		},
 	}
 
@@ -252,6 +263,7 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 	data := map[string]interface{}{
 		"db_name":             role.DBName,
 		"rotation_statements": role.Statements.Rotation,
+		"credential_type":     role.CredentialType.String(),
 	}
 
 	// guard against nil StaticAccount; shouldn't happen but we'll be safe
@@ -264,6 +276,9 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 		}
 	}
 
+	if len(role.CredentialConfig) > 0 {
+		data["credential_config"] = role.CredentialConfig
+	}
 	if len(role.Statements.Rotation) == 0 {
 		data["rotation_statements"] = []string{}
 	}
@@ -290,6 +305,10 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		"renew_statements":      role.Statements.Renewal,
 		"default_ttl":           role.DefaultTTL.Seconds(),
 		"max_ttl":               role.MaxTTL.Seconds(),
+		"credential_type":       role.CredentialType.String(),
+	}
+	if len(role.CredentialConfig) > 0 {
+		data["credential_config"] = role.CredentialConfig
 	}
 	if len(role.Statements.Creation) == 0 {
 		data["creation_statements"] = []string{}
@@ -355,6 +374,23 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		}
 		if role.DBName == "" {
 			return logical.ErrorResponse("database name is required"), nil
+		}
+
+		if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
+			credentialType := credentialTypeRaw.(string)
+			if err := role.setCredentialType(credentialType); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+		}
+
+		var credentialConfig map[string]string
+		if raw, ok := data.GetOk("credential_config"); ok {
+			credentialConfig = raw.(map[string]string)
+		} else if req.Operation == logical.CreateOperation {
+			credentialConfig = data.Get("credential_config").(map[string]string)
+		}
+		if err := role.setCredentialConfig(credentialConfig); err != nil {
+			return logical.ErrorResponse("credential_config validation failed: %s", err), nil
 		}
 	}
 
@@ -447,7 +483,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 	// createRole is a boolean to indicate if this is a new role creation. This is
 	// can be used later by database plugins that distinguish between creating and
-	// updating roles, and may use seperate statements depending on the context.
+	// updating roles, and may use separate statements depending on the context.
 	createRole := (req.Operation == logical.CreateOperation)
 	if role == nil {
 		role = &roleEntry{
@@ -497,6 +533,23 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.Statements.Rotation = rotationStmtsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
 		role.Statements.Rotation = data.Get("rotation_statements").([]string)
+	}
+
+	if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
+		credentialType := credentialTypeRaw.(string)
+		if err := role.setCredentialType(credentialType); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
+	var credentialConfig map[string]string
+	if raw, ok := data.GetOk("credential_config"); ok {
+		credentialConfig = raw.(map[string]string)
+	} else if req.Operation == logical.CreateOperation {
+		credentialConfig = data.Get("credential_config").(map[string]string)
+	}
+	if err := role.setCredentialConfig(credentialConfig); err != nil {
+		return logical.ErrorResponse("credential_config validation failed: %s", err), nil
 	}
 
 	// lvr represents the roles' LastVaultRotation
@@ -558,21 +611,84 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
-	DBName        string         `json:"db_name"`
-	Statements    v4.Statements  `json:"statements"`
-	DefaultTTL    time.Duration  `json:"default_ttl"`
-	MaxTTL        time.Duration  `json:"max_ttl"`
-	StaticAccount *staticAccount `json:"static_account" mapstructure:"static_account"`
+	DBName           string                 `json:"db_name"`
+	Statements       v4.Statements          `json:"statements"`
+	DefaultTTL       time.Duration          `json:"default_ttl"`
+	MaxTTL           time.Duration          `json:"max_ttl"`
+	CredentialType   v5.CredentialType      `json:"credential_type"`
+	CredentialConfig map[string]interface{} `json:"credential_config"`
+	StaticAccount    *staticAccount         `json:"static_account" mapstructure:"static_account"`
+}
+
+// setCredentialType sets the credential type for the role given its string form.
+// Returns an error if the given credential type string is unknown.
+func (r *roleEntry) setCredentialType(credentialType string) error {
+	switch credentialType {
+	case v5.CredentialTypePassword.String():
+		r.CredentialType = v5.CredentialTypePassword
+	case v5.CredentialTypeRSAPrivateKey.String():
+		r.CredentialType = v5.CredentialTypeRSAPrivateKey
+	default:
+		return fmt.Errorf("invalid credential_type %q", credentialType)
+	}
+
+	return nil
+}
+
+// setCredentialConfig validates and sets the credential configuration
+// for the role using the role's credential type. It will also populate
+// all default values. Returns an error if the configuration is invalid.
+func (r *roleEntry) setCredentialConfig(config map[string]string) error {
+	c := make(map[string]interface{})
+	for k, v := range config {
+		c[k] = v
+	}
+
+	switch r.CredentialType {
+	case v5.CredentialTypePassword:
+		generator, err := newPasswordGenerator(c)
+		if err != nil {
+			return err
+		}
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
+	case v5.CredentialTypeRSAPrivateKey:
+		generator, err := newRSAKeyGenerator(c)
+		if err != nil {
+			return err
+		}
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
+	}
+
+	return nil
 }
 
 type staticAccount struct {
 	// Username to create or assume management for static accounts
 	Username string `json:"username"`
 
-	// Password is the current password for static accounts. As an input, this is
-	// used/required when trying to assume management of an existing static
-	// account. Return this on credential request if it exists.
+	// Password is the current password credential for static accounts. As an input,
+	// this is used/required when trying to assume management of an existing static
+	// account. Returned on credential request if the role's credential type is
+	// CredentialTypePassword.
 	Password string `json:"password"`
+
+	// PrivateKey is the current private key credential for static accounts. As an input,
+	// this is used/required when trying to assume management of an existing static
+	// account. Returned on credential request if the role's credential type is
+	// CredentialTypeRSAPrivateKey.
+	PrivateKey []byte `json:"private_key"`
 
 	// LastVaultRotation represents the last time Vault rotated the password
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
@@ -593,7 +709,7 @@ func (s *staticAccount) NextRotationTime() time.Time {
 	return s.LastVaultRotation.Add(s.RotationPeriod)
 }
 
-// PasswordTTL calculates the approximate time remaining until the password is
+// CredentialTTL calculates the approximate time remaining until the credential is
 // no longer valid. This is approximate because the periodic rotation is only
 // checked approximately every 5 seconds, and each rotation can take a small
 // amount of time to process. This can result in a negative TTL time while the
@@ -601,7 +717,7 @@ func (s *staticAccount) NextRotationTime() time.Time {
 // TTL is negative, zero is returned. Users should not trust passwords with a
 // Zero TTL, as they are likely in the process of being rotated and will quickly
 // be invalidated.
-func (s *staticAccount) PasswordTTL() time.Duration {
+func (s *staticAccount) CredentialTTL() time.Duration {
 	next := s.NextRotationTime()
 	ttl := next.Sub(time.Now()).Round(time.Second)
 	if ttl < 0 {
@@ -662,7 +778,7 @@ rollback a change if needed.
 const pathStaticRoleHelpDesc = `
 This path lets you manage the static roles that can be created with this
 backend. Static Roles are associated with a single database user, and manage the
-password based on a rotation period, automatically rotating the password.
+credential based on a rotation period, automatically rotating the credential.
 
 The "db_name" parameter is required and configures the name of the database
 connection to use.
@@ -675,7 +791,11 @@ and "}}" to be replaced.
 
   * "name" - The random username generated for the DB user.
 
-  * "password" - The random password generated for the DB user.
+  * "password" - The random password generated for the DB user. Populated if the
+  static role's credential_type is 'password'.
+  
+  * "public_key" - The public key generated for the DB user. Populated if the
+  static role's credential_type is 'rsa_private_key'.
 
 Example of a decent creation_statements for a postgresql database plugin:
 

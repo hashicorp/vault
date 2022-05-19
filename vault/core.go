@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -3270,7 +3271,16 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 }
 
 func (c *Core) CheckPluginPerms(pluginName string) (err error) {
-	if c.pluginDirectory != "" && os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+	var enableFilePermissionsCheck bool
+	if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+		var err error
+		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+		if err != nil {
+			return errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+		}
+	}
+
+	if c.pluginDirectory != "" && enableFilePermissionsCheck {
 		err = osutil.OwnerPermissionsMatch(c.pluginDirectory, c.pluginFileUid, c.pluginFilePermissions)
 		if err != nil {
 			return err
