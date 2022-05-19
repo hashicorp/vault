@@ -31,3 +31,7 @@ func (d *Delegate) autopilotConfigExt() interface{} {
 func (d *Delegate) autopilotServerExt(_ string) interface{} {
 	return nil
 }
+
+func (d *Delegate) meta() map[string]string {
+	return nil
+}

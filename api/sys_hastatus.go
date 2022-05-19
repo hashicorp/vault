@@ -37,4 +37,6 @@ type HANode struct {
 	ClusterAddress string     `json:"cluster_address"`
 	ActiveNode     bool       `json:"active_node"`
 	LastEcho       *time.Time `json:"last_echo"`
+	Version        string     `json:"version"`
+	UpgradeVersion string     `json:"upgrade_version"`
 }

@@ -15,13 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/benchhelpers"
-	vaultseal "github.com/hashicorp/vault/vault/seal"
-
 	"github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -31,6 +30,8 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
+	testingintf "github.com/mitchellh/go-testing-interface"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -40,10 +41,15 @@ type RaftClusterOpts struct {
 	InmemCluster                   bool
 	EnableAutopilot                bool
 	PhysicalFactoryConfig          map[string]interface{}
+	PhysicalFactory                func(t testingintf.T, coreIdx int, logger log.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle
 	DisablePerfStandby             bool
 	EnableResponseHeaderRaftNodeID bool
 	NumCores                       int
 	Seal                           vault.Seal
+	VersionMap                     map[int]string
+	RedundancyZoneMap              map[int]string
+	AutopilotReconcileInterval     time.Duration
+	AutopilotUpdateInterval        time.Duration
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -65,8 +71,11 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	}
 	opts.InmemClusterLayers = ropts.InmemCluster
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
+	opts.PhysicalFactory = ropts.PhysicalFactory
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 	opts.NumCores = ropts.NumCores
+	opts.VersionMap = ropts.VersionMap
+	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
