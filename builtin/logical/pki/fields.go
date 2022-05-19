@@ -250,10 +250,20 @@ If you want more than one, specify alternative names in the alt_names
 map using OID 2.5.4.5. This has no impact on the final certificate's
 Serial Number field.`,
 	}
+
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
+
+	fields["not_before_duration"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Default:     30,
+		Description: `The duration before now which the certificate needs to be backdated by.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 30,
+		},
 	}
 
 	return fields

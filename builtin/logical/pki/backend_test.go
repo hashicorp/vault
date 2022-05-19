@@ -172,8 +172,9 @@ func TestPKI_DeviceCert(t *testing.T) {
 	}
 
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
-		"common_name": "myvault.com",
-		"not_after":   "9999-12-31T23:59:59Z",
+		"common_name":         "myvault.com",
+		"not_after":           "9999-12-31T23:59:59Z",
+		"not_before_duration": "2h",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +195,10 @@ func TestPKI_DeviceCert(t *testing.T) {
 	cert := parsedCertBundle.Certificate
 	notAfter := cert.NotAfter.Format(time.RFC3339)
 	if notAfter != "9999-12-31T23:59:59Z" {
-		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
+		t.Fatalf("not after from certificate: %v is not matching with input parameter: %v", cert.NotAfter, "9999-12-31T23:59:59Z")
+	}
+	if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+		t.Fatalf("root/generate/internal did not properly set validity period (notBefore): was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 	}
 
 	// Create a role which does require CN (default)
@@ -583,9 +587,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name": "intermediate.cert.com",
-				"csr":         csrPem2048,
-				"format":      "der",
+				"common_name":         "intermediate.cert.com",
+				"csr":                 csrPem2048,
+				"format":              "der",
+				"not_before_duration": "2h",
 			},
 			Check: func(resp *logical.Response) error {
 				certString := resp.Data["certificate"].(string)
@@ -614,6 +619,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
 				case !reflect.DeepEqual([]string{"intermediate.cert.com"}, cert.DNSNames):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
+				}
+
+				if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+					t.Fatalf("root/sign-intermediate did not properly set validity period (notBefore): was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 				}
 
 				return nil

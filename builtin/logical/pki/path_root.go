@@ -288,6 +288,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
 		NotAfter:                  data.Get("not_after").(string),
+		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 	*role.AllowWildcardCertificates = true
 
