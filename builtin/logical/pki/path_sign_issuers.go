@@ -32,7 +32,6 @@ func pathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.Path {
 
 	path.Fields = addCACommonFields(path.Fields)
 	path.Fields = addCAIssueFields(path.Fields)
-	path.Fields = addNotBeforeField(path.Fields)
 
 	path.Fields["csr"] = &framework.FieldSchema{
 		Type:        framework.TypeString,

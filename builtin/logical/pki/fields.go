@@ -250,10 +250,20 @@ If you want more than one, specify alternative names in the alt_names
 map using OID 2.5.4.5. This has no impact on the final certificate's
 Serial Number field.`,
 	}
+
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
+
+	fields["not_before_duration"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Default:     30,
+		Description: `The duration before now the cert needs to be created / signed.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 30,
+		},
 	}
 
 	return fields
@@ -397,17 +407,5 @@ for the configured default key, an identifier or the name assigned
 to the key.`,
 		Default: defaultRef,
 	}
-	return fields
-}
-
-func addNotBeforeField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields["not_before_duration"] = &framework.FieldSchema{
-		Type:        framework.TypeDurationSecond,
-		Description: "Not-Before backdating in seconds",
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name: "Not-before duration",
-		},
-	}
-
 	return fields
 }
