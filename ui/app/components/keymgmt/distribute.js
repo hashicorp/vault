@@ -263,5 +263,10 @@ export default class KeymgmtDistribute extends Component {
       }
     }
     yield this.distributeKey(backend, data);
+    // Reload key to get dist info
+    yield this.store.queryRecord(`keymgmt/key`, {
+      backend: this.args.backend,
+      id: this.keyModel.name,
+    });
   }
 }

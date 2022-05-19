@@ -1,5 +1,5 @@
 {{#if @backend}}
-  <form {{on "submit" this.createDistribution}} class="form-section" data-test-keymgmt-distribution-form>
+  <form {{on "submit" (perform this.createDistribution)}} class="form-section" data-test-keymgmt-distribution-form>
     {{#unless @key}}
       <div class="field" data-test-keymgmt-dist-key>
         <SearchSelect
@@ -140,11 +140,15 @@
       <div class="control">
         <button
           type="submit"
-          disabled={{or this.validationErrorCount}}
+          disabled={{or this.validationErrorCount this.createDistribution.isRunning}}
           class="button is-primary"
           data-test-secret-save={{true}}
         >
-          {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+          {{#if this.createDistribution.isRunning}}
+            <span class="loader is-inline-block"></span>
+          {{else}}
+            {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+          {{/if}}
         </button>
       </div>
       <div class="control">
