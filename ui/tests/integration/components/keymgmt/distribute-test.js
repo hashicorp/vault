@@ -104,7 +104,6 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.operationsSection).hasAttribute('disabled');
     // Select
     await clickTrigger();
-    await settled();
     assert.equal(ssComponent.options.length, 3, 'shows all provider options');
     await typeInSearch('aws');
     await ssComponent.selectOption();
@@ -113,9 +112,7 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     // Remove selection
     await ssComponent.deleteButtons.objectAt(0).click();
     // Select Azure
-    await settled();
     await clickTrigger();
-    await settled();
     await typeInSearch('azure');
     await ssComponent.selectOption();
     // await select(SELECTORS.providerInput, 'provider-azure');
@@ -131,7 +128,6 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.keyTypeSection).doesNotExist('Key Type section is not rendered by default');
     // Add new item on search-select
     await clickTrigger();
-    await settled();
     await typeInSearch('new-key');
     await ssComponent.selectOption();
     assert.dom(SELECTORS.keyTypeSection).exists('Key Type selector is shown');
@@ -144,17 +140,14 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.providerInput).doesNotExist('Provider input is hidden');
     // Select existing key
     await clickTrigger();
-    await settled();
     await ssComponent.selectOption();
     await settled();
     assert.dom(SELECTORS.inlineError).exists({ count: 1 }, 'only shows single error');
     assert.dom(SELECTORS.errorKey).exists('Shows error on key selector when key/provider mismatch');
     // Remove selection
     await ssComponent.deleteButtons.objectAt(0).click();
-    await settled();
     // Select new key
     await clickTrigger();
-    await settled();
     await typeInSearch('new-key');
     await ssComponent.selectOption();
     await select(SELECTORS.keyTypeSection, 'ecdsa-p256');
@@ -169,11 +162,8 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.providerInput).exists('Provider input shown');
     assert.dom(SELECTORS.keySection).doesNotExist('Key input not shown');
     await clickTrigger();
-    await settled();
     await typeInSearch('azure');
-    await settled();
     await ssComponent.selectOption();
-    await settled();
     assert.dom(SELECTORS.inlineError).exists({ count: 1 }, 'only shows single error');
     assert.dom(SELECTORS.errorProvider).exists('Shows error due to key/provider mismatch');
   });

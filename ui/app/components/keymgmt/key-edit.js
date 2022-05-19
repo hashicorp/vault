@@ -54,7 +54,6 @@ export default class KeymgmtKeyEdit extends Component {
     const { model } = this.args;
     try {
       yield model.save();
-      yield model.reload();
       this.router.transitionTo(SHOW_ROUTE, model.name);
     } catch (error) {
       let errorMessage = error;
