@@ -1,14 +1,16 @@
 import Model, { attr } from '@ember-data/model';
 import { capitalize } from '@ember/string';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { withModelValidations } from 'vault/decorators/model-validations';
+import { isPresent } from '@ember/utils';
 
 const METHOD_PROPS = {
   common: [],
-  duo: ['username_template', 'secret_key', 'integration_key', 'api_hostname', 'push_info', 'use_passcode'],
-  okta: ['mount_accessor', 'org_name', 'api_token', 'base_url', 'primary_email'],
+  duo: ['username_format', 'secret_key', 'integration_key', 'api_hostname', 'push_info', 'use_passcode'],
+  okta: ['username_format', 'mount_accessor', 'org_name', 'api_token', 'base_url', 'primary_email'],
   totp: ['issuer', 'period', 'key_size', 'qr_size', 'algorithm', 'digits', 'skew', 'max_validation_attempts'],
   pingid: [
-    'username_template',
+    'username_format',
     'settings_file_base64',
     'use_signature',
     'idp_url',
@@ -18,14 +20,36 @@ const METHOD_PROPS = {
   ],
 };
 
+const REQUIRED_PROPS = {
+  duo: ['secret_key', 'integration_key', 'api_hostname'],
+  okta: ['org_name', 'api_token'],
+  totp: ['issuer'],
+  pingid: ['settings_file_base64'],
+};
+
+const validators = Object.keys(REQUIRED_PROPS).reduce((obj, type) => {
+  REQUIRED_PROPS[type].forEach((prop) => {
+    obj[`${prop}`] = [
+      {
+        message: `${prop.replace(/_/g, ' ')} is required`,
+        validator(model) {
+          return model.type === type ? isPresent(model[prop]) : true;
+        },
+      },
+    ];
+  });
+  return obj;
+}, {});
+
+@withModelValidations(validators)
 export default class MfaMethod extends Model {
   // common
   @attr('string') type;
   @attr('string', {
-    label: 'Username template',
+    label: 'Username format',
     subText: 'How to map identity names to MFA method names. ',
   })
-  username_template;
+  username_format;
   @attr('string', {
     label: 'Namespace',
   })
