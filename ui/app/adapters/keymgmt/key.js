@@ -13,6 +13,21 @@ function pickKeys(obj, picklist) {
 export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
+  pathForType() {
+    // backend name prepended in buildURL method
+    return 'key';
+  }
+
+  buildURL(modelName, id, snapshot, requestType, query) {
+    let url = super.buildURL(...arguments);
+    if (snapshot) {
+      url = url.replace('key', `${snapshot.attr('backend')}/key`);
+    } else if (query) {
+      url = url.replace('key', `${query.backend}/key`);
+    }
+    return url;
+  }
+
   url(backend, id, type) {
     const url = `${this.buildURL()}/${backend}/key`;
     if (id) {
@@ -145,13 +160,15 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     });
   }
 
-  rotateKey(backend, id) {
-    // TODO: re-fetch record data after
-    return this.ajax(this.url(backend, id, 'ROTATE'), 'PUT');
+  async rotateKey(backend, id) {
+    let keyModel = this.store.peekRecord('keymgmt/key', id);
+    const result = await this.ajax(this.url(backend, id, 'ROTATE'), 'PUT');
+    await keyModel.reload();
+    return result;
   }
 
   removeFromProvider(model) {
-    const url = `${this.buildURL()}/${model.backend}/kms/${model.provider.name}/key/${model.name}`;
+    const url = `${this.buildURL()}/${model.backend}/kms/${model.provider}/key/${model.name}`;
     return this.ajax(url, 'DELETE').then(() => {
       model.provider = null;
     });
