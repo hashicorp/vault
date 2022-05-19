@@ -37,7 +37,7 @@ the unseal key.
 
 ## Shamir seals
 
-![Shamir](/img/vault-shamir-storage.png)
+![Shahir seals](/img/vault-shamir-seal.png)
 
 The default Vault config uses a Shamir seal. Instead of distributing the unseal
 key as a single key to an operator, Vault uses an algorithm known as
@@ -89,7 +89,7 @@ securing the unseal key from users to a trusted device or service. At startup
 Vault will connect to the device or service implementing the seal and ask it
 to decrypt the root key Vault read from storage.
 
-![AutoUnseal](/img/vault-autounseal-storage.png)
+![Auto unseal](/img/vault-auto-unseal.png)
 
 There are certain operations in Vault besides unsealing that
 require a quorum of users to perform, e.g. generating a root token. When
