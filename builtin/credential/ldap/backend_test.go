@@ -642,7 +642,6 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
 		},
 	})
-
 }
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
