@@ -57,7 +57,17 @@ export default class KeymgmtKeyEdit extends Component {
       yield model.reload();
       this.router.transitionTo(SHOW_ROUTE, model.name);
     } catch (error) {
-      this.flashMessages.danger(error.errors.join('. '));
+      let errorMessage = error;
+      if (error.errors) {
+        // if errors come directly from API they will be in this shape
+        errorMessage = error.errors.join('. ');
+      }
+      this.flashMessages.danger(errorMessage);
+      if (!error.errors) {
+        // If error was custom from save, only partial fail
+        // so it's safe to show the key
+        this.router.transitionTo(SHOW_ROUTE, model.name);
+      }
     }
   }
 
