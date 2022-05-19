@@ -1,6 +1,6 @@
 <div class="box is-sideless is-fullwidth is-marginless" ...attributes>
   {{#each @model.attrs as |attr|}}
-    <FormField data-test-field @attr={{attr}} @model={{@model}} />
+    <FormField @attr={{attr}} @model={{@model}} @modelValidations={{or @validations this.editValidations}} />
   {{/each}}
 </div>
 {{#if @hasActions}}
@@ -10,7 +10,7 @@
         type="button"
         class="button is-primary {{if this.save.isRunning 'is-loading'}}"
         disabled={{this.save.isRunning}}
-        onclick={{action (mut this.isEditModalActive) true}}
+        onclick={{this.initSave}}
       >
         Save
       </button>
@@ -25,7 +25,7 @@
   @title="Edit {{@model.type}} configuration?"
   @onClose={{action (mut this.isEditModalActive) false}}
   @isActive={{this.isEditModalActive}}
-  @confirmText="edit"
+  @confirmText={{@model.type}}
   @onConfirm={{perform this.save}}
 >
   <p>

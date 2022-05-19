@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
@@ -19,6 +20,9 @@ export default class MfaMethodForm extends Component {
   @service store;
   @service flashMessages;
 
+  @tracked editValidations;
+  @tracked isEditModalActive = false;
+
   @task
   *save() {
     try {
@@ -26,6 +30,17 @@ export default class MfaMethodForm extends Component {
       this.args.onSave();
     } catch (e) {
       this.flashMessages.danger(e.errors?.join('. ') || e.message);
+    }
+  }
+
+  @action
+  async initSave(e) {
+    e.preventDefault();
+    const { isValid, state } = await this.args.model.validate();
+    if (isValid) {
+      this.isEditModalActive = true;
+    } else {
+      this.editValidations = state;
     }
   }
 

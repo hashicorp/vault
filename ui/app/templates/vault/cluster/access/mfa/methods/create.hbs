@@ -10,6 +10,18 @@
       {{/if}}
     </h1>
   </p.levelLeft>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.mfa.methods.index">
+            Methods
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
 </PageHeader>
 <div class="has-border-top-light has-top-padding-l">
   {{#if this.showForms}}
@@ -18,7 +30,7 @@
       {{this.description}}
       <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
     </p>
-    <Mfa::MethodForm @model={{this.method}} class="is-box-shadowless" />
+    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-box-shadowless" />
     <MfaLoginEnforcementHeader
       @isInline={{true}}
       @radioCardGroupValue={{this.enforcementPreference}}

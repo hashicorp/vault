@@ -101,7 +101,7 @@ export default class MfaMethodCreateController extends Controller {
   checkValidityState() {
     // block saving models if either is in an invalid state
     let isEnforcementValid = true;
-    const methodValidations = { isValid: true }; // roughing in for now until validations are created -- replace with this.method.validate();
+    const methodValidations = this.method.validate();
     if (!methodValidations.isValid) {
       this.methodErrors = methodValidations.state;
     }
