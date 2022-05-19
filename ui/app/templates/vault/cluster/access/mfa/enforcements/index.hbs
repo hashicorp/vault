@@ -20,6 +20,8 @@
   {{#each this.model as |item|}}
     <Mfa::LoginEnforcementListItem @model={{item}} />
   {{/each}}
+{{else}}
+  <EmptyState @title="No enforcements found." @message="Add a new one to get started." />
 {{/if}}
 {{#if (gt this.model.meta.lastPage 1)}}
   <ListPagination
