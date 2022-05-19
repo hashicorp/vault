@@ -1,7 +1,7 @@
 import Route from '@ember/routing/route';
 
 export default class MfaConfigureRoute extends Route {
-  model() {
+  beforeModel() {
     return this.store
       .query('mfa-method', {})
       .then(() => {
