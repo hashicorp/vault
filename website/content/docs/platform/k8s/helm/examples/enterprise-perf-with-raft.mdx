@@ -8,7 +8,7 @@ description: |-
 
 # Highly Available Vault Enterprise Performance Clusters with Integrated Storage (Raft)
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
 
 The following is an example of creating a performance cluster using Vault Helm.
 
@@ -23,7 +23,7 @@ First, create the primary cluster:
 ```shell
 helm install vault-primary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.9.2-ent' \
+  --set='server.image.tag=1.10.3-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -74,7 +74,7 @@ With the primary cluster created, next create a secondary cluster.
 ```shell
 helm install vault-secondary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.9.2-ent' \
+  --set='server.image.tag=1.10.3-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
