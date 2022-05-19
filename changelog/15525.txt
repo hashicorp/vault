@@ -1,0 +1,3 @@
+```release-note:bug
+auth/ldap: A bug during login has been fixed when `username_as_alias` is set.
+```
