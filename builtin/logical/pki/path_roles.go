@@ -118,6 +118,7 @@ See the documentation for more information.`,
 the common name to be issued, conforming to RFC 6125's Section 6.4.3; e.g.,
 "*.example.net" or "b*z.example.net". See the documentation for more
 information.`,
+				Default: true,
 			},
 
 			"allow_any_name": {
@@ -427,6 +428,12 @@ serviced by this role.`,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoleDelete,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.PatchOperation: &framework.PathOperation{
+				Callback: b.pathRolePatch,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
