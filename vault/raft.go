@@ -777,6 +777,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 	if err != nil {
 		return nil, fmt.Errorf("failed to create api client: %w", err)
 	}
+	// Clearing namespace, as this client should only ever be using the root namespace
+	apiClient.ClearNamespace()
 
 	// Attempt to join the leader by requesting for the bootstrap challenge
 	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
