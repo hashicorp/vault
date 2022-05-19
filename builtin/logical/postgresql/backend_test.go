@@ -272,7 +272,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 
-			db, err := sql.Open("pgx", connURL+" timezone=utc")
+			db, err := sql.Open("pgx", connURL+"&timezone=utc")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -350,7 +350,7 @@ func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, 
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 
-			db, err := sql.Open("pgx", connURL+" timezone=utc")
+			db, err := sql.Open("pgx", connURL+"&timezone=utc")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -398,7 +398,7 @@ func testAccStepDropTable(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 
-			db, err := sql.Open("pgx", connURL+" timezone=utc")
+			db, err := sql.Open("pgx", connURL+"&timezone=utc")
 			if err != nil {
 				t.Fatal(err)
 			}

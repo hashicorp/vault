@@ -1473,7 +1473,7 @@ func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)
 
-	db, err := sql.Open("pgx", connURL+" timezone=utc")
+	db, err := sql.Open("pgx", connURL+"&timezone=utc")
 	if err != nil {
 		t.Fatal(err)
 	}

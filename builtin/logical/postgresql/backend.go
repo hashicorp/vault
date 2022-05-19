@@ -108,7 +108,7 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 			conn += "?timezone=utc"
 		}
 	} else {
-		conn += " timezone=utc"
+		conn += "&timezone=utc"
 	}
 
 	b.db, err = sql.Open("pgx", conn)
