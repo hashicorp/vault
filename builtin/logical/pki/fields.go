@@ -260,7 +260,7 @@ The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	fields["not_before_duration"] = &framework.FieldSchema{
 		Type:        framework.TypeDurationSecond,
 		Default:     30,
-		Description: `The duration before now the cert needs to be created / signed.`,
+		Description: `The duration before now which the certificate needs to be backdated by.`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: 30,
 		},

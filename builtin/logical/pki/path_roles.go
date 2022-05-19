@@ -397,7 +397,7 @@ for "generate_lease".`,
 			"not_before_duration": {
 				Type:        framework.TypeDurationSecond,
 				Default:     30,
-				Description: `The duration before now the cert needs to be created / signed.`,
+				Description: `The duration before now which the certificate needs to be backdated by.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: 30,
 				},
