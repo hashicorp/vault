@@ -118,8 +118,8 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	switch raw.(type) {
-	case *backendGRPCPluginClient:
-		backend = raw.(*backendGRPCPluginClient)
+	case *BackendGRPCPluginClient:
+		backend = raw.(*BackendGRPCPluginClient)
 		transport = "gRPC"
 	default:
 		return nil, errors.New("unsupported plugin client type")
@@ -127,9 +127,9 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 
 	// Wrap the backend in a tracing middleware
 	if namedLogger.IsTrace() {
-		backend = &backendTracingMiddleware{
-			logger: namedLogger.With("transport", transport),
-			next:   backend,
+		backend = &BackendTracingMiddleware{
+			BLogger: namedLogger.With("transport", transport),
+			Next:    backend,
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	bplugin "github.com/hashicorp/vault/sdk/plugin"
+	v5 "github.com/hashicorp/vault/sdk/plugin/v5"
 )
 
 // Backend returns an instance of the backend, either as a plugin if external
@@ -23,7 +24,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	sys := conf.System
 
-	raw, err := bplugin.NewBackendV5(ctx, name, pluginType, sys, conf, false)
+	raw, err := v5.NewBackend(ctx, name, pluginType, sys, conf, false)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
 	b.Backend.Cleanup(ctx)
 
-	nb, err := bplugin.NewBackendV5(ctx, pluginName, pluginType, b.config.System, b.config, false)
+	nb, err := v5.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
 	if err != nil {
 		return err
 	}

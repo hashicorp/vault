@@ -22,14 +22,14 @@ var (
 	ErrClientInMetadataMode = errors.New("plugin client can not perform action while in metadata mode")
 )
 
-// Validate backendGRPCPluginClient satisfies the logical.Backend interface
-var _ logical.Backend = &backendGRPCPluginClient{}
+// Validate BackendGRPCPluginClient satisfies the logical.Backend interface
+var _ logical.Backend = &BackendGRPCPluginClient{}
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
-type backendGRPCPluginClient struct {
+type BackendGRPCPluginClient struct {
 	broker       *plugin.GRPCBroker
-	client       pb.BackendClient
+	Client       pb.BackendClient
 	metadataMode bool
 
 	system logical.SystemView
@@ -48,7 +48,7 @@ type backendGRPCPluginClient struct {
 	doneCtx    context.Context
 }
 
-func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+func (b *BackendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
 	if b.metadataMode {
 		return nil
 	}
@@ -58,7 +58,7 @@ func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.Ini
 	defer close(quitCh)
 	defer cancel()
 
-	reply, err := b.client.Initialize(ctx, &pb.InitializeArgs{}, largeMsgGRPCCallOpts...)
+	reply, err := b.Client.Initialize(ctx, &pb.InitializeArgs{}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return ErrPluginShutdown
@@ -80,7 +80,7 @@ func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.Ini
 	return nil
 }
 
-func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+func (b *BackendGRPCPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.metadataMode {
 		return nil, ErrClientInMetadataMode
 	}
@@ -95,7 +95,7 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
+	reply, err := b.Client.HandleRequest(ctx, &pb.HandleRequestArgs{
 		Request: protoReq,
 	}, largeMsgGRPCCallOpts...)
 	if err != nil {
@@ -116,8 +116,8 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 	return resp, nil
 }
 
-func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
-	reply, err := b.client.SpecialPaths(b.doneCtx, &pb.Empty{})
+func (b *BackendGRPCPluginClient) SpecialPaths() *logical.Paths {
+	reply, err := b.Client.SpecialPaths(b.doneCtx, &pb.Empty{})
 	if err != nil {
 		return nil
 	}
@@ -136,17 +136,17 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 
 // System returns vault's system view. The backend client stores the view during
 // Setup, so there is no need to shim the system just to get it back.
-func (b *backendGRPCPluginClient) System() logical.SystemView {
+func (b *BackendGRPCPluginClient) System() logical.SystemView {
 	return b.system
 }
 
 // Logger returns vault's logger. The backend client stores the logger during
 // Setup, so there is no need to shim the logger just to get it back.
-func (b *backendGRPCPluginClient) Logger() log.Logger {
+func (b *BackendGRPCPluginClient) Logger() log.Logger {
 	return b.logger
 }
 
-func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
+func (b *BackendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	if b.metadataMode {
 		return false, false, ErrClientInMetadataMode
 	}
@@ -160,7 +160,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
 	defer close(quitCh)
 	defer cancel()
-	reply, err := b.client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
+	reply, err := b.Client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
 		Request: protoReq,
 	}, largeMsgGRPCCallOpts...)
 	if err != nil {
@@ -176,13 +176,13 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	return reply.CheckFound, reply.Exists, nil
 }
 
-func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
+func (b *BackendGRPCPluginClient) Cleanup(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
 	defer close(quitCh)
 	defer cancel()
 
-	b.client.Cleanup(ctx, &pb.Empty{})
+	b.Client.Cleanup(ctx, &pb.Empty{})
 
 	// This will block until Setup has run the function to create a new server
 	// in b.server. If we stop here before it has a chance to actually start
@@ -197,7 +197,7 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	b.clientConn.Close()
 }
 
-func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {
+func (b *BackendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {
 	if b.metadataMode {
 		return
 	}
@@ -207,12 +207,12 @@ func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string)
 	defer close(quitCh)
 	defer cancel()
 
-	b.client.InvalidateKey(ctx, &pb.InvalidateKeyArgs{
+	b.Client.InvalidateKey(ctx, &pb.InvalidateKeyArgs{
 		Key: key,
 	})
 }
 
-func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
+func (b *BackendGRPCPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	// Shim logical.Storage
 	storageImpl := config.StorageView
 	if b.metadataMode {
@@ -257,7 +257,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 	defer close(quitCh)
 	defer cancel()
 
-	reply, err := b.client.Setup(ctx, args)
+	reply, err := b.Client.Setup(ctx, args)
 	if err != nil {
 		return err
 	}
@@ -272,8 +272,8 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 	return nil
 }
 
-func (b *backendGRPCPluginClient) Type() logical.BackendType {
-	reply, err := b.client.Type(b.doneCtx, &pb.Empty{})
+func (b *BackendGRPCPluginClient) Type() logical.BackendType {
+	reply, err := b.Client.Type(b.doneCtx, &pb.Empty{})
 	if err != nil {
 		return logical.TypeUnknown
 	}

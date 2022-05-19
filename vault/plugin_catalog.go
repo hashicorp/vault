@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
+	backendpluginv5 "github.com/hashicorp/vault/sdk/plugin/v5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -389,7 +390,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	// Attempt to run as backend plugin
 	config := pluginutil.PluginClientConfig{
 		Name:            pluginRunner.Name,
-		PluginSets:      backendplugin.PluginSet,
+		PluginSets:      backendpluginv5.PluginSet,
 		HandshakeConfig: backendplugin.HandshakeConfig,
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  false,
@@ -402,7 +403,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// dispense the plugin so we can get its type
-		client, err = backendplugin.Dispense(ctx, pc.ClientProtocol, pc)
+		client, err = backendpluginv5.Dispense(ctx, pc.ClientProtocol, pc)
 		if err != nil {
 			merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend v5: %w", err))
 		} else {

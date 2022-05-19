@@ -50,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
+	backendpluginv5 "github.com/hashicorp/vault/sdk/plugin/v5"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
@@ -587,7 +588,7 @@ func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName st
 		return pluginutil.PluginClientConfig{
 			Name:            pluginName,
 			PluginType:      pluginType,
-			PluginSets:      backendplugin.PluginSet,
+			PluginSets:      backendpluginv5.PluginSet,
 			HandshakeConfig: backendplugin.HandshakeConfig,
 			Logger:          log.NewNullLogger(),
 			AutoMTLS:        false,

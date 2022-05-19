@@ -11,13 +11,14 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	bplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
 
-// BackendPluginClientV5 is a wrapper around backendPluginClient
+// BackendPluginClient is a wrapper around backendPluginClient
 // that also contains its plugin.Client instance. It's primarily
 // used to cleanly kill the client on Cleanup()
-type BackendPluginClientV5 struct {
+type BackendPluginClient struct {
 	client pluginutil.PluginClient
 	sync.Mutex
 
@@ -27,13 +28,13 @@ type BackendPluginClientV5 struct {
 type ContextKey string
 
 func (c ContextKey) String() string {
-	return "v5plugin" + string(c)
+	return "plugin" + string(c)
 }
 
 var ContextKeyPluginReload = ContextKey("plugin-reload")
 
 // Cleanup cleans up the go-plugin client and the plugin catalog
-func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
+func (b *BackendPluginClient) Cleanup(ctx context.Context) {
 	_, ok := ctx.Value(ContextKeyPluginReload).(string)
 	if !ok {
 		b.Backend.Cleanup(ctx)
@@ -48,7 +49,7 @@ func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
 // external plugins, or a concrete implementation of the backend if it is a builtin backend.
 // The backend is returned as a logical.Backend interface. The isMetadataMode param determines whether
 // the plugin should run in metadata mode.
-func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool) (logical.Backend, error) {
+func NewBackend(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
 	if err != nil {
@@ -77,13 +78,13 @@ func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.Plug
 			Name:            pluginName,
 			PluginSets:      PluginSet,
 			PluginType:      pluginType,
-			HandshakeConfig: HandshakeConfig,
+			HandshakeConfig: bplugin.HandshakeConfig,
 			Logger:          conf.Logger.Named(pluginName),
 			IsMetadataMode:  isMetadataMode,
 			AutoMTLS:        true,
 			Wrapper:         sys,
 		}
-		backend, err = NewPluginClientV5(ctx, sys, config)
+		backend, err = NewPluginClient(ctx, sys, config)
 		if err != nil {
 			return nil, err
 		}
@@ -99,13 +100,13 @@ var PluginSet = map[int]plugin.PluginSet{
 	// work with gRPC. There is currently no difference between version 3
 	// and version 4.
 	3: {
-		"backend": &GRPCBackendPlugin{},
+		"backend": &bplugin.GRPCBackendPlugin{},
 	},
 	4: {
-		"backend": &GRPCBackendPlugin{},
+		"backend": &bplugin.GRPCBackendPlugin{},
 	},
 	5: {
-		"backend": &GRPCBackendPlugin{},
+		"backend": &bplugin.GRPCBackendPlugin{},
 	},
 }
 
@@ -120,23 +121,23 @@ func Dispense(ctx context.Context, rpcClient plugin.ClientProtocol, pluginClient
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	switch c := raw.(type) {
-	case *backendGRPCPluginClient:
+	case *bplugin.BackendGRPCPluginClient:
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
-		c.client = pb.NewBackendClient(pluginClient.Conn())
+		c.Client = pb.NewBackendClient(pluginClient.Conn())
 
 		backend = c
 	default:
 		return nil, errors.New("unsupported plugin client type")
 	}
 
-	return &BackendPluginClientV5{
+	return &BackendPluginClient{
 		client:  pluginClient,
 		Backend: backend,
 	}, nil
 }
 
-func NewPluginClientV5(ctx context.Context, sys pluginutil.RunnerUtil, config pluginutil.PluginClientConfig) (logical.Backend, error) {
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config pluginutil.PluginClientConfig) (logical.Backend, error) {
 	pluginClient, err := sys.NewPluginClient(ctx, config)
 	if err != nil {
 		return nil, err
@@ -153,10 +154,10 @@ func NewPluginClientV5(ctx context.Context, sys pluginutil.RunnerUtil, config pl
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	switch c := raw.(type) {
-	case *backendGRPCPluginClient:
+	case *bplugin.BackendGRPCPluginClient:
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
-		c.client = pb.NewBackendClient(pluginClient.Conn())
+		c.Client = pb.NewBackendClient(pluginClient.Conn())
 
 		backend = c
 		transport = "gRPC"
@@ -166,13 +167,13 @@ func NewPluginClientV5(ctx context.Context, sys pluginutil.RunnerUtil, config pl
 
 	// Wrap the backend in a tracing middleware
 	if config.Logger.IsTrace() {
-		backend = &backendTracingMiddleware{
-			logger: config.Logger.With("transport", transport),
-			next:   backend,
+		backend = &bplugin.BackendTracingMiddleware{
+			BLogger: config.Logger.With("transport", transport),
+			Next:    backend,
 		}
 	}
 
-	return &BackendPluginClientV5{
+	return &BackendPluginClient{
 		client:  pluginClient,
 		Backend: backend,
 	}, nil
