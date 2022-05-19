@@ -702,6 +702,9 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 	if warning != "" {
+		if resp == nil {
+			resp = &logical.Response{}
+		}
 		resp.AddWarning(warning)
 	}
 	if resp.IsError() {
@@ -721,7 +724,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 }
 
 func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.Storage) (*logical.Response, error) {
-	resp := &logical.Response{}
+	var resp *logical.Response
 	var err error
 
 	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
@@ -764,6 +767,7 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 		issuerId, err := resolveIssuerReference(ctx, s, entry.Issuer)
 		if err != nil {
 			if issuerId == IssuerRefNotFound {
+				resp = &logical.Response{}
 				if entry.Issuer == defaultRef {
 					resp.AddWarning("Issuing Certificate was set to default, but no default issuing certificate (configurable at /config/issuers) is currently set")
 				} else {
