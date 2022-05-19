@@ -174,7 +174,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s", d.Token)
 
 	// Build a client and verify that the credentials work
 	consulapiConfig := consulapi.DefaultConfig()
@@ -185,7 +184,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	t.Logf("Verifying that the generated token works...")
 	_, err = client.KV().Put(&consulapi.KVPair{
 		Key:   "foo",
 		Value: []byte("bar"),
@@ -210,7 +208,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	t.Logf("Verifying that the generated token does not work...")
 	_, err = client.KV().Put(&consulapi.KVPair{
 		Key:   "foo",
 		Value: []byte("bar"),
@@ -271,7 +268,6 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	}
 	roleResp, err := b.HandleRequest(context.Background(), read)
 
-	t.Logf("Response consul_policies '%s' should match '[test]'", roleResp.Data["consul_policies"])
 	expectExtract := roleResp.Data["consul_policies"]
 	respExtract := roleResp.Data[policiesParam]
 	if respExtract != nil {
@@ -303,7 +299,6 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
 
 	// Build a client and verify that the credentials work
 	consulapiConfig := consulapi.DefaultNonPooledConfig()
@@ -314,7 +309,6 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -348,7 +342,6 @@ func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string
 		Datacenter: "DC1",
 	}
 
-	t.Log("Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
@@ -425,7 +418,6 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
 
 	if d.Local {
 		t.Fatalf("requested global token, got local one")
@@ -440,7 +432,6 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -462,7 +453,6 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
 
 	if !d.Local {
 		t.Fatalf("requested local token, got global one")
@@ -477,7 +467,6 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -805,7 +794,6 @@ func TestBackend_Roles(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated consul_roles token: %s with accessor %s", d.Token, d.Accessor)
 
 	// Build a client and verify that the credentials work
 	consulapiConfig := consulapi.DefaultNonPooledConfig()
@@ -816,7 +804,6 @@ func TestBackend_Roles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -850,7 +837,6 @@ func TestBackend_Roles(t *testing.T) {
 		Datacenter: "DC1",
 	}
 
-	t.Log("Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
@@ -936,7 +922,6 @@ func testBackendEntNamespace(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated namespace '%s' token: %s with accessor %s", d.ConsulNamespace, d.Token, d.Accessor)
 
 	if d.ConsulNamespace != "ns1" {
 		t.Fatalf("Failed to access namespace")
@@ -951,7 +936,6 @@ func testBackendEntNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -986,7 +970,6 @@ func testBackendEntNamespace(t *testing.T) {
 		Namespace:  "ns1",
 	}
 
-	t.Log("Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
@@ -1056,7 +1039,6 @@ func testBackendEntPartition(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated partition '%s' token: %s with accessor %s", d.Partition, d.Token, d.Accessor)
 
 	if d.Partition != "part1" {
 		t.Fatalf("Failed to access partition")
@@ -1071,7 +1053,6 @@ func testBackendEntPartition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -1106,7 +1087,6 @@ func testBackendEntPartition(t *testing.T) {
 		Partition:  "test1",
 	}
 
-	t.Log("Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
@@ -1295,7 +1275,6 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 		if err := mapstructure.Decode(resp.Data, &d); err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
 
 		// Build a client and verify that the credentials work
 		consulapiConfig := consulapi.DefaultNonPooledConfig()
@@ -1306,7 +1285,6 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		t.Log("Verifying that the generated token works...")
 		_, err = client.Catalog(), nil
 		if err != nil {
 			t.Fatal(err)
@@ -1338,7 +1316,6 @@ func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
 			Datacenter: "DC1",
 		}
 
-		t.Log("Verifying that the generated token does not exist...")
 		_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 		if err == nil {
 			t.Fatal("err: expected error")
