@@ -42,12 +42,6 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     return url;
   }
 
-  urlForDeleteRecord(store, type, snapshot) {
-    const name = snapshot.attr('name');
-    const backend = snapshot.attr('backend');
-    return this.url(backend, name);
-  }
-
   _updateKey(backend, name, serialized) {
     // Only these two attributes are allowed to be updated
     let data = pickKeys(serialized, ['deletion_allowed', 'min_enabled_version']);
