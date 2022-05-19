@@ -19,11 +19,13 @@ To use the extension, include one of the following ARNs as a layer in your
 Lambda function, depending on your desired architecture.
 
 amd64 (x86_64):
+
 ```text
 arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:13
 ```
 
 arm64:
+
 ```text
 arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension-arm64:1
 ```
@@ -307,6 +309,6 @@ $ aws lambda publish-layer-version \
      --region "${REGION}"
 ```
 
-## Learn
+## Tutorial
 
 For step-by-step instructions, refer to the [Vault AWS Lambda Extension](https://learn.hashicorp.com/tutorials/vault/aws-lambda) tutorial for details on how to create an AWS Lambda function and use the Vault Lambda Extension to authenticate with Vault.
