@@ -46,6 +46,12 @@ in a FIPS-compliant manner. We are not a NIST-certified testing laboratory
 and thus organizations may need to consult an approved auditor for final
 information.
 
+~> **Note**: When pulling the FIPS UBI-based images, note that they are
+   ultimately designed for OpenShift certification; consider either adding
+   the `--user root --cap-add IPC_LOCK` options, to allow Vault to enable
+   mlock, or use the `--env SKIP_SETCAP=1` option, to disable mlock
+   completely, as appropriate for your environment.
+
 ## Technical Details
 
 Vault Enterprise's FIPS 140-2 Inside binaries rely on a special version of the
