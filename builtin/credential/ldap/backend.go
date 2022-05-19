@@ -56,7 +56,7 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) (string, []string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string, usernameAsAlias bool) (string, []string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return "", nil, nil, nil, err
@@ -195,12 +195,15 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Policies from each group may overlap
 	policies = strutil.RemoveDuplicates(policies, true)
 
-	entityAliasAttribute, err := ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
-	if err != nil {
-		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
-	}
-	if entityAliasAttribute == "" {
-		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
+	entityAliasAttribute := username
+	if !usernameAsAlias {
+		entityAliasAttribute, err = ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
+		if err != nil {
+			return "", nil, logical.ErrorResponse(err.Error()), nil, nil
+		}
+		if entityAliasAttribute == "" {
+			return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
+		}
 	}
 
 	return entityAliasAttribute, policies, ldapResponse, allGroups, nil
