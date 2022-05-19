@@ -178,6 +178,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
 	}
 
+	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+		// If the operator hasn't configured any of the URLs prior to
+		// generating this issuer, we should add a warning to the response,
+		// informing them they might want to do so and re-generate the issuer.
+		resp.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
+	}
+
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
@@ -366,6 +373,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		// our certificate's ASN.1 content, so let's just assume it holds
 		// and move on.
 		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
+	}
+
+	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+		// If the operator hasn't configured any of the URLs prior to
+		// generating this issuer, we should add a warning to the response,
+		// informing them they might want to do so and re-generate the issuer.
+		resp.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
 	}
 
 	switch format {
