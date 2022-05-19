@@ -849,15 +849,15 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
 		PolicyIdentifiers:             getWithExplicitDefault(data, "policy_identifiers", oldEntry.PolicyIdentifiers).([]string),
-		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.PolicyIdentifiers).(bool),
+		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.BasicConstraintsValidForNonCA).(bool),
 		NotBeforeDuration:             getTimeWithExplicitDefault(data, "not_before_duration", oldEntry.NotBeforeDuration),
 		NotAfter:                      getWithExplicitDefault(data, "not_after", oldEntry.NotAfter).(string),
 		Issuer:                        getWithExplicitDefault(data, "issuer_ref", oldEntry.Issuer).(string),
 	}
 
 	allowedOtherSANsData, wasSet := data.GetOk("allowed_other_sans")
-	allowedOtherSANs := allowedOtherSANsData.([]string)
 	if wasSet {
+		allowedOtherSANs := allowedOtherSANsData.([]string)
 		switch {
 		case len(allowedOtherSANs) == 0:
 		case len(allowedOtherSANs) == 1 && allowedOtherSANs[0] == "*":
@@ -874,7 +874,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 
 	allowWildcardCertificates, present := data.GetOk("allow_wildcard_certificates")
 	if !present {
-		allowWildcardCertificates = oldEntry.AllowWildcardCertificates
+		allowWildcardCertificates = *oldEntry.AllowWildcardCertificates
 	}
 	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
 
