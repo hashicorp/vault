@@ -4150,6 +4150,10 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	rootCaCert := parseCert(t, rootCert)
 	intermediaryCaCert := parseCert(t, intermediateCert)
 	requireSignedBy(t, intermediaryCaCert, rootCaCert.PublicKey)
+	intermediateCaChain := intermediateSignedData["ca_chain"].([]interface{})
+
+	require.Equal(t, parseCert(t, intermediateCaChain[0].(string)), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
+	require.Equal(t, parseCert(t, intermediateCaChain[1].(string)), rootCaCert, "root cert should have been part of ca_chain")
 
 	resp, err = client.Logical().Write("pki-intermediate/intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCert + "\n" + rootCert + "\n",
