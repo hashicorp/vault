@@ -1328,7 +1328,7 @@
   },
   {
     "title": "Troubleshoot",
-    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+    "href": "/vault/tutorials/monitoring/troubleshooting-vault"
   },
   {
     "divider": true
