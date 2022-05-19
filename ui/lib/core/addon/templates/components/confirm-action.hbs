@@ -32,12 +32,16 @@
         <div class="confirm-action-options">
           <button
             type="button"
-            disabled={{this.disabled}}
+            disabled={{or this.disabled this.isRunning}}
             class="link is-destroy"
             data-test-confirm-button="true"
             {{action "onConfirm"}}
           >
-            {{this.confirmButtonText}}
+            {{#if this.isRunning}}
+              <span class="loader is-inline-block"></span>
+            {{else}}
+              {{this.confirmButtonText}}
+            {{/if}}
           </button>
           <button type="button" class="link" data-test-confirm-cancel-button="true" {{action d.actions.close}}>
             {{this.cancelButtonText}}

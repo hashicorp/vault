@@ -56,14 +56,26 @@ export default class KeymgmtKeyEdit extends Component {
       yield model.save();
       this.router.transitionTo(SHOW_ROUTE, model.name);
     } catch (error) {
-      this.flashMessages.danger(error.errors.join('. '));
+      let errorMessage = error;
+      if (error.errors) {
+        // if errors come directly from API they will be in this shape
+        errorMessage = error.errors.join('. ');
+      }
+      this.flashMessages.danger(errorMessage);
+      if (!error.errors) {
+        // If error was custom from save, only partial fail
+        // so it's safe to show the key
+        this.router.transitionTo(SHOW_ROUTE, model.name);
+      }
     }
   }
 
-  @action
-  async removeKey() {
+  @task
+  @waitFor
+  *removeKey() {
     try {
-      await this.keyAdapter.removeFromProvider(this.args.model);
+      yield this.keyAdapter.removeFromProvider(this.args.model);
+      yield this.args.model.reload();
       this.flashMessages.success('Key has been successfully removed from provider');
     } catch (error) {
       this.flashMessages.danger(error.errors?.join('. '));
@@ -84,11 +96,13 @@ export default class KeymgmtKeyEdit extends Component {
       });
   }
 
-  @action
-  rotateKey(id) {
-    const backend = this.args.model.get('backend');
+  @task
+  @waitFor
+  *rotateKey() {
+    const id = this.args.model.name;
+    const backend = this.args.model.backend;
     const adapter = this.keyAdapter;
-    adapter
+    yield adapter
       .rotateKey(backend, id)
       .then(() => {
         this.flashMessages.success(`Success: ${id} connection was rotated`);

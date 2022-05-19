@@ -45,7 +45,7 @@ export default class KeymgmtProviderModel extends Model {
     label: 'Type',
     subText: 'Choose the provider type.',
     possibleValues: ['azurekeyvault', 'awskms', 'gcpckms'],
-    defaultValue: 'azurekeyvault',
+    noDefault: true,
   })
   provider;
 
@@ -54,8 +54,6 @@ export default class KeymgmtProviderModel extends Model {
     subText: 'The name of a Key Vault instance must be supplied. This cannot be edited later.',
   })
   keyCollection;
-
-  @attr('date') created;
 
   idPrefix = 'provider/';
   type = 'provider';
@@ -78,7 +76,7 @@ export default class KeymgmtProviderModel extends Model {
     }[this.provider];
   }
   get showFields() {
-    const attrs = expandAttributeMeta(this, ['name', 'created', 'keyCollection']);
+    const attrs = expandAttributeMeta(this, ['name', 'keyCollection']);
     attrs.splice(1, 0, { hasBlock: true, label: 'Type', value: this.typeName, icon: this.icon });
     const l = this.keys.length;
     const value = l
@@ -90,13 +88,18 @@ export default class KeymgmtProviderModel extends Model {
     return attrs;
   }
   get credentialProps() {
+    if (!this.provider) return [];
     return CRED_PROPS[this.provider];
   }
   get credentialFields() {
     const [creds, fields] = this.credentialProps.reduce(
       ([creds, fields], prop) => {
         creds[prop] = null;
-        fields.push({ name: `credentials.${prop}`, type: 'string', options: { label: prop } });
+        let field = { name: `credentials.${prop}`, type: 'string', options: { label: prop } };
+        if (prop === 'service_account_file') {
+          field.options.subText = 'The path to a Google service account key file, not the file itself.';
+        }
+        fields.push(field);
         return [creds, fields];
       },
       [{}, []]
@@ -109,7 +112,10 @@ export default class KeymgmtProviderModel extends Model {
   }
 
   async fetchKeys(page) {
-    if (this.canListKeys) {
+    if (this.canListKeys === false) {
+      this.keys = [];
+    } else {
+      // try unless capabilities returns false
       try {
         this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
           backend: 'keymgmt',
@@ -123,8 +129,6 @@ export default class KeymgmtProviderModel extends Model {
           throw error;
         }
       }
-    } else {
-      this.keys = [];
     }
   }
 
