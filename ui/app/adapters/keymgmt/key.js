@@ -1,5 +1,6 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import ControlGroupError from '../../lib/control-group-error';
 
 function pickKeys(obj, picklist) {
   const data = {};
@@ -68,8 +69,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     if (snapshot.attr('deletionAllowed')) {
       try {
         await this._updateKey(backend, name, data);
-      } catch (e) {
-        // TODO: Test how this works with UI
+      } catch {
         throw new Error(`Key ${name} was created, but not all settings were saved`);
       }
     }
@@ -110,7 +110,6 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
       } else if (e.httpStatus === 403) {
         return { permissionsError: true };
       }
-      // TODO: handle control group
       throw e;
     }
   }
@@ -124,8 +123,10 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
           purposeArray: res.data.purpose.split(','),
         };
       })
-      .catch(() => {
-        // TODO: handle control group
+      .catch((e) => {
+        if (e instanceof ControlGroupError) {
+          throw e;
+        }
         return null;
       });
   }
