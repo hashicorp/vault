@@ -202,8 +202,8 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	if usernameAsAlias {
 		return username, policies, ldapResponse, allGroups, nil
 	}
-	
-	entityAliasAttribute, err = ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
+
+	entityAliasAttribute, err := ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
 	if err != nil {
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
