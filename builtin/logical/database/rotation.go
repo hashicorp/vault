@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -125,15 +124,36 @@ func (b *databaseBackend) runTicker(ctx context.Context, queueTickInterval time.
 // setCredentialsWAL is used to store information in a WAL that can retry a
 // credential setting or rotation in the event of partial failure.
 type setCredentialsWAL struct {
-	NewPassword string `json:"new_password"`
-	RoleName    string `json:"role_name"`
-	Username    string `json:"username"`
+	CredentialType v5.CredentialType `json:"credential_type"`
+	NewPassword    string            `json:"new_password"`
+	NewPublicKey   []byte            `json:"new_public_key"`
+	NewPrivateKey  []byte            `json:"new_private_key"`
+	RoleName       string            `json:"role_name"`
+	Username       string            `json:"username"`
 
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 
 	// Private fields which will not be included in json.Marshal/Unmarshal.
 	walID        string
 	walCreatedAt int64 // Unix time at which the WAL was created.
+}
+
+// credentialIsSet returns true if the credential associated with the
+// CredentialType field is properly set. See field comments to for a
+// mapping of CredentialType values to respective credential fields.
+func (w *setCredentialsWAL) credentialIsSet() bool {
+	if w == nil {
+		return false
+	}
+
+	switch w.CredentialType {
+	case v5.CredentialTypePassword:
+		return w.NewPassword != ""
+	case v5.CredentialTypeRSAPrivateKey:
+		return len(w.NewPublicKey) > 0
+	default:
+		return false
+	}
 }
 
 // rotateCredentials sets a new password for a static account. This method is
@@ -287,16 +307,17 @@ type setStaticAccountOutput struct {
 	WALID string
 }
 
-// setStaticAccount sets the password for a static account associated with a
+// setStaticAccount sets the credential for a static account associated with a
 // Role. This method does many things:
 // - verifies role exists and is in the allowed roles list
 // - loads an existing WAL entry if WALID input is given, otherwise creates a
 // new WAL entry
 // - gets a database connection
-// - accepts an input password, otherwise generates a new one via gRPC to the
-// database plugin
-// - sets new password for the static account
-// - uses WAL for ensuring passwords are not lost if storage to Vault fails
+// - accepts an input credential, otherwise generates a new one for
+//   the role's credential type
+// - sets new credential for the static account
+// - uses WAL for ensuring new credentials are not lost if storage to Vault fails,
+//   resulting in a partial failure.
 //
 // This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
@@ -321,6 +342,12 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		return output, fmt.Errorf("%q is not an allowed role", input.RoleName)
 	}
 
+	// If the plugin doesn't support the credential type, return an error
+	if !dbConfig.SupportsCredentialType(input.Role.CredentialType) {
+		return output, fmt.Errorf("unsupported credential_type: %q",
+			input.Role.CredentialType.String())
+	}
+
 	// Get the Database object
 	dbi, err := b.GetConnection(ctx, s, input.Role.DBName)
 	if err != nil {
@@ -330,61 +357,122 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	dbi.RLock()
 	defer dbi.RUnlock()
 
-	// Use password from input if available. This happens if we're restoring from
+	updateReq := v5.UpdateUserRequest{
+		Username: input.Role.StaticAccount.Username,
+	}
+	statements := v5.Statements{
+		Commands: input.Role.Statements.Rotation,
+	}
+
+	// Use credential from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
-	var newPassword string
 	if output.WALID != "" {
 		wal, err := b.findStaticWAL(ctx, s, output.WALID)
 		if err != nil {
-			return output, errwrap.Wrapf("error retrieving WAL entry: {{err}}", err)
+			return output, fmt.Errorf("error retrieving WAL entry: %w", err)
 		}
-
 		switch {
-		case wal != nil && wal.NewPassword != "":
-			newPassword = wal.NewPassword
-		default:
-			if wal == nil {
-				b.Logger().Error("expected role to have WAL, but WAL not found in storage", "role", input.RoleName, "WAL ID", output.WALID)
-			} else {
-				b.Logger().Error("expected WAL to have a new password set, but empty", "role", input.RoleName, "WAL ID", output.WALID)
-				err = framework.DeleteWAL(ctx, s, output.WALID)
-				if err != nil {
-					b.Logger().Warn("failed to delete WAL with no new password", "error", err, "WAL ID", output.WALID)
-				}
-			}
-			// If there's anything wrong with the WAL in storage, we'll need
-			// to generate a fresh WAL and password
+		case wal == nil:
+			b.Logger().Error("expected role to have WAL, but WAL not found in storage", "role", input.RoleName, "WAL ID", output.WALID)
+
+			// Generate a new WAL entry and credential
 			output.WALID = ""
+		case !wal.credentialIsSet():
+			b.Logger().Error("expected WAL to have a new credential set, but empty", "role", input.RoleName, "WAL ID", output.WALID)
+			if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
+				b.Logger().Warn("failed to delete WAL with no new credential", "error", err, "WAL ID", output.WALID)
+			}
+
+			// Generate a new WAL entry and credential
+			output.WALID = ""
+		case wal.CredentialType == v5.CredentialTypePassword:
+			// Roll forward by using the credential in the existing WAL entry
+			updateReq.CredentialType = v5.CredentialTypePassword
+			updateReq.Password = &v5.ChangePassword{
+				NewPassword: wal.NewPassword,
+				Statements:  statements,
+			}
+			input.Role.StaticAccount.Password = wal.NewPassword
+		case wal.CredentialType == v5.CredentialTypeRSAPrivateKey:
+			// Roll forward by using the credential in the existing WAL entry
+			updateReq.CredentialType = v5.CredentialTypeRSAPrivateKey
+			updateReq.PublicKey = &v5.ChangePublicKey{
+				NewPublicKey: wal.NewPublicKey,
+				Statements:   statements,
+			}
+			input.Role.StaticAccount.PrivateKey = wal.NewPrivateKey
 		}
 	}
 
+	// Generate a new credential
 	if output.WALID == "" {
-		newPassword, err = dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
-		if err != nil {
-			return output, err
-		}
-		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, &setCredentialsWAL{
+		walEntry := &setCredentialsWAL{
 			RoleName:          input.RoleName,
 			Username:          input.Role.StaticAccount.Username,
-			NewPassword:       newPassword,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
-		})
+		}
+
+		switch input.Role.CredentialType {
+		case v5.CredentialTypePassword:
+			generator, err := newPasswordGenerator(input.Role.CredentialConfig)
+			if err != nil {
+				return output, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Fall back to database config-level password policy if not set on role
+			if generator.PasswordPolicy == "" {
+				generator.PasswordPolicy = dbConfig.PasswordPolicy
+			}
+
+			// Generate the password
+			newPassword, err := generator.generate(ctx, b, dbi.database)
+			if err != nil {
+				b.CloseIfShutdown(dbi, err)
+				return output, fmt.Errorf("failed to generate password: %s", err)
+			}
+
+			// Set new credential in WAL entry and update user request
+			walEntry.NewPassword = newPassword
+			updateReq.CredentialType = v5.CredentialTypePassword
+			updateReq.Password = &v5.ChangePassword{
+				NewPassword: newPassword,
+				Statements:  statements,
+			}
+
+			// Set new credential in static account
+			input.Role.StaticAccount.Password = newPassword
+		case v5.CredentialTypeRSAPrivateKey:
+			generator, err := newRSAKeyGenerator(input.Role.CredentialConfig)
+			if err != nil {
+				return output, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Generate the RSA key pair
+			public, private, err := generator.generate(b.GetRandomReader())
+			if err != nil {
+				return output, fmt.Errorf("failed to generate RSA key pair: %s", err)
+			}
+
+			// Set new credential in WAL entry and update user request
+			walEntry.NewPublicKey = public
+			updateReq.CredentialType = v5.CredentialTypeRSAPrivateKey
+			updateReq.PublicKey = &v5.ChangePublicKey{
+				NewPublicKey: public,
+				Statements:   statements,
+			}
+
+			// Set new credential in static account
+			input.Role.StaticAccount.PrivateKey = private
+		}
+
+		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, walEntry)
 		if err != nil {
 			return output, fmt.Errorf("error writing WAL entry: %w", err)
 		}
 		b.Logger().Debug("writing WAL", "role", input.RoleName, "WAL ID", output.WALID)
 	}
 
-	updateReq := v5.UpdateUserRequest{
-		Username: input.Role.StaticAccount.Username,
-		Password: &v5.ChangePassword{
-			NewPassword: newPassword,
-			Statements: v5.Statements{
-				Commands: input.Role.Statements.Rotation,
-			},
-		},
-	}
 	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		b.CloseIfShutdown(dbi, err)
@@ -395,7 +483,6 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// lvr is the known LastVaultRotation
 	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
-	input.Role.StaticAccount.Password = newPassword
 	output.RotationTime = lvr
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)

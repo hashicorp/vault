@@ -53,6 +53,9 @@ type PolicyRequest struct {
 
 	// How frequently the key should automatically rotate
 	AutoRotatePeriod time.Duration
+
+	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
+	AllowImportedKeyRotation bool
 }
 
 type LockManager struct {
@@ -437,6 +440,62 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 	retP = p
 	cleanup()
 	return
+}
+
+func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key []byte, rand io.Reader) error {
+	var p *Policy
+	var err error
+	var ok bool
+	var pRaw interface{}
+
+	// Check if it's in our cache
+	if lm.useCache {
+		pRaw, ok = lm.cache.Load(req.Name)
+	}
+	if ok {
+		p = pRaw.(*Policy)
+		if atomic.LoadUint32(&p.deleted) == 1 {
+			return nil
+		}
+	}
+
+	// We're not using the cache, or it wasn't found; get an exclusive lock.
+	// This ensures that any other process writing the actual storage will be
+	// finished before we load from storage.
+	lock := locksutil.LockForKey(lm.keyLocks, req.Name)
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Load it from storage
+	p, err = lm.getPolicyFromStorage(ctx, req.Storage, req.Name)
+	if err != nil {
+		return err
+	}
+
+	if p == nil {
+		p = &Policy{
+			l:                        new(sync.RWMutex),
+			Name:                     req.Name,
+			Type:                     req.KeyType,
+			Derived:                  req.Derived,
+			Exportable:               req.Exportable,
+			AllowPlaintextBackup:     req.AllowPlaintextBackup,
+			AutoRotatePeriod:         req.AutoRotatePeriod,
+			AllowImportedKeyRotation: req.AllowImportedKeyRotation,
+			Imported:                 true,
+		}
+	}
+
+	err = p.Import(ctx, req.Storage, key, rand)
+	if err != nil {
+		return fmt.Errorf("error importing key: %s", err)
+	}
+
+	if lm.useCache {
+		lm.cache.Store(req.Name, p)
+	}
+
+	return nil
 }
 
 func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage, name string) error {

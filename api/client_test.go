@@ -490,6 +490,7 @@ func TestClone(t *testing.T) {
 			parent.SetLimiter(5.0, 10)
 			parent.SetMaxRetries(5)
 			parent.SetOutputCurlString(true)
+			parent.SetOutputPolicy(true)
 			parent.SetSRVLookup(true)
 
 			if tt.headers != nil {

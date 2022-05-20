@@ -9,7 +9,9 @@ description: >-
 
 You can use this Helm chart to deploy Vault Enterprise by following a few extra steps around licensing.
 
-~> **Note:** As of Vault Enterprise 1.8, the license must be specified via HCL configuration or environment variables on startup, unless the Vault cluster was created with an older Vault version and the license was stored, or the Vault Enterprise binary has the license baked in (`prem` or `pro` version tags). More information is available in the [Vault Enterprise License docs](/docs/enterprise/license).
+~> **Note:** As of Vault Enterprise 1.8, the license must be specified via HCL configuration or environment variables on startup, unless the Vault cluster was created with an older Vault version and the license was stored. More information is available in the [Vault Enterprise License docs](/docs/enterprise/license).
+
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
 
 ## Vault Enterprise 1.8+
 
@@ -31,7 +33,7 @@ In your chart overrides, set the values of [`server.image`](/docs/platform/k8s/h
 server:
   image:
     repository: hashicorp/vault-enterprise
-    tag: 1.9.2-ent
+    tag: 1.10.3-ent
   enterpriseLicense:
     secretName: vault-ent-license
 ```

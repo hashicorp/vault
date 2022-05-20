@@ -20,14 +20,22 @@ func (b *RaftBackend) AddNonVotingPeer(ctx context.Context, peerID, clusterAddr 
 	return errors.New("adding non voting peer is not allowed")
 }
 
-func autopilotToAPIServerEnterprise(_ *autopilot.ServerState, _ *AutopilotServer) {
-	// noop in oss
+func autopilotToAPIServerEnterprise(_ *autopilot.Server, _ *AutopilotServer) error {
+	return nil
+}
+
+func autopilotToAPIStateEnterprise(_ *autopilot.State, _ *AutopilotState) error {
+	return nil
 }
 
 func (d *Delegate) autopilotConfigExt() interface{} {
 	return nil
 }
 
-func (d *Delegate) autopilotServerExt(_ string) interface{} {
+func (d *Delegate) autopilotServerExt(_ *FollowerState) interface{} {
+	return nil
+}
+
+func (d *Delegate) meta(_ *FollowerState) map[string]string {
 	return nil
 }

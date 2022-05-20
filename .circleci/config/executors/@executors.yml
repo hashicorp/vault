@@ -1,5 +1,6 @@
 go-machine:
-  machine: true
+  machine:
+    image: ubuntu-2004:202201-02
   shell: /usr/bin/env bash -euo pipefail -c
   environment:
     CIRCLECI_CLI_VERSION: 0.1.18556  # Pin CircleCI CLI to patch version (ex: 1.2.3)

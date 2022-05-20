@@ -13,23 +13,25 @@ import { inject as service } from '@ember/service';
  *    @chartLegend={{this.chartLegend}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
  *    @newUsageCounts={{this.newUsageCounts}}
- *    @totalClientsData={{this.totalClientsData}}
- *    @newClientsData={{this.newClientsData}}
+ *    @totalClientAttribution={{this.totalClientAttribution}}
+ *    @newClientAttribution={{this.newClientAttribution}}
  *    @selectedNamespace={{this.selectedNamespace}}
  *    @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
  *    @isDateRange={{this.isDateRange}}
+ *    @isCurrentMonth={{false}}
  *    @timestamp={{this.responseTimestamp}}
  *  />
  * ```
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {object} newUsageCounts - object with new client counts for chart tooltip text
- * @param {array} totalClientsData - array of objects containing a label and breakdown of client counts for total clients
- * @param {array} newClientsData - array of objects containing a label and breakdown of client counts for new clients
+ * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
+ * @param {array} newClientAttribution - array of objects containing a label and breakdown of client counts for new clients
  * @param {string} selectedNamespace - namespace selected from filter bar
  * @param {string} startTimeDisplay - string that displays as start date for CSV modal
  * @param {string} endTimeDisplay - string that displays as end date for CSV modal
- * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month
+ * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month and display text accordingly
+ * @param {boolean} isCurrentMonth - boolean to determine if rendered in current month tab or not
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  */
 
@@ -38,14 +40,15 @@ export default class Attribution extends Component {
   @service downloadCsv;
 
   get hasCsvData() {
-    return this.args.totalClientsData ? this.args.totalClientsData.length > 0 : false;
+    return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
   }
+
   get isDateRange() {
     return this.args.isDateRange;
   }
 
   get isSingleNamespace() {
-    if (!this.args.totalClientsData) {
+    if (!this.args.totalClientAttribution) {
       return 'no data';
     }
     // if a namespace is selected, then we're viewing top 10 auth methods (mounts)
@@ -53,18 +56,17 @@ export default class Attribution extends Component {
   }
 
   // truncate data before sending to chart component
-  // move truncating to serializer when we add separate request to fetch and export ALL namespace data
   get barChartTotalClients() {
-    return this.args.totalClientsData?.slice(0, 10);
+    return this.args.totalClientAttribution?.slice(0, 10);
   }
 
   get barChartNewClients() {
-    return this.args.newClientsData?.slice(0, 10);
+    return this.args.newClientAttribution?.slice(0, 10);
   }
 
   get topClientCounts() {
     // get top namespace or auth method
-    return this.args.totalClientsData ? this.args.totalClientsData[0] : null;
+    return this.args.totalClientAttribution ? this.args.totalClientAttribution[0] : null;
   }
 
   get attributionBreakdown() {
@@ -103,9 +105,28 @@ export default class Attribution extends Component {
     }
   }
 
-  get getCsvData() {
+  destructureCountsToArray(object) {
+    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, clients: 191}
+    // to get integers for CSV file
+    let { clients, entity_clients, non_entity_clients } = object;
+    return [clients, entity_clients, non_entity_clients];
+  }
+
+  constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
+    // if namespaceColumn is a string, then we're at mount level attribution, otherwise it is an object
+    // if constructing a namespace row, mountColumn=null so the column is blank, otherwise it is an object
+    let otherColumns = newColumns ? [...totalColumns, ...newColumns] : [...totalColumns];
+    return [
+      `${typeof namespaceColumn === 'string' ? namespaceColumn : namespaceColumn.label}`,
+      `${mountColumn ? mountColumn.label : ''}`,
+      ...otherColumns,
+    ];
+  }
+
+  generateCsvData() {
+    const totalAttribution = this.args.totalClientAttribution;
+    const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;
     let csvData = [],
-      graphData = this.args.totalClientsData,
       csvHeader = [
         'Namespace path',
         'Authentication method',
@@ -114,24 +135,41 @@ export default class Attribution extends Component {
         'Non-entity clients',
       ];
 
-    // each array will be a row in the csv file
-    if (this.isSingleNamespace) {
-      graphData.forEach((mount) => {
-        csvData.push(['', mount.label, mount.clients, mount.entity_clients, mount.non_entity_clients]);
-      });
-      csvData.forEach((d) => (d[0] = this.args.selectedNamespace));
-    } else {
-      graphData.forEach((ns) => {
-        csvData.push([ns.label, '', ns.clients, ns.entity_clients, ns.non_entity_clients]);
-        if (ns.mounts) {
-          ns.mounts.forEach((m) => {
-            csvData.push([ns.label, m.label, m.clients, m.entity_clients, m.non_entity_clients]);
-          });
-        }
-      });
+    if (newAttribution) {
+      csvHeader = [...csvHeader, 'Total new clients, New entity clients, New non-entity clients'];
     }
+
+    totalAttribution.forEach((totalClientsObject) => {
+      let namespace = this.isSingleNamespace ? this.args.selectedNamespace : totalClientsObject;
+      let mount = this.isSingleNamespace ? totalClientsObject : null;
+
+      // find new client data for namespace/mount object we're iterating over
+      let newClientsObject = newAttribution
+        ? newAttribution.find((d) => d.label === totalClientsObject.label)
+        : null;
+
+      let totalClients = this.destructureCountsToArray(totalClientsObject);
+      let newClients = newClientsObject ? this.destructureCountsToArray(newClientsObject) : null;
+
+      csvData.push(this.constructCsvRow(namespace, mount, totalClients, newClients));
+      // constructCsvRow returns an array that corresponds to a row in the csv file:
+      // ['ns label', 'mount label', total client #, entity #, non-entity #, ...new client #'s]
+
+      // only iterate through mounts if NOT viewing a single namespace
+      if (!this.isSingleNamespace && namespace.mounts) {
+        namespace.mounts.forEach((mount) => {
+          let newMountData = newAttribution
+            ? newClientsObject?.mounts.find((m) => m.label === mount.label)
+            : null;
+          let mountTotalClients = this.destructureCountsToArray(mount);
+          let mountNewClients = newMountData ? this.destructureCountsToArray(newMountData) : null;
+          csvData.push(this.constructCsvRow(namespace, mount, mountTotalClients, mountNewClients));
+        });
+      }
+    });
+
     csvData.unshift(csvHeader);
-    // make each nested array a comma separated string, join each array in csvData with line break (\n)
+    // make each nested array a comma separated string, join each array "row" in csvData with line break (\n)
     return csvData.map((d) => d.join()).join('\n');
   }
 
@@ -145,7 +183,8 @@ export default class Attribution extends Component {
 
   // ACTIONS
   @action
-  exportChartData(filename, contents) {
+  exportChartData(filename) {
+    let contents = this.generateCsvData();
     this.downloadCsv.download(filename, contents);
     this.showCSVDownloadModal = false;
   }
