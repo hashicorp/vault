@@ -9,8 +9,7 @@
   {{else}}
     <div class="list-item-row">
       <div class="center-display">
-        {{! template-lint-disable no-curly-component-invocation }}
-        {{qr-code text=@qrCode colorLight="#F7F7F7" width=155 height=155 correctLevel="L"}}
+        <QrCode @text={{@qrCode}} @colorLight="#F7F7F7" @width={{155}} @height={{155}} @correctLevel="L" />
       </div>
     </div>
     <div class="has-top-margin-s">
