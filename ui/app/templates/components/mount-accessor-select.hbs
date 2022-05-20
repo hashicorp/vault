@@ -21,7 +21,14 @@
         {{/if}}
         {{#each this.authMethods.last.value as |method|}}
           {{! token type does not need to be authorized via MFA }}
-          {{#if (not-eq method.id "token")}}
+          {{#if this.filterToken}}
+            {{#if (not-eq method.id "token")}}
+              <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
+                {{method.path}}
+                ({{if this.showAccessor method.accessor method.type}})
+              </option>
+            {{/if}}
+          {{else}}
             <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
               {{method.path}}
               ({{if this.showAccessor method.accessor method.type}})
