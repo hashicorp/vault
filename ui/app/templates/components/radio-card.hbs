@@ -1,5 +1,5 @@
 <label
-  for="radio-card"
+  for={{@value}}
   class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
   ...attributes
 >
@@ -22,6 +22,7 @@
   {{/if}}
   <div class="radio-card-radio-row">
     <RadioButton
+      id={{@value}}
       name="config-mode"
       class="radio"
       disabled={{@disabled}}
