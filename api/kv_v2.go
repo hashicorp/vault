@@ -198,9 +198,9 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 	}
 
 	kvSecret := &KVSecret{
-		Data:     nil, // secret.Data in this case is the metadata
-		Metadata: metadata,
-		Raw:      secret,
+		Data:            nil, // secret.Data in this case is the metadata
+		VersionMetadata: metadata,
+		Raw:             secret,
 	}
 
 	err = kvSecret.addCustomMetadata(secret)
@@ -312,9 +312,9 @@ func extractDataAndVersionMetadata(secret *Secret) (*KVSecret, error) {
 	}
 
 	return &KVSecret{
-		Data:     data,
-		Metadata: metadata,
-		Raw:      secret,
+		Data:            data,
+		VersionMetadata: metadata,
+		Raw:             secret,
 	}, nil
 }
 

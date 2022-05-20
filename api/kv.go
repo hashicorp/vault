@@ -43,10 +43,10 @@ type kvv2 struct {
 // The Raw field can be inspected for information about the lease,
 // and passed to a LifetimeWatcher object for periodic renewal.
 type KVSecret struct {
-	Data           map[string]interface{}
-	Metadata       *KVVersionMetadata
-	CustomMetadata map[string]interface{}
-	Raw            *Secret
+	Data            map[string]interface{}
+	VersionMetadata *KVVersionMetadata
+	CustomMetadata  map[string]interface{}
+	Raw             *Secret
 }
 
 // KVv1 is used to return the client for API calls

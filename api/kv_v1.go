@@ -20,9 +20,9 @@ func (kv *kvv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 	}
 
 	return &KVSecret{
-		Data:     secret.Data,
-		Metadata: nil,
-		Raw:      secret,
+		Data:            secret.Data,
+		VersionMetadata: nil,
+		Raw:             secret,
 	}, nil
 }
 

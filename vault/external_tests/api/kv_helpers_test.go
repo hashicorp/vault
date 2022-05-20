@@ -75,7 +75,7 @@ func TestKVHelpers(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if writtenSecret == nil || writtenSecret.Metadata == nil {
+		if writtenSecret == nil || writtenSecret.VersionMetadata == nil {
 			t.Fatal("kv v2 secret did not have expected contents")
 		}
 
@@ -86,8 +86,8 @@ func TestKVHelpers(t *testing.T) {
 		if secret.Data["foo"] != "bar" {
 			t.Fatal("kv v2 secret did not contain expected value")
 		}
-		if secret.Metadata.CreatedTime != writtenSecret.Metadata.CreatedTime {
-			t.Fatal("the created_time on the secret did not match the response from when it was written")
+		if secret.VersionMetadata.CreatedTime != writtenSecret.VersionMetadata.CreatedTime {
+			t.Fatal("the created_time on the secret did not match the response from when it was created")
 		}
 
 		// get its full metadata
@@ -114,8 +114,8 @@ func TestKVHelpers(t *testing.T) {
 		if s2.Data["foo"] != "baz" {
 			t.Fatalf("second version of secret did not have expected contents")
 		}
-		if s2.Metadata.Version != 2 {
-			t.Fatalf("wrong version of kv v2 secret was read, expected 2 but got %d", s2.Metadata.Version)
+		if s2.VersionMetadata.Version != 2 {
+			t.Fatalf("wrong version of kv v2 secret was read, expected 2 but got %d", s2.VersionMetadata.Version)
 		}
 
 		// get a specific past version
@@ -123,8 +123,8 @@ func TestKVHelpers(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if s1.Metadata.Version != 1 {
-			t.Fatalf("wrong version of kv v2 secret was read, expected 1 but got %d", s1.Metadata.Version)
+		if s1.VersionMetadata.Version != 1 {
+			t.Fatalf("wrong version of kv v2 secret was read, expected 1 but got %d", s1.VersionMetadata.Version)
 		}
 
 		// delete that version
@@ -137,7 +137,7 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if s1AfterDelete.Metadata.DeletionTime.IsZero() {
+		if s1AfterDelete.VersionMetadata.DeletionTime.IsZero() {
 			t.Fatalf("the deletion_time in the first version of the secret was not updated")
 		}
 
@@ -149,9 +149,21 @@ func TestKVHelpers(t *testing.T) {
 		_, err = client.KVv2("secret-v2").Put(context.Background(), "value", map[string]interface{}{
 			"meow": "woof",
 		}, api.WithCheckAndSet(99))
-
 		if err == nil {
 			t.Fatalf("expected error from trying to update different version from check-and-set value")
+		}
+
+		versions, err := client.KVv2("secret-v2").GetVersionsAsList(context.Background(), "value")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(versions) != 2 {
+			t.Fatalf("expected there to be 2 versions of the secret but got %d", len(versions))
+		}
+
+		if versions[0].Version != 1 {
+			t.Fatalf("incorrect value for version; expected 1 but got %d", versions[0].Version)
 		}
 	})
 }
