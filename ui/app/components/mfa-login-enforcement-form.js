@@ -1,7 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { methods } from 'vault/helpers/mountable-auth-methods';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
@@ -32,7 +31,6 @@ export default class MfaLoginEnforcementForm extends Component {
     { label: 'Group', type: 'identity/group', key: 'identity_groups' },
     { label: 'Entity', type: 'identity/entity', key: 'identity_entities' },
   ];
-  authMethods = methods();
   searchSelectOptions = null;
 
   @tracked name;
@@ -43,6 +41,7 @@ export default class MfaLoginEnforcementForm extends Component {
     options: [],
     selected: [],
   };
+  @tracked authMethods = [];
   @tracked modelErrors;
 
   constructor() {
@@ -51,6 +50,8 @@ export default class MfaLoginEnforcementForm extends Component {
     this.flattenTargets();
     // eagerly fetch identity groups and entities for use as search select options
     this.resetTargetState();
+    // only auth method types that have mounts can be selected as targets -- fetch from sys/auth and map by type
+    this.fetchAuthMethods();
   }
 
   async flattenTargets() {
@@ -80,6 +81,10 @@ export default class MfaLoginEnforcementForm extends Component {
         options: [...options[this.selectedTargetType]],
       };
     }
+  }
+  async fetchAuthMethods() {
+    const mounts = (await this.store.findAll('auth-method')).toArray();
+    this.authMethods = mounts.mapBy('type');
   }
 
   get selectedTarget() {
