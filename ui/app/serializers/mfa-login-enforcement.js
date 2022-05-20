@@ -3,7 +3,7 @@ import ApplicationSerializer from './application';
 export default class MfaLoginEnforcementSerializer extends ApplicationSerializer {
   primaryKey = 'name';
 
-  // change keys for hasMany relationships with ids in the name
+  // Return data with updated keys for hasMany relationships with ids in the name
   transformHasManyKeys(data, destination) {
     const keys = {
       model: ['mfa_methods', 'identity_entities', 'identity_groups'],
@@ -13,6 +13,7 @@ export default class MfaLoginEnforcementSerializer extends ApplicationSerializer
       const oldKey = destination === 'model' ? keys.server[index] : keys.model[index];
       delete Object.assign(data, { [newKey]: data[oldKey] })[oldKey];
     });
+    return data;
   }
   normalize(model, data) {
     this.transformHasManyKeys(data, 'model');
@@ -30,7 +31,6 @@ export default class MfaLoginEnforcementSerializer extends ApplicationSerializer
   }
   serialize() {
     const json = super.serialize(...arguments);
-    this.transformHasManyKeys(json, 'server');
-    return json;
+    return this.transformHasManyKeys(json, 'server');
   }
 }
