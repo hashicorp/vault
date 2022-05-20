@@ -608,7 +608,7 @@ func (c *Client) CloneConfig() *Config {
 	return newConfig
 }
 
-// Sets the address of Vault in the client. The format of address should be
+// SetAddress sets the address of Vault in the client. The format of address should be
 // "<Scheme>://<Host>:<Port>". Setting this on a client will override the
 // value of VAULT_ADDR environment variable.
 func (c *Client) SetAddress(addr string) error {
@@ -633,6 +633,16 @@ func (c *Client) Address() string {
 	defer c.modifyLock.RUnlock()
 
 	return c.addr.String()
+}
+
+func (c *Client) SetCheckRedirect(f func(*http.Request, []*http.Request) error) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.CheckRedirect = f
 }
 
 // SetLimiter will set the rate limiter for this client.

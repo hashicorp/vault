@@ -171,29 +171,24 @@ func formatServer(srv *api.AutopilotServer) string {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(fmt.Sprintf("   %s\n", srv.ID))
-	buffer.WriteString(fmt.Sprintf("      Name:            %s\n", srv.Name))
-	buffer.WriteString(fmt.Sprintf("      Address:         %s\n", srv.Address))
-	buffer.WriteString(fmt.Sprintf("      Status:          %s\n", srv.Status))
-	buffer.WriteString(fmt.Sprintf("      Node Status:     %s\n", srv.NodeStatus))
-	buffer.WriteString(fmt.Sprintf("      Healthy:         %t\n", srv.Healthy))
-	buffer.WriteString(fmt.Sprintf("      Last Contact:    %s\n", srv.LastContact))
-	buffer.WriteString(fmt.Sprintf("      Last Term:       %d\n", srv.LastTerm))
-	buffer.WriteString(fmt.Sprintf("      Last Index:      %d\n", srv.LastIndex))
+	buffer.WriteString(fmt.Sprintf("      Name:              %s\n", srv.Name))
+	buffer.WriteString(fmt.Sprintf("      Address:           %s\n", srv.Address))
+	buffer.WriteString(fmt.Sprintf("      Status:            %s\n", srv.Status))
+	buffer.WriteString(fmt.Sprintf("      Node Status:       %s\n", srv.NodeStatus))
+	buffer.WriteString(fmt.Sprintf("      Healthy:           %t\n", srv.Healthy))
+	buffer.WriteString(fmt.Sprintf("      Last Contact:      %s\n", srv.LastContact))
+	buffer.WriteString(fmt.Sprintf("      Last Term:         %d\n", srv.LastTerm))
+	buffer.WriteString(fmt.Sprintf("      Last Index:        %d\n", srv.LastIndex))
+	buffer.WriteString(fmt.Sprintf("      Version:           %s\n", srv.Version))
 
-	if len(srv.Meta) > 0 {
-		buffer.WriteString("      Meta\n")
-		var outputs []mapOutput
-		for k, v := range srv.Meta {
-			outputs = append(outputs, mapOutput{key: k, value: fmt.Sprintf("         %q: %q\n", k, v)})
-		}
-
-		sort.Slice(outputs, func(i, j int) bool {
-			return outputs[i].key < outputs[j].key
-		})
-
-		for _, output := range outputs {
-			buffer.WriteString(output.value)
-		}
+	if srv.UpgradeVersion != "" {
+		buffer.WriteString(fmt.Sprintf("      Upgrade Version:   %s\n", srv.UpgradeVersion))
+	}
+	if srv.RedundancyZone != "" {
+		buffer.WriteString(fmt.Sprintf("      Redundancy Zone:   %s\n", srv.RedundancyZone))
+	}
+	if srv.NodeType != "" {
+		buffer.WriteString(fmt.Sprintf("      Node Type:         %s\n", srv.NodeType))
 	}
 
 	return buffer.String()
@@ -203,9 +198,9 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 	state := data.(*api.AutopilotState)
 
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Healthy:                      %t\n", state.Healthy))
-	buffer.WriteString(fmt.Sprintf("Failure Tolerance:            %d\n", state.FailureTolerance))
-	buffer.WriteString(fmt.Sprintf("Leader:                       %s\n", state.Leader))
+	buffer.WriteString(fmt.Sprintf("Healthy:                         %t\n", state.Healthy))
+	buffer.WriteString(fmt.Sprintf("Failure Tolerance:               %d\n", state.FailureTolerance))
+	buffer.WriteString(fmt.Sprintf("Leader:                          %s\n", state.Leader))
 	buffer.WriteString("Voters:\n")
 	outputStringSlice(&buffer, "   ", state.Voters)
 
@@ -214,18 +209,64 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 		outputStringSlice(&buffer, "   ", state.NonVoters)
 	}
 
+	if state.OptimisticFailureTolerance > 0 {
+		buffer.WriteString(fmt.Sprintf("Optimistic Failure Tolerance:    %d\n", state.OptimisticFailureTolerance))
+	}
+
+	// Servers
 	buffer.WriteString("Servers:\n")
 	var outputs []mapOutput
 	for id, srv := range state.Servers {
 		outputs = append(outputs, mapOutput{key: id, value: formatServer(srv)})
 	}
-
 	sort.Slice(outputs, func(i, j int) bool {
 		return outputs[i].key < outputs[j].key
 	})
-
 	for _, output := range outputs {
 		buffer.WriteString(output.value)
+	}
+
+	// Redundancy Zones
+	if len(state.RedundancyZones) > 0 {
+		buffer.WriteString("Redundancy Zones:\n")
+		zoneList := make([]string, 0, len(state.RedundancyZones))
+		for z := range state.RedundancyZones {
+			zoneList = append(zoneList, z)
+		}
+		sort.Strings(zoneList)
+		for _, zoneName := range zoneList {
+			zone := state.RedundancyZones[zoneName]
+			servers := zone.Servers
+			voters := zone.Voters
+			sort.Strings(servers)
+			sort.Strings(voters)
+			buffer.WriteString(fmt.Sprintf("   %s\n", zoneName))
+			buffer.WriteString(fmt.Sprintf("      Servers: %s\n", strings.Join(servers, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Voters: %s\n", strings.Join(voters, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Failure Tolerance: %d\n", zone.FailureTolerance))
+		}
+	}
+
+	// Upgrade Info
+	if state.Upgrade != nil {
+		buffer.WriteString("Upgrade Info:\n")
+		buffer.WriteString(fmt.Sprintf("   Status: %s\n", state.Upgrade.Status))
+		buffer.WriteString(fmt.Sprintf("   Target Version: %s\n", state.Upgrade.TargetVersion))
+		buffer.WriteString(fmt.Sprintf("   Target Version Voters: %s\n", strings.Join(state.Upgrade.TargetVersionVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Target Version Non-Voters: %s\n", strings.Join(state.Upgrade.TargetVersionNonVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Other Version Voters: %s\n", strings.Join(state.Upgrade.OtherVersionVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Other Version Non-Voters: %s\n", strings.Join(state.Upgrade.OtherVersionNonVoters, ", ")))
+
+		if len(state.Upgrade.RedundancyZones) > 0 {
+			buffer.WriteString("   Redundancy Zones:\n")
+			for zoneName, zoneVersion := range state.Upgrade.RedundancyZones {
+				buffer.WriteString(fmt.Sprintf("      %s\n", zoneName))
+				buffer.WriteString(fmt.Sprintf("         Target Version Voters: %s\n", strings.Join(zoneVersion.TargetVersionVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Target Version Non-Voters: %s\n", strings.Join(zoneVersion.TargetVersionNonVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Other Version Voters: %s\n", strings.Join(zoneVersion.OtherVersionVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Other Version Non-Voters: %s\n", strings.Join(zoneVersion.OtherVersionNonVoters, ", ")))
+			}
+		}
 	}
 
 	ui.Output(buffer.String())

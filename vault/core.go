@@ -892,6 +892,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		mountMigrationTracker:          &sync.Map{},
 		disableSSCTokens:               conf.DisableSSCTokens,
 	}
+
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
@@ -3252,7 +3253,10 @@ type PeerNode struct {
 	Hostname       string    `json:"hostname"`
 	APIAddress     string    `json:"api_address"`
 	ClusterAddress string    `json:"cluster_address"`
+	Version        string    `json:"version"`
 	LastEcho       time.Time `json:"last_echo"`
+	UpgradeVersion string    `json:"upgrade_version,omitempty"`
+	RedundancyZone string    `json:"redundancy_zone,omitempty"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -3265,6 +3269,9 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 			APIAddress:     info.nodeInfo.ApiAddr,
 			ClusterAddress: itemClusterAddr,
 			LastEcho:       info.lastHeartbeat,
+			Version:        info.version,
+			UpgradeVersion: info.upgradeVersion,
+			RedundancyZone: info.redundancyZone,
 		})
 	}
 	return nodes

@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -181,6 +181,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 	disableAutopilot := c.disableAutopilot
+
 	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
@@ -346,7 +347,12 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0, 0, "voter")
+			followerStates.Update(&raft.EchoRequestUpdate{
+				NodeID:          server.NodeID,
+				AppliedIndex:    0,
+				Term:            0,
+				DesiredSuffrage: "voter",
+			})
 		}
 	}
 
@@ -1018,7 +1024,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				if err == nil {
 					return
 				}
-				c.logger.Error("failed to retry join raft cluster", "retry", "2s")
+				c.logger.Error("failed to retry join raft cluster", "retry", "2s", "err", err)
 				time.Sleep(2 * time.Second)
 			}
 		}()
