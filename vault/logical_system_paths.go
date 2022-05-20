@@ -1392,6 +1392,7 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Output format of logs. Supported values are \"standard\" and \"json\". The default is \"standard\".",
 				Query:       true,
+				Default:     "standard",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
