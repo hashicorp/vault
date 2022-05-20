@@ -206,6 +206,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 			"snapshot_threshold":           "50",
 			"trailing_logs":                "100",
 			"autopilot_reconcile_interval": "1s",
+			"autopilot_update_interval":    "500ms",
 			"snapshot_interval":            "1s",
 		}
 		if coreIdx == 2 {
