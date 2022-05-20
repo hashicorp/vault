@@ -118,6 +118,7 @@ See the documentation for more information.`,
 the common name to be issued, conforming to RFC 6125's Section 6.4.3; e.g.,
 "*.example.net" or "b*z.example.net". See the documentation for more
 information.`,
+				Default: true,
 			},
 
 			"allow_any_name": {
@@ -431,6 +432,12 @@ serviced by this role.`,
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
+			logical.PatchOperation: &framework.PathOperation{
+				Callback: b.pathRolePatch,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathRoleHelpSyn,
@@ -611,7 +618,6 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, _ *fra
 
 func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	var resp *logical.Response
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
@@ -671,16 +677,55 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	}
 	entry.AllowedOtherSANs = allowedOtherSANs
 
+	allowWildcardCertificates, present := data.GetOk("allow_wildcard_certificates")
+	if !present {
+		// While not the most secure default, when AllowWildcardCertificates isn't
+		// explicitly specified in the request, we automatically set it to true to
+		// preserve compatibility with previous versions of Vault.
+		allowWildcardCertificates = true
+	}
+	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
+
+	warning := ""
 	// no_store implies generate_lease := false
 	if entry.NoStore {
 		*entry.GenerateLease = false
 		if data.Get("generate_lease").(bool) {
-			resp = &logical.Response{}
-			resp.AddWarning("mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority")
+			warning = "mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority"
 		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
 	}
+
+	resp, err := validateRole(b, entry, ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if warning != "" {
+		if resp == nil {
+			resp = &logical.Response{}
+		}
+		resp.AddWarning(warning)
+	}
+	if resp.IsError() {
+		return resp, nil
+	}
+
+	// Store it
+	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.Storage) (*logical.Response, error) {
+	var resp *logical.Response
+	var err error
 
 	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
 		return logical.ErrorResponse(
@@ -710,15 +755,6 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	}
 
-	allowWildcardCertificates, present := data.GetOk("allow_wildcard_certificates")
-	if !present {
-		// While not the most secure default, when AllowWildcardCertificates isn't
-		// explicitly specified in the request, we automatically set it to true to
-		// preserve compatibility with previous versions of Vault.
-		allowWildcardCertificates = true
-	}
-	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
-
 	// Ensure issuers ref is set to a non-empty value. Note that we never
 	// resolve the reference (to an issuerId) at role creation time; instead,
 	// resolve it at use time. This allows values such as `default` or other
@@ -728,12 +764,10 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	}
 	// Check that the issuers reference set resolves to something
 	if !b.useLegacyBundleCaStorage() {
-		issuerId, err := resolveIssuerReference(ctx, req.Storage, entry.Issuer)
+		issuerId, err := resolveIssuerReference(ctx, s, entry.Issuer)
 		if err != nil {
 			if issuerId == IssuerRefNotFound {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
+				resp = &logical.Response{}
 				if entry.Issuer == defaultRef {
 					resp.AddWarning("Issuing Certificate was set to default, but no default issuing certificate (configurable at /config/issuers) is currently set")
 				} else {
@@ -744,6 +778,131 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 			}
 		}
 
+	}
+
+	return resp, nil
+}
+
+func getWithExplicitDefault(data *framework.FieldData, field string, defaultValue interface{}) interface{} {
+	assignedValue, ok := data.GetOk(field)
+	if ok {
+		return assignedValue
+	}
+	return defaultValue
+}
+
+func getTimeWithExplicitDefault(data *framework.FieldData, field string, defaultValue time.Duration) time.Duration {
+	assignedValue, ok := data.GetOk(field)
+	if ok {
+		return time.Duration(assignedValue.(int)) * time.Second
+	}
+	return defaultValue
+}
+
+func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
+
+	oldEntry, err := b.getRole(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if oldEntry == nil {
+		return logical.ErrorResponse("Unable to fetch role entry to patch"), nil
+	}
+
+	entry := &roleEntry{
+		MaxTTL:                        getTimeWithExplicitDefault(data, "max_ttl", oldEntry.MaxTTL),
+		TTL:                           getTimeWithExplicitDefault(data, "ttl", oldEntry.TTL),
+		AllowLocalhost:                getWithExplicitDefault(data, "allow_localhost", oldEntry.AllowLocalhost).(bool),
+		AllowedDomains:                getWithExplicitDefault(data, "allowed_domains", oldEntry.AllowedDomains).([]string),
+		AllowedDomainsTemplate:        getWithExplicitDefault(data, "allowed_domains_template", oldEntry.AllowedDomainsTemplate).(bool),
+		AllowBareDomains:              getWithExplicitDefault(data, "allow_bare_domains", oldEntry.AllowBareDomains).(bool),
+		AllowSubdomains:               getWithExplicitDefault(data, "allow_subdomains", oldEntry.AllowSubdomains).(bool),
+		AllowGlobDomains:              getWithExplicitDefault(data, "allow_glob_domains", oldEntry.AllowGlobDomains).(bool),
+		AllowWildcardCertificates:     new(bool), // Handled specially below
+		AllowAnyName:                  getWithExplicitDefault(data, "allow_any_name", oldEntry.AllowAnyName).(bool),
+		AllowedURISANsTemplate:        getWithExplicitDefault(data, "allowed_uri_sans_template", oldEntry.AllowedURISANsTemplate).(bool),
+		EnforceHostnames:              getWithExplicitDefault(data, "enforce_hostnames", oldEntry.EnforceHostnames).(bool),
+		AllowIPSANs:                   getWithExplicitDefault(data, "allow_ip_sans", oldEntry.AllowIPSANs).(bool),
+		AllowedURISANs:                getWithExplicitDefault(data, "allowed_uri_sans", oldEntry.AllowedURISANs).([]string),
+		ServerFlag:                    getWithExplicitDefault(data, "server_flag", oldEntry.ServerFlag).(bool),
+		ClientFlag:                    getWithExplicitDefault(data, "client_flag", oldEntry.ClientFlag).(bool),
+		CodeSigningFlag:               getWithExplicitDefault(data, "code_signing_flag", oldEntry.CodeSigningFlag).(bool),
+		EmailProtectionFlag:           getWithExplicitDefault(data, "email_protection_flag", oldEntry.EmailProtectionFlag).(bool),
+		KeyType:                       getWithExplicitDefault(data, "key_type", oldEntry.KeyType).(string),
+		KeyBits:                       getWithExplicitDefault(data, "key_bits", oldEntry.KeyBits).(int),
+		SignatureBits:                 getWithExplicitDefault(data, "signature_bits", oldEntry.SignatureBits).(int),
+		UseCSRCommonName:              getWithExplicitDefault(data, "use_csr_common_name", oldEntry.UseCSRCommonName).(bool),
+		UseCSRSANs:                    getWithExplicitDefault(data, "use_csr_sans", oldEntry.UseCSRSANs).(bool),
+		KeyUsage:                      getWithExplicitDefault(data, "key_usage", oldEntry.KeyUsage).([]string),
+		ExtKeyUsage:                   getWithExplicitDefault(data, "ext_key_usage", oldEntry.ExtKeyUsage).([]string),
+		ExtKeyUsageOIDs:               getWithExplicitDefault(data, "ext_key_usage_oids", oldEntry.ExtKeyUsageOIDs).([]string),
+		OU:                            getWithExplicitDefault(data, "ou", oldEntry.OU).([]string),
+		Organization:                  getWithExplicitDefault(data, "organization", oldEntry.Organization).([]string),
+		Country:                       getWithExplicitDefault(data, "country", oldEntry.Country).([]string),
+		Locality:                      getWithExplicitDefault(data, "locality", oldEntry.Locality).([]string),
+		Province:                      getWithExplicitDefault(data, "province", oldEntry.Province).([]string),
+		StreetAddress:                 getWithExplicitDefault(data, "street_address", oldEntry.StreetAddress).([]string),
+		PostalCode:                    getWithExplicitDefault(data, "postal_code", oldEntry.PostalCode).([]string),
+		GenerateLease:                 new(bool),
+		NoStore:                       getWithExplicitDefault(data, "no_store", oldEntry.NoStore).(bool),
+		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
+		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
+		PolicyIdentifiers:             getWithExplicitDefault(data, "policy_identifiers", oldEntry.PolicyIdentifiers).([]string),
+		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.BasicConstraintsValidForNonCA).(bool),
+		NotBeforeDuration:             getTimeWithExplicitDefault(data, "not_before_duration", oldEntry.NotBeforeDuration),
+		NotAfter:                      getWithExplicitDefault(data, "not_after", oldEntry.NotAfter).(string),
+		Issuer:                        getWithExplicitDefault(data, "issuer_ref", oldEntry.Issuer).(string),
+	}
+
+	allowedOtherSANsData, wasSet := data.GetOk("allowed_other_sans")
+	if wasSet {
+		allowedOtherSANs := allowedOtherSANsData.([]string)
+		switch {
+		case len(allowedOtherSANs) == 0:
+		case len(allowedOtherSANs) == 1 && allowedOtherSANs[0] == "*":
+		default:
+			_, err := parseOtherSANs(allowedOtherSANs)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Errorf("error parsing allowed_other_sans: %w", err).Error()), nil
+			}
+		}
+		entry.AllowedOtherSANs = allowedOtherSANs
+	} else {
+		entry.AllowedOtherSANs = oldEntry.AllowedOtherSANs
+	}
+
+	allowWildcardCertificates, present := data.GetOk("allow_wildcard_certificates")
+	if !present {
+		allowWildcardCertificates = *oldEntry.AllowWildcardCertificates
+	}
+	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
+
+	warning := ""
+	generateLease, ok := data.GetOk("generate_lease")
+	// no_store implies generate_lease := false
+	if entry.NoStore {
+		*entry.GenerateLease = false
+		if ok && generateLease.(bool) || !ok && (*oldEntry.GenerateLease == true) {
+			warning = "mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority"
+		}
+	} else {
+		if ok {
+			*entry.GenerateLease = data.Get("generate_lease").(bool)
+		} else {
+			entry.GenerateLease = oldEntry.GenerateLease
+		}
+	}
+
+	resp, err := validateRole(b, entry, ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if warning != "" {
+		resp.AddWarning(warning)
+	}
+	if resp.IsError() {
+		return resp, nil
 	}
 
 	// Store it
