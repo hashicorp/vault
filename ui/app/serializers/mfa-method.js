@@ -14,4 +14,9 @@ export default class KeymgmtKeySerializer extends ApplicationSerializer {
     delete payload.data;
     return payload;
   }
+  serialize() {
+    const json = super.serialize(...arguments);
+    delete json.type;
+    return json;
+  }
 }

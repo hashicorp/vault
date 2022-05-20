@@ -88,11 +88,14 @@ export default class MfaMethodCreateController extends Controller {
           try {
             // now save enforcement and catch error separately
             yield this.enforcement.save();
-            this.router.transitionTo('vault.cluster.access.mfa.methods.method', this.method.id);
           } catch (error) {
-            this.handleError(error, 'Error saving enforcement');
+            this.handleError(
+              error,
+              'Error saving enforcement. You can still create an enforcement separately and add this method to it.'
+            );
           }
         }
+        this.router.transitionTo('vault.cluster.access.mfa.methods.method', this.method.id);
       } catch (error) {
         this.handleError(error, 'Error saving method');
       }
