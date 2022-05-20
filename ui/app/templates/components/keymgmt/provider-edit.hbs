@@ -23,13 +23,13 @@
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs">
         <ul>
-          <li class={{unless this.viewingKeys "is-active"}} data-test-kms-provider-tab="details">
+          <li class={{unless this.viewingKeys "active"}} data-test-kms-provider-tab="details">
             <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab=""}}>
               Details
             </LinkTo>
           </li>
           {{#if @model.canListKeys}}
-            <li class={{if this.viewingKeys "is-active"}} data-test-kms-provider-tab="keys">
+            <li class={{if this.viewingKeys "active"}} data-test-kms-provider-tab="keys">
               <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
                 Keys
               </LinkTo>
@@ -98,8 +98,15 @@
                   Provider configuration
                 </h2>
               </div>
+              {{#if @model.provider}}
+                {{! Only show last field if provider selected }}
+                <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+              {{else}}
+                <EmptyState @title="No provider selected" @message="Select a provider in order to configure it." />
+              {{/if}}
+            {{else}}
+              <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
             {{/if}}
-            <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
           {{/each}}
         {{/if}}
         {{#unless this.isCreating}}
