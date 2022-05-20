@@ -46,6 +46,16 @@ in a FIPS-compliant manner. We are not a NIST-certified testing laboratory
 and thus organizations may need to consult an approved auditor for final
 information.
 
+The FIPS 140-2 variant of Vault uses separate binaries; these are available
+from the following sources:
+
+ - From the [Hashicorp Releases Page](https://releases.hashicorp.com/vault),
+   ending with the `+ent.fips1402` and `+ent.hsm.fips1402` suffixes.
+ - From the [Docker Hub `hashicorp/vault-enterprise-fips`](https://hub.docker.com/r/hashicorp/vault-enterprise-fips)
+   container repository.
+ - From the [AWS ECR `hashicorp/vault-enterprise-fips`](https://gallery.ecr.aws/hashicorp/vault-enterprise-fips)
+   container repository.
+
 ~> **Note**: When pulling the FIPS UBI-based images, note that they are
    ultimately designed for OpenShift certification; consider either adding
    the `--user root --cap-add IPC_LOCK` options, to allow Vault to enable
