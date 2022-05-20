@@ -199,15 +199,16 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Policies from each group may overlap
 	policies = strutil.RemoveDuplicates(policies, true)
 
-	entityAliasAttribute := username
-	if !usernameAsAlias {
-		entityAliasAttribute, err = ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
-		if err != nil {
-			return "", nil, logical.ErrorResponse(err.Error()), nil, nil
-		}
-		if entityAliasAttribute == "" {
-			return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
-		}
+	if usernameAsAlias {
+		return username, policies, ldapResponse, allGroups, nil
+	}
+	
+	entityAliasAttribute, err = ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
+	if err != nil {
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
+	}
+	if entityAliasAttribute == "" {
+		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
 	}
 
 	return entityAliasAttribute, policies, ldapResponse, allGroups, nil
