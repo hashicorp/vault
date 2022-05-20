@@ -231,6 +231,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// When the new name is in use but isn't this name, throw an error.
 		return logical.ErrorResponse(err.Error()), nil
 	}
+	if len(newName) > 0 && !nameMatcher.MatchString(newName) {
+		return logical.ErrorResponse("new key name outside of valid character limits"), nil
+	}
 
 	newPath := data.Get("manual_chain").([]string)
 	rawLeafBehavior := data.Get("leaf_not_after_behavior").(string)
@@ -373,6 +376,9 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		if err == errIssuerNameInUse && issuer.Name != newName {
 			// When the new name is in use but isn't this name, throw an error.
 			return logical.ErrorResponse(err.Error()), nil
+		}
+		if len(newName) > 0 && !nameMatcher.MatchString(newName) {
+			return logical.ErrorResponse("new key name outside of valid character limits"), nil
 		}
 		if newName != issuer.Name {
 			oldName = issuer.Name
