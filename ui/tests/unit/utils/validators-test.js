@@ -22,11 +22,17 @@ module('Unit | Util | validators', function (hooks) {
     check(null);
     assert.false(isValid, 'Invalid when nullable is false');
     check('12');
-    assert.false(isValid, 'Invalid when not min length');
+    assert.false(isValid, 'Invalid when string not min length');
     check('123456');
-    assert.false(isValid, 'Invalid when over max length');
+    assert.false(isValid, 'Invalid when string over max length');
     check('1234');
-    assert.true(isValid, 'Valid when in between min and max length');
+    assert.true(isValid, 'Valid when string between min and max length');
+    check(12);
+    assert.false(isValid, 'Invalid when integer not min length');
+    check(123456);
+    assert.false(isValid, 'Invalid when integer over max length');
+    check(1234);
+    assert.true(isValid, 'Valid when integer between min and max length');
   });
 
   test('it should validate number', function (assert) {
@@ -47,5 +53,9 @@ module('Unit | Util | validators', function (hooks) {
     assert.true(isValid, 'Valid for number as string');
     check('foo');
     assert.false(isValid, 'Invalid for string that is not a number');
+    check(0);
+    assert.true(isValid, 'Valid for 0 as an integer');
+    check('0');
+    assert.true(isValid, 'Valid for 0 as a string');
   });
 });
