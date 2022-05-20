@@ -5,7 +5,10 @@ import (
 	"fmt"
 )
 
-//// KV v1 methods ////
+type kvv1 struct {
+	c         *Client
+	mountPath string
+}
 
 // Get returns a secret from the KV v1 secrets engine.
 func (kv *kvv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {

@@ -1,36 +1,5 @@
 package api
 
-// A kvv1 client is used to perform reads and writes against a KV v1 secrets engine in Vault.
-//
-// The mount path is the location where the target KV secrets engine resides
-// in Vault.
-//
-// While v1 is not necessarily deprecated, Vault development servers tend to
-// use v2 as the version of the KV secrets engine, as this is what's mounted
-// by default when a server is started in -dev mode. See the kvv2 struct.
-//
-// Learn more about the KV secrets engine here:
-// https://www.vaultproject.io/docs/secrets/kv
-type kvv1 struct {
-	c         *Client
-	mountPath string
-}
-
-// A kvv2 client is used to perform reads and writes against a KV v2 secrets engine in Vault.
-//
-// The mount path is the location where the target KV secrets engine resides
-// in Vault.
-//
-// Vault development servers tend to have "secret" as the mount path,
-// as these are the default settings when a server is started in -dev mode.
-//
-// Learn more about the KV secrets engine here:
-// https://www.vaultproject.io/docs/secrets/kv
-type kvv2 struct {
-	c         *Client
-	mountPath string
-}
-
 // A KVSecret is a key-value secret returned by Vault's KV secrets engine,
 // and is the most basic type of secret stored in Vault.
 //
@@ -49,14 +18,33 @@ type KVSecret struct {
 	Raw             *Secret
 }
 
-// KVv1 is used to return the client for API calls
-// to the KV v1 secrets engine.
+// KVv1 is used to return a client for reads and writes against
+// a KV v1 secrets engine in Vault.
+//
+// The mount path is the location where the target KV secrets engine resides
+// in Vault.
+//
+// While v1 is not necessarily deprecated, Vault development servers tend to
+// use v2 as the version of the KV secrets engine, as this is what's mounted
+// by default when a server is started in -dev mode. See the kvv2 struct.
+//
+// Learn more about the KV secrets engine here:
+// https://www.vaultproject.io/docs/secrets/kv
 func (c *Client) KVv1(mountPath string) *kvv1 {
 	return &kvv1{c: c, mountPath: mountPath}
 }
 
-// KVv2 is used to return the client for API calls
-// to the KV v2 secrets engine.
+// KVv2 is used to return a client for reads and writes against
+// a KV v2 secrets engine in Vault.
+//
+// The mount path is the location where the target KV secrets engine resides
+// in Vault.
+//
+// Vault development servers tend to have "secret" as the mount path,
+// as these are the default settings when a server is started in -dev mode.
+//
+// Learn more about the KV secrets engine here:
+// https://www.vaultproject.io/docs/secrets/kv
 func (c *Client) KVv2(mountPath string) *kvv2 {
 	return &kvv2{c: c, mountPath: mountPath}
 }

@@ -10,6 +10,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+type kvv2 struct {
+	c         *Client
+	mountPath string
+}
+
 // KVMetadata is the full metadata for a given KV v2 secret.
 type KVMetadata struct {
 	CASRequired        bool                   `mapstructure:"cas_required"`
@@ -46,8 +51,6 @@ func WithCheckAndSet(cas int) KVOption {
 		return "cas", cas
 	}
 }
-
-//// KV v2 methods ////
 
 // Get returns the latest version of a secret from the KV v2 secrets engine.
 //
