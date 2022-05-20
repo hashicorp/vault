@@ -44,21 +44,21 @@ No, these changes will not impact HCP Vault.
 
 ### Q: What is the product behavior change introduced by the licensing changes?
 
-With Vault 1.11, the use of an [auto-loaded license](https://www.vaultproject.io/docs/enterprise/license/autoloading) is required for Vault to start successfully.
+With Vault 1.11, the use of an [auto-loaded license](/docs/enterprise/license/autoloading) is required for Vault to start successfully.
 
 ### Q: How will Vault behave at startup when a license expires or terminates?
 
 When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.11. The grace period, defined as the time between license expiration and license termination, is 1 day for evaluation licenses (as of 1.8), and ten years for non-evaluation licenses.
-Customers must provide a valid license before the grace period expires. This license is required to be [auto-loaded](https://www.vaultproject.io/docs/enterprise/license/autoloading). When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to provide one, and this license will need to be auto-loaded.
+Customers must provide a valid license before the grace period expires. This license is required to be [auto-loaded](/docs/enterprise/license/autoloading). When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to provide one, and this license will need to be auto-loaded.
 
 ### Q: What is the impact on evaluation licenses due to this change?
 
-As of Vault 1.8, any Vault cluster deployed must have a valid [auto-loaded](https://www.vaultproject.io/docs/enterprise/license/autoloading) license.
+As of Vault 1.8, any Vault cluster deployed must have a valid [auto-loaded](/docs/enterprise/license/autoloading) license.
 
 ### Q: Are there any changes to existing methods for manual license loading (API or CLI)?
 
-The [`/sys/license`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#install-license) and [`/sys/license/signed`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#read-signed-license) endpoints have been removed as of Vault 1.11. With that said, it is no longer possible to provide a license via the `/sys/license` endpoint. License [auto-loading](https://www.vaultproject.io/docs/enterprise/license/autoloading) must be used instead.
-The [`/sys/config/reload/license`](https://www.vaultproject.io/api-docs/system/config-reload#reload-license-file) endpoint can be used to reload an auto-loaded license provided as a path via an environment variable or configuration.
+The [`/sys/license`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#install-license) and [`/sys/license/signed`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#read-signed-license) endpoints have been removed as of Vault 1.11. With that said, it is no longer possible to provide a license via the `/sys/license` endpoint. License [auto-loading](/docs/enterprise/license/autoloading) must be used instead.
+The [`/sys/config/reload/license`](/api-docs/system/config-reload#reload-license-file) endpoint can be used to reload an auto-loaded license provided as a path via an environment variable or configuration.
 
 ### Q: Is there a grace period when evaluation licenses expire?
 
@@ -73,22 +73,22 @@ The changes to licenses apply to all nodes in a cluster. The license files are n
 Yes, starting with Vault 1.8, ENT binaries will be subjected to a EULA check. The release of Vault 1.8 introduces the EULA check for evaluation licenses (non-evaluation licenses are evaluated with a EULA check during contractual agreement) .
 Although the agreement to a EULA occurs only once (when the user receives their license), Vault will check for the presence of a valid license every time a node is restarted.
 
-Starting Vault 1.11, when customers deploy new Vault clusters, or upgrade existing Vault clusters, a valid [auto-loaded](https://www.vaultproject.io/docs/enterprise/license/autoloading) license must exist for the upgrade to be successful.
+Starting Vault 1.11, when customers deploy new Vault clusters, or upgrade existing Vault clusters, a valid [auto-loaded](/docs/enterprise/license/autoloading) license must exist for the upgrade to be successful.
 
 ### Q: What scenarios should a customer plan for due to these license changes?
 
-- **New Cluster Deployment**: When a customer deploys new clusters to Vault 1.11 or later, a valid license must exist to successfully deploy. This valid license must be on-disk ([auto-loaded](https://www.vaultproject.io/docs/enterprise/license/autoloading)).
+- **New Cluster Deployment**: When a customer deploys new clusters to Vault 1.11 or later, a valid license must exist to successfully deploy. This valid license must be on-disk ([auto-loaded](/docs/enterprise/license/autoloading)).
 
 - **Eventual Migration**: Vault 1.11 removes support for in-storage licenses. Migrating to an auto-loaded license is required for Vault to start successfully using version 1.11 or greater. Pre-existing license storage entries will be automatically removed from storage upon startup.
 
 ### Q: What is the migration path for customers who want to migrate from their existing license-as-applied-via-the-CLI flow to the license on disk flow?
 
 If a Vault cluster using a stored license is planned to be upgraded to Vault 1.11 or greater, the operator must migrate to using an auto-loaded license. The [`vault license get -signed`](https://www.vaultproject.io/docs/v1.10.x/commands/license/get) command (or underlying [`/sys/license/signed`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#read-signed-license) endpoint) can be used to retrieve the license from storage in a running cluster.
-It is not necessary to remove the stored license entry. That will occur automatically upon startup in Vault 1.11 or greater. Prior to completing the [recommended upgrade steps](https://www.vaultproject.io/docs/upgrading), perform the following to ensure your license is properly configured:
+It is not necessary to remove the stored license entry. That will occur automatically upon startup in Vault 1.11 or greater. Prior to completing the [recommended upgrade steps](/docs/upgrading), perform the following to ensure your license is properly configured:
 
 1. Use the command `vault license get -signed` to retrieve the license from storage of your running cluster.
 2. Put the license on disk
-3. Configure license auto-loading by specifying the [`license_path`](https://www.vaultproject.io/docs/configuration#license_path) config option or setting the [`VAULT_LICENSE`](https://www.vaultproject.io/docs/commands#vault_license) or [`VAULT_LICENSE_PATH`](https://www.vaultproject.io/docs/commands#vault_license_path) environment variable.
+3. Configure license auto-loading by specifying the [`license_path`](/docs/configuration#license_path) config option or setting the [`VAULT_LICENSE`](/docs/commands#vault_license) or [`VAULT_LICENSE_PATH`](o/docs/commands#vault_license_path) environment variable.
 
 ### Q: What is the path for customers who want to downgrade/rollback from Vault 1.11 or later (auto-loaded license mandatory) to a pre-Vault 1.11 (auto-loading not mandatory, stored license supported)?
 
@@ -96,7 +96,7 @@ The downgrade procedure remains the same for Vault customers who are currently o
 
 ### Q: Is there a limited time for support of licenses that are in storage?
 
-The support of licenses installed by alternative means often leads to difficulties providing the appropriate support. To provide the support expected by our customers, as we have announced in [Vault feature deprecations and plans](https://www.vaultproject.io/docs/deprecation) we are removing support for licenses in storage with Vault 1.11. This implies licensing endpoints that deal with licenses in storage will be removed, and Vault will no longer check for valid licenses in storage. This change requires that all customers have [auto-loaded](https://www.vaultproject.io/docs/enterprise/license/autoloading) licenses to upgrade to 1.11(+) successfully.
+The support of licenses installed by alternative means often leads to difficulties providing the appropriate support. To provide the support expected by our customers, as we have announced in [Vault feature deprecations and plans](/docs/deprecation) we are removing support for licenses in storage with Vault 1.11. This implies licensing endpoints that deal with licenses in storage will be removed, and Vault will no longer check for valid licenses in storage. This change requires that all customers have [auto-loaded](/docs/enterprise/license/autoloading) licenses to upgrade to 1.11(+) successfully.
 
 ### Q: What are the steps to upgrade from one autoloaded license to another autoloaded license?
 
