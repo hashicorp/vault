@@ -41,9 +41,9 @@ a root key. By default, Vault uses [Shamir's Secret
 Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the
 root key into a configured number of shards (referred as key shares or unseal
 keys). A certain threshold of shards is required to reconstruct the root key,
-which is then used to decrypt the Vault's encryption key. 
+which is then used to decrypt the Vault's encryption key.
 
-![Unseal keys](/img/unseal.png)
+![Unseal keys](/img/vault-shamir-seal.png)
 
 Refer to the [Seal/Unseal](/docs/concepts/seal#seal-unseal) documentation for
 further details.
