@@ -11,12 +11,12 @@ module('Integration | Component | mfa-login-enforcement-header', function (hooks
   test('it renders heading', async function (assert) {
     await render(hbs`<MfaLoginEnforcementHeader @heading="New enforcement" />`);
 
-    assert.dom('[data-test-mleh-title]').includesText('New enforcement');
-    assert.dom('[data-test-mleh-title] svg').hasClass('flight-icon-lock', 'Lock icon renders');
+    assert.dom('[data-test-mfa-title]').includesText('New enforcement');
+    assert.dom('[data-test-mfa-title] svg').hasClass('flight-icon-lock', 'Lock icon renders');
     assert
-      .dom('[data-test-mleh-description]')
+      .dom('[data-test-mfa-description]')
       .includesText('An enforcement will define which auth types', 'Description renders');
-    assert.dom('[data-test-mleh-radio]').doesNotExist('Radio cards are hidden when not inline display mode');
+    assert.dom('[data-test-mfa-radio]').doesNotExist('Radio cards are hidden when not inline display mode');
     assert
       .dom('[data-test-component="search-select"]')
       .doesNotExist('Search select is hidden when not inline display mode');
@@ -46,13 +46,13 @@ module('Integration | Component | mfa-login-enforcement-header', function (hooks
       />
     `);
 
-    assert.dom('[data-test-mleh-title]').includesText('Enforcement');
+    assert.dom('[data-test-mfa-title]').includesText('Enforcement');
     assert
-      .dom('[data-test-mleh-description]')
+      .dom('[data-test-mfa-description]')
       .includesText('An enforcement includes the authentication types', 'Description renders');
 
     for (const option of ['new', 'existing', 'skip']) {
-      await click(`[data-test-mleh-radio="${option}"] input`);
+      await click(`[data-test-mfa-radio="${option}"] input`);
       assert.equal(this.value, option, 'Value is updated on radio select');
       if (option === 'existing') {
         await click('.ember-basic-dropdown-trigger');
