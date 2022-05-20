@@ -1202,8 +1202,6 @@ func TestClientWithNamespace(t *testing.T) {
 }
 
 func TestVaultProxy(t *testing.T) {
-	const VaultHttpProxy string = "VAULT_HTTP_PROXY"
-	const VaultProxyAddr string = "VAULT_PROXY_ADDR"
 	const NoProxy string = "NO_PROXY"
 
 	tests := map[string]struct {
@@ -1250,15 +1248,15 @@ func TestVaultProxy(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			if tc.vaultHttpProxy != "" {
-				oldVaultHttpProxy := os.Getenv(VaultHttpProxy)
-				os.Setenv(VaultHttpProxy, tc.vaultHttpProxy)
-				defer os.Setenv(VaultHttpProxy, oldVaultHttpProxy)
+				oldVaultHttpProxy := os.Getenv(EnvHTTPProxy)
+				os.Setenv(EnvHTTPProxy, tc.vaultHttpProxy)
+				defer os.Setenv(EnvHTTPProxy, oldVaultHttpProxy)
 			}
 
 			if tc.vaultProxyAddr != "" {
-				oldVaultProxyAddr := os.Getenv(VaultProxyAddr)
-				os.Setenv(VaultProxyAddr, tc.vaultProxyAddr)
-				defer os.Setenv(VaultProxyAddr, oldVaultProxyAddr)
+				oldVaultProxyAddr := os.Getenv(EnvVaultProxyAddr)
+				os.Setenv(EnvVaultProxyAddr, tc.vaultProxyAddr)
+				defer os.Setenv(EnvVaultProxyAddr, oldVaultProxyAddr)
 			}
 
 			if tc.noProxy != "" {
@@ -1274,13 +1272,14 @@ func TestVaultProxy(t *testing.T) {
 
 			r, _ := http.NewRequest("GET", tc.requestUrl, nil)
 			proxyUrl, err := c.HttpClient.Transport.(*http.Transport).Proxy(r)
-
 			if err != nil {
 				t.Fatalf("Expected no error resolving proxy, found error %v", err)
-			} else if proxyUrl == nil || proxyUrl.String() == "" {
+			}
+			if proxyUrl == nil || proxyUrl.String() == "" {
 				t.Fatalf("Expected proxy to be resolved but no proxy returned")
-			} else if tc.checkProxyVarPriority && proxyUrl.String() != tc.vaultProxyAddr {
-				t.Fatalf("Expected %v value (%v) to be used but was %v", VaultProxyAddr, tc.vaultProxyAddr, proxyUrl.String())
+			}
+			if tc.checkProxyVarPriority && proxyUrl.String() != tc.vaultProxyAddr {
+				t.Fatalf("Expected %v value (%v) to be used but was %v", EnvVaultProxyAddr, tc.vaultProxyAddr, proxyUrl.String())
 			}
 		})
 	}
