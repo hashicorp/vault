@@ -8,6 +8,7 @@ export default Component.extend({
   // Public API
   //value for the external mount selector
   value: null,
+  filterToken: false,
   noDefault: false,
   onChange: () => {},
 
