@@ -256,19 +256,19 @@ injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
-| Name                                                                             | Description                                                                            |
-| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| `identity.entity.id`                                                             | The entity's ID                                                                        |
-| `identity.entity.name`                                                           | The entity's name                                                                      |
-| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                  |
-| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                    |
-| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                  |
-| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key                |
-| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key  |
-| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                  |
-| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                  |
-| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                   |
-| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                   |
+| Name                                                                             | Description                                                                           |
+| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| `identity.entity.id`                                                             | The entity's ID                                                                       |
+| `identity.entity.name`                                                           | The entity's name                                                                     |
+| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                 |
+| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                   |
+| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                 |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key               |
+| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key |
+| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                 |
+| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                 |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                  |
+| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                  |
 
 ### Examples
 
@@ -724,7 +724,7 @@ authenticated user.
 Tokens have two sets of policies: identity policies, which are computed
 based on the entity and its groups, and token policies, which are either defined
 based on the login method or, in the case of explicit token creates via the API,
-are an input to the token creation.  What follows concerns token policies
+are an input to the token creation. What follows concerns token policies
 exclusively: a token's identity policies cannot be controlled except by modifying
 the underlying entities, groups, and group memberships.
 
@@ -746,7 +746,7 @@ However, the _contents_ of policies are parsed in real-time whenever the token i
 As a result, if a policy is modified, the modified rules will be in force the
 next time a token, with that policy attached, is used to make a call to Vault.
 
-## Learn
+## Tutorial
 
 Refer to the following tutorials for further learning:
 
