@@ -769,7 +769,7 @@ and consider if they're appropriate for your deployment.
     - `apiAddr`: (`string: "{}"`) -
       Set the API address configuration for a Vault cluster. If set to an empty string, the pod IP address is used.
 
-    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](https://www.vaultproject.io/docs/configuration#cluster_addr) confuguration for Vault HA.
+    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](https://www.vaultproject.io/docs/configuration#cluster_addr) configuration for Vault HA.
       If null, defaults to `https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201`.
 
     - `raft` - This configures `raft` integrated storage mode for the Vault server.
