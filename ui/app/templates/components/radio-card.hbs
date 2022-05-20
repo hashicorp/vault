@@ -1,5 +1,5 @@
 <label
-  for={{@value}}
+  for={{dasherize @value}}
   class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
   ...attributes
 >
@@ -22,7 +22,7 @@
   {{/if}}
   <div class="radio-card-radio-row">
     <RadioButton
-      id={{@value}}
+      id={{dasherize @value}}
       name="config-mode"
       class="radio"
       disabled={{@disabled}}
@@ -30,6 +30,6 @@
       @groupValue={{@groupValue}}
       @onChange={{@onChange}}
     />
-    <label for="radio-card-button"></label>
+    <span class="dot"></span>
   </div>
 </label>
