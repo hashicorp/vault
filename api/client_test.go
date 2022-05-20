@@ -1205,12 +1205,12 @@ func TestVaultProxy(t *testing.T) {
 	const NoProxy string = "NO_PROXY"
 
 	tests := map[string]struct {
-		name                  string
-		vaultHttpProxy        string
-		vaultProxyAddr        string
-		noProxy               string
-		requestUrl            string
-		checkProxyVarPriority bool
+		name                     string
+		vaultHttpProxy           string
+		vaultProxyAddr           string
+		noProxy                  string
+		requestUrl               string
+		expectedResolvedProxyUrl string
 	}{
 		"VAULT_HTTP_PROXY used when NO_PROXY env var doesn't include request host": {
 			vaultHttpProxy: "https://hashicorp.com",
@@ -1237,11 +1237,11 @@ func TestVaultProxy(t *testing.T) {
 			requestUrl:     "https://vaultproject.io",
 		},
 		"VAULT_PROXY_ADDR used when VAULT_HTTP_PROXY env var also supplied": {
-			vaultHttpProxy:        "https://hashicorp.com",
-			vaultProxyAddr:        "https://terraform.io",
-			noProxy:               "",
-			requestUrl:            "https://vaultproject.io",
-			checkProxyVarPriority: true,
+			vaultHttpProxy:           "https://hashicorp.com",
+			vaultProxyAddr:           "https://terraform.io",
+			noProxy:                  "",
+			requestUrl:               "https://vaultproject.io",
+			expectedResolvedProxyUrl: "https://terraform.io",
 		},
 	}
 
@@ -1278,8 +1278,8 @@ func TestVaultProxy(t *testing.T) {
 			if proxyUrl == nil || proxyUrl.String() == "" {
 				t.Fatalf("Expected proxy to be resolved but no proxy returned")
 			}
-			if tc.checkProxyVarPriority && proxyUrl.String() != tc.vaultProxyAddr {
-				t.Fatalf("Expected %v value (%v) to be used but was %v", EnvVaultProxyAddr, tc.vaultProxyAddr, proxyUrl.String())
+			if tc.expectedResolvedProxyUrl != "" && proxyUrl.String() != tc.expectedResolvedProxyUrl {
+				t.Fatalf("Expected resolved proxy URL to be %v but was %v", tc.expectedResolvedProxyUrl, proxyUrl.String())
 			}
 		})
 	}
