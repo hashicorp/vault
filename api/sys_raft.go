@@ -88,7 +88,7 @@ func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
 type AutopilotState struct {
 	Healthy                    bool                        `mapstructure:"healthy"`
 	FailureTolerance           int                         `mapstructure:"failure_tolerance"`
-	Servers                    map[string]*AutopilotServer `mapstructure:"servers" deep:"-"`
+	Servers                    map[string]*AutopilotServer `mapstructure:"servers"`
 	Leader                     string                      `mapstructure:"leader"`
 	Voters                     []string                    `mapstructure:"voters"`
 	NonVoters                  []string                    `mapstructure:"non_voters"`
