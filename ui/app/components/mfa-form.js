@@ -80,7 +80,7 @@ export default class MfaForm extends Component {
       this.args.onSuccess(response);
     } catch (error) {
       const errors = error.errors || [];
-      const codeUsed = errors.find((e) => e.includes('code already used;'));
+      const codeUsed = errors.find((e) => e.includes('code already used'));
       const rateLimit = errors.find((e) => e.includes('maximum TOTP validation attempts'));
       const delayMessage = codeUsed || rateLimit;
 
