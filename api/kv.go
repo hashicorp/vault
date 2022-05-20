@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -40,34 +41,45 @@ type kvv2 struct {
 	mountPath string
 }
 
+// A KVSecret is a key-value secret returned by Vault's KV secrets engine,
+// and is the most basic type of secret stored in Vault.
+//
+// Data contains the key-value pairs of the secret itself,
+// while Metadata contains a subset of metadata describing
+// this particular version of the secret.
+// The Metadata field for a KV v1 secret will always be nil, as
+// metadata is only supported starting in KV v2.
+//
+// The Raw field can be inspected for information about the lease,
+// and passed to a LifetimeWatcher object for periodic renewal.
 type KVSecret struct {
-	Data     map[string]interface{}
-	Metadata *KVVersionMetadata
+	Data           map[string]interface{}
+	Metadata       *KVVersionMetadata
+	CustomMetadata map[string]interface{}
+	Raw            *Secret
+}
+
+// KVMetadata is the full metadata for a given KV v2 secret.
+type KVMetadata struct {
+	CASRequired        bool                   `mapstructure:"cas_required"`
+	CreatedTime        time.Time              `mapstructure:"created_time"`
+	CurrentVersion     int                    `mapstructure:"current_version"`
+	CustomMetadata     map[string]interface{} `mapstructure:"custom_metadata"`
+	DeleteVersionAfter time.Duration          `mapstructure:"delete_version_after"`
+	MaxVersions        int                    `mapstructure:"max_versions"`
+	OldestVersion      int                    `mapstructure:"oldest_version"`
+	UpdatedTime        time.Time              `mapstructure:"updated_time"`
+	// Keys are stringified ints, e.g. "3". To get a sorted slice of version metadata, use GetVersionsAsList.
+	Versions map[string]KVVersionMetadata `mapstructure:"versions"`
 	Raw      *Secret
 }
 
-type KVMetadata struct {
-	CASRequired        bool              `mapstructure:"cas_required"`
-	CreatedTime        time.Time         `mapstructure:"created_time"`
-	CurrentVersion     int               `mapstructure:"current_version"`
-	CustomMetadata     map[string]string `mapstructure:"custom_metadata"`
-	DeleteVersionAfter time.Duration     `mapstructure:"delete_version_after"`
-	MaxVersions        int               `mapstructure:"max_versions"`
-	OldestVersion      int               `mapstructure:"oldest_version"`
-	UpdatedTime        time.Time         `mapstructure:"updated_time"`
-	// Keys are stringified ints, e.g. "3"
-	Versions map[string]KVVersionMetadata `mapstructure:"versions"`
-}
-
+// KVVersionMetadata is a subset of metadata for a given version of a KV v2 secret.
 type KVVersionMetadata struct {
 	Version      int       `mapstructure:"version"`
 	CreatedTime  time.Time `mapstructure:"created_time"`
 	DeletionTime time.Time `mapstructure:"deletion_time"`
 	Destroyed    bool      `mapstructure:"destroyed"`
-	// There is currently no version-specific custom metadata.
-	// This field is just a copy of what's in the CustomMetadata field
-	// for the full KVMetadata of the secret.
-	CustomMetadata map[string]string `mapstructure:"custom_metadata"`
 }
 
 // Currently supported options: WithCheckAndSet
@@ -84,10 +96,14 @@ func WithCheckAndSet(cas int) KVOption {
 	}
 }
 
+// KVv1 is used to return the client for API calls
+// to the KV v1 secrets engine.
 func (c *Client) KVv1(mountPath string) *kvv1 {
 	return &kvv1{c: c, mountPath: mountPath}
 }
 
+// KVv2 is used to return the client for API calls
+// to the KV v2 secrets engine.
 func (c *Client) KVv2(mountPath string) *kvv2 {
 	return &kvv2{c: c, mountPath: mountPath}
 }
@@ -95,10 +111,6 @@ func (c *Client) KVv2(mountPath string) *kvv2 {
 //// KV v1 methods ////
 
 // Get returns a secret from the KV v1 secrets engine.
-//
-// The Metadata field in the returned *KVSecret will always be nil.
-// The Raw field can be inspected for information about the lease,
-// and passed to a LifetimeWatcher object for periodic renewal.
 func (kv *kvv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 	pathToRead := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
@@ -117,6 +129,10 @@ func (kv *kvv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 	}, nil
 }
 
+// Put inserts a key-value secret (e.g. {"password": "Hashi123"}) into the
+// KV v1 secrets engine.
+//
+// If the secret already exists, it will be overwritten.
 func (kv *kvv1) Put(ctx context.Context, secretPath string, data map[string]interface{}) error {
 	pathToWriteTo := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
@@ -128,6 +144,7 @@ func (kv *kvv1) Put(ctx context.Context, secretPath string, data map[string]inte
 	return nil
 }
 
+// Delete deletes a secret from the KV v1 secrets engine.
 func (kv *kvv1) Delete(ctx context.Context, secretPath string) error {
 	pathToDelete := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
@@ -157,12 +174,27 @@ func (kv *kvv2) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("no secret found at %s", pathToRead)
 	}
 
-	return extractDataAndVersionMetadata(secret)
+	kvSecret, err := extractDataAndVersionMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing secret at %s: %w", pathToRead, err)
+	}
+
+	err = kvSecret.addCustomMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToRead, err)
+	}
+
+	return kvSecret, nil
 }
 
 // GetVersion returns the data and metadata for a specific version of the
-// given secret. If that version has been deleted, the Data field on the
+// given secret.
+//
+// If that version has been deleted, the Data field on the
 // returned secret will be nil, and the Metadata field will contain the deletion time.
+//
+// GetVersionsAsList can provide a list of available versions sorted by
+// version number, while the response from GetMetadata contains them as a map.
 func (kv *kvv2) GetVersion(ctx context.Context, secretPath string, version int) (*KVSecret, error) {
 	pathToRead := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
 
@@ -175,9 +207,47 @@ func (kv *kvv2) GetVersion(ctx context.Context, secretPath string, version int) 
 		return nil, fmt.Errorf("no secret with version %d found at %s", version, pathToRead)
 	}
 
-	return extractDataAndVersionMetadata(secret)
+	kvSecret, err := extractDataAndVersionMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing secret at %s: %w", pathToRead, err)
+	}
+
+	err = kvSecret.addCustomMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToRead, err)
+	}
+
+	return kvSecret, nil
 }
 
+// GetVersionsAsList returns a subset of the metadata for each version of the secret, sorted by version number.
+func (kv *kvv2) GetVersionsAsList(ctx context.Context, secretPath string) ([]KVVersionMetadata, error) {
+	pathToRead := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
+
+	secret, err := kv.c.Logical().ReadWithContext(ctx, pathToRead)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("no secret metadata found at %s", pathToRead)
+	}
+
+	md, err := extractFullMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("unable to extract metadata from secret to determine versions: %w", err)
+	}
+
+	versionsList := make([]KVVersionMetadata, 0, len(md.Versions))
+	for _, versionMetadata := range md.Versions {
+		versionsList = append(versionsList, versionMetadata)
+	}
+
+	sort.Slice(versionsList, func(i, j int) bool { return versionsList[i].Version < versionsList[j].Version })
+	return versionsList, nil
+}
+
+// GetMetadata returns the full metadata for a given secret, including a map of
+// its existing versions and their respective creation/deletion times, etc.
 func (kv *kvv2) GetMetadata(ctx context.Context, secretPath string) (*KVMetadata, error) {
 	pathToRead := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
@@ -189,9 +259,20 @@ func (kv *kvv2) GetMetadata(ctx context.Context, secretPath string) (*KVMetadata
 		return nil, fmt.Errorf("no secret metadata found at %s", pathToRead)
 	}
 
-	return extractFullMetadata(secret)
+	md, err := extractFullMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("unable to extract metadata from secret: %w", err)
+	}
+
+	return md, nil
 }
 
+// Put inserts a key-value secret (e.g. {"password": "Hashi123"})
+// into the KV v2 secrets engine.
+//
+// If the secret already exists, a new version will be created
+// and the previous version can be accessed with the GetVersion method.
+// GetMetadata can provide a list of available versions.
 func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]interface{}, opts ...KVOption) (*KVSecret, error) {
 	pathToWriteTo := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
 
@@ -225,13 +306,22 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 		return nil, fmt.Errorf("secret was written successfully, but unable to view version metadata from response: %w", err)
 	}
 
-	return &KVSecret{
-		Data:     secret.Data,
+	kvSecret := &KVSecret{
+		Data:     nil, // secret.Data in this case is the metadata
 		Metadata: metadata,
 		Raw:      secret,
-	}, nil
+	}
+
+	err = kvSecret.addCustomMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToWriteTo, err)
+	}
+
+	return kvSecret, nil
 }
 
+// Delete deletes the most recent version of a secret from the KV v2
+// secrets engine. To delete an older version, use DeleteVersions.
 func (kv *kvv2) Delete(ctx context.Context, secretPath string) error {
 	pathToDelete := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
 
@@ -243,6 +333,8 @@ func (kv *kvv2) Delete(ctx context.Context, secretPath string) error {
 	return nil
 }
 
+// DeleteVersions deletes the specified versions of a secret from the KV v2
+// secrets engine. To delete the latest version of a secret, just use Delete.
 func (kv *kvv2) DeleteVersions(ctx context.Context, secretPath string, versions []int) error {
 	// verb and path are different when trying to delete past versions
 	pathToDelete := fmt.Sprintf("%s/delete/%s", kv.mountPath, secretPath)
@@ -258,6 +350,46 @@ func (kv *kvv2) DeleteVersions(ctx context.Context, secretPath string, versions 
 		_, err := kv.c.Logical().WriteWithContext(ctx, pathToDelete, versionsMap)
 		if err != nil {
 			return fmt.Errorf("error deleting secret at %s: %w", pathToDelete, err)
+		}
+	}
+
+	return nil
+}
+
+// addCustomMetadata adds custom metadata onto the top level of the KV Secret,
+// rather than inside the KVVersionMetadata struct like in the response from
+// `vault kv get` in the CLI, to help prevent users of KVMetadata (the
+// equivalent of the response from `vault kv metadata get` in the CLI) from
+// mistakenly thinking there is such a thing as version-specific custom_metadata.
+func (kvs *KVSecret) addCustomMetadata(secret *Secret) error {
+	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
+	metadataInterface, ok := secret.Data["metadata"]
+	if ok {
+		metadataMap, ok := metadataInterface.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
+		}
+		customMetadataInterface, ok := metadataMap["custom_metadata"]
+		if ok {
+			if customMetadataInterface != nil {
+				customMetadata, ok := customMetadataInterface.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("unexpected type for 'custom_metadata' map value: %T (%#v)", customMetadataInterface, customMetadataInterface)
+				}
+				kvs.CustomMetadata = customMetadata
+			}
+		}
+	} else {
+		// this Secret was the response from a Write
+		customMetadataInterface, ok := secret.Data["custom_metadata"]
+		if ok {
+			if customMetadataInterface != nil {
+				customMetadata, ok := customMetadataInterface.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("unexpected type for 'custom_metadata' map value inside 'data': %T (%#v)", customMetadataInterface, customMetadataInterface)
+				}
+				kvs.CustomMetadata = customMetadata
+			}
 		}
 	}
 
@@ -299,7 +431,7 @@ func extractVersionMetadata(secret *Secret) (*KVVersionMetadata, error) {
 	var metadata *KVVersionMetadata
 
 	if secret.Data != nil {
-		// Writes return the metadata directly, Reads return it nested inside the "metadata" key
+		// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
 		var metadataMap map[string]interface{}
 		metadataInterface, ok := secret.Data["metadata"]
 		if ok {
@@ -335,20 +467,24 @@ func extractVersionMetadata(secret *Secret) (*KVVersionMetadata, error) {
 }
 
 func extractFullMetadata(secret *Secret) (*KVMetadata, error) {
-	//TODO: actually find a way to copy custom metadata from KVMetadata into the KVVersionMetadata struct on KV ReadMetadata
 	var metadata *KVMetadata
 
 	if secret.Data != nil {
-		// deletion_time usually comes in as an empty string which can't be
-		// processed as time.RFC3339, so we reset it to a convertible value
 		if versions, ok := secret.Data["versions"]; ok {
 			versionsMap := versions.(map[string]interface{})
 			if len(versionsMap) > 0 {
 				for version, metadata := range versionsMap {
 					metadataMap := metadata.(map[string]interface{})
+					// deletion_time usually comes in as an empty string which can't be
+					// processed as time.RFC3339, so we reset it to a convertible value
 					if metadataMap["deletion_time"] == "" {
 						metadataMap["deletion_time"] = time.Time{}
 					}
+					versionInt, err := strconv.Atoi(version)
+					if err != nil {
+						return nil, fmt.Errorf("error converting version %s to integer: %w", version, err)
+					}
+					metadataMap["version"] = versionInt
 					versionsMap[version] = metadataMap // save the updated copy of the metadata map
 				}
 			}
