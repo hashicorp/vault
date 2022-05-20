@@ -1215,9 +1215,8 @@ func TestVaultHttpProxyUsedWhenNoProxyEnvVarDoesntIncludeRequestHost(t *testing.
 	defer os.Setenv(NoProxy, oldNoProxy)
 
 	c := DefaultConfig()
-	err := c.ReadEnvironment()
-	if err != nil {
-		t.Fatalf("Expected no error reading config, found error %v", err)
+	if c.Error != nil {
+		t.Fatalf("Expected no error reading config, found error %v", c.Error)
 	}
 
 	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
@@ -1243,9 +1242,8 @@ func TestVaultHttpProxyStillUsedWhenNoProxyEnvVarIncludesRequestHost(t *testing.
 	defer os.Setenv(NoProxy, oldNoProxy)
 
 	c := DefaultConfig()
-	err := c.ReadEnvironment()
-	if err != nil {
-		t.Fatalf("Expected no error reading config, found error %v", err)
+	if c.Error != nil {
+		t.Fatalf("Expected no error reading config, found error %v", c.Error)
 	}
 
 	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
@@ -1271,9 +1269,8 @@ func TestVaultAddrProxyUsedWhenNoProxyEnvVarDoesntIncludeRequestHost(t *testing.
 	defer os.Setenv(NoProxy, oldNoProxy)
 
 	c := DefaultConfig()
-	err := c.ReadEnvironment()
-	if err != nil {
-		t.Fatalf("Expected no error reading config, found error %v", err)
+	if c.Error != nil {
+		t.Fatalf("Expected no error reading config, found error %v", c.Error)
 	}
 
 	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
@@ -1299,9 +1296,8 @@ func TestVaultProxyAddrStillUsedWhenNoProxyEnvVarIncludesRequestHost(t *testing.
 	defer os.Setenv(NoProxy, oldNoProxy)
 
 	c := DefaultConfig()
-	err := c.ReadEnvironment()
-	if err != nil {
-		t.Fatalf("Expected no error reading config, found error %v", err)
+	if c.Error != nil {
+		t.Fatalf("Expected no error reading config, found error %v", c.Error)
 	}
 
 	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
@@ -1327,9 +1323,8 @@ func TestVaultProxyAddrStillUsedWhenVaultHttpProxySuppliedAlso(t *testing.T) {
 	defer os.Setenv(VaultProxyAddr, oldVaultProxyAddr)
 
 	c := DefaultConfig()
-	err := c.ReadEnvironment()
-	if err != nil {
-		t.Fatalf("Expected no error reading config, found error %v", err)
+	if c.Error != nil {
+		t.Fatalf("Expected no error reading config, found error %v", c.Error)
 	}
 
 	r, _ := http.NewRequest("GET", "https://vaultproject.io", nil)
