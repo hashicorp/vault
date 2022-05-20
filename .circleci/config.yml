@@ -143,7 +143,7 @@ jobs:
         - bin
         root: .
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.18556
     - GO_TAGS: ''
     - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
@@ -380,7 +380,7 @@ jobs:
           fi
         name: make fmt
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.18556
     - GO_TAGS: ''
     - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
@@ -862,7 +862,7 @@ jobs:
         paths:
         - /home/circleci/go/pkg/mod
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.18556
     - GO_TAGS: ''
     - GO_VERSION: 1.17.9
     - GOFUMPT_VERSION: 0.2.1
