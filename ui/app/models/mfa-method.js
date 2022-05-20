@@ -109,7 +109,6 @@ export default class MfaMethod extends Model {
   @attr('boolean', {
     label: 'Passcode reminder',
     subText: 'If this is turned on, the user is reminded to use the passcode upon MFA validation.',
-    defaultValue: false,
   })
   use_passcode;
 
