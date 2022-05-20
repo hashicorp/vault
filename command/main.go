@@ -47,12 +47,12 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 			break
 		}
 
-		if arg == "-output-curl-string" {
+		if arg == "-output-curl-string" || arg == "--output-curl-string" {
 			outputCurlString = true
 			continue
 		}
 
-		if arg == "-output-policy" {
+		if arg == "-output-policy" || arg == "--output-policy" {
 			outputPolicy = true
 			continue
 		}
