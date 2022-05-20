@@ -77,6 +77,7 @@ type nodeHAConnectionInfo struct {
 	lastHeartbeat  time.Time
 	version        string
 	upgradeVersion string
+	redundancyZone string
 }
 
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
@@ -85,6 +86,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		lastHeartbeat:  time.Now(),
 		version:        in.SdkVersion,
 		upgradeVersion: in.RaftUpgradeVersion,
+		redundancyZone: in.RaftRedundancyZone,
 	}
 	if in.ClusterAddr != "" {
 		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)

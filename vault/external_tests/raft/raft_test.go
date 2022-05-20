@@ -45,8 +45,6 @@ type RaftClusterOpts struct {
 	Seal                           vault.Seal
 	VersionMap                     map[int]string
 	RedundancyZoneMap              map[int]string
-	AutopilotReconcileInterval     time.Duration
-	AutopilotUpdateInterval        time.Duration
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {

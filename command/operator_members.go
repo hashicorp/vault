@@ -71,27 +71,11 @@ func (c *OperatorMembersCommand) Run(args []string) int {
 
 	switch Format(c.UI) {
 	case "table":
-		showUpgradeVersion := false
 		out := make([]string, 0)
-		cols := []string{"Host Name", "API Address", "Cluster Address", "Active Node", "Version"}
-
-		// If any of the nodes have an UpgradeVersion, show the header
-		if len(resp.Nodes) > 0 {
-			for _, node := range resp.Nodes {
-				if node.UpgradeVersion != "" && node.UpgradeVersion != node.Version {
-					cols = append(cols, "Upgrade Version")
-					showUpgradeVersion = true
-					break
-				}
-			}
-		}
-		cols = append(cols, "Last Echo")
+		cols := []string{"Host Name", "API Address", "Cluster Address", "Active Node", "Version", "Upgrade Version", "Redundancy Zone", "Last Echo"}
 		out = append(out, strings.Join(cols, " | "))
 		for _, node := range resp.Nodes {
-			cols := []string{node.Hostname, node.APIAddress, node.ClusterAddress, fmt.Sprintf("%t", node.ActiveNode), node.Version}
-			if showUpgradeVersion {
-				cols = append(cols, node.UpgradeVersion)
-			}
+			cols := []string{node.Hostname, node.APIAddress, node.ClusterAddress, fmt.Sprintf("%t", node.ActiveNode), node.Version, node.UpgradeVersion, node.RedundancyZone}
 			if node.LastEcho != nil {
 				cols = append(cols, node.LastEcho.Format(time.RFC3339))
 			} else {

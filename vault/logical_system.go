@@ -4333,6 +4333,7 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 
 	if rb := b.Core.getRaftBackend(); rb != nil {
 		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.RedundancyZone = rb.RedundancyZone()
 	}
 
 	nodes := []HAStatusNode{leader}
@@ -4346,6 +4347,7 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 			LastEcho:       &lastEcho,
 			Version:        peerNode.Version,
 			UpgradeVersion: peerNode.UpgradeVersion,
+			RedundancyZone: peerNode.RedundancyZone,
 		})
 	}
 
@@ -4368,6 +4370,7 @@ type HAStatusNode struct {
 	LastEcho       *time.Time `json:"last_echo"`
 	Version        string     `json:"version"`
 	UpgradeVersion string     `json:"upgrade_version,omitempty"`
+	RedundancyZone string     `json:"redundancy_zone,omitempty"`
 }
 
 func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

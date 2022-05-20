@@ -38,5 +38,6 @@ type HANode struct {
 	ActiveNode     bool       `json:"active_node"`
 	LastEcho       *time.Time `json:"last_echo"`
 	Version        string     `json:"version"`
-	UpgradeVersion string     `json:"upgrade_version"`
+	UpgradeVersion string     `json:"upgrade_version,omitempty"`
+	RedundancyZone string     `json:"redundancy_zone,omitempty"`
 }

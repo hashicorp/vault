@@ -3256,6 +3256,7 @@ type PeerNode struct {
 	Version        string    `json:"version"`
 	LastEcho       time.Time `json:"last_echo"`
 	UpgradeVersion string    `json:"upgrade_version,omitempty"`
+	RedundancyZone string    `json:"redundancy_zone,omitempty"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -3270,6 +3271,7 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 			LastEcho:       info.lastHeartbeat,
 			Version:        info.version,
 			UpgradeVersion: info.upgradeVersion,
+			RedundancyZone: info.redundancyZone,
 		})
 	}
 	return nodes
