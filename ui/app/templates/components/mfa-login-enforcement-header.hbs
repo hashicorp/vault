@@ -1,5 +1,5 @@
 {{#if @isInline}}
-  <h3 class="title is-5">Enforcement</h3>
+  <h3 class="title is-5" data-test-mleh-title>Enforcement</h3>
 {{else}}
   <PageHeader as |p|>
     <p.top>
@@ -15,7 +15,7 @@
       </nav>
     </p.top>
     <p.levelLeft>
-      <h1 class="title is-3">
+      <h1 class="title is-3" data-test-mleh-title>
         <Icon @name="lock" @size="24" />
         {{@heading}}
       </h1>
@@ -23,7 +23,7 @@
   </PageHeader>
 {{/if}}
 <div class="has-border-top-light">
-  <p class="has-top-margin-m">
+  <p class="has-top-margin-m" data-test-mleh-description>
     {{#if @isInline}}
       An enforcement includes the authentication types, authentication methods, groups, and entities that will require this
       MFA method. This is optional and can be added later.
@@ -43,6 +43,7 @@
         @value="new"
         @groupValue={{@radioCardGroupValue}}
         @onChange={{@onRadioCardSelect}}
+        data-test-mleh-radio="new"
       />
       <RadioCard
         @title="Use existing"
@@ -52,6 +53,7 @@
         @groupValue={{@radioCardGroupValue}}
         @disabled={{not this.enforcements.length}}
         @onChange={{@onRadioCardSelect}}
+        data-test-mleh-radio="existing"
       />
       <RadioCard
         @title="Skip this step"
@@ -60,6 +62,7 @@
         @value="skip"
         @groupValue={{@radioCardGroupValue}}
         @onChange={{@onRadioCardSelect}}
+        data-test-mleh-radio="skip"
       />
     </div>
     {{#if (eq @radioCardGroupValue "existing")}}
@@ -71,7 +74,7 @@
         @options={{this.enforcements}}
         @shouldRenderName={{true}}
         @selectLimit={{1}}
-        @onChange={{@onEnforcementSelect}}
+        @onChange={{this.onEnforcementSelect}}
       />
     {{/if}}
   {{/if}}
