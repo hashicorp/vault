@@ -1232,15 +1232,14 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 		return errors.New("raft storage autopilot is not initialized")
 	}
 
-	server := &autopilot.Server{
+	b.logger.Trace("adding server to raft via autopilot", "id", peerID)
+	return b.autopilot.AddServer(&autopilot.Server{
 		ID:          raft.ServerID(peerID),
 		Name:        peerID,
 		Address:     raft.ServerAddress(clusterAddr),
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeType:    autopilot.NodeVoter,
-	}
-	b.logger.Trace("adding server to raft via autopilot", "id", peerID)
-	return b.autopilot.AddServer(server)
+	})
 }
 
 // Peers returns all the servers present in the raft cluster
