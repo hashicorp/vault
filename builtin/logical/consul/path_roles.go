@@ -35,6 +35,7 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `Policy document, base64 encoded. Required
 for 'client' tokens. Required for Consul pre-1.4.`,
+				Deprecated: true,
 			},
 
 			"token_type": {
@@ -43,6 +44,7 @@ for 'client' tokens. Required for Consul pre-1.4.`,
 				Description: `Which type of token to create: 'client' or 'management'. If
 a 'management' token, the "policy", "policies", and "consul_roles" parameters are not
 required. Defaults to 'client'.`,
+				Deprecated: true,
 			},
 
 			"policies": {
