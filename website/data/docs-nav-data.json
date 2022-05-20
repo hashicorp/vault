@@ -1053,10 +1053,6 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secrets/kmip"
-      },
-      {
         "title": "Key/Value",
         "routes": [
           {
@@ -1072,6 +1068,10 @@
             "path": "secrets/kv/kv-v2"
           }
         ]
+      },
+      {
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secrets/kmip"
       },
       {
         "title": "MongoDB Atlas",
