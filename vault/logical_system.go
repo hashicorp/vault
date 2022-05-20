@@ -3711,7 +3711,11 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			if me.Table == "auth" {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Table+"/"+me.Path)
+			} else {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			}
 		}
 
 		return false
