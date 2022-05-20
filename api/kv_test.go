@@ -42,11 +42,10 @@ func TestExtractVersionMetadata(t *testing.T) {
 				},
 			},
 			expected: &KVVersionMetadata{
-				Version:        10,
-				CreatedTime:    expectedCreatedTimeParsed,
-				DeletionTime:   time.Time{},
-				Destroyed:      false,
-				CustomMetadata: nil,
+				Version:      10,
+				CreatedTime:  expectedCreatedTimeParsed,
+				DeletionTime: time.Time{},
+				Destroyed:    false,
 			},
 		},
 		{
@@ -66,43 +65,10 @@ func TestExtractVersionMetadata(t *testing.T) {
 				},
 			},
 			expected: &KVVersionMetadata{
-				Version:        10,
-				CreatedTime:    expectedCreatedTimeParsed,
-				DeletionTime:   expectedDeletionTimeParsed,
-				Destroyed:      false,
-				CustomMetadata: nil,
-			},
-		},
-		{
-			name: "a secret with custom metadata",
-			input: &Secret{
-				Data: map[string]interface{}{
-					"data": map[string]interface{}{
-						"password": "Hashi123",
-					},
-					"metadata": map[string]interface{}{
-						"version":       10,
-						"created_time":  inputCreatedTimeStr,
-						"deletion_time": "",
-						"destroyed":     false,
-						"custom_metadata": map[string]string{
-							"foo": "abc",
-							"bar": "def",
-							"baz": "ghi",
-						},
-					},
-				},
-			},
-			expected: &KVVersionMetadata{
 				Version:      10,
 				CreatedTime:  expectedCreatedTimeParsed,
-				DeletionTime: time.Time{},
+				DeletionTime: expectedDeletionTimeParsed,
 				Destroyed:    false,
-				CustomMetadata: map[string]string{
-					"foo": "abc",
-					"bar": "def",
-					"baz": "ghi",
-				},
 			},
 		},
 	}

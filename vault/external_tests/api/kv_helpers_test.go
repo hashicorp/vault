@@ -75,7 +75,7 @@ func TestKVHelpers(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if writtenSecret == nil || writtenSecret.Data == nil {
+		if writtenSecret == nil || writtenSecret.Metadata == nil {
 			t.Fatal("kv v2 secret did not have expected contents")
 		}
 
@@ -95,7 +95,7 @@ func TestKVHelpers(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(secret.Metadata.CustomMetadata, fullMetadata.CustomMetadata) {
+		if !reflect.DeepEqual(secret.CustomMetadata, fullMetadata.CustomMetadata) {
 			t.Fatalf("custom metadata on the secret does not match the custom metadata in the full metadata")
 		}
 
