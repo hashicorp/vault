@@ -741,7 +741,8 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
-	recovery bool) (*logical.Response, error) {
+	recovery bool,
+) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up backed-up keys: %w", err)
@@ -792,7 +793,8 @@ func (b *SystemBackend) handleRekeyDelete(
 	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
-	recovery bool) (*logical.Response, error) {
+	recovery bool,
+) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("error during deletion of backed-up keys: %w", err)
@@ -1082,7 +1084,8 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 
 // used to intercept an HTTPCodedError so it goes back to callee
 func handleError(
-	err error) (*logical.Response, error) {
+	err error,
+) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		return logical.ErrorResponse(err.Error()), err
 	}
@@ -1097,7 +1100,8 @@ func handleError(
 // Performs a similar function to handleError, but upon seeing a ReadOnlyError
 // will actually strip it out to prevent forwarding
 func handleErrorNoReadOnlyForward(
-	err error) (*logical.Response, error) {
+	err error,
+) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		return nil, fmt.Errorf("operation could not be completed as storage is read-only")
 	}
@@ -2007,7 +2011,8 @@ func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Requ
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefixCommon(ctx context.Context,
-	req *logical.Request, data *framework.FieldData, force, sync bool) (*logical.Response, error) {
+	req *logical.Request, data *framework.FieldData, force, sync bool,
+) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 
@@ -3239,6 +3244,14 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
+	lf := data.Get("log_format").(string)
+	lowerLogFormat := strings.ToLower(lf)
+
+	validFormats := []string{"standard", "json"}
+	if !strutil.StrListContains(validFormats, lowerLogFormat) {
+		return logical.ErrorResponse("unknown log format"), nil
+	}
+
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
 		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
@@ -3253,7 +3266,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	isJson := b.Core.LogFormat() == "json"
+	isJson := b.Core.LogFormat() == "json" || lf == "json"
 	logger := b.Core.Logger().(log.InterceptLogger)
 
 	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
