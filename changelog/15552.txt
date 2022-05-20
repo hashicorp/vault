@@ -1,0 +1,3 @@
+```release-note:bug
+openapi: Fixed issue where information about /auth/token endpoints was not present with explicit policy permissions
+```
