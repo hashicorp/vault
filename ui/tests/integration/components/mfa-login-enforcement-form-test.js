@@ -191,7 +191,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
       },
     }));
     this.model.auth_method_accessors.addObject('auth_userpass_1234');
-    this.model.auth_method_types.addObject('alicloud');
+    this.model.auth_method_types.addObject('userpass');
     const [entity] = (await this.store.query('identity/entity', {})).toArray();
     this.model.identity_entities.addObject(entity);
     const [group] = (await this.store.query('identity/group', {})).toArray();
@@ -212,7 +212,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         key: 'auth_method_accessors',
         type: 'accessor',
       },
-      { label: 'Authentication method', value: 'alicloud', key: 'auth_method_types', type: 'method' },
+      { label: 'Authentication method', value: 'userpass', key: 'auth_method_types', type: 'method' },
       { label: 'Group', value: 'bar group 1234', key: 'identity_groups', type: 'identity/group' },
       { label: 'Entity', value: 'foo entity 1234', key: 'identity_entities', type: 'identity/entity' },
     ];
@@ -240,7 +240,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         await click('.ember-power-select-option');
       } else {
         const key = target.label === 'Authentication method' ? 'auth-method' : 'accessor';
-        const value = target.label === 'Authentication method' ? 'alicloud' : 'auth_userpass_1234';
+        const value = target.label === 'Authentication method' ? 'userpass' : 'auth_userpass_1234';
         await fillIn(`[data-test-mlef-select="${key}"] select`, value);
       }
       await click('[data-test-mlef-add-target]');
