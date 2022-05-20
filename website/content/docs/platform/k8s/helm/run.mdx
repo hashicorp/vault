@@ -375,7 +375,7 @@ failover to an older version of Vault must always be avoided.
 
 !> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
-newly-installed Vault binary with the previous version not cleanly
+newly-installed Vault binary with the previous version may not cleanly
 downgrade Vault, as upgrades may perform changes to the underlying data
 structure that make the data incompatible with a downgrade. If you need to roll
 back to a previous version of Vault, you should roll back your data store as
