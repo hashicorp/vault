@@ -1015,6 +1015,23 @@
         "path": "secrets/gcpkms"
       },
       {
+        "title": "Identity",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+      },
+      {
         "title": "Key Management <sup>ENTERPRISE</sup>",
         "routes": [
           {
@@ -1053,23 +1070,6 @@
           {
             "title": "K/V Version 2",
             "path": "secrets/kv/kv-v2"
-          }
-        ]
-      },
-      {
-        "title": "Identity",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/identity"
-          },
-          {
-            "title": "Identity Tokens",
-            "path": "secrets/identity/identity-token"
-          },
-          {
-            "title": "OIDC Identity Provider",
-            "path": "secrets/identity/oidc-provider"
           }
         ]
       },
