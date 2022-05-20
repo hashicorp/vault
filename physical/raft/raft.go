@@ -445,8 +445,18 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		updateInterval = interval
 	}
 
-	if reconcileInterval != 0 && updateInterval != 0 && reconcileInterval < updateInterval {
-		return nil, fmt.Errorf("autopilot_reconcile_interval should be larger than autopilot_update_interval")
+	effectiveReconcileInterval := autopilot.DefaultReconcileInterval
+	effectiveUpdateInterval := autopilot.DefaultUpdateInterval
+
+	if reconcileInterval != 0 {
+		effectiveReconcileInterval = reconcileInterval
+	}
+	if updateInterval != 0 {
+		effectiveUpdateInterval = updateInterval
+	}
+
+	if effectiveReconcileInterval < effectiveUpdateInterval {
+		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
 	}
 
 	return &RaftBackend{
