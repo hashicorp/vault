@@ -14,7 +14,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     }).then(() => data);
   }
   // create does not return response similar to PUT request
-  async createRecord() {
+  createRecord() {
     return this._saveRecord(...arguments);
   }
   // update record via POST method
@@ -22,7 +22,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     return this._saveRecord(...arguments);
   }
 
-  async query(store, type, query) {
+  query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
     return this.ajax(url, 'GET', { data: { list: true } });
   }
