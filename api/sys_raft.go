@@ -113,7 +113,6 @@ type AutopilotServer struct {
 	Version        string `mapstructure:"version"`
 	UpgradeVersion string `mapstructure:"upgrade_version,omitempty"`
 	RedundancyZone string `mapstructure:"redundancy_zone,omitempty"`
-	ReadReplica    bool   `mapstructure:"read_replica,omitempty"`
 	NodeType       string `mapstructure:"node_type,omitempty"`
 }
 

@@ -229,10 +229,20 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 	// Redundancy Zones
 	if len(state.RedundancyZones) > 0 {
 		buffer.WriteString("Redundancy Zones:\n")
-		for zoneName, zone := range state.RedundancyZones {
+		zoneList := make([]string, 0, len(state.RedundancyZones))
+		for z := range state.RedundancyZones {
+			zoneList = append(zoneList, z)
+		}
+		sort.Strings(zoneList)
+		for _, zoneName := range zoneList {
+			zone := state.RedundancyZones[zoneName]
+			servers := zone.Servers
+			voters := zone.Voters
+			sort.Strings(servers)
+			sort.Strings(voters)
 			buffer.WriteString(fmt.Sprintf("   %s\n", zoneName))
-			buffer.WriteString(fmt.Sprintf("      Servers: %s\n", strings.Join(zone.Servers, ", ")))
-			buffer.WriteString(fmt.Sprintf("      Voters: %s\n", strings.Join(zone.Voters, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Servers: %s\n", strings.Join(servers, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Voters: %s\n", strings.Join(voters, ", ")))
 			buffer.WriteString(fmt.Sprintf("      Failure Tolerance: %d\n", zone.FailureTolerance))
 		}
 	}
@@ -244,10 +254,8 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 		buffer.WriteString(fmt.Sprintf("   Target Version: %s\n", state.Upgrade.TargetVersion))
 		buffer.WriteString(fmt.Sprintf("   Target Version Voters: %s\n", strings.Join(state.Upgrade.TargetVersionVoters, ", ")))
 		buffer.WriteString(fmt.Sprintf("   Target Version Non-Voters: %s\n", strings.Join(state.Upgrade.TargetVersionNonVoters, ", ")))
-		buffer.WriteString(fmt.Sprintf("   Target Version Read Replicas: %s\n", strings.Join(state.Upgrade.TargetVersionReadReplicas, ", "))) // TODO: ok to use this term? how is this different from non-voters?
 		buffer.WriteString(fmt.Sprintf("   Other Version Voters: %s\n", strings.Join(state.Upgrade.OtherVersionVoters, ", ")))
 		buffer.WriteString(fmt.Sprintf("   Other Version Non-Voters: %s\n", strings.Join(state.Upgrade.OtherVersionNonVoters, ", ")))
-		buffer.WriteString(fmt.Sprintf("   Other Version Read Replicas: %s\n", strings.Join(state.Upgrade.OtherVersionReadReplicas, ", "))) // TODO: same here as above
 
 		if len(state.Upgrade.RedundancyZones) > 0 {
 			buffer.WriteString("   Redundancy Zones:\n")

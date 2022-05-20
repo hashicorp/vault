@@ -821,12 +821,11 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 	}
 
-	raftInfo := &raftInformation{
+	return &raftInformation{
 		challenge:           eBlob,
 		leaderClient:        apiClient,
 		leaderBarrierConfig: &sealConfig,
-	}
-	return raftInfo, nil
+	}, nil
 }
 
 func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, nonVoter bool) (bool, error) {

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -31,7 +30,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	testingintf "github.com/mitchellh/go-testing-interface"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -41,7 +39,6 @@ type RaftClusterOpts struct {
 	InmemCluster                   bool
 	EnableAutopilot                bool
 	PhysicalFactoryConfig          map[string]interface{}
-	PhysicalFactory                func(t testingintf.T, coreIdx int, logger log.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle
 	DisablePerfStandby             bool
 	EnableResponseHeaderRaftNodeID bool
 	NumCores                       int
@@ -71,7 +68,6 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	}
 	opts.InmemClusterLayers = ropts.InmemCluster
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
-	opts.PhysicalFactory = ropts.PhysicalFactory
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 	opts.NumCores = ropts.NumCores
 	opts.VersionMap = ropts.VersionMap
