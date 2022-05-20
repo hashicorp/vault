@@ -20,10 +20,13 @@
           <option value="">Select one</option>
         {{/if}}
         {{#each this.authMethods.last.value as |method|}}
-          <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
-            {{method.path}}
-            ({{if this.showAccessor method.accessor method.type}})
-          </option>
+          {{! token type does not need to be authorized via MFA }}
+          {{#if (not-eq method.id "token")}}
+            <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
+              {{method.path}}
+              ({{if this.showAccessor method.accessor method.type}})
+            </option>
+          {{/if}}
         {{/each}}
       </select>
     </div>
