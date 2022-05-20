@@ -5,40 +5,66 @@ import (
 	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"log"
 )
 
 func pathIssue(b *backend) *framework.Path {
+	log.Println("HELLO WORLD")
 	return &framework.Path{
 		Pattern: "issue/" + framework.GenericNameWithAtRegex("role"),
 
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathIssue,
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathIssue,
+		},
+		//Operations: map[logical.Operation]framework.OperationHandler{
+		//	logical.UpdateOperation: &framework.PathOperation{
+		//		Callback: b.pathIssue,
+		//	},
+		//},
+		Fields: map[string]*framework.FieldSchema{
+			"role": {
+				Type:        framework.TypeString,
+				Description: `The desired role with configuration for this request.`,
+			},
+			"key_type": {
+				Type:        framework.TypeString,
+				Description: "TBD",
+			},
+			"key_bits": {
+				Type:        framework.TypeInt,
+				Description: "TBD",
 			},
 		},
+		HelpSynopsis:    "TBD - HelpSynopsis",
+		HelpDescription: "TBD - HelpDescription",
 	}
 }
 
 func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Get role? or should it be passed? / Role is always required here
+	log.Println("HELLO WORLD in pathIssue")
+	// Get role or should it be passed?
 	roleName := data.Get("role").(string)
 	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
+		return nil, err
+	}
+	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
 	}
+
 	// If "KeyType" is not "ca" return?
 	if role.KeyType != "ca" {
 		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
 
 	// We are expecting a "key_type" and "key_bits"
-	keyType := data.Get("keyType").(string)
+	keyType := data.Get("key_type").(string)
 	if keyType == "" {
 		return logical.ErrorResponse("missing key_type"), nil
 	}
 
 	// Can "keyBits" be 0?
-	keyBits := data.Get("keyBits").(int)
+	keyBits := data.Get("key_bits").(int)
 	if keyBits == 0 {
 		return logical.ErrorResponse("missing key_bits"), nil
 	}
@@ -71,16 +97,22 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 		return nil, fmt.Errorf("failed to generate or parse the keys")
 	}
 
-	// Let's see if this is working
-	respData := map[string]interface{}{}
+	// Sign key
+	// Raw or Schema?
+	data.Raw["public_key"] = publicKey
+	data.Raw["private_key"] = privateKey
+	return b.pathSignCertificate(ctx, req, data, role)
 
-	respData["private_key"] = privateKey
-	respData["public_key"] = publicKey
+	//	// Everything after this is creating a response
+	/*
+		respData := map[string]interface{}{}
 
-	// Create response
-	resp := &logical.Response{
-		Data: respData,
-	}
+		respData["private_key"] = privateKey
+		respData["public_key"] = publicKey
 
-	return resp, nil
+		// Create response
+		resp := &logical.Response{
+			Data: respData,
+		}
+	*/
 }
