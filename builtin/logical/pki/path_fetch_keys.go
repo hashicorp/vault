@@ -248,10 +248,11 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 
 	keyId, err := resolveKeyReference(ctx, req.Storage, keyRef)
 	if err != nil {
+		if keyId == KeyRefNotFound {
+			// We failed to lookup the key, we should ignore any error here and reply as if it was deleted.
+			return nil, nil
+		}
 		return nil, err
-	}
-	if keyId == "" {
-		return logical.ErrorResponse("unable to resolve key id for reference" + keyRef), nil
 	}
 
 	keyInUse, issuerId, err := isKeyInUse(keyId.String(), ctx, req.Storage)
