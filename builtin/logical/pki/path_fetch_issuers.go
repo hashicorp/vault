@@ -400,14 +400,14 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 
 	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
 	if err != nil {
+		// Return as if we deleted it if we fail to lookup the issuer.
+		if ref == IssuerRefNotFound {
+			return &logical.Response{}, nil
+		}
 		return nil, err
 	}
-	if ref == "" {
-		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
-	}
 
-	var response *logical.Response
-	response = &logical.Response{}
+	response := &logical.Response{}
 
 	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
 	if err != nil {
