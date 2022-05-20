@@ -290,6 +290,49 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_Method_InitialBackoff(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-method-initial-backoff.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:       "aws",
+				MountPath:  "auth/aws",
+				WrapTTL:    5 * time.Minute,
+				MinBackoff: 5 * time.Second,
+				MaxBackoff: 2 * time.Minute,
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type: "file",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-cache-no-auto_auth.hcl")
 	if err != nil {

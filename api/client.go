@@ -143,6 +143,14 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// OutputPolicy causes the actual request to return an error of type
+	// *OutputPolicyError. Type asserting the error message will display
+	// an example of the required policy HCL needed for the operation.
+	//
+	// Note: It is not thread-safe to set this and make concurrent requests
+	// with the same client. Cloning a client will not clone this value.
+	OutputPolicy bool
+
 	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
 	// track of the name of the TLS certs and keys when OutputCurlString is set.
 	// Cloning a client will also not clone those values.
@@ -600,7 +608,7 @@ func (c *Client) CloneConfig() *Config {
 	return newConfig
 }
 
-// Sets the address of Vault in the client. The format of address should be
+// SetAddress sets the address of Vault in the client. The format of address should be
 // "<Scheme>://<Host>:<Port>". Setting this on a client will override the
 // value of VAULT_ADDR environment variable.
 func (c *Client) SetAddress(addr string) error {
@@ -625,6 +633,16 @@ func (c *Client) Address() string {
 	defer c.modifyLock.RUnlock()
 
 	return c.addr.String()
+}
+
+func (c *Client) SetCheckRedirect(f func(*http.Request, []*http.Request) error) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.CheckRedirect = f
 }
 
 // SetLimiter will set the rate limiter for this client.
@@ -777,6 +795,24 @@ func (c *Client) SetOutputCurlString(curl bool) {
 	defer c.config.modifyLock.Unlock()
 
 	c.config.OutputCurlString = curl
+}
+
+func (c *Client) OutputPolicy() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.OutputPolicy
+}
+
+func (c *Client) SetOutputPolicy(isSet bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.OutputPolicy = isSet
 }
 
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
@@ -1172,6 +1208,7 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	httpClient := c.config.HttpClient
 	ns := c.headers.Get(consts.NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
@@ -1223,6 +1260,14 @@ START:
 			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
+	}
+
+	if outputPolicy {
+		LastOutputPolicyError = &OutputPolicyError{
+			method: req.Method,
+			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
+		}
+		return nil, LastOutputPolicyError
 	}
 
 	req.Request = req.Request.WithContext(ctx)
@@ -1317,6 +1362,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
+
 	// add headers
 	if c.headers != nil {
 		for header, vals := range c.headers {
@@ -1333,9 +1380,12 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 
-	// OutputCurlString logic relies on the request type to be retryable.Request as
+	// OutputCurlString and OutputPolicy logic rely on the request type to be retryable.Request
 	if outputCurlString {
 		return nil, fmt.Errorf("output-curl-string is not implemented for this request")
+	}
+	if outputPolicy {
+		return nil, fmt.Errorf("output-policy is not implemented for this request")
 	}
 
 	req.URL.User = r.URL.User

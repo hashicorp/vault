@@ -127,13 +127,14 @@
         <LayoutLoading />
       {{else}}
         {{#if this.totalUsageCounts}}
-          {{#unless this.byMonthTotalClients}}
+          {{#unless this.byMonthActivityData}}
             <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
           {{/unless}}
-          {{#if this.byMonthTotalClients}}
+          {{#if this.byMonthActivityData}}
             <Clients::RunningTotal
               @chartLegend={{this.chartLegend}}
-              @lineChartData={{this.byMonthTotalClients}}
+              @selectedAuthMethod={{this.selectedAuthMethod}}
+              @lineChartData={{this.byMonthActivityData}}
               @barChartData={{this.byMonthNewClients}}
               @runningTotals={{this.totalUsageCounts}}
               @upgradeData={{this.upgradeDuringActivity}}
@@ -143,8 +144,10 @@
           {{#if this.hasAttributionData}}
             <Clients::Attribution
               @chartLegend={{this.chartLegend}}
-              @totalClientsData={{this.totalClientsData}}
               @totalUsageCounts={{this.totalUsageCounts}}
+              @newUsageCounts={{this.newClientCounts}}
+              @totalClientAttribution={{this.totalClientAttribution}}
+              @newClientAttribution={{this.newClientAttribution}}
               @selectedNamespace={{this.selectedNamespace}}
               @startTimeDisplay={{this.startTimeDisplay}}
               @endTimeDisplay={{this.endTimeDisplay}}
@@ -152,10 +155,10 @@
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
-          {{#if this.byMonthTotalClients}}
+          {{#if this.hasMultipleMonthsData}}
             <Clients::MonthlyUsage
               @chartLegend={{this.chartLegend}}
-              @verticalBarChartData={{this.byMonthTotalClients}}
+              @verticalBarChartData={{this.byMonthActivityData}}
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}

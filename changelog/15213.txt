@@ -1,0 +1,3 @@
+```release-note:improvement
+core,transit: Allow callers to choose random byte source including entropy augmentation sources for the sys/tools/random and transit/random endpoints.
+```

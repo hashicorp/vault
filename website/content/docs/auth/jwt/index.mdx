@@ -321,9 +321,10 @@ Note: the metadata key name "role" is reserved and may not be used for claim map
 
 ### Claim Specifications and JSON Pointer
 
-Some parameters (e.g. `bound_claims`, `groups_claim`, `claim_mappings`) are used to point to data within the JWT. If
-the desired key is at the top of level of the JWT, the name can be provided directly. If it is nested at a
-lower level, a JSON Pointer may be used.
+Some parameters (e.g. `bound_claims`, `groups_claim`, `claim_mappings`, `user_claim`) are
+used to point to data within the JWT. If the desired key is at the top of level of the JWT,
+the name can be provided directly. If it is nested at a lower level, a JSON Pointer may be
+used.
 
 Assume the following JSON data to be referenced:
 

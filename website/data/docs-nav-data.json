@@ -1057,6 +1057,10 @@
         ]
       },
       {
+        "title": "Kubernetes",
+        "path": "secrets/kubernetes"
+      },
+      {
         "title": "Identity",
         "routes": [
           {
@@ -1087,7 +1091,32 @@
       },
       {
         "title": "PKI (Certificates)",
-        "path": "secrets/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/pki"
+          },
+          {
+            "title": "Setup and Usage",
+            "path": "secrets/pki/setup"
+          },
+          {
+            "title": "Quick Start - Root CA Setup",
+            "path": "secrets/pki/quick-start-root-ca"
+          },
+          {
+            "title": "Quick Start - Intermediate CA Setup",
+            "path": "secrets/pki/quick-start-intermediate-ca"
+          },
+          {
+            "title": "Considerations",
+            "path": "secrets/pki/considerations"
+          },
+          {
+            "title": "Rotation Primitives",
+            "path": "secrets/pki/rotation-primitives"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
@@ -1908,7 +1937,24 @@
         "path": "enterprise/entropy-augmentation"
       },
       {
-        "title": "Seal Wrap / FIPS 140-2",
+        "title": "FIPS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/fips"
+          },
+          {
+            "title": "FIPS 140-2 Inside Vault",
+            "path": "enterprise/fips/fips1402"
+          },
+          {
+            "title": "Seal Wrap for FIPS 140-2",
+            "path": "enterprise/fips/sealwrap"
+          }
+        ]
+      },
+      {
+        "title": "Seal Wrap",
         "path": "enterprise/sealwrap"
       },
       {

@@ -44,6 +44,7 @@ type AutopilotConfig struct {
 	MaxTrailingLogs                uint64        `json:"max_trailing_logs" mapstructure:"max_trailing_logs"`
 	MinQuorum                      uint          `json:"min_quorum" mapstructure:"min_quorum"`
 	ServerStabilizationTime        time.Duration `json:"server_stabilization_time" mapstructure:"-"`
+	DisableUpgradeMigration        bool          `json:"disable_upgrade_migration" mapstructure:"disable_upgrade_migration"`
 }
 
 // MarshalJSON makes the autopilot config fields JSON compatible
@@ -55,6 +56,7 @@ func (ac *AutopilotConfig) MarshalJSON() ([]byte, error) {
 		"max_trailing_logs":                  ac.MaxTrailingLogs,
 		"min_quorum":                         ac.MinQuorum,
 		"server_stabilization_time":          ac.ServerStabilizationTime.String(),
+		"disable_upgrade_migration":          ac.DisableUpgradeMigration,
 	})
 }
 
@@ -84,28 +86,59 @@ func (ac *AutopilotConfig) UnmarshalJSON(b []byte) error {
 
 // AutopilotState represents the response of the raft autopilot state API
 type AutopilotState struct {
-	Healthy          bool                        `mapstructure:"healthy"`
-	FailureTolerance int                         `mapstructure:"failure_tolerance"`
-	Servers          map[string]*AutopilotServer `mapstructure:"servers"`
-	Leader           string                      `mapstructure:"leader"`
-	Voters           []string                    `mapstructure:"voters"`
-	NonVoters        []string                    `mapstructure:"non_voters"`
+	Healthy                    bool                        `mapstructure:"healthy"`
+	FailureTolerance           int                         `mapstructure:"failure_tolerance"`
+	Servers                    map[string]*AutopilotServer `mapstructure:"servers"`
+	Leader                     string                      `mapstructure:"leader"`
+	Voters                     []string                    `mapstructure:"voters"`
+	NonVoters                  []string                    `mapstructure:"non_voters"`
+	RedundancyZones            map[string]AutopilotZone    `mapstructure:"redundancy_zones,omitempty"`
+	Upgrade                    *AutopilotUpgrade           `mapstructure:"upgrade_info,omitempty"`
+	OptimisticFailureTolerance int                         `mapstructure:"optimistic_failure_tolerance,omitempty"`
 }
 
 // AutopilotServer represents the server blocks in the response of the raft
 // autopilot state API.
 type AutopilotServer struct {
-	ID          string            `mapstructure:"id"`
-	Name        string            `mapstructure:"name"`
-	Address     string            `mapstructure:"address"`
-	NodeStatus  string            `mapstructure:"node_status"`
-	LastContact string            `mapstructure:"last_contact"`
-	LastTerm    uint64            `mapstructure:"last_term"`
-	LastIndex   uint64            `mapstructure:"last_index"`
-	Healthy     bool              `mapstructure:"healthy"`
-	StableSince string            `mapstructure:"stable_since"`
-	Status      string            `mapstructure:"status"`
-	Meta        map[string]string `mapstructure:"meta"`
+	ID             string `mapstructure:"id"`
+	Name           string `mapstructure:"name"`
+	Address        string `mapstructure:"address"`
+	NodeStatus     string `mapstructure:"node_status"`
+	LastContact    string `mapstructure:"last_contact"`
+	LastTerm       uint64 `mapstructure:"last_term"`
+	LastIndex      uint64 `mapstructure:"last_index"`
+	Healthy        bool   `mapstructure:"healthy"`
+	StableSince    string `mapstructure:"stable_since"`
+	Status         string `mapstructure:"status"`
+	Version        string `mapstructure:"version"`
+	UpgradeVersion string `mapstructure:"upgrade_version,omitempty"`
+	RedundancyZone string `mapstructure:"redundancy_zone,omitempty"`
+	NodeType       string `mapstructure:"node_type,omitempty"`
+}
+
+type AutopilotZone struct {
+	Servers          []string `mapstructure:"servers,omitempty"`
+	Voters           []string `mapstructure:"voters,omitempty"`
+	FailureTolerance int      `mapstructure:"failure_tolerance,omitempty"`
+}
+
+type AutopilotUpgrade struct {
+	Status                    string                                  `mapstructure:"status"`
+	TargetVersion             string                                  `mapstructure:"target_version,omitempty"`
+	TargetVersionVoters       []string                                `mapstructure:"target_version_voters,omitempty"`
+	TargetVersionNonVoters    []string                                `mapstructure:"target_version_non_voters,omitempty"`
+	TargetVersionReadReplicas []string                                `mapstructure:"target_version_read_replicas,omitempty"`
+	OtherVersionVoters        []string                                `mapstructure:"other_version_voters,omitempty"`
+	OtherVersionNonVoters     []string                                `mapstructure:"other_version_non_voters,omitempty"`
+	OtherVersionReadReplicas  []string                                `mapstructure:"other_version_read_replicas,omitempty"`
+	RedundancyZones           map[string]AutopilotZoneUpgradeVersions `mapstructure:"redundancy_zones,omitempty"`
+}
+
+type AutopilotZoneUpgradeVersions struct {
+	TargetVersionVoters    []string `mapstructure:"target_version_voters,omitempty"`
+	TargetVersionNonVoters []string `mapstructure:"target_version_non_voters,omitempty"`
+	OtherVersionVoters     []string `mapstructure:"other_version_voters,omitempty"`
+	OtherVersionNonVoters  []string `mapstructure:"other_version_non_voters,omitempty"`
 }
 
 // RaftJoin wraps RaftJoinWithContext using context.Background.

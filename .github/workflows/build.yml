@@ -1,11 +1,6 @@
 name: build
 
-on:
-  push:
-    # Sequence of patterns matched against refs/heads
-    branches:    
-      # Push events on main branch
-      - main
+on: [ workflow_dispatch, push ]
 
 env:
   PKG_NAME: "vault"
@@ -257,3 +252,26 @@ jobs:
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
+
+  build-ubi:
+    name: Red Hat UBI ${{ matrix.arch }} build
+    needs:
+      - get-product-version
+      - build-linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["amd64"]
+    env:
+      repo: ${{github.event.repository.name}}
+      version: ${{needs.get-product-version.outputs.product-version}}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Build (Action)
+        uses: hashicorp/actions-docker-build@v1
+        with:
+          version: ${{env.version}}
+          target: ubi
+          arch: ${{matrix.arch}}
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi

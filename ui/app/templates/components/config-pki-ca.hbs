@@ -4,7 +4,11 @@
     {{#if this.needsConfig}}
       Configure CA Certificate
     {{else}}
-      Replace CA Certificate
+      {{#if this.model.certificate}}
+        Generated Certificate
+      {{else}}
+        Add CA Certificate
+      {{/if}}
     {{/if}}
   </h2>
   {{#if (or this.model.certificate this.model.csr)}}
@@ -59,13 +63,6 @@
   {{else}}
     <form {{action "saveCA" on="submit"}} data-test-generate-root-cert="true">
       <NamespaceReminder @mode="save" @noun="PKI change" />
-      {{#if this.model.uploadPemBundle}}
-        <AlertBanner
-          @type="warning"
-          @message="If you have already set a certificate and key, they will be overridden with the successful saving of a new PEM bundle."
-          data-test-warning
-        />
-      {{/if}}
       <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
       <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
         <div class="field is-grouped">
@@ -84,18 +81,6 @@
               Cancel
             </button>
           </div>
-        </div>
-        <div class="control">
-          {{#if this.model.canDeleteRoot}}
-            <ConfirmAction
-              @buttonClasses="button"
-              @confirmTitle="Delete this CA key?"
-              @confirmMessage="This CA certificate will still be available for reading until a new certificate/key is generated or uploaded."
-              @onConfirmAction={{action "deleteCA"}}
-            >
-              Delete
-            </ConfirmAction>
-          {{/if}}
         </div>
       </div>
     </form>
@@ -231,7 +216,7 @@
         {{#if this.needsConfig}}
           Configure CA
         {{else}}
-          Replace CA
+          Add CA
         {{/if}}
       </button>
     </div>
@@ -252,5 +237,24 @@
         Set signed intermediate
       </button>
     </div>
+    {{#unless this.needsConfig}}
+      <div class="control">
+        <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+          <T.Trigger data-test-tooltip-trigger tabindex="-1">
+            <button type="button" class="button is-primary" disabled={{true}}>
+              Delete
+            </button>
+          </T.Trigger>
+          <T.Content @defaultClass="tool-tip smaller-font">
+            <div class="box" data-test-hover-copy-tooltip-text>
+              Deleting a CA is only available via the CLI and API.
+              <DocLink @path="/api-docs/secret/pki#delete-issuer" class="doc-link-subtle">
+                Learn more
+              </DocLink>
+            </div>
+          </T.Content>
+        </ToolTip>
+      </div>
+    {{/unless}}
   </div>
 {{/if}}
