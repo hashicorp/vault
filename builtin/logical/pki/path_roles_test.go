@@ -2,12 +2,14 @@ package pki
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPki_RoleGenerateLease(t *testing.T) {
@@ -736,5 +738,284 @@ func TestPki_CertsLease(t *testing.T) {
 
 	if resp.Secret == nil {
 		t.Fatalf("expected a response that contains a secret")
+	}
+}
+
+func TestPki_RolePatch(t *testing.T) {
+	type TestCase struct {
+		Field   string
+		Before  interface{}
+		Patched interface{}
+	}
+
+	testCases := []TestCase{
+		{
+			Field:   "ttl",
+			Before:  int64(5),
+			Patched: int64(10),
+		},
+		{
+			Field:   "max_ttl",
+			Before:  int64(5),
+			Patched: int64(10),
+		},
+		{
+			Field:   "allow_localhost",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "allowed_domains",
+			Before:  []string{"alex", "bob"},
+			Patched: []string{"sam", "alex", "frank"},
+		},
+		{
+			Field:   "allowed_domains_template",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allow_bare_domains",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "allow_subdomains",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allow_glob_domains",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "allow_wildcard_certificates",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allow_any_name",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "enforce_hostnames",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allow_ip_sans",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "allowed_uri_sans",
+			Before:  []string{"gopher://*"},
+			Patched: []string{"https://*"},
+		},
+		{
+			Field:   "allowed_uri_sans_template",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "allowed_other_sans",
+			Before:  []string{"1.2.3.4;UTF8:magic"},
+			Patched: []string{"4.3.2.1;UTF8:cigam"},
+		},
+		{
+			Field:   "allowed_serial_numbers",
+			Before:  []string{"*"},
+			Patched: []string{""},
+		},
+		{
+			Field:   "server_flag",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "client_flag",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "code_signing_flag",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "email_protection_flag",
+			Before:  false,
+			Patched: true,
+		},
+		// key_type, key_bits, and signature_bits can't be tested in this setup
+		// due to their non-default stored nature.
+		{
+			Field:   "key_usage",
+			Before:  []string{"DigitialSignature"},
+			Patched: []string{"DigitalSignature", "KeyAgreement"},
+		},
+		{
+			Field:   "ext_key_usage",
+			Before:  []string{"ServerAuth"},
+			Patched: []string{"ClientAuth"},
+		},
+		{
+			Field:   "ext_key_usage_oids",
+			Before:  []string{"1.2.3.4"},
+			Patched: []string{"4.3.2.1"},
+		},
+		{
+			Field:   "use_csr_common_name",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "use_csr_sans",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "ou",
+			Before:  []string{"crypto"},
+			Patched: []string{"cryptosec"},
+		},
+		{
+			Field:   "organization",
+			Before:  []string{"hashicorp"},
+			Patched: []string{"dadgarcorp"},
+		},
+		{
+			Field:   "country",
+			Before:  []string{"US"},
+			Patched: []string{"USA"},
+		},
+		{
+			Field:   "locality",
+			Before:  []string{"Orange"},
+			Patched: []string{"Blue"},
+		},
+		{
+			Field:   "province",
+			Before:  []string{"CA"},
+			Patched: []string{"AC"},
+		},
+		{
+			Field:   "street_address",
+			Before:  []string{"101 First"},
+			Patched: []string{"202 Second", "Unit 020"},
+		},
+		{
+			Field:   "postal_code",
+			Before:  []string{"12345"},
+			Patched: []string{"54321-1234"},
+		},
+		{
+			Field:   "generate_lease",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "no_store",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "require_cn",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "policy_identifiers",
+			Before:  []string{"1.2.3.4.5"},
+			Patched: []string{"5.4.3.2.1"},
+		},
+		{
+			Field:   "basic_constraints_valid_for_non_ca",
+			Before:  true,
+			Patched: false,
+		},
+		{
+			Field:   "not_before_duration",
+			Before:  int64(30),
+			Patched: int64(300),
+		},
+		{
+			Field:   "not_after",
+			Before:  "9999-12-31T23:59:59Z",
+			Patched: "1230-12-31T23:59:59Z",
+		},
+		{
+			Field:   "issuer_ref",
+			Before:  "default",
+			Patched: "missing",
+		},
+	}
+
+	b, storage := createBackendWithStorage(t)
+
+	for index, testCase := range testCases {
+		var resp *logical.Response
+		var roleDataResp *logical.Response
+		var afterRoleDataResp *logical.Response
+		var err error
+
+		// Create the role
+		roleData := map[string]interface{}{}
+		roleData[testCase.Field] = testCase.Before
+
+		roleReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "roles/testrole",
+			Storage:   storage,
+			Data:      roleData,
+		}
+
+		resp, err = b.HandleRequest(context.Background(), roleReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad [%d/%v] create: err: %v resp: %#v", index, testCase.Field, err, resp)
+		}
+
+		// Read the role after creation
+		roleReq.Operation = logical.ReadOperation
+		roleDataResp, err = b.HandleRequest(context.Background(), roleReq)
+		if err != nil || (roleDataResp != nil && roleDataResp.IsError()) {
+			t.Fatalf("bad [%d/%v] read: err: %v resp: %#v", index, testCase.Field, err, resp)
+		}
+
+		beforeRoleData := roleDataResp.Data
+
+		// Patch the role
+		roleReq.Operation = logical.PatchOperation
+		roleReq.Data[testCase.Field] = testCase.Patched
+		resp, err = b.HandleRequest(context.Background(), roleReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad [%d/%v] patch: err: %v resp: %#v", index, testCase.Field, err, resp)
+		}
+
+		// Re-read and verify the role
+		roleReq.Operation = logical.ReadOperation
+		afterRoleDataResp, err = b.HandleRequest(context.Background(), roleReq)
+		if err != nil || (afterRoleDataResp != nil && afterRoleDataResp.IsError()) {
+			t.Fatalf("bad [%d/%v] read: err: %v resp: %#v", index, testCase.Field, err, resp)
+		}
+
+		afterRoleData := afterRoleDataResp.Data
+
+		for field, before := range beforeRoleData {
+			switch typed := before.(type) {
+			case *bool:
+				before = *typed
+				afterRoleData[field] = *(afterRoleData[field].(*bool))
+			}
+
+			if field != testCase.Field {
+				require.Equal(t, before, afterRoleData[field], fmt.Sprintf("bad [%d/%v] compare: non-modified field %v should not be changed", index, testCase.Field, field))
+			} else {
+				require.Equal(t, before, testCase.Before, fmt.Sprintf("bad [%d] compare: modified field %v before should be correct", index, field))
+				require.Equal(t, afterRoleData[field], testCase.Patched, fmt.Sprintf("bad [%d] compare: modified field %v after should be correct", index, field))
+			}
+		}
 	}
 }
