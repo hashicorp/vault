@@ -18,7 +18,7 @@ FEATURES:
 
 * **Non-Disruptive Intermediate/Root Certificate Rotation**: This allows
 import, generation and configuration of any number of keys and/or issuers
-within a PKI mount, providing operators to ability to rotate certificates
+within a PKI mount, providing operators the ability to rotate certificates
 in place without affecting existing client configurations. [[GH-15277](https://github.com/hashicorp/vault/pull/15277)]
 * api/command: Global -output-policy flag to determine minimum required policy HCL for a given operation [[GH-14899](https://github.com/hashicorp/vault/pull/14899)]
 * nomad: Bootstrap Nomad ACL system if no token is provided [[GH-12451](https://github.com/hashicorp/vault/pull/12451)]
