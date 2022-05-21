@@ -48,7 +48,7 @@ With Vault 1.11, the use of an [auto-loaded license](/docs/enterprise/license/au
 
 ### Q: How will Vault behave at startup when a license expires or terminates?
 
-When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.11. The grace period, defined as the time between license expiration and license termination, is 1 day for evaluation licenses (as of 1.8), and ten years for non-evaluation licenses.
+When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.11. The grace period, defined as the time between license expiration and license termination, is one day for evaluation licenses (as of 1.8), and ten years for non-evaluation licenses.
 Customers must provide a valid license before the grace period expires. This license is required to be [auto-loaded](/docs/enterprise/license/autoloading). When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to provide one, and this license will need to be auto-loaded.
 
 ### Q: What is the impact on evaluation licenses due to this change?
