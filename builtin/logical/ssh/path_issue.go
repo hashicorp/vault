@@ -13,14 +13,14 @@ func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issue/" + framework.GenericNameWithAtRegex("role"),
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathIssue,
-		},
-		//Operations: map[logical.Operation]framework.OperationHandler{
-		//	logical.UpdateOperation: &framework.PathOperation{
-		//		Callback: b.pathIssue,
-		//	},
+		//Callbacks: map[logical.Operation]framework.OperationFunc{
+		//	logical.UpdateOperation: b.pathIssue,
 		//},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathIssue,
+			},
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
@@ -57,37 +57,35 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
 
-	// We are expecting a "key_type" and "key_bits"
+	// We are expecting a "key_type" and "key_bits" | REQUIRED?
 	keyType := data.Get("key_type").(string)
-	if keyType == "" {
-		return logical.ErrorResponse("missing key_type"), nil
-	}
+	//if keyType == "" {
+	//	return logical.ErrorResponse("missing key_type"), nil
+	//}
 
-	// Can "keyBits" be 0?
 	keyBits := data.Get("key_bits").(int)
-	if keyBits == 0 {
-		return logical.ErrorResponse("missing key_bits"), nil
-	}
+	// If statement ?
+	//if keyBits == 0 {
+	//	return logical.ErrorResponse("missing key_bits"), nil
+	//}
 
-	//allowed_user_key_lengths | Also return list of allowed key_types?
-	keyLengths, present := role.AllowedUserKeyTypesLengths[keyType]
-	if !present {
-		return logical.ErrorResponse("key_type not in allowed_user_key_lengths"), nil
-	}
-
-	// Also return list of allowed key bits?
-	present = false
-	for _, kb := range keyLengths {
-		if keyBits == kb {
-			present = true
-			break
+	//allowed_user_key_lengths | What if the users provides an invalid key type?
+	keyTypeLengths, keyPresent := role.AllowedUserKeyTypesLengths[keyType]
+	if keyPresent {
+		var bitsPresent bool
+		for _, kb := range keyTypeLengths {
+			if keyBits == kb {
+				bitsPresent = true
+				break
+			}
+		}
+		if !bitsPresent {
+			// Also return list of allowed key bits?
+			return logical.ErrorResponse("key_bits not in list of allowed value  for key_type provided"), nil
 		}
 	}
-	if !present {
-		return logical.ErrorResponse("key_bits not in list of valid key lengths"), nil
-	}
 
-	// Create key pair
+	// Create key pair | key_type and key_bits checked here?
 	publicKey, privateKey, err := generateSSHKeyPair(b.Backend.GetRandomReader(), keyType, keyBits)
 	if err != nil {
 		return nil, err
@@ -101,7 +99,11 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 	// Raw or Schema?
 	data.Raw["public_key"] = publicKey
 	data.Raw["private_key"] = privateKey
-	return b.pathSignCertificate(ctx, req, data, role)
+	log.Printf("Public Key:\n%s\n", publicKey)
+	log.Printf("Private Key:\n%s\n", privateKey)
+	//return b.pathSignCertificate(ctx, req, data, role)
+
+	return nil, nil
 
 	//	// Everything after this is creating a response
 	/*
