@@ -7,6 +7,7 @@ export default Component.extend({
   auth: service(),
   store: service(),
   tagName: '',
+  showTruncatedNavBar: true,
 
   activeCluster: computed('auth.activeCluster', function () {
     return this.store.peekRecord('cluster', this.auth.activeCluster);
