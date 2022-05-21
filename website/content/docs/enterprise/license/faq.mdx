@@ -57,7 +57,7 @@ As of Vault 1.8, any Vault cluster deployed must have a valid [auto-loaded](/doc
 
 ### Q: Are there any changes to existing methods for manual license loading (API or CLI)?
 
-The [`/sys/license`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#install-license) and [`/sys/license/signed`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#read-signed-license) endpoints have been removed as of Vault 1.11. With that said, it is no longer possible to provide a license via the `/sys/license` endpoint. License [auto-loading](/docs/enterprise/license/autoloading) must be used instead.
+The [`/sys/license`](/api-docs/v1.10.x/system/license#install-license) and [`/sys/license/signed`](/api-docs/v1.10.x/system/license#read-signed-license) endpoints have been removed as of Vault 1.11. With that said, it is no longer possible to provide a license via the `/sys/license` endpoint. License [auto-loading](/docs/enterprise/license/autoloading) must be used instead.
 The [`/sys/config/reload/license`](/api-docs/system/config-reload#reload-license-file) endpoint can be used to reload an auto-loaded license provided as a path via an environment variable or configuration.
 
 ### Q: Is there a grace period when evaluation licenses expire?
@@ -83,7 +83,7 @@ Starting Vault 1.11, when customers deploy new Vault clusters, or upgrade existi
 
 ### Q: What is the migration path for customers who want to migrate from their existing license-as-applied-via-the-CLI flow to the license on disk flow?
 
-If a Vault cluster using a stored license is planned to be upgraded to Vault 1.11 or greater, the operator must migrate to using an auto-loaded license. The [`vault license get -signed`](https://www.vaultproject.io/docs/v1.10.x/commands/license/get) command (or underlying [`/sys/license/signed`](https://www.vaultproject.io/api-docs/v1.10.x/system/license#read-signed-license) endpoint) can be used to retrieve the license from storage in a running cluster.
+If a Vault cluster using a stored license is planned to be upgraded to Vault 1.11 or greater, the operator must migrate to using an auto-loaded license. The [`vault license get -signed`](/docs/v1.10.x/commands/license/get) command (or underlying [`/sys/license/signed`](/api-docs/v1.10.x/system/license#read-signed-license) endpoint) can be used to retrieve the license from storage in a running cluster.
 It is not necessary to remove the stored license entry. That will occur automatically upon startup in Vault 1.11 or greater. Prior to completing the [recommended upgrade steps](/docs/upgrading), perform the following to ensure your license is properly configured:
 
 1. Use the command `vault license get -signed` to retrieve the license from storage of your running cluster.
