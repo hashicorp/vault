@@ -261,7 +261,7 @@
           readonly={{this.isReadOnly}}
           autocomplete="off"
           spellcheck="false"
-          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
+          value={{or @attr.options.defaultValue (get @model this.valuePath)}}
           onchange={{this.onChangeWithEvent}}
           onkeyup={{this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
