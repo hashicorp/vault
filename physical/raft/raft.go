@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	bolt "go.etcd.io/bbolt"
@@ -152,7 +153,21 @@ type RaftBackend struct {
 	// node is up and running.
 	disableAutopilot bool
 
+	// autopilotReconcileInterval is how long between rounds of performing promotions, demotions
+	// and leadership transfers.
 	autopilotReconcileInterval time.Duration
+
+	// autopilotUpdateInterval is the time between the periodic state updates. These periodic
+	// state updates take in known servers from the delegate, request Raft stats be
+	// fetched and pull in other inputs such as the Raft configuration to create
+	// an updated view of the Autopilot State.
+	autopilotUpdateInterval time.Duration
+
+	// upgradeVersion is used to override the Vault SDK version when performing an autopilot automated upgrade.
+	upgradeVersion string
+
+	// redundancyZone specifies a redundancy zone for autopilot.
+	redundancyZone string
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -421,6 +436,29 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		reconcileInterval = interval
 	}
 
+	var updateInterval time.Duration
+	if interval := conf["autopilot_update_interval"]; interval != "" {
+		interval, err := time.ParseDuration(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
+		}
+		updateInterval = interval
+	}
+
+	effectiveReconcileInterval := autopilot.DefaultReconcileInterval
+	effectiveUpdateInterval := autopilot.DefaultUpdateInterval
+
+	if reconcileInterval != 0 {
+		effectiveReconcileInterval = reconcileInterval
+	}
+	if updateInterval != 0 {
+		effectiveUpdateInterval = updateInterval
+	}
+
+	if effectiveReconcileInterval < effectiveUpdateInterval {
+		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
+	}
+
 	return &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
@@ -435,6 +473,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize:               maxEntrySize,
 		followerHeartbeatTicker:    time.NewTicker(time.Second),
 		autopilotReconcileInterval: reconcileInterval,
+		autopilotUpdateInterval:    updateInterval,
+		redundancyZone:             conf["autopilot_redundancy_zone"],
+		upgradeVersion:             conf["autopilot_upgrade_version"],
 	}, nil
 }
 
@@ -484,6 +525,36 @@ func (b *RaftBackend) Close() error {
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) RedundancyZone() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.redundancyZone
+}
+
+func (b *RaftBackend) EffectiveVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.upgradeVersion != "" {
+		return b.upgradeVersion
+	}
+
+	return version.GetVersion().Version
+}
+
+// DisableUpgradeMigration returns the state of the DisableUpgradeMigration config flag and whether it was set or not
+func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.autopilotConfig == nil {
+		return false, false
+	}
+
+	return b.autopilotConfig.DisableUpgradeMigration, true
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
@@ -636,9 +707,9 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 			return err
 		}
 	}
-	config.ElectionTimeout = config.ElectionTimeout * time.Duration(multiplier)
-	config.HeartbeatTimeout = config.HeartbeatTimeout * time.Duration(multiplier)
-	config.LeaderLeaseTimeout = config.LeaderLeaseTimeout * time.Duration(multiplier)
+	config.ElectionTimeout *= time.Duration(multiplier)
+	config.HeartbeatTimeout *= time.Duration(multiplier)
+	config.LeaderLeaseTimeout *= time.Duration(multiplier)
 
 	snapThresholdRaw, ok := b.conf["snapshot_threshold"]
 	if ok {
@@ -1146,6 +1217,7 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 			Voter:           server.Suffrage == raft.Voter,
 			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
+
 		config.Servers = append(config.Servers, entry)
 	}
 

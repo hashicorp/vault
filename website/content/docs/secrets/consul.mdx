@@ -175,7 +175,7 @@ This requires you to have an external process to rotate tokens. At this time, th
 is to rotate the tokens manually by creating a new token using the `vault read consul/creds/my-role` command. Once
 the token is synchronized with Consul, apply the token to the agents using the Consul API or CLI.
 
-## Learn
+## Tutorial
 
 Refer to [Administer Consul Access Control Tokens with
 Vault](https://learn.hashicorp.com/tutorials/consul/vault-consul-secrets) for a

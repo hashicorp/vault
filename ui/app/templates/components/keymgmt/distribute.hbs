@@ -1,5 +1,5 @@
 {{#if @backend}}
-  <form {{on "submit" this.createDistribution}} class="form-section" data-test-keymgmt-distribution-form>
+  <form {{on "submit" (perform this.createDistribution)}} class="form-section" data-test-keymgmt-distribution-form>
     {{#unless @key}}
       <div class="field" data-test-keymgmt-dist-key>
         <SearchSelect
@@ -64,35 +64,29 @@
 
     {{#unless @provider}}
       <div class="field">
-        <label class="is-label" for="provider">Provider</label>
-        <p class="sub-text">Select a provider in Vault. If it doesn’t exist yet, you’ll need to add it first.</p>
-        <div class="control is-expanded">
-          <div class="select is-fullwidth">
-            <select
-              name="provider"
-              id="provider"
-              {{on "change" this.handleProvider}}
-              class={{if this.validMatchError.provider "has-error-border"}}
-              data-test-keymgmt-dist-provider
-            >
-              <option value="">
-                Select provider
-              </option>
-              {{#each @providers as |val|}}
-                <option selected={{eq @model.provider val}} value={{val}}>
-                  {{val}}
-                </option>
-              {{/each}}
-            </select>
-          </div>
-        </div>
-        {{#if this.validMatchError.provider}}
-          <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
-            {{this.validMatchError.provider}}
-            To check compatibility,
-            <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
-          </AlertInline>
-        {{/if}}
+        <SearchSelect
+          @id="provider"
+          @models={{array "keymgmt/provider"}}
+          @onChange={{this.handleProvider}}
+          @passObject={{false}}
+          @inputValue={{this.formData.provider}}
+          @subText="Select a provider in Vault. If it doesn’t exist yet, you’ll need to add it first."
+          @label=""
+          @subLabel="Provider"
+          @fallbackComponent="input-search"
+          @selectLimit="1"
+          @backend={{@backend}}
+          @disallowNewItems={{true}}
+          data-test-keymgmt-dist-provider
+        >
+          {{#if this.validMatchError.provider}}
+            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
+              {{this.validMatchError.provider}}
+              To check compatibility,
+              <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
+            </AlertInline>
+          {{/if}}
+        </SearchSelect>
       </div>
     {{/unless}}
 
@@ -139,15 +133,22 @@
       </div>
     </fieldset>
 
+    {{#if this.formErrors}}
+      <AlertBanner @type="danger" @message={{this.formErrors}} data-test-keymgmt-distribute-error />
+    {{/if}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         <button
           type="submit"
-          disabled={{or this.validationErrorCount this.error}}
+          disabled={{or this.validationErrorCount this.createDistribution.isRunning}}
           class="button is-primary"
           data-test-secret-save={{true}}
         >
-          {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+          {{#if this.createDistribution.isRunning}}
+            <span class="loader is-inline-block"></span>
+          {{else}}
+            {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+          {{/if}}
         </button>
       </div>
       <div class="control">

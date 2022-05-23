@@ -41,7 +41,7 @@ fi
 # Due to OpenShift environment compatibility, we have to allow group write
 # access to the Vault configuration. This requires us to disable the stricter
 # file permissions checks introduced in Vault v1.11.0.
-export VAULT_DISABLE_FILE_PERMISSIONS_CHECK=1
+export VAULT_DISABLE_FILE_PERMISSIONS_CHECK=true
 
 # If the user is trying to run Vault directly with some arguments, then
 # pass them to Vault.

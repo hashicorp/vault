@@ -54,6 +54,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
+	github.com/google/tink/go v1.4.0
 	github.com/hashicorp/cap v0.1.1
 	github.com/hashicorp/consul-template v0.29.0
 	github.com/hashicorp/consul/api v1.12.0
@@ -75,7 +76,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.4
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.5
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
@@ -110,6 +111,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1
@@ -118,7 +120,7 @@ require (
 	github.com/hashicorp/vault/api v1.5.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.4.2-0.20220426194706-f8e907e0deda
+	github.com/hashicorp/vault/sdk v0.4.2-0.20220511000023-fa93782110bf
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -139,12 +141,12 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/gox v1.0.1
-	github.com/mitchellh/mapstructure v1.4.3
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.1.0
-	github.com/okta/okta-sdk-golang/v2 v2.9.1
+	github.com/okta/okta-sdk-golang/v2 v2.12.1
 	github.com/oracle/oci-go-sdk v13.1.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.8.0
@@ -187,7 +189,7 @@ require (
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.6.0
-	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
+	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 	mvdan.cc/gofumpt v0.1.1
 )
@@ -261,7 +263,7 @@ require (
 	github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.1 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
-	github.com/go-logr/logr v0.4.0 // indirect
+	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -283,6 +285,7 @@ require (
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0 // indirect
+	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-slug v0.7.0 // indirect
 	github.com/hashicorp/go-tfe v0.20.0 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
@@ -365,7 +368,7 @@ require (
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
+	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220207185906-7721543eae58 // indirect
@@ -378,7 +381,7 @@ require (
 	k8s.io/api v0.22.2 // indirect
 	k8s.io/apimachinery v0.22.2 // indirect
 	k8s.io/client-go v0.22.2 // indirect
-	k8s.io/klog/v2 v2.9.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	k8s.io/klog/v2 v2.60.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )

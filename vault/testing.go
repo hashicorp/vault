@@ -1150,6 +1150,10 @@ type TestClusterOptions struct {
 	PhysicalFactoryConfig map[string]interface{}
 	LicensePublicKey      ed25519.PublicKey
 	LicensePrivateKey     ed25519.PrivateKey
+
+	// this stores the vault version that should be used for each core config
+	VersionMap        map[int]string
+	RedundancyZoneMap map[int]string
 }
 
 var DefaultNumCores = 3
@@ -1411,7 +1415,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	tlsConfigs := []*tls.Config{}
 	certGetters := []*reloadutil.CertificateGetter{}
 	for i := 0; i < numCores; i++ {
-
 		addr := &net.TCPAddr{
 			IP:   baseAddr.IP,
 			Port: 0,
@@ -1837,7 +1840,17 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
 	if opts != nil && opts.PhysicalFactory != nil {
-		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, opts.PhysicalFactoryConfig)
+		pfc := opts.PhysicalFactoryConfig
+		if pfc == nil {
+			pfc = make(map[string]interface{})
+		}
+		if len(opts.VersionMap) > 0 {
+			pfc["autopilot_upgrade_version"] = opts.VersionMap[idx]
+		}
+		if len(opts.RedundancyZoneMap) > 0 {
+			pfc["autopilot_redundancy_zone"] = opts.RedundancyZoneMap[idx]
+		}
+		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, pfc)
 		switch {
 		case physBundle == nil && coreConfig.Physical != nil:
 		case physBundle == nil && coreConfig.Physical == nil:

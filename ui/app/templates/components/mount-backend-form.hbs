@@ -46,7 +46,6 @@
               @groupName="mount-type"
               @onRadioChange={{queue (action (mut this.mountModel.type)) (action "onTypeChange" "type")}}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-              {{! TODO: verify that keymgmt is in the ADP module }}
               @tooltipMessage={{if
                 (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
                 (concat

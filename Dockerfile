@@ -118,6 +118,7 @@ COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 # storage backend, if desired; the server will be started with /vault/config as
 # the configuration directory so you can add additional config files in that
 # location.
+ENV HOME /home/vault
 RUN mkdir -p /vault/logs && \
     mkdir -p /vault/file && \
     mkdir -p /vault/config && \
@@ -143,8 +144,8 @@ EXPOSE 8200
 #
 # For production derivatives of this container, you shoud add the IPC_LOCK
 # capability so that Vault can mlock memory.
-COPY .release/docker/ubi-docker-entrypoint.sh /usr/local/bin/
-ENTRYPOINT ["ubi-docker-entrypoint.sh"]
+COPY .release/docker/ubi-docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Use the Vault user as the default user for starting this container.
 USER vault

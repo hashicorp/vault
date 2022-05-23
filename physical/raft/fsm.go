@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"

@@ -1,5 +1,6 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import ControlGroupError from '../../lib/control-group-error';
 
 function pickKeys(obj, picklist) {
   const data = {};
@@ -13,6 +14,21 @@ function pickKeys(obj, picklist) {
 export default class KeymgmtKeyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
+  pathForType() {
+    // backend name prepended in buildURL method
+    return 'key';
+  }
+
+  buildURL(modelName, id, snapshot, requestType, query) {
+    let url = super.buildURL(...arguments);
+    if (snapshot) {
+      url = url.replace('key', `${snapshot.attr('backend')}/key`);
+    } else if (query) {
+      url = url.replace('key', `${query.backend}/key`);
+    }
+    return url;
+  }
+
   url(backend, id, type) {
     const url = `${this.buildURL()}/${backend}/key`;
     if (id) {
@@ -24,12 +40,6 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
       return url + '/' + encodePath(id);
     }
     return url;
-  }
-
-  urlForDeleteRecord(store, type, snapshot) {
-    const name = snapshot.attr('name');
-    const backend = snapshot.attr('backend');
-    return this.url(backend, name);
   }
 
   _updateKey(backend, name, serialized) {
@@ -53,8 +63,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     if (snapshot.attr('deletionAllowed')) {
       try {
         await this._updateKey(backend, name, data);
-      } catch (e) {
-        // TODO: Test how this works with UI
+      } catch {
         throw new Error(`Key ${name} was created, but not all settings were saved`);
       }
     }
@@ -95,7 +104,6 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
       } else if (e.httpStatus === 403) {
         return { permissionsError: true };
       }
-      // TODO: handle control group
       throw e;
     }
   }
@@ -109,8 +117,10 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
           purposeArray: res.data.purpose.split(','),
         };
       })
-      .catch(() => {
-        // TODO: handle control group
+      .catch((e) => {
+        if (e instanceof ControlGroupError) {
+          throw e;
+        }
         return null;
       });
   }
@@ -123,7 +133,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     let provider, distribution;
     if (!recordOnly) {
       provider = await this.getProvider(backend, id);
-      if (provider) {
+      if (provider && !provider.permissionsError) {
         distribution = await this.getDistribution(backend, provider, id);
       }
     }
@@ -145,13 +155,15 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     });
   }
 
-  rotateKey(backend, id) {
-    // TODO: re-fetch record data after
-    return this.ajax(this.url(backend, id, 'ROTATE'), 'PUT');
+  async rotateKey(backend, id) {
+    let keyModel = this.store.peekRecord('keymgmt/key', id);
+    const result = await this.ajax(this.url(backend, id, 'ROTATE'), 'PUT');
+    await keyModel.reload();
+    return result;
   }
 
   removeFromProvider(model) {
-    const url = `${this.buildURL()}/${model.backend}/kms/${model.provider.name}/key/${model.name}`;
+    const url = `${this.buildURL()}/${model.backend}/kms/${model.provider}/key/${model.name}`;
     return this.ajax(url, 'DELETE').then(() => {
       model.provider = null;
     });

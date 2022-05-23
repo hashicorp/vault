@@ -121,7 +121,7 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
-	parsedBundle, err := parseCABundle(ctx, b, req, bundle)
+	parsedBundle, err := parseCABundle(ctx, b, bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
@@ -142,13 +142,6 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-	}
-	if entries == nil {
-		entries = &certutil.URLEntries{
-			IssuingCertificates:   []string{},
-			CRLDistributionPoints: []string{},
-			OCSPServers:           []string{},
-		}
 	}
 	caInfo.URLs = entries
 
@@ -632,13 +625,6 @@ func generateCert(ctx context.Context,
 			entries, err := getURLs(ctx, input.req)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-			}
-			if entries == nil {
-				entries = &certutil.URLEntries{
-					IssuingCertificates:   []string{},
-					CRLDistributionPoints: []string{},
-					OCSPServers:           []string{},
-				}
 			}
 			data.Params.URLs = entries
 

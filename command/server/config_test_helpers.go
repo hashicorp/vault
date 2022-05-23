@@ -320,7 +320,6 @@ func testParseEntropy(t *testing.T, oss bool) {
 		case err != test.outErr:
 			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
 		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			fmt.Printf("\n config.Entropy: %#v", config.Entropy)
 			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 		}
 	}
@@ -476,6 +475,16 @@ func testLoadConfigFile(t *testing.T) {
 	}
 }
 
+func testUnknownFieldValidationStorageAndListener(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/storage-listener-config.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(config.UnusedKeys) != 0 {
+		t.Fatalf("unused keys for valid config are %+v\n", config.UnusedKeys)
+	}
+}
+
 func testUnknownFieldValidation(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config.hcl")
 	if err != nil {
@@ -522,16 +531,6 @@ func testUnknownFieldValidation(t *testing.T) {
 		if !found {
 			t.Fatalf("could not find expected error: %v", ex.String())
 		}
-	}
-}
-
-func testUnknownFieldValidationStorageAndListener(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/storage-listener-config.json")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if len(config.UnusedKeys) != 0 {
-		t.Fatalf("unused keys for valid config are %+v\n", config.UnusedKeys)
 	}
 }
 

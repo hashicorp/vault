@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) getGenerationParams(ctx context.Context, storage logical.Storage, data *framework.FieldData, mountPoint string) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
+func (b *backend) getGenerationParams(ctx context.Context, storage logical.Storage, data *framework.FieldData) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
@@ -37,8 +37,7 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
 		return
 	}
-	mkc := newManagedKeyContext(ctx, b, mountPoint)
-	keyType, keyBits, err := getKeyTypeAndBitsForRole(mkc, storage, data)
+	keyType, keyBits, err := getKeyTypeAndBitsForRole(ctx, b, storage, data)
 	if err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 		return
@@ -64,6 +63,7 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 		Province:                  data.Get("province").([]string),
 		StreetAddress:             data.Get("street_address").([]string),
 		PostalCode:                data.Get("postal_code").([]string),
+		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 	*role.AllowWildcardCertificates = true
 
@@ -80,7 +80,7 @@ func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data 
 		if err != nil {
 			return nil, err
 		}
-		return generateManagedKeyCABundle(ctx, b, input, keyId, data, randomSource)
+		return generateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -99,7 +99,7 @@ func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data 
 			if err != nil {
 				return nil, err
 			}
-			return generateManagedKeyCABundle(ctx, b, input, keyId, data, randomSource)
+			return generateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
 		}
 
 		return certutil.CreateCertificateWithKeyGenerator(data, randomSource, existingKeyGeneratorFromBytes(keyEntry))
@@ -115,7 +115,7 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 			return nil, err
 		}
 
-		return generateManagedKeyCSRBundle(ctx, b, input, keyId, data, addBasicConstraints, randomSource)
+		return generateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -134,7 +134,7 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 			if err != nil {
 				return nil, err
 			}
-			return generateManagedKeyCSRBundle(ctx, b, input, keyId, data, addBasicConstraints, randomSource)
+			return generateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
 		}
 
 		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingKeyGeneratorFromBytes(key))
@@ -143,14 +143,14 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
 }
 
-func parseCABundle(ctx context.Context, b *backend, req *logical.Request, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
+func parseCABundle(ctx context.Context, b *backend, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
 	if bundle.PrivateKeyType == certutil.ManagedPrivateKey {
-		return parseManagedKeyCABundle(ctx, b, req, bundle)
+		return parseManagedKeyCABundle(ctx, b, bundle)
 	}
 	return bundle.ToParsedCertBundle()
 }
 
-func getKeyTypeAndBitsForRole(mkc managedKeyContext, storage logical.Storage, data *framework.FieldData) (string, int, error) {
+func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.Storage, data *framework.FieldData) (string, int, error) {
 	exportedStr := data.Get("exported").(string)
 	var keyType string
 	var keyBits int
@@ -179,7 +179,7 @@ func getKeyTypeAndBitsForRole(mkc managedKeyContext, storage logical.Storage, da
 			return "", 0, errors.New("unable to determine managed key id" + err.Error())
 		}
 
-		pubKeyManagedKey, err := getManagedKeyPublicKey(mkc, keyId)
+		pubKeyManagedKey, err := getManagedKeyPublicKey(ctx, b, keyId)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from managed key: " + err.Error())
 		}
@@ -187,7 +187,7 @@ func getKeyTypeAndBitsForRole(mkc managedKeyContext, storage logical.Storage, da
 	}
 
 	if existingKeyRequestedFromFieldData(data) {
-		existingPubKey, err := getExistingPublicKey(mkc, storage, data)
+		existingPubKey, err := getExistingPublicKey(ctx, b, storage, data)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from existing key: " + err.Error())
 		}
@@ -198,20 +198,20 @@ func getKeyTypeAndBitsForRole(mkc managedKeyContext, storage logical.Storage, da
 	return string(privateKeyType), keyBits, err
 }
 
-func getExistingPublicKey(mkc managedKeyContext, s logical.Storage, data *framework.FieldData) (crypto.PublicKey, error) {
+func getExistingPublicKey(ctx context.Context, b *backend, s logical.Storage, data *framework.FieldData) (crypto.PublicKey, error) {
 	keyRef, err := getKeyRefWithErr(data)
 	if err != nil {
 		return nil, err
 	}
-	id, err := resolveKeyReference(mkc.ctx, s, keyRef)
+	id, err := resolveKeyReference(ctx, s, keyRef)
 	if err != nil {
 		return nil, err
 	}
-	key, err := fetchKeyById(mkc.ctx, s, id)
+	key, err := fetchKeyById(ctx, s, id)
 	if err != nil {
 		return nil, err
 	}
-	return getPublicKey(mkc, key)
+	return getPublicKey(ctx, b, key)
 }
 
 func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.PrivateKeyType, int, error) {
