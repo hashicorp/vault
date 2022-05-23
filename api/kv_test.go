@@ -172,7 +172,7 @@ func TestExtractDataAndVersionMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:  "a secret that has been deleted",
+			name:  "a secret that has been deleted and thus has nil data",
 			input: readRespDeleted,
 			expected: &KVSecret{
 				Data: nil,
@@ -293,7 +293,7 @@ func TestExtractFullMetadata(t *testing.T) {
 	}
 }
 
-func TestAddCustomMetadata(t *testing.T) {
+func TestExtractCustomMetadata(t *testing.T) {
 	testCases := []struct {
 		name          string
 		inputAPIResp  *Secret
@@ -329,13 +329,13 @@ func TestAddCustomMetadata(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		err := tc.inputKVSecret.addCustomMetadata(tc.inputAPIResp)
+		cm, err := extractCustomMetadata(tc.inputAPIResp)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
 
-		if !reflect.DeepEqual(tc.inputKVSecret.CustomMetadata, tc.expected) {
-			t.Fatalf("%s: got\n%#v\nexpected\n%#v\n", tc.name, tc.inputKVSecret.CustomMetadata, tc.expected)
+		if !reflect.DeepEqual(cm, tc.expected) {
+			t.Fatalf("%s: got\n%#v\nexpected\n%#v\n", tc.name, cm, tc.expected)
 		}
 	}
 }
