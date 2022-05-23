@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
@@ -97,7 +99,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_table = "vault_kv_store"
 	}
-	quoted_table := quoteIdentifier(unquoted_table)
+	quoted_table := dbutil.QuoteIdentifier(unquoted_table)
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -163,7 +165,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_ha_table = "vault_ha_locks"
 	}
-	quoted_ha_table := quoteIdentifier(unquoted_ha_table)
+	quoted_ha_table := dbutil.QuoteIdentifier(unquoted_ha_table)
 
 	// Setup the backend.
 	m := &PostgreSQLBackend{
@@ -469,17 +471,4 @@ func (l *PostgreSQLLock) writeItem() (bool, error) {
 		return false, err
 	}
 	return ar == 1, nil
-}
-
-// quoteIdentifier quotes an "identifier" (e.g. a table or a column name) to be used as part of an SQL statement.
-//
-// This is a copy of the same function as found in lib/pq (https://github.com/lib/pq/blob/v1.10.4/conn.go#L1640)
-// and was added as part of our pq -> pgx migration. The pgx package doesn't expose a similar function at this
-// time (https://github.com/jackc/pgx/issues/868).
-func quoteIdentifier(name string) string {
-	end := strings.IndexRune(name, 0)
-	if end > -1 {
-		name = name[:end]
-	}
-	return `"` + strings.Replace(name, `"`, `""`, -1) + `"`
 }

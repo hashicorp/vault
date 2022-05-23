@@ -398,23 +398,23 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req dbplugin.DeleteUse
 		}
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			quoteIdentifier(schema),
-			quoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-			quoteIdentifier(schema),
-			quoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// for good measure, revoke all privileges and usage on schema public
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-		quoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE USAGE ON SCHEMA public FROM %s;",
-		quoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	// get the current database name so we can issue a REVOKE CONNECT for
 	// this username
@@ -467,7 +467,7 @@ $$;`)
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP USER IF EXISTS %s;`, quoteIdentifier(username)))
+		`DROP USER IF EXISTS %s;`, dbutil.QuoteIdentifier(username)))
 	if err != nil {
 		return dbplugin.DeleteUserResponse{}, err
 	}
@@ -477,17 +477,4 @@ $$;`)
 	}
 
 	return dbplugin.DeleteUserResponse{}, nil
-}
-
-// quoteIdentifier quotes an "identifier" (e.g. a table or a column name) to be used as part of an SQL statement.
-//
-// This is a copy of the same function as found in lib/pq (https://github.com/lib/pq/blob/v1.10.4/conn.go#L1640)
-// and was added as part of our pq -> pgx migration. The pgx package doesn't expose a similar function at this
-// time (https://github.com/jackc/pgx/issues/868).
-func quoteIdentifier(name string) string {
-	end := strings.IndexRune(name, 0)
-	if end > -1 {
-		name = name[:end]
-	}
-	return `"` + strings.Replace(name, `"`, `""`, -1) + `"`
 }
