@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net"
-	nurl "net/url"
-	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -64,62 +63,11 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 	}
 }
 
-// parseURL converts an url to a connection string for driver.Open.
-//
-// This is a copy from https://github.com/lib/pq/blob/v1.10.6/url.go#L32 to
-// allow us to check backward compatibility against DSN formatted connection
-// strings without importing the entire lib/pq package
-func parseURL(url string) (string, error) {
-	u, err := nurl.Parse(url)
-	if err != nil {
-		return "", err
-	}
-
-	if u.Scheme != "postgres" && u.Scheme != "postgresql" {
-		return "", fmt.Errorf("invalid connection protocol: %s", u.Scheme)
-	}
-
-	var kvs []string
-	escaper := strings.NewReplacer(`'`, `\'`, `\`, `\\`)
-	accrue := func(k, v string) {
-		if v != "" {
-			kvs = append(kvs, k+"='"+escaper.Replace(v)+"'")
-		}
-	}
-
-	if u.User != nil {
-		v := u.User.Username()
-		accrue("user", v)
-
-		v, _ = u.User.Password()
-		accrue("password", v)
-	}
-
-	if host, port, err := net.SplitHostPort(u.Host); err != nil {
-		accrue("host", u.Host)
-	} else {
-		accrue("host", host)
-		accrue("port", port)
-	}
-
-	if u.Path != "" {
-		accrue("dbname", u.Path[1:])
-	}
-
-	q := u.Query()
-	for k := range q {
-		accrue(k, q.Get(k))
-	}
-
-	sort.Strings(kvs) // Makes testing easier (not a performance concern)
-	return strings.Join(kvs, " "), nil
-}
-
 func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
-	dsnConnURL, err := parseURL(connURL)
+	dsnConnURL, err := dbutil.ParseURL(connURL)
 	if err != nil {
 		t.Fatal(err)
 	}

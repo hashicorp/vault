@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
