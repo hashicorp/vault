@@ -68,7 +68,7 @@
           type="submit"
           data-test-mount-submit="true"
           class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
-          disabled={{or this.mountBackend.isRunning this.isFormInvalid}}
+          disabled={{or this.mountBackend.isRunning}}
         >
           {{#if (eq this.mountType "auth")}}
             Enable Method
