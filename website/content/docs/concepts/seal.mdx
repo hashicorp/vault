@@ -114,10 +114,10 @@ For a list of examples and supported providers, please see the
 
 ## Recovery Key
 
-When Vault is initialized while using an HSM or KMS, rather than unseal keys being
-returned to the operator, recovery keys are returned. These are generated from
-an internal recovery key that is split via Shamir's Secret Sharing, similar to
-Vault's treatment of unseal keys when running without an HSM or KMS.
+When Vault is initialized while using an HSM or KMS, rather than unseal keys
+being returned to the operator, recovery keys are returned. These are generated
+from an internal recovery key that is split via Shamir's Secret Sharing, similar
+to Vault's treatment of unseal keys when running without an HSM or KMS.
 
 Details about initialization and rekeying follow. When performing an operation
 that uses recovery keys, such as `generate-root`, selection of the recovery
@@ -164,12 +164,6 @@ Via the API, the rekey operation is performed with the same parameters as the
 endpoint](/api-docs/system/rekey); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.
-
-## Recovery Key Rekeying
-
-Recovery keys can be rekeyed to change the number of shares or thresholds.
-When using the Vault CLI, this is performed by using the `-target=recovery` flag
-to `vault operator rekey`.
 
 ## Seal Migration
 
