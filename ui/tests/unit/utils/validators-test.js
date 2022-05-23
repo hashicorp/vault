@@ -10,10 +10,10 @@ module('Unit | Util | validators', function (hooks) {
     const check = (value) => (isValid = validators.presence(value));
     check(null);
     assert.false(isValid, 'Invalid when value is null');
-    check(true);
-    assert.true(isValid, 'Valid when value is true');
     check('');
     assert.false(isValid, 'Invalid when value is empty string');
+    check(true);
+    assert.true(isValid, 'Valid when value is true');
     check(0);
     assert.true(isValid, 'Valid when value is 0 as integer');
     check('0');
