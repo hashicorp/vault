@@ -14,12 +14,9 @@ export const length = (value, { nullable = false, min, max } = {}) => {
   return nullable;
 };
 
-export const number = (value, { nullable = false, asString } = {}) => {
-  // since 0 is falsy, !value is true even though 0 is valid here
+export const number = (value, { nullable = false } = {}) => {
+  // since 0 is falsy, !value returns true even though 0 is a valid number
   if (!value && value !== 0) return nullable;
-  if (typeof value === 'string' && !asString) {
-    return false;
-  }
   return !isNaN(value);
 };
 
