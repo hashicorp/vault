@@ -134,6 +134,19 @@ management tool.
   will need to re-authenticate. You can force this by revoking the
   existing tokens.
 
+### Okta API Token Permissions
+
+The `okta` auth method uses the [Authentication](https://developer.okta.com/docs/reference/api/authn/)
+and [User Groups](https://developer.okta.com/docs/reference/api/users/#get-user-s-groups)
+APIs to authenticate users and obtain their group membership. The [`api_token`](/api-docs/auth/okta#api_token)
+provided to the auth method's configuration must have sufficient privileges to exercise
+these Okta APIs.
+
+It is recommended to configure the auth method with a minimally permissive API token.
+To do so, create the API token using an administrator with the standard
+[Read-only Admin](https://help.okta.com/en/prod/Content/Topics/Security/administrators-read-only-admin.htm)
+role. Custom roles may also be used to grant minimal permissions to the Okta API token.
+
 ## API
 
 The Okta auth method has a full HTTP API. Please see the
