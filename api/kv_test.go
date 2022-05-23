@@ -165,8 +165,8 @@ func TestExtractDataAndVersionMetadata(t *testing.T) {
 				},
 				// it's tempting to test some Secrets with custom_metadata but
 				// we can't in this test because it isn't until we call the
-				// addCustomMetadata function that the custom metadata
-				// gets added onto the struct. See TestAddCustomMetadata.
+				// extractCustomMetadata function that the custom metadata
+				// gets added onto the struct. See TestExtractCustomMetadata.
 				CustomMetadata: nil,
 				Raw:            readResp,
 			},
@@ -295,10 +295,9 @@ func TestExtractFullMetadata(t *testing.T) {
 
 func TestExtractCustomMetadata(t *testing.T) {
 	testCases := []struct {
-		name          string
-		inputAPIResp  *Secret
-		inputKVSecret *KVSecret
-		expected      map[string]interface{}
+		name         string
+		inputAPIResp *Secret
+		expected     map[string]interface{}
 	}{
 		{
 			name: "a read response with some custom metadata",
@@ -309,9 +308,6 @@ func TestExtractCustomMetadata(t *testing.T) {
 					},
 				},
 			},
-			inputKVSecret: &KVSecret{
-				CustomMetadata: nil, // starts with nothing, let's see if it has it after we call our addCustomMetadata method
-			},
 			expected: map[string]interface{}{"org": "eng"},
 		},
 		{
@@ -320,9 +316,6 @@ func TestExtractCustomMetadata(t *testing.T) {
 				Data: map[string]interface{}{
 					"custom_metadata": map[string]interface{}{"org": "eng"},
 				},
-			},
-			inputKVSecret: &KVSecret{
-				CustomMetadata: nil, // starts with nothing, let's see if it has it after we call our addCustomMetadata method
 			},
 			expected: map[string]interface{}{"org": "eng"},
 		},
