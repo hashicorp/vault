@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, settled, waitUntil, find } from '@ember/test-helpers';
+import { visit, currentURL, click, settled, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
@@ -15,6 +15,7 @@ import {
   SELECTORS,
   sendResponse,
 } from '../helpers/clients';
+import { waitFor } from '@ember/test-waiters';
 
 const searchSelect = create(ss);
 
@@ -191,9 +192,7 @@ module('Acceptance | clients history tab', function (hooks) {
     // FILTER BY NAMESPACE
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    await waitUntil(() => {
-      return find('[data-test-horizontal-bar-chart]');
-    });
+    await waitFor('[data-test-horizontal-bar-chart]');
     assert.ok(true, 'Filter by first namespace');
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('15');
     assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('5');
@@ -253,11 +252,13 @@ module('Acceptance | clients history tab', function (hooks) {
       this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
       this.get('/v1/sys/version-history', () =>
         sendResponse({
-          keys: ['1.9.0'],
-          key_info: {
-            '1.9.0': {
-              previous_version: '1.8.3',
-              timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
+          data: {
+            keys: ['1.9.0'],
+            key_info: {
+              '1.9.0': {
+                previous_version: '1.8.3',
+                timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
+              },
             },
           },
         })
@@ -270,7 +271,7 @@ module('Acceptance | clients history tab', function (hooks) {
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert.dom(SELECTORS.activeTab).hasText('History', 'history tab is active');
-    assert.dom('[data-test-flash-message] .message-actions').containsText(`You upgraded to Vault 1.9.0`);
+    assert.dom('[data-test-alert-banner] .message-actions').containsText(`You upgraded to Vault 1.9.0`);
   });
 
   test('Shows empty if license start date is current month', async function (assert) {

@@ -50,9 +50,9 @@ without any explicit action by a plugin author. The default behavior of Vault
 Enterprise is to attempt to handle all requests, including requests to plugins,
 on performance standbys. If the plugin request makes any attempt to modify
 storage, the request will receive a readonly error, and the request routing
-code will then forward the request to the active node. In other words, plugins
-can scale horizontally on Vault Enterprise without any effort on the plugin
-author's part.
+code will then forward the full original request transparently to the active
+node. In other words, plugins can scale horizontally on Vault Enterprise
+without any effort on the plugin author's part.
 
 ## Plugin Communication
 
@@ -92,9 +92,11 @@ cannot be added to Vault unless it exists in the plugin directory. There is no
 default for this configuration option, and if it is not set, plugins cannot be
 added to Vault.
 
-~> Warning: A Vault operator should take caution and lock down the permissions on
-this directory to ensure a plugin cannot be modified by an unauthorized user
-between the time of the SHA check and the time of plugin execution.
+~> Warning: By default, Vault expects the plugin directory and files to be owned by the
+user running Vault. It also expects no write or execute permissions for group or others.
+Vault allows operators to specify the user and permissions of the plugin directory and binaries 
+using parameters `plugin_file_uid` and `plugin_file_permissions` in config if an operator needs those to be different.  
+This check can be disabled via the environment variable `VAULT_DISABLE_FILE_PERMISSIONS_CHECK`.
 
 ### Plugin Catalog
 
@@ -161,7 +163,7 @@ opt-out capability for plugins that implement multiplexing. To use a
 non-multiplexed plugin, run an older version of the plugin, i.e., the
 plugin calls the `dbplugin.Serve` function. More details
 on implementing plugin multiplexing can be found in
-[Upgrading Vault Plugins](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
+[Serving a Multiplexed Plugin](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
 
 ## Troubleshooting
 
