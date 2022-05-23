@@ -24,6 +24,13 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var keyTypeToMapKey = map[string][]string{
+	"rsa":     {"rsa", ssh.KeyAlgoRSA},
+	"dsa":     {"dsa", ssh.KeyAlgoDSA},
+	"ecdsa":   {"ecdsa", "ec"},
+	"ed25519": {"ed25519", ssh.KeyAlgoED25519},
+}
+
 type creationBundle struct {
 	KeyID           string
 	ValidPrincipals []string
@@ -120,74 +127,9 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(fmt.Sprintf("public_key failed to meet the key requirements: %s", err)), nil
 	}
 
-	// Note that these various functions always return "user errors" so we pass
-	// them as 4xx values
-	keyID, err := b.calculateKeyID(data, req, role, userPublicKey)
+	certificate, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	certificateType, err := b.calculateCertificateType(data, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	var parsedPrincipals []string
-	if certificateType == ssh.HostCert {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-	} else {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-	}
-
-	ttl, err := b.calculateTTL(data, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	criticalOptions, err := b.calculateCriticalOptions(data, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	extensions, err := b.calculateExtensions(data, req, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CA private key: %w", err)
-	}
-	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
-		return nil, fmt.Errorf("failed to read CA private key")
-	}
-
-	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
-	}
-
-	cBundle := creationBundle{
-		KeyID:           keyID,
-		PublicKey:       userPublicKey,
-		Signer:          signer,
-		ValidPrincipals: parsedPrincipals,
-		TTL:             ttl,
-		CertificateType: certificateType,
-		Role:            role,
-		CriticalOptions: criticalOptions,
-		Extensions:      extensions,
-	}
-
-	certificate, err := cBundle.sign()
-	if err != nil {
-		return nil, err
 	}
 
 	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
@@ -471,13 +413,6 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			}
 		default:
 			return fmt.Errorf("pubkey not suitable for crypto (expected ssh.CryptoPublicKey but found %T)", k)
-		}
-
-		keyTypeToMapKey := map[string][]string{
-			"rsa":     {"rsa", ssh.KeyAlgoRSA},
-			"dsa":     {"dsa", ssh.KeyAlgoDSA},
-			"ecdsa":   {"ecdsa", "ec"},
-			"ed25519": {"ed25519", ssh.KeyAlgoED25519},
 		}
 
 		if keyType == "ecdsa" {

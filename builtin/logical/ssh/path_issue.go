@@ -11,6 +11,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+type keySpecs struct {
+	Type string
+	Bits int
+}
+
 func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issue/" + framework.GenericNameWithAtRegex("role"),
@@ -70,6 +75,7 @@ be later than the role max TTL.`,
 }
 
 func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get the role
 	roleName := data.Get("role").(string)
 	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
@@ -83,25 +89,18 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 		return logical.ErrorResponse("role key type \"%s\" not allowed to issue key pairs", role.KeyType), nil
 	}
 
-	keyType := data.Get("key_type").(string)
-	keyBits := data.Get("key_bits").(int)
-
-	keyTypeLengths, keyPresent := role.AllowedUserKeyTypesLengths[keyType]
-	if keyPresent {
-		var bitsPresent bool
-		for _, kb := range keyTypeLengths {
-			if keyBits == kb {
-				bitsPresent = true
-				break
-			}
-		}
-		if !bitsPresent {
-			// Also return list of allowed key bits?
-			return logical.ErrorResponse("key_bits not in list of allowed values for key_type provided"), nil
-		}
+	// Validate and extract key specifications
+	keySpecs, err := extractKeySpecs(role, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	publicKey, privateKey, err := generateSSHKeyPair(b.Backend.GetRandomReader(), keyType, keyBits)
+	// Issue certificate
+	return b.pathIssueCertificate(ctx, req, data, role, keySpecs)
+}
+
+func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, keySpecs *keySpecs) (*logical.Response, error) {
+	publicKey, privateKey, err := generateSSHKeyPair(b.Backend.GetRandomReader(), keySpecs.Type, keySpecs.Bits)
 	if err != nil {
 		return nil, err
 	}
@@ -116,47 +115,107 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse public_key as SSH key: %s", err)), nil
 	}
 
-	err = b.validateSignedKeyRequirements(userPublicKey, role)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("public_key failed to meet the key requirements: %s", err)), nil
-	}
-
-	keyID, err := b.calculateKeyID(data, req, role, userPublicKey)
+	certificate, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
+	if len(signedSSHCertificate) == 0 {
+		return nil, fmt.Errorf("error marshaling signed certificate")
+	}
+
+	response := &logical.Response{
+		Data: map[string]interface{}{
+			"serial_number":    strconv.FormatUint(certificate.Serial, 16),
+			"certificate":      string(signedSSHCertificate),
+			"private_key":      privateKey,
+			"private_key_type": keySpecs.Type,
+		},
+	}
+
+	return response, nil
+}
+
+func extractKeySpecs(role *sshRole, data *framework.FieldData) (*keySpecs, error) {
+	keyType := data.Get("key_type").(string)
+	keyBits := data.Get("key_bits").(int)
+	keySpecs := keySpecs{}
+
+	if len(role.AllowedUserKeyTypesLengths) != 0 {
+		var keyAllowed bool
+		var bitsAllowed bool
+
+	keyTypeAliasesLoop:
+		for _, keyTypeAlias := range keyTypeToMapKey[keyType] {
+			allowedValues, allowed := role.AllowedUserKeyTypesLengths[keyTypeAlias]
+			if !allowed {
+				continue
+			}
+			keyAllowed = true
+
+			for _, value := range allowedValues {
+				if value == keyBits {
+					// Have others checks?
+					bitsAllowed = true
+					break keyTypeAliasesLoop
+				}
+			}
+		}
+
+		if !keyAllowed {
+			return &keySpecs, fmt.Errorf("key_type provided not in allowed_user_key_types")
+		}
+
+		if !bitsAllowed {
+			return &keySpecs, fmt.Errorf("key_bits not in list of allowed values for key_type provided")
+		}
+	}
+
+	keySpecs.Type = keyType
+	keySpecs.Bits = keyBits
+	return &keySpecs, nil
+}
+
+func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, publicKey ssh.PublicKey) (*ssh.Certificate, error) {
+	// Note that these various functions always return "user errors" so we pass
+	// them as 4xx values
+	keyID, err := b.calculateKeyID(data, req, role, publicKey)
+	if err != nil {
+		return nil, err
 	}
 
 	certificateType, err := b.calculateCertificateType(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
 		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+			return nil, err
 		}
 	} else {
 		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+			return nil, err
 		}
 	}
 
 	ttl, err := b.calculateTTL(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	criticalOptions, err := b.calculateCriticalOptions(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	extensions, err := b.calculateExtensions(data, req, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
@@ -174,7 +233,7 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 
 	cBundle := creationBundle{
 		KeyID:           keyID,
-		PublicKey:       userPublicKey,
+		PublicKey:       publicKey,
 		Signer:          signer,
 		ValidPrincipals: parsedPrincipals,
 		TTL:             ttl,
@@ -189,19 +248,5 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 		return nil, err
 	}
 
-	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
-	if len(signedSSHCertificate) == 0 {
-		return nil, fmt.Errorf("error marshaling signed certificate")
-	}
-
-	response := &logical.Response{
-		Data: map[string]interface{}{
-			"serial_number":    strconv.FormatUint(certificate.Serial, 16),
-			"certificate":      string(signedSSHCertificate),
-			"private_key":      privateKey,
-			"private_key_type": keyType,
-		},
-	}
-
-	return response, nil
+	return certificate, nil
 }
