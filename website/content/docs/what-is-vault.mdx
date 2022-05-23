@@ -9,7 +9,7 @@ description: >-
 
 ## What is Vault?
 
-Vault is an identity-based **secrets** and encryption management system. A secret is anything that you want to tightly control access to, such as API encryption keys, passwords, or certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
+HashiCorp Vault is an identity-based **secrets** and encryption management system. A secret is anything that you want to tightly control access to, such as API encryption keys, passwords, or certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
 
 A modern system requires access to a multitude of secrets: database credentials,
 API keys for external services, credentials for service-oriented architecture
@@ -18,8 +18,26 @@ difficult and platform-specific. Adding on key rolling, secure storage, and
 detailed audit logs is almost impossible without a custom solution. This is
 where Vault steps in.
 
-Examples work best to showcase Vault. Please see the
-[use cases](/docs/use-cases).
+### How does Vault work?
+
+Vault validates, authorizes, and provides clients (users, machines, apps) access to secrets or stored sensitive data.
+
+![How Vault Works](/img/how-vault-works.png)
+
+The core Vault worklflow consists of four stages:
+
+* **Authenticate:** Client (users, apps, systems) authenticate with Vault using their identity.
+* **Validation:** Vault validates the client against third-party trusted sources.
+* **Authorize**: Client is matched against the Vault security policy.  This policy is a set of rules that direct which API endpoints a client has access to in a construct, using a Vault token.
+* **Access**: Vault provides access to secrets, keys, and encryption capabilities based on policies associated with the client’s identity.
+
+![Vault Workflow](/img/vault-workflow.png)
+
+### Why Vault?
+
+HashiCorp co-founder and CTO Armon Dadgar explains how Vault supports dynamic infrastructure that securely protects secrets and sensitive data.
+
+<iframe src="https://www.youtube.com/watch?v=VYfl-DpZ5wM" frameborder="0" allowfullscreen="true"  width="560" height="315" ></iframe>
 
 The key features of Vault are:
 
@@ -50,6 +68,17 @@ The key features of Vault are:
   all secrets read by a specific user, or all secrets of a particular type.
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
+
+  ~> **Tip:** Learn more about [Vault use cases](/docs/use-cases).
+
+### Community
+
+We welcome questions, suggestions, and contributions from the community.
+
+* Ask questions in [HashiCorp Discuss](https://discuss.hashicorp.com/c/vault/30).
+* Read our [contributing guide](https://github.com/hashicorp/tutorials/blob/main/CONTRIBUTING.md).
+* [Submit an issue](https://github.com/hashicorp/vault/issues/new/choose) for bugs and feature requests.
+
 
 ## What is HCP Vault?
 
