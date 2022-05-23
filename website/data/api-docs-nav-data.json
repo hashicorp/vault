@@ -228,6 +228,10 @@
         ]
       },
       {
+        "title": "Kubernetes",
+        "path": "secret/kubernetes"
+      },
+      {
         "title": "MongoDB Atlas",
         "path": "secret/mongodbatlas"
       },
