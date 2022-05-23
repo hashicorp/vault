@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -127,21 +126,9 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(fmt.Sprintf("public_key failed to meet the key requirements: %s", err)), nil
 	}
 
-	certificate, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
+	response, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
-	if len(signedSSHCertificate) == 0 {
-		return nil, fmt.Errorf("error marshaling signed certificate")
-	}
-
-	response := &logical.Response{
-		Data: map[string]interface{}{
-			"serial_number": strconv.FormatUint(certificate.Serial, 16),
-			"signed_key":    string(signedSSHCertificate),
-		},
+		return response, err
 	}
 
 	return response, nil
