@@ -5,7 +5,7 @@ import { action } from '@ember/object';
 
 /**
  * @module MountAccessorSelect
- * The MountAccessorSelect component is used xx
+ * The MountAccessorSelect component is used to selectDrop down mount options.
  *
  * @example
  * ```js
