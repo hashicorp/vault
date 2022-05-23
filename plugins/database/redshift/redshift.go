@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 	middlewareTypeName = "redshift"
 
 	// This allows us to use the postgres database driver.
-	sqlTypeName = "postgres"
+	sqlTypeName = "pgx"
 
 	defaultRenewSQL = `
 ALTER USER "{{name}}" VALID UNTIL '{{expiration}}';
@@ -398,23 +398,23 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req dbplugin.DeleteUse
 		}
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// for good measure, revoke all privileges and usage on schema public
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE USAGE ON SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	// get the current database name so we can issue a REVOKE CONNECT for
 	// this username
@@ -467,7 +467,7 @@ $$;`)
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP USER IF EXISTS %s;`, pq.QuoteIdentifier(username)))
+		`DROP USER IF EXISTS %s;`, dbutil.QuoteIdentifier(username)))
 	if err != nil {
 		return dbplugin.DeleteUserResponse{}, err
 	}
