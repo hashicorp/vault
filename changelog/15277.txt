@@ -1,11 +1,6 @@
 ```release-note:feature
-**Allows Multiple Issuer Certificates to enable Non-Disruptive
-Intermediate/Root Certificate Rotation**: This introduces /keys and /issuers
-endpoints to allow import, generation and configuration of any number of keys
-or issuers that can be used to issue and revoke certificates.  Keys and Issuers
-can be referred to by (a) a unique UUID; (b) a name; (c) “default”.  If an
-issuer existed prior to this feature, that issuer will be tagged by a migration
-as “default” to allow backwards compatible calls which don’t specify an issuer.
-Creation of new roles will assume an issuer of “default” unless otherwise
-specified.  This default can be configured at /config/issuers and /config/keys.
+**Non-Disruptive Intermediate/Root Certificate Rotation**: This allows
+import, generation and configuration of any number of keys and/or issuers
+within a PKI mount, providing operators the ability to rotate certificates
+in place without affecting existing client configurations.
 ```

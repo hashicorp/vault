@@ -16,15 +16,10 @@ endpoints in favor of [autoloaded licenses](https://www.vaultproject.io/docs/ent
 
 FEATURES:
 
-* **Allows Multiple Issuer Certificates to enable Non-Disruptive
-Intermediate/Root Certificate Rotation**: This introduces /keys and /issuers
-endpoints to allow import, generation and configuration of any number of keys
-or issuers that can be used to issue and revoke certificates.  Keys and Issuers
-can be referred to by (a) a unique UUID; (b) a name; (c) “default”.  If an
-issuer existed prior to this feature, that issuer will be tagged by a migration
-as “default” to allow backwards compatible calls which don’t specify an issuer.
-Creation of new roles will assume an issuer of “default” unless otherwise
-specified.  This default can be configured at /config/issuers and /config/keys. [[GH-15277](https://github.com/hashicorp/vault/pull/15277)]
+* **Non-Disruptive Intermediate/Root Certificate Rotation**: This allows
+import, generation and configuration of any number of keys and/or issuers
+within a PKI mount, providing operators the ability to rotate certificates
+in place without affecting existing client configurations. [[GH-15277](https://github.com/hashicorp/vault/pull/15277)]
 * api/command: Global -output-policy flag to determine minimum required policy HCL for a given operation [[GH-14899](https://github.com/hashicorp/vault/pull/14899)]
 * nomad: Bootstrap Nomad ACL system if no token is provided [[GH-12451](https://github.com/hashicorp/vault/pull/12451)]
 * storage/dynamodb: Added `AWS_DYNAMODB_REGION` environment variable. [[GH-15054](https://github.com/hashicorp/vault/pull/15054)]
