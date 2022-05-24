@@ -485,7 +485,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 			name:        "test mount reload for type secret",
 			backendType: logical.TypeLogical,
 			data: map[string]interface{}{
-				"mounts": "mock-0/,mock-1/",
+				"mounts": "mock-0/,mock-1",
 			},
 		},
 	}
