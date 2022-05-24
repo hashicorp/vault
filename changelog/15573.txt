@@ -1,3 +1,3 @@
 ```release-note:bug
-**UI**: Fixed unsupported revocation statements field for DB roles
+ui: Fixed unsupported revocation statements field for DB roles
 ```
