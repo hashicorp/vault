@@ -1,6 +1,7 @@
 package command
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -129,4 +130,38 @@ func TestListCommand_Run(t *testing.T) {
 		_, cmd := testListCommand(t)
 		assertNoTabs(t, cmd)
 	})
+}
+
+func TestListReturnError(t *testing.T) {
+	os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "True")
+	defer os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "")
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	keys := []string{
+		"secret/list/foo",
+		"secret/list/bar",
+		"secret/list/baz",
+	}
+	for _, k := range keys {
+		if _, err := client.Logical().Write(k, map[string]interface{}{
+			"foo": "bar",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ui, cmd := testListCommand(t)
+	cmd.client = client
+
+	code := cmd.Run([]string{"secrettt/list/foo"})
+	if code != 2 {
+		t.Errorf("expected %d to be %d", code, 2)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if !strings.Contains(combined, "Error listing secrettt/list/foo") {
+		t.Errorf("expected %q to contain %q", combined, "Error listing secrettt/read/foo")
+	}
 }

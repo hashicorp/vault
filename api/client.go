@@ -33,28 +33,29 @@ import (
 )
 
 const (
-	EnvVaultAddress       = "VAULT_ADDR"
-	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
-	EnvVaultCACert        = "VAULT_CACERT"
-	EnvVaultCACertBytes   = "VAULT_CACERT_BYTES"
-	EnvVaultCAPath        = "VAULT_CAPATH"
-	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
-	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
-	EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-	EnvVaultSRVLookup     = "VAULT_SRV_LOOKUP"
-	EnvVaultSkipVerify    = "VAULT_SKIP_VERIFY"
-	EnvVaultNamespace     = "VAULT_NAMESPACE"
-	EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
-	EnvVaultWrapTTL       = "VAULT_WRAP_TTL"
-	EnvVaultMaxRetries    = "VAULT_MAX_RETRIES"
-	EnvVaultToken         = "VAULT_TOKEN"
-	EnvVaultMFA           = "VAULT_MFA"
-	EnvRateLimit          = "VAULT_RATE_LIMIT"
-	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
-	HeaderIndex           = "X-Vault-Index"
-	HeaderForward         = "X-Vault-Forward"
-	HeaderInconsistent    = "X-Vault-Inconsistent"
-	TLSErrorString        = "This error usually means that the server is running with TLS disabled\n" +
+	EnvVaultAddress         = "VAULT_ADDR"
+	EnvVaultAgentAddr       = "VAULT_AGENT_ADDR"
+	EnvVaultCACert          = "VAULT_CACERT"
+	EnvVaultCACertBytes     = "VAULT_CACERT_BYTES"
+	EnvVaultCAPath          = "VAULT_CAPATH"
+	EnvVaultClientCert      = "VAULT_CLIENT_CERT"
+	EnvVaultClientKey       = "VAULT_CLIENT_KEY"
+	EnvVaultClientTimeout   = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultSRVLookup       = "VAULT_SRV_LOOKUP"
+	EnvVaultSkipVerify      = "VAULT_SKIP_VERIFY"
+	EnvVaultNamespace       = "VAULT_NAMESPACE"
+	EnvVaultTLSServerName   = "VAULT_TLS_SERVER_NAME"
+	EnvVaultWrapTTL         = "VAULT_WRAP_TTL"
+	EnvVaultMaxRetries      = "VAULT_MAX_RETRIES"
+	EnvVaultToken           = "VAULT_TOKEN"
+	EnvVaultMFA             = "VAULT_MFA"
+	EnvRateLimit            = "VAULT_RATE_LIMIT"
+	EnvHTTPProxy            = "VAULT_HTTP_PROXY"
+	EnvReturnErrorOnMissing = "VAULT_RETURN_ERROR_ON_MISSING"
+	HeaderIndex             = "X-Vault-Index"
+	HeaderForward           = "X-Vault-Forward"
+	HeaderInconsistent      = "X-Vault-Inconsistent"
+	TLSErrorString          = "This error usually means that the server is running with TLS disabled\n" +
 		"but the client is configured to use TLS. Please either enable TLS\n" +
 		"on the server or run the client with -address set to an address\n" +
 		"that uses the http protocol:\n\n" +
@@ -175,6 +176,14 @@ type Config struct {
 	// since there will be a performance penalty paid upon each request.
 	// This feature requires Enterprise server-side.
 	ReadYourWrites bool
+
+	// ReturnErrorOnMissing makes sure the returned error is not swallowed.
+	// This can happen in some api calls like Read and List. Here,
+	// in case of a 404 response status code and when the parsed resp.Body
+	// returns a nil api.Secret, the error message is not returned to the
+	// caller. To improve this behaviour, ReturnErrorOnMissing option is
+	// introduced to enable clients to retrieve the actual error.
+	ReturnErrorOnMissing bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -339,6 +348,7 @@ func (c *Config) ReadEnvironment() error {
 	var envSRVLookup bool
 	var limit *rate.Limiter
 	var envHTTPProxy string
+	var envReturnErrorOnMissing bool
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -414,6 +424,14 @@ func (c *Config) ReadEnvironment() error {
 		envHTTPProxy = v
 	}
 
+	if v := os.Getenv(EnvReturnErrorOnMissing); v != "" {
+		var err error
+		envReturnErrorOnMissing, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("could not parse VAULT_RETURN_ERROR_ON_MISSING")
+		}
+	}
+
 	// Configure the HTTP clients TLS configuration.
 	t := &TLSConfig{
 		CACert:        envCACert,
@@ -430,6 +448,7 @@ func (c *Config) ReadEnvironment() error {
 
 	c.SRVLookup = envSRVLookup
 	c.Limiter = limit
+	c.ReturnErrorOnMissing = envReturnErrorOnMissing
 
 	if err := c.configureTLS(t); err != nil {
 		return err
@@ -600,6 +619,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
+	newConfig.ReturnErrorOnMissing = c.config.ReturnErrorOnMissing
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -739,6 +759,24 @@ func (c *Client) SRVLookup() bool {
 	defer c.config.modifyLock.RUnlock()
 
 	return c.config.SRVLookup
+}
+
+func (c *Client) SetReturnErrorOnMissing(retErr bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.ReturnErrorOnMissing = retErr
+}
+
+func (c *Client) ReturnErrorOnMissing() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.ReturnErrorOnMissing
 }
 
 // SetCheckRetry sets the CheckRetry function to be used for future requests.
@@ -1066,21 +1104,22 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:        config.Address,
-		HttpClient:     config.HttpClient,
-		MinRetryWait:   config.MinRetryWait,
-		MaxRetryWait:   config.MaxRetryWait,
-		MaxRetries:     config.MaxRetries,
-		Timeout:        config.Timeout,
-		Backoff:        config.Backoff,
-		CheckRetry:     config.CheckRetry,
-		Logger:         config.Logger,
-		Limiter:        config.Limiter,
-		AgentAddress:   config.AgentAddress,
-		SRVLookup:      config.SRVLookup,
-		CloneHeaders:   config.CloneHeaders,
-		CloneToken:     config.CloneToken,
-		ReadYourWrites: config.ReadYourWrites,
+		Address:              config.Address,
+		HttpClient:           config.HttpClient,
+		MinRetryWait:         config.MinRetryWait,
+		MaxRetryWait:         config.MaxRetryWait,
+		MaxRetries:           config.MaxRetries,
+		Timeout:              config.Timeout,
+		Backoff:              config.Backoff,
+		CheckRetry:           config.CheckRetry,
+		Logger:               config.Logger,
+		Limiter:              config.Limiter,
+		AgentAddress:         config.AgentAddress,
+		SRVLookup:            config.SRVLookup,
+		CloneHeaders:         config.CloneHeaders,
+		CloneToken:           config.CloneToken,
+		ReadYourWrites:       config.ReadYourWrites,
+		ReturnErrorOnMissing: config.ReturnErrorOnMissing,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {

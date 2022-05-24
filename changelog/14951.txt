@@ -1,0 +1,3 @@
+```release-note:bug
+cli: vault CLI hides 404 root cause
+```

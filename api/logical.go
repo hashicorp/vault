@@ -97,6 +97,9 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
 		}
+		if c.c.ReturnErrorOnMissing() {
+			return nil, err
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -135,6 +138,9 @@ func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, er
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
+		}
+		if c.c.ReturnErrorOnMissing() {
+			return nil, err
 		}
 		return nil, nil
 	}

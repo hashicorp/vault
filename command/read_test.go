@@ -1,6 +1,7 @@
 package command
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -134,4 +135,31 @@ func TestReadCommand_Run(t *testing.T) {
 		_, cmd := testReadCommand(t)
 		assertNoTabs(t, cmd)
 	})
+}
+
+func TestReadReturnError(t *testing.T) {
+	os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "True")
+	defer os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "")
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if _, err := client.Logical().Write("secret/read/foo", map[string]interface{}{
+		"foo": "bar",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ui, cmd := testReadCommand(t)
+	cmd.client = client
+
+	code := cmd.Run([]string{"secretttttt/read/foo"})
+	if code != 2 {
+		t.Errorf("expected %d to be %d", code, 2)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if !strings.Contains(combined, "Error reading secretttttt/read/foo") {
+		t.Errorf("expected %q to contain %q", combined, "Error reading secretttttt/read/foo")
+	}
 }

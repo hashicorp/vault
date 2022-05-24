@@ -51,6 +51,24 @@ func TestDefaultConfig_envvar(t *testing.T) {
 	}
 }
 
+func TestConfigEnvVarReturnErrorOnMissing(t *testing.T) {
+	os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "True")
+	defer os.Setenv("VAULT_RETURN_ERROR_ON_MISSING", "")
+
+	config := DefaultConfig()
+	if !config.ReturnErrorOnMissing {
+		t.Fatalf("bad ReturnErrorOnMissing in config")
+	}
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !client.ReturnErrorOnMissing() {
+		t.Fatalf("failed to set ReturnErrorOnMissing using environment variable")
+	}
+}
+
 func TestClientDefaultHttpClient(t *testing.T) {
 	_, err := NewClient(&Config{
 		HttpClient: http.DefaultClient,
