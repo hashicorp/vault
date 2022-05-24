@@ -1,0 +1,34 @@
+<p>
+  TOTP Multi-factor authentication (MFA) can be enabled here if it is required by your administrator. This will ensure that
+  you are not prevented from logging into Vault in the future, once MFA is fully enforced.
+</p>
+<div class="field has-top-margin-l">
+  <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+  {{#if @warning}}
+    <AlertBanner @type="info" @title="MFA enabled" @message={{@warning}} class="has-top-margin-l" />
+  {{else}}
+    <div class="list-item-row">
+      <div class="center-display">
+        <QrCode @text={{@qrCode}} @colorLight="#F7F7F7" @width={{155}} @height={{155}} @correctLevel="L" />
+      </div>
+    </div>
+    <div class="has-top-margin-s">
+      <div class="info-table-row has-no-shadow">
+        <div class="column info-table-row-edit"><Icon @name="alert-triangle-fill" class="has-text-highlight" /></div>
+        <p class="is-size-8">
+          After you leave this page, this QR code will be removed and
+          <strong>cannot</strong>
+          be regenerated.
+        </p>
+      </div>
+    </div>
+  {{/if}}
+  <div class="is-flex-start has-gap has-top-margin-l">
+    <button id="restart" type="button" class="button has-text-danger" {{on "click" this.restartSetup}}>
+      Restart setup
+    </button>
+    <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button is-primary">
+      Done
+    </button>
+  </div>
+</div>

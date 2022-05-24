@@ -855,7 +855,7 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
+			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
 			Fields: map[string]*framework.FieldSchema{
 				"urlbytes": {
 					Type:        framework.TypeString,
@@ -872,6 +872,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Default:     "base64",
 					Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
+				},
+
+				"source": {
+					Type:        framework.TypeString,
+					Default:     "platform",
+					Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
 				},
 			},
 

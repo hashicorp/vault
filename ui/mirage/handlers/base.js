@@ -35,13 +35,6 @@ export default function (server) {
     return {
       data: {
         autoloading_used: false,
-        stored: {
-          expiration_time: EXPIRY_DATE,
-          features: ['DR Replication', 'Namespaces', 'Lease Count Quotas', 'Automated Snapshots'],
-          license_id: '0eca7ef8-ebc0-f875-315e-3cc94a7870cf',
-          performance_standby_count: 0,
-          start_time: '2020-04-28T00:00:00Z',
-        },
         persisted_autoload: {
           expiration_time: EXPIRY_DATE,
           features: ['DR Replication', 'Namespaces', 'Lease Count Quotas', 'Automated Snapshots'],

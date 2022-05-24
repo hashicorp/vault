@@ -16,11 +16,24 @@
   <div class="control is-expanded">
     <div class="select is-fullwidth">
       <select name={{this.name}} id={{this.name}} onchange={{action "change" value="target.value"}}>
+        {{#if this.noDefault}}
+          <option value="">Select one</option>
+        {{/if}}
         {{#each this.authMethods.last.value as |method|}}
-          <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
-            {{method.path}}
-            ({{method.type}})
-          </option>
+          {{! token type does not need to be authorized via MFA }}
+          {{#if this.filterToken}}
+            {{#if (not-eq method.id "token")}}
+              <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
+                {{method.path}}
+                ({{if this.showAccessor method.accessor method.type}})
+              </option>
+            {{/if}}
+          {{else}}
+            <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
+              {{method.path}}
+              ({{if this.showAccessor method.accessor method.type}})
+            </option>
+          {{/if}}
         {{/each}}
       </select>
     </div>

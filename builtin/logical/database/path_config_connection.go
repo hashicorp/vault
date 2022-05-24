@@ -33,6 +33,22 @@ type DatabaseConfig struct {
 	PasswordPolicy string `json:"password_policy" structs:"password_policy" mapstructure:"password_policy"`
 }
 
+func (c *DatabaseConfig) SupportsCredentialType(credentialType v5.CredentialType) bool {
+	credTypes, ok := c.ConnectionDetails[v5.SupportedCredentialTypesKey].([]interface{})
+	if !ok {
+		// Default to supporting CredentialTypePassword for database plugins that
+		// don't specify supported credential types in the initialization response
+		return credentialType == v5.CredentialTypePassword
+	}
+
+	for _, ct := range credTypes {
+		if ct == credentialType.String() {
+			return true
+		}
+	}
+	return false
+}
+
 // pathResetConnection configures a path to reset a plugin.
 func pathResetConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
@@ -347,7 +363,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		resp := &logical.Response{}
 
-		// This is a simple test to check for passwords in the connection_url paramater. If one exists,
+		// This is a simple test to check for passwords in the connection_url parameter. If one exists,
 		// warn the user to use templated url string
 		if connURLRaw, ok := config.ConnectionDetails["connection_url"]; ok {
 			if connURL, err := url.Parse(connURLRaw.(string)); err == nil {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -368,7 +369,16 @@ func LoadConfig(path string) (*Config, error) {
 
 	if fi.IsDir() {
 		// check permissions on the config directory
-		if os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+		var enableFilePermissionsCheck bool
+		if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+			var err error
+			enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+			if err != nil {
+				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+			}
+		}
+
+		if enableFilePermissionsCheck {
 			err = osutil.OwnerPermissionsMatch(path, 0, 0)
 			if err != nil {
 				return nil, err
@@ -409,7 +419,16 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	if os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+	var enableFilePermissionsCheck bool
+	if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+		var err error
+		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+		if err != nil {
+			return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+		}
+	}
+
+	if enableFilePermissionsCheck {
 		// check permissions of the config file
 		err = osutil.OwnerPermissionsMatch(path, 0, 0)
 		if err != nil {
@@ -507,6 +526,9 @@ func ParseConfig(d, source string) (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
+		if pluginFilePermissions < math.MinInt || pluginFilePermissions > math.MaxInt {
+			return nil, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
+		}
 		result.PluginFilePermissions = int(pluginFilePermissions)
 	}
 
@@ -562,6 +584,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		if err := ParseStorage(result, o, "storage"); err != nil {
 			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
+		result.found(result.Storage.Type, result.Storage.Type)
 	} else {
 		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
@@ -966,4 +989,9 @@ func (c *Config) Prune() {
 		c.Telemetry.FoundKeys = nil
 		c.Telemetry.UnusedKeys = nil
 	}
+}
+
+func (c *Config) found(s, k string) {
+	delete(c.UnusedKeys, s)
+	c.FoundKeys = append(c.FoundKeys, k)
 }

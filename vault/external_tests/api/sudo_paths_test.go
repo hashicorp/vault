@@ -71,15 +71,7 @@ func TestSudoPaths(t *testing.T) {
 
 	sudoPathsInCode := api.SudoPaths()
 
-	// check for missing or superfluous paths
-	for path := range sudoPathsInCode {
-		if _, ok := sudoPathsFromSpec[path]; !ok {
-			t.Fatalf(
-				"A path in the static list of sudo paths in the api module is "+
-					"missing from the OpenAPI spec (%s). Please reconcile the two "+
-					"accordingly.", path)
-		}
-	}
+	// check for missing paths
 	for path := range sudoPathsFromSpec {
 		if _, ok := sudoPathsInCode[path]; !ok {
 			t.Fatalf(

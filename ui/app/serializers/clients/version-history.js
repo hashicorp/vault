@@ -1,11 +1,13 @@
 import ApplicationSerializer from '../application';
 
 export default ApplicationSerializer.extend({
-  normalizeFindAllResponse(store, primaryModelClass, payload, id, requestType) {
-    let normalizedPayload = [];
-    payload.keys.forEach((key) => {
-      normalizedPayload.push({ id: key, ...payload.key_info[key] });
-    });
-    return this._super(store, primaryModelClass, normalizedPayload, id, requestType);
+  normalizeItems(payload) {
+    if (payload.data.keys && Array.isArray(payload.data.keys)) {
+      return payload.data.keys.map((key) => {
+        let model = payload.data.key_info[key];
+        model.id = key;
+        return model;
+      });
+    }
   },
 });

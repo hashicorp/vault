@@ -8,6 +8,8 @@ export default Component.extend({
   // Public API
   //value for the external mount selector
   value: null,
+  filterToken: false,
+  noDefault: false,
   onChange: () => {},
 
   init() {
@@ -17,8 +19,9 @@ export default Component.extend({
 
   authMethods: task(function* () {
     let methods = yield this.store.findAll('auth-method');
-    if (!this.value) {
+    if (!this.value && !this.noDefault) {
       this.set('value', methods.get('firstObject.accessor'));
+      this.onChange(this.value);
     }
     return methods;
   }).drop(),

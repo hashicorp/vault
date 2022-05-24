@@ -32,9 +32,16 @@ valid; defaults to 72 hours`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCRLRead,
-			logical.UpdateOperation: b.pathCRLWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCRLRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCRLWrite,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigCRLHelpSyn,
@@ -47,11 +54,15 @@ func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
-	}
 
 	var result crlConfig
+	result.Expiry = b.crlLifetime.String()
+	result.Disable = false
+
+	if entry == nil {
+		return &result, nil
+	}
+
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -59,13 +70,10 @@ func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error
 	return &result, nil
 }
 
-func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-	if config == nil {
-		return nil, nil
 	}
 
 	return &logical.Response{
@@ -80,9 +88,6 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-	if config == nil {
-		config = &crlConfig{}
 	}
 
 	if expiryRaw, ok := d.GetOk("expiry"); ok {
@@ -111,7 +116,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	if oldDisable != config.Disable {
 		// It wasn't disabled but now it is, rotate
-		crlErr := buildCRL(ctx, b, req, true)
+		crlErr := b.crlBuilder.rebuild(ctx, b, req, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:

@@ -12,8 +12,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	_ "github.com/lib/pq"
 )
 
 type Config struct {
@@ -63,7 +61,7 @@ func connectCockroachDB(ctx context.Context, host string, port int) (docker.Serv
 		RawQuery: "sslmode=disable",
 	}
 
-	db, err := sql.Open("postgres", u.String())
+	db, err := sql.Open("pgx", u.String())
 	if err != nil {
 		return nil, err
 	}

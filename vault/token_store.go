@@ -2591,7 +2591,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		// Create or fetch entity from entity alias
-		entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
+		entity, _, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
 		if err != nil {
 			return nil, err
 		}

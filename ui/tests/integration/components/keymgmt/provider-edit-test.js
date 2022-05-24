@@ -4,7 +4,6 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, triggerEvent, settled, fillIn } from '@ember/test-helpers';
-import { format } from 'date-fns';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -28,12 +27,10 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
           name: 'foo-bar',
           provider: 'azurekeyvault',
           keyCollection: 'keyvault-1',
-          created: new Date(),
         },
       },
     });
     this.model = this.store.peekRecord('keymgmt/provider', 'foo-bar');
-    this.created = format(this.model.created, 'MMM d yyyy, h:mm:ss aaa');
     this.root = root;
     this.owner.lookup('service:router').reopen({
       currentURL: '/ui/vault/secrets/keymgmt/show/foo-bar',
@@ -45,7 +42,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render show view', async function (assert) {
-    assert.expect(13);
+    assert.expect(12);
 
     // override capability getters
     Object.defineProperties(this.model, {
@@ -86,15 +83,14 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       />`);
 
     assert.dom(`[${ts}-header]`).hasText('Provider foo-bar', 'Page header renders');
-    assert.dom(`[${ts}-tab="details"]`).hasClass('is-active', 'Details tab is active');
+    assert.dom(`[${ts}-tab="details"]`).hasClass('active', 'Details tab is active');
 
     const infoRows = this.element.querySelectorAll('[data-test-component="info-table-row"]');
     assert.dom(infoRows[0]).hasText('Provider name foo-bar', 'Provider name field renders');
     assert.dom(infoRows[1]).hasText('Type Azure Key Vault', 'Type field renders');
     assert.dom('svg', infoRows[1]).hasAttribute('data-test-icon', 'azure-color', 'Icon renders for type');
-    assert.dom(infoRows[2]).hasText(`Created ${this.created}`, 'Created field renders');
-    assert.dom(infoRows[3]).hasText('Key Vault instance name keyvault-1', 'Key collection field renders');
-    assert.dom(infoRows[4]).hasText('Keys 2 keys', 'Keys field renders');
+    assert.dom(infoRows[2]).hasText('Key Vault instance name keyvault-1', 'Key collection field renders');
+    assert.dom(infoRows[3]).hasText('Keys 2 keys', 'Keys field renders');
 
     await changeTab('keys');
     assert.dom(`[${ts}-details-actions]`).doesNotExist('Toolbar is hidden on keys tab');
@@ -115,11 +111,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render create view', async function (assert) {
-    assert.expect(10);
+    assert.expect(14);
 
     this.server.put('/keymgmt/kms/foo', (schema, req) => {
       const params = {
         name: 'foo',
+        backend: 'keymgmt',
         provider: 'gcpckms',
         key_collection: 'keyvault-1',
         credentials: {
@@ -136,7 +133,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
-    this.model = this.store.createRecord('keymgmt/provider');
+    this.model = this.store.createRecord('keymgmt/provider', { backend: 'keymgmt' });
 
     await render(hbs`
       <Keymgmt::ProviderEdit
@@ -150,21 +147,20 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     assert.dom(`[${ts}-creds-title]`).doesNotExist('New credentials header hidden in create mode');
 
     await click(`[${ts}-submit]`);
-    assert
-      .dom('[data-test-inline-error-message]')
-      .exists({ count: 5 }, 'Required fields are shown on validation');
+    assert.dom('[data-test-inline-error-message]').exists('Validation error messages shown');
 
+    await fillIn('[data-test-input="provider"]', 'azurekeyvault');
     ['client_id', 'client_secret', 'tenant_id'].forEach((prop) => {
-      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`Azure ${prop} field renders`);
+      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`Azure - ${prop} field renders`);
     });
 
     await fillIn('[data-test-input="provider"]', 'awskms');
     ['access_key', 'secret_key'].forEach((prop) => {
-      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`AWS ${prop} field renders`);
+      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`AWS - ${prop} field renders`);
     });
 
     await fillIn('[data-test-input="provider"]', 'gcpckms');
-    assert.dom(`[data-test-input="credentials.service_account_file"]`).exists(`GCP cred field renders`);
+    assert.dom(`[data-test-input="credentials.service_account_file"]`).exists(`GCP - cred field renders`);
 
     await fillIn('[data-test-input="name"]', 'foo');
     await fillIn('[data-test-input="keyCollection"]', 'keyvault-1');
@@ -178,6 +174,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     this.server.put('/keymgmt/kms/foo', (schema, req) => {
       const params = {
         name: 'foo-bar',
+        backend: 'keymgmt',
         provider: 'azurekeyvault',
         key_collection: 'keyvault-1',
         credentials: {

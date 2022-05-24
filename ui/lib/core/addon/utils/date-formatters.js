@@ -15,7 +15,7 @@ export const ARRAY_OF_MONTHS = [
   'December',
 ];
 
-// convert RFC3339 timestamp ( '2021-03-21T00:00:00Z' ) to date object, optionally format
+// convert API timestamp ( '2021-03-21T00:00:00Z' ) to date object, optionally format
 export const parseAPITimestamp = (timestamp, style) => {
   if (!timestamp) return;
   let date = parseISO(timestamp.split('T')[0]);

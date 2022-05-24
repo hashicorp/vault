@@ -244,7 +244,7 @@ func (c *Client) GetUserAliasAttributeValue(cfg *ConfigEntry, conn Connection, u
 		}
 
 		if len(result.Entries[0].Attributes) != 1 {
-			return aliasAttributeValue, errwrap.Wrapf("LDAP attribute missing for entity alias mapping{{err}}", err)
+			return aliasAttributeValue, fmt.Errorf("LDAP attribute missing for entity alias mapping")
 		}
 
 		if len(result.Entries[0].Attributes[0].Values) != 1 {

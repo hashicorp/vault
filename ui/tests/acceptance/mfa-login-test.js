@@ -1,15 +1,16 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitUntil, find } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
+import { validationHandler } from '../../mirage/handlers/mfa-login';
 
-module('Acceptance | mfa', function (hooks) {
+module('Acceptance | mfa-login', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'mfa';
+    ENV['ember-cli-mirage'].handler = 'mfaLogin';
   });
   hooks.beforeEach(function () {
     this.select = async (select = 0, option = 1) => {
@@ -56,7 +57,27 @@ module('Acceptance | mfa', function (hooks) {
   });
 
   test('it should handle single mfa constraint with push method', async function (assert) {
-    assert.expect(1);
+    assert.expect(6);
+
+    server.post('/sys/mfa/validate', async (schema, req) => {
+      await waitUntil(() => find('[data-test-mfa-description]'));
+      assert
+        .dom('[data-test-mfa-description]')
+        .hasText(
+          'Multi-factor authentication is enabled for your account.',
+          'Mfa form displays with correct description'
+        );
+      assert.dom('[data-test-mfa-label]').hasText('Okta push notification', 'Correct method renders');
+      assert
+        .dom('[data-test-mfa-push-instruction]')
+        .hasText('Check device for push notification', 'Push notification instruction renders');
+      assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled while validating');
+      assert
+        .dom('[data-test-mfa-validate]')
+        .hasClass('is-loading', 'Loading class applied to button while validating');
+      return validationHandler(schema, req);
+    });
+
     await login('mfa-b');
     didLogin(assert);
   });

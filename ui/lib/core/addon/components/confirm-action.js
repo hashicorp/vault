@@ -33,6 +33,7 @@ export default Component.extend({
   cancelButtonText: 'Cancel',
   horizontalPosition: 'auto-right',
   verticalPosition: 'below',
+  isRunning: false,
   disabled: false,
   showConfirm: false,
   onConfirmAction: null,

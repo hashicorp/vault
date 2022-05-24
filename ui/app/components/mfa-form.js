@@ -15,9 +15,10 @@ import { numberToWord } from 'vault/helpers/number-to-word';
  * @param {string} clusterId - id of selected cluster
  * @param {object} authData - data from initial auth request -- { mfa_requirement, backend, data }
  * @param {function} onSuccess - fired when passcode passes validation
+ * @param {function} onError - fired for multi-method or non-passcode method validation errors
  */
 
-export const VALIDATION_ERROR =
+export const TOTP_VALIDATION_ERROR =
   'The passcode failed to validate. If you entered the correct passcode, contact your administrator.';
 
 export default class MfaForm extends Component {
@@ -25,6 +26,18 @@ export default class MfaForm extends Component {
 
   @tracked countdown;
   @tracked error;
+  @tracked codeDelayMessage;
+
+  constructor() {
+    super(...arguments);
+    // trigger validation immediately when passcode is not required
+    const passcodeOrSelect = this.constraints.filter((constraint) => {
+      return constraint.methods.length > 1 || constraint.methods.findBy('uses_passcode');
+    });
+    if (!passcodeOrSelect.length) {
+      this.validate.perform();
+    }
+  }
 
   get constraints() {
     return this.args.authData.mfa_requirement.mfa_constraints;
@@ -66,19 +79,26 @@ export default class MfaForm extends Component {
       });
       this.args.onSuccess(response);
     } catch (error) {
-      const codeUsed = (error.errors || []).find((e) => e.includes('code already used;'));
-      if (codeUsed) {
-        // parse validity period from error string to initialize countdown
-        const seconds = parseInt(codeUsed.split('in ')[1].split(' seconds')[0]);
-        this.newCodeDelay.perform(seconds);
+      const errors = error.errors || [];
+      const codeUsed = errors.find((e) => e.includes('code already used'));
+      const rateLimit = errors.find((e) => e.includes('maximum TOTP validation attempts'));
+      const delayMessage = codeUsed || rateLimit;
+
+      if (delayMessage) {
+        const reason = codeUsed ? 'This code has already been used' : 'Maximum validation attempts exceeded';
+        this.codeDelayMessage = `${reason}. Please wait until a new code is available.`;
+        this.newCodeDelay.perform(delayMessage);
+      } else if (this.singlePasscode) {
+        this.error = TOTP_VALIDATION_ERROR;
       } else {
-        this.error = VALIDATION_ERROR;
+        this.args.onError(this.auth.handleError(error));
       }
     }
   }
 
-  @task *newCodeDelay(timePeriod) {
-    this.countdown = timePeriod;
+  @task *newCodeDelay(message) {
+    // parse validity period from error string to initialize countdown
+    this.countdown = parseInt(message.match(/(\d\w seconds)/)[0].split(' ')[0]);
     while (this.countdown) {
       yield timeout(1000);
       this.countdown--;

@@ -1,77 +1,125 @@
-<div class="chart-wrapper stacked-charts">
-  <div class="single-chart-grid">
-    <div class="chart-header has-bottom-margin-xl">
+{{#if this.showSingleMonth}}
+  <div class="chart-wrapper single-month-grid">
+    <div class="chart-header has-bottom-margin-sm">
       <h2 class="chart-title">Vault client counts</h2>
       <p class="chart-description">
         A client is any user or service that interacts with Vault. They are made up of entity clients and non-entity clients.
         The total client count number is an important consideration for Vault billing.
       </p>
     </div>
-
-    <div class="chart-container-wide">
-      <Clients::LineChart @dataset={{@lineChartData}} @upgradeData={{@upgradeData}} />
+    <div class="single-month-stats">
+      <div class="single-month-section-title">
+        <StatText
+          @label="New clients"
+          @subText="This is the number of clients which were created in Vault for the first time in the selected month."
+          @value={{this.showSingleMonth.new.total}}
+          @size="l"
+        />
+      </div>
+      <div class="single-month-breakdown-entity">
+        <StatText @label="Entity clients" @value={{this.showSingleMonth.new.entityClients}} @size="m" />
+      </div>
+      <div class="single-month-breakdown-nonentity">
+        <StatText @label="Non-entity clients" @value={{this.showSingleMonth.new.nonEntityClients}} @size="m" />
+      </div>
     </div>
-
-    <div class="chart-subTitle">
-      <h2 class="chart-title">Running client total</h2>
-      <p class="chart-subtext">The number of clients which interacted with Vault during this date range. </p>
-    </div>
-    <div class="data-details-top">
-      <h3 class="data-details">Entity clients</h3>
-      <p class="data-details">
-        {{format-number this.entityClientData.runningTotal}}
-      </p>
-    </div>
-
-    <div class="data-details-bottom">
-      <h3 class="data-details">Non-entity clients</h3>
-      <p class="data-details">
-        {{format-number this.nonEntityClientData.runningTotal}}
-      </p>
-    </div>
-
-    <div class="legend-right">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
-    </div>
-  </div>
-
-  <div class="single-chart-grid">
-    <div class="chart-container-wide">
-      <Clients::VerticalBarChart @dataset={{@barChartData}} @chartLegend={{@chartLegend}} />
-    </div>
-
-    <div class="chart-subTitle">
-      <h2 class="chart-title">New monthly clients</h2>
-      <p class="chart-subtext">
-        Clients which interacted with Vault for the first time during this date range, displayed per month.
-      </p>
-    </div>
-
-    <div class="data-details-top">
-      <h3 class="data-details">Average new entity clients per month</h3>
-      <p class="data-details">
-        {{format-number this.entityClientData.averageNewClients}}
-      </p>
-    </div>
-
-    <div class="data-details-bottom">
-      <h3 class="data-details">Average new non-entity clients per month</h3>
-      <p class="data-details">
-        {{format-number this.nonEntityClientData.averageNewClients}}
-      </p>
-    </div>
-
-    <div class="timestamp">
-      {{#if @timestamp}}
-        Updated
-        {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
-      {{/if}}
-    </div>
-
-    <div class="legend-right">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+    <div class="single-month-stats">
+      <div class="single-month-section-title">
+        <StatText
+          @label="Total monthly clients"
+          @subText="This is the number of total clients which used Vault for the given month, both new and previous."
+          @value={{this.showSingleMonth.total.total}}
+          @size="l"
+        />
+      </div>
+      <div class="single-month-breakdown-entity">
+        <StatText @label="Entity clients" @value={{this.showSingleMonth.total.entityClients}} @size="m" />
+      </div>
+      <div class="single-month-breakdown-nonentity">
+        <StatText @label="Non-entity clients" @value={{this.showSingleMonth.total.nonEntityClients}} @size="m" />
+      </div>
     </div>
   </div>
-</div>
+{{else}}
+  <div class="chart-wrapper stacked-charts">
+    <div class="single-chart-grid">
+      <div class="chart-header has-bottom-margin-xl">
+        <h2 class="chart-title">Vault client counts</h2>
+        <p class="chart-description">
+          A client is any user or service that interacts with Vault. They are made up of entity clients and non-entity
+          clients. The total client count number is an important consideration for Vault billing.
+        </p>
+      </div>
+
+      <div class="chart-container-wide">
+        <Clients::LineChart @dataset={{@lineChartData}} @upgradeData={{@upgradeData}} />
+      </div>
+
+      <div class="chart-subTitle">
+        <h2 class="chart-title">Running client total</h2>
+        <p class="chart-subtext">The number of clients which interacted with Vault during this date range. </p>
+      </div>
+      <div class="data-details-top">
+        <h3 class="data-details">Entity clients</h3>
+        <p class="data-details">
+          {{format-number this.entityClientData.runningTotal}}
+        </p>
+      </div>
+
+      <div class="data-details-bottom">
+        <h3 class="data-details">Non-entity clients</h3>
+        <p class="data-details">
+          {{format-number this.nonEntityClientData.runningTotal}}
+        </p>
+      </div>
+    </div>
+
+    <div class="single-chart-grid">
+      <div class={{concat (unless this.hasAverageNewClients "chart-empty-state ") "chart-container-wide"}}>
+        <Clients::VerticalBarChart
+          @dataset={{if this.hasAverageNewClients @barChartData false}}
+          @chartLegend={{@chartLegend}}
+          @noDataTitle="No new clients"
+          @noDataMessage={{concat
+            "There are no new clients for this "
+            (if @selectedAuthMethod "auth method" "namespace")
+            " in this date range"
+          }}
+        />
+      </div>
+
+      <div class="chart-subTitle">
+        <h2 class="chart-title">New monthly clients</h2>
+        <p class="chart-subtext">
+          Clients which interacted with Vault for the first time during this date range, displayed per month.
+        </p>
+      </div>
+
+      <div class="data-details-top">
+        <h3 class="data-details">Average new entity clients per month</h3>
+        <p class="data-details">
+          {{format-number this.entityClientData.averageNewClients}}
+        </p>
+      </div>
+
+      <div class="data-details-bottom">
+        <h3 class="data-details">Average new non-entity clients per month</h3>
+        <p class="data-details">
+          {{format-number this.nonEntityClientData.averageNewClients}}
+        </p>
+      </div>
+
+      <div class="timestamp">
+        {{#if @timestamp}}
+          Updated
+          {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+        {{/if}}
+      </div>
+
+      <div class="legend-right">
+        <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+        <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+      </div>
+    </div>
+  </div>
+{{/if}}
