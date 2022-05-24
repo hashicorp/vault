@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// reloadPluginMounts reloads provided mounts, regardless of
+// reloadMatchingPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
 func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
 	c.mountsLock.RLock()
@@ -28,7 +28,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 	var errors error
 	for _, mount := range mounts {
 		var isAuth bool
-		if strings.HasPrefix(mount, systemMountPath+credentialRoutePrefix) {
+		if strings.HasPrefix(mount, credentialRoutePrefix) {
 			isAuth = true
 			mount = strings.TrimPrefix(mount, systemMountPath)
 		}
