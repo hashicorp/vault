@@ -27,6 +27,8 @@ VAULT_PID=$!
 echo "Mounting all builtin backends..."
 
 # Read auth backends
+i=0
+Plugins=()
 codeLinesStarted=false
 inQuotesRegex='".*"'
 while read -r line; do
@@ -37,6 +39,8 @@ while read -r line; do
     elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
+        Plugins[$i]=${plugin}
+        let i+=1
         vault auth enable "${plugin}"
     fi
 done <../../vault/helper/builtinplugins/registry.go
@@ -51,6 +55,8 @@ while read -r line; do
     elif [ $codeLinesStarted = true ] && [[ $line =~ $inQuotesRegex ]] && [[ $line != *"Deprecated"* ]] ; then
         backend=${BASH_REMATCH[0]}
         plugin=$(sed -e 's/^"//' -e 's/"$//' <<<"$backend")
+        Plugins[$i]=${plugin}
+        let i+=1
         vault secrets enable "${plugin}"
     fi
 done <../../vault/helper/builtinplugins/registry.go
@@ -81,6 +87,15 @@ if [ "$1" == "-p" ]; then
   curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
 else
   curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
+fi
+
+# Adding dynamic mount paths
+if [ "$2" == "-g" ]; then
+    echo "Replacing hardcoded paths with dynamic mounts..."
+    for p in "${Plugins[@]}"
+    do
+        sed -i '' "s/\/${p}\//\/{mount}\//" openapi.json
+    done
 fi
 
 kill $VAULT_PID
