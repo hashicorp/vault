@@ -28,7 +28,12 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 	var errors error
 	for _, mount := range mounts {
 		var isAuth bool
+		// allow either of
+		//   - sys/auth/foo/
+		//   - auth/foo/
 		if strings.HasPrefix(mount, credentialRoutePrefix) {
+			isAuth = true
+		} else if strings.HasPrefix(mount, systemMountPath+credentialRoutePrefix) {
 			isAuth = true
 			mount = strings.TrimPrefix(mount, systemMountPath)
 		}

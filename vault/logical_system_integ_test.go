@@ -471,7 +471,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 			name:        "test mount reload for type credential",
 			backendType: logical.TypeCredential,
 			data: map[string]interface{}{
-				"mounts": "auth/mock-0/,auth/mock-1/",
+				"mounts": "sys/auth/mock-0/,auth/mock-1/",
 			},
 		},
 		{
