@@ -120,7 +120,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     await fillIn('[data-test-mlef-input="name"]', 'bar');
     await click('.ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
-    await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_1234');
+    await fillIn('[data-test-mlef-select="accessor"] select', 'auth_userpass_1234');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mlef-save]');
     assert.true(this.didSave, 'onSave callback triggered');
@@ -166,7 +166,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
       .includesText('At least one target is required', 'Target is removed');
     assert.notOk(this.model.auth_method_accessors.length, 'Target is removed from appropriate model prop');
 
-    await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_1234');
+    await fillIn('[data-test-mlef-select="accessor"] select', 'auth_userpass_1234');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-selected-list-button="delete"]');
     await click('[data-test-mlef-save]');
@@ -241,12 +241,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
       } else {
         const key = target.label === 'Authentication method' ? 'auth-method' : 'accessor';
         const value = target.label === 'Authentication method' ? 'userpass' : 'auth_userpass_1234';
-        if (key === 'accessor') {
-          // glimmerized component that does not bind the data-test to the hbs file, and instead has it on the select inside the component
-          await fillIn(`[data-test-mount-accessor-select]`, value);
-        } else {
-          await fillIn(`[data-test-mlef-select="${key}"] select`, value);
-        }
+        await fillIn(`[data-test-mlef-select="${key}"] select`, value);
       }
       await click('[data-test-mlef-add-target]');
       assert.ok(this.model[target.key].length, `${target.label} added to correct model prop`);
