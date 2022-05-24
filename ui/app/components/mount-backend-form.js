@@ -87,7 +87,7 @@ export default Component.extend({
     }
   },
 
-  isModelValid(model) {
+  checkModelValidity(model) {
     const { isValid, state } = model.validate();
     this.setProperties({
       modelValidations: state,
@@ -100,7 +100,7 @@ export default Component.extend({
       const mountModel = this.mountModel;
       const { type, path } = mountModel;
       // only submit form if validations pass
-      if (!this.isModelValid(mountModel)) {
+      if (!this.checkModelValidity(mountModel)) {
         return;
       }
       let capabilities = null;
