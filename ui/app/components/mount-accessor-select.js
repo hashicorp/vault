@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { dropTask } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 
 /**
@@ -37,7 +37,7 @@ export default class MountAccessorSelect extends Component {
     this.authMethods.perform();
   }
 
-  @dropTask *authMethods() {
+  @task *authMethods() {
     let methods = yield this.store.findAll('auth-method');
     if (!this.args.value && !this.args.noDefault) {
       const getValue = methods.get('firstObject.accessor');
