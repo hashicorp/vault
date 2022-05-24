@@ -146,24 +146,80 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// check that KVOption works
+		////
+		// WithCheckAndSet
 		_, err = client.KVv2("secret-v2").Put(context.Background(), "value", map[string]interface{}{
 			"meow": "woof",
 		}, api.WithCheckAndSet(99))
+		// should fail
 		if err == nil {
-			t.Fatalf("expected error from trying to update different version from check-and-set value")
+			t.Fatalf("expected error from trying to update different version from check-and-set value using WithCheckAndSet")
 		}
 
+		// WithOption (generic)
+		_, err = client.KVv2("secret-v2").Put(context.Background(), "value", map[string]interface{}{
+			"bow": "wow",
+		}, api.WithOption("cas", 99))
+		// should fail
+		if err == nil {
+			t.Fatalf("expected error from trying to update different version from check-and-set value using generic WithOption")
+		}
+
+		// WithMethod Patch (implicit)
+		_, err = client.KVv2("secret-v2").Patch(context.Background(), "value", map[string]interface{}{
+			"dog": "cat",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// WithMethod Patch (explicit)
+		_, err = client.KVv2("secret-v2").Patch(context.Background(), "value", map[string]interface{}{
+			"rat": "mouse",
+		}, api.WithMethod("patch"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// WithMethod RW
+		_, err = client.KVv2("secret-v2").Patch(context.Background(), "value", map[string]interface{}{
+			"bird": "tweet",
+		}, api.WithMethod("rw"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		secretAfterPatches, err := client.KVv2("secret-v2").Get(context.Background(), "value")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, ok := secretAfterPatches.Data["dog"]
+		if !ok {
+			t.Fatalf("secret did not contain data patched with implicit Patch method")
+		}
+		_, ok = secretAfterPatches.Data["rat"]
+		if !ok {
+			t.Fatalf("secret did not contain data patched with explicit Patch method")
+		}
+		_, ok = secretAfterPatches.Data["bird"]
+		if !ok {
+			t.Fatalf("secret did not contain data patched with RW method")
+		}
+		////
+
+		// get versions as list
 		versions, err := client.KVv2("secret-v2").GetVersionsAsList(context.Background(), "value")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if len(versions) != 2 {
-			t.Fatalf("expected there to be 2 versions of the secret but got %d", len(versions))
+		expectedLength := 5
+		if len(versions) != expectedLength {
+			t.Fatalf("expected there to be %d versions of the secret but got %d", expectedLength, len(versions))
 		}
 
-		if versions[0].Version != 1 {
-			t.Fatalf("incorrect value for version; expected 1 but got %d", versions[0].Version)
+		if versions[0].Version != 1 || versions[len(versions)-1].Version != expectedLength {
+			t.Fatalf("versions list is not ordered as expected")
 		}
 	})
 }
