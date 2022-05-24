@@ -92,7 +92,8 @@ export default Model.extend({
   get showFields() {
     let fields = ['name', 'database', 'type'];
     fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements']);
-    if (this.database != 'elasticsearch') {
+    // elasticsearch does not support revocation statements: https://www.vaultproject.io/api-docs/secret/databases/elasticdb#parameters-1
+    if (this.database[0] !== 'elasticsearch') {
       fields = fields.concat(['revocation_statements']);
     }
     return expandAttributeMeta(this, fields);
