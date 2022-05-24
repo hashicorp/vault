@@ -92,8 +92,8 @@ export default Model.extend({
   get showFields() {
     let fields = ['name', 'database', 'type'];
     fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements']);
-    const plugin = this.database+'-database-plugin';
-    if(getStatementFields(this.type, plugin).includes('revocation_statements')){
+    const plugin = this.database + '-database-plugin';
+    if (getStatementFields(this.type, plugin).includes('revocation_statements')) {
       fields = fields.concat(['revocation_statements']);
     }
     return expandAttributeMeta(this, fields);
