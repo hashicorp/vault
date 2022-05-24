@@ -16,12 +16,12 @@
   <div class="control is-expanded">
     <div class="select is-fullwidth">
       <select name={{@name}} id={{@name}} {{on "change" this.change}} data-test-mount-accessor-select>
-        {{#if @noDefault}}
+        {{#if this.noDefault}}
           <option value="">Select one</option>
         {{/if}}
         {{#each this.authMethods.last.value as |method|}}
           {{! token type does not need to be authorized via MFA }}
-          {{#if @filterToken}}
+          {{#if this.filterToken}}
             {{#if (not-eq method.id "token")}}
               <option selected={{eq @value method.accessor}} value={{method.accessor}} data-test-mlef-select="accessor">
                 {{method.path}}
