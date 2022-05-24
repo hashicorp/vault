@@ -24,9 +24,13 @@ import { action } from '@ember/object';
 export default class MountAccessorSelect extends Component {
   @service store;
 
-  filterToken = false;
-  noDefault = false;
-  value = '';
+  get filterToken() {
+    return this.args.filterToken || false;
+  }
+
+  get noDefault() {
+    return this.args.noDefault || false;
+  }
 
   constructor() {
     super(...arguments);
@@ -36,9 +40,8 @@ export default class MountAccessorSelect extends Component {
   @dropTask *authMethods() {
     let methods = yield this.store.findAll('auth-method');
     if (!this.args.value && !this.args.noDefault) {
-      // ARG can't set value as args.
-      this.value = methods.get('firstObject.accessor');
-      this.args.onChange(this.value);
+      const getValue = methods.get('firstObject.accessor');
+      this.args.onChange(getValue);
     }
     return methods;
   }
