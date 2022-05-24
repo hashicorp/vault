@@ -47,7 +47,7 @@ export default Component.extend({
 
   // validation related properties
   modelValidations: null,
-  validationMessage: null,
+  invalidFormAlert: null,
 
   mountIssue: false,
 
@@ -89,10 +89,10 @@ export default Component.extend({
   },
 
   checkModelValidity(model) {
-    const { isValid, state, errorMessage } = model.validate();
+    const { isValid, state, invalidFormMessage } = model.validate();
     this.setProperties({
       modelValidations: state,
-      validationMessage: errorMessage,
+      invalidFormAlert: invalidFormMessage,
     });
 
     return isValid;

@@ -82,9 +82,9 @@
           Back
         </button>
       </div>
-      {{#if this.validationMessage}}
+      {{#if this.invalidFormAlert}}
         <div class="control">
-          <AlertInline @type="danger" @message={{this.validationMessage}} @paddingTop={{true}} @mimicRefresh={{true}} />
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
         </div>
       {{/if}}
     {{else}}
