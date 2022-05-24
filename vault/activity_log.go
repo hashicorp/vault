@@ -2658,7 +2658,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	for _, startTime := range filteredList {
 		err := a.WalkEntitySegments(ctx, startTime, walkEntities)
 		if err != nil {
-			a.logger.Warn("failed to load segments for export", "error", err)
+			a.logger.Error("failed to load segments for export", "error", err)
 			return fmt.Errorf("failed to load segments for export: %w", err)
 		}
 	}
@@ -2667,7 +2667,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	// encoders like csv.
 	encoder.Flush()
 	if err := encoder.Error(); err != nil {
-		a.logger.Warn("failed to flush export encoding", "error", err)
+		a.logger.Error("failed to flush export encoding", "error", err)
 		return fmt.Errorf("failed to flush export encoding: %w", err)
 	}
 
