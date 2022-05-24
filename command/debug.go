@@ -93,6 +93,9 @@ type DebugCommand struct {
 	flagOutput          string
 	flagTargets         []string
 
+	// logFormat defines the output format for Monitor
+	logFormat string
+
 	// debugIndex is used to keep track of the index state, which gets written
 	// to a file at the end.
 	debugIndex *debugIndex
@@ -178,6 +181,14 @@ func (c *DebugCommand) Flags() *FlagSets {
 			"This can be specified multiple times to capture multiple targets. " +
 			"Available targets are: config, host, metrics, pprof, " +
 			"replication-status, server-status, log.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "log-format",
+		Target:  &c.logFormat,
+		Default: "standard",
+		Usage: "Log format to be captured if \"log\" target specified. " +
+			"Supported values are \"standard\" and \"json\". The default is \"standard\".",
 	})
 
 	return set
@@ -1053,14 +1064,14 @@ func (c *DebugCommand) captureError(target string, err error) {
 }
 
 func (c *DebugCommand) writeLogs(ctx context.Context) {
-	out, err := os.OpenFile(filepath.Join(c.flagOutput, "vault.log"), os.O_CREATE, 0o600)
+	out, err := os.OpenFile(filepath.Join(c.flagOutput, "vault.log"), os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		c.captureError("log", err)
 		return
 	}
 	defer out.Close()
 
-	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
+	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace", c.logFormat)
 	if err != nil {
 		c.captureError("log", err)
 		return
