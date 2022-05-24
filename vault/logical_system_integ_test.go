@@ -471,7 +471,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 			name:        "test mount reload for type credential",
 			backendType: logical.TypeCredential,
 			data: map[string]interface{}{
-				"mounts": "sys/auth/mock-0/,sys/auth/mock-1/",
+				"mounts": "auth/mock-0/,auth/mock-1/",
 			},
 		},
 		{
@@ -490,7 +490,6 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			testSystemBackend_PluginReload(t, tc.data, tc.backendType)
 		})
