@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { getRoleFields } from '../../utils/database-helpers';
+import { getRoleFields, getStatementFields } from '../../utils/database-helpers';
 
 export default Model.extend({
   idPrefix: 'role/',
@@ -91,7 +91,11 @@ export default Model.extend({
 
   get showFields() {
     let fields = ['name', 'database', 'type'];
-    fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements', 'revocation_statements']);
+    fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements']);
+    const plugin = this.database+'-database-plugin';
+    if(getStatementFields(this.type, plugin).includes('revocation_statements')){
+      fields = fields.concat(['revocation_statements']);
+    }
     return expandAttributeMeta(this, fields);
   },
 
