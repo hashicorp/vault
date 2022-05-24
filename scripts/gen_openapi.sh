@@ -94,7 +94,7 @@ if [ "$2" == "-g" ]; then
     echo "Replacing hardcoded paths with dynamic mounts..."
     for p in "${Plugins[@]}"
     do
-        sed -i '' "s/\/${p}\//\/{mount}\//" openapi.json
+        sed -i '' "s/\/${p}\//\/{mount${p}}\//" openapi.json
     done
 fi
 
