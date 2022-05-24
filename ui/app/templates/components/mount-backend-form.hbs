@@ -82,6 +82,11 @@
           Back
         </button>
       </div>
+      {{#if this.validationMessage}}
+        <div class="control">
+          <AlertInline @type="danger" @message={{this.validationMessage}} @paddingTop={{true}} @mimicRefresh={{true}} />
+        </div>
+      {{/if}}
     {{else}}
       <button
         data-test-mount-next

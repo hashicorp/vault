@@ -1,4 +1,8 @@
-<Icon @name={{this.alertType.glyph}} class={{this.alertType.glyphClass}} />
+{{#if this.isLoading}}
+  <Icon @name="loading" class="loading" />
+{{else}}
+  <Icon @name={{this.alertType.glyph}} class={{this.alertType.glyphClass}} />
+{{/if}}
 <p class={{this.textClass}} data-test-inline-error-message>
   {{#if (has-block)}}
     {{yield}}

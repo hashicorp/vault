@@ -2,6 +2,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { messageTypes } from 'core/helpers/message-types';
 import layout from '../templates/components/alert-inline';
+import { later } from '@ember/runloop';
 
 /**
  * @module AlertInline
@@ -17,6 +18,7 @@ import layout from '../templates/components/alert-inline';
  * @param [sizeSmall=false]{Boolean} - Whether or not to display a small font with padding below of alert message.
  * @param [paddingTop=false]{Boolean} - Whether or not to add padding above component.
  * @param [isMarginless=false]{Boolean} - Whether or not to remove margin bottom below component.
+ * @param [mimicRefresh=false]{Boolean} - If true will display a loading icon when attributes change (e.g. when a form submits and the alert message changes).
  */
 
 export default Component.extend({
@@ -27,6 +29,8 @@ export default Component.extend({
   paddingTop: false,
   classNames: ['message-inline'],
   classNameBindings: ['sizeSmall:size-small', 'paddingTop:padding-top', 'isMarginless:is-marginless'],
+  isLoading: false,
+  mimicRefresh: false,
 
   textClass: computed('type', function () {
     if (this.type == 'danger') {
@@ -39,4 +43,14 @@ export default Component.extend({
   alertType: computed('type', function () {
     return messageTypes([this.type]);
   }),
+
+  didReceiveAttrs() {
+    this._super(...arguments);
+    if (this.mimicRefresh) {
+      this.set('isLoading', true);
+      later(() => {
+        this.set('isLoading', false);
+      }, 200);
+    }
+  },
 });

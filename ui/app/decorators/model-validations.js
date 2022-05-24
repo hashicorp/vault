@@ -69,6 +69,8 @@ export function withModelValidations(validations) {
       validate() {
         let isValid = true;
         const state = {};
+        const errors = [];
+        let errorMessage;
 
         for (const key in this._validations) {
           const rules = this._validations[key];
@@ -110,9 +112,18 @@ export function withModelValidations(validations) {
               }
             }
           }
+          errors.push(state[key].errors.length);
           state[key].isValid = !state[key].errors.length;
         }
-        return { isValid, state };
+        errorMessage = this.createErrorMessage(errors);
+
+        return { isValid, state, errorMessage };
+      }
+
+      createErrorMessage(errors) {
+        let errorCount = errors.reduce((a, b) => a + b, 0);
+        let isPlural = errorCount > 1 ? `are ${errorCount} errors` : false;
+        return `There ${isPlural ? isPlural : 'is an error'} with this form.`;
       }
     };
   };
