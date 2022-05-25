@@ -24,7 +24,7 @@ import { setComponentTemplate } from '@ember/component';
  */
 
 class AlertInlineComponent extends Component {
-  @tracked isLoading = false;
+  @tracked isRefreshing = false;
 
   get mimicRefresh() {
     return this.args.mimicRefresh || false;
@@ -56,9 +56,9 @@ class AlertInlineComponent extends Component {
   @action
   refresh() {
     if (this.mimicRefresh) {
-      this.isLoading = true;
+      this.isRefreshing = true;
       later(() => {
-        this.isLoading = false;
+        this.isRefreshing = false;
       }, 200);
     }
   }

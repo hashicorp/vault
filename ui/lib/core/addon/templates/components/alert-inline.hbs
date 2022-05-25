@@ -3,7 +3,7 @@
   class={{concat "message-inline" this.paddingTop this.isMarginless this.sizeSmall}}
   data-test-inline-alert
 >
-  {{#if this.isLoading}}
+  {{#if this.isRefreshing}}
     <Icon @name="loading" class="loading" />
   {{else}}
     <Icon @name={{this.alertType.glyph}} class={{this.alertType.glyphClass}} />
