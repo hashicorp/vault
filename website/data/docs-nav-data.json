@@ -12,11 +12,11 @@
     "routes": [
       {
         "title": "CLI Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/getting-started"
+        "href": "/vault/tutorials/getting-started"
       },
       {
         "title": "HCP Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/cloud"
+        "href": "/vault/tutorials/cloud"
       },
       {
         "title": "Developer Quick Start",
@@ -1336,7 +1336,7 @@
   },
   {
     "title": "Troubleshoot",
-    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+    "href": "/vault/tutorials/monitoring/troubleshooting-vault"
   },
   {
     "divider": true
