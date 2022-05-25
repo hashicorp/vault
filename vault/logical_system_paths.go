@@ -916,6 +916,28 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 		},
 		{
+			Pattern: "internal/specs/dynamic",
+			Fields: map[string]*framework.FieldSchema{
+				"context": {
+					Type:        framework.TypeString,
+					Description: "Context string appended to every operationId",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathInternalOpenApiDynamic,
+				logical.UpdateOperation: b.pathInternalOpenApiDynamic,
+			},
+		},
+		{
+			Pattern: "internal/specs/dynamic",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalOpenApiDynamic,
+					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
+				},
+			},
+		},
+		{
 			Pattern: "internal/ui/feature-flags",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{

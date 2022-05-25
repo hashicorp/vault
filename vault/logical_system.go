@@ -117,6 +117,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/specs/openapi",
+				"internal/specs/dynamic",
 				"internal/ui/mounts",
 				"internal/ui/mounts/*",
 				"internal/ui/namespaces",
@@ -3991,6 +3992,126 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	resp.Data["exact_paths"] = exact
 	resp.Data["glob_paths"] = glob
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalOpenApiDynamic(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Limit output to authorized paths
+	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
+	if err != nil {
+		return nil, err
+	}
+
+	context := d.Get("context").(string)
+
+	// Set up target document and convert to map[string]interface{} which is what will
+	// be received from plugin backends.
+	doc := framework.NewOASDocument()
+
+	procMountGroup := func(group, mountPrefix string) error {
+		for mount, entry := range resp.Data[group].(map[string]interface{}) {
+
+			var pluginType string
+			if t, ok := entry.(map[string]interface{})["type"]; ok {
+				pluginType = t.(string)
+			}
+
+			backend := b.Core.router.MatchingBackend(ctx, mountPrefix+mount)
+
+			if backend == nil {
+				continue
+			}
+
+			req := &logical.Request{
+				Operation: logical.HelpOperation,
+				Storage:   req.Storage,
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
+			}
+
+			resp, err := backend.HandleRequest(ctx, req)
+			if err != nil {
+				return err
+			}
+
+			var backendDoc *framework.OASDocument
+
+			// Normalize response type, which will be different if received
+			// from an external plugin.
+			switch v := resp.Data["openapi"].(type) {
+			case *framework.OASDocument:
+				backendDoc = v
+			case map[string]interface{}:
+				backendDoc, err = framework.NewOASDocumentFromMap(v)
+				if err != nil {
+					return err
+				}
+			default:
+				continue
+			}
+
+			// Prepare to add tags to default builtins that are
+			// type "unknown" and won't already be tagged.
+			var tag string
+			switch mountPrefix + mount {
+			case "cubbyhole/", "secret/":
+				tag = "secrets"
+			case "sys/":
+				tag = "system"
+			case "auth/token/":
+				tag = "auth"
+			case "identity/":
+				tag = "identity"
+			}
+
+			// Merge backend paths with existing document
+			for path, obj := range backendDoc.Paths {
+				path := strings.TrimPrefix(path, "/")
+
+				// Add tags to all of the operations if necessary
+				if tag != "" {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
+						// TODO: a special override for identity is used used here because the backend
+						// is currently categorized as "secret", which will likely change. Also of interest
+						// is removing all tag handling here and providing the mount information to OpenAPI.
+						if op != nil && (len(op.Tags) == 0 || tag == "identity") {
+							op.Tags = []string{tag}
+						}
+					}
+				}
+
+				doc.Paths["/"+mountPrefix+mount+path] = obj
+			}
+
+			// Merge backend schema components
+			for e, schema := range backendDoc.Components.Schemas {
+				doc.Components.Schemas[e] = schema
+			}
+		}
+		return nil
+	}
+
+	if err := procMountGroup("secret", ""); err != nil {
+		return nil, err
+	}
+	if err := procMountGroup("auth", "auth/"); err != nil {
+		return nil, err
+	}
+
+	doc.CreateOperationIDs(context)
+
+	buf, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	resp = &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
 
 	return resp, nil
 }
