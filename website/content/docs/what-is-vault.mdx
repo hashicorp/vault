@@ -33,7 +33,7 @@ Vault validates, authorizes, and provides clients (users, machines, apps) access
 
 ### Why Vault?
 
-TBD
+Most enterprises today have credentials sprawled across their organizations, such as passwords, API keys, credentials that are in plain text, app source code, config files, and more. Since these credentials live everywhere, the sprawl can lead enterprises to a state where it's difficult and daunting to really know who has access and authorization to what. Further, having credentials in plain text increases the potential for malicious attacks, both by internal and external attackers. Vault was designed with these challenges in mind by helping you take all these credentials and centralize them so they are defined in one location, thereby, reducing unwanted exposure to credentials. But, Vault takes a few steps further by making sure clients (users, apps, systems) are authenticated and explicitely authorized to access resources while an audit trail can provide a history of client actions.
 
 The key features of Vault are:
 
@@ -73,36 +73,36 @@ HashiCorp Cloud Platform (HCP) Vault is a hosted version of Vault, which is oper
 
 -> To learn more about HCP Vault, see the [HCP Vault documentation](https://cloud.hashicorp.com/docs/vault). You can also get started with HCP Vault by using the HCP portal to set up your managed Vault cluster. Refer to the [Getting Started with HCP Vault](https://learn.hashicorp.com/collections/vault/cloud) tutorial.
 
-### Why is HCP Vault? 
+### Why is HCP Vault?
 
-Vault running on the HashiCorp Cloud Platform (HCP) enables users to secure, store, and tightly control access to tokens, passwords, certificates, and encryption keys within one unified cloud-based platform. 
+Vault running on the HashiCorp Cloud Platform (HCP) enables users to secure, store, and tightly control access to tokens, passwords, certificates, and encryption keys within one unified cloud-based platform.
 
 The benefits of HCP Vault are:
-   
-- **Reduce operational overhead:** Push-button deployment, fully managed 
+
+- **Reduce operational overhead:** Push-button deployment, fully managed
   upgrades, and backups mean organizations can focus on adoption and integration
   instead of operational overhead
-   
-- **Increase security across clouds and machines:** Secure your infrastructure 
+
+- **Increase security across clouds and machines:** Secure your infrastructure
   across all your environments through a single interface and globally control
   and restrict access to sensitive data and systems
-   
-- **Control cost:** Reduce the number of systesm, licenses, and manual overhead 
+
+- **Control cost:** Reduce the number of systesm, licenses, and manual overhead
   by centralizing secrets management with HCP Vault
-   
-- **Day-Zero readiness:** Modern cloud security to quickly secure applications, 
-  acess, and data from day zero 
-   
-- **Reliability:** HashiCorp have supported thousands of commercial Vault 
+
+- **Day-Zero readiness:** Modern cloud security to quickly secure applications,
+  acess, and data from day zero
+
+- **Reliability:** HashiCorp have supported thousands of commercial Vault
   clusters and HCP Vault brings that expertise directly to users
-   
-- **Ease of use:** HCP Vault is built around making cloud security automation 
+
+- **Ease of use:** HCP Vault is built around making cloud security automation
   simple. Get up and running instantly and onboard applications and teams easily
 
-### Feature parity 
+### Feature parity
 
 The table below compares the features available on the self-managed Vault
-Enterprise and HCP Vault. 
+Enterprise and HCP Vault.
 
 | Features                                      | Self-managed | HCP Vault       |
 |-----------------------------------------------|:------------:|:---------------:|
@@ -112,7 +112,7 @@ Enterprise and HCP Vault.
 | Paths Filter                                  | ✔️            | ✔️               |
 | Read Replica                                  | ✔️            |                 |
 | Disaster Recovery (DR) Replication            | ✔️            |                 |
-| Control Groups                                | ✔️            |                 | 
+| Control Groups                                | ✔️            |                 |
 | Sentinel                                      | ✔️            |                 |
 | HSM Auto-unseal                               | ✔️            |                 |
 | FIPS 140-2 & Seal Wrap                        | ✔️            |                 |
@@ -123,7 +123,7 @@ Enterprise and HCP Vault.
 | Audit Logging by default                      |              | ✔️               |
 | Snapshots & Restore                           |              | ✔️               |
 
--> **Note:** For the self-managed Vault Enterprise clusters, audit logging is a 
+-> **Note:** For the self-managed Vault Enterprise clusters, audit logging is a
 manual configuration. Similarly, if your self-managed Vault is running Vault
 with Integrated Storage, you can configure an automatic data snapshot; however,
 it is a manual process to configure it yourself while it is automated for HCP
