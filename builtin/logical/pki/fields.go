@@ -250,10 +250,20 @@ If you want more than one, specify alternative names in the alt_names
 map using OID 2.5.4.5. This has no impact on the final certificate's
 Serial Number field.`,
 	}
+
 	fields["not_after"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
+
+	fields["not_before_duration"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Default:     30,
+		Description: `The duration before now which the certificate needs to be backdated by.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 30,
+		},
 	}
 
 	return fields
@@ -356,7 +366,7 @@ func addIssuerRefNameFields(fields map[string]*framework.FieldSchema) map[string
 func addIssuerNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields["issuer_name"] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `Provide a name to the generated issuer, the name
+		Description: `Provide a name to the generated or existing issuer, the name
 must be unique across all issuers and not be the reserved value 'default'`,
 	}
 	return fields
@@ -382,9 +392,8 @@ func addKeyRefNameFields(fields map[string]*framework.FieldSchema) map[string]*f
 func addKeyNameField(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields[keyNameParam] = &framework.FieldSchema{
 		Type: framework.TypeString,
-		Description: `Provide a name for the key that will be generated,
-the name must be unique across all keys and not be the reserved value
-'default'`,
+		Description: `Provide a name to the generated or existing key, the name
+must be unique across all keys and not be the reserved value 'default'`,
 	}
 
 	return fields

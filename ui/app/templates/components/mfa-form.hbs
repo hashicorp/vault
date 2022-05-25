@@ -45,7 +45,7 @@
               {{! template-lint-enable no-autofocus-attribute}}
             </div>
           {{else if (eq constraint.methods.length 1)}}
-            <p class="has-text-grey-400">
+            <p class="has-text-grey-400" data-test-mfa-push-instruction>
               Check device for push notification
             </p>
           {{/if}}
@@ -53,11 +53,7 @@
       </div>
       {{#if this.newCodeDelay.isRunning}}
         <div>
-          <AlertInline
-            @type="danger"
-            @sizeSmall={{true}}
-            @message="This code is invalid. Please wait until a new code is available."
-          />
+          <AlertInline @type="danger" @sizeSmall={{true}} @message={{this.codeDelayMessage}} />
         </div>
       {{/if}}
       <button

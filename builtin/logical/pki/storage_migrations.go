@@ -22,6 +22,8 @@ const (
 type legacyBundleMigrationLog struct {
 	Hash             string    `json:"hash" structs:"hash" mapstructure:"hash"`
 	Created          time.Time `json:"created" structs:"created" mapstructure:"created"`
+	CreatedIssuer    issuerID  `json:"issuer_id" structs:"issuer_id" mapstructure:"issuer_id"`
+	CreatedKey       keyID     `json:"key_id" structs:"key_id" mapstructure:"key_id"`
 	MigrationVersion int       `json:"migrationVersion" structs:"migrationVersion" mapstructure:"migrationVersion"`
 }
 
@@ -75,39 +77,40 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 
 	if !migrationInfo.isRequired {
 		// No migration was deemed to be required.
-		b.Logger().Debug("existing migration found and was considered valid, skipping migration.")
 		return nil
 	}
 
-	b.Logger().Info("performing PKI migration to new keys/issuers layout")
+	var issuerIdentifier issuerID
+	var keyIdentifier keyID
 	if migrationInfo.legacyBundle != nil {
-		mkc := newManagedKeyContext(ctx, b, b.backendUuid)
-		anIssuer, aKey, err := writeCaBundle(mkc, s, migrationInfo.legacyBundle, "current", "current")
+		b.Logger().Info("performing PKI migration to new keys/issuers layout")
+		anIssuer, aKey, err := writeCaBundle(ctx, b, s, migrationInfo.legacyBundle, "current", "current")
 		if err != nil {
 			return err
 		}
-		b.Logger().Debug("Migration generated the following ids and set them as defaults",
+		b.Logger().Info("Migration generated the following ids and set them as defaults",
 			"issuer id", anIssuer.ID, "key id", aKey.ID)
-	} else {
-		b.Logger().Debug("No legacy CA certs found, no migration required.")
-	}
+		issuerIdentifier = anIssuer.ID
+		keyIdentifier = aKey.ID
 
-	// Since we do not have all the mount information available we must schedule
-	// the CRL to be rebuilt at a later time.
-	b.crlBuilder.requestRebuildIfActiveNode(b)
+		// Since we do not have all the mount information available we must schedule
+		// the CRL to be rebuilt at a later time.
+		b.crlBuilder.requestRebuildIfActiveNode(b)
+	}
 
 	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
 	// if they were upgraded prior to the primary cluster's migration occurred.
 	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigrationLog{
 		Hash:             migrationInfo.legacyBundleHash,
 		Created:          time.Now(),
+		CreatedIssuer:    issuerIdentifier,
+		CreatedKey:       keyIdentifier,
 		MigrationVersion: latestMigrationVersion,
 	})
 	if err != nil {
 		return err
 	}
 
-	b.Logger().Info("successfully completed migration to new keys/issuers layout")
 	return nil
 }
 
@@ -174,12 +177,14 @@ func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, 
 		return nil, nil, err
 	}
 
-	// Fake a storage entry with backwards compatibility in mind. We only need
-	// the fields in the CAInfoBundle; everything else doesn't matter.
+	// Fake a storage entry with backwards compatibility in mind.
 	issuer := &issuerEntry{
 		ID:                   legacyBundleShimID,
 		KeyID:                legacyBundleShimKeyID,
 		Name:                 "legacy-entry-shim",
+		Certificate:          cb.Certificate,
+		CAChain:              cb.CAChain,
+		SerialNumber:         cb.SerialNumber,
 		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
 	}
 	issuer.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)

@@ -1,0 +1,7 @@
+<MfaLoginEnforcementHeader @heading="New enforcement" />
+<MfaLoginEnforcementForm
+  @model={{this.model}}
+  @onClose={{transition-to "vault.cluster.access.mfa.enforcements"}}
+  @onSave={{transition-to "vault.cluster.access.mfa.enforcements.enforcement" this.model.name}}
+  class="has-top-margin-l"
+/>

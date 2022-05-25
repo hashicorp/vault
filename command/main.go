@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -19,13 +20,16 @@ import (
 
 type VaultUI struct {
 	cli.Ui
-	format string
+	format   string
+	detailed bool
 }
 
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) (retArgs []string, format string, outputCurlString bool, outputPolicy bool) {
+func setupEnv(args []string) (retArgs []string, format string, detailed bool, outputCurlString bool, outputPolicy bool) {
+	var err error
 	var nextArgFormat bool
+	var haveDetailed bool
 
 	for _, arg := range args {
 		if nextArgFormat {
@@ -43,12 +47,12 @@ func setupEnv(args []string) (retArgs []string, format string, outputCurlString 
 			break
 		}
 
-		if arg == "-output-curl-string" {
+		if arg == "-output-curl-string" || arg == "--output-curl-string" {
 			outputCurlString = true
 			continue
 		}
 
-		if arg == "-output-policy" {
+		if arg == "-output-policy" || arg == "--output-policy" {
 			outputPolicy = true
 			continue
 		}
@@ -64,6 +68,28 @@ func setupEnv(args []string) (retArgs []string, format string, outputCurlString 
 		if arg == "-format" || arg == "--format" {
 			nextArgFormat = true
 		}
+
+		// Parse a given flag here, which overrides the env var
+		if strings.HasPrefix(arg, "--detailed=") {
+			detailed, err = strconv.ParseBool(strings.TrimPrefix(arg, "--detailed="))
+			if err != nil {
+				detailed = false
+			}
+			haveDetailed = true
+		}
+		if strings.HasPrefix(arg, "-detailed=") {
+			detailed, err = strconv.ParseBool(strings.TrimPrefix(arg, "-detailed="))
+			if err != nil {
+				detailed = false
+			}
+			haveDetailed = true
+		}
+		// For backwards compat, it could be specified without an equal sign to enable
+		// detailed output.
+		if arg == "-detailed" || arg == "--detailed" {
+			detailed = true
+			haveDetailed = true
+		}
 	}
 
 	envVaultFormat := os.Getenv(EnvVaultFormat)
@@ -77,7 +103,16 @@ func setupEnv(args []string) (retArgs []string, format string, outputCurlString 
 		format = "table"
 	}
 
-	return args, format, outputCurlString, outputPolicy
+	envVaultDetailed := os.Getenv(EnvVaultDetailed)
+	// If we did not parse a value, fetch the env var
+	if !haveDetailed && envVaultDetailed != "" {
+		detailed, err = strconv.ParseBool(envVaultDetailed)
+		if err != nil {
+			detailed = false
+		}
+	}
+
+	return args, format, detailed, outputCurlString, outputPolicy
 }
 
 type RunOptions struct {
@@ -100,9 +135,10 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	var format string
+	var detailed bool
 	var outputCurlString bool
 	var outputPolicy bool
-	args, format, outputCurlString, outputPolicy = setupEnv(args)
+	args, format, detailed, outputCurlString, outputPolicy = setupEnv(args)
 
 	// Don't use color if disabled
 	useColor := true
@@ -145,7 +181,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 				ErrorWriter: uiErrWriter,
 			},
 		},
-		format: format,
+		format:   format,
+		detailed: detailed,
 	}
 
 	serverCmdUi := &VaultUI{

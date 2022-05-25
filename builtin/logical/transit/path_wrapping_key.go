@@ -26,28 +26,10 @@ func (b *backend) pathWrappingKey() *framework.Path {
 }
 
 func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	polReq := keysutil.PolicyRequest{
-		Upsert:               true,
-		Storage:              req.Storage,
-		Name:                 fmt.Sprintf("import/%s", WrappingKeyName),
-		KeyType:              keysutil.KeyType_RSA4096,
-		Derived:              false,
-		Convergent:           false,
-		Exportable:           false,
-		AllowPlaintextBackup: false,
-		AutoRotatePeriod:     0,
-	}
-	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
+	p, err := b.getWrappingKey(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if p == nil {
-		return nil, fmt.Errorf("error retrieving wrapping key: returned policy was nil")
-	}
-	if b.System().CachingDisabled() {
-		p.Unlock()
-	}
-
 	wrappingKey := p.Keys[strconv.Itoa(p.LatestVersion)]
 
 	derBytes, err := x509.MarshalPKIXPublicKey(wrappingKey.RSAKey.Public())
@@ -72,6 +54,32 @@ func (b *backend) pathWrappingKeyRead(ctx context.Context, req *logical.Request,
 	}
 
 	return resp, nil
+}
+
+func (b *backend) getWrappingKey(ctx context.Context, storage logical.Storage) (*keysutil.Policy, error) {
+	polReq := keysutil.PolicyRequest{
+		Upsert:               true,
+		Storage:              storage,
+		Name:                 fmt.Sprintf("import/%s", WrappingKeyName),
+		KeyType:              keysutil.KeyType_RSA4096,
+		Derived:              false,
+		Convergent:           false,
+		Exportable:           false,
+		AllowPlaintextBackup: false,
+		AutoRotatePeriod:     0,
+	}
+	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, fmt.Errorf("error retrieving wrapping key: returned policy was nil")
+	}
+	if b.System().CachingDisabled() {
+		p.Unlock()
+	}
+
+	return p, nil
 }
 
 const (

@@ -1,6 +1,13 @@
 <div class="field is-grouped">
   <div class="control is-expanded">
+    {{#if @label}}
+      <label for={{@id}} class="is-label">{{@label}}</label>
+    {{/if}}
+    {{#if @subText}}
+      <p class="sub-text">{{@subText}}</p>
+    {{/if}}
     <Input
+      id={{@id}}
       class="input"
       @type="text"
       @value={{this.searchInput}}

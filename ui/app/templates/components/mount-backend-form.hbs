@@ -46,7 +46,6 @@
               @groupName="mount-type"
               @onRadioChange={{queue (action (mut this.mountModel.type)) (action "onTypeChange" "type")}}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-              {{! TODO: verify that keymgmt is in the ADP module }}
               @tooltipMessage={{if
                 (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
                 (concat
@@ -68,7 +67,7 @@
           type="submit"
           data-test-mount-submit="true"
           class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
-          disabled={{or this.mountBackend.isRunning this.isFormInvalid}}
+          disabled={{this.mountBackend.isRunning}}
         >
           {{#if (eq this.mountType "auth")}}
             Enable Method
@@ -82,6 +81,11 @@
           Back
         </button>
       </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        </div>
+      {{/if}}
     {{else}}
       <button
         data-test-mount-next

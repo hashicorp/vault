@@ -172,8 +172,9 @@ func TestPKI_DeviceCert(t *testing.T) {
 	}
 
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
-		"common_name": "myvault.com",
-		"not_after":   "9999-12-31T23:59:59Z",
+		"common_name":         "myvault.com",
+		"not_after":           "9999-12-31T23:59:59Z",
+		"not_before_duration": "2h",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +195,10 @@ func TestPKI_DeviceCert(t *testing.T) {
 	cert := parsedCertBundle.Certificate
 	notAfter := cert.NotAfter.Format(time.RFC3339)
 	if notAfter != "9999-12-31T23:59:59Z" {
-		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
+		t.Fatalf("not after from certificate: %v is not matching with input parameter: %v", cert.NotAfter, "9999-12-31T23:59:59Z")
+	}
+	if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+		t.Fatalf("root/generate/internal did not properly set validity period (notBefore): was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 	}
 
 	// Create a role which does require CN (default)
@@ -583,9 +587,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name": "intermediate.cert.com",
-				"csr":         csrPem2048,
-				"format":      "der",
+				"common_name":         "intermediate.cert.com",
+				"csr":                 csrPem2048,
+				"format":              "der",
+				"not_before_duration": "2h",
 			},
 			Check: func(resp *logical.Response) error {
 				certString := resp.Data["certificate"].(string)
@@ -614,6 +619,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
 				case !reflect.DeepEqual([]string{"intermediate.cert.com"}, cert.DNSNames):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
+				}
+
+				if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+					t.Fatalf("root/sign-intermediate did not properly set validity period (notBefore): was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 				}
 
 				return nil
@@ -707,30 +716,7 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 }
 
 func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-	csrTemplate := x509.CertificateRequest{
-		Subject: pkix.Name{
-			Country:      []string{"MyCountry"},
-			PostalCode:   []string{"MyPostalCode"},
-			SerialNumber: "MySerialNumber",
-			CommonName:   "my@example.com",
-		},
-		DNSNames: []string{
-			"name1.example.com",
-			"name2.example.com",
-			"name3.example.com",
-		},
-		EmailAddresses: []string{
-			"name1@example.com",
-			"name2@example.com",
-			"name3@example.com",
-		},
-		IPAddresses: []net.IP{
-			net.ParseIP("::ff:1:2:3:4"),
-			net.ParseIP("::ff:5:6:7:8"),
-		},
-	}
-
-	_, _, csrPem := generateCSR(t, &csrTemplate, "rsa", 2048)
+	csrTemplate, csrPem := generateTestCsr(t, certutil.RSAPrivateKey, 2048)
 
 	ret := []logicaltest.TestStep{
 		{
@@ -818,6 +804,34 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 	}
 	return ret
+}
+
+func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			Country:      []string{"MyCountry"},
+			PostalCode:   []string{"MyPostalCode"},
+			SerialNumber: "MySerialNumber",
+			CommonName:   "my@example.com",
+		},
+		DNSNames: []string{
+			"name1.example.com",
+			"name2.example.com",
+			"name3.example.com",
+		},
+		EmailAddresses: []string{
+			"name1@example.com",
+			"name2@example.com",
+			"name3@example.com",
+		},
+		IPAddresses: []net.IP{
+			net.ParseIP("::ff:1:2:3:4"),
+			net.ParseIP("::ff:5:6:7:8"),
+		},
+	}
+
+	_, _, csrPem := generateCSR(t, &csrTemplate, string(keyType), keyBits)
+	return csrTemplate, csrPem
 }
 
 // Generates steps to test out various role permutations
@@ -2173,9 +2187,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
 	roleData := map[string]interface{}{
-		"ttl":      "4h",
-		"max_ttl":  "8h",
-		"key_type": keyType,
+		"ttl":                 "4h",
+		"max_ttl":             "8h",
+		"key_type":            keyType,
+		"not_before_duration": "2h",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -2242,7 +2257,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 	cert := certs[0]
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
-		t.Fatalf("sign-verbatim did not properly cap validity period on signed CSR")
+		t.Fatalf("sign-verbatim did not properly cap validity period (notAfter) on signed CSR: was %v vs requested %v but should've been %v", cert.NotAfter, time.Now().Add(12*time.Hour), time.Now().Add(8*time.Hour))
+	}
+	if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
+		t.Fatalf("sign-verbatim did not properly cap validity period (notBefore) on signed CSR: was %v vs expected %v", cert.NotBefore, time.Now().Add(-2*time.Hour))
 	}
 
 	// Now check signing a certificate using the not_after input using the Y10K value
@@ -4132,6 +4150,10 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	rootCaCert := parseCert(t, rootCert)
 	intermediaryCaCert := parseCert(t, intermediateCert)
 	requireSignedBy(t, intermediaryCaCert, rootCaCert.PublicKey)
+	intermediateCaChain := intermediateSignedData["ca_chain"].([]interface{})
+
+	require.Equal(t, parseCert(t, intermediateCaChain[0].(string)), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
+	require.Equal(t, parseCert(t, intermediateCaChain[1].(string)), rootCaCert, "root cert should have been part of ca_chain")
 
 	resp, err = client.Logical().Write("pki-intermediate/intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCert + "\n" + rootCert + "\n",

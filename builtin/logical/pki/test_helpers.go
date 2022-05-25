@@ -25,7 +25,7 @@ import (
 )
 
 // Setup helpers
-func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -40,7 +40,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
-func mountPKIEndpoint(t *testing.T, client *api.Client, path string) {
+func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 	var err error
 	err = client.Sys().Mount(path, &api.MountInput{
 		Type: "pki",
@@ -159,17 +159,21 @@ func parseCrlPemBytes(t *testing.T, crlPem []byte) pkix.TBSCertificateList {
 	return certList.TBSCertList
 }
 
-func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, serialNum string) {
+func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, serialNum string) bool {
 	serialsInList := make([]string, 0, len(revokeList.RevokedCertificates))
 	for _, revokeEntry := range revokeList.RevokedCertificates {
 		formattedSerial := certutil.GetHexFormatted(revokeEntry.SerialNumber.Bytes(), ":")
 		serialsInList = append(serialsInList, formattedSerial)
 		if formattedSerial == serialNum {
-			return
+			return true
 		}
 	}
 
-	t.Fatalf("the serial number %s, was not found in the CRL list containing: %v", serialNum, serialsInList)
+	if t != nil {
+		t.Fatalf("the serial number %s, was not found in the CRL list containing: %v", serialNum, serialsInList)
+	}
+
+	return false
 }
 
 func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.CertificateList {

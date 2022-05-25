@@ -47,7 +47,7 @@ export default Component.extend({
 
   // validation related properties
   modelValidations: null,
-  isFormInvalid: false,
+  invalidFormAlert: null,
 
   mountIssue: false,
 
@@ -88,10 +88,24 @@ export default Component.extend({
     }
   },
 
+  checkModelValidity(model) {
+    const { isValid, state, invalidFormMessage } = model.validate();
+    this.setProperties({
+      modelValidations: state,
+      invalidFormAlert: invalidFormMessage,
+    });
+
+    return isValid;
+  },
+
   mountBackend: task(
     waitFor(function* () {
       const mountModel = this.mountModel;
       const { type, path } = mountModel;
+      // only submit form if validations pass
+      if (!this.checkModelValidity(mountModel)) {
+        return;
+      }
       let capabilities = null;
       try {
         capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
@@ -120,7 +134,6 @@ export default Component.extend({
       } catch (err) {
         if (err.httpStatus === 403) {
           this.mountIssue = true;
-          this.set('isFormInvalid', this.mountIssue);
           this.flashMessages.danger(
             'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
           );
@@ -163,12 +176,8 @@ export default Component.extend({
   actions: {
     onKeyUp(name, value) {
       this.mountModel.set(name, value);
-      const { isValid, state } = this.mountModel.validate();
-      this.setProperties({
-        modelValidations: state,
-        isFormInvalid: !isValid,
-      });
     },
+
     onTypeChange(path, value) {
       if (path === 'type') {
         this.wizard.set('componentState', value);

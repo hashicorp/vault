@@ -88,6 +88,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			responseWriter = w
 		case path == "sys/storage/raft/snapshot":
 			responseWriter = w
+		case path == "sys/internal/counters/activity/export":
+			responseWriter = w
 		case path == "sys/monitor":
 			passHTTPReq = true
 			responseWriter = w

@@ -167,6 +167,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			l.Type = strings.ToLower(l.Type)
 			switch l.Type {
 			case "tcp", "unix":
+				result.found(l.Type, l.Type)
 			default:
 				return multierror.Prefix(fmt.Errorf("unsupported listener type %q", l.Type), fmt.Sprintf("listeners.%d:", i))
 			}

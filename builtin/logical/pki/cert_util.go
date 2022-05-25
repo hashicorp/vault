@@ -80,9 +80,32 @@ func getFormat(data *framework.FieldData) string {
 	return format
 }
 
-// fetchCAInfo will fetch the CA info, will return an error if no ca info exists.
+// fetchCAInfo will fetch the CA info, will return an error if no ca info exists, this does NOT support
+// loading using the legacyBundleShimID and should be used with care. This should be called only once
+// within the request path otherwise you run the risk of a race condition with the issuer migration on perf-secondaries.
 func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
-	entry, bundle, err := fetchCertBundle(ctx, b, req.Storage, issuerRef)
+	var issuerId issuerID
+
+	if b.useLegacyBundleCaStorage() {
+		// We have not completed the migration so attempt to load the bundle from the legacy location
+		b.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
+		issuerId = legacyBundleShimID
+	} else {
+		var err error
+		issuerId, err = resolveIssuerReference(ctx, req.Storage, issuerRef)
+		if err != nil {
+			// Usually a bad label from the user or mis-configured default.
+			return nil, errutil.UserError{Err: err.Error()}
+		}
+	}
+
+	return fetchCAInfoByIssuerId(ctx, b, req, issuerId, usage)
+}
+
+// fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
+// This does support the loading using the legacyBundleShimID
+func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request, issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	entry, bundle, err := fetchCertBundleByIssuerId(ctx, req.Storage, issuerId, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -95,14 +118,10 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 	}
 
 	if err := entry.EnsureUsage(usage); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerRef, err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
-	if bundle == nil {
-		return nil, errutil.UserError{Err: "no CA information is present"}
-	}
-
-	parsedBundle, err := parseCABundle(ctx, b, req, bundle)
+	parsedBundle, err := parseCABundle(ctx, b, bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
@@ -111,7 +130,7 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 	}
 	if parsedBundle.PrivateKey == nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerRef)}
+		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
 	}
 
 	caInfo := &certutil.CAInfoBundle{
@@ -124,37 +143,9 @@ func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRe
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
-	if entries == nil {
-		entries = &certutil.URLEntries{
-			IssuingCertificates:   []string{},
-			CRLDistributionPoints: []string{},
-			OCSPServers:           []string{},
-		}
-	}
 	caInfo.URLs = entries
 
 	return caInfo, nil
-}
-
-// fetchCertBundle is our flex point to load either the legacy ca bundle if migration has yet to be
-// performed or load the bundle from the new key/issuer storage. Any function that needs a bundle
-// should load it using this method to maintain compatibility on secondary nodes for which their
-// primary's have not upgraded yet.
-// NOTE: This function can return a nil, nil response.
-func fetchCertBundle(ctx context.Context, b *backend, s logical.Storage, issuerRef string) (*issuerEntry, *certutil.CertBundle, error) {
-	if b.useLegacyBundleCaStorage() {
-		// We have not completed the migration so attempt to load the bundle from the legacy location
-		b.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
-		return getLegacyCertBundle(ctx, s)
-	}
-
-	id, err := resolveIssuerReference(ctx, s, issuerRef)
-	if err != nil {
-		// Usually a bad label from the user or misconfigured default.
-		return nil, nil, errutil.UserError{Err: err.Error()}
-	}
-
-	return fetchCertBundleByIssuerId(ctx, s, id, true)
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
@@ -634,13 +625,6 @@ func generateCert(ctx context.Context,
 			entries, err := getURLs(ctx, input.req)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-			}
-			if entries == nil {
-				entries = &certutil.URLEntries{
-					IssuingCertificates:   []string{},
-					CRLDistributionPoints: []string{},
-					OCSPServers:           []string{},
-				}
 			}
 			data.Params.URLs = entries
 

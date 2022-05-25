@@ -35,3 +35,17 @@ These features were deprecated in prior releases of Vault. We are targeting the 
 | Mount Filters         | [Path Filters](https://www.vaultproject.io/api-docs/system/replication/replication-performance#create-paths-filter) |
 | AppID                 | [AppRole auth method](/docs/auth/approle)                                                                           |
 | Standalone DB engines | [Combined DB engines](/docs/secrets/databases)                                                                      |
+
+### Q: What is the impact of removing support for X.509 certificates with signatures that use SHA-1?
+
+Starting with Vault 1.12.0, Vault will be built with Go 1.18.
+The Go 1.18 standard library [rejects X.509 certificates](https://tip.golang.org/doc/go1.18#sha1) whose signatures use a SHA-1 hash.
+
+If this issue impacts your usage of Vault, you can temporarily work around it by deploying Vault with the environment variable `GODEBUG=x509sha1=1` set.
+This workaround will fail in a future version of Go, however, the Go team has not said when they will remove this workaround.
+
+Here are the use cases that may still use certificates with SHA-1:
+
+- AWS Credential Plugin: [AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html) can use SHA-1-based PKCS7 signatures for DSA key pairs.
+
+We will update this list as we do further research.

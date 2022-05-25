@@ -1388,6 +1388,12 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
 				Query:       true,
 			},
+			"log_format": {
+				Type:        framework.TypeString,
+				Description: "Output format of logs. Supported values are \"standard\" and \"json\". The default is \"standard\".",
+				Query:       true,
+				Default:     "standard",
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.handleMonitor,
