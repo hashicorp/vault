@@ -61,7 +61,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
-	github.com/hashicorp/go-gcp-common v0.7.0
+	github.com/hashicorp/go-gcp-common v0.7.1-0.20220519220342-94aabf4c4c87
 	github.com/hashicorp/go-hclog v1.1.0
 	github.com/hashicorp/go-kms-wrapping v0.7.0
 	github.com/hashicorp/go-memdb v1.3.2
@@ -96,7 +96,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.10.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.11.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.11.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20220405202915-ab4f0f6abd2b
+	github.com/hashicorp/vault-plugin-auth-gcp v0.13.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.13.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.6.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.12.0
@@ -106,7 +106,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.6.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.4.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.12.0

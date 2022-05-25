@@ -225,6 +225,29 @@ func TestRaft_Backend(t *testing.T) {
 	physical.ExerciseBackend(t, b)
 }
 
+func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(raftDir)
+
+	conf := map[string]string{
+		"path":                      raftDir,
+		"node_id":                   "abc123",
+		"autopilot_upgrade_version": "hahano",
+	}
+
+	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+
+	if !strings.Contains(err.Error(), "does not parse") {
+		t.Fatal("expected an error about unparseable versions but got none")
+	}
+}
+
 func TestRaft_Backend_LargeKey(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)

@@ -1015,6 +1015,23 @@
         "path": "secrets/gcpkms"
       },
       {
+        "title": "Identity",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+      },
+      {
         "title": "Key Management <sup>ENTERPRISE</sup>",
         "routes": [
           {
@@ -1036,10 +1053,6 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secrets/kmip"
-      },
-      {
         "title": "Key/Value",
         "routes": [
           {
@@ -1057,25 +1070,12 @@
         ]
       },
       {
-        "title": "Kubernetes",
-        "path": "secrets/kubernetes"
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secrets/kmip"
       },
       {
-        "title": "Identity",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/identity"
-          },
-          {
-            "title": "Identity Tokens",
-            "path": "secrets/identity/identity-token"
-          },
-          {
-            "title": "OIDC Identity Provider",
-            "path": "secrets/identity/oidc-provider"
-          }
-        ]
+        "title": "Kubernetes",
+        "path": "secrets/kubernetes"
       },
       {
         "title": "MongoDB Atlas",
