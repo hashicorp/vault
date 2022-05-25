@@ -17,9 +17,9 @@ import { setComponentTemplate } from '@ember/component';
  *
  * @param type=null{String} - The alert type passed to the message-types helper.
  * @param [message=null]{String} - The message to display within the alert.
- * @param [sizeSmall=false]{Boolean} - Whether or not to display a small font with padding below of alert message.
  * @param [paddingTop=false]{Boolean} - Whether or not to add padding above component.
  * @param [isMarginless=false]{Boolean} - Whether or not to remove margin bottom below component.
+ * @param [sizeSmall=false]{Boolean} - Whether or not to display a small font with padding below of alert message.
  * @param [mimicRefresh=false]{Boolean} - If true will display a loading icon when attributes change (e.g. when a form submits and the alert message changes).
  */
 
@@ -29,9 +29,6 @@ class AlertInlineComponent extends Component {
   get mimicRefresh() {
     return this.args.mimicRefresh || false;
   }
-  get sizeSmall() {
-    return this.args.sizeSmall ? ' size-small' : '';
-  }
 
   get paddingTop() {
     return this.args.paddingTop ? ' padding-top' : '';
@@ -39,6 +36,10 @@ class AlertInlineComponent extends Component {
 
   get isMarginless() {
     return this.args.isMarginless ? ' is-marginless' : '';
+  }
+
+  get sizeSmall() {
+    return this.args.sizeSmall ? ' size-small' : '';
   }
 
   get textClass() {
