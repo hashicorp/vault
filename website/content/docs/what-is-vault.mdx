@@ -20,22 +20,20 @@ where Vault steps in.
 
 ### How does Vault work?
 
-Vault validates, authorizes, and provides clients (users, machines, apps) access to secrets or stored sensitive data.
-
 ![How Vault Works](/img/how-vault-works.png)
 
-The core Vault worklflow consists of four stages:
+Vault validates, authorizes, and provides clients (users, machines, apps) access to secrets or stored sensitive data. The core Vault worklflow consists of four stages:
+
+![Vault Workflow](/img/vault-workflow-diagram.png)
 
 * **Authenticate:** Client (users, apps, systems) authenticate with Vault using their identity.
 * **Validation:** Vault validates the client against third-party trusted sources.
 * **Authorize**: Client is matched against the Vault security policy.  This policy is a set of rules that direct which API endpoints a client has access to in a construct, using a Vault token.
 * **Access**: Vault provides access to secrets, keys, and encryption capabilities based on policies associated with the client’s identity.
 
-![Vault Workflow](/img/vault-workflow2.png)
-
 ### Why Vault?
 
-TBD 
+TBD
 
 The key features of Vault are:
 
@@ -67,18 +65,9 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
-  ~> **Tip:** Learn more about [Vault use cases](/docs/use-cases).
+-> **Tip:** Learn more about [Vault use cases](/docs/use-cases).
 
-### Community
-
-We welcome questions, suggestions, and contributions from the community.
-
-* Ask questions in [HashiCorp Discuss](https://discuss.hashicorp.com/c/vault/30).
-* Read our [contributing guide](https://github.com/hashicorp/tutorials/blob/main/CONTRIBUTING.md).
-* [Submit an issue](https://github.com/hashicorp/vault/issues/new/choose) for bugs and feature requests.
-
-
-## What is HCP Vault?
+### What is HCP Vault?
 
 HashiCorp Cloud Platform (HCP) Vault is a hosted version of Vault, which is operated by HashiCorp to allow organizations to get up and running quickly. HCP Vault uses the same binary as self-hosted Vault, which means you will have a consistent user experience. You can use the same Vault clients to communicate with HCP Vault as you use to communicate with a self-hosted Vault.
 
@@ -140,8 +129,11 @@ with Integrated Storage, you can configure an automatic data snapshot; however,
 it is a manual process to configure it yourself while it is automated for HCP
 Vault.
 
-## Next Steps
 
-See the page on [Vault use cases](/docs/use-cases) to learn about the multiple ways
-Vault can be used. Then, continue onwards with the [Getting Started](https://learn.hashicorp.com/collections/vault/getting-started) tutorial to use Vault
-to read, write, and create real secrets and see how it works in practice.
+### Community
+
+We welcome questions, suggestions, and contributions from the community.
+
+* Ask questions in [HashiCorp Discuss](https://discuss.hashicorp.com/c/vault/30).
+* Read our [contributing guide](https://github.com/hashicorp/tutorials/blob/main/CONTRIBUTING.md).
+* [Submit an issue](https://github.com/hashicorp/vault/issues/new/choose) for bugs and feature requests.
