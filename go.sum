@@ -999,8 +999,8 @@ github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD
 github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.13.0 h1:hULVZaireW8XXg7ZWbPp3Qk4nrCPnMfhlE7soiYBzHU=
 github.com/hashicorp/vault-plugin-secrets-ad v0.13.0/go.mod h1:WwwDLyCMncZnOOtN2GHw6O4pIWauHhJx2DjRFbGYvV4=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1 h1:vuenbRDeUV6Ghn4yFXKLKrIRsY1a9iiXnl8cGIzB19Y=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1/go.mod h1:F4KWrlCQZbhP2dFXCkRvbHX2J6CTydlaY0cH+OrLHCE=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0 h1:4Ke3dtM7ARa9ga2jI2rW/TouXWZ45hjfwwtcILoErA4=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0/go.mod h1:F4KWrlCQZbhP2dFXCkRvbHX2J6CTydlaY0cH+OrLHCE=
 github.com/hashicorp/vault-plugin-secrets-azure v0.12.0 h1:B2rLk3JxIXSRhZb47DLHSxQfX3yVWDFE6dGGzT6QXaA=
 github.com/hashicorp/vault-plugin-secrets-azure v0.12.0/go.mod h1:Xw8CQPkyZSJRK9BXKBruf6kOO8rLyXEf40o19ClK9kY=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.13.0 h1:GDh70QU8yG/ObIRfKjhxfMQbj+qJF1iNkzcrJ6v5byw=
