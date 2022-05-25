@@ -35,7 +35,7 @@ export default create({
     window.sessionStorage.clear();
     await this.visit({ with: 'username' });
     await settled();
-    await this.usernameInput(username).submit();
+    await this.usernameInput(username);
     await this.passwordInput(password).submit();
     return;
   },
