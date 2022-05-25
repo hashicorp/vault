@@ -60,9 +60,7 @@ func WithOption(key string, value interface{}) KVOption {
 // If set to non-zero, the write will only be allowed if the key’s current
 // version matches the version specified in the cas parameter.
 func WithCheckAndSet(cas int) KVOption {
-	return func() (string, interface{}) {
-		return KVOptionCheckAndSet, cas
-	}
+	return WithOption(KVOptionCheckAndSet, cas)
 }
 
 // WithMethod can optionally be passed to dictate which type of
@@ -70,9 +68,7 @@ func WithCheckAndSet(cas int) KVOption {
 // request will be issued. If set to "rw", then a read will be performed,
 // then a local update, followed by a remote update. Defaults to "patch".
 func WithMethod(method string) KVOption {
-	return func() (string, interface{}) {
-		return KVOptionMethod, method
-	}
+	return WithOption(KVOptionMethod, method)
 }
 
 // Get returns the latest version of a secret from the KV v2 secrets engine.
@@ -240,6 +236,15 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 	return kvSecret, nil
 }
 
+// Patch additively updates the most recent version of a key-value secret,
+// differentiating it from Put which will fully overwrite the previous data.
+// Only the key-value pairs that are new or changing need to be provided.
+//
+// The WithMethod KVOption function can optionally be passed to dictate which
+// kind of patch to perform, as older Vault server versions (pre-1.9.0) may
+// only be able to use the old "rw" (read-then-write) style of partial update,
+// whereas newer Vault servers can use the default value of "patch" if the
+// client token's policy has the "patch" capability.
 func (kv *kvv2) Patch(ctx context.Context, secretPath string, data map[string]interface{}, opts ...KVOption) (*KVSecret, error) {
 	pathToUpdate := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
 
