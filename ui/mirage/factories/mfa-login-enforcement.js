@@ -31,11 +31,16 @@ export default Factory.extend({
       const method = methods.length ? methods[Math.floor(Math.random() * methods.length)] : null;
       record.update('mfa_method_ids', method ? [method.id] : []);
     }
-    const keys = ['auth_method_accessors', 'auth_method_types', 'identity_group_ids', 'identity_entity_ids'];
-    keys.forEach((key) => {
-      if (!record[key]) {
-        record.update(key, key === 'auth_method_types' ? ['userpass'] : []);
+    const targets = {
+      auth_method_accessors: ['auth_userpass_bb95c2b1'],
+      auth_method_types: ['userpass'],
+      identity_group_ids: ['34db6b52-591e-bc22-8af0-4add5e167326'],
+      identity_entity_ids: ['f831667b-7392-7a1c-c0fc-33d48cb1c57d'],
+    };
+    for (const key in targets) {
+      if (!record.key) {
+        record.update(key, targets[key]);
       }
-    });
+    }
   },
 });
