@@ -50,11 +50,11 @@ func TestKVHelpers(t *testing.T) {
 
 	//// v1 ////
 	t.Run("kv v1 helpers", func(t *testing.T) {
-		if err := client.KVv1("secret").Put(context.Background(), "value", secretData); err != nil {
+		if err := client.KVv1("secret").Put(context.Background(), "my-secret", secretData); err != nil {
 			t.Fatal(err)
 		}
 
-		secret, err := client.KVv1("secret").Get(context.Background(), "value")
+		secret, err := client.KVv1("secret").Get(context.Background(), "my-secret")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -63,7 +63,7 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatalf("kv v1 secret did not contain expected value")
 		}
 
-		if err := client.KVv1("secret").Delete(context.Background(), "value"); err != nil {
+		if err := client.KVv1("secret").Delete(context.Background(), "my-secret"); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -71,7 +71,7 @@ func TestKVHelpers(t *testing.T) {
 	//// v2 ////
 	t.Run("kv v2 helpers", func(t *testing.T) {
 		// create a secret
-		writtenSecret, err := client.KVv2("secret-v2").Put(context.Background(), "value", secretData)
+		writtenSecret, err := client.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -79,7 +79,7 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatal("kv v2 secret did not have expected contents")
 		}
 
-		secret, err := client.KVv2("secret-v2").Get(context.Background(), "value")
+		secret, err := client.KVv2("secret-v2").Get(context.Background(), "my-secret")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,7 +91,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// get its full metadata
-		fullMetadata, err := client.KVv2("secret-v2").GetMetadata(context.Background(), "value")
+		fullMetadata, err := client.KVv2("secret-v2").GetMetadata(context.Background(), "my-secret")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -100,14 +100,14 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// create a second version
-		_, err = client.KVv2("secret-v2").Put(context.Background(), "value", map[string]interface{}{
+		_, err = client.KVv2("secret-v2").Put(context.Background(), "my-secret", map[string]interface{}{
 			"foo": "baz",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		s2, err := client.KVv2("secret-v2").Get(context.Background(), "value")
+		s2, err := client.KVv2("secret-v2").Get(context.Background(), "my-secret")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,7 +119,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// get a specific past version
-		s1, err := client.KVv2("secret-v2").GetVersion(context.Background(), "value", 1)
+		s1, err := client.KVv2("secret-v2").GetVersion(context.Background(), "my-secret", 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,11 +128,11 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// delete that version
-		if err = client.KVv2("secret-v2").DeleteVersions(context.Background(), "value", []int{1}); err != nil {
+		if err = client.KVv2("secret-v2").DeleteVersions(context.Background(), "my-secret", []int{1}); err != nil {
 			t.Fatal(err)
 		}
 
-		s1AfterDelete, err := client.KVv2("secret-v2").GetVersion(context.Background(), "value", 1)
+		s1AfterDelete, err := client.KVv2("secret-v2").GetVersion(context.Background(), "my-secret", 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,14 +146,14 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// check that KVOption works
-		_, err = client.KVv2("secret-v2").Put(context.Background(), "value", map[string]interface{}{
+		_, err = client.KVv2("secret-v2").Put(context.Background(), "my-secret", map[string]interface{}{
 			"meow": "woof",
 		}, api.WithCheckAndSet(99))
 		if err == nil {
 			t.Fatalf("expected error from trying to update different version from check-and-set value")
 		}
 
-		versions, err := client.KVv2("secret-v2").GetVersionsAsList(context.Background(), "value")
+		versions, err := client.KVv2("secret-v2").GetVersionsAsList(context.Background(), "my-secret")
 		if err != nil {
 			t.Fatal(err)
 		}
