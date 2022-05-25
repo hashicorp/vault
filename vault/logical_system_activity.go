@@ -2,7 +2,9 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -97,15 +99,37 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				},
 			},
 		},
+		{
+			Pattern: "internal/counters/activity/export$",
+			Fields: map[string]*framework.FieldSchema{
+				"start_time": {
+					Type:        framework.TypeTime,
+					Description: "Start of query interval",
+				},
+				"end_time": {
+					Type:        framework.TypeTime,
+					Description: "End of query interval",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
+					Default:     "json",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-export"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["activity-export"][1]),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleClientExport,
+					Summary:  "Report the client count metrics, for this namespace and all child namespaces.",
+				},
+			},
+		},
 	}
 }
 
-func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	a := b.Core.activityLog
-	if a == nil {
-		return logical.ErrorResponse("no activity log present"), nil
-	}
-
+func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
@@ -126,7 +150,52 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		startTime = startTime.UTC()
 	}
 	if startTime.After(endTime) {
-		return logical.ErrorResponse("start_time is later than end_time"), nil
+		return time.Time{}, time.Time{}, fmt.Errorf("start_time is later than end_time")
+	}
+
+	return startTime, endTime, nil
+}
+
+func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	a := b.Core.activityLog
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	startTime, endTime, err := parseStartEndTimes(a, d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	// This is to avoid the default 90s context timeout.
+	timeout := 10 * time.Minute
+	if durationRaw := os.Getenv("VAULT_ACTIVITY_EXPORT_DURATION"); durationRaw != "" {
+		d, err := time.ParseDuration(durationRaw)
+		if err == nil {
+			timeout = d
+		}
+	}
+
+	runCtx, cancelFunc := context.WithTimeout(b.Core.activeContext, timeout)
+	defer cancelFunc()
+
+	err = a.writeExport(runCtx, req.ResponseWriter, d.Get("format").(string), startTime, endTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	a := b.Core.activityLog
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	startTime, endTime, err := parseStartEndTimes(a, d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	results, err := a.handleQuery(ctx, startTime, endTime)

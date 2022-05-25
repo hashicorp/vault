@@ -67,7 +67,7 @@
           type="submit"
           data-test-mount-submit="true"
           class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
-          disabled={{or this.mountBackend.isRunning this.isFormInvalid}}
+          disabled={{this.mountBackend.isRunning}}
         >
           {{#if (eq this.mountType "auth")}}
             Enable Method
@@ -81,6 +81,11 @@
           Back
         </button>
       </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        </div>
+      {{/if}}
     {{else}}
       <button
         data-test-mount-next

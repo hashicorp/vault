@@ -5198,6 +5198,10 @@ This path responds to the following HTTP methods.
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
 	},
+	"activity-export": {
+		"Export the historical activity of clients.",
+		"Export the historical activity of clients.",
+	},
 	"activity-monthly": {
 		"Count of active clients so far this month.",
 		"Count of active clients so far this month.",
