@@ -73,7 +73,7 @@ module('Integration | Component | alert-inline', function (hooks) {
 
     this.set('message', 'some changed alert!!!');
     await waitUntil(() => find('[data-test-icon="loading"]'));
-    assert.true(find('[data-test-icon="loading"]'), 'it shows loading icon when message changes');
+    assert.ok(find('[data-test-icon="loading"]'), 'it shows loading icon when message changes');
     await settled();
     assert
       .dom('[data-test-inline-error-message]')

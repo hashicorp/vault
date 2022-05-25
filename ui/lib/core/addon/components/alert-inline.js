@@ -3,8 +3,6 @@ import { action } from '@ember/object';
 import { later } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
 import { messageTypes } from 'core/helpers/message-types';
-import layout from '../templates/components/alert-inline';
-import { setComponentTemplate } from '@ember/component';
 
 /**
  * @module AlertInline
@@ -23,7 +21,7 @@ import { setComponentTemplate } from '@ember/component';
  * @param [mimicRefresh=false]{Boolean} - If true will display a loading icon when attributes change (e.g. when a form submits and the alert message changes).
  */
 
-class AlertInlineComponent extends Component {
+export default class AlertInlineComponent extends Component {
   @tracked isRefreshing = false;
 
   get mimicRefresh() {
@@ -63,5 +61,3 @@ class AlertInlineComponent extends Component {
     }
   }
 }
-
-export default setComponentTemplate(layout, AlertInlineComponent);

@@ -69,8 +69,7 @@ export function withModelValidations(validations) {
       validate() {
         let isValid = true;
         const state = {};
-        const errors = [];
-        let invalidFormMessage;
+        let errorCount = 0;
 
         for (const key in this._validations) {
           const rules = this._validations[key];
@@ -112,17 +111,16 @@ export function withModelValidations(validations) {
               }
             }
           }
-          errors.push(state[key].errors);
+          errorCount += state[key].errors.length;
           state[key].isValid = !state[key].errors.length;
         }
-        invalidFormMessage = this.generateErrorCountMessage(errors);
 
-        return { isValid, state, invalidFormMessage };
+        return { isValid, state, invalidFormMessage: this.generateErrorCountMessage(errorCount) };
       }
 
-      generateErrorCountMessage(errors) {
-        // returns form-specific message: 'There is an error/are N errors with this form.'
-        let errorCount = errors.map((e) => e.length).reduce((a, b) => a + b, 0);
+      generateErrorCountMessage(errorCount) {
+        if (errorCount < 1) return null;
+        // returns count specific message: 'There is an error/are N errors with this form.'
         let isPlural = errorCount > 1 ? `are ${errorCount} errors` : false;
         return `There ${isPlural ? isPlural : 'is an error'} with this form.`;
       }
