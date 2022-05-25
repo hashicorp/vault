@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import EmberObject, { computed } from '@ember/object';
 import Service from '@ember/service';
@@ -112,6 +112,7 @@ module('Integration | Component | edit form kmip role', function (hooks) {
         operationGet: null,
         operationNone: false,
       },
+      5,
     ],
     [
       'setting operationNone',
@@ -127,6 +128,7 @@ module('Integration | Component | edit form kmip role', function (hooks) {
         operationCreate: null,
         operationAll: false,
       },
+      6,
     ],
 
     [
@@ -144,11 +146,13 @@ module('Integration | Component | edit form kmip role', function (hooks) {
         operationDestroy: true,
         operationAll: false,
       },
+      7,
     ],
   ];
   for (let testCase of savingTests) {
-    let [name, initialState, displayClicks, stateBeforeSave, stateAfterSave] = testCase;
+    let [name, initialState, displayClicks, stateBeforeSave, stateAfterSave, assertionCount] = testCase;
     test(name, async function (assert) {
+      assert.expect(assertionCount);
       let model = createModel(initialState);
       this.set('model', model);
       let clickTargets = displayClicks.split(',');
@@ -163,7 +167,7 @@ module('Integration | Component | edit form kmip role', function (hooks) {
 
       click('[data-test-edit-form-submit]');
 
-      later(() => run.cancelTimers(), 50);
+      later(() => cancelTimers(), 50);
       return settled().then(() => {
         for (let afterStateKey of Object.keys(stateAfterSave)) {
           assert.equal(

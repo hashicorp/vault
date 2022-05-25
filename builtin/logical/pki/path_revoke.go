@@ -22,8 +22,14 @@ hyphen-separated octal`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRevokeWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.metricsWrap("revoke", noRole, b.pathRevokeWrite),
+				// This should never be forwarded. See backend.go for more information.
+				// If this needs to write, the entire request will be forwarded to the
+				// active node of the current performance cluster, but we don't want to
+				// forward invalid revoke requests there.
+			},
 		},
 
 		HelpSynopsis:    pathRevokeHelpSyn,
@@ -35,8 +41,14 @@ func pathRotateCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathRotateCRLRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRotateCRLRead,
+				// See backend.go; we will read a lot of data prior to calling write,
+				// so this request should be forwarded when it is first seen, not
+				// when it is ready to write.
+				ForwardPerformanceStandby: true,
+			},
 		},
 
 		HelpSynopsis:    pathRotateCRLHelpSyn,
@@ -44,7 +56,7 @@ func pathRotateCRL(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *roleEntry) (*logical.Response, error) {
 	serial := data.Get("serial_number").(string)
 	if len(serial) == 0 {
 		return logical.ErrorResponse("The serial number must be provided"), nil
@@ -64,23 +76,25 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	return revokeCert(ctx, b, req, serial, false)
 }
 
-func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	b.revokeStorageLock.RLock()
 	defer b.revokeStorageLock.RUnlock()
 
-	crlErr := buildCRL(ctx, b, req, false)
-	switch crlErr.(type) {
-	case errutil.UserError:
-		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
-	case errutil.InternalError:
-		return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
-	default:
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"success": true,
-			},
-		}, nil
+	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
+	if crlErr != nil {
+		switch crlErr.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+		default:
+			return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
+		}
 	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"success": true,
+		},
+	}, nil
 }
 
 const pathRevokeHelpSyn = `

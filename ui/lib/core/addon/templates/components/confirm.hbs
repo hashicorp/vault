@@ -1,7 +1,7 @@
 {{! template-lint-disable no-inline-styles}}
 
 <div class="confirm-wrapper" style={{this.style}}>
-  <div class="confirm {{if this.openTrigger "show-confirm"}}" ...attributes>
+  <div class="confirm {{if this.openTrigger 'show-confirm'}}" ...attributes>
     {{yield
       (hash
         Message=(component
@@ -15,6 +15,6 @@
       )
     }}
   </div>
-  <div id={{this.wormholeId}} class="confirm-overlay {{if this.openTrigger "show-confirm"}}">
+  <div id={{this.wormholeId}} class="confirm-overlay {{if this.openTrigger 'show-confirm'}}">
   </div>
 </div>

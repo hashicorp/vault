@@ -31,6 +31,11 @@
         </ConfirmAction>
         <div class="toolbar-separator"></div>
       {{/if}}
+      {{#if (and @model.canRotateRoleCredentials (eq @model.type "static"))}}
+        <button type="button" class="toolbar-link" {{on "click" (fn this.rotateRoleCred @model.id)}}>
+          Rotate credentials
+        </button>
+      {{/if}}
       {{#if @model.canGenerateCredentials}}
         <button
           type="button"
@@ -47,7 +52,7 @@
           @mode="edit"
           @replace={{true}}
           @queryParams={{query-params itemType="role"}}
-          @data-test-edit-link={{true}}
+          data-test-edit-link={{true}}
         >
           Edit role
         </ToolbarSecretLink>
@@ -62,6 +67,14 @@
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{stringify (get @model attr.name)}}
+        />
+      {{else if (eq attr.options.editType "ttl")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{format-duration (get @model attr.name)}}
+          @isLink={{eq attr.name "database"}}
         />
       {{else}}
         <InfoTableRow
@@ -106,7 +119,7 @@
                 data-test-secret-save
                 type="submit"
                 disabled={{this.loading}}
-                class="button is-primary {{if this.loading "is-loading"}}"
+                class="button is-primary {{if this.loading 'is-loading'}}"
               >
                 {{#if (eq @mode "create")}}
                   Create role
@@ -121,7 +134,7 @@
                     Save
                   </button>
                 </T.Trigger>
-                <T.Content class="tool-tip">
+                <T.Content @defaultClass="tool-tip">
                   <div class="box">
                     You don't have permissions required to
                     {{if (eq @mode "create") "create" "update"}}
@@ -132,7 +145,7 @@
             {{/if}}
           </div>
           <div class="control">
-            <SecretLink @mode="list" @class="button">
+            <SecretLink @mode="list" class="button">
               Cancel
             </SecretLink>
           </div>

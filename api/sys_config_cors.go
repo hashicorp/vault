@@ -3,16 +3,22 @@ package api
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/mitchellh/mapstructure"
 )
 
 func (c *Sys) CORSStatus() (*CORSResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/config/cors")
+	return c.CORSStatusWithContext(context.Background())
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) CORSStatusWithContext(ctx context.Context) (*CORSResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/config/cors")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +42,19 @@ func (c *Sys) CORSStatus() (*CORSResponse, error) {
 }
 
 func (c *Sys) ConfigureCORS(req *CORSRequest) error {
-	r := c.c.NewRequest("PUT", "/v1/sys/config/cors")
+	return c.ConfigureCORSWithContext(context.Background(), req)
+}
+
+func (c *Sys) ConfigureCORSWithContext(ctx context.Context, req *CORSRequest) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPut, "/v1/sys/config/cors")
 	if err := r.SetJSONBody(req); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -51,11 +62,16 @@ func (c *Sys) ConfigureCORS(req *CORSRequest) error {
 }
 
 func (c *Sys) DisableCORS() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/config/cors")
+	return c.DisableCORSWithContext(context.Background())
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) DisableCORSWithContext(ctx context.Context) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/config/cors")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}

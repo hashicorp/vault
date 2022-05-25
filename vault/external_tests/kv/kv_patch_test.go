@@ -52,36 +52,48 @@ func TestKV_Patch_BadContentTypeHeader(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", kvData)
+	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Write("kv/data/foo", kvData)
+	})
 	if err != nil {
-		t.Fatalf("write failed - err :%#v, resp: %#v\n", err, resp)
+		t.Fatalf("write failed - err :%#v, resp: %#v\n", err, secretRaw)
 	}
 
-	resp, err = c.Logical().Read("kv/data/foo")
+	secretRaw, err = kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Read("kv/data/foo")
+	})
 	if err != nil {
-		t.Fatalf("read failed - err :%#v, resp: %#v\n", err, resp)
+		t.Fatalf("read failed - err :%#v, resp: %#v\n", err, secretRaw)
 	}
 
-	req := c.NewRequest("PATCH", "/v1/kv/data/foo")
-	req.Headers = http.Header{
-		"Content-Type": []string{"application/json"},
+	apiRespRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		req := c.NewRequest("PATCH", "/v1/kv/data/foo")
+		req.Headers = http.Header{
+			"Content-Type": []string{"application/json"},
+		}
+
+		if err := req.SetJSONBody(kvData); err != nil {
+			t.Fatal(err)
+		}
+
+		return c.RawRequestWithContext(context.Background(), req)
+	})
+
+	apiResp, ok := apiRespRaw.(*api.Response)
+	if !ok {
+		t.Fatalf("response not an api.Response, actual: %#v", apiRespRaw)
 	}
 
-	if err := req.SetJSONBody(kvData); err != nil {
-		t.Fatal(err)
-	}
-
-	apiResp, err := c.RawRequestWithContext(context.Background(), req)
 	if err == nil || apiResp.StatusCode != http.StatusUnsupportedMediaType {
 		t.Fatalf("expected PATCH request to fail with %d status code - err :%#v, resp: %#v\n", http.StatusUnsupportedMediaType, err, apiResp)
 	}
 }
 
-func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Secret, error) {
+func kvRequestWithRetry(t *testing.T, req func() (interface{}, error)) (interface{}, error) {
 	t.Helper()
 
 	var err error
-	var resp *api.Secret
+	var resp interface{}
 
 	// Loop until return message does not indicate upgrade, or timeout.
 	timeout := time.After(20 * time.Second)
@@ -156,7 +168,7 @@ func TestKV_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
+	resp, err := kvRequestWithRetry(t, func() (interface{}, error) {
 		return c.Logical().Write("kv/data/foo", writeData)
 	})
 	if err != nil {
@@ -169,7 +181,7 @@ func TestKV_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err = kvRequestWithRetry(t, func() (*api.Secret, error) {
+	resp, err = kvRequestWithRetry(t, func() (interface{}, error) {
 		return c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", patchData)
 	})
 
@@ -233,7 +245,7 @@ func TestKV_Patch_RootToken(t *testing.T) {
 	}
 
 	// Write a kv value and patch it
-	_, err = kvRequestWithRetry(t, func() (*api.Secret, error) {
+	_, err = kvRequestWithRetry(t, func() (interface{}, error) {
 		data := map[string]interface{}{
 			"data": map[string]interface{}{
 				"bar": "baz",
@@ -247,7 +259,7 @@ func TestKV_Patch_RootToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = kvRequestWithRetry(t, func() (*api.Secret, error) {
+	_, err = kvRequestWithRetry(t, func() (interface{}, error) {
 		data := map[string]interface{}{
 			"data": map[string]interface{}{
 				"bar": "quux",
@@ -260,11 +272,16 @@ func TestKV_Patch_RootToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secret, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
+	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
 		return client.Logical().Read("kv/data/foo")
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	secret, ok := secretRaw.(*api.Secret)
+	if !ok {
+		t.Fatalf("response not an api.Secret, actual: %#v", secretRaw)
 	}
 
 	bar := secret.Data["data"].(map[string]interface{})["bar"]

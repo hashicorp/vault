@@ -11,7 +11,7 @@ jobs:
   backport-targeted-release-branch:
     if: github.event.pull_request.merged
     runs-on: ubuntu-latest
-    container: hashicorpdev/backport-assistant:0.2.3
+    container: hashicorpdev/backport-assistant:0.2.5
     steps:
       - name: Backport changes to targeted release branch
         run: |
@@ -19,4 +19,5 @@ jobs:
         env:
           BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+\\.[+\\w]+)"
           BACKPORT_TARGET_TEMPLATE: "release/{{.target}}"
+          BACKPORT_MERGE_COMMIT: true
           GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

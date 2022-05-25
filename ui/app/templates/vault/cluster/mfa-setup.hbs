@@ -1,0 +1,29 @@
+<SplashPage @showTruncatedNavBar={{false}} as |Page|>
+  <Page.header>
+    <h1 class="title is-4">MFA setup</h1>
+  </Page.header>
+  <Page.content>
+    <div class="auth-form" data-test-mfa-form>
+      <div class="box">
+        {{#if (eq this.onStep 1)}}
+          <MfaSetupStepOne
+            @entityId={{this.entityId}}
+            @isUUIDVerified={{this.isUUIDVerified}}
+            @restartFlow={{this.restartFlow}}
+            @saveUUIDandQrCode={{this.saveUUIDandQrCode}}
+            @showWarning={{this.showWarning}}
+          />
+        {{/if}}
+        {{#if (eq this.onStep 2)}}
+          <MfaSetupStepTwo
+            @entityId={{this.entityId}}
+            @uuid={{this.uuid}}
+            @qrCode={{this.qrCode}}
+            @restartFlow={{this.restartFlow}}
+            @warning={{this.warning}}
+          />
+        {{/if}}
+      </div>
+    </div>
+  </Page.content>
+</SplashPage>

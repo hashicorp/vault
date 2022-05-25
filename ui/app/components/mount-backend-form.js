@@ -1,10 +1,10 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
-import { computed, set } from '@ember/object';
+import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
+import { engines, KMIP, TRANSFORM, KEYMGMT } from 'vault/helpers/mountable-secret-engines';
 import { waitFor } from '@ember/test-waiters';
 
 const METHODS = methods();
@@ -45,8 +45,8 @@ export default Component.extend({
 
   showEnable: false,
 
-  // cp-validation related properties
-  validationMessages: null,
+  // validation related properties
+  modelValidations: null,
   isFormInvalid: false,
 
   mountIssue: false,
@@ -57,10 +57,6 @@ export default Component.extend({
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
     this.set('mountModel', model);
-
-    this.set('validationMessages', {
-      path: '',
-    });
   },
 
   mountTypes: computed('engines', 'mountType', function () {
@@ -69,7 +65,7 @@ export default Component.extend({
 
   engines: computed('version.{features[],isEnterprise}', function () {
     if (this.version.isEnterprise) {
-      return ENGINES.concat([KMIP, TRANSFORM]);
+      return ENGINES.concat([KMIP, TRANSFORM, KEYMGMT]);
     }
     return ENGINES;
   }),
@@ -113,8 +109,39 @@ export default Component.extend({
         }
       }
 
-      if (!capabilities.get('canUpdate')) {
-        // if there is no sys/mount issue then error is config endpoint.
+      let changedAttrKeys = Object.keys(mountModel.changedAttributes());
+      let updatesConfig =
+        changedAttrKeys.includes('casRequired') ||
+        changedAttrKeys.includes('deleteVersionAfter') ||
+        changedAttrKeys.includes('maxVersions');
+
+      try {
+        yield mountModel.save();
+      } catch (err) {
+        if (err.httpStatus === 403) {
+          this.mountIssue = true;
+          this.set('isFormInvalid', this.mountIssue);
+          this.flashMessages.danger(
+            'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
+          );
+          return;
+        }
+        if (err.errors) {
+          let errors = err.errors.map((e) => {
+            if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
+            return e;
+          });
+          this.set('errors', errors);
+        } else if (err.message) {
+          this.set('errorMessage', err.message);
+        } else {
+          this.set('errorMessage', 'An error occurred, check the vault logs.');
+        }
+        return;
+      }
+      // mountModel must be after the save
+      if (mountModel.isV2KV && updatesConfig && !capabilities.get('canUpdate')) {
+        // config error is not thrown from secret-engine adapter, so handling here
         this.flashMessages.warning(
           'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
         );
@@ -124,20 +151,6 @@ export default Component.extend({
           false,
           0,
         ];
-      }
-      try {
-        yield mountModel.save();
-      } catch (err) {
-        if (err.message === 'mountIssue') {
-          this.mountIssue = true;
-          this.set('isFormInvalid', this.mountIssue);
-          this.flashMessages.danger(
-            'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
-          );
-          return;
-        }
-        this.set('errorMessage', 'This mount path already exist.');
-        return;
       }
       let mountType = this.mountType;
       mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
@@ -149,26 +162,11 @@ export default Component.extend({
 
   actions: {
     onKeyUp(name, value) {
-      // validate path
-      if (name === 'path') {
-        this.mountModel.set('path', value);
-        this.mountModel.validations.attrs.path.isValid
-          ? set(this.validationMessages, 'path', '')
-          : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
-      }
-      // check maxVersions is a number
-      if (name === 'maxVersions') {
-        this.mountModel.set('maxVersions', value);
-        this.mountModel.validations.attrs.maxVersions.isValid
-          ? set(this.validationMessages, 'maxVersions', '')
-          : set(
-              this.validationMessages,
-              'maxVersions',
-              this.mountModel.validations.attrs.maxVersions.message
-            );
-      }
-      this.mountModel.validate().then(({ validations }) => {
-        this.set('isFormInvalid', !validations.isValid);
+      this.mountModel.set(name, value);
+      const { isValid, state } = this.mountModel.validate();
+      this.setProperties({
+        modelValidations: state,
+        isFormInvalid: !isValid,
       });
     },
     onTypeChange(path, value) {

@@ -18,13 +18,13 @@ const BACKENDS = supportedAuthBackends();
  *
  * @example ```js
  * // All properties are passed in via query params.
- *   <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @redirectTo={{redirectTo}} @selectedAuth={{authMethod}}/>```
+ * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}} />```
  *
- * @param wrappedToken=null {String} - The auth method that is currently selected in the dropdown.
- * @param cluster=null {Object} - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
- * @param namespace=null {String} - The currently active namespace.
- * @param redirectTo=null {String} - The name of the route to redirect to.
- * @param selectedAuth=null {String} - The auth method that is currently selected in the dropdown.
+ * @param {string} wrappedToken - The auth method that is currently selected in the dropdown.
+ * @param {object} cluster - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
+ * @param {string} namespace- The currently active namespace.
+ * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
+ * @param {function} onSuccess - Fired on auth success
  */
 
 const DEFAULTS = {
@@ -45,11 +45,11 @@ export default Component.extend(DEFAULTS, {
   selectedAuth: null,
   methods: null,
   cluster: null,
-  redirectTo: null,
   namespace: null,
   wrappedToken: null,
   // internal
   oldNamespace: null,
+  authMethods: BACKENDS,
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -111,6 +111,19 @@ export default Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
+  getAuthBackend(type) {
+    const { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
+    const selected = type || selectedAuth;
+    if (!methods && !wrappedToken) {
+      return {};
+    }
+    // if type is provided we can ignore path since we are attempting to lookup a specific backend by type
+    if (keyIsPath && !type) {
+      return methods.findBy('path', selected);
+    }
+    return BACKENDS.findBy('type', selected);
+  },
+
   selectedAuthIsPath: match('selectedAuth', /\/$/),
   selectedAuthBackend: computed(
     'wrappedToken',
@@ -119,14 +132,7 @@ export default Component.extend(DEFAULTS, {
     'selectedAuth',
     'selectedAuthIsPath',
     function () {
-      let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
-      if (!methods && !wrappedToken) {
-        return {};
-      }
-      if (keyIsPath) {
-        return methods.findBy('path', selectedAuth);
-      }
-      return BACKENDS.findBy('type', selectedAuth);
+      return this.getAuthBackend();
     }
   ),
 
@@ -206,54 +212,26 @@ export default Component.extend(DEFAULTS, {
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
-  handleError(e, prefixMessage = true) {
-    this.set('loading', false);
-    let errors;
-    if (e.errors) {
-      errors = e.errors.map((error) => {
-        if (error.detail) {
-          return error.detail;
-        }
-        return error;
-      });
-    } else {
-      errors = [e];
-    }
-    let message = prefixMessage ? 'Authentication failed: ' : '';
-    this.set('error', `${message}${errors.join('.')}`);
-  },
-
   authenticate: task(
     waitFor(function* (backendType, data) {
-      let clusterId = this.cluster.id;
+      const {
+        selectedAuth,
+        cluster: { id: clusterId },
+      } = this;
       try {
-        if (backendType === 'okta') {
-          this.delayAuthMessageReminder.perform();
-        }
-        let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
-
-        let { isRoot, namespace } = authResponse;
-        let transition;
-        let { redirectTo } = this;
-        if (redirectTo) {
-          // reset the value on the controller because it's bound here
-          this.set('redirectTo', '');
-          // here we don't need the namespace because it will be encoded in redirectTo
-          transition = this.router.transitionTo(redirectTo);
-        } else {
-          transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
-        }
-        // returning this w/then because if we keep it
-        // in the task, it will get cancelled when the component in un-rendered
-        yield transition.followRedirects().then(() => {
-          if (isRoot) {
-            this.flashMessages.warning(
-              'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-            );
-          }
+        this.delayAuthMessageReminder.perform();
+        const authResponse = yield this.auth.authenticate({
+          clusterId,
+          backend: backendType,
+          data,
+          selectedAuth,
         });
+        this.onSuccess(authResponse, backendType, data);
       } catch (e) {
-        this.handleError(e);
+        this.set('isLoading', false);
+        if (!this.auth.mfaError) {
+          this.set('error', `Authentication failed: ${this.auth.handleError(e)}`);
+        }
       }
     })
   ),
@@ -262,9 +240,9 @@ export default Component.extend(DEFAULTS, {
     if (Ember.testing) {
       this.showLoading = true;
       yield timeout(0);
-      return;
+    } else {
+      yield timeout(5000);
     }
-    yield timeout(5000);
   }),
 
   actions: {
@@ -282,7 +260,10 @@ export default Component.extend(DEFAULTS, {
       this.setProperties({
         error: null,
       });
-      let backend = this.selectedAuthBackend || {};
+      // if callback from oidc or jwt we have a token at this point
+      let backend = ['oidc', 'jwt'].includes(this.providerName)
+        ? this.getAuthBackend('token')
+        : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
@@ -298,11 +279,10 @@ export default Component.extend(DEFAULTS, {
       return this.authenticate.unlinked().perform(backend.type, data);
     },
     handleError(e) {
-      if (e) {
-        this.handleError(e, false);
-      } else {
-        this.set('error', null);
-      }
+      this.setProperties({
+        isLoading: false,
+        error: e ? this.auth.handleError(e) : null,
+      });
     },
   },
 });

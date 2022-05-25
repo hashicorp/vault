@@ -147,7 +147,7 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("minimum encryption version mismatch, expected (%#v), found (%#v)", minEncryptionVersion, d.MinDecryptionVersion)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("expected DeletionAllowed to be false, but got true")
 			}
 			if d.Derived != derived {

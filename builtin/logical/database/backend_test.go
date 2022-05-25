@@ -3,7 +3,9 @@ package database
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
@@ -25,7 +27,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -47,8 +49,11 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
 	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
 	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoMultiplexed", []string{}, "")
 	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlas", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlasMultiplexed", []string{}, "")
 
 	return cluster, sys
 }
@@ -66,6 +71,14 @@ func TestBackend_PluginMain_Postgres(t *testing.T) {
 	v5.Serve(dbType.(v5.Database))
 }
 
+func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	v5.ServeMultiplex(postgresql.New)
+}
+
 func TestBackend_PluginMain_Mongo(t *testing.T) {
 	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
@@ -79,6 +92,14 @@ func TestBackend_PluginMain_Mongo(t *testing.T) {
 	v5.Serve(dbType.(v5.Database))
 }
 
+func TestBackend_PluginMain_MongoMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	v5.ServeMultiplex(mongodb.New)
+}
+
 func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
@@ -90,6 +111,14 @@ func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
 	}
 
 	v5.Serve(dbType.(v5.Database))
+}
+
+func TestBackend_PluginMain_MongoAtlasMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+		return
+	}
+
+	v5.ServeMultiplex(mongodbatlas.New)
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -659,7 +688,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
-	if len(resp.Warnings) != 1 {
+	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warning about password in url %s, resp:%#v\n", connURL, resp)
 	}
 
@@ -1322,6 +1351,116 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 }
 
+func TestBackend_ConnectionURL_redacted(t *testing.T) {
+	cluster, sys := getCluster(t)
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "basic",
+			password: "secret",
+		},
+		{
+			name:     "encoded",
+			password: "yourStrong(!)Password",
+		},
+	}
+
+	respCheck := func(req *logical.Request) *logical.Response {
+		t.Helper()
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp == nil {
+			t.Fatalf("expected a response, resp: %#v", resp)
+		}
+
+		if resp.Error() != nil {
+			t.Fatalf("unexpected error in response, err: %#v", resp.Error())
+		}
+
+		return resp
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cleanup, u := postgreshelper.PrepareTestContainerWithPassword(t, "13.4-buster", tt.password)
+			t.Cleanup(cleanup)
+
+			p, err := url.Parse(u)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			actualPassword, _ := p.User.Password()
+			if tt.password != actualPassword {
+				t.Fatalf("expected computed URL password %#v, actual %#v", tt.password, actualPassword)
+			}
+
+			// Configure a connection
+			data := map[string]interface{}{
+				"connection_url": u,
+				"plugin_name":    "postgresql-database-plugin",
+				"allowed_roles":  []string{"plugin-role-test"},
+			}
+			req := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("config/%s", tt.name),
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+			respCheck(req)
+
+			// read config
+			readReq := &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      req.Path,
+				Storage:   config.StorageView,
+			}
+			resp := respCheck(readReq)
+
+			var connDetails map[string]interface{}
+			if v, ok := resp.Data["connection_details"]; ok {
+				connDetails = v.(map[string]interface{})
+			}
+
+			if connDetails == nil {
+				t.Fatalf("response data missing connection_details, resp: %#v", resp)
+			}
+
+			actual := connDetails["connection_url"].(string)
+			expected := p.Redacted()
+			if expected != actual {
+				t.Fatalf("expected redacted URL %q, actual %q", expected, actual)
+			}
+
+			if tt.password != "" {
+				// extra test to ensure that URL.Redacted() is working as expected.
+				p, err = url.Parse(actual)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if pp, _ := p.User.Password(); pp == tt.password {
+					t.Fatalf("password was not redacted by URL.Redacted()")
+				}
+			}
+		})
+	}
+}
+
 func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	t.Helper()
 	var d struct {
@@ -1332,14 +1471,8 @@ func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 		t.Fatal(err)
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	conn += " timezone=utc"
-
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL+"&timezone=utc")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,7 +19,7 @@
     opacity: 0;
   }
 
-  input[type='radio'] + label {
+  input[type='radio'] + span.dot {
     border: 1px solid $grey-light;
     border-radius: 50%;
     cursor: pointer;
@@ -30,13 +30,18 @@
     flex-grow: 0;
   }
 
-  input[type='radio']:checked + label {
+  input[type='radio']:checked + span.dot {
     background: $blue;
     border: 1px solid $blue;
     box-shadow: inset 0 0 0 0.15rem $white;
   }
-  input[type='radio']:focus + label {
+  input[type='radio']:focus + span.dot {
     box-shadow: 0 0 10px 1px rgba($blue, 0.4), inset 0 0 0 0.15rem $white;
+  }
+
+  &.is-disabled {
+    opacity: 0.6;
+    box-shadow: none;
   }
 }
 .radio-card:first-child {

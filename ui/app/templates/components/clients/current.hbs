@@ -8,49 +8,75 @@
       @message="Tracking is disabled and data is not being collected. To turn it on edit the configuration."
     >
       {{#if @model.config.configPath.canUpdate}}
-        <LinkTo @route="vault.cluster.clients.edit">
+        <LinkTo @route="vault.cluster.clients.config">
           Go to configuration
         </LinkTo>
       {{/if}}
     </EmptyState>
+  {{else if this.isGatheringData}}
+    <EmptyState
+      @title="No data received"
+      @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+    />
+  {{else if (eq @model.monthly.id "no-data")}}
+    <EmptyState
+      @title="No data available"
+      @message="Tracking may be turned off. Check with your administrator or check back later."
+    />
   {{else}}
-    {{#if this.totalClientsData}}
-      <div class="is-subtitle-gray has-bottom-margin-m">
-        FILTERS
-        <Toolbar>
-          <ToolbarFilters>
-            {{! ARG TODO more filters for namespace here }}
-          </ToolbarFilters>
-        </Toolbar>
-      </div>
+    <div class="is-subtitle-gray has-bottom-margin-m">
+      FILTERS
+      <Toolbar>
+        <ToolbarFilters data-test-clients-filter-bar>
+          <SearchSelect
+            @id="namespace-search-select-monthly"
+            @options={{this.namespaceArray}}
+            @selectLimit="1"
+            @disallowNewItems={{true}}
+            @fallbackComponent="input-search"
+            @onChange={{this.selectNamespace}}
+            @placeholder={{"Filter by namespace"}}
+            @displayInherit={{true}}
+            class="is-marginless"
+          />
+          {{#if (not (is-empty this.authMethodOptions))}}
+            <SearchSelect
+              @id="auth-method-search-select"
+              @options={{this.authMethodOptions}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{this.setAuthMethod}}
+              @placeholder={{"Filter by auth method"}}
+              @displayInherit={{true}}
+            />
+          {{/if}}
+        </ToolbarFilters>
+      </Toolbar>
+    </div>
+    {{#if this.upgradeDuringCurrentMonth}}
+      <AlertBanner @type="warning" @title="Warning">
+        {{this.upgradeVersionAndDate}}
+        {{this.versionSpecificText}}
+        <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
+          Learn more here.
+        </DocLink>
+      </AlertBanner>
     {{/if}}
-    {{! TODO CMB COMMENT IN CONDITIONAL WHEN VERSION ENDPOINT IS COMPLETE }}
-    {{!-- {{#if (is-after this.upgradeDate this.licenseStartDate)}} --}}
-    <AlertBanner @type="warning" @title="Warning">
-      {{#if this.upgradeDate}}
-        {{concat "You upgraded to Vault 1.9 on " (date-format this.upgradeDate "MMMM d, yyyy.")}}
-      {{/if}}
-      How we count clients changed in 1.9, so please keep in mind when looking at the data below. Furthermore, namespace
-      attribution is available only for 1.9 data.
-      <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
-        Learn more here.
-      </DocLink>
-    </AlertBanner>
-    {{!-- {{/if}} --}}
-    {{#if @isLoading}}
-      <LayoutLoading />
-    {{else}}
+    {{#if this.totalUsageCounts}}
       <Clients::UsageStats
         @title={{date-format this.responseTimestamp "MMMM"}}
         @totalUsageCounts={{this.totalUsageCounts}}
       />
-      {{#if this.totalClientsData}}
+      {{#if this.hasAttributionData}}
         <Clients::Attribution
           @chartLegend={{this.chartLegend}}
-          @totalClientsData={{this.totalClientsData}}
           @totalUsageCounts={{this.totalUsageCounts}}
+          @newUsageCounts={{this.newUsageCounts}}
+          @totalClientAttribution={{this.totalClientAttribution}}
           @selectedNamespace={{this.selectedNamespace}}
           @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
+          @isCurrentMonth={{true}}
           @isDateRange={{false}}
           @timestamp={{this.responseTimestamp}}
         />

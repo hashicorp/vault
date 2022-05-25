@@ -33,6 +33,7 @@ import (
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -161,6 +162,23 @@ func TestCoreUI(t testing.T, enableUI bool) *Core {
 }
 
 func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
+	c := TestCoreWithSealAndUINoCleanup(t, opts)
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		err := c.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
+	})
+	return c
+}
+
+func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
@@ -183,6 +201,8 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.NumExpirationWorkers = numExpirationWorkersTest
 	conf.RawConfig = opts.RawConfig
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
+	conf.DisableSSCTokens = opts.DisableSSCTokens
+	conf.PluginDirectory = opts.PluginDirectory
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -207,15 +227,6 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
-	t.Cleanup(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("panic closing core during cleanup", "panic", r)
-			}
-		}()
-		c.Shutdown()
-	})
 
 	return c
 }
@@ -327,7 +338,11 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	return result.SecretShares, result.RecoveryShares, result.RootToken
+	innerToken, err := core.DecodeSSCToken(result.RootToken)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	return result.SecretShares, result.RecoveryShares, innerToken
 }
 
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
@@ -384,10 +399,6 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	}
 
 	testCoreAddSecretMount(t, core, token)
-
-	t.Cleanup(func() {
-		core.Shutdown()
-	})
 	return core, keys, token
 }
 
@@ -447,7 +458,10 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 				t.Log("panic closing core during cleanup", "panic", r)
 			}
 		}()
-		core.Shutdown()
+		err := core.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
 	})
 
 	return core, keys, token
@@ -1136,6 +1150,10 @@ type TestClusterOptions struct {
 	PhysicalFactoryConfig map[string]interface{}
 	LicensePublicKey      ed25519.PublicKey
 	LicensePrivateKey     ed25519.PrivateKey
+
+	// this stores the vault version that should be used for each core config
+	VersionMap        map[int]string
+	RedundancyZoneMap map[int]string
 }
 
 var DefaultNumCores = 3
@@ -1397,7 +1415,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	tlsConfigs := []*tls.Config{}
 	certGetters := []*reloadutil.CertificateGetter{}
 	for i := 0; i < numCores; i++ {
-
 		addr := &net.TCPAddr{
 			IP:   baseAddr.IP,
 			Port: 0,
@@ -1823,7 +1840,17 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
 	if opts != nil && opts.PhysicalFactory != nil {
-		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, opts.PhysicalFactoryConfig)
+		pfc := opts.PhysicalFactoryConfig
+		if pfc == nil {
+			pfc = make(map[string]interface{})
+		}
+		if len(opts.VersionMap) > 0 {
+			pfc["autopilot_upgrade_version"] = opts.VersionMap[idx]
+		}
+		if len(opts.RedundancyZoneMap) > 0 {
+			pfc["autopilot_redundancy_zone"] = opts.RedundancyZoneMap[idx]
+		}
+		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, pfc)
 		switch {
 		case physBundle == nil && coreConfig.Physical != nil:
 		case physBundle == nil && coreConfig.Physical == nil:
@@ -1908,7 +1935,8 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 
 func (testCluster *TestCluster) setupClusterListener(
 	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
-	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler) {
+	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler,
+) {
 	if coreConfig.ClusterAddr == "" {
 		return
 	}
@@ -2094,7 +2122,8 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 func (testCluster *TestCluster) getAPIClient(
 	t testing.T, opts *TestClusterOptions,
-	port int, tlsConfig *tls.Config) *api.Client {
+	port int, tlsConfig *tls.Config,
+) *api.Client {
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = tlsConfig.Clone()
 	if err := http2.ConfigureTransport(transport); err != nil {
@@ -2124,11 +2153,18 @@ func (testCluster *TestCluster) getAPIClient(
 	return apiClient
 }
 
+func toFunc(f logical.Factory) func() (interface{}, error) {
+	return func() (interface{}, error) {
+		return f, nil
+	}
+}
+
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 	return &mockBuiltinRegistry{
 		forTesting: map[string]consts.PluginType{
 			"mysql-database-plugin":      consts.PluginTypeDatabase,
 			"postgresql-database-plugin": consts.PluginTypeDatabase,
+			"approle":                    consts.PluginTypeCredential,
 		},
 	}
 }
@@ -2137,6 +2173,7 @@ type mockBuiltinRegistry struct {
 	forTesting map[string]consts.PluginType
 }
 
+// Get only supports getting database plugins, and approle
 func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
 	testPluginType, ok := m.forTesting[name]
 	if !ok {
@@ -2145,39 +2182,49 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 	if pluginType != testPluginType {
 		return nil, false
 	}
+
+	if name == "approle" {
+		return toFunc(approle.Factory), true
+	}
+
 	if name == "postgresql-database-plugin" {
 		return dbPostgres.New, true
 	}
 	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
 
-// Keys only supports getting a realistic list of the keys for database plugins.
+// Keys only supports getting a realistic list of the keys for database plugins,
+// and approle
 func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
-	if pluginType != consts.PluginTypeDatabase {
-		return []string{}
-	}
-	/*
-		This is a hard-coded reproduction of the db plugin keys in helper/builtinplugins/registry.go.
-		The registry isn't directly used because it causes import cycles.
-	*/
-	return []string{
-		"mysql-database-plugin",
-		"mysql-aurora-database-plugin",
-		"mysql-rds-database-plugin",
-		"mysql-legacy-database-plugin",
+	switch pluginType {
+	case consts.PluginTypeDatabase:
+		// This is a hard-coded reproduction of the db plugin keys in
+		// helper/builtinplugins/registry.go. The registry isn't directly used
+		// because it causes import cycles.
+		return []string{
+			"mysql-database-plugin",
+			"mysql-aurora-database-plugin",
+			"mysql-rds-database-plugin",
+			"mysql-legacy-database-plugin",
 
-		"cassandra-database-plugin",
-		"couchbase-database-plugin",
-		"elasticsearch-database-plugin",
-		"hana-database-plugin",
-		"influxdb-database-plugin",
-		"mongodb-database-plugin",
-		"mongodbatlas-database-plugin",
-		"mssql-database-plugin",
-		"postgresql-database-plugin",
-		"redshift-database-plugin",
-		"snowflake-database-plugin",
+			"cassandra-database-plugin",
+			"couchbase-database-plugin",
+			"elasticsearch-database-plugin",
+			"hana-database-plugin",
+			"influxdb-database-plugin",
+			"mongodb-database-plugin",
+			"mongodbatlas-database-plugin",
+			"mssql-database-plugin",
+			"postgresql-database-plugin",
+			"redshift-database-plugin",
+			"snowflake-database-plugin",
+		}
+	case consts.PluginTypeCredential:
+		return []string{
+			"approle",
+		}
 	}
+	return []string{}
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {

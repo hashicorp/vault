@@ -11,6 +11,7 @@ import (
 	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
@@ -505,6 +506,30 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
+	// userattr not used in the userfilter should result in a warning in the response
+	cfg.UserFilter = "((mail={{.Username}}))"
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.UpdateOperation, []string{userFilterWarning}),
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.ReadOperation, []string{userFilterWarning}),
+		},
+	})
+
+	// If both upndomain and userfilter is set, ensure that a warning is still
+	// returned if userattr is not considered
+	cfg.UPNDomain = "planetexpress.com"
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.UpdateOperation, []string{userFilterWarning}),
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.ReadOperation, []string{userFilterWarning}),
+		},
+	})
+
+	cfg.UPNDomain = ""
+
 	// Add a liberal user filter, allowing to log in with either cn or email
 	cfg.UserFilter = "(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))"
 
@@ -591,6 +616,30 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 			testAccStepConfigUrlWithAuthBind(t, cfg),
 			// Authenticate with cn attribute
 			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	// If UserAttr returns multiple attributes that can be used as alias then
+	// we return an error...
+	cfg.UserAttr = "employeeType"
+	cfg.UserFilter = "(cn={{.Username}})"
+	cfg.UsernameAsAlias = false
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	// ...unless username_as_alias has been set in which case we don't care
+	// about the alias returned by the LDAP server and always use the username
+	cfg.UsernameAsAlias = true
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
 		},
 	})
 }
@@ -780,6 +829,7 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"username_as_alias":    cfg.UsernameAsAlias,
 		},
 	}
 }
@@ -838,6 +888,36 @@ func testAccStepConfigUrlNoGroupDN(t *testing.T, cfg *ldaputil.ConfigEntry) logi
 			"discoverdn":           true,
 			"case_sensitive_names": true,
 			"request_timeout":      cfg.RequestTimeout,
+		},
+	}
+}
+
+func testAccStepConfigUrlWarningCheck(t *testing.T, cfg *ldaputil.ConfigEntry, operation logical.Operation, warnings []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: operation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"userfilter":           cfg.UserFilter,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
+			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
+		},
+		Check: func(response *logical.Response) error {
+			if len(response.Warnings) == 0 {
+				return fmt.Errorf("expected warnings, got none")
+			}
+
+			if !strutil.StrListSubset(response.Warnings, warnings) {
+				return fmt.Errorf("expected response to contain the following warnings:\n%s\ngot:\n%s", warnings, response.Warnings)
+			}
+			return nil
 		},
 	}
 }
@@ -1150,6 +1230,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			CaseSensitiveNames:       falseBool,
 			UsePre111GroupCNBehavior: new(bool),
 			RequestTimeout:           cfg.RequestTimeout,
+			UsernameAsAlias:          false,
 		},
 	}
 

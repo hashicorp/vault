@@ -9,7 +9,7 @@
     {{yield}}
   </div>
 {{else}}
-  <div class="selectable-card is-rounded {{if this.actionCard "no-flex"}}">
+  <div class="selectable-card is-rounded {{if this.actionCard 'no-flex'}}">
     {{#if this.actionCard}}
       <div class="is-flex-between is-fullwidth card-details" data-test-selectable-card={{this.formattedCardTitle}}>
         <h3 class="title is-5">{{this.formattedCardTitle}}</h3>

@@ -1,4 +1,4 @@
-<div class="chart-wrapper">
+<div class="chart-wrapper" data-test-usage-stats>
   <div class="chart-header has-header-link has-bottom-margin-m">
     <div class="header-left">
       <h2 class="chart-title">{{@title}}</h2>
@@ -12,12 +12,13 @@
   </div>
 
   <div class="columns">
-    <div class="column" data-test-client-count-stats>
+    <div class="column">
       <StatText
         @label="Total clients"
         @value={{or @totalUsageCounts.clients "0"}}
         @size="l"
         @subText="The sum of entity clientIDs and non-entity clientIDs; this is Vault’s primary billing metric."
+        data-test-stat-text="total-clients"
       />
     </div>
     <div class="column">
@@ -27,6 +28,7 @@
         @value={{or @totalUsageCounts.entity_clients "0"}}
         @size="l"
         @subText="Representations of a particular user, client, or application that created a token via login."
+        data-test-stat-text="entity-clients"
       />
     </div>
     <div class="column">
@@ -36,6 +38,7 @@
         @value={{or @totalUsageCounts.non_entity_clients "0"}}
         @size="l"
         @subText="Clients created with a shared set of permissions, but not associated with an entity. "
+        data-test-stat-text="non-entity-clients"
       />
     </div>
   </div>

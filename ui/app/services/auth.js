@@ -3,6 +3,7 @@ import { resolve, reject } from 'rsvp';
 import { assign } from '@ember/polyfills';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
+import { capitalize } from '@ember/string';
 
 import fetch from 'fetch';
 import { getOwner } from '@ember/application';
@@ -24,6 +25,8 @@ export default Service.extend({
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   isRenewing: false,
+  mfaErrors: null,
+
   init() {
     this._super(...arguments);
     this.checkForRootToken();
@@ -32,9 +35,14 @@ export default Service.extend({
   clusterAdapter() {
     return getOwner(this).lookup('adapter:cluster');
   },
-
-  tokens: computed(function () {
-    return this.getTokensFromStorage() || [];
+  // eslint-disable-next-line
+  tokens: computed({
+    get() {
+      return this._tokens || this.getTokensFromStorage() || [];
+    },
+    set(key, value) {
+      return (this._tokens = value);
+    },
   }),
 
   generateTokenName({ backend, clusterId }, policies) {
@@ -292,9 +300,10 @@ export default Service.extend({
   },
 
   setLastFetch(timestamp) {
+    const now = this.now();
     this.set('lastFetch', timestamp);
-    // if expiration was allowed we want to go ahead and renew here
-    if (this.allowExpiration) {
+    // if expiration was allowed and we're over half the ttl we want to go ahead and renew here
+    if (this.allowExpiration && now >= this.renewAfterEpoch) {
       this.renew();
     }
     this.set('allowExpiration', false);
@@ -321,19 +330,78 @@ export default Service.extend({
     });
   },
 
-  async authenticate(/*{clusterId, backend, data}*/) {
+  _parseMfaResponse(mfa_requirement) {
+    // mfa_requirement response comes back in a shape that is not easy to work with
+    // convert to array of objects and add necessary properties to satisfy the view
+    if (mfa_requirement) {
+      const { mfa_request_id, mfa_constraints } = mfa_requirement;
+      const constraints = [];
+      for (let key in mfa_constraints) {
+        const methods = mfa_constraints[key].any;
+        const isMulti = methods.length > 1;
+
+        // friendly label for display in MfaForm
+        methods.forEach((m) => {
+          const typeFormatted = m.type === 'totp' ? m.type.toUpperCase() : capitalize(m.type);
+          m.label = `${typeFormatted} ${m.uses_passcode ? 'passcode' : 'push notification'}`;
+        });
+        constraints.push({
+          name: key,
+          methods,
+          selectedMethod: isMulti ? null : methods[0],
+        });
+      }
+
+      return {
+        mfa_requirement: { mfa_request_id, mfa_constraints: constraints },
+      };
+    }
+    return {};
+  },
+
+  async authenticate(/*{clusterId, backend, data, selectedAuth}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
+    const resp = await adapter.authenticate(options);
 
-    let resp = await adapter.authenticate(options);
-    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.namespaceService.path);
+    if (resp.auth?.mfa_requirement) {
+      return this._parseMfaResponse(resp.auth?.mfa_requirement);
+    }
+
+    return this.authSuccess(options, resp.auth || resp.data);
+  },
+
+  async totpValidate({ mfa_requirement, ...options }) {
+    const resp = await this.clusterAdapter().mfaValidate(mfa_requirement);
+    return this.authSuccess(options, resp.auth || resp.data);
+  },
+
+  async authSuccess(options, response) {
+    // persist selectedAuth to sessionStorage to rehydrate auth form on logout
+    sessionStorage.setItem('selectedAuth', options.selectedAuth);
+    const authData = await this.persistAuthData(options, response, this.namespaceService.path);
     await this.permissions.getPaths.perform();
     return authData;
   },
 
+  handleError(e) {
+    if (e.errors) {
+      return e.errors.map((error) => {
+        if (error.detail) {
+          return error.detail;
+        }
+        return error;
+      });
+    }
+    return [e];
+  },
+
   getAuthType() {
-    if (!this.authData) return;
-    return this.authData.backend.type;
+    // check sessionStorage first
+    const selectedAuth = sessionStorage.getItem('selectedAuth');
+    if (selectedAuth) return selectedAuth;
+    // fallback to authData which discerns backend type from token
+    return this.authData ? this.authData.backend.type : null;
   },
 
   deleteCurrentToken() {

@@ -6,7 +6,7 @@ import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { visit, settled, currentURL, find } from '@ember/test-helpers';
+import { visit, settled, currentURL } from '@ember/test-helpers';
 
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -156,10 +156,9 @@ module('Acceptance | oidc provider', function (hooks) {
     await settled();
     assert.equal(currentURL(), url, 'URL is as expected after login');
     assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
-    assert.ok(
-      find('[data-test-oidc-redirect]').textContent.includes(`${callback}?code=`),
-      'Successful redirect to callback'
-    );
+    assert
+      .dom('[data-test-oidc-redirect]')
+      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
@@ -178,10 +177,9 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.password(USER_PASSWORD);
     await authFormComponent.login();
     await settled();
-    assert.ok(
-      find('[data-test-oidc-redirect]').textContent.includes(`${callback}?code=`),
-      'Successful redirect to callback'
-    );
+    assert
+      .dom('[data-test-oidc-redirect]')
+      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {

@@ -36,8 +36,8 @@ export default Route.extend({
       case 'alphabet':
         modelType = 'transform/alphabet';
         break;
-      default:
-        modelType = 'transform'; // CBS TODO: transform/transformation
+      default: // CBS TODO: transform/transformation
+        modelType = 'transform';
         break;
     }
     return modelType;
@@ -84,6 +84,7 @@ export default Route.extend({
       // secret or secret-v2
       cubbyhole: 'secret',
       kv: secretEngine.get('modelTypeForKV'),
+      keymgmt: `keymgmt/${tab || 'key'}`,
       generic: secretEngine.get('modelTypeForKV'),
     };
     return types[type];
@@ -113,8 +114,9 @@ export default Route.extend({
         .catch((err) => {
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
+            this.set('noMetadataPermissions', false);
             return [];
-          } else if (backendModel.engineType === 'kv' && backendModel.isV2KV) {
+          } else if (err.httpStatus === 403 && backendModel.isV2KV) {
             this.set('noMetadataPermissions', true);
             return [];
           } else {

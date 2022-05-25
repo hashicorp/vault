@@ -51,7 +51,7 @@ func ensureTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoTrailingSlash ensures the given string has a trailing slash.
+// ensureNoTrailingSlash ensures the given string does not have a trailing slash.
 func ensureNoTrailingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -64,7 +64,7 @@ func ensureNoTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoLeadingSlash ensures the given string has a trailing slash.
+// ensureNoLeadingSlash ensures the given string does not have a leading slash.
 func ensureNoLeadingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
