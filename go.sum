@@ -987,6 +987,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0 h1:pONFgWz9hbcS1wFxPtQ
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0/go.mod h1:/hQF30guXWLcIUiTYsXoQ0dUTHspo0q30nLBr1RE+Lw=
 github.com/hashicorp/vault-plugin-auth-oci v0.10.0 h1:ga65BC6q1A/1G/HfQOzy+irOqNhEx6gdnqlmNIemoLQ=
 github.com/hashicorp/vault-plugin-auth-oci v0.10.0/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
+github.com/hashicorp/vault-plugin-auth-oci v0.11.0 h1:DrdccnGU8O28I1MIs21zmbYM2Nta7RLOAzozvDSX9h0=
+github.com/hashicorp/vault-plugin-auth-oci v0.11.0/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
 github.com/hashicorp/vault-plugin-database-couchbase v0.7.0 h1:p//NCrYPF7AlCFtwKsO6dT7RvINSq3/x1VN19nfPlK4=
 github.com/hashicorp/vault-plugin-database-couchbase v0.7.0/go.mod h1:Xw7uSxLWTzyWRHZhOBoc51cBC2nmNc7ekPgaaKK7UWI=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.10.0 h1:zjgO/peqT419K7w1BQWTnepj6cuBkv2qYpkSqp01t3A=
