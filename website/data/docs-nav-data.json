@@ -1015,6 +1015,23 @@
         "path": "secrets/gcpkms"
       },
       {
+        "title": "Identity",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+      },
+      {
         "title": "Key Management <sup>ENTERPRISE</sup>",
         "routes": [
           {
@@ -1036,10 +1053,6 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secrets/kmip"
-      },
-      {
         "title": "Key/Value",
         "routes": [
           {
@@ -1057,21 +1070,12 @@
         ]
       },
       {
-        "title": "Identity",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/identity"
-          },
-          {
-            "title": "Identity Tokens",
-            "path": "secrets/identity/identity-token"
-          },
-          {
-            "title": "OIDC Identity Provider",
-            "path": "secrets/identity/oidc-provider"
-          }
-        ]
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secrets/kmip"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "secrets/kubernetes"
       },
       {
         "title": "MongoDB Atlas",
@@ -1933,7 +1937,24 @@
         "path": "enterprise/entropy-augmentation"
       },
       {
-        "title": "Seal Wrap / FIPS 140-2",
+        "title": "FIPS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/fips"
+          },
+          {
+            "title": "FIPS 140-2 Inside Vault",
+            "path": "enterprise/fips/fips1402"
+          },
+          {
+            "title": "Seal Wrap for FIPS 140-2",
+            "path": "enterprise/fips/sealwrap"
+          }
+        ]
+      },
+      {
+        "title": "Seal Wrap",
         "path": "enterprise/sealwrap"
       },
       {

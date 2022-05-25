@@ -379,9 +379,26 @@ used.
 
 ### `VAULT_HTTP_PROXY`
 
-HTTP proxy location which should be used to access Vault. When present, this
-overrides any other proxies found in the environment. Format should be
-`http://server:port`.
+HTTP or HTTPS proxy location which should be used by all requests to access Vault.
+ When present, this overrides the default proxy resolution behavior.
+Format should be `http://server:port` or `https://server:port`.
+
+(See `VAULT_PROXY_ADDR` below).
+
+### `VAULT_PROXY_ADDR`
+
+HTTP or HTTPS proxy location which should be used by all requests to access Vault.
+ When present, this overrides the default proxy resolution behavior.
+Format should be `http://server:port` or `https://server:port`.
+
+~> Note: When using `VAULT_HTTP_PROXY` or `VAULT_PROXY_ADDR` any of the standard
+ proxy variables found in the environment will be ignored.
+Specifically `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`.
+All requests will resolve the specified proxy; there is no way to exclude
+ domains from consulting the proxy server.
+
+~> Note: If both `VAULT_HTTP_PROXY` and `VAULT_PROXY_ADDR` environment
+variables are supplied, `VAULT_PROXY_ADDR` will be prioritized and preferred.
 
 ## Flags
 

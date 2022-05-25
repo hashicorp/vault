@@ -1,0 +1,35 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Multi-factor authentication
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box is-fullwidth is-sideless is-flex-between is-box-shadowless is-marginless">
+  <p>
+    Configure and enforce multi-factor authentication (MFA) for users logging into Vault, for any
+    <br />
+    authentication method.
+    <LearnLink @path="/tutorials/vault/multi-factor-authentication">
+      Learn more
+    </LearnLink>
+  </p>
+  <button type="submit" class="button is-primary" {{on "click" (transition-to "vault.cluster.access.mfa.methods.create")}}>
+    Configure MFA
+  </button>
+</div>
+<div class="box is-fullwidth is-shadowless">
+  <p>
+    <b>Step 1:</b>
+    Set up an MFA configuration using one of the methods; TOTP, Okta, Duo or Pingid.
+  </p>
+  <p>
+    <b>Step 2:</b>
+    Set up an enforcement to map the MFA configuration to your chosen auth method(s).
+  </p>
+</div>
+
+<div class="box is-fullwidth is-shadowless">
+  <img src={{img-path "~/mfa-landing.png"}} alt="MFA configure diagram" />
+</div>

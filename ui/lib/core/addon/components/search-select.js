@@ -16,7 +16,7 @@ import layout from '../templates/components/search-select';
  * @param {string} id - The name of the form field
  * @param {Array} models - An array of model types to fetch from the API.
  * @param {function} onChange - The onchange action for this form field.
- * @param {string | Array} inputValue -  A comma-separated string or an array of strings.
+ * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
  * @param {string} label - Label for this form field
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)

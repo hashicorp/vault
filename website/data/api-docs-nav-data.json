@@ -120,48 +120,6 @@
         "path": "secret/gcpkms"
       },
       {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secret/key-management"
-          },
-          {
-            "title": "Azure Key Vault",
-            "path": "secret/key-management/azurekeyvault"
-          },
-          {
-            "title": "AWS KMS",
-            "path": "secret/key-management/awskms"
-          },
-          {
-            "title": "GCP Cloud KMS",
-            "path": "secret/key-management/gcpkms"
-          }
-        ]
-      },
-      {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secret/kmip"
-      },
-      {
-        "title": "Key/Value",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secret/kv"
-          },
-          {
-            "title": "K/V Version 1",
-            "path": "secret/kv/kv-v1"
-          },
-          {
-            "title": "K/V Version 2",
-            "path": "secret/kv/kv-v2"
-          }
-        ]
-      },
-      {
         "title": "Identity",
         "routes": [
           {
@@ -226,6 +184,52 @@
             ]
           }
         ]
+      },
+      {
+        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/key-management"
+          },
+          {
+            "title": "Azure Key Vault",
+            "path": "secret/key-management/azurekeyvault"
+          },
+          {
+            "title": "AWS KMS",
+            "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
+          }
+        ]
+      },
+      {
+        "title": "Key/Value",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/kv"
+          },
+          {
+            "title": "K/V Version 1",
+            "path": "secret/kv/kv-v1"
+          },
+          {
+            "title": "K/V Version 2",
+            "path": "secret/kv/kv-v2"
+          }
+        ]
+      },
+      {
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secret/kmip"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "secret/kubernetes"
       },
       {
         "title": "MongoDB Atlas",

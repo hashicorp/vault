@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -108,10 +107,10 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 			conn += "?timezone=utc"
 		}
 	} else {
-		conn += " timezone=utc"
+		conn += "&timezone=utc"
 	}
 
-	b.db, err = sql.Open("postgres", conn)
+	b.db, err = sql.Open("pgx", conn)
 	if err != nil {
 		return nil, err
 	}

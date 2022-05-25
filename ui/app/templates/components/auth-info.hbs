@@ -16,6 +16,13 @@
               />
             </li>
           {{/if}}
+          {{#if this.hasEntityId}}
+            <li class="action">
+              <LinkTo @route="vault.cluster.mfa-setup">
+                Multi-factor authentication
+              </LinkTo>
+            </li>
+          {{/if}}
           <li class="action">
             <button type="button" class="link" onclick={{action "restartGuide"}}>
               Restart guide

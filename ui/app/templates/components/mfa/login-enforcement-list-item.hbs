@@ -1,0 +1,32 @@
+<LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.enforcements.enforcement" @model.id}}>
+  <div class="level is-mobile">
+    <div class="level-left">
+      <div>
+        <Icon @name="lock" />
+        <span class="has-text-weight-semibold has-text-black">
+          {{@model.name}}
+        </span>
+      </div>
+    </div>
+    <div class="level-right is-flex is-paddingless is-marginless">
+      <div class="level-item">
+        <PopupMenu>
+          <nav class="menu">
+            <ul class="menu-list">
+              <li>
+                <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement" @model={{@model.name}}>
+                  Details
+                </LinkTo>
+              </li>
+              <li>
+                <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement.edit" @model={{@model.name}}>
+                  Edit
+                </LinkTo>
+              </li>
+            </ul>
+          </nav>
+        </PopupMenu>
+      </div>
+    </div>
+  </div>
+</LinkedBlock>

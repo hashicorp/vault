@@ -56,8 +56,7 @@ export default class LineChart extends Component {
       );
     }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
-    const dataMax = max(filteredData.map((d) => d[this.yKey]));
-    const domainMax = Math.ceil(dataMax / 10) * 10; // we want to round UP to the nearest tens place ex. dataMax = 102, domainMax = 110
+    const domainMax = max(filteredData.map((d) => d[this.yKey]));
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 

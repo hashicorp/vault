@@ -325,18 +325,20 @@ func (kv *kvv2) DeleteVersions(ctx context.Context, secretPath string, versions 
 	// verb and path are different when trying to delete past versions
 	pathToDelete := fmt.Sprintf("%s/delete/%s", kv.mountPath, secretPath)
 
-	if len(versions) > 0 {
-		var versionsToDelete []string
-		for _, version := range versions {
-			versionsToDelete = append(versionsToDelete, strconv.Itoa(version))
-		}
-		versionsMap := map[string]interface{}{
-			"versions": versionsToDelete,
-		}
-		_, err := kv.c.Logical().WriteWithContext(ctx, pathToDelete, versionsMap)
-		if err != nil {
-			return fmt.Errorf("error deleting secret at %s: %w", pathToDelete, err)
-		}
+	if len(versions) == 0 {
+		return nil
+	}
+
+	var versionsToDelete []string
+	for _, version := range versions {
+		versionsToDelete = append(versionsToDelete, strconv.Itoa(version))
+	}
+	versionsMap := map[string]interface{}{
+		"versions": versionsToDelete,
+	}
+	_, err := kv.c.Logical().WriteWithContext(ctx, pathToDelete, versionsMap)
+	if err != nil {
+		return fmt.Errorf("error deleting secret at %s: %w", pathToDelete, err)
 	}
 
 	return nil
@@ -402,37 +404,39 @@ func extractDataAndVersionMetadata(secret *Secret) (*KVSecret, error) {
 func extractVersionMetadata(secret *Secret) (*KVVersionMetadata, error) {
 	var metadata *KVVersionMetadata
 
-	if secret.Data != nil {
-		// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
-		var metadataMap map[string]interface{}
-		metadataInterface, ok := secret.Data["metadata"]
-		if ok {
-			metadataMap, ok = metadataInterface.(map[string]interface{})
-			if !ok {
-				return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
-			}
-		} else {
-			metadataMap = secret.Data
-		}
+	if secret.Data == nil {
+		return nil, nil
+	}
 
-		// deletion_time usually comes in as an empty string which can't be
-		// processed as time.RFC3339, so we reset it to a convertible value
-		if metadataMap["deletion_time"] == "" {
-			metadataMap["deletion_time"] = time.Time{}
+	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
+	var metadataMap map[string]interface{}
+	metadataInterface, ok := secret.Data["metadata"]
+	if ok {
+		metadataMap, ok = metadataInterface.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
 		}
+	} else {
+		metadataMap = secret.Data
+	}
 
-		d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
-			Result:     &metadata,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error setting up decoder for API response: %w", err)
-		}
+	// deletion_time usually comes in as an empty string which can't be
+	// processed as time.RFC3339, so we reset it to a convertible value
+	if metadataMap["deletion_time"] == "" {
+		metadataMap["deletion_time"] = time.Time{}
+	}
 
-		err = d.Decode(metadataMap)
-		if err != nil {
-			return nil, fmt.Errorf("error decoding metadata from API response into VersionMetadata: %w", err)
-		}
+	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
+		Result:     &metadata,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error setting up decoder for API response: %w", err)
+	}
+
+	err = d.Decode(metadataMap)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding metadata from API response into VersionMetadata: %w", err)
 	}
 
 	return metadata, nil
@@ -441,43 +445,45 @@ func extractVersionMetadata(secret *Secret) (*KVVersionMetadata, error) {
 func extractFullMetadata(secret *Secret) (*KVMetadata, error) {
 	var metadata *KVMetadata
 
-	if secret.Data != nil {
-		if versions, ok := secret.Data["versions"]; ok {
-			versionsMap := versions.(map[string]interface{})
-			if len(versionsMap) > 0 {
-				for version, metadata := range versionsMap {
-					metadataMap := metadata.(map[string]interface{})
-					// deletion_time usually comes in as an empty string which can't be
-					// processed as time.RFC3339, so we reset it to a convertible value
-					if metadataMap["deletion_time"] == "" {
-						metadataMap["deletion_time"] = time.Time{}
-					}
-					versionInt, err := strconv.Atoi(version)
-					if err != nil {
-						return nil, fmt.Errorf("error converting version %s to integer: %w", version, err)
-					}
-					metadataMap["version"] = versionInt
-					versionsMap[version] = metadataMap // save the updated copy of the metadata map
+	if secret.Data == nil {
+		return nil, nil
+	}
+
+	if versions, ok := secret.Data["versions"]; ok {
+		versionsMap := versions.(map[string]interface{})
+		if len(versionsMap) > 0 {
+			for version, metadata := range versionsMap {
+				metadataMap := metadata.(map[string]interface{})
+				// deletion_time usually comes in as an empty string which can't be
+				// processed as time.RFC3339, so we reset it to a convertible value
+				if metadataMap["deletion_time"] == "" {
+					metadataMap["deletion_time"] = time.Time{}
 				}
+				versionInt, err := strconv.Atoi(version)
+				if err != nil {
+					return nil, fmt.Errorf("error converting version %s to integer: %w", version, err)
+				}
+				metadataMap["version"] = versionInt
+				versionsMap[version] = metadataMap // save the updated copy of the metadata map
 			}
-			secret.Data["versions"] = versionsMap // save the updated copy of the versions map
 		}
+		secret.Data["versions"] = versionsMap // save the updated copy of the versions map
+	}
 
-		d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-				mapstructure.StringToTimeDurationHookFunc(),
-			),
-			Result: &metadata,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error setting up decoder for API response: %w", err)
-		}
+	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeHookFunc(time.RFC3339),
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+		Result: &metadata,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error setting up decoder for API response: %w", err)
+	}
 
-		err = d.Decode(secret.Data)
-		if err != nil {
-			return nil, fmt.Errorf("error decoding metadata from API response into KVMetadata: %w", err)
-		}
+	err = d.Decode(secret.Data)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding metadata from API response into KVMetadata: %w", err)
 	}
 
 	return metadata, nil

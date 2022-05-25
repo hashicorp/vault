@@ -1,37 +1,53 @@
-{{#if this.label}}
-  <label for={{this.name}} class="is-label">
-    {{this.label}}
-    {{#if this.helpText}}
-      <InfoTooltip>
-        <span data-test-help-text>{{this.helpText}}</span>
-      </InfoTooltip>
-    {{/if}}
-  </label>
-{{/if}}
-{{#if this.authMethods.isRunning}}
-  <div>
-    <span class="loader is-inline-block"></span>
-  </div>
-{{else if this.authMethods.last.value}}
-  <div class="control is-expanded">
-    <div class="select is-fullwidth">
-      <select name={{this.name}} id={{this.name}} onchange={{action "change" value="target.value"}}>
-        {{#each this.authMethods.last.value as |method|}}
-          <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
-            {{method.path}}
-            ({{method.type}})
-          </option>
-        {{/each}}
-      </select>
+<div ...attributes>
+  {{#if @label}}
+    <label for={{@name}} class="is-label">
+      {{@label}}
+      {{#if @helpText}}
+        <InfoTooltip>
+          <span data-test-help-text>{{@helpText}}</span>
+        </InfoTooltip>
+      {{/if}}
+    </label>
+  {{/if}}
+  {{#if this.authMethods.isRunning}}
+    <div>
+      <span class="loader is-inline-block"></span>
     </div>
-  </div>
-{{else}}
-  <input
-    name={{this.name}}
-    id={{this.name}}
-    class="input"
-    value={{this.value}}
-    placeholder="Mount accessor"
-    onchange={{action "change" value="target.value"}}
-  />
-{{/if}}
+  {{else if this.authMethods.last.value}}
+    <div class="control is-expanded">
+      <div class="select is-fullwidth">
+        <select name={{@name}} id={{@name}} {{on "change" this.change}} data-test-mount-accessor-select>
+          {{#if this.noDefault}}
+            <option value="">Select one</option>
+          {{/if}}
+          {{#each this.authMethods.last.value as |method|}}
+            {{! token type does not need to be authorized via MFA }}
+            {{#if this.filterToken}}
+              {{#if (not-eq method.id "token")}}
+                <option selected={{eq @value method.accessor}} value={{method.accessor}}>
+                  {{method.path}}
+                  ({{if @showAccessor method.accessor method.type}})
+                </option>
+              {{/if}}
+            {{else}}
+              <option selected={{eq @value method.accessor}} value={{method.accessor}}>
+                {{method.path}}
+                ({{if @showAccessor method.accessor method.type}})
+              </option>
+            {{/if}}
+          {{/each}}
+        </select>
+      </div>
+    </div>
+  {{else}}
+    <input
+      name={{@name}}
+      id={{@name}}
+      class="input"
+      value={{@value}}
+      placeholder="Mount accessor"
+      {{on "change" this.change}}
+      data-test-mount-accessor-default
+    />
+  {{/if}}
+</div>

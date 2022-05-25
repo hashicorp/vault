@@ -159,7 +159,9 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
 			RoleName:    req.GetUsernameConfig().GetRoleName(),
 		},
+		CredentialType:     CredentialType(req.GetCredentialType()),
 		Password:           req.GetPassword(),
+		PublicKey:          req.GetPublicKey(),
 		Expiration:         expiration,
 		Statements:         getStatementsFromProto(req.GetStatements()),
 		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
@@ -207,6 +209,14 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 		}
 	}
 
+	var publicKey *ChangePublicKey
+	if req.GetPublicKey() != nil && len(req.GetPublicKey().GetNewPublicKey()) > 0 {
+		publicKey = &ChangePublicKey{
+			NewPublicKey: req.GetPublicKey().GetNewPublicKey(),
+			Statements:   getStatementsFromProto(req.GetPublicKey().GetStatements()),
+		}
+	}
+
 	var expiration *ChangeExpiration
 	if req.GetExpiration() != nil && req.GetExpiration().GetNewExpiration() != nil {
 		newExpiration, err := ptypes.Timestamp(req.GetExpiration().GetNewExpiration())
@@ -221,9 +231,11 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	}
 
 	dbReq := UpdateUserRequest{
-		Username:   req.GetUsername(),
-		Password:   password,
-		Expiration: expiration,
+		Username:       req.GetUsername(),
+		CredentialType: CredentialType(req.GetCredentialType()),
+		Password:       password,
+		PublicKey:      publicKey,
+		Expiration:     expiration,
 	}
 
 	if !hasChange(dbReq) {
@@ -235,6 +247,9 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 
 func hasChange(dbReq UpdateUserRequest) bool {
 	if dbReq.Password != nil && dbReq.Password.NewPassword != "" {
+		return true
+	}
+	if dbReq.PublicKey != nil && len(dbReq.PublicKey.NewPublicKey) > 0 {
 		return true
 	}
 	if dbReq.Expiration != nil && !dbReq.Expiration.NewExpiration.IsZero() {

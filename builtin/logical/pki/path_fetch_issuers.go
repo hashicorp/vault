@@ -127,6 +127,12 @@ and always set.`,
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
+			logical.PatchOperation: &framework.PathOperation{
+				Callback: b.pathPatchIssuer,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathGetIssuerHelpSyn,
@@ -225,6 +231,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// When the new name is in use but isn't this name, throw an error.
 		return logical.ErrorResponse(err.Error()), nil
 	}
+	if len(newName) > 0 && !nameMatcher.MatchString(newName) {
+		return logical.ErrorResponse("new key name outside of valid character limits"), nil
+	}
 
 	newPath := data.Get("manual_chain").([]string)
 	rawLeafBehavior := data.Get("leaf_not_after_behavior").(string)
@@ -248,7 +257,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	modified := false
 
+	var oldName string
 	if newName != issuer.Name {
+		oldName = issuer.Name
 		issuer.Name = newName
 		modified = true
 	}
@@ -309,7 +320,165 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		}
 	}
 
-	return respondReadIssuer(issuer)
+	response, err := respondReadIssuer(issuer)
+	if newName != oldName {
+		addWarningOnDereferencing(oldName, response, ctx, req.Storage)
+	}
+
+	return response, err
+}
+
+func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not patch issuer until migration has completed"), nil
+	}
+
+	// First we fetch the issuer
+	issuerName := getIssuerRef(data)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
+
+	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	if err != nil {
+		return nil, err
+	}
+	if ref == "" {
+		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
+	}
+
+	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	// Now We are Looking at What (Might) Have Changed
+	modified := false
+
+	// Name Changes First
+	_, ok := data.GetOk("issuer_name") // Don't check for conflicts if we aren't updating the name
+	var oldName string
+	var newName string
+	if ok {
+		newName, err = getIssuerName(ctx, req.Storage, data)
+		if err != nil && err != errIssuerNameInUse {
+			// If the error is name already in use, and the new name is the
+			// old name for this issuer, we're not actually updating the
+			// issuer name (or causing a conflict) -- so don't err out. Other
+			// errs should still be surfaced, however.
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		if err == errIssuerNameInUse && issuer.Name != newName {
+			// When the new name is in use but isn't this name, throw an error.
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		if len(newName) > 0 && !nameMatcher.MatchString(newName) {
+			return logical.ErrorResponse("new key name outside of valid character limits"), nil
+		}
+		if newName != issuer.Name {
+			oldName = issuer.Name
+			issuer.Name = newName
+			modified = true
+		}
+	}
+
+	// Leaf Not After Changes
+	rawLeafBehaviorData, ok := data.GetOk("leaf_not_after_behaivor")
+	if ok {
+		rawLeafBehavior := rawLeafBehaviorData.(string)
+		var newLeafBehavior certutil.NotAfterBehavior
+		switch rawLeafBehavior {
+		case "err":
+			newLeafBehavior = certutil.ErrNotAfterBehavior
+		case "truncate":
+			newLeafBehavior = certutil.TruncateNotAfterBehavior
+		case "permit":
+			newLeafBehavior = certutil.PermitNotAfterBehavior
+		default:
+			return logical.ErrorResponse("Unknown value for field `leaf_not_after_behavior`. Possible values are `err`, `truncate`, and `permit`."), nil
+		}
+		if newLeafBehavior != issuer.LeafNotAfterBehavior {
+			issuer.LeafNotAfterBehavior = newLeafBehavior
+			modified = true
+		}
+	}
+
+	// Usage Changes
+	rawUsageData, ok := data.GetOk("usage")
+	if ok {
+		rawUsage := rawUsageData.([]string)
+		newUsage, err := NewIssuerUsageFromNames(rawUsage)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
+		}
+		if newUsage != issuer.Usage {
+			issuer.Usage = newUsage
+			modified = true
+		}
+	}
+
+	// Manual Chain Changes
+	newPathData, ok := data.GetOk("manual_chain")
+	if ok {
+		newPath := newPathData.([]string)
+		var updateChain bool
+		var constructedChain []issuerID
+		for index, newPathRef := range newPath {
+			// Allow self for the first entry.
+			if index == 0 && newPathRef == "self" {
+				newPathRef = string(ref)
+			}
+
+			resolvedId, err := resolveIssuerReference(ctx, req.Storage, newPathRef)
+			if err != nil {
+				return nil, err
+			}
+
+			if index == 0 && resolvedId != ref {
+				return logical.ErrorResponse(fmt.Sprintf("expected first cert in chain to be a self-reference, but was: %v/%v", newPathRef, resolvedId)), nil
+			}
+
+			constructedChain = append(constructedChain, resolvedId)
+			if len(issuer.ManualChain) < len(constructedChain) || constructedChain[index] != issuer.ManualChain[index] {
+				updateChain = true
+			}
+		}
+
+		if len(issuer.ManualChain) != len(constructedChain) {
+			updateChain = true
+		}
+
+		if updateChain {
+			issuer.ManualChain = constructedChain
+
+			// Building the chain will write the issuer to disk; no need to do it
+			// twice.
+			modified = false
+			err := rebuildIssuersChains(ctx, req.Storage, issuer)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if modified {
+		err := writeIssuer(ctx, req.Storage, issuer)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	response, err := respondReadIssuer(issuer)
+	if newName != oldName {
+		addWarningOnDereferencing(oldName, response, ctx, req.Storage)
+	}
+
+	return response, err
 }
 
 func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -393,21 +562,31 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 
 	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
 	if err != nil {
+		// Return as if we deleted it if we fail to lookup the issuer.
+		if ref == IssuerRefNotFound {
+			return &logical.Response{}, nil
+		}
 		return nil, err
 	}
-	if ref == "" {
-		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
+
+	response := &logical.Response{}
+
+	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	if err != nil {
+		return nil, err
 	}
+	if issuer.Name != "" {
+		addWarningOnDereferencing(issuer.Name, response, ctx, req.Storage)
+	}
+	addWarningOnDereferencing(string(issuer.ID), response, ctx, req.Storage)
 
 	wasDefault, err := deleteIssuer(ctx, req.Storage, ref)
 	if err != nil {
 		return nil, err
 	}
-
-	var response *logical.Response
 	if wasDefault {
-		response = &logical.Response{}
 		response.AddWarning(fmt.Sprintf("Deleted issuer %v (via issuer_ref %v); this was configured as the default issuer. Operations without an explicit issuer will not work until a new default is configured.", ref, issuerName))
+		addWarningOnDereferencing(defaultRef, response, ctx, req.Storage)
 	}
 
 	// Since we've deleted an issuer, the chains might've changed. Call the
@@ -420,6 +599,21 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	return response, nil
+}
+
+func addWarningOnDereferencing(name string, resp *logical.Response, ctx context.Context, s logical.Storage) {
+	timeout, inUseBy, err := checkForRolesReferencing(name, ctx, s)
+	if err != nil || timeout {
+		if inUseBy == 0 {
+			resp.AddWarning(fmt.Sprint("Unable to check if any roles referenced this issuer by ", name))
+		} else {
+			resp.AddWarning(fmt.Sprint("The name ", name, " was in use by at least ", inUseBy, " roles"))
+		}
+	} else {
+		if inUseBy > 0 {
+			resp.AddWarning(fmt.Sprint(inUseBy, " roles reference ", name))
+		}
+	}
 }
 
 const (

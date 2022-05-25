@@ -848,3 +848,58 @@ $ curl \
   "warnings": null
 }
 ```
+
+## Activity Export
+
+This endpoint returns an export of the clients that had activity within the
+provided start and end times. The returned set of client information will be
+deduplicated over the time window and will show the earliest activity logged for
+each client. The output will be ordered chronologically by month of activity.
+
+~> **NOTE**: This endpoint is currently in tech preview status.
+
+There are a few things to keep in mind while using this API.
+
+- The response includes the actual time period covered, which may not exactly
+match the query parameters due to the month granularity of data or missing
+months in the requested time range.
+
+- If the `end_date` supplied to the API is for the current month, the activity
+information returned by this API will include activity for this month, however
+it may be up to 20 minutes delayed.
+
+This endpoint was added in Vault 1.11.
+
+| Method | Path                                      |
+| :----- | :---------------------------------------- |
+| `GET`  | `/sys/internal/counters/activity/export` |
+
+### Parameters
+
+- `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
+  period for which client counts will be reported. If no start time is specified, the `default_report_months`
+  prior to the `end_time` will be used.
+- `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
+  for which client counts will be reported. If no end time is specified, the end of the previous calendar
+  month will be used.
+- `format` `(string, optional)` - The desired format of the output file. Allowed
+    values are `csv` and `json`. If no format is provided a default of `json`
+    will be used.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity/export
+```
+
+### Sample Response
+
+```json
+{"client_id":"3f210722-7210-98e8-1f0d-e6a39ffb29c6","namespace_id":"root","timestamp":1653350457,"mount_accessor":"auth_userpass_bb52979d"}
+{"client_id":"X/Yed4Oj4cqODj9tSHjKwnRy5QVSBRlX3COxjjWSXyI=","namespace_id":"root","timestamp":1653350491,"non_entity":true,"mount_accessor":"auth_token_f6f2c11c"}
+{"client_id":"d93405dc-b592-b1c3-a520-14e618d359c1","namespace_id":"root","timestamp":1653350501,"mount_accessor":"auth_userpass_bb52979d"}
+```
+

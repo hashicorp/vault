@@ -1,7 +1,9 @@
 package pki
 
 import (
+	"bytes"
 	"context"
+	"encoding/pem"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -80,7 +82,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 
 	keyName, err := getKeyName(ctx, req.Storage, data)
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	exportPrivateKey := false
@@ -173,7 +175,7 @@ func pathImportKey(b *backend) *framework.Path {
 const (
 	pathImportKeyHelpSyn  = `Import the specified key.`
 	pathImportKeyHelpDesc = `This endpoint allows importing a specified issuer key from a pem bundle.
-If name is set, that will be set on the key.`
+If key_name is set, that will be set on the key, assuming the key did not exist previously.`
 )
 
 func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -186,14 +188,31 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("Cannot import keys until migration has completed"), nil
 	}
 
-	keyValueInterface, isOk := data.GetOk("pem_bundle")
-	if !isOk {
-		return logical.ErrorResponse("keyValue must be set"), nil
+	pemBundle := data.Get("pem_bundle").(string)
+	keyName, err := getKeyName(ctx, req.Storage, data)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
-	keyValue := keyValueInterface.(string)
-	keyName := data.Get(keyNameParam).(string)
 
-	key, existed, err := importKeyFromBytes(ctx, b, req.Storage, keyValue, keyName)
+	pemBytes := []byte(pemBundle)
+	var pemBlock *pem.Block
+
+	var keys []string
+	for len(bytes.TrimSpace(pemBytes)) > 0 {
+		pemBlock, pemBytes = pem.Decode(pemBytes)
+		if pemBlock == nil {
+			return logical.ErrorResponse("provided PEM block contained no data"), nil
+		}
+
+		pemBlockString := string(pem.EncodeToMemory(pemBlock))
+		keys = append(keys, pemBlockString)
+	}
+
+	if len(keys) != 1 {
+		return logical.ErrorResponse("only a single key can be present within the pem_bundle for importing"), nil
+	}
+
+	key, existed, err := importKeyFromBytes(ctx, b, req.Storage, keys[0], keyName)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

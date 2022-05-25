@@ -108,6 +108,9 @@ type Auth struct {
 
 	// MFARequirement
 	MFARequirement *MFARequirement `json:"mfa_requirement"`
+
+	// EntityCreated is set to true if an entity is created as part of a login request
+	EntityCreated bool `json:"entity_created"`
 }
 
 func (a *Auth) GoString() string {

@@ -19,6 +19,7 @@ import (
 	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
 	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
+	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
@@ -120,6 +121,7 @@ func newRegistry() *registry {
 			"consul":       logicalConsul.Factory,
 			"gcp":          logicalGcp.Factory,
 			"gcpkms":       logicalGcpKms.Factory,
+			"kubernetes":   logicalKube.Factory,
 			"kv":           logicalKv.Factory,
 			"mongodb":      logicalMongo.Factory, // Deprecated
 			"mongodbatlas": logicalMongoAtlas.Factory,

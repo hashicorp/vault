@@ -283,6 +283,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Metadata:                  auth.Metadata,
 			RemainingUses:             req.ClientTokenRemainingUses,
 			EntityID:                  auth.EntityID,
+			EntityCreated:             auth.EntityCreated,
 			TokenType:                 auth.TokenType.String(),
 			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
@@ -415,6 +416,7 @@ type AuditAuth struct {
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
 	EntityID                  string              `json:"entity_id,omitempty"`
+	EntityCreated             bool                `json:"entity_created,omitempty"`
 	TokenType                 string              `json:"token_type,omitempty"`
 	TokenTTL                  int64               `json:"token_ttl,omitempty"`
 	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
