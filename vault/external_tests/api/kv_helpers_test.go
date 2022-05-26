@@ -50,11 +50,13 @@ func TestKVHelpers(t *testing.T) {
 
 	//// v1 ////
 	t.Run("kv v1 helpers", func(t *testing.T) {
-		if err := client.KVv1("secret").Put(context.Background(), "my-secret", secretData); err != nil {
+		mountPath := "secret"
+		secretPath := "my-secret"
+		if err := client.KVv1(mountPath).Put(context.Background(), secretPath, secretData); err != nil {
 			t.Fatal(err)
 		}
 
-		secret, err := client.KVv1("secret").Get(context.Background(), "my-secret")
+		secret, err := client.KVv1(mountPath).Get(context.Background(), secretPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -63,15 +65,17 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatalf("kv v1 secret did not contain expected value")
 		}
 
-		if err := client.KVv1("secret").Delete(context.Background(), "my-secret"); err != nil {
+		if err := client.KVv1(mountPath).Delete(context.Background(), secretPath); err != nil {
 			t.Fatal(err)
 		}
 	})
 
 	//// v2 ////
 	t.Run("kv v2 helpers", func(t *testing.T) {
+		mountPath := "secret-v2"
+		secretPath := "my-secret"
 		// create a secret
-		writtenSecret, err := client.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData)
+		writtenSecret, err := client.KVv2(mountPath).Put(context.Background(), secretPath, secretData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -79,7 +83,7 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatal("kv v2 secret did not have expected contents")
 		}
 
-		secret, err := client.KVv2("secret-v2").Get(context.Background(), "my-secret")
+		secret, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,7 +95,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// get its full metadata
-		fullMetadata, err := client.KVv2("secret-v2").GetMetadata(context.Background(), "my-secret")
+		fullMetadata, err := client.KVv2(mountPath).GetMetadata(context.Background(), secretPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -100,14 +104,14 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// create a second version
-		_, err = client.KVv2("secret-v2").Put(context.Background(), "my-secret", map[string]interface{}{
+		_, err = client.KVv2(mountPath).Put(context.Background(), secretPath, map[string]interface{}{
 			"foo": "baz",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		s2, err := client.KVv2("secret-v2").Get(context.Background(), "my-secret")
+		s2, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,7 +123,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// get a specific past version
-		s1, err := client.KVv2("secret-v2").GetVersion(context.Background(), "my-secret", 1)
+		s1, err := client.KVv2(mountPath).GetVersion(context.Background(), secretPath, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,11 +132,11 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// delete that version
-		if err = client.KVv2("secret-v2").DeleteVersions(context.Background(), "my-secret", []int{1}); err != nil {
+		if err = client.KVv2(mountPath).DeleteVersions(context.Background(), secretPath, []int{1}); err != nil {
 			t.Fatal(err)
 		}
 
-		s1AfterDelete, err := client.KVv2("secret-v2").GetVersion(context.Background(), "my-secret", 1)
+		s1AfterDelete, err := client.KVv2(mountPath).GetVersion(context.Background(), secretPath, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -148,7 +152,7 @@ func TestKVHelpers(t *testing.T) {
 		// check that KVOption works
 		////
 		// WithCheckAndSet
-		_, err = client.KVv2("secret-v2").Put(context.Background(), "my-secret", map[string]interface{}{
+		_, err = client.KVv2(mountPath).Put(context.Background(), secretPath, map[string]interface{}{
 			"meow": "woof",
 		}, api.WithCheckAndSet(99))
 		// should fail
@@ -157,7 +161,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// WithOption (generic)
-		_, err = client.KVv2("secret-v2").Put(context.Background(), "my-secret", map[string]interface{}{
+		_, err = client.KVv2(mountPath).Put(context.Background(), secretPath, map[string]interface{}{
 			"bow": "wow",
 		}, api.WithOption("cas", 99))
 		// should fail
@@ -166,30 +170,39 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// WithMethod Patch (implicit)
-		_, err = client.KVv2("secret-v2").Patch(context.Background(), "my-secret", map[string]interface{}{
+		patch, err := client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
 			"dog": "cat",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
+		if patch.VersionMetadata.Version != 3 {
+			t.Fatalf("incorrect version %d, expected 3", patch.VersionMetadata.Version)
+		}
 
 		// WithMethod Patch (explicit)
-		_, err = client.KVv2("secret-v2").Patch(context.Background(), "my-secret", map[string]interface{}{
+		patchExp, err := client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
 			"rat": "mouse",
 		}, api.WithMethod("patch"))
 		if err != nil {
 			t.Fatal(err)
 		}
+		if patchExp.VersionMetadata.Version != 4 {
+			t.Fatalf("incorrect version %d, expected 4", patchExp.VersionMetadata.Version)
+		}
 
 		// WithMethod RW
-		_, err = client.KVv2("secret-v2").Patch(context.Background(), "my-secret", map[string]interface{}{
+		patchRW, err := client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
 			"bird": "tweet",
 		}, api.WithMethod("rw"))
 		if err != nil {
 			t.Fatal(err)
 		}
+		if patchRW.VersionMetadata.Version != 5 {
+			t.Fatalf("incorrect version %d, expected 5", patchRW.VersionMetadata.Version)
+		}
 
-		secretAfterPatches, err := client.KVv2("secret-v2").Get(context.Background(), "my-secret")
+		secretAfterPatches, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -205,10 +218,14 @@ func TestKVHelpers(t *testing.T) {
 		if !ok {
 			t.Fatalf("secret did not contain data patched with RW method")
 		}
+		value, ok := secretAfterPatches.Data["foo"]
+		if !ok || value != "baz" {
+			t.Fatalf("secret did not keep original data after patch")
+		}
 		////
 
 		// get versions as list
-		versions, err := client.KVv2("secret-v2").GetVersionsAsList(context.Background(), "my-secret")
+		versions, err := client.KVv2(mountPath).GetVersionsAsList(context.Background(), secretPath)
 		if err != nil {
 			t.Fatal(err)
 		}

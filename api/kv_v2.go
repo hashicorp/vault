@@ -245,70 +245,42 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 // only be able to use the old "rw" (read-then-write) style of partial update,
 // whereas newer Vault servers can use the default value of "patch" if the
 // client token's policy has the "patch" capability.
-func (kv *kvv2) Patch(ctx context.Context, secretPath string, data map[string]interface{}, opts ...KVOption) (*KVSecret, error) {
-	pathToUpdate := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
-
-	wrappedData := map[string]interface{}{
-		"data": data,
-	}
-
-	// Add options such as check-and-set, etc.
-	options := make(map[string]interface{})
+func (kv *kvv2) Patch(ctx context.Context, secretPath string, newData map[string]interface{}, opts ...KVOption) (*KVSecret, error) {
+	// determine patch method
+	var patchMethod string
+	var ok bool
 	for _, opt := range opts {
 		k, v := opt()
-		options[k] = v
-	}
-	if len(opts) > 0 {
-		wrappedData["options"] = options
-	}
-
-	var patchMethod string
-	if m, ok := options["method"]; ok {
-		patchMethod, ok = m.(string)
-		if !ok {
-			return nil, fmt.Errorf("unsupported type provided for option value; value for patch method should be string \"rw\" or \"patch\"")
+		if k == "method" {
+			patchMethod, ok = v.(string)
+			if !ok {
+				return nil, fmt.Errorf("unsupported type provided for option value; value for patch method should be string \"rw\" or \"patch\"")
+			}
 		}
 	}
 
 	// Determine which kind of patch to use,
 	// the newer HTTP Patch style or the older read-then-write style
-	var secret *Secret
+	var kvs *KVSecret
 	var perr error
 	switch patchMethod {
 	case "rw":
-		secret, perr = readThenWrite(ctx, kv.c, pathToUpdate, wrappedData)
+		kvs, perr = readThenWrite(ctx, kv.c, kv.mountPath, secretPath, newData)
 	case "patch":
-		secret, perr = mergePatch(ctx, kv.c, pathToUpdate, wrappedData)
+		kvs, perr = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
 	case "":
-		secret, perr = mergePatch(ctx, kv.c, pathToUpdate, wrappedData)
+		kvs, perr = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
 	default:
 		return nil, fmt.Errorf("unsupported patch method provided; value for patch method should be string \"rw\" or \"patch\"")
 	}
 	if perr != nil {
 		return nil, fmt.Errorf("unable to perform patch: %w", perr)
 	}
-	if secret == nil {
-		return nil, fmt.Errorf("no secret was written to %s", pathToUpdate)
+	if kvs == nil {
+		return nil, fmt.Errorf("no secret was written to %s", secretPath)
 	}
 
-	metadata, err := extractVersionMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("secret was written successfully, but unable to view version metadata from response: %w", err)
-	}
-
-	kvSecret := &KVSecret{
-		Data:            nil, // secret.Data in this case is the metadata
-		VersionMetadata: metadata,
-		Raw:             secret,
-	}
-
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToUpdate, err)
-	}
-	kvSecret.CustomMetadata = cm
-
-	return kvSecret, nil
+	return kvs, nil
 }
 
 // Delete deletes the most recent version of a secret from the KV v2
@@ -494,86 +466,91 @@ func extractFullMetadata(secret *Secret) (*KVMetadata, error) {
 	return metadata, nil
 }
 
-func mergePatch(ctx context.Context, client *Client, path string, wrappedData map[string]interface{}) (*Secret, error) {
-	secret, err := client.Logical().JSONMergePatch(ctx, path, wrappedData)
+func mergePatch(ctx context.Context, client *Client, mountPath string, secretPath string, newData map[string]interface{}, opts ...KVOption) (*KVSecret, error) {
+	pathToMergePatch := fmt.Sprintf("%s/data/%s", mountPath, secretPath)
+
+	// take any other additional options provided
+	// and pass them along to the patch request
+	wrappedData := map[string]interface{}{
+		"data": newData,
+	}
+	options := make(map[string]interface{})
+	for _, opt := range opts {
+		k, v := opt()
+		options[k] = v
+	}
+	if len(opts) > 0 {
+		wrappedData["options"] = options
+	}
+
+	secret, err := client.Logical().JSONMergePatch(ctx, pathToMergePatch, wrappedData)
 	if err != nil {
 		// If it's a 405, that probably means the server is running a pre-1.9
 		// Vault version that doesn't support the HTTP PATCH method.
 		// Fall back to the old way of doing it.
 		if re, ok := err.(*ResponseError); ok && re.StatusCode == 405 {
-			return readThenWrite(ctx, client, path, wrappedData)
+			return readThenWrite(ctx, client, mountPath, secretPath, newData)
 		}
 
 		if re, ok := err.(*ResponseError); ok && re.StatusCode == 403 {
 			return nil, fmt.Errorf("received 403 from Vault server; please ensure that token's policy has \"patch\" capability: %w", err)
 		}
 
-		return nil, fmt.Errorf("error performing merge patch to %s: %s", path, err)
+		return nil, fmt.Errorf("error performing merge patch to %s: %s", pathToMergePatch, err)
 	}
 
-	return secret, nil
+	metadata, err := extractVersionMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("secret was written successfully, but unable to view version metadata from response: %w", err)
+	}
+
+	kvSecret := &KVSecret{
+		Data:            nil, // secret.Data in this case is the metadata
+		VersionMetadata: metadata,
+		Raw:             secret,
+	}
+
+	cm, err := extractCustomMetadata(secret)
+	if err != nil {
+		return nil, fmt.Errorf("error reading custom metadata for secret %s: %w", secretPath, err)
+	}
+	kvSecret.CustomMetadata = cm
+
+	return kvSecret, nil
 }
 
-func readThenWrite(ctx context.Context, client *Client, path string, wrappedData map[string]interface{}) (*Secret, error) {
+func readThenWrite(ctx context.Context, client *Client, mountPath string, secretPath string, newData map[string]interface{}) (*KVSecret, error) {
 	// First, read the secret.
-	secret, err := client.Logical().ReadWithContext(ctx, path)
+	existingVersion, err := client.KVv2(mountPath).Get(ctx, secretPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading secret as part of read-then-write patch operation: %w", err)
 	}
 
 	// Make sure the secret already exists
-	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no existing secret was found at %s when doing read-then-write patch operation: %w", path, err)
+	if existingVersion == nil || existingVersion.Data == nil {
+		return nil, fmt.Errorf("no existing secret was found at %s when doing read-then-write patch operation: %w", secretPath, err)
 	}
 
 	// Verify existing secret has metadata
-	rawMeta, ok := secret.Data["metadata"]
-	if !ok || rawMeta == nil {
-		return nil, fmt.Errorf("no metadata found at %s; patch can only be used on existing data", path)
-	}
-	meta, ok := rawMeta.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("metadata found at %s is not the expected type (JSON object)", path)
-	}
-	if meta == nil {
-		return nil, fmt.Errorf("no metadata found at %s; patch can only be used on existing data", path)
+	if existingVersion.VersionMetadata == nil {
+		return nil, fmt.Errorf("no metadata found at %s; patch can only be used on existing data", secretPath)
 	}
 
 	// Verify existing secret has data
-	rawData, ok := secret.Data["data"]
-	if !ok || rawData == nil {
-		return nil, fmt.Errorf("no data found at %s; patch can only be used on existing data", path)
-	}
-	data, ok := rawData.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("data found at %s is not the expected type (JSON object)", path)
-	}
-	if data == nil {
-		return nil, fmt.Errorf("no data found at %s; patch can only be used on existing data", path)
+	if existingVersion.Data == nil {
+		return nil, fmt.Errorf("no data found at %s; patch can only be used on existing data", secretPath)
 	}
 
 	// Copy new data over with existing data
-	newData, ok := wrappedData["data"]
-	if !ok || newData == nil {
-		return nil, fmt.Errorf("no key-value data provided to update with")
-	}
-	newDataMap, ok := newData.(map[string]interface{})
-	if !ok || newDataMap == nil {
-		return nil, fmt.Errorf("no key-value data in map provided to update with")
-	}
-	for k, v := range newDataMap {
-		data[k] = v
+	combinedData := existingVersion.Data
+	for k, v := range newData {
+		combinedData[k] = v
 	}
 
-	secret, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{
-		"data": data,
-		"options": map[string]interface{}{
-			"cas": meta["version"], // this is the only KVOption that matters for RW-style requests, so we set it explicitly
-		},
-	})
+	updatedSecret, err := client.KVv2(mountPath).Put(ctx, secretPath, combinedData, WithCheckAndSet(existingVersion.VersionMetadata.Version))
 	if err != nil {
-		return nil, fmt.Errorf("error writing secret to %s: %w", path, err)
+		return nil, fmt.Errorf("error writing secret to %s: %w", secretPath, err)
 	}
 
-	return secret, nil
+	return updatedSecret, nil
 }
