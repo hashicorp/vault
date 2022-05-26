@@ -6,7 +6,13 @@
   <div class="field has-top-margin-l">
     <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
     {{#if @warning}}
-      <AlertBanner @type="info" @title="MFA enabled" @message={{@warning}} class="has-top-margin-l" data-test-warning />
+      <AlertBanner
+        @type="info"
+        @title="MFA enabled"
+        @message={{@warning}}
+        class="has-top-margin-l"
+        data-test-mfa-enabled-warning
+      />
     {{else}}
       <div class="list-item-row">
         <div class="center-display">
@@ -35,7 +41,7 @@
       <button id="restart" type="button" class="button has-text-danger" {{on "click" this.restartSetup}} data-test-restart>
         Restart setup
       </button>
-      <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button is-primary">
+      <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button is-primary" data-test-done>
         Done
       </button>
     </div>

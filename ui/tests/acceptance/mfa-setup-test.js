@@ -50,8 +50,8 @@ module('Acceptance | mfa-setup', function (hooks) {
   });
 
   test('it should login through MFA and post to admin-generate and be able to restart the setup', async function (assert) {
-    assert.expect(1);
-    // the network requests in the flow
+    assert.expect(5);
+    // the network requests required in this test
     this.server.post('/identity/mfa/method/totp/admin-generate', (scheme, req) => {
       const json = JSON.parse(req.requestBody);
       assert.equal(json.method_id, '123', 'sends the UUID value');
@@ -74,9 +74,25 @@ module('Acceptance | mfa-setup', function (hooks) {
     await fillIn('[data-test-input="uuid"]', 123);
     await click('[data-test-verify]');
     assert.dom('[data-test-qrcode]').exists('the qrCode is shown.');
-    assert.dom('[data-test-warning]').doesNotExist('warning does not show.');
+    assert.dom('[data-test-mfa-enabled-warning]').doesNotExist('warning does not show.');
 
     await click('[data-test-restart]');
     assert.dom('[data-test-step-one]').exists('back to step one.');
+  });
+
+  test('it should show a warning if you enter in the same UUID without restarting the setup', async function (assert) {
+    assert.expect(2);
+    // the network requests required in this test
+    this.server.post('/identity/mfa/method/totp/admin-generate', () => {
+      return {
+        data: null,
+        warnings: ['Entity already has a secret for MFA method “”'],
+      };
+    });
+
+    await fillIn('[data-test-input="uuid"]', 123);
+    await click('[data-test-verify]');
+    assert.dom('[data-test-qrcode]').doesNotExist('the qrCode is not shown.');
+    assert.dom('[data-test-mfa-enabled-warning]').exists('the mfa-enabled warning shows.');
   });
 });
