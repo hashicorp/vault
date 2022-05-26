@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'ember-qunit';
-// import { fillIn } from '@ember/test-helpers';
+import { settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import logout from 'vault/tests/pages/logout';
@@ -43,7 +43,9 @@ module('Acceptance | mfa-setup', function (hooks) {
     await logout.visit();
     await authPage.login('root');
     await setupUser();
+    await settled();
     await logout.visit();
+    await settled();
     // await authPage.loginUsername(USER, PASSWORD);
     // await click('.nav-user-button button');
     // await click('[data-test-status-link="mfa"]');
