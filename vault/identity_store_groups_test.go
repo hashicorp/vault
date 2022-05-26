@@ -677,7 +677,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 
 	// Create a group with the above created 2 entities as its members
 	groupData := map[string]interface{}{
-		"policies":          "testpolicy1,testpolicy2",
+		"policies":          "testpolicy1,testPolicy1 , testpolicy2",
 		"metadata":          []string{"testkey1=testvalue1", "testkey2=testvalue2"},
 		"member_entity_ids": []string{entityID1, entityID2},
 	}
