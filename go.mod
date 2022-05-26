@@ -92,7 +92,7 @@ require (
 	github.com/hashicorp/raft-autopilot v0.1.3
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.11.0
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.12.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.10.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.11.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.11.0
@@ -107,9 +107,9 @@ require (
 	github.com/hashicorp/vault-plugin-database-snowflake v0.5.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1
-	github.com/hashicorp/vault-plugin-secrets-azure v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.12.0
