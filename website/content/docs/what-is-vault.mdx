@@ -9,7 +9,7 @@ description: >-
 
 ## What is Vault?
 
-HashiCorp Vault is an identity-based **secrets** and encryption management system. A secret is anything that you want to tightly control access to, such as API encryption keys, passwords, or certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
+HashiCorp Vault is an identity-based secrets and encryption management system. A _secret_ is anything that you want to tightly control access to, such as API encryption keys, passwords, and certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
 
 A modern system requires access to a multitude of secrets: database credentials,
 API keys for external services, credentials for service-oriented architecture
@@ -22,13 +22,13 @@ where Vault steps in.
 
 ![How Vault Works](/img/how-vault-works.png)
 
-Vault validates, authorizes, and provides clients (users, machines, apps) access to secrets or stored sensitive data. The core Vault worklflow consists of four stages:
+Vault validates and authorizes clients (users, machines, apps) before providing them access to secrets or stored sensitive data. The core Vault workflow consists of four stages:
 
 ![Vault Workflow](/img/vault-workflow-diagram1.png)
 
-* **Authenticate:** Client (users, apps, systems) authenticate with Vault using their identity.
+* **Authenticate:** A client uses their identity to authenticate with Vault.
 * **Validation:** Vault validates the client against third-party trusted sources.
-* **Authorize**: Client is matched against the Vault security policy.  This policy is a set of rules that direct which API endpoints a client has access to in a construct, using a Vault token.
+* **Authorize**: A client is matched against the Vault security policy.  This policy is a set of rules defining which API endpoints a client has access to with its Vault token.
 * **Access**: Vault provides access to secrets, keys, and encryption capabilities based on policies associated with the client’s identity.
 
 ### Why Vault?
