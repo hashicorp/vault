@@ -168,4 +168,34 @@ export default function (server) {
     schema.db.mfaLoginEnforcements.remove({ name });
     return {};
   });
+  // endpoints for target selection
+  server.get('/identity/group/id', () => ({
+    data: {
+      key_info: { '34db6b52-591e-bc22-8af0-4add5e167326': { name: 'test-group' } },
+      keys: ['34db6b52-591e-bc22-8af0-4add5e167326'],
+    },
+  }));
+  server.get('/identity/group/id/:id', () => ({
+    data: {
+      id: '34db6b52-591e-bc22-8af0-4add5e167326',
+      name: 'test-group',
+    },
+  }));
+  server.get('/identity/entity/id', () => ({
+    data: {
+      key_info: { 'f831667b-7392-7a1c-c0fc-33d48cb1c57d': { name: 'test-entity' } },
+      keys: ['f831667b-7392-7a1c-c0fc-33d48cb1c57d'],
+    },
+  }));
+  server.get('/identity/entity/id/:id', () => ({
+    data: {
+      id: 'f831667b-7392-7a1c-c0fc-33d48cb1c57d',
+      name: 'test-entity',
+    },
+  }));
+  server.get('/sys/auth', () => ({
+    data: {
+      'userpass/': { accessor: 'auth_userpass_bb95c2b1', type: 'userpass' },
+    },
+  }));
 }

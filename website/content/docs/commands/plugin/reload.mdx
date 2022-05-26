@@ -13,11 +13,29 @@ must be provided, but not both.
 
 ## Examples
 
-Reload a plugin:
+Reload a plugin by name:
 
 ```shell-session
 $ vault plugin reload -plugin my-custom-plugin
 Success! Reloaded plugin: my-custom-plugin
+```
+
+Reload an auth plugin by mount:
+
+```shell-session
+$ vault plugin reload \
+  -mounts auth/my-custom-plugin-1 \
+  -mounts auth/my-custom-plugin-2
+Success! Reloaded mounts: [auth/my-custom-plugin-1/ auth/my-custom-plugin-2/]
+```
+
+Reload a secrets plugin by mount:
+
+```shell-session
+$ vault plugin reload \
+  -mounts my-custom-plugin-1 \
+  -mounts my-custom-plugin-2
+Success! Reloaded mounts: [my-custom-plugin-1/ my-custom-plugin-2/]
 ```
 
 ## Usage

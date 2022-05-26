@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// reloadPluginMounts reloads provided mounts, regardless of
+// reloadMatchingPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
 func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
 	c.mountsLock.RLock()
@@ -27,16 +27,26 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 
 	var errors error
 	for _, mount := range mounts {
+		var isAuth bool
+		// allow any of
+		//   - sys/auth/foo/
+		//   - sys/auth/foo
+		//   - auth/foo/
+		//   - auth/foo
+		if strings.HasPrefix(mount, credentialRoutePrefix) {
+			isAuth = true
+		} else if strings.HasPrefix(mount, systemMountPath+credentialRoutePrefix) {
+			isAuth = true
+			mount = strings.TrimPrefix(mount, systemMountPath)
+		}
+		if !strings.HasSuffix(mount, "/") {
+			mount += "/"
+		}
+
 		entry := c.router.MatchingMountEntry(ctx, mount)
 		if entry == nil {
 			errors = multierror.Append(errors, fmt.Errorf("cannot fetch mount entry on %q", mount))
 			continue
-		}
-
-		var isAuth bool
-		fullPath := c.router.MatchingMount(ctx, mount)
-		if strings.HasPrefix(fullPath, credentialRoutePrefix) {
-			isAuth = true
 		}
 
 		// We dont reload mounts that are not in the same namespace
