@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'ember-qunit';
-import { fillIn } from '@ember/test-helpers';
+// import { fillIn } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import logout from 'vault/tests/pages/logout';
@@ -70,12 +70,10 @@ module('Acceptance | mfa-setup', function (hooks) {
     //   // returns nothing
     //   return {};
     // });
-
-    await fillIn('[data-test-input="uuid"]', 123);
+    // await fillIn('[data-test-input="uuid"]', 123);
     // await click('[data-test-verify]');
     // assert.dom('[data-test-qrcode]').exists('the qrCode is shown.');
     // assert.dom('[data-test-mfa-enabled-warning]').doesNotExist('warning does not show.');
-
     // await click('[data-test-restart]');
     // assert.dom('[data-test-step-one]').exists('back to step one.');
   });
