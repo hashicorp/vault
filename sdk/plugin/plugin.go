@@ -24,6 +24,11 @@ type BackendPluginClient struct {
 	logical.Backend
 }
 
+// HACK: Exposed negotiated version
+func (b *BackendPluginClient) NegotiatedVersion() int {
+	return b.client.NegotiatedVersion()
+}
+
 // Cleanup calls the RPC client's Cleanup() func and also calls
 // the go-plugin's client Kill() func
 func (b *BackendPluginClient) Cleanup(ctx context.Context) {
@@ -84,6 +89,12 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		4: {
 			"backend": &GRPCBackendPlugin{
 				MetadataMode: isMetadataMode,
+			},
+		},
+		5: {
+			"backend": &GRPCBackendPlugin{
+				MetadataMode:      false,
+				AutoMTLSSupported: true,
 			},
 		},
 	}

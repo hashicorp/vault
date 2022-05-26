@@ -55,6 +55,13 @@ func Serve(opts *ServeOpts) error {
 				Logger:  logger,
 			},
 		},
+		5: {
+			"backend": &GRPCBackendPlugin{
+				Factory:           opts.BackendFactoryFunc,
+				Logger:            logger,
+				AutoMTLSSupported: true,
+			},
+		},
 	}
 
 	err := pluginutil.OptionallyEnableMlock()

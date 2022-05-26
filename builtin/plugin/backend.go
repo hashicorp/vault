@@ -65,8 +65,13 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
 
-	// Cleanup meta plugin backend
-	raw.Cleanup(ctx)
+	// HACK: Cast to BackendPluginClient
+	if bpc, ok := raw.(*bplugin.BackendPluginClient); ok {
+		if bpc.NegotiatedVersion() < 5 {
+			// Cleanup meta plugin backend
+			raw.Cleanup(ctx)
+		}
+	}
 
 	// Initialize b.Backend with dummy backend since plugin
 	// backends will need to be lazy loaded.
