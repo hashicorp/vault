@@ -181,7 +181,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		group.Policies = policiesRaw.([]string)
+		group.Policies = strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
 	}
 
 	if strutil.StrListContains(group.Policies, "root") {
