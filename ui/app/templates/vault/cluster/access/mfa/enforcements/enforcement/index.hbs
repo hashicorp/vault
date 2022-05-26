@@ -21,10 +21,18 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs" aria-label="Enforcement tabs">
     <ul>
-      <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement" @query={{hash tab="targets"}}>
+      <LinkTo
+        @route="vault.cluster.access.mfa.enforcements.enforcement"
+        @query={{hash tab="targets"}}
+        data-test-tab="targets"
+      >
         Targets
       </LinkTo>
-      <LinkTo @route="vault.cluster.access.mfa.enforcements.enforcement" @query={{hash tab="methods"}}>
+      <LinkTo
+        @route="vault.cluster.access.mfa.enforcements.enforcement"
+        @query={{hash tab="methods"}}
+        data-test-tab="methods"
+      >
         Methods
       </LinkTo>
     </ul>
@@ -32,11 +40,19 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <button class="toolbar-link" onclick={{action (mut this.showDeleteConfirmation) true}} type="button">
+    <button
+      class="toolbar-link"
+      onclick={{action (mut this.showDeleteConfirmation) true}}
+      type="button"
+      data-test-enforcement-delete
+    >
       Delete
     </button>
     <div class="toolbar-separator"></div>
-    <ToolbarLink @params={{array "vault.cluster.access.mfa.enforcements.enforcement.edit" this.model.id}}>
+    <ToolbarLink
+      @params={{array "vault.cluster.access.mfa.enforcements.enforcement.edit" this.model.id}}
+      data-test-enforcement-edit={{true}}
+    >
       Edit enforcement
     </ToolbarLink>
   </ToolbarActions>
@@ -44,7 +60,12 @@
 
 {{#if (eq this.tab "targets")}}
   {{#each @model.targets as |target|}}
-    <LinkedBlock class="list-item-row" @disabled={{not target.link}} @params={{union (array target.link) target.linkModels}}>
+    <LinkedBlock
+      class="list-item-row"
+      @disabled={{not target.link}}
+      @params={{union (array target.link) target.linkModels}}
+      data-test-target={{target.title}}
+    >
       <div class="level is-mobile">
         <div class="level-left">
           <div>
@@ -66,7 +87,7 @@
                 <nav class="menu" aria-label="Enforcement target more menu">
                   <ul class="menu-list">
                     <li>
-                      <LinkTo @route={{target.link}} @models={{target.linkModels}}>
+                      <LinkTo @route={{target.link}} @models={{target.linkModels}} data-test-target-link={{target.title}}>
                         Details
                       </LinkTo>
                     </li>
