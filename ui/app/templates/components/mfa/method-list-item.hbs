@@ -1,4 +1,8 @@
-<LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.mfa.methods.method" @model.id}}>
+<LinkedBlock
+  class="list-item-row"
+  @params={{array "vault.cluster.access.mfa.methods.method" @model.id}}
+  data-test-mfa-method-list-item={{@model.id}}
+>
   <div class="level is-mobile">
     <div class="level-left">
       <div class="is-flex-row">
@@ -25,12 +29,20 @@
           <nav class="menu">
             <ul class="menu-list">
               <li>
-                <LinkTo @route="vault.cluster.access.mfa.methods.method" @model={{@model.id}}>
+                <LinkTo
+                  @route="vault.cluster.access.mfa.methods.method"
+                  @model={{@model.id}}
+                  data-test-mfa-method-menu-link="details"
+                >
                   Details
                 </LinkTo>
               </li>
               <li>
-                <LinkTo @route="vault.cluster.access.mfa.methods.method.edit" @model={{@model.id}}>
+                <LinkTo
+                  @route="vault.cluster.access.mfa.methods.method.edit"
+                  @model={{@model.id}}
+                  data-test-mfa-method-menu-link="edit"
+                >
                   Edit
                 </LinkTo>
               </li>
