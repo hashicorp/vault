@@ -169,7 +169,7 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatalf("expected error from trying to update different version from check-and-set value using generic WithOption")
 		}
 
-		// WithMethod Patch (implicit)
+		// WithMergeMethod Patch (implicit)
 		patch, err := client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
 			"dog": "cat",
 		})
@@ -180,10 +180,10 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatalf("incorrect version %d, expected 3", patch.VersionMetadata.Version)
 		}
 
-		// WithMethod Patch (explicit)
+		// WithMergeMethod Patch (explicit)
 		patchExp, err := client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
 			"rat": "mouse",
-		}, api.WithMethod("patch"))
+		}, api.WithMergeMethod(api.KVMergeMethodPatch))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -191,15 +191,23 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatalf("incorrect version %d, expected 4", patchExp.VersionMetadata.Version)
 		}
 
-		// WithMethod RW
+		// WithMergeMethod RW
 		patchRW, err := client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
 			"bird": "tweet",
-		}, api.WithMethod("rw"))
+		}, api.WithMergeMethod(api.KVMergeMethodReadWrite))
 		if err != nil {
 			t.Fatal(err)
 		}
 		if patchRW.VersionMetadata.Version != 5 {
 			t.Fatalf("incorrect version %d, expected 5", patchRW.VersionMetadata.Version)
+		}
+
+		// patch something that doesn't exist
+		_, err = client.KVv2(mountPath).Patch(context.Background(), "nonexistent-secret", map[string]interface{}{
+			"no": "nope",
+		})
+		if err == nil {
+			t.Fatal("expected error from trying to patch something that doesn't exist")
 		}
 
 		secretAfterPatches, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
@@ -222,6 +230,55 @@ func TestKVHelpers(t *testing.T) {
 		if !ok || value != "baz" {
 			t.Fatalf("secret did not keep original data after patch")
 		}
+
+		// patch an existing field
+		_, err = client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
+			"dog": "pug",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		patchedFieldKV, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		v, ok := patchedFieldKV.Data["dog"]
+		if !ok || v != "pug" {
+			t.Fatalf("secret's data was not replaced by patch")
+		}
+
+		// delete a key in a secret via patch
+		_, err = client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
+			"dog": nil,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		deletedFieldKV, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, ok = deletedFieldKV.Data["dog"]
+		if ok {
+			t.Fatalf("secret key \"dog\" should have been removed by nil patch")
+		}
+
+		// set a key to an empty string via patch
+		_, err = client.KVv2(mountPath).Patch(context.Background(), secretPath, map[string]interface{}{
+			"dog": "",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		emptyValueKV, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		v, ok = emptyValueKV.Data["dog"]
+		if !ok || v != "" {
+			t.Fatalf("secret key \"dog\" should have an empty string value")
+		}
+
 		////
 
 		// get versions as list
@@ -230,7 +287,7 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expectedLength := 5
+		expectedLength := 8
 		if len(versions) != expectedLength {
 			t.Fatalf("expected there to be %d versions of the secret but got %d", expectedLength, len(versions))
 		}

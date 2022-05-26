@@ -42,8 +42,10 @@ type KVVersionMetadata struct {
 type KVOption func() (key string, value interface{})
 
 const (
-	KVOptionCheckAndSet = "cas"
-	KVOptionMethod      = "method"
+	KVOptionCheckAndSet    = "cas"
+	KVOptionMethod         = "method"
+	KVMergeMethodPatch     = "patch"
+	KVMergeMethodReadWrite = "rw"
 )
 
 // WithOption can optionally be passed to provide generic options for a
@@ -63,11 +65,11 @@ func WithCheckAndSet(cas int) KVOption {
 	return WithOption(KVOptionCheckAndSet, cas)
 }
 
-// WithMethod can optionally be passed to dictate which type of
+// WithMergeMethod can optionally be passed to dictate which type of
 // patch to perform in a Patch request. If set to "patch", then an HTTP PATCH
 // request will be issued. If set to "rw", then a read will be performed,
 // then a local update, followed by a remote update. Defaults to "patch".
-func WithMethod(method string) KVOption {
+func WithMergeMethod(method string) KVOption {
 	return WithOption(KVOptionMethod, method)
 }
 
@@ -534,11 +536,6 @@ func readThenWrite(ctx context.Context, client *Client, mountPath string, secret
 	// Verify existing secret has metadata
 	if existingVersion.VersionMetadata == nil {
 		return nil, fmt.Errorf("no metadata found at %s; patch can only be used on existing data", secretPath)
-	}
-
-	// Verify existing secret has data
-	if existingVersion.Data == nil {
-		return nil, fmt.Errorf("no data found at %s; patch can only be used on existing data", secretPath)
 	}
 
 	// Copy new data over with existing data
