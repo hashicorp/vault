@@ -49,7 +49,8 @@ module('Acceptance | mfa-setup', function (hooks) {
     // await click('[data-test-status-link="mfa"]');
   });
 
-  test('it should login through MFA and post to admin-generate and be able to restart the setup', async function () {
+  test('it should login through MFA and post to admin-generate and be able to restart the setup', async function (assert) {
+    assert.expect(0);
     // assert.expect(5);
     // the network requests required in this test
     // this.server.post('/identity/mfa/method/totp/admin-generate', (scheme, req) => {
