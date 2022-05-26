@@ -32,12 +32,12 @@ func pathIssue(b *backend) *framework.Path {
 			},
 			"key_type": {
 				Type:        framework.TypeString,
-				Description: "TBD",
+				Description: "Specifies the desired key type; must be `rsa`, `ed25519` or `ec`",
 				Required:    true,
 			},
 			"key_bits": {
 				Type:        framework.TypeInt,
-				Description: "TBD",
+				Description: "Specifies the number of bits to use for the generated keys.",
 			},
 			"ttl": {
 				Type: framework.TypeDurationSecond,
@@ -69,8 +69,8 @@ be later than the role max TTL.`,
 				Description: `Extensions that the certificate should be signed for.`,
 			},
 		},
-		HelpSynopsis:    "TBD - HelpSynopsis",
-		HelpDescription: "TBD - HelpDescription",
+		HelpSynopsis:    pathRoleHelpSyn,
+		HelpDescription: pathIssueHelpDesc,
 	}
 }
 
@@ -253,3 +253,10 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 
 	return response, nil
 }
+
+const pathIssueHelpSyn = `
+Request a signed key pair using a certain role with the provided details.
+`
+
+const pathIssueHelpDesc = `
+`
