@@ -100,6 +100,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	}
 
 	namedLogger := logger.Named(pluginRunner.Name)
+	namedLogger.Debug("sdk NewPluginClient", "isMetadataMode", isMetadataMode)
 
 	var client *plugin.Client
 	var err error

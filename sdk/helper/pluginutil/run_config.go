@@ -54,6 +54,10 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	metadataEnv := fmt.Sprintf("%s=%t", PluginMetadataModeEnv, rc.IsMetadataMode)
 	cmd.Env = append(cmd.Env, metadataEnv)
 
+	automtlsEnv := fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, rc.AutoMTLS)
+	cmd.Env = append(cmd.Env, automtlsEnv)
+	rc.Logger.Debug("makeConfig", "rc.AutoMTLS", rc.AutoMTLS)
+
 	var clientTLSConfig *tls.Config
 	if !rc.AutoMTLS && !rc.IsMetadataMode {
 		// Get a CA TLS Certificate

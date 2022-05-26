@@ -64,6 +64,7 @@ func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginSets m
 		Env(env...),
 		Logger(logger),
 		MetadataMode(false),
+		AutoMTLS(true),
 	)
 }
 
