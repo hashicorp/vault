@@ -255,6 +255,98 @@ func (kv *kvv2) DeleteVersions(ctx context.Context, secretPath string, versions 
 	return nil
 }
 
+// DeleteMetadata deletes all versions and metadata of the secret at the
+// given path.
+func (kv *kvv2) DeleteMetadata(ctx context.Context, secretPath string) error {
+	pathToDelete := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
+
+	_, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete)
+	if err != nil {
+		return fmt.Errorf("error deleting secret metadata at %s: %w", pathToDelete, err)
+	}
+
+	return nil
+}
+
+// Undelete undeletes the given versions of a secret, restoring the data
+// so that it can be fetched again with Get requests.
+//
+// A list of existing versions can be retrieved using the GetVersionsAsList method.
+func (kv *kvv2) Undelete(ctx context.Context, secretPath string, versions []int) error {
+	pathToUndelete := fmt.Sprintf("%s/undelete/%s", kv.mountPath, secretPath)
+
+	data := map[string]interface{}{
+		"versions": versions,
+	}
+
+	_, err := kv.c.Logical().WriteWithContext(ctx, pathToUndelete, data)
+	if err != nil {
+		return fmt.Errorf("error undeleting secret metadata at %s: %w", pathToUndelete, err)
+	}
+
+	return nil
+}
+
+// Destroy permanently removes the specified secret versions' data
+// from the Vault server. If no secret exists at the given path, no
+// action will be taken.
+//
+// A list of existing versions can be retrieved using the GetVersionsAsList method.
+func (kv *kvv2) Destroy(ctx context.Context, secretPath string, versions []int) error {
+	pathToDestroy := fmt.Sprintf("%s/destroy/%s", kv.mountPath, secretPath)
+
+	data := map[string]interface{}{
+		"versions": versions,
+	}
+
+	_, err := kv.c.Logical().WriteWithContext(ctx, pathToDestroy, data)
+	if err != nil {
+		return fmt.Errorf("error undeleting secret metadata at %s: %w", pathToDestroy, err)
+	}
+
+	return nil
+}
+
+// Rollback can be used to roll a secret back to a previous
+// non-deleted/non-destroyed version. That previous version becomes the
+// next/newest version for the path.
+func (kv *kvv2) Rollback(ctx context.Context, secretPath string, toVersion int) (*KVSecret, error) {
+	// First, do a read to get the current version for check-and-set
+	latest, err := kv.Get(ctx, secretPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get latest version of secret: %w", err)
+	}
+
+	// Make sure a value already exists
+	if latest == nil || latest.Data == nil {
+		return nil, fmt.Errorf("no secret was found: %w", err)
+	}
+
+	// Verify metadata found
+	if latest.VersionMetadata == nil {
+		return nil, fmt.Errorf("no metadata found; rollback can only be used on existing data")
+	}
+
+	// Now run it again and read the version we want to roll back to
+	rollbackVersion, err := kv.GetVersion(ctx, secretPath, toVersion)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get previous version %d of secret: %s", toVersion, err)
+	}
+
+	err = validateRollbackVersion(rollbackVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid rollback version %d", toVersion)
+	}
+
+	casVersion := latest.VersionMetadata.Version
+	kvs, err := kv.Put(ctx, secretPath, rollbackVersion.Data, WithCheckAndSet(casVersion))
+	if err != nil {
+		return nil, fmt.Errorf("unable to roll back to previous secret version: %w", err)
+	}
+
+	return kvs, nil
+}
+
 func extractCustomMetadata(secret *Secret) (map[string]interface{}, error) {
 	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
 	cmI, ok := secret.Data["custom_metadata"]
@@ -398,4 +490,32 @@ func extractFullMetadata(secret *Secret) (*KVMetadata, error) {
 	}
 
 	return metadata, nil
+}
+
+func validateRollbackVersion(rollbackVersion *KVSecret) error {
+	// Make sure a value already exists
+	if rollbackVersion == nil || rollbackVersion.Data == nil {
+		return fmt.Errorf("no secret found")
+	}
+
+	// Verify metadata found
+	if rollbackVersion.VersionMetadata == nil {
+		return fmt.Errorf("no version metadata found; rollback only works on existing data")
+	}
+
+	// Verify it hasn't been deleted
+	if !rollbackVersion.VersionMetadata.DeletionTime.IsZero() {
+		return fmt.Errorf("cannot roll back to a version that has been deleted")
+	}
+
+	if rollbackVersion.VersionMetadata.Destroyed {
+		return fmt.Errorf("cannot roll back to a version that has been destroyed")
+	}
+
+	// Verify old data found
+	if rollbackVersion.Data == nil {
+		return fmt.Errorf("no data found; rollback only works on existing data")
+	}
+
+	return nil
 }
