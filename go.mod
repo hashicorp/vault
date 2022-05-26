@@ -100,20 +100,20 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.13.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.6.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.10.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.11.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.6.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.5.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.6.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.4.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
