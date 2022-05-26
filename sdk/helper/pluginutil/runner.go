@@ -64,6 +64,19 @@ func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginSets m
 		Env(env...),
 		Logger(logger),
 		MetadataMode(false),
+	)
+}
+
+// RunAutoMTLS takes a wrapper RunnerUtil instance along with the go-plugin parameters and
+// returns a configured plugin.Client with TLS Configured via go-plugin's AutoMTLS.
+func (r *PluginRunner) RunAutoMTLS(ctx context.Context, wrapper RunnerUtil, pluginSets map[int]plugin.PluginSet, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.RunConfig(ctx,
+		Runner(wrapper),
+		PluginSets(pluginSets),
+		HandshakeConfig(hs),
+		Env(env...),
+		Logger(logger),
+		MetadataMode(false),
 		AutoMTLS(true),
 	)
 }

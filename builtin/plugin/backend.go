@@ -51,10 +51,21 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 
 	sys := conf.System
 
-	// NewBackend with isMetadataMode set to true
-	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, true)
+	// NewBackend with isMetadataMode set to false
+	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, false, true)
 	if err != nil {
-		return nil, err
+		// NewBackend with isMetadataMode set to true
+		raw, err = bplugin.NewBackend(ctx, name, pluginType, sys, conf, true, false)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		b.Backend = raw
+		b.config = conf
+		b.loaded = true
+		b.autoMTLSSupported = true
+
+		return &b, nil
 	}
 	err = raw.Setup(ctx, conf)
 	if err != nil {
@@ -90,7 +101,8 @@ type PluginBackend struct {
 	Backend logical.Backend
 	sync.RWMutex
 
-	config *logical.BackendConfig
+	autoMTLSSupported bool
+	config            *logical.BackendConfig
 
 	// Used to detect if we already reloaded
 	canary string
@@ -110,7 +122,7 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
 	b.Backend.Cleanup(ctx)
 
-	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
+	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false, b.autoMTLSSupported)
 	if err != nil {
 		return err
 	}

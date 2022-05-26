@@ -40,7 +40,7 @@ func (b *BackendPluginClient) Cleanup(ctx context.Context) {
 // external plugins, or a concrete implementation of the backend if it is a builtin backend.
 // The backend is returned as a logical.Backend interface. The isMetadataMode param determines whether
 // the plugin should run in metadata mode.
-func NewBackend(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool) (logical.Backend, error) {
+func NewBackend(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool, autoMTLS bool) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
 	if err != nil {
@@ -65,7 +65,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		}
 	} else {
 		// create a backendPluginClient instance
-		backend, err = NewPluginClient(ctx, sys, pluginRunner, conf.Logger, isMetadataMode)
+		backend, err = NewPluginClient(ctx, sys, pluginRunner, conf.Logger, isMetadataMode, autoMTLS)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +74,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 	return backend, nil
 }
 
-func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool, autoMTLS bool) (logical.Backend, error) {
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
@@ -106,6 +106,8 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var err error
 	if isMetadataMode {
 		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
+	} else if autoMTLS {
+		client, err = pluginRunner.RunAutoMTLS(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
 	} else {
 		client, err = pluginRunner.Run(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
 	}

@@ -326,7 +326,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	merr = multierror.Append(merr, err)
 
 	// Attempt to run as backend plugin
-	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true, false)
 	if err == nil {
 		err := client.Setup(ctx, &logical.BackendConfig{})
 		if err != nil {
