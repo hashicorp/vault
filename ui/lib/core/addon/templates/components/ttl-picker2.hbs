@@ -1,13 +1,6 @@
-<Toggle
-  @name={{this.label}}
-  @status="success"
-  @size="small"
-  @onChange={{action "toggleEnabled"}}
-  @checked={{this.enableTTL}}
-  data-test-ttl-toggle
->
-  <span class="ttl-picker-label is-large">{{this.label}}</span><br />
-  <div class="description has-text-grey">
+{{#if this.hideToggle}}
+  <span class="ttl-picker-label">{{this.label}}</span><br />
+  <div class="sub-text">
     <span>{{this.helperText}}</span>
     {{#if this.description}}
       <ToolTip @verticalPosition="below" as |T|>
@@ -22,9 +15,35 @@
       </ToolTip>
     {{/if}}
   </div>
-</Toggle>
-{{#if this.enableTTL}}
-  <div class="ttl-show-picker" data-test-ttl-picker-group={{this.label}}>
+{{else}}
+  <Toggle
+    @name={{this.label}}
+    @status="success"
+    @size="small"
+    @onChange={{action "toggleEnabled"}}
+    @checked={{this.enableTTL}}
+    data-test-ttl-toggle
+  >
+    <span class="ttl-picker-label is-large">{{this.label}}</span><br />
+    <div class="description has-text-grey">
+      <span>{{this.helperText}}</span>
+      {{#if this.description}}
+        <ToolTip @verticalPosition="below" as |T|>
+          <T.Trigger data-test-tooltip-trigger tabindex="-1">
+            <Icon @name="info" aria-label="description" />
+          </T.Trigger>
+          <T.Content @defaultClass="tool-tip">
+            <div class="box" data-test-hover-copy-tooltip-text>
+              {{this.description}}
+            </div>
+          </T.Content>
+        </ToolTip>
+      {{/if}}
+    </div>
+  </Toggle>
+{{/if}}
+{{#if (or this.enableTTL this.hideToggle)}}
+  <div class={{unless this.hideToggle "ttl-show-picker"}} data-test-ttl-picker-group={{this.label}}>
     <div class="field is-grouped is-marginless">
       <div class="control is-marginless">
         <input
