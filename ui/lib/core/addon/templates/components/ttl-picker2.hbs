@@ -2,6 +2,18 @@
   <span class="ttl-picker-label">{{this.label}}</span><br />
   <div class="sub-text">
     <span>{{this.helperText}}</span>
+    {{#if this.description}}
+      <ToolTip @verticalPosition="below" as |T|>
+        <T.Trigger data-test-tooltip-trigger tabindex="-1">
+          <Icon @name="info" aria-label="description" />
+        </T.Trigger>
+        <T.Content @defaultClass="tool-tip">
+          <div class="box" data-test-hover-copy-tooltip-text>
+            {{this.description}}
+          </div>
+        </T.Content>
+      </ToolTip>
+    {{/if}}
   </div>
 {{else}}
   <Toggle

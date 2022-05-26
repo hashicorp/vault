@@ -54,6 +54,7 @@ export default TtlForm.extend({
   unit: 's',
   initialValue: null,
   changeOnInit: false,
+  hideToggle: false,
 
   init() {
     this._super(...arguments);
