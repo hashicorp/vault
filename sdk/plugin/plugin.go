@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -24,9 +23,10 @@ type BackendPluginClient struct {
 	logical.Backend
 }
 
-// HACK: Exposed negotiated version
-func (b *BackendPluginClient) NegotiatedVersion() int {
-	return b.client.NegotiatedVersion()
+// AutoMTLSSupported inspects the go-plugin client's negotiated version. This
+// allows us to determine if a given client supports AutoMTLS
+func (b *BackendPluginClient) AutoMTLSSupported() bool {
+	return b.client.NegotiatedVersion() >= pluginutil.BackendPluginAutoMTLSMinVersion
 }
 
 // Cleanup calls the RPC client's Cleanup() func and also calls
@@ -65,7 +65,16 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		}
 	} else {
 		// create a backendPluginClient instance
-		backend, err = NewPluginClient(ctx, sys, pluginRunner, conf.Logger, isMetadataMode, autoMTLS)
+		config := pluginutil.PluginClientConfig{
+			Name:           pluginName,
+			PluginType:     pluginType,
+			Logger:         conf.Logger.Named(pluginName),
+			IsMetadataMode: isMetadataMode,
+			AutoMTLS:       autoMTLS,
+			Wrapper:        sys,
+		}
+		// create a backendPluginClient instance
+		backend, err = NewPluginClient(ctx, pluginRunner, config)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +83,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 	return backend, nil
 }
 
-func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool, autoMTLS bool) (logical.Backend, error) {
+func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (logical.Backend, error) {
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
@@ -83,12 +92,12 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		// and version 4.
 		3: {
 			"backend": &GRPCBackendPlugin{
-				MetadataMode: isMetadataMode,
+				MetadataMode: config.IsMetadataMode,
 			},
 		},
 		4: {
 			"backend": &GRPCBackendPlugin{
-				MetadataMode: isMetadataMode,
+				MetadataMode: config.IsMetadataMode,
 			},
 		},
 		5: {
@@ -99,17 +108,14 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		},
 	}
 
-	namedLogger := logger.Named(pluginRunner.Name)
-	namedLogger.Debug("sdk NewPluginClient", "isMetadataMode", isMetadataMode)
-
 	var client *plugin.Client
 	var err error
-	if isMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
-	} else if autoMTLS {
-		client, err = pluginRunner.RunAutoMTLS(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
+	if config.IsMetadataMode {
+		client, err = pluginRunner.RunMetadataMode(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
+	} else if config.AutoMTLS {
+		client, err = pluginRunner.RunAutoMTLS(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
 	} else {
-		client, err = pluginRunner.Run(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
+		client, err = pluginRunner.Run(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
 	}
 	if err != nil {
 		return nil, err
@@ -140,9 +146,9 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	}
 
 	// Wrap the backend in a tracing middleware
-	if namedLogger.IsTrace() {
+	if config.Logger.IsTrace() {
 		backend = &backendTracingMiddleware{
-			logger: namedLogger.With("transport", transport),
+			logger: config.Logger.With("transport", transport),
 			next:   backend,
 		}
 	}
