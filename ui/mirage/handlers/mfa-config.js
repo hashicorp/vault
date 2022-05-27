@@ -94,7 +94,7 @@ export default function (server) {
     });
   });
   // update method
-  server.put('/identity/mfa/method/:type/:id', (schema, { params: { type, id }, requestBody }) => {
+  server.post('/identity/mfa/method/:type/:id', (schema, { params: { type, id }, requestBody }) => {
     const data = JSON.parse(requestBody);
     return validate(type, data, () => {
       schema.db[dbKeyFromType(type)].update(id, data);
