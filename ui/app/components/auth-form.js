@@ -133,7 +133,7 @@ export default Component.extend(DEFAULTS, {
     }
   ),
 
-  providerName: computed('selectedAuthBackend.type', function(){
+  providerName: computed('selectedAuthBackend.type', function () {
     if (!this.selectedAuthBackend) {
       return;
     }
