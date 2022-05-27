@@ -81,7 +81,7 @@ nodes can be removed from the cluster.
 
 Redundancy Zones provide both scaling and resiliency benefits by deploying non-voting
 nodes alongside voting nodes on a per availability zone basis. When using redundancy zones,
-each zone will have exactly 1 voting node and as many additional non-voting nodes as desired.
+each zone will have exactly one voting node and as many additional non-voting nodes as desired.
 If the voting node in a zone fails, a non-voting node will be automatically promoted to
 voter. If an entire zone is lost, a non-voting node from another zone will be promoted to voter,
 maintaining quorum. These non-voting nodes function not only as hot standbys, but also
