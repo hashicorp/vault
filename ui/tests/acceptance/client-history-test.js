@@ -1,17 +1,16 @@
 import { module, test } from 'qunit';
+// import { visit, currentURL, click, findAll, find } from '@ember/test-helpers';
 import { visit, currentURL, click, findAll } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
-import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
 import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
-import { SELECTORS, sendResponse } from '../helpers/clients';
+import { SELECTORS, sendResponse, overrideResponse } from '../helpers/clients';
 // import endOfMonth from 'date-fns/endOfMonth';
 // import { create } from 'ember-cli-page-object';
 // import { clickTrigger } from 'ember-power-select/test-support/helpers';
 // import ss from 'vault/tests/pages/components/search-select';
-
 // const searchSelect = create(ss);
 
 const NEW_DATE = new Date();
@@ -198,8 +197,8 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('Shows empty if license start date is current month', async function (assert) {
-    const licenseStart = new Date();
-    const licenseEnd = addMonths(new Date(), 12);
+    const licenseStart = NEW_DATE;
+    const licenseEnd = addMonths(NEW_DATE, 12);
     this.server.get('sys/license/status', function () {
       return {
         request_id: 'my-license-request-id',
@@ -223,15 +222,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('shows correct interface if no permissions on license', async function (assert) {
-    // TODO cmb figure out how to send 403 properly
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(null, 403));
-      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-    });
+    this.server.get('/sys/license/status', () => overrideResponse(403));
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
@@ -242,18 +233,12 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('shows error template if permissions denied querying activity response with no data', async function (assert) {
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(null, 403));
-      this.get('/v1/sys/version-history', () => sendResponse(null, 403));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(null, 403));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 403));
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-    });
-    await visit('/vault/clients/history');
+    this.server.get('sys/license/status', () => overrideResponse(403));
+    this.server.get('sys/version-history', () => overrideResponse(403));
+    this.server.get('sys/internal/counters/config', () => overrideResponse(403));
+    this.server.get('sys/internal/counters/activity', () => overrideResponse(403));
 
+    await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert
       .dom(SELECTORS.emptyStateTitle)

@@ -1,4 +1,5 @@
 import { addMonths, differenceInCalendarMonths, formatRFC3339, startOfMonth } from 'date-fns';
+import { Response } from 'miragejs';
 
 /** Scenarios
  * Config off, no data
@@ -54,6 +55,22 @@ export function sendResponse(data, httpStatus = 200) {
     return [httpStatus, { 'Content-Type': 'application/json' }];
   }
   return [httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data)];
+}
+
+export function overrideResponse(httpStatus, data) {
+  if (httpStatus === 403) {
+    return new Response(
+      403,
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ errors: ['permission denied'] })
+    );
+  }
+  if (httpStatus === 204) {
+    // /activity endpoint returns 204 when no data, while
+    // /activity/monthly returns 200 with zero values on data
+    return new Response(204, { 'Content-Type': 'application/json' });
+  }
+  return new Response(204, { 'Content-Type': 'application/json' }, JSON.stringify(data));
 }
 
 function generateNamespaceBlock(idx = 0, skipMounts = false) {
