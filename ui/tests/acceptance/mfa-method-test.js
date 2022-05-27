@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { Response } from 'miragejs';
@@ -14,13 +15,14 @@ module('Acceptance | mfa-method', function (hooks) {
   hooks.before(function () {
     ENV['ember-cli-mirage'].handler = 'mfaConfig';
   });
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
     this.getMethods = () =>
       ['Totp', 'Duo', 'Okta', 'Pingid'].reduce((methods, type) => {
         methods.addObjects(this.server.db[`mfa${type}Methods`].where({}));
         return methods;
       }, []);
+    await logout.visit();
     return authPage.login();
   });
   hooks.after(function () {
@@ -257,7 +259,6 @@ module('Acceptance | mfa-method', function (hooks) {
     const keys = ['issuer', 'period', 'key_size', 'qr_size', 'algorithm', 'digits', 'skew'];
     keys.forEach((key) => {
       if (key === 'period') {
-        assert.dom('[data-test-toggle-input="Period"]').isChecked('Period toggle is on');
         assert
           .dom('[data-test-ttl-value="Period"]')
           .hasValue(model.period.toString(), 'Period form field is populated with model value');
