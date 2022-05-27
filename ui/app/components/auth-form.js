@@ -128,7 +128,7 @@ export default Component.extend(DEFAULTS, {
     'methods.[]',
     'selectedAuth',
     'selectedAuthIsPath',
-    function(){
+    function () {
       return this.getAuthBackend();
     }
   ),
@@ -147,16 +147,16 @@ export default Component.extend(DEFAULTS, {
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
-  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function(){
+  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function () {
     let hasMethodsWithPath = this.hasMethodsWithPath;
     let methodsToShow = this.methodsToShow;
     return hasMethodsWithPath ? methodsToShow.concat(BACKENDS) : methodsToShow;
   }),
 
-  hasMethodsWithPath: computed('methodsToShow', function(){
+  hasMethodsWithPath: computed('methodsToShow', function () {
     return this.methodsToShow.isAny('path');
   }),
-  methodsToShow: computed('methods', function() {
+  methodsToShow: computed('methods', function () {
     let methods = this.methods || [];
     let shownMethods = methods.filter((m) =>
       BACKENDS.find((b) => b.type.toLowerCase() === m.type.toLowerCase())
@@ -164,7 +164,7 @@ export default Component.extend(DEFAULTS, {
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
-  unwrapToken: task(function*(token){
+  unwrapToken: task(function* (token) {
     // will be using the Token Auth Method, so set it here
     this.set('selectedAuth', 'token');
     let adapter = this.store.adapterFor('tools');
@@ -177,7 +177,7 @@ export default Component.extend(DEFAULTS, {
     }
   }).withTestWaiter(),
 
-  fetchMethods: task(function*(){
+  fetchMethods: task(function* () {
     let store = this.store;
     try {
       let methods = yield store.findAll('auth-method', {
