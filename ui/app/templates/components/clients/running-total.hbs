@@ -1,5 +1,5 @@
 {{#if this.showSingleMonth}}
-  <div class="chart-wrapper single-month-grid">
+  <div class="chart-wrapper single-month-grid" data-test-running-total="single-month-stats">
     <div class="chart-header has-bottom-margin-sm">
       <h2 class="chart-title">Vault client counts</h2>
       <p class="chart-description">
@@ -41,7 +41,7 @@
     </div>
   </div>
 {{else}}
-  <div class="chart-wrapper stacked-charts">
+  <div class="chart-wrapper stacked-charts" data-test-running-total="monthly-charts">
     <div class="single-chart-grid">
       <div class="chart-header has-bottom-margin-xl">
         <h2 class="chart-title">Vault client counts</h2>

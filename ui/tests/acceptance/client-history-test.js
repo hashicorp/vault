@@ -1,23 +1,26 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click } from '@ember/test-helpers';
+import { visit, currentURL, click, findAll } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import authPage from 'vault/tests/pages/auth';
 import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
-import {
-  generateActivityResponse,
-  generateConfigResponse,
-  generateLicenseResponse,
-  SELECTORS,
-  sendResponse,
-} from '../helpers/clients';
+import { SELECTORS, sendResponse } from '../helpers/clients';
+// import endOfMonth from 'date-fns/endOfMonth';
 // import { create } from 'ember-cli-page-object';
 // import { clickTrigger } from 'ember-power-select/test-support/helpers';
 // import ss from 'vault/tests/pages/components/search-select';
 
 // const searchSelect = create(ss);
+
+const NEW_DATE = new Date();
+const LICENSE_START = startOfMonth(subMonths(NEW_DATE, 6));
+// const LICENSE_END = endOfMonth(addMonths(NEW_DATE, 6));
+const lastMonth = startOfMonth(subMonths(NEW_DATE, 1));
+
+// upgrade happened 1 month after license start
+// const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 
 module('Acceptance | clients history tab', function (hooks) {
   setupApplicationTest(hooks);
@@ -26,59 +29,55 @@ module('Acceptance | clients history tab', function (hooks) {
   hooks.before(function () {
     ENV['ember-cli-mirage'].handler = 'clients';
   });
+
   hooks.after(function () {
     ENV['ember-cli-mirage'].handler = null;
   });
+
   hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  hooks.afterEach(function () {
-    this.server.shutdown();
-  });
+  // hooks.afterEach(function () {
+  //   this.server.shutdown();
+  // });
 
-  test('shows warning when config off, no data, queries available', async function (assert) {
-    const licenseStart = startOfMonth(subMonths(new Date(), 6));
-    const licenseEnd = addMonths(new Date(), 6);
-    const license = generateLicenseResponse(licenseStart, licenseEnd);
-    const config = generateConfigResponse({ enabled: 'default-disable' });
-    this.server.get(('v1/sys/license/status', () => sendResponse(license)));
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
-      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/feature-flags', this.passthrough);
-    });
-    this.server.get('sys/internal/counters/activity', (schema, req) => {
-      console.log(req.queryParams);
+  test('shows warning when config off, no data, queries_available=true', async function (assert) {
+    assert.expect(6);
+    this.server.get('sys/internal/counters/activity', () => sendResponse(null, 204));
+    this.server.get('sys/internal/counters/config', () => {
+      return {
+        request_id: 'some-config-id',
+        data: {
+          default_report_months: 12,
+          enabled: 'default-disable',
+          queries_available: true,
+          retention_months: 24,
+        },
+      };
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
-
     assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
     assert.dom(SELECTORS.filterBar).doesNotExist('Shows filter bar to search previous dates');
     assert.dom(SELECTORS.usageStats).doesNotExist('No usage stats');
   });
 
-  test('shows warning when config off, no data, queries unavailable', async function (assert) {
-    const licenseStart = startOfMonth(subMonths(new Date(), 6));
-    const licenseEnd = addMonths(new Date(), 6);
-    const license = generateLicenseResponse(licenseStart, licenseEnd);
-    const config = generateConfigResponse({ enabled: 'default-disable', queries_available: false });
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
-      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
+  test('shows warning when config off, no data, queries_available=false', async function (assert) {
+    assert.expect(4);
+    this.server.get('sys/internal/counters/activity', () => sendResponse(null, 204));
+    this.server.get('sys/internal/counters/config', () => {
+      return {
+        request_id: 'some-config-id',
+        data: {
+          default_report_months: 12,
+          enabled: 'default-disable',
+          queries_available: false,
+          retention_months: 24,
+        },
+      };
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
@@ -87,22 +86,20 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is hidden when no data available');
   });
 
-  test('shows empty state when config on and no queries', async function (assert) {
-    const licenseStart = startOfMonth(subMonths(new Date(), 6));
-    const licenseEnd = addMonths(new Date(), 6);
-    const license = generateLicenseResponse(licenseStart, licenseEnd);
-    const config = generateConfigResponse({ queries_available: false });
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(null, 204));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
-      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+  test('shows empty state when config enabled and queries_available=false', async function (assert) {
+    assert.expect(4);
+    this.server.get('sys/internal/counters/activity', () => sendResponse(null, 204));
+    this.server.get('sys/internal/counters/config', () => {
+      return {
+        request_id: 'some-config-id',
+        data: {
+          default_report_months: 12,
+          enabled: 'default-enable',
+          queries_available: false,
+          retention_months: 24,
+        },
+      };
     });
-    // History Tab
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
@@ -112,56 +109,28 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
-    assert.expect(9);
-    const licenseStart = startOfMonth(subMonths(new Date(), 6));
-    const licenseEnd = addMonths(new Date(), 6);
-    const lastMonth = addMonths(new Date(), -1);
-    const license = generateLicenseResponse(licenseStart, licenseEnd);
-    const config = generateConfigResponse();
-    const activity = generateActivityResponse(5, licenseStart, lastMonth);
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(activity));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
-      this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-    });
+    assert.expect(8);
+    // TODO CMB: wire up dynamic generateActivity to mirage handler
+    // const activity = generateActivityResponse(5, LICENSE_START, lastMonth);
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
+
     assert
       .dom(SELECTORS.dateDisplay)
-      .hasText(format(licenseStart, 'MMMM yyyy'), 'billing start month is correctly parsed from license');
+      .hasText(format(LICENSE_START, 'MMMM yyyy'), 'billing start month is correctly parsed from license');
     assert
       .dom(SELECTORS.rangeDropdown)
       .hasText(
-        `${format(licenseStart, 'MMMM yyyy')} - ${format(lastMonth, 'MMMM yyyy')}`,
+        `${format(LICENSE_START, 'MMMM yyyy')} - ${format(lastMonth, 'MMMM yyyy')}`,
         'Date range shows dates correctly parsed activity response'
       );
-    assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
-    const { clients, entity_clients, non_entity_clients } = activity.data.total;
+    assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
+    assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
     assert
-      .dom('[data-test-stat-text="total-clients"] .stat-value')
-      .hasText(clients.toString(), 'total clients stat is correct');
-    assert
-      .dom('[data-test-stat-text="entity-clients"] .stat-value')
-      .hasText(entity_clients.toString(), 'entity clients stat is correct');
-    assert
-      .dom('[data-test-stat-text="non-entity-clients"] .stat-value')
-      .hasText(non_entity_clients.toString(), 'non-entity clients stat is correct');
-    assert.dom('[data-test-clients-attribution]').exists('Shows attribution area');
-    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
-
-    // TODO CMB - add assertion so double charts show for single historical month
-    // TODO and check for empty state there
-    // assert
-    // .dom('[data-test-chart-container="new-clients"] [data-test-empty-state-subtext]')
-    // .includesText(
-    //   'There are no new clients for this namespace during this time period.',
-    //   'Shows empty state if no new client counts'
-    // );
+      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .exists('Shows running totals with monthly breakdown charts');
+    // TODO CMB update when generate monthly data dynamically
+    assert.equal(findAll('[data-test-line-chart="plot-point"]').length, 5, `5 plot points show`);
   });
 
   // flaky test -- does not consistently run the same number of assertions
@@ -173,7 +142,7 @@ module('Acceptance | clients history tab', function (hooks) {
   //   const licenseStart = startOfMonth(subMonths(new Date(), 6));
   //   const licenseEnd = addMonths(new Date(), 6);
   //   const lastMonth = addMonths(new Date(), -1);
-  //   const config = generateConfigResponse();
+  //   const config = overrideConfigResponse();
   //   const activity = generateActivityResponse(5, licenseStart, lastMonth);
   //   const license = generateLicenseResponse(licenseStart, licenseEnd);
   //   this.server = new Pretender(function () {
@@ -222,34 +191,6 @@ module('Acceptance | clients history tab', function (hooks) {
   // });
 
   test('shows warning if upgrade happened within license period', async function (assert) {
-    const licenseStart = startOfMonth(subMonths(new Date(), 6));
-    const licenseEnd = addMonths(new Date(), 6);
-    const lastMonth = addMonths(new Date(), -1);
-    const config = generateConfigResponse();
-    const activity = generateActivityResponse(5, licenseStart, lastMonth);
-    const license = generateLicenseResponse(licenseStart, licenseEnd);
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => sendResponse(activity));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
-      this.get('/v1/sys/version-history', () =>
-        sendResponse({
-          data: {
-            keys: ['1.9.0'],
-            key_info: {
-              '1.9.0': {
-                previous_version: null,
-                timestamp_installed: formatRFC3339(addMonths(new Date(), -2)),
-              },
-            },
-          },
-        })
-      );
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-    });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
@@ -259,21 +200,17 @@ module('Acceptance | clients history tab', function (hooks) {
   test('Shows empty if license start date is current month', async function (assert) {
     const licenseStart = new Date();
     const licenseEnd = addMonths(new Date(), 12);
-    const config = generateConfigResponse();
-    const license = generateLicenseResponse(licenseStart, licenseEnd);
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/license/status', () => sendResponse(license));
-      this.get('/v1/sys/internal/counters/activity', () => this.passthrough);
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
-      this.get('/v1/sys/version-history', () =>
-        sendResponse({
-          keys: [],
-        })
-      );
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.post('/v1/sys/capabilities-self', this.passthrough);
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
+    this.server.get('sys/license/status', function () {
+      return {
+        request_id: 'my-license-request-id',
+        data: {
+          autoloaded: {
+            license_id: 'my-license-id',
+            start_time: formatRFC3339(licenseStart),
+            expiration_time: formatRFC3339(licenseEnd),
+          },
+        },
+      };
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
@@ -286,10 +223,9 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('shows correct interface if no permissions on license', async function (assert) {
-    const config = generateConfigResponse();
+    // TODO cmb figure out how to send 403 properly
     this.server = new Pretender(function () {
       this.get('/v1/sys/license/status', () => sendResponse(null, 403));
-      this.get('/v1/sys/internal/counters/config', () => sendResponse(config));
       this.get('/v1/sys/version-history', () => sendResponse({ keys: [] }));
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
@@ -317,6 +253,7 @@ module('Acceptance | clients history tab', function (hooks) {
       this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
     });
     await visit('/vault/clients/history');
+
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert
       .dom(SELECTORS.emptyStateTitle)

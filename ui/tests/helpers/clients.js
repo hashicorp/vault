@@ -1,4 +1,4 @@
-import { formatRFC3339 } from 'date-fns';
+import { addMonths, differenceInCalendarMonths, formatRFC3339, startOfMonth } from 'date-fns';
 
 /** Scenarios
  * Config off, no data
@@ -26,6 +26,9 @@ export const SELECTORS = {
   monthDropdown: '[data-test-popup-menu-trigger="month"]',
   yearDropdown: '[data-test-popup-menu-trigger="year"]',
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
+  runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
+  runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
+  monthlyUsageBlock: '[data-test-monthly-usage]',
 };
 
 export const CHART_ELEMENTS = {
@@ -51,19 +54,6 @@ export function sendResponse(data, httpStatus = 200) {
     return [httpStatus, { 'Content-Type': 'application/json' }];
   }
   return [httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data)];
-}
-
-export function generateConfigResponse(overrides = {}) {
-  return {
-    request_id: 'some-config-id',
-    data: {
-      default_report_months: 12,
-      enabled: 'default-enable',
-      queries_available: true,
-      retention_months: 24,
-      ...overrides,
-    },
-  };
 }
 
 function generateNamespaceBlock(idx = 0, skipMounts = false) {
@@ -99,6 +89,67 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   return nsBlock;
 }
 
+function generateCounts(max, arrayLength) {
+  function randomBetween(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  }
+  var result = [];
+  var sum = 0;
+  for (var i = 0; i < arrayLength - 1; i++) {
+    result[i] = randomBetween(1, max - (arrayLength - i - 1) - sum);
+    sum += result[i];
+  }
+  result[arrayLength - 1] = max - sum;
+  return result.sort((a, b) => b - a);
+}
+
+function generateMonths(startDate, endDate, hasNoData = false) {
+  let numberOfMonths = differenceInCalendarMonths(endDate, startDate) + 1;
+  let months = [];
+
+  for (let i = 0; i < numberOfMonths; i++) {
+    if (hasNoData) {
+      months.push({
+        timestamp: formatRFC3339(startOfMonth(addMonths(startDate, i))),
+        counts: null,
+        namespace: null,
+        new_clients: null,
+      });
+      continue;
+    }
+    const namespaces = Array.from(Array(5)).map((v, idx) => {
+      return generateNamespaceBlock(idx);
+    });
+    const clients = numberOfMonths * 5 + i * 5;
+    const [entity_clients, non_entity_clients] = generateCounts(clients, 2);
+    const counts = {
+      clients,
+      entity_clients,
+      non_entity_clients,
+      distinct_entities: entity_clients,
+      non_entity_tokens: non_entity_clients,
+    };
+    const new_counts = 5 + i;
+    const [new_entity, new_non_entity] = generateCounts(new_counts, 2);
+    months.push({
+      timestamp: formatRFC3339(startOfMonth(addMonths(startDate, i))),
+      counts,
+      namespaces,
+      new_clients: {
+        counts: {
+          distinct_entities: new_entity,
+          entity_clients: new_entity,
+          non_entity_tokens: new_non_entity,
+          non_entity_clients: new_non_entity,
+          clients: new_counts,
+        },
+        namespaces,
+      },
+    });
+  }
+  return months;
+}
+
 export function generateActivityResponse(nsCount = 1, startDate, endDate) {
   if (nsCount === 0) {
     return {
@@ -122,7 +173,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
             },
           },
         ],
-        months: [],
+        months: generateMonths(startDate, endDate, false),
       },
     };
   }
@@ -140,20 +191,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
         non_entity_clients: 333,
       },
       by_namespace: namespaces,
-      months: [],
-    },
-  };
-}
-
-export function generateLicenseResponse(startDate, endDate) {
-  return {
-    request_id: 'my-license-request-id',
-    data: {
-      autoloaded: {
-        license_id: 'my-license-id',
-        start_time: formatRFC3339(startDate),
-        expiration_time: formatRFC3339(endDate),
-      },
+      months: generateMonths(startDate, endDate),
     },
   };
 }

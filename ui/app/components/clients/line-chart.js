@@ -125,7 +125,7 @@ export default class LineChart extends Component {
       .data(filteredData)
       .enter()
       .append('circle')
-      .attr('class', 'data-plot')
+      .attr('data-test-line-chart', 'plot-point')
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
       .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 3.5)

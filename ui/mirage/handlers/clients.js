@@ -1,10 +1,30 @@
-import { formatISO, isAfter, isBefore, sub, isSameMonth, startOfMonth, endOfMonth } from 'date-fns';
+import {
+  formatISO,
+  isAfter,
+  isBefore,
+  sub,
+  isSameMonth,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+} from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import formatRFC3339 from 'date-fns/formatRFC3339';
 
+const NEW_DATE = new Date();
+const COUNTS_START = subMonths(NEW_DATE, 12); // pretend vault user started cluster 1 year ago
+
+// for testing, we're in the middle of a license/billing period
+const LICENSE_START = startOfMonth(subMonths(NEW_DATE, 6));
+const LICENSE_END = endOfMonth(addMonths(NEW_DATE, 6));
+
+// upgrade happened 1 month after license start
+const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 // Oldest to newest
 const MOCK_MONTHLY_DATA = [
   {
-    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 5 }))),
+    timestamp: formatISO(UPGRADE_DATE),
     counts: {
       distinct_entities: 0,
       entity_clients: 2,
@@ -93,7 +113,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 4 }))),
+    timestamp: formatISO(addMonths(UPGRADE_DATE, 1)),
     counts: {
       distinct_entities: 0,
       entity_clients: 5,
@@ -182,7 +202,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 3 }))),
+    timestamp: formatISO(addMonths(UPGRADE_DATE, 2)),
     counts: {
       distinct_entities: 0,
       entity_clients: 7,
@@ -304,7 +324,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 2 }))),
+    timestamp: formatISO(addMonths(UPGRADE_DATE, 3)),
     counts: {
       distinct_entities: 0,
       entity_clients: 17,
@@ -525,7 +545,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: formatISO(startOfMonth(sub(new Date(), { months: 1 }))),
+    timestamp: formatISO(addMonths(UPGRADE_DATE, 4)),
     counts: {
       distinct_entities: 0,
       entity_clients: 20,
@@ -648,7 +668,7 @@ const MOCK_MONTHLY_DATA = [
   },
 ];
 const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) => {
-  const queryStartDate = parseAPITimestamp(queryStartTimestamp);
+  const queryStartDate = startOfMonth(parseAPITimestamp(queryStartTimestamp));
   const queryEndDate = parseAPITimestamp(queryEndTimestamp);
   // monthlyData is oldest to newest
   const dataEarliestMonth = parseAPITimestamp(monthlyData[0].timestamp);
@@ -672,7 +692,6 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
 };
 
 export default function (server) {
-  // 1.10 API response
   server.get('sys/version-history', function () {
     return {
       data: {
@@ -680,86 +699,41 @@ export default function (server) {
         key_info: {
           '1.9.0': {
             previous_version: null,
-            timestamp_installed: formatISO(sub(new Date(), { months: 4 })),
+            timestamp_installed: formatRFC3339(subMonths(UPGRADE_DATE, 4)),
           },
           '1.9.1': {
             previous_version: '1.9.0',
-            timestamp_installed: formatISO(sub(new Date(), { months: 3 })),
+            timestamp_installed: formatRFC3339(subMonths(UPGRADE_DATE, 3)),
           },
           '1.9.2': {
             previous_version: '1.9.1',
-            timestamp_installed: formatISO(sub(new Date(), { months: 2 })),
+            timestamp_installed: formatRFC3339(subMonths(UPGRADE_DATE, 2)),
           },
           '1.10.1': {
             previous_version: '1.9.2',
-            timestamp_installed: formatISO(sub(new Date(), { months: 1 })),
+            timestamp_installed: formatRFC3339(UPGRADE_DATE),
           },
         },
       },
     };
   });
 
-  /*
   server.get('sys/license/status', function () {
-    const startTime = new Date();
-
     return {
+      request_id: 'my-license-request-id',
       data: {
-        autoloading_used: true,
         autoloaded: {
-          expiration_time: formatRFC3339(addDays(startTime, 365)),
-          features: [
-            'HSM',
-            'Performance Replication',
-            'DR Replication',
-            'MFA',
-            'Sentinel',
-            'Seal Wrapping',
-            'Control Groups',
-            'Performance Standby',
-            'Namespaces',
-            'KMIP',
-            'Entropy Augmentation',
-            'Transform Secrets Engine',
-            'Lease Count Quotas',
-            'Key Management Secrets Engine',
-            'Automated Snapshots',
-          ],
-          license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
-          performance_standby_count: 9999,
-          start_time: formatRFC3339(startTime),
-        },
-        persisted_autoload: {
-          expiration_time: formatRFC3339(addDays(startTime, 365)),
-          features: [
-            'HSM',
-            'Performance Replication',
-            'DR Replication',
-            'MFA',
-            'Sentinel',
-            'Seal Wrapping',
-            'Control Groups',
-            'Performance Standby',
-            'Namespaces',
-            'KMIP',
-            'Entropy Augmentation',
-            'Transform Secrets Engine',
-            'Lease Count Quotas',
-            'Key Management Secrets Engine',
-            'Automated Snapshots',
-          ],
-          license_id: '060d7820-fa59-f95c-832b-395db0aeb9ba',
-          performance_standby_count: 9999,
-          start_time: formatRFC3339(startTime),
+          license_id: 'my-license-id',
+          start_time: formatRFC3339(LICENSE_START),
+          expiration_time: formatRFC3339(LICENSE_END),
         },
       },
     };
   });
-  */
 
   server.get('sys/internal/counters/config', function () {
     return {
-      request_id: '00001',
+      request_id: 'some-config-id',
       data: {
         default_report_months: 12,
         enabled: 'default-enable',
@@ -772,7 +746,7 @@ export default function (server) {
   server.get('/sys/internal/counters/activity', (schema, req) => {
     const { start_time, end_time } = req.queryParams;
     // fake client counting start date so warning shows if user queries earlier start date
-    const counts_start = '2020-12-31T00:00:00Z';
+    const counts_start = COUNTS_START;
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',
@@ -887,7 +861,7 @@ export default function (server) {
             ],
           },
         ],
-        end_time: end_time || formatISO(endOfMonth(sub(new Date(), { months: 1 }))),
+        end_time: end_time || formatISO(endOfMonth(sub(NEW_DATE, { months: 1 }))),
         months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
         start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
         total: {
@@ -905,7 +879,7 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity/monthly', function () {
-    const timestamp = new Date();
+    const timestamp = NEW_DATE;
     return {
       request_id: '26be5ab9-dcac-9237-ec12-269a8ca64742',
       lease_id: '',
