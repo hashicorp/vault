@@ -70,7 +70,7 @@ export function overrideResponse(httpStatus, data) {
     // /activity/monthly returns 200 with zero values on data
     return new Response(204, { 'Content-Type': 'application/json' });
   }
-  return new Response(204, { 'Content-Type': 'application/json' }, JSON.stringify(data));
+  return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
 }
 
 function generateNamespaceBlock(idx = 0, skipMounts = false) {

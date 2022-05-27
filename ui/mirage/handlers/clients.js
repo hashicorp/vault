@@ -8,6 +8,7 @@ import {
   endOfMonth,
   addMonths,
   subMonths,
+  differenceInCalendarMonths,
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import formatRFC3339 from 'date-fns/formatRFC3339';
@@ -667,6 +668,22 @@ const MOCK_MONTHLY_DATA = [
     },
   },
 ];
+
+function generateNullMonths(startDate, endDate) {
+  let numberOfMonths = differenceInCalendarMonths(endDate, startDate);
+  let months = [];
+  for (let i = 0; i < numberOfMonths; i++) {
+    months.push({
+      timestamp: formatRFC3339(startOfMonth(addMonths(startDate, i))),
+      counts: null,
+      namespace: null,
+      new_clients: null,
+    });
+    continue;
+  }
+  return months;
+}
+
 const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) => {
   const queryStartDate = startOfMonth(parseAPITimestamp(queryStartTimestamp));
   const queryEndDate = parseAPITimestamp(queryEndTimestamp);
@@ -676,12 +693,17 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
   let transformedMonthlyArray = [...monthlyData];
   // If query end is before last month in array, return only through end query
   if (isBefore(queryEndDate, dataLatestMonth)) {
-    let index = monthlyData.findIndex((e) => isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp)));
-    return transformedMonthlyArray.slice(0, index + 1);
+    let indexQueryStart = monthlyData.findIndex((e) =>
+      isSameMonth(queryStartDate, parseAPITimestamp(e.timestamp))
+    );
+    let indexQueryEnd = monthlyData.findIndex((e) =>
+      isSameMonth(queryEndDate, parseAPITimestamp(e.timestamp))
+    );
+    return transformedMonthlyArray.slice(indexQueryStart, indexQueryEnd + 1);
   }
-  // If query wants months previous to the data we have, return the full array
+  // If query wants months previous to the data we have, generate months without data prior
   if (isBefore(queryStartDate, dataEarliestMonth)) {
-    return transformedMonthlyArray;
+    return [...generateNullMonths(queryStartDate, dataEarliestMonth), ...transformedMonthlyArray];
   }
   // If query is after earliest month in array, return latest to month that matches query
   if (isAfter(queryStartDate, dataEarliestMonth)) {

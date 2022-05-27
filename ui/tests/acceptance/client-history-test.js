@@ -1,25 +1,21 @@
 import { module, test } from 'qunit';
-// import { visit, currentURL, click, findAll, find } from '@ember/test-helpers';
-import { visit, currentURL, click, findAll } from '@ember/test-helpers';
+import { visit, currentURL, click, findAll, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
-import { SELECTORS, sendResponse, overrideResponse } from '../helpers/clients';
-// import endOfMonth from 'date-fns/endOfMonth';
+import { SELECTORS, overrideResponse } from '../helpers/clients';
+
+// commented out for flaky test
 // import { create } from 'ember-cli-page-object';
-// import { clickTrigger } from 'ember-power-select/test-support/helpers';
 // import ss from 'vault/tests/pages/components/search-select';
+// import { clickTrigger } from 'ember-power-select/test-support/helpers';
 // const searchSelect = create(ss);
 
 const NEW_DATE = new Date();
 const LICENSE_START = startOfMonth(subMonths(NEW_DATE, 6));
-// const LICENSE_END = endOfMonth(addMonths(NEW_DATE, 6));
 const lastMonth = startOfMonth(subMonths(NEW_DATE, 1));
-
-// upgrade happened 1 month after license start
-// const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 
 module('Acceptance | clients history tab', function (hooks) {
   setupApplicationTest(hooks);
@@ -37,13 +33,9 @@ module('Acceptance | clients history tab', function (hooks) {
     return authPage.login();
   });
 
-  // hooks.afterEach(function () {
-  //   this.server.shutdown();
-  // });
-
   test('shows warning when config off, no data, queries_available=true', async function (assert) {
     assert.expect(6);
-    this.server.get('sys/internal/counters/activity', () => sendResponse(null, 204));
+    this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
     this.server.get('sys/internal/counters/config', () => {
       return {
         request_id: 'some-config-id',
@@ -66,7 +58,7 @@ module('Acceptance | clients history tab', function (hooks) {
 
   test('shows warning when config off, no data, queries_available=false', async function (assert) {
     assert.expect(4);
-    this.server.get('sys/internal/counters/activity', () => sendResponse(null, 204));
+    this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
     this.server.get('sys/internal/counters/config', () => {
       return {
         request_id: 'some-config-id',
@@ -87,7 +79,7 @@ module('Acceptance | clients history tab', function (hooks) {
 
   test('shows empty state when config enabled and queries_available=false', async function (assert) {
     assert.expect(4);
-    this.server.get('sys/internal/counters/activity', () => sendResponse(null, 204));
+    this.server.get('sys/internal/counters/activity', () => overrideResponse(204));
     this.server.get('sys/internal/counters/config', () => {
       return {
         request_id: 'some-config-id',
@@ -108,7 +100,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
-    assert.expect(7);
+    assert.expect(14);
     // TODO CMB: wire up dynamic generateActivity to mirage handler
     // const activity = generateActivityResponse(5, LICENSE_START, lastMonth);
     await visit('/vault/clients/history');
@@ -128,8 +120,49 @@ module('Acceptance | clients history tab', function (hooks) {
     assert
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .exists('Shows running totals with monthly breakdown charts');
+
     // TODO CMB update when generate monthly data dynamically
-    assert.equal(findAll('[data-test-line-chart="plot-point"]').length, 5, `5 plot points show`);
+    assert.equal(
+      findAll('[data-test-line-chart="plot-point"]').length,
+      5,
+      `line chart plots 5 points to match query`
+    );
+
+    // change billing start month
+    await click('[data-test-start-date-editor] button');
+    await click(SELECTORS.monthDropdown);
+    await click(find('.menu-list button:not([disabled])'));
+    await click(SELECTORS.yearDropdown);
+    await click(find('.menu-list button:not([disabled])'));
+    await click('[data-test-modal-save]');
+    assert.equal(
+      findAll('[data-test-line-chart="plot-point"]').length,
+      4,
+      `line chart plots 4 points to match query`
+    );
+
+    // use date picker and change end month
+    await click(SELECTORS.rangeDropdown);
+    await click('[data-test-show-calendar]');
+    let readOnlyMonths = findAll('[data-test-calendar-month].is-readOnly');
+    let clickableMonths = findAll('[data-test-calendar-month]').filter((m) => !readOnlyMonths.includes(m));
+    await click(clickableMonths[1]);
+    assert.equal(
+      findAll('[data-test-line-chart="plot-point"]').length,
+      2,
+      `line chart plots 2 points to match query`
+    );
+
+    await click(SELECTORS.rangeDropdown);
+    await click('[data-test-show-calendar]');
+    readOnlyMonths = findAll('[data-test-calendar-month].is-readOnly');
+    clickableMonths = findAll('[data-test-calendar-month]').filter((m) => !readOnlyMonths.includes(m));
+    await click(clickableMonths[0]);
+    assert.dom(SELECTORS.runningTotalMonthStats).exists('single month stat boxes show');
+    assert.dom(SELECTORS.runningTotalMonthlyCharts).doesNotExist('running total charts do not show');
+    assert.dom(SELECTORS.attributionBlock).exists('attribution area shows');
+    assert.dom('[data-test-chart-container="new-clients"]').exists('new client attribution chart shows');
+    assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
   });
 
   // flaky test -- does not consistently run the same number of assertions
