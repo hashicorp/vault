@@ -296,18 +296,6 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		t.Fatal("invalid command")
 	}
 
-	// Mount credential type plugins
-	switch btype {
-	case logical.TypeCredential:
-		vault.TestAddTestPlugin(t, core.Core, mountPoint, consts.PluginTypeCredential, "TestBackend_PluginMainCredentials", []string{}, cluster.TempDir)
-		_, err = core.Client.Logical().Write(fmt.Sprintf("sys/auth/%s", mountPoint), map[string]interface{}{
-			"type": "mock-plugin",
-		})
-		if err != nil {
-			t.Fatalf("err:%v", err)
-		}
-	}
-
 	// Trigger a sha256 mismatch or missing plugin error
 	if mismatch {
 		req = logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("sys/plugins/catalog/%s/mock-plugin", pluginType))
@@ -673,7 +661,7 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 
 func TestBackend_PluginMainLogical(t *testing.T) {
 	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
 	}
 
@@ -686,14 +674,11 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -702,7 +687,7 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 
 func TestBackend_PluginMainCredentials(t *testing.T) {
 	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
 	}
 
@@ -715,14 +700,11 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -751,14 +733,11 @@ func TestBackend_PluginMainEnv(t *testing.T) {
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)
