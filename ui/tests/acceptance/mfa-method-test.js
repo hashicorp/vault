@@ -177,8 +177,15 @@ module('Acceptance | mfa-method', function (hooks) {
         .dom('[data-test-inline-error-message]')
         .exists({ count: required.length }, `Required field validations display for ${type}`);
 
-      for (const field of required) {
-        const inputType = ['secret_key', 'integration_key'].includes(field) ? 'textarea' : 'input';
+      for (const [i, field] of required.entries()) {
+        let inputType = 'input';
+        // this is less than ideal but updating the test selectors in masked-input break a bunch of tests
+        // add value to the masked input text area data-test attributes for selection
+        if (['secret_key', 'integration_key'].includes(field)) {
+          inputType = 'textarea';
+          const textareas = this.element.querySelectorAll('[data-test-textarea]');
+          textareas[i].setAttribute('data-test-textarea', field);
+        }
         await fillIn(`[data-test-${inputType}="${field}"]`, 'foo');
       }
       await click('[data-test-mfa-create-save]');

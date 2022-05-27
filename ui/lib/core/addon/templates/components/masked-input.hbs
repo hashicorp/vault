@@ -1,7 +1,7 @@
 <div
   class="masked-input {{if this.displayOnly 'display-only'}} {{if this.allowCopy 'allow-copy'}}"
-  data-test-masked-input={{this.name}}
-  data-test-field={{this.name}}
+  data-test-masked-input
+  data-test-field
 >
   {{#if this.displayOnly}}
     {{#if this.showValue}}
@@ -16,7 +16,7 @@
       value={{this.value}}
       class="input {{unless this.showValue 'masked-font'}}"
       onchange={{action "updateValue"}}
-      data-test-input={{this.name}}
+      data-test-input
     />
   {{else}}
     <textarea
@@ -27,7 +27,7 @@
       onchange={{action "updateValue"}}
       onkeyup={{action (action "handleKeyUp" this.name) value="target.value"}}
       value={{this.value}}
-      data-test-textarea={{this.name}}
+      data-test-textarea
     ></textarea>
   {{/if}}
   {{#if this.allowCopy}}
