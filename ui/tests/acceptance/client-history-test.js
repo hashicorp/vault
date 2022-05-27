@@ -109,7 +109,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
-    assert.expect(8);
+    assert.expect(7);
     // TODO CMB: wire up dynamic generateActivity to mirage handler
     // const activity = generateActivityResponse(5, LICENSE_START, lastMonth);
     await visit('/vault/clients/history');
