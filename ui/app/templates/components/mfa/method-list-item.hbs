@@ -6,10 +6,10 @@
   <div class="level is-mobile">
     <div class="level-left">
       <div class="is-flex-row">
-        <Icon @size="24" @name={{@model.type}} class="has-text-grey" />
+        <Icon @size="24" @name={{@model.type}} class="has-text-grey" data-test-mfa-method-list-icon={{@model.type}} />
         <div>
           <span class="has-text-weight-semibold has-text-black">
-            {{if (eq @model.type "totp") (uppercase @model.type) @model.type}}
+            {{@model.name}}
           </span>
           <span class="tag has-left-margin-xs">
             {{@model.id}}

@@ -22,10 +22,14 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.access.mfa.methods.method" @query={{hash tab="config"}}>
+      <LinkTo @route="vault.cluster.access.mfa.methods.method" @query={{hash tab="config"}} data-test-tab="config">
         Configuration
       </LinkTo>
-      <LinkTo @route="vault.cluster.access.mfa.methods.method" @query={{hash tab="enforcements"}}>
+      <LinkTo
+        @route="vault.cluster.access.mfa.methods.method"
+        @query={{hash tab="enforcements"}}
+        data-test-tab="enforcements"
+      >
         Enforcements
       </LinkTo>
     </ul>
@@ -45,7 +49,10 @@
       >
         Delete
       </ConfirmAction>
-      <ToolbarLink @params={{array "vault.cluster.access.mfa.methods.method.edit" this.model.method.id}}>
+      <ToolbarLink
+        @params={{array "vault.cluster.access.mfa.methods.method.edit" this.model.method.id}}
+        data-test-mfa-method-edit
+      >
         Edit
       </ToolbarLink>
     </ToolbarActions>
