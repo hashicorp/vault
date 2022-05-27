@@ -11,6 +11,7 @@
         class="button is-primary {{if this.save.isRunning 'is-loading'}}"
         disabled={{this.save.isRunning}}
         onclick={{this.initSave}}
+        data-test-mfa-method-save
       >
         Save
       </button>
