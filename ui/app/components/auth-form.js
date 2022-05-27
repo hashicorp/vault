@@ -128,12 +128,12 @@ export default Component.extend(DEFAULTS, {
     'methods.[]',
     'selectedAuth',
     'selectedAuthIsPath',
-    function() {
+    function(){
       return this.getAuthBackend();
     }
   ),
 
-  providerName: computed('selectedAuthBackend.type', function() {
+  providerName: computed('selectedAuthBackend.type', function(){
     if (!this.selectedAuthBackend) {
       return;
     }
@@ -147,22 +147,24 @@ export default Component.extend(DEFAULTS, {
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
-  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function() {
+  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function(){
     let hasMethodsWithPath = this.hasMethodsWithPath;
     let methodsToShow = this.methodsToShow;
     return hasMethodsWithPath ? methodsToShow.concat(BACKENDS) : methodsToShow;
   }),
 
-  hasMethodsWithPath: computed('methodsToShow', function() {
+  hasMethodsWithPath: computed('methodsToShow', function(){
     return this.methodsToShow.isAny('path');
   }),
   methodsToShow: computed('methods', function() {
     let methods = this.methods || [];
-    let shownMethods = methods.filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()));
+    let shownMethods = methods.filter((m) =>
+      BACKENDS.find((b) => b.type.toLowerCase() === m.type.toLowerCase())
+    );
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
-  unwrapToken: task(function*(token) {
+  unwrapToken: task(function*(token){
     // will be using the Token Auth Method, so set it here
     this.set('selectedAuth', 'token');
     let adapter = this.store.adapterFor('tools');
@@ -175,7 +177,7 @@ export default Component.extend(DEFAULTS, {
     }
   }).withTestWaiter(),
 
-  fetchMethods: task(function*() {
+  fetchMethods: task(function*(){
     let store = this.store;
     try {
       let methods = yield store.findAll('auth-method', {
@@ -185,7 +187,7 @@ export default Component.extend(DEFAULTS, {
       });
       this.set(
         'methods',
-        methods.map(m => {
+        methods.map((m) => {
           const method = m.serialize({ includeId: true });
           return {
             ...method,
@@ -207,7 +209,7 @@ export default Component.extend(DEFAULTS, {
     this.set('loading', false);
     let errors;
     if (e.errors) {
-      errors = e.errors.map(error => {
+      errors = e.errors.map((error) => {
         if (error.detail) {
           return error.detail;
         }
@@ -220,7 +222,7 @@ export default Component.extend(DEFAULTS, {
     this.set('error', `${message}${errors.join('.')}`);
   },
 
-  authenticate: task(function*(backendType, data) {
+  authenticate: task(function* (backendType, data) {
     const {
       selectedAuth,
       cluster: { id: clusterId },
@@ -261,7 +263,7 @@ export default Component.extend(DEFAULTS, {
     }
   }).withTestWaiter(),
 
-  delayAuthMessageReminder: task(function*() {
+  delayAuthMessageReminder: task(function* () {
     if (Ember.testing) {
       this.showLoading = true;
       yield timeout(0);
@@ -290,7 +292,7 @@ export default Component.extend(DEFAULTS, {
         ? this.getAuthBackend('token')
         : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
-        b => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
+        (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
       let attributes = (backendMeta || {}).formAttributes || [];
 
