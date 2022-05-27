@@ -6,6 +6,8 @@ description: This is the API documentation for the Vault LDAP auth method.
 
 # LDAP Auth Method (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault LDAP auth method. For
 general information about the usage and operation of the LDAP method, please
 see the [Vault LDAP method documentation](/docs/auth/ldap).
