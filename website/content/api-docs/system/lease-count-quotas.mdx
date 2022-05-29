@@ -102,3 +102,39 @@ $ curl \
   "warnings": null
 }
 ```
+
+## List Lease Count Quotas
+
+This endpoint returns a list of all the lease count quotas. A 404 response will
+be returned if no lease count quota has been created.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `LIST` | `/sys/quotas/lease-count` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request LIST \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/quotas/lease-count
+```
+
+### Sample Response
+
+```json
+{
+  "auth": null,
+  "data": {
+    "keys": ["global-lease-count-quota"]
+  },
+  "lease_duration": 0,
+  "lease_id": "",
+  "renewable": false,
+  "request_id": "ab633ee1-a692-ba03-083b-f1bd91c51c28",
+  "warnings": null,
+  "wrap_info": null
+}
+```
+
