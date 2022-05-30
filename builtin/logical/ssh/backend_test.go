@@ -1776,6 +1776,82 @@ func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestSSHBackend_IssueSign(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":     "otp",
+				"default_user": "user",
+			}),
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "issue/testing",
+				Data:      map[string]interface{}{},
+				ErrorOk:   true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "role key type 'otp' not allowed to issue key pairs" {
+						return errors.New("non 'ca' 'key_type' role was allowed to issue key pairs")
+					}
+					return nil
+				},
+			},
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_key_ids":      false,
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"ssh-rsa":             []int{2048, 3072, 4096},
+					"ecdsa-sha2-nistp521": 0,
+				},
+			}),
+			// Key_type not in allowed_user_key_types_lengths
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "issue/testing",
+				Data: map[string]interface{}{
+					"key_type": "ec",
+					"key_bits": 256,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "key_type provided not in allowed_user_key_types" {
+						return errors.New("'key_type' not present in the existing 'allowed_user_key_used' was allowed")
+					}
+
+					return nil
+				},
+			},
+			// Key_bits not in allowed_user_key_types_lengths for provided key_type
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "issue/testing",
+				Data: map[string]interface{}{
+					"key_bits": 2560,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "key_bits not in list of allowed values for key_type provided" {
+						return errors.New("'key_bits' value not in values allowed for a 'key_type' was allowed")
+					}
+					return nil
+				},
+			},
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{

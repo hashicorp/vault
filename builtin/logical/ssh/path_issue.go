@@ -33,7 +33,7 @@ func pathIssue(b *backend) *framework.Path {
 			"key_type": {
 				Type:        framework.TypeString,
 				Description: "Specifies the desired key type; must be `rsa`, `ed25519` or `ec`",
-				Required:    true,
+				Default:     "rsa",
 			},
 			"key_bits": {
 				Type:        framework.TypeInt,
@@ -69,7 +69,7 @@ be later than the role max TTL.`,
 				Description: `Extensions that the certificate should be signed for.`,
 			},
 		},
-		HelpSynopsis:    pathRoleHelpSyn,
+		HelpSynopsis:    pathIssueHelpSyn,
 		HelpDescription: pathIssueHelpDesc,
 	}
 }
@@ -86,7 +86,7 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 	}
 
 	if role.KeyType != "ca" {
-		return logical.ErrorResponse("role key type \"%s\" not allowed to issue key pairs", role.KeyType), nil
+		return logical.ErrorResponse("role key type '%s' not allowed to issue key pairs", role.KeyType), nil
 	}
 
 	// Validate and extract key specifications
