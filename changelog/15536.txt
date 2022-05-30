@@ -1,0 +1,7 @@
+```release-note:improvement
+api/monitor: Add log_format option to allow for logs to be emitted in JSON format
+```
+
+```release-note:improvement
+command/debug: Add log_format flag to allow for logs to be emitted in JSON format
+```

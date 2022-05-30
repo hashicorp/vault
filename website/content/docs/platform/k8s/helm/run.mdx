@@ -402,14 +402,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.20.0       	1.10.3     	Official HashiCorp Vault Chart
+hashicorp/vault	0.20.1       	1.10.3     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.20.0 \
+$ helm upgrade vault hashicorp/vault --version=0.20.1 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run

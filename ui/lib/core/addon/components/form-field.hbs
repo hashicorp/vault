@@ -76,7 +76,6 @@
     <MountAccessorSelect
       @name={{@attr.name}}
       @label={{this.labelString}}
-      @warning={{@attr.options.warning}}
       @helpText={{@attr.options.helpText}}
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
@@ -114,6 +113,7 @@
           @description={{@attr.helpText}}
           @initialValue={{initialValue}}
           @initialEnabled={{if (eq initialValue "0s") false initialValue}}
+          @hideToggle={{@attr.options.hideToggle}}
         />
       {{/let}}
     </div>

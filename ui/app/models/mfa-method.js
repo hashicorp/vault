@@ -121,7 +121,8 @@ export default class MfaMethod extends Model {
   @attr({
     label: 'Period',
     editType: 'ttl',
-    subText: 'How long each generated TOTP is valid.',
+    helperTextEnabled: 'How long each generated TOTP is valid.',
+    hideToggle: true,
   })
   period;
   @attr('number', {

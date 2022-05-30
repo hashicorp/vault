@@ -1,0 +1,4 @@
+```release-note:improvement
+secrets/pki: Allow operators to control the issuing certificate behavior when
+the requested TTL is beyond the NotAfter value of the signing certificate
+```

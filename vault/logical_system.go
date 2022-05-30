@@ -3244,6 +3244,14 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
+	lf := data.Get("log_format").(string)
+	lowerLogFormat := strings.ToLower(lf)
+
+	validFormats := []string{"standard", "json"}
+	if !strutil.StrListContains(validFormats, lowerLogFormat) {
+		return logical.ErrorResponse("unknown log format"), nil
+	}
+
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
 		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
@@ -3258,7 +3266,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	isJson := b.Core.LogFormat() == "json"
+	isJson := b.Core.LogFormat() == "json" || lf == "json"
 	logger := b.Core.Logger().(log.InterceptLogger)
 
 	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
@@ -3396,13 +3404,23 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 		return nil, errors.New("token is not a valid unwrap token")
 	}
 
+	lookupNS, err := NamespaceByID(ctx, te.NamespaceID, b.Core)
+	if err != nil {
+		return nil, err
+	}
+	if lookupNS == nil {
+		return nil, errors.New("token is not from a valid namespace")
+	}
+
+	lookupCtx := namespace.ContextWithNamespace(ctx, lookupNS)
+
 	cubbyReq := &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
 	cubbyReq.SetTokenEntry(te)
-	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
+	cubbyResp, err := b.Core.router.Route(lookupCtx, cubbyReq)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
@@ -5189,6 +5207,10 @@ This path responds to the following HTTP methods.
 	"activity-query": {
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
+	},
+	"activity-export": {
+		"Export the historical activity of clients.",
+		"Export the historical activity of clients.",
 	},
 	"activity-monthly": {
 		"Count of active clients so far this month.",

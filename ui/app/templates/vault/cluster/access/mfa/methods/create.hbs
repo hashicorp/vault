@@ -53,7 +53,12 @@
     </p>
     <div class="is-flex-row has-top-margin-xl">
       {{#each this.methodNames as |methodName|}}
-        <RadioCard @value={{lowercase methodName}} @groupValue={{this.type}} @onChange={{this.onTypeSelect}}>
+        <RadioCard
+          @value={{lowercase methodName}}
+          @groupValue={{this.type}}
+          @onChange={{this.onTypeSelect}}
+          data-test-radio-card={{lowercase methodName}}
+        >
           <div class="radio-card-row is-flex-v-centered">
             <div>
               <Icon
@@ -82,14 +87,14 @@
   <div class="has-top-margin-l has-border-top-light">
     <div class="has-top-margin-l has-bottom-margin-l">
       {{#if this.showForms}}
-        <button class="button is-primary" type="button" {{on "click" (perform this.save)}}>
+        <button class="button is-primary" type="button" {{on "click" (perform this.save)}} data-test-mfa-create-save>
           Continue
         </button>
         <button class="button has-left-margin-xs" type="button" {{on "click" this.cancel}}>
           Cancel
         </button>
       {{else if this.type}}
-        <button class="button is-primary" type="button" {{on "click" this.createModels}}>
+        <button class="button is-primary" type="button" {{on "click" this.createModels}} data-test-mfa-create-next>
           Next
         </button>
       {{/if}}

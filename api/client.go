@@ -51,6 +51,7 @@ const (
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
 	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
+	EnvVaultProxyAddr     = "VAULT_PROXY_ADDR"
 	HeaderIndex           = "X-Vault-Index"
 	HeaderForward         = "X-Vault-Forward"
 	HeaderInconsistent    = "X-Vault-Inconsistent"
@@ -338,7 +339,7 @@ func (c *Config) ReadEnvironment() error {
 	var envMaxRetries *uint64
 	var envSRVLookup bool
 	var limit *rate.Limiter
-	var envHTTPProxy string
+	var envVaultProxy string
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -411,7 +412,12 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	if v := os.Getenv(EnvHTTPProxy); v != "" {
-		envHTTPProxy = v
+		envVaultProxy = v
+	}
+
+	// VAULT_PROXY_ADDR supersedes VAULT_HTTP_PROXY
+	if v := os.Getenv(EnvVaultProxyAddr); v != "" {
+		envVaultProxy = v
 	}
 
 	// Configure the HTTP clients TLS configuration.
@@ -451,14 +457,14 @@ func (c *Config) ReadEnvironment() error {
 		c.Timeout = envClientTimeout
 	}
 
-	if envHTTPProxy != "" {
-		url, err := url.Parse(envHTTPProxy)
+	if envVaultProxy != "" {
+		u, err := url.Parse(envVaultProxy)
 		if err != nil {
 			return err
 		}
 
 		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.Proxy = http.ProxyURL(url)
+		transport.Proxy = http.ProxyURL(u)
 	}
 
 	return nil

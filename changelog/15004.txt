@@ -1,0 +1,4 @@
+```release-note:change
+secrets/pki: existing Delete Root API (pki/root) will now delete all issuers
+and keys within the mount path.
+```

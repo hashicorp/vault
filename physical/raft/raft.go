@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
@@ -459,6 +460,15 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
 	}
 
+	var upgradeVersion string
+	if uv, ok := conf["autopilot_upgrade_version"]; ok && uv != "" {
+		upgradeVersion = uv
+		_, err := goversion.NewVersion(upgradeVersion)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_upgrade_version does not parse as a semantic version: %w", err)
+		}
+	}
+
 	return &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
@@ -475,7 +485,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		autopilotReconcileInterval: reconcileInterval,
 		autopilotUpdateInterval:    updateInterval,
 		redundancyZone:             conf["autopilot_redundancy_zone"],
-		upgradeVersion:             conf["autopilot_upgrade_version"],
+		upgradeVersion:             upgradeVersion,
 	}, nil
 }
 

@@ -15,7 +15,12 @@
       Learn more
     </LearnLink>
   </p>
-  <button type="submit" class="button is-primary" {{on "click" (transition-to "vault.cluster.access.mfa.methods.create")}}>
+  <button
+    type="submit"
+    class="button is-primary"
+    {{on "click" (transition-to "vault.cluster.access.mfa.methods.create")}}
+    data-test-mfa-configure
+  >
     Configure MFA
   </button>
 </div>
