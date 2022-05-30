@@ -87,8 +87,8 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 			} else {
 				atomicNumFail.Add(1)
 			}
+			time.Sleep(2 * time.Millisecond)
 		}
-		time.Sleep(2 * time.Millisecond)
 	}
 
 	results := make(map[string]*clientResult)
