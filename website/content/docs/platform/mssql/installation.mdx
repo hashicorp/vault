@@ -34,9 +34,6 @@ The EKM provider requires AppRole auth and the Transit secret engine to be setup
 on the Vault server. The steps below can be used to configure Vault ready for the
 EKM provider to use it.
 
--> **Note:** The first release of the Vault EKM provider does not support custom
-mount paths or namespaces for the AppRole and Transit engines.
-
 -> **Note:** rsa-2048 is currently the only supported key type.
 
 1. Set up AppRole auth:
@@ -205,7 +202,7 @@ installation.
     ```sql
     SELECT * FROM sys.dm_database_encryption_keys;
 
-    SELECT (SELECT name FROM sys.databases WHERE database_id = k.database_id) as name, 
+    SELECT (SELECT name FROM sys.databases WHERE database_id = k.database_id) as name,
         encryption_state, key_algorithm, key_length,
         encryptor_type, encryption_state_desc, encryption_scan_state_desc FROM sys.dm_database_encryption_keys k;
 
