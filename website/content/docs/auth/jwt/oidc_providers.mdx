@@ -394,7 +394,7 @@ Configuration steps:
    ISSUER="$(kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer')"
 
    # 2. Query the jwks_uri specified in /.well-known/openid-configuration
-   kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^\/]+(.*)/\1/')"
+   kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
    ```
 
 1. Convert the keys from JWK format to PEM. You can use a CLI tool or an online
