@@ -11,6 +11,17 @@
         </LinkTo>
       </li>
     {{/if}}
+    {{#if (has-permission "access" routeParams="mfa")}}
+      <li>
+        <LinkTo
+          @route="vault.cluster.access.mfa.methods"
+          @current-when="vault.cluster.access.mfa.methods vault.cluster.access.mfa.enforcements vault.cluster.access.mfa.index"
+          data-test-link="mfa"
+        >
+          Multi-factor authentication
+        </LinkTo>
+      </li>
+    {{/if}}
     {{#if (has-permission "access" routeParams="entities")}}
       <li>
         <LinkTo @route="vault.cluster.access.identity" @model="entities" data-test-link={{true}}>

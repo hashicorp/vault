@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	lplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -454,28 +455,62 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_reload(t *testing.T) {
-	data := map[string]interface{}{
-		"plugin": "mock-plugin",
+	testCases := []struct {
+		name        string
+		backendType logical.BackendType
+		data        map[string]interface{}
+	}{
+		{
+			name:        "test plugin reload for type credential",
+			backendType: logical.TypeCredential,
+			data: map[string]interface{}{
+				"plugin": "mock-plugin",
+			},
+		},
+		{
+			name:        "test mount reload for type credential",
+			backendType: logical.TypeCredential,
+			data: map[string]interface{}{
+				"mounts": "sys/auth/mock-0/,auth/mock-1/",
+			},
+		},
+		{
+			name:        "test plugin reload for type secret",
+			backendType: logical.TypeLogical,
+			data: map[string]interface{}{
+				"plugin": "mock-plugin",
+			},
+		},
+		{
+			name:        "test mount reload for type secret",
+			backendType: logical.TypeLogical,
+			data: map[string]interface{}{
+				"mounts": "mock-0/,mock-1",
+			},
+		},
 	}
-	t.Run("plugin", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
-
-	data = map[string]interface{}{
-		"mounts": "mock-0/,mock-1/",
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testSystemBackend_PluginReload(t, tc.data, tc.backendType)
+		})
 	}
-	t.Run("mounts", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
 }
 
 // Helper func to test different reload methods on plugin reload endpoint
-func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}) {
-	cluster := testSystemBackendMock(t, 1, 2, logical.TypeLogical)
+func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}, backendType logical.BackendType) {
+	cluster := testSystemBackendMock(t, 1, 2, backendType)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
 	client := core.Client
 
+	pathPrefix := "mock-"
+	if backendType == logical.TypeCredential {
+		pathPrefix = "auth/" + pathPrefix
+	}
 	for i := 0; i < 2; i++ {
 		// Update internal value in the backend
-		resp, err := client.Logical().Write(fmt.Sprintf("mock-%d/internal", i), map[string]interface{}{
+		resp, err := client.Logical().Write(fmt.Sprintf("%s%d/internal", pathPrefix, i), map[string]interface{}{
 			"value": "baz",
 		})
 		if err != nil {
@@ -500,7 +535,7 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 
 	for i := 0; i < 2; i++ {
 		// Ensure internal backed value is reset
-		resp, err := client.Logical().Read(fmt.Sprintf("mock-%d/internal", i))
+		resp, err := client.Logical().Read(fmt.Sprintf("%s%d/internal", pathPrefix, i))
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -600,7 +635,6 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 			"test": plugin.Factory,
 		},
 	}
-
 	// Create a tempdir, cluster.Cleanup will clean up this directory
 	tempDir, err := ioutil.TempDir("", "vault-test-cluster")
 	if err != nil {
@@ -895,4 +929,69 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 		}
 		return nil
 	})
+}
+
+// TestSystemBackend_VersionHistory_unauthenticated tests the sys/version-history
+// endpoint without providing a token. Requests to the endpoint must be
+// authenticated and thus a 403 response is expected.
+func TestSystemBackend_VersionHistory_unauthenticated(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	client.SetToken("")
+	resp, err := client.Logical().List("sys/version-history")
+
+	if resp != nil {
+		t.Fatalf("expected nil response, resp: %#v", resp)
+	}
+
+	respErr, ok := err.(*api.ResponseError)
+	if !ok {
+		t.Fatalf("unexpected error type: err: %#v", err)
+	}
+
+	if respErr.StatusCode != 403 {
+		t.Fatalf("expected response status to be 403, actual: %d", respErr.StatusCode)
+	}
+}
+
+// TestSystemBackend_VersionHistory_authenticated tests the sys/version-history
+// endpoint with authentication. Without synthetically altering the underlying
+// core/versions storage entries, a single version entry should exist.
+func TestSystemBackend_VersionHistory_authenticated(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	resp, err := client.Logical().List("sys/version-history")
+	if err != nil || resp == nil {
+		t.Fatalf("request failed, err: %v, resp: %#v", err, resp)
+	}
+
+	var ok bool
+	var keys []interface{}
+	var keyInfo map[string]interface{}
+
+	if keys, ok = resp.Data["keys"].([]interface{}); !ok {
+		t.Fatalf("expected keys to be array, actual: %#v", resp.Data["keys"])
+	}
+
+	if keyInfo, ok = resp.Data["key_info"].(map[string]interface{}); !ok {
+		t.Fatalf("expected key_info to be map, actual: %#v", resp.Data["key_info"])
+	}
+
+	if len(keys) != 1 {
+		t.Fatalf("expected single version history entry for %q", version.Version)
+	}
+
+	if keyInfo[version.Version] == nil {
+		t.Fatalf("expected version %s to be present in key_info, actual: %#v", version.Version, keyInfo)
+	}
 }

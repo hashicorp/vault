@@ -1,0 +1,3 @@
+```release-note:bug
+ secrets/openldap: Fix panic from nil logger in backend
+```

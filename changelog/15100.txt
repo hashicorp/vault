@@ -1,0 +1,4 @@
+```release-note:change
+secrets/pki: Existing CRL API (/pki/crl) now returns an X.509 v2 CRL instead
+of a v1 CRL.
+```

@@ -120,48 +120,6 @@
         "path": "secret/gcpkms"
       },
       {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secret/key-management"
-          },
-          {
-            "title": "Azure Key Vault",
-            "path": "secret/key-management/azurekeyvault"
-          },
-          {
-            "title": "AWS KMS",
-            "path": "secret/key-management/awskms"
-          },
-          {
-            "title": "GCP Cloud KMS",
-            "path": "secret/key-management/gcpkms"
-          }
-        ]
-      },
-      {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secret/kmip"
-      },
-      {
-        "title": "Key/Value",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secret/kv"
-          },
-          {
-            "title": "K/V Version 1",
-            "path": "secret/kv/kv-v1"
-          },
-          {
-            "title": "K/V Version 2",
-            "path": "secret/kv/kv-v2"
-          }
-        ]
-      },
-      {
         "title": "Identity",
         "routes": [
           {
@@ -195,8 +153,83 @@
           {
             "title": "OIDC Provider",
             "path": "secret/identity/oidc-provider"
+          },
+          {
+            "title": "MFA",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secret/identity/mfa"
+              },
+              {
+                "title": "Duo",
+                "path": "secret/identity/mfa/duo"
+              },
+              {
+                "title": "Okta",
+                "path": "secret/identity/mfa/okta"
+              },
+              {
+                "title": "PingID",
+                "path": "secret/identity/mfa/pingid"
+              },
+              {
+                "title": "TOTP",
+                "path": "secret/identity/mfa/totp"
+              },
+              {
+                "title": "Login Enforcement",
+                "path": "secret/identity/mfa/login-enforcement"
+              }
+            ]
           }
         ]
+      },
+      {
+        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/key-management"
+          },
+          {
+            "title": "Azure Key Vault",
+            "path": "secret/key-management/azurekeyvault"
+          },
+          {
+            "title": "AWS KMS",
+            "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
+          }
+        ]
+      },
+      {
+        "title": "Key/Value",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/kv"
+          },
+          {
+            "title": "K/V Version 1",
+            "path": "secret/kv/kv-v1"
+          },
+          {
+            "title": "K/V Version 2",
+            "path": "secret/kv/kv-v2"
+          }
+        ]
+      },
+      {
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secret/kmip"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "secret/kubernetes"
       },
       {
         "title": "MongoDB Atlas",
@@ -446,8 +479,12 @@
         "path": "system/leases"
       },
       {
-        "title": "<code>/sys/license</code>",
+        "title": "<code>/sys/license/status</code>",
         "path": "system/license"
+      },
+      {
+        "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
+        "path": "system/managed-keys"
       },
       {
         "title": "<code>/sys/metrics</code>",
@@ -475,6 +512,10 @@
           {
             "title": "<code>/sys/mfa/method/totp</code>",
             "path": "system/mfa/totp"
+          },
+          {
+            "title": "<code>/sys/mfa/validate</code>",
+            "path": "system/mfa/validate"
           }
         ]
       },
@@ -611,6 +652,10 @@
       {
         "title": "<code>/sys/unseal</code>",
         "path": "system/unseal"
+      },
+      {
+        "title": "<code>/sys/version-history</code>",
+        "path": "system/version-history"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

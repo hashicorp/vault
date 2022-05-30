@@ -27,15 +27,30 @@ type ManagedKey interface {
 	// Present returns true if the key is established in the KMS.  This may return false if for example
 	// an HSM library is not configured on all cluster nodes.
 	Present(ctx context.Context) (bool, error)
-	Finalize(context.Context) error
 
 	// AllowsAll returns true if all the requested usages are supported by the managed key.
 	AllowsAll(usages []KeyUsage) bool
 }
 
+type (
+	ManagedKeyConsumer        func(context.Context, ManagedKey) error
+	ManagedSigningKeyConsumer func(context.Context, ManagedSigningKey) error
+)
+
 type ManagedKeySystemView interface {
-	GetManagedKeyByName(ctx context.Context, keyName, mountPoint string) (ManagedKey, error)
-	GetManagedKeyByUUID(ctx context.Context, keyUuid, mountPoint string) (ManagedKey, error)
+	// WithManagedKeyByName retrieves an instantiated managed key for consumption by the given function.  The
+	// provided key can only be used within the scope of that function call
+	WithManagedKeyByName(ctx context.Context, keyName, backendUUID string, f ManagedKeyConsumer) error
+	// WithManagedKeyByUUID retrieves an instantiated managed key for consumption by the given function.  The
+	// provided key can only be used within the scope of that function call
+	WithManagedKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedKeyConsumer) error
+
+	// WithManagedSigningKeyByName retrieves an instantiated managed signing key for consumption by the given function,
+	// with the same semantics as WithManagedKeyByName
+	WithManagedSigningKeyByName(ctx context.Context, keyName, backendUUID string, f ManagedSigningKeyConsumer) error
+	// WithManagedSigningKeyByUUID retrieves an instantiated managed signing key for consumption by the given function,
+	// with the same semantics as WithManagedKeyByUUID
+	WithManagedSigningKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedSigningKeyConsumer) error
 }
 
 type ManagedAsymmetricKey interface {

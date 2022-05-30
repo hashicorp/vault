@@ -1,0 +1,126 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.mfa.enforcements.index">
+            Enforcements
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon @name="lock" @size="24" />
+      {{this.model.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs" aria-label="Enforcement tabs">
+    <ul>
+      <LinkTo
+        @route="vault.cluster.access.mfa.enforcements.enforcement"
+        @query={{hash tab="targets"}}
+        data-test-tab="targets"
+      >
+        Targets
+      </LinkTo>
+      <LinkTo
+        @route="vault.cluster.access.mfa.enforcements.enforcement"
+        @query={{hash tab="methods"}}
+        data-test-tab="methods"
+      >
+        Methods
+      </LinkTo>
+    </ul>
+  </nav>
+</div>
+<Toolbar>
+  <ToolbarActions>
+    <button
+      class="toolbar-link"
+      onclick={{action (mut this.showDeleteConfirmation) true}}
+      type="button"
+      data-test-enforcement-delete
+    >
+      Delete
+    </button>
+    <div class="toolbar-separator"></div>
+    <ToolbarLink
+      @params={{array "vault.cluster.access.mfa.enforcements.enforcement.edit" this.model.id}}
+      data-test-enforcement-edit={{true}}
+    >
+      Edit enforcement
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if (eq this.tab "targets")}}
+  {{#each @model.targets as |target|}}
+    <LinkedBlock
+      class="list-item-row"
+      @disabled={{not target.link}}
+      @params={{union (array target.link) target.linkModels}}
+      data-test-target={{target.title}}
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Icon @name={{target.icon}} />
+            <span class="has-text-weight-semibold has-text-black">
+              {{target.title}}
+            </span>
+            <div class="has-text-grey is-size-8">
+              <code>
+                {{target.subTitle}}
+              </code>
+            </div>
+          </div>
+        </div>
+        {{#if target.link}}
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu" aria-label="Enforcement target more menu">
+                  <ul class="menu-list">
+                    <li>
+                      <LinkTo @route={{target.link}} @models={{target.linkModels}} data-test-target-link={{target.title}}>
+                        Details
+                      </LinkTo>
+                    </li>
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
+          </div>
+        {{/if}}
+      </div>
+    </LinkedBlock>
+  {{/each}}
+{{else if (eq this.tab "methods")}}
+  {{#each this.model.mfa_methods as |method|}}
+    <Mfa::MethodListItem @model={{method}} />
+  {{/each}}
+{{/if}}
+
+<ConfirmationModal
+  @title="Delete enforcement?"
+  @confirmText={{this.model.name}}
+  @toConfirmMsg="deleting the transformation."
+  @buttonText="Delete"
+  @isActive={{this.showDeleteConfirmation}}
+  @onClose={{action (mut this.showDeleteConfirmation) false}}
+  @onConfirm={{this.delete}}
+>
+  <p class="has-bottom-margin-m">
+    Deleting the
+    <strong>{{this.model.name}}</strong>
+    enforcement will mean that the MFA method that depends on it will no longer enforce multi-factor authentication.
+    <br /><br />
+    Deleting this enforcement cannot be undone; it will have to be recreated.
+  </p>
+  <MessageError @model={{this.model}} @errorMessage={{this.deleteError}} />
+</ConfirmationModal>

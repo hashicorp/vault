@@ -50,10 +50,12 @@ export default RESTSerializer.extend({
       const min_decryption_version = snapshot.attr('minDecryptionVersion');
       const min_encryption_version = snapshot.attr('minEncryptionVersion');
       const deletion_allowed = snapshot.attr('deletionAllowed');
+      const auto_rotate_period = snapshot.attr('autoRotatePeriod');
       return {
         min_decryption_version,
         min_encryption_version,
         deletion_allowed,
+        auto_rotate_period,
       };
     } else {
       snapshot.id = snapshot.attr('name');

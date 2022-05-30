@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
@@ -29,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	bolt "go.etcd.io/bbolt"
@@ -151,7 +154,21 @@ type RaftBackend struct {
 	// node is up and running.
 	disableAutopilot bool
 
+	// autopilotReconcileInterval is how long between rounds of performing promotions, demotions
+	// and leadership transfers.
 	autopilotReconcileInterval time.Duration
+
+	// autopilotUpdateInterval is the time between the periodic state updates. These periodic
+	// state updates take in known servers from the delegate, request Raft stats be
+	// fetched and pull in other inputs such as the Raft configuration to create
+	// an updated view of the Autopilot State.
+	autopilotUpdateInterval time.Duration
+
+	// upgradeVersion is used to override the Vault SDK version when performing an autopilot automated upgrade.
+	upgradeVersion string
+
+	// redundancyZone specifies a redundancy zone for autopilot.
+	redundancyZone string
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -274,7 +291,7 @@ func EnsurePath(path string, dir bool) error {
 	if !dir {
 		path = filepath.Dir(path)
 	}
-	return os.MkdirAll(path, 0o755)
+	return os.MkdirAll(path, 0o700)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
@@ -420,6 +437,38 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		reconcileInterval = interval
 	}
 
+	var updateInterval time.Duration
+	if interval := conf["autopilot_update_interval"]; interval != "" {
+		interval, err := time.ParseDuration(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
+		}
+		updateInterval = interval
+	}
+
+	effectiveReconcileInterval := autopilot.DefaultReconcileInterval
+	effectiveUpdateInterval := autopilot.DefaultUpdateInterval
+
+	if reconcileInterval != 0 {
+		effectiveReconcileInterval = reconcileInterval
+	}
+	if updateInterval != 0 {
+		effectiveUpdateInterval = updateInterval
+	}
+
+	if effectiveReconcileInterval < effectiveUpdateInterval {
+		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
+	}
+
+	var upgradeVersion string
+	if uv, ok := conf["autopilot_upgrade_version"]; ok && uv != "" {
+		upgradeVersion = uv
+		_, err := goversion.NewVersion(upgradeVersion)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_upgrade_version does not parse as a semantic version: %w", err)
+		}
+	}
+
 	return &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
@@ -434,6 +483,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize:               maxEntrySize,
 		followerHeartbeatTicker:    time.NewTicker(time.Second),
 		autopilotReconcileInterval: reconcileInterval,
+		autopilotUpdateInterval:    updateInterval,
+		redundancyZone:             conf["autopilot_redundancy_zone"],
+		upgradeVersion:             upgradeVersion,
 	}, nil
 }
 
@@ -483,6 +535,36 @@ func (b *RaftBackend) Close() error {
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) RedundancyZone() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.redundancyZone
+}
+
+func (b *RaftBackend) EffectiveVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.upgradeVersion != "" {
+		return b.upgradeVersion
+	}
+
+	return version.GetVersion().Version
+}
+
+// DisableUpgradeMigration returns the state of the DisableUpgradeMigration config flag and whether it was set or not
+func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.autopilotConfig == nil {
+		return false, false
+	}
+
+	return b.autopilotConfig.DisableUpgradeMigration, true
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
@@ -635,9 +717,9 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 			return err
 		}
 	}
-	config.ElectionTimeout = config.ElectionTimeout * time.Duration(multiplier)
-	config.HeartbeatTimeout = config.HeartbeatTimeout * time.Duration(multiplier)
-	config.LeaderLeaseTimeout = config.LeaderLeaseTimeout * time.Duration(multiplier)
+	config.ElectionTimeout *= time.Duration(multiplier)
+	config.HeartbeatTimeout *= time.Duration(multiplier)
+	config.LeaderLeaseTimeout *= time.Duration(multiplier)
 
 	snapThresholdRaw, ok := b.conf["snapshot_threshold"]
 	if ok {
@@ -676,6 +758,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	// scheduler.
 	config.BatchApplyCh = true
 
+	b.logger.Trace("applying raft config", "inputs", b.conf)
 	return nil
 }
 
@@ -758,6 +841,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return false
 	}
 
+	var initialTimeoutMultiplier time.Duration
 	switch {
 	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
@@ -769,6 +853,19 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
+		initialTimeoutMultiplier = 3
+		if !opts.StartAsLeader {
+			electionTimeout, heartbeatTimeout := raftConfig.ElectionTimeout, raftConfig.HeartbeatTimeout
+			// Use bigger values for first election
+			raftConfig.ElectionTimeout *= initialTimeoutMultiplier
+			raftConfig.HeartbeatTimeout *= initialTimeoutMultiplier
+			b.logger.Trace("using larger timeouts for raft at startup",
+				"initial_election_timeout", raftConfig.ElectionTimeout,
+				"initial_heartbeat_timeout", raftConfig.HeartbeatTimeout,
+				"normal_election_timeout", electionTimeout,
+				"normal_heartbeat_timeout", heartbeatTimeout)
+		}
+
 		// Set the local address and localID in the streaming layer and the raft config.
 		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener)
 		if err != nil {
@@ -860,11 +957,16 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	// StartAsLeader is only set during init, recovery mode, storage migration,
 	// and tests.
 	if opts.StartAsLeader {
+		// ticker is used to prevent memory leak of using time.After in
+		// for - select pattern.
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
 		for {
 			if raftObj.State() == raft.Leader {
 				break
 			}
 
+			ticker.Reset(10 * time.Millisecond)
 			select {
 			case <-ctx.Done():
 				future := raftObj.Shutdown()
@@ -873,7 +975,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 				}
 
 				return errors.New("shutdown while waiting for leadership")
-			case <-time.After(10 * time.Millisecond):
+			case <-ticker.C:
 			}
 		}
 	}
@@ -896,6 +998,63 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Close the init channel to signal setup has been completed
 	close(b.raftInitCh)
+
+	reloadConfig := func() {
+		newCfg := raft.ReloadableConfig{
+			TrailingLogs:      raftConfig.TrailingLogs,
+			SnapshotInterval:  raftConfig.SnapshotInterval,
+			SnapshotThreshold: raftConfig.SnapshotThreshold,
+			HeartbeatTimeout:  raftConfig.HeartbeatTimeout / initialTimeoutMultiplier,
+			ElectionTimeout:   raftConfig.ElectionTimeout / initialTimeoutMultiplier,
+		}
+		err := raftObj.ReloadConfig(newCfg)
+		if err != nil {
+			b.logger.Error("failed to reload raft config to set lower timeouts", "error", err)
+		} else {
+			b.logger.Trace("reloaded raft config to set lower timeouts", "config", fmt.Sprintf("%#v", newCfg))
+		}
+	}
+	confFuture := raftObj.GetConfiguration()
+	numServers := 0
+	if err := confFuture.Error(); err != nil {
+		// This should probably never happen, but just in case we'll log the error.
+		// We'll default in this case to the multi-node behaviour.
+		b.logger.Error("failed to read raft configuration", "error", err)
+	} else {
+		clusterConf := confFuture.Configuration()
+		numServers = len(clusterConf.Servers)
+	}
+	if initialTimeoutMultiplier != 0 {
+		if numServers == 1 {
+			reloadConfig()
+		} else {
+			go func() {
+				ticker := time.NewTicker(50 * time.Millisecond)
+				// Emulate the random timeout used in Raft lib, to ensure that
+				// if all nodes are brought up simultaneously, they don't all
+				// call for an election at once.
+				extra := time.Duration(rand.Int63()) % raftConfig.HeartbeatTimeout
+				timeout := time.NewTimer(raftConfig.HeartbeatTimeout + extra)
+				for {
+					select {
+					case <-ticker.C:
+						switch raftObj.State() {
+						case raft.Candidate, raft.Leader:
+							b.logger.Trace("triggering raft config reload due to being candidate or leader")
+							reloadConfig()
+							return
+						case raft.Shutdown:
+							return
+						}
+					case <-timeout.C:
+						b.logger.Trace("triggering raft config reload due to initial timeout")
+						reloadConfig()
+						return
+					}
+				}
+			}()
+		}
+	}
 
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
@@ -1068,6 +1227,7 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 			Voter:           server.Suffrage == raft.Voter,
 			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
+
 		config.Servers = append(config.Servers, entry)
 	}
 

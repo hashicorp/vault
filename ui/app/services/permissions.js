@@ -4,6 +4,7 @@ import { task } from 'ember-concurrency';
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
+    mfa: 'identity/mfa/method',
     entities: 'identity/entity/id',
     groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
@@ -36,12 +37,13 @@ const API_PATHS = {
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
-  'sys/auth': ['vault.cluster.access.methods'],
-  'identity/entity/id': ['vault.cluster.access.identity', 'entities'],
-  'identity/group/id': ['vault.cluster.access.identity', 'groups'],
-  'sys/leases/lookup': ['vault.cluster.access.leases'],
-  'sys/namespaces': ['vault.cluster.access.namespaces'],
-  'sys/control-group/': ['vault.cluster.access.control-groups'],
+  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
+  'identity/entity/id': { route: 'vault.cluster.access.identity', models: ['entities'] },
+  'identity/group/id': { route: 'vault.cluster.access.identity', models: ['groups'] },
+  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
+  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
+  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
+  'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
 };
 
 /*
@@ -99,7 +101,7 @@ export default Service.extend({
   navPathParams(navItem) {
     const path = Object.values(API_PATHS[navItem]).find((path) => this.hasPermission(path));
     if (['policies', 'tools'].includes(navItem)) {
-      return path.split('/').lastObject;
+      return { models: [path.split('/').lastObject] };
     }
 
     return API_PATHS_TO_ROUTE_PARAMS[path];

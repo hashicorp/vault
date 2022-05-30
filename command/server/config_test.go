@@ -51,3 +51,7 @@ func TestParseSeals(t *testing.T) {
 func TestUnknownFieldValidation(t *testing.T) {
 	testUnknownFieldValidation(t)
 }
+
+func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
+	testUnknownFieldValidationStorageAndListener(t)
+}

@@ -15,12 +15,11 @@ import (
 	"testing"
 	"time"
 
-	vaultseal "github.com/hashicorp/vault/vault/seal"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -30,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -43,6 +43,8 @@ type RaftClusterOpts struct {
 	EnableResponseHeaderRaftNodeID bool
 	NumCores                       int
 	Seal                           vault.Seal
+	VersionMap                     map[int]string
+	RedundancyZoneMap              map[int]string
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -66,6 +68,8 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 	opts.NumCores = ropts.NumCores
+	opts.VersionMap = ropts.VersionMap
+	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
@@ -73,9 +77,9 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		opts.SetupFunc = nil
 	}
 
-	cluster := vault.NewTestCluster(t, conf, &opts)
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), conf, &opts)
 	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	vault.TestWaitActive(benchhelpers.TBtoT(t), cluster.Cores[0].Core)
 	return cluster
 }
 
@@ -489,28 +493,13 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 		}
 	}
 
-	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
-	if err := http2.ConfigureTransport(transport); err != nil {
-		t.Fatal(err)
-	}
-	client := &http.Client{
-		Transport: transport,
-	}
-
 	// Take a snapshot
-	req := leaderClient.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
-	httpReq, err := req.ToHTTP()
+	buf := new(bytes.Buffer)
+	err := leaderClient.Sys().RaftSnapshot(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	snap, err := ioutil.ReadAll(resp.Body)
+	snap, err := io.ReadAll(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -527,15 +516,8 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
 	// Restore snapshot
-	req = leaderClient.NewRequest("POST", "/v1/sys/storage/raft/snapshot")
-	req.Body = bytes.NewBuffer(snap)
-	httpReq, err = req.ToHTTP()
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err = client.Do(httpReq)
+	err = leaderClient.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
 	if err != nil {
 		t.Fatal(err)
 	}

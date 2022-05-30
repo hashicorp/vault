@@ -19,7 +19,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
@@ -125,7 +124,7 @@ func TestClientHostHeader(t *testing.T) {
 	// Set the token manually
 	client.SetToken("foo")
 
-	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,13 +151,13 @@ func TestClientBadToken(t *testing.T) {
 	}
 
 	client.SetToken("foo")
-	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	client.SetToken("foo\u007f")
-	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err == nil || !strings.Contains(err.Error(), "printable") {
 		t.Fatalf("expected error due to bad token")
 	}
@@ -187,7 +186,7 @@ func TestClientRedirect(t *testing.T) {
 	client.SetToken("foo")
 
 	// Do a raw "/" request
-	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	resp, err := client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -262,24 +261,37 @@ func TestDefaulRetryPolicy(t *testing.T) {
 
 func TestClientEnvSettings(t *testing.T) {
 	cwd, _ := os.Getwd()
+
+	caCertBytes, err := os.ReadFile(cwd + "/test-fixtures/keys/cert.pem")
+	if err != nil {
+		t.Fatalf("error reading %q cert file: %v", cwd+"/test-fixtures/keys/cert.pem", err)
+	}
+
 	oldCACert := os.Getenv(EnvVaultCACert)
+	oldCACertBytes := os.Getenv(EnvVaultCACertBytes)
 	oldCAPath := os.Getenv(EnvVaultCAPath)
 	oldClientCert := os.Getenv(EnvVaultClientCert)
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
+
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
+	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
 	os.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
 	os.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
-	defer os.Setenv(EnvVaultCACert, oldCACert)
-	defer os.Setenv(EnvVaultCAPath, oldCAPath)
-	defer os.Setenv(EnvVaultClientCert, oldClientCert)
-	defer os.Setenv(EnvVaultClientKey, oldClientKey)
-	defer os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
-	defer os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+
+	defer func() {
+		os.Setenv(EnvVaultCACert, oldCACert)
+		os.Setenv(EnvVaultCACertBytes, oldCACertBytes)
+		os.Setenv(EnvVaultCAPath, oldCAPath)
+		os.Setenv(EnvVaultClientCert, oldClientCert)
+		os.Setenv(EnvVaultClientKey, oldClientKey)
+		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
+		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+	}()
 
 	config := DefaultConfig()
 	if err := config.ReadEnvironment(); err != nil {
@@ -331,7 +343,7 @@ func TestClientEnvNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	_, err = client.RawRequest(client.NewRequest("GET", "/"))
+	_, err = client.RawRequest(client.NewRequest(http.MethodGet, "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -477,6 +489,7 @@ func TestClone(t *testing.T) {
 			parent.SetLimiter(5.0, 10)
 			parent.SetMaxRetries(5)
 			parent.SetOutputCurlString(true)
+			parent.SetOutputPolicy(true)
 			parent.SetSRVLookup(true)
 
 			if tt.headers != nil {
@@ -513,8 +526,8 @@ func TestClone(t *testing.T) {
 			if parent.MaxRetries() != clone.MaxRetries() {
 				t.Fatalf("maxRetries don't match: %v vs %v", parent.MaxRetries(), clone.MaxRetries())
 			}
-			if parent.OutputCurlString() != clone.OutputCurlString() {
-				t.Fatalf("outputCurlString doesn't match: %v vs %v", parent.OutputCurlString(), clone.OutputCurlString())
+			if parent.OutputCurlString() == clone.OutputCurlString() {
+				t.Fatalf("outputCurlString was copied over when it shouldn't have been: %v and %v", parent.OutputCurlString(), clone.OutputCurlString())
 			}
 			if parent.SRVLookup() != clone.SRVLookup() {
 				t.Fatalf("SRVLookup doesn't match: %v vs %v", parent.SRVLookup(), clone.SRVLookup())
@@ -962,7 +975,7 @@ func TestClient_ReadYourWrites(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testRequest := func(client *Client, val string) {
-				req := client.NewRequest("GET", "/"+val)
+				req := client.NewRequest(http.MethodGet, "/"+val)
 				req.Headers.Set(HeaderIndex, val)
 				resp, err := client.RawRequestWithContext(context.Background(), req)
 				if err != nil {
@@ -1119,6 +1132,154 @@ func TestClient_SetCloneToken(t *testing.T) {
 				if actual != expected {
 					t.Fatalf("SetCloneToken(): expected %v, actual %v", expected, actual)
 				}
+			}
+		})
+	}
+}
+
+func TestClientWithNamespace(t *testing.T) {
+	var ns string
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		ns = req.Header.Get(consts.NamespaceHeaderName)
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	// set up a client with a namespace
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	ogNS := "test"
+	client.SetNamespace(ogNS)
+	_, err = client.rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != ogNS {
+		t.Fatalf("Expected namespace: \"%s\", got \"%s\"", ogNS, ns)
+	}
+
+	// make a call with a temporary namespace
+	newNS := "new-namespace"
+	_, err = client.WithNamespace(newNS).rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != newNS {
+		t.Fatalf("Expected new namespace: \"%s\", got \"%s\"", newNS, ns)
+	}
+	// ensure client has not been modified
+	_, err = client.rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != ogNS {
+		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
+	}
+
+	// make call with empty ns
+	_, err = client.WithNamespace("").rawRequestWithContext(
+		context.Background(),
+		client.NewRequest(http.MethodGet, "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if ns != "" {
+		t.Fatalf("Expected no namespace, got \"%s\"", ns)
+	}
+
+	// ensure client has not been modified
+	if client.Namespace() != ogNS {
+		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, client.Namespace())
+	}
+}
+
+func TestVaultProxy(t *testing.T) {
+	const NoProxy string = "NO_PROXY"
+
+	tests := map[string]struct {
+		name                     string
+		vaultHttpProxy           string
+		vaultProxyAddr           string
+		noProxy                  string
+		requestUrl               string
+		expectedResolvedProxyUrl string
+	}{
+		"VAULT_HTTP_PROXY used when NO_PROXY env var doesn't include request host": {
+			vaultHttpProxy: "https://hashicorp.com",
+			vaultProxyAddr: "",
+			noProxy:        "terraform.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_HTTP_PROXY used when NO_PROXY env var includes request host": {
+			vaultHttpProxy: "https://hashicorp.com",
+			vaultProxyAddr: "",
+			noProxy:        "terraform.io,vaultproject.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_PROXY_ADDR used when NO_PROXY env var doesn't include request host": {
+			vaultHttpProxy: "",
+			vaultProxyAddr: "https://hashicorp.com",
+			noProxy:        "terraform.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_PROXY_ADDR used when NO_PROXY env var includes request host": {
+			vaultHttpProxy: "",
+			vaultProxyAddr: "https://hashicorp.com",
+			noProxy:        "terraform.io,vaultproject.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_PROXY_ADDR used when VAULT_HTTP_PROXY env var also supplied": {
+			vaultHttpProxy:           "https://hashicorp.com",
+			vaultProxyAddr:           "https://terraform.io",
+			noProxy:                  "",
+			requestUrl:               "https://vaultproject.io",
+			expectedResolvedProxyUrl: "https://terraform.io",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.vaultHttpProxy != "" {
+				oldVaultHttpProxy := os.Getenv(EnvHTTPProxy)
+				os.Setenv(EnvHTTPProxy, tc.vaultHttpProxy)
+				defer os.Setenv(EnvHTTPProxy, oldVaultHttpProxy)
+			}
+
+			if tc.vaultProxyAddr != "" {
+				oldVaultProxyAddr := os.Getenv(EnvVaultProxyAddr)
+				os.Setenv(EnvVaultProxyAddr, tc.vaultProxyAddr)
+				defer os.Setenv(EnvVaultProxyAddr, oldVaultProxyAddr)
+			}
+
+			if tc.noProxy != "" {
+				oldNoProxy := os.Getenv(NoProxy)
+				os.Setenv(NoProxy, tc.noProxy)
+				defer os.Setenv(NoProxy, oldNoProxy)
+			}
+
+			c := DefaultConfig()
+			if c.Error != nil {
+				t.Fatalf("Expected no error reading config, found error %v", c.Error)
+			}
+
+			r, _ := http.NewRequest("GET", tc.requestUrl, nil)
+			proxyUrl, err := c.HttpClient.Transport.(*http.Transport).Proxy(r)
+			if err != nil {
+				t.Fatalf("Expected no error resolving proxy, found error %v", err)
+			}
+			if proxyUrl == nil || proxyUrl.String() == "" {
+				t.Fatalf("Expected proxy to be resolved but no proxy returned")
+			}
+			if tc.expectedResolvedProxyUrl != "" && proxyUrl.String() != tc.expectedResolvedProxyUrl {
+				t.Fatalf("Expected resolved proxy URL to be %v but was %v", tc.expectedResolvedProxyUrl, proxyUrl.String())
 			}
 		})
 	}

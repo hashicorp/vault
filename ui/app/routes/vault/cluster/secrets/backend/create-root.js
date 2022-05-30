@@ -29,9 +29,10 @@ const transformModel = (queryParams) => {
 
 export default EditBase.extend({
   wizard: service(),
+
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let modelType = this.modelType(backend);
+    let modelType = this.modelType(backend, null, { queryParams: transition.to.queryParams });
     if (modelType === 'role-ssh') {
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
@@ -57,6 +58,10 @@ export default EditBase.extend({
   },
 
   model(params, transition) {
+    // wizard will pause unless we manually continue it -- verify that keymgmt tutorial is in progress
+    if (params.itemType === 'provider' && this.wizard.nextStep === 'provider') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
+    }
     return hash({
       secret: this.createModel(transition),
       capabilities: {},

@@ -46,6 +46,9 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathConfig(),
 			b.pathRotate(),
 			b.pathRewrap(),
+			b.pathWrappingKey(),
+			b.pathImport(),
+			b.pathImportVersion(),
 			b.pathKeys(),
 			b.pathListKeys(),
 			b.pathExportKeys(),
@@ -190,7 +193,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 }
 
 // autoRotateKeys retrieves all transit keys and rotates those which have an
-// auto rotate interval defined which has passed. This operation only happens
+// auto rotate period defined which has passed. This operation only happens
 // on primary nodes and performance secondary nodes which have a local mount.
 func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) error {
 	// Only check for autorotation once an hour to avoid unnecessarily iterating
@@ -247,15 +250,20 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 	}
 	defer p.Unlock()
 
-	// If the policy's automatic rotation interval is 0, it should not
+	// If the key is imported, it can only be rotated from within Vault if allowed.
+	if p.Imported && !p.AllowImportedKeyRotation {
+		return nil
+	}
+
+	// If the policy's automatic rotation period is 0, it should not
 	// automatically rotate.
-	if p.AutoRotateInterval == 0 {
+	if p.AutoRotatePeriod == 0 {
 		return nil
 	}
 
 	// Retrieve the latest version of the policy and determine if it is time to rotate.
 	latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
-	if time.Now().After(latestKey.CreationTime.Add(p.AutoRotateInterval)) {
+	if time.Now().After(latestKey.CreationTime.Add(p.AutoRotatePeriod)) {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("automatically rotating key", "key", key)
 		}

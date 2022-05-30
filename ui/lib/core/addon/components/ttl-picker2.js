@@ -8,7 +8,7 @@
  * ```js
  * <TtlPicker2 @onChange={{handleChange}} @time={{defaultTime}} @unit={{defaultUnit}}/>
  * ```
- * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}.
+ * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
  * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle.
  * @param helperTextDisabled="Allow tokens to be used indefinitely" {String} - This helper text is shown under the label when the toggle is switched off
  * @param helperTextEnabled="Disable the use of the token after" {String} - This helper text is shown under the label when the toggle is switched on
@@ -19,6 +19,7 @@
  * @param initialValue=null {String} - This is the value set initially (particularly from a string like '30h')
  * @param initialEnabled=null {Boolean} - Set this value if you want the toggle on when component is mounted
  * @param changeOnInit=false {Boolean} - set this value if you'd like the passed onChange function to be called on component initialization
+ * @param hideToggle=false {Boolean} - set this value if you'd like to hide the toggle and just leverage the input field
  */
 
 import { computed } from '@ember/object';
@@ -33,9 +34,13 @@ const secondsMap = {
   h: 3600,
   d: 86400,
 };
-const validUnits = ['s', 'm', 'h', 'd'];
 const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
+};
+const goSafeConvertFromSeconds = (seconds, unit) => {
+  // Go only accepts s, m, or h units
+  let u = unit === 'd' ? 'h' : unit;
+  return convertFromSeconds(seconds, u) + u;
 };
 
 export default TtlForm.extend({
@@ -49,6 +54,7 @@ export default TtlForm.extend({
   unit: 's',
   initialValue: null,
   changeOnInit: false,
+  hideToggle: false,
 
   init() {
     this._super(...arguments);
@@ -70,16 +76,30 @@ export default TtlForm.extend({
 
     if (typeOf(value) === 'number') {
       // if the passed value is a number, assume unit is seconds
-      time = value;
+      // then check if the value can be converted into a larger unit
+      if (value % secondsMap.d === 0) {
+        unit = 'd';
+      } else if (value % secondsMap.h === 0) {
+        unit = 'h';
+      } else if (value % secondsMap.m === 0) {
+        unit = 'm';
+      }
+      time = convertFromSeconds(value, unit);
     } else {
       try {
         const seconds = Duration.parse(value).seconds();
-        const lastDigit = value.toString().substring(value.length - 1);
-        if (validUnits.indexOf(lastDigit) >= 0 && lastDigit !== 's') {
-          time = convertFromSeconds(seconds, lastDigit);
-          unit = lastDigit;
-        } else {
-          time = seconds;
+        time = seconds;
+        // get largest unit with no remainder
+        if (seconds % secondsMap.d === 0) {
+          unit = 'd';
+        } else if (seconds % secondsMap.h === 0) {
+          unit = 'h';
+        } else if (seconds % secondsMap.m === 0) {
+          unit = 'm';
+        }
+
+        if (unit !== 's') {
+          time = convertFromSeconds(seconds, unit);
         }
       } catch (e) {
         // if parsing fails leave as default 30s
@@ -111,6 +131,7 @@ export default TtlForm.extend({
       enabled: enableTTL,
       seconds,
       timeString: time + unit,
+      goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
     };
     this.onChange(ttl);
   },
@@ -121,8 +142,9 @@ export default TtlForm.extend({
     'helperTextEnabled',
     'helperTextSet',
     'helperTextUnset',
+    'hideToggle',
     function () {
-      return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
+      return this.enableTTL || this.hideToggle ? this.helperTextEnabled : this.helperTextDisabled;
     }
   ),
 

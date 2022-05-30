@@ -80,6 +80,12 @@ const (
 	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
 	// path to a license file on disk
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
+	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
+	EnvVaultDetailed = `VAULT_DETAILED`
+
+	// DisableSSCTokens is an env var used to disable index bearing
+	// token functionality
+	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -271,6 +277,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"auth list": func() (cli.Command, error) {
 			return &AuthListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"auth move": func() (cli.Command, error) {
+			return &AuthMoveCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -650,6 +661,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"version": func() (cli.Command, error) {
 			return &VersionCommand{
 				VersionInfo: version.GetVersion(),
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"version-history": func() (cli.Command, error) {
+			return &VersionHistoryCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

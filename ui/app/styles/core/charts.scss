@@ -1,16 +1,37 @@
 .chart-wrapper {
   border: $light-border;
   border-radius: $radius-large;
-  padding: $spacing-l $spacing-l $spacing-s $spacing-l;
+  padding: $spacing-s $spacing-l;
   margin-bottom: $spacing-m;
 }
 
 // GRID LAYOUT //
+.single-month-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2em;
+  width: 100%;
+}
+.single-month-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2em;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.single-month-section-title {
+  grid-column-start: 1;
+  grid-column-end: span col3-end;
+}
+.single-month-breakdown-entity {
+  grid-column-start: 1;
+}
+.single-month-breakdown-nonentity {
+  grid-column-start: 2;
+}
 .stacked-charts {
   display: grid;
   width: 100%;
-  // grid-template-columns: 1fr;
-  // grid-template-rows: 1fr;
 }
 
 .single-chart-grid {
@@ -32,10 +53,6 @@
   grid-column-end: span col4-end;
   grid-row-start: 1;
   box-shadow: inset 0 -1px 0 $vault-gray-200;
-
-  > h2 {
-    padding-bottom: $spacing-xs;
-  }
 }
 
 .has-header-link {
@@ -54,11 +71,6 @@
         border-color: darken($ui-gray-300, 5%);
       }
     }
-    > a {
-      &:hover {
-        text-decoration: underline;
-      }
-    }
   }
 }
 
@@ -68,8 +80,8 @@
   grid-row-start: 2;
   grid-row-end: span 3;
   justify-self: center;
-  height: 341px;
-  max-width: 730px;
+  height: 300px;
+  max-width: 700px;
 
   svg.chart {
     width: 100%;
@@ -112,8 +124,16 @@
 }
 
 .chart-empty-state {
-  grid-column-start: 1;
-  grid-column-end: -1;
+  place-self: center stretch;
+  grid-row-end: span 3;
+  grid-column-end: span 3;
+  max-width: none;
+  padding-right: 20px;
+  padding-left: 20px;
+
+  > div {
+    box-shadow: none !important;
+  }
 }
 
 .chart-subTitle {
@@ -167,6 +187,7 @@ h2.chart-title {
   font-weight: $font-weight-bold;
   font-size: $size-5;
   line-height: $spacing-l;
+  margin-bottom: $spacing-xxs;
 }
 
 p.chart-description {
@@ -178,14 +199,14 @@ p.chart-description {
 
 p.chart-subtext {
   color: $ui-gray-500;
-  font-size: $size-9;
-  line-height: $body-size;
+  font-size: $size-8;
+  line-height: 16px;
   margin-top: $spacing-xs;
 }
 
 h3.data-details {
   font-weight: $font-weight-bold;
-  font-size: $size-9;
+  font-size: $size-8;
   line-height: $body-size;
   margin-bottom: $spacing-xs;
 }
@@ -224,25 +245,26 @@ p.data-details {
   font-size: $size-9;
   padding: 6px;
   border-radius: $radius-large;
+  width: 140px;
 
   .bold {
     font-weight: $font-weight-bold;
   }
-
   .line-chart {
     width: 117px;
   }
-
   .vertical-chart {
     text-align: center;
     flex-wrap: nowrap;
     width: fit-content;
   }
-
   .horizontal-chart {
-    width: 200px;
     padding: $spacing-s;
   }
+}
+
+.is-label-fit-content {
+  max-width: fit-content !important;
 }
 
 .chart-tooltip-arrow {

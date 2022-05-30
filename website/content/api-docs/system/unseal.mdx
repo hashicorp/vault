@@ -10,8 +10,8 @@ The `/sys/unseal` endpoint is used to unseal the Vault.
 
 ## Submit Unseal Key
 
-This endpoint is used to enter a single master key share to progress the
-unsealing of the Vault. If the threshold number of master key shares is reached,
+This endpoint is used to enter a single root key share to progress the
+unsealing of the Vault. If the threshold number of root key shares is reached,
 Vault will attempt to unseal the Vault. Otherwise, this API must be called
 multiple times until that threshold is met.
 
@@ -20,11 +20,11 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 
 | Method | Path          |
 | :----- | :------------ |
-| `PUT`  | `/sys/unseal` |
+| `POST` | `/sys/unseal` |
 
 ### Parameters
 
-- `key` `(string: "")` – Specifies a single master key share. This is required
+- `key` `(string: "")` – Specifies a single root key share. This is required
   unless `reset` is true.
 
 - `reset` `(bool: false)` – Specifies if previously-provided unseal keys are
@@ -46,7 +46,7 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/unseal
 ```

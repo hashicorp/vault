@@ -175,7 +175,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
 
 export const ROLE_FIELDS = {
   static: ['username', 'rotation_period'],
-  dynamic: ['ttl', 'max_ttl'],
+  dynamic: ['default_ttl', 'max_ttl'],
 };
 
 export const STATEMENT_FIELDS = {

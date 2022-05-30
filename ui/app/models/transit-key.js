@@ -56,6 +56,12 @@ export default Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
+  autoRotatePeriod: attr({
+    defaultValue: '0',
+    defaultShown: 'Key is not automatically rotated',
+    editType: 'ttl',
+    label: 'Auto-rotation period',
+  }),
   deletionAllowed: attr('boolean'),
   derived: attr('boolean'),
   exportable: attr('boolean'),

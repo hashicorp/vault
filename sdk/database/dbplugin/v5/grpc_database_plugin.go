@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc"
 )
 
@@ -12,14 +13,17 @@ import (
 // a plugin and host. If the handshake fails, a user friendly error is shown.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
-var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  5,
+var HandshakeConfig = plugin.HandshakeConfig{
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
+// Factory is the factory function to create a dbplugin Database.
+type Factory func() (interface{}, error)
+
 type GRPCDatabasePlugin struct {
-	Impl Database
+	FactoryFunc Factory
+	Impl        Database
 
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
@@ -31,7 +35,25 @@ var (
 )
 
 func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
-	proto.RegisterDatabaseServer(s, gRPCServer{impl: d.Impl})
+	var server gRPCServer
+
+	if d.Impl != nil {
+		server = gRPCServer{singleImpl: d.Impl}
+	} else {
+		// multiplexing is supported
+		server = gRPCServer{
+			factoryFunc: d.FactoryFunc,
+			instances:   make(map[string]Database),
+		}
+
+		// Multiplexing is enabled for this plugin, register the server so we
+		// can tell the client in Vault.
+		pluginutil.RegisterPluginMultiplexingServer(s, pluginutil.PluginMultiplexingServerImpl{
+			Supported: true,
+		})
+	}
+
+	proto.RegisterDatabaseServer(s, &server)
 	return nil
 }
 

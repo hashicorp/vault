@@ -62,6 +62,8 @@ func (c *Core) Standby() (bool, error) {
 }
 
 // PerfStandby checks if the vault is a performance standby
+// This function cannot be used during request handling
+// because this causes a deadlock with the statelock.
 func (c *Core) PerfStandby() bool {
 	c.stateLock.RLock()
 	perfStandby := c.perfStandby
@@ -181,6 +183,15 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		adv.RedirectAddr = string(entry.Value)
 		c.logger.Debug("parsed redirect addr for new active node", "redirect_addr", adv.RedirectAddr)
 		oldAdv = true
+	}
+
+	// At the top of this function we return early when we're the active node.
+	// If we're not the active node, and there's a stale advertisement pointing
+	// to ourself, there's no point in paying any attention to it.  And by
+	// disregarding it, we can avoid a panic in raft tests using the Inmem network
+	// layer when we try to connect back to ourself.
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+		return false, "", "", nil
 	}
 
 	if !oldAdv {

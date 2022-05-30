@@ -14,7 +14,7 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#if (not (eq this.model.canParse true))}}
+{{#if (eq this.model.canParse false)}}
   <AlertBanner
     @type="info"
     @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the common name or the issue and expiration dates. This will not interfere with the certificate's functionality."
@@ -31,7 +31,7 @@
         @value={{stringify (get this.model attr.name)}}
       />
     {{else}}
-      {{#if attr.options.masked}}
+      {{#if (and attr.options.masked (get this.model attr.name))}}
         <InfoTableRow
           data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
@@ -45,7 +45,7 @@
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{date-format (get this.model attr.name) "MMM dd, yyyy hh:mm:ss a" isFormatted=true}}
         />
-      {{else if (and (get this.model attr.name) (eq attr.name "revocationTime"))}}
+      {{else if (eq attr.name "revocationTime")}}
         <InfoTableRow
           data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}

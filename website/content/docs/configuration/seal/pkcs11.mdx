@@ -8,6 +8,8 @@ description: |-
 
 # `pkcs11` Seal
 
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, HSM must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
+
 The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal wrapping
 mechanism. Vault Enterprise's HSM PKCS11 support is activated by one of the
 following:
@@ -57,10 +59,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `lib` `(string: <required>)`: The path to the PKCS#11 library shared object
   file. May also be specified by the `VAULT_HSM_LIB` environment variable.
 
-  ~> **Note:** Depending on your HSM, this may be either a binary or a dynamic
-  library, and its use may require other libraries depending on which system the
-  Vault binary is currently running on (e.g.: a Linux system may require other
-  libraries to interpret Windows .dll files).
+  ~> **Note:** Depending on your HSM, the value of the `lib` parameter may be
+  either a binary or a dynamic library, and its use may require other libraries
+  depending on which system the Vault binary is currently running on (e.g.: a
+  Linux system may require other libraries to interpret Windows .dll files).
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
   specified as a string (e.g. `"2305843009213693953"`). May also be specified by
@@ -150,6 +152,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   variable. This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+  
 ### Mechanism Specific Flags
 
 - `rsa_encrypt_local` `(string: "false")`: For HSMs that do not support encryption
@@ -267,7 +273,7 @@ or deleted and are used to decrypt older data.
 rotation is desired for data that was seal wrapped prior to this version must also set
 `default_key_label` and `hmac_default_key_label` to allow for decryption of older values.
 
-## Learn
+## Tutorial
 
 Refer to the [HSM Integration - Seal Wrap](https://learn.hashicorp.com/vault/operations/ops-seal-wrap)
-guide for a step-by-step tutorial.
+tutorial to learn how to enable the Seal Wrap feature to protect your data.

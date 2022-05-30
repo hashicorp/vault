@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/fatih/structs"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
+
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -31,6 +31,22 @@ type DatabaseConfig struct {
 	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
 
 	PasswordPolicy string `json:"password_policy" structs:"password_policy" mapstructure:"password_policy"`
+}
+
+func (c *DatabaseConfig) SupportsCredentialType(credentialType v5.CredentialType) bool {
+	credTypes, ok := c.ConnectionDetails[v5.SupportedCredentialTypesKey].([]interface{})
+	if !ok {
+		// Default to supporting CredentialTypePassword for database plugins that
+		// don't specify supported credential types in the initialization response
+		return credentialType == v5.CredentialTypePassword
+	}
+
+	for _, ct := range credTypes {
+		if ct == credentialType.String() {
+			return true
+		}
+	}
+	return false
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -195,13 +211,10 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			return nil, err
 		}
 
-		// Mask the password if it is in the url
+		// Ensure that we only ever include a redacted valid URL in the response.
 		if connURLRaw, ok := config.ConnectionDetails["connection_url"]; ok {
-			connURL := connURLRaw.(string)
-			if conn, err := url.Parse(connURL); err == nil {
-				if password, ok := conn.User.Password(); ok {
-					config.ConnectionDetails["connection_url"] = strings.Replace(connURL, password, "*****", -1)
-				}
+			if p, err := url.Parse(connURLRaw.(string)); err == nil {
+				config.ConnectionDetails["connection_url"] = p.Redacted()
 			}
 		}
 
@@ -329,6 +342,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 		config.ConnectionDetails = initResp.Config
 
+		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
+
 		b.Lock()
 		defer b.Unlock()
 
@@ -348,7 +363,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		resp := &logical.Response{}
 
-		// This is a simple test to check for passwords in the connection_url paramater. If one exists,
+		// This is a simple test to check for passwords in the connection_url parameter. If one exists,
 		// warn the user to use templated url string
 		if connURLRaw, ok := config.ConnectionDetails["connection_url"]; ok {
 			if connURL, err := url.Parse(connURLRaw.(string)); err == nil {
@@ -365,6 +380,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
+		if len(resp.Warnings) == 0 {
+			return nil, nil
+		}
 		return resp, nil
 	}
 }

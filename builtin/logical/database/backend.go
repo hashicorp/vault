@@ -110,6 +110,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 }
 
 type databaseBackend struct {
+	// connections holds configured database connections by config name
 	connections map[string]*dbPluginInstance
 	logger      log.Logger
 

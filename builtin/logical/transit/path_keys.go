@@ -95,7 +95,7 @@ if the key type supports public keys, this will
 return the public key for the given context.`,
 			},
 
-			"auto_rotate_interval": {
+			"auto_rotate_period": {
 				Type:    framework.TypeDurationSecond,
 				Default: 0,
 				Description: `Amount of time the key should live before
@@ -132,10 +132,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	keyType := d.Get("type").(string)
 	exportable := d.Get("exportable").(bool)
 	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
-	autoRotateInterval := time.Second * time.Duration(d.Get("auto_rotate_interval").(int))
+	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
 
-	if autoRotateInterval != 0 && autoRotateInterval < time.Hour {
-		return logical.ErrorResponse("auto rotate interval must be 0 to disable or at least an hour"), nil
+	if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
+		return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
 	}
 
 	if !derived && convergent {
@@ -150,7 +150,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		Convergent:           convergent,
 		Exportable:           exportable,
 		AllowPlaintextBackup: allowPlaintextBackup,
-		AutoRotateInterval:   autoRotateInterval,
+		AutoRotatePeriod:     autoRotatePeriod,
 	}
 	switch keyType {
 	case "aes128-gcm96":
@@ -238,8 +238,13 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
-			"auto_rotate_interval":   p.AutoRotateInterval.String(),
+			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
+			"imported_key":           p.Imported,
 		},
+	}
+
+	if p.Imported {
+		resp.Data["imported_key_allow_rotation"] = p.AllowImportedKeyRotation
 	}
 
 	if p.BackupInfo != nil {

@@ -489,6 +489,18 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["ha-status"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
 		},
+		{
+			Pattern: "version-history/$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleVersionHistoryList,
+					Summary:  "Returns map of historical version change entries",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["version-history"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["version-history"][1]),
+		},
 	}
 }
 
@@ -843,7 +855,7 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
+			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
 			Fields: map[string]*framework.FieldSchema{
 				"urlbytes": {
 					Type:        framework.TypeString,
@@ -860,6 +872,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Default:     "base64",
 					Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
+				},
+
+				"source": {
+					Type:        framework.TypeString,
+					Default:     "platform",
+					Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
 				},
 			},
 
@@ -1296,27 +1314,50 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) remountPath() *framework.Path {
-	return &framework.Path{
-		Pattern: "remount",
+func (b *SystemBackend) remountPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "remount",
 
-		Fields: map[string]*framework.FieldSchema{
-			"from": {
-				Type:        framework.TypeString,
-				Description: "The previous mount point.",
+			Fields: map[string]*framework.FieldSchema{
+				"from": {
+					Type:        framework.TypeString,
+					Description: "The previous mount point.",
+				},
+				"to": {
+					Type:        framework.TypeString,
+					Description: "The new mount point.",
+				},
 			},
-			"to": {
-				Type:        framework.TypeString,
-				Description: "The new mount point.",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRemount,
+					Summary:  "Initiate a mount migration",
+				},
 			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 		},
+		{
+			Pattern: "remount/status/(?P<migration_id>.+?)$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.handleRemount,
+			Fields: map[string]*framework.FieldSchema{
+				"migration_id": {
+					Type:        framework.TypeString,
+					Description: "The ID of the migration operation",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleRemountStatusCheck,
+					Summary:  "Check status of a mount migration",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount-status"][1]),
 		},
-
-		HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
-		HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 	}
 }
 
@@ -1346,6 +1387,12 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
 				Query:       true,
+			},
+			"log_format": {
+				Type:        framework.TypeString,
+				Description: "Output format of logs. Supported values are \"standard\" and \"json\". The default is \"standard\".",
+				Query:       true,
+				Default:     "standard",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{

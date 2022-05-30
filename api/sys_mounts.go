@@ -4,16 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 )
 
 func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/mounts")
+	return c.ListMountsWithContext(context.Background())
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) ListMountsWithContext(ctx context.Context) (map[string]*MountOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/mounts")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -37,14 +44,19 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 }
 
 func (c *Sys) Mount(path string, mountInfo *MountInput) error {
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
+	return c.MountWithContext(context.Background(), path, mountInfo)
+}
+
+func (c *Sys) MountWithContext(ctx context.Context, path string, mountInfo *MountInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s", path))
 	if err := r.SetJSONBody(mountInfo); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -54,46 +66,140 @@ func (c *Sys) Mount(path string, mountInfo *MountInput) error {
 }
 
 func (c *Sys) Unmount(path string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
+	return c.UnmountWithContext(context.Background(), path)
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/mounts/%s", path))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
 	return err
 }
 
+// Remount wraps RemountWithContext using context.Background.
 func (c *Sys) Remount(from, to string) error {
+	return c.RemountWithContext(context.Background(), from, to)
+}
+
+// RemountWithContext kicks off a remount operation, polls the status endpoint using
+// the migration ID till either success or failure state is observed
+func (c *Sys) RemountWithContext(ctx context.Context, from, to string) error {
+	remountResp, err := c.StartRemountWithContext(ctx, from, to)
+	if err != nil {
+		return err
+	}
+
+	for {
+		remountStatusResp, err := c.RemountStatusWithContext(ctx, remountResp.MigrationID)
+		if err != nil {
+			return err
+		}
+		if remountStatusResp.MigrationInfo.MigrationStatus == "success" {
+			return nil
+		}
+		if remountStatusResp.MigrationInfo.MigrationStatus == "failure" {
+			return fmt.Errorf("Failure! Error encountered moving mount %s to %s, with migration ID %s", from, to, remountResp.MigrationID)
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// StartRemount wraps StartRemountWithContext using context.Background.
+func (c *Sys) StartRemount(from, to string) (*MountMigrationOutput, error) {
+	return c.StartRemountWithContext(context.Background(), from, to)
+}
+
+// StartRemountWithContext kicks off a mount migration and returns a response with the migration ID
+func (c *Sys) StartRemountWithContext(ctx context.Context, from, to string) (*MountMigrationOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	body := map[string]interface{}{
 		"from": from,
 		"to":   to,
 	}
 
-	r := c.c.NewRequest("POST", "/v1/sys/remount")
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/remount")
 	if err := r.SetJSONBody(body); err != nil {
-		return err
+		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
-	if err == nil {
-		defer resp.Body.Close()
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
 	}
-	return err
+	defer resp.Body.Close()
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	var result MountMigrationOutput
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, err
+}
+
+// RemountStatus wraps RemountStatusWithContext using context.Background.
+func (c *Sys) RemountStatus(migrationID string) (*MountMigrationStatusOutput, error) {
+	return c.RemountStatusWithContext(context.Background(), migrationID)
+}
+
+// RemountStatusWithContext checks the status of a mount migration operation with the provided ID
+func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) (*MountMigrationStatusOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/remount/status/%s", migrationID))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	var result MountMigrationStatusOutput
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, err
 }
 
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	return c.TuneMountWithContext(context.Background(), path, config)
+}
+
+func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -101,11 +207,16 @@ func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 }
 
 func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	return c.MountConfigWithContext(context.Background(), path)
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) MountConfigWithContext(ctx context.Context, path string) (*MountConfigOutput, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -186,4 +297,19 @@ type MountConfigOutput struct {
 
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+type MountMigrationOutput struct {
+	MigrationID string `mapstructure:"migration_id"`
+}
+
+type MountMigrationStatusOutput struct {
+	MigrationID   string                    `mapstructure:"migration_id"`
+	MigrationInfo *MountMigrationStatusInfo `mapstructure:"migration_info"`
+}
+
+type MountMigrationStatusInfo struct {
+	SourceMount     string `mapstructure:"source_mount"`
+	TargetMount     string `mapstructure:"target_mount"`
+	MigrationStatus string `mapstructure:"status"`
 }

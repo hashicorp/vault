@@ -6,11 +6,11 @@ description: These are general upgrade instructions for Vault plugins.
 
 # Upgrading Vault Plugins
 
-The following procedure details steps for upgrading a plugin that has already
-been registered to the catalog on a running server. This procedure is applicable
-to secret, auth, and database plugins.
+## External Plugin Upgrade Procedure
 
-## Upgrade Procedure
+The following procedure details steps for upgrading an external plugin that has
+been registered to the catalog on a running server. This procedure is
+applicable to secret engines, auth methods, and database plugins.
 
 Vault executes plugin binaries when they are configured and roles are established
 around them. The binary cannot be modified or replaced while running, so
@@ -21,16 +21,43 @@ Instead, you can restart or reload a plugin with the
 `sys/plugins/reload/backend` [API][plugin_reload_api]. Follow these steps to
 replace or upgrade a Vault plugin binary:
 
-1. Register plugin_v1 to the catalog
-2. Mount the plugin backend
-3. Register plugin_v2 to the catalog under the same plugin name, but with
-   updated command to run plugin_v2 and updated sha256 of plugin_v2
-4. Trigger a plugin reload with `sys/plugins/reload/backend` to reload all
+1. [Register][plugin_registration] version 1 of `my-db-plugin` to the catalog.
+   Skip this step if your plugin is already registered.
+
+    ```shell-session
+    $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+        database \                  # type
+        my-db-plugin
+    ```
+
+2. [Mount][plugin_management] the plugin backend. Skip this step if the backend
+   is already mounted.
+
+    ```shell-session
+    $ vault secrets enable database
+    ```
+
+3. Register version 2 of `my-db-plugin` to the catalog under the same plugin
+   name, but with updated command to run version 2 of `my-db-plugin` and updated
+   sha256 of the new binary
+
+    ```shell-session
+    $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+        database \                  # type
+        my-db-plugin
+    ```
+
+4. Trigger a [plugin reload](/docs/commands/plugin/reload) to reload all
    mounted backends using that plugin or a subset of the mounts using that plugin
    with either the `plugin` or `mounts` parameter respectively.
 
-Until step 4, the mount will still use plugin_v1, and when the reload is
-triggered, Vault will kill plugin_v1’s process and start a plugin_v2 process.
+    ```shell-session
+    $ vault plugin reload -plugin my-db-plugin
+    ```
+
+Until step 4, the mount will still use version 1 of `my-db-plugin`, and when
+the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
+new plugin process for `my-db-plugin` version 2.
 
 -> **Important:** Plugin reload of a new plugin binary must be
 performed on each Vault instance. Performing a plugin upgrade on a single
@@ -38,4 +65,147 @@ instance or through a load balancer can result in mismatched
 plugin binaries within a cluster. On a replicated cluster this may be accomplished
 by setting the 'scope' parameter of the reload to 'global'.
 
-[plugin_reload_api]: /api/system/plugins-reload-backend
+## Overriding Built-in Plugins
+
+### Background
+
+Vault's auth methods and secrets engines are structured as plugins, but this
+design is not obvious since many of them are built into Vault.
+
+You can see them with the Vault plugin list command, for example, the list of
+Secrets engines:
+
+```shell-session
+$ vault plugin list secret
+Plugins
+-------
+ad
+alicloud
+aws
+azure
+cassandra
+consul
+gcp
+gcpkms
+kv
+mongodb
+mongodbatlas
+mssql
+mysql
+nomad
+openldap
+pki
+postgresql
+rabbitmq
+ssh
+terraform
+totp
+transit
+```
+
+This will list all Secrets engines, internal (built-in) or external. To find
+out if a plugin is built-in, we can query its info:
+
+```shell-session
+$ vault plugin info secret azure
+Key        Value
+---        -----
+args       []
+builtin    true
+command    n/a
+name       azure
+sha256     n/a
+```
+
+Because these built-in engines are plugins, they can be overridden. This can be
+a useful way to leverage features or bug fixes in plugins that are newer than
+the version of Vault you're using, without updating or even restarting Vault,
+and while retaining the data for your existing mount.
+
+Assume you have a new version of Azure Secrets and the binary is called
+"azure_new". The binary needs to be in the [plugin directory](/docs/plugins/plugin-architecture#plugin-directory)
+and can then be registered as either a distinct plugin, or overriding the
+current one.
+
+~> **Important:** do not disable (`vault secrets disable ...`) any mount that has
+data you're interested in; that would erase storage. For the in-place update,
+register a new plugin atop the built-in one and leave any mounts alone.
+
+### Procedure for Overriding Built-in Plugins
+
+The syntax is the same as an external plugin, with the difference being you
+name it the same as a built-in:
+
+```shell-session
+$ vault plugin register \
+  -sha256=<SHA256 Hex value of the plugin binary> \
+  -command=azure_new \
+  secret \
+  azure
+```
+
+"-command=azure_new" is the name of the binary, "secret" is the plugin type,
+and "azure" is the name of the built-in plugin that we're overriding. We can
+verify that the override is in place:
+
+```shell-session
+$ vault plugin info secret azure
+Key        Value
+---        -----
+args       []
+builtin    false
+command    azure_new
+name       azure
+sha256     f6f6ec45d37484c257aa9ff80444b9f244aaef1c650edf8a42a2a1d3f00db2c5
+```
+
+At this point we've overridden the built-in, but it is not yet actively
+handling requests. For that we run:
+
+```shell-session
+$ vault plugin reload -plugin=azure
+```
+
+### Procedure for Reverting After Overriding A Built-in Plugin
+
+To revert the override, first deregister the plugin:
+
+```shell-session
+$ vault plugin deregister secret azure
+```
+
+Next, verify the override has been reverted and we are now using the built-in
+plugin:
+
+```shell-session
+$ vault plugin info secret azure
+Key        Value
+---        -----
+args       []
+builtin    true
+command    n/a
+name       azure
+sha256     n/a
+```
+
+Finally, reload the plugin:
+
+```shell-session
+$ vault plugin reload -plugin=azure
+```
+
+### Caveats to Overriding Built-in Plugins
+
+* As mentioned earlier, disabling existing mounts will wipe the existing data.
+* This type of upgrade affects all uses of the plugin. So if you have 5
+  different Azure Secrets mounts, they'll all change after the replacement. If
+  you don't want that, you'll need to register the plugin under a different name
+  and start with a fresh mount.
+* In most cases, data upgrade and downgrade is not an issue. If the "new" version
+  introduces new data and you downgrade, the "old" version will ignore the
+  extraneous data. In some cases upgrading changes existing data in non-backwards
+  compatible ways, so it is good to check whether this is an issue.
+
+[plugin_reload_api]: /api-docs/system/plugins-reload-backend
+[plugin_registration]: /docs/plugins/plugin-architecture#plugin-registration
+[plugin_management]: /docs/plugins/plugin-management#enabling-disabling-external-plugins

@@ -4,7 +4,9 @@ package vault
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -59,6 +61,16 @@ func (c *Core) setupReplicationResolverHandler() error {
 	return nil
 }
 
+func NewPolicyMFABackend(core *Core, logger hclog.Logger) *PolicyMFABackend { return nil }
+
+func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error) {
+	if namespaceId != namespace.RootNamespaceID {
+		return nil, fmt.Errorf("failed to find barrier view for non-root namespace")
+	}
+
+	return c.systemBarrierView, nil
+}
+
 // GetCoreConfigInternal returns the server configuration
 // in struct format.
 func (c *Core) GetCoreConfigInternal() *server.Config {
@@ -103,7 +115,7 @@ func postUnsealPhysical(c *Core) error {
 	return nil
 }
 
-func loadMFAConfigs(context.Context, *Core) error { return nil }
+func loadPolicyMFAConfigs(context.Context, *Core) error { return nil }
 
 func shouldStartClusterListener(*Core) bool { return true }
 
@@ -123,8 +135,8 @@ func (c *Core) collectNamespaces() []*namespace.Namespace {
 	}
 }
 
-func (c *Core) namepaceByPath(string) *namespace.Namespace {
-	return namespace.RootNamespace
+func (c *Core) HasWALState(required *logical.WALState, perfStandby bool) bool {
+	return true
 }
 
 func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { return nil }
@@ -175,6 +187,10 @@ func (c *Core) namespaceByPath(path string) *namespace.Namespace {
 
 func (c *Core) AllowForwardingViaHeader() bool {
 	return false
+}
+
+func (c *Core) ForwardToActive() string {
+	return ""
 }
 
 func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
