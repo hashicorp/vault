@@ -70,41 +70,42 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 
 	var wg sync.WaitGroup
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
 		defer wg.Done()
 
-		resp, err := rlq.allow(context.Background(), &Request{ClientAddress: addr})
-		if err != nil {
-			return
-		}
+		for ctx.Err() == nil {
+			resp, err := rlq.allow(context.Background(), &Request{ClientAddress: addr})
+			if err != nil {
+				return
+			}
 
-		if resp.Allowed {
-			atomicNumAllow.Add(1)
-		} else {
-			atomicNumFail.Add(1)
+			if resp.Allowed {
+				atomicNumAllow.Add(1)
+			} else {
+				atomicNumFail.Add(1)
+			}
+			time.Sleep(2 * time.Millisecond)
 		}
 	}
 
 	results := make(map[string]*clientResult)
 
 	start := time.Now()
-	end := start.Add(5 * time.Second)
 
-	for time.Now().Before(end) {
-		for i := 0; i < 5; i++ {
-			wg.Add(1)
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
 
-			addr := fmt.Sprintf("127.0.0.%d", i)
-			cr, ok := results[addr]
-			if !ok {
-				results[addr] = &clientResult{atomicNumAllow: atomic.NewInt32(0), atomicNumFail: atomic.NewInt32(0)}
-				cr = results[addr]
-			}
-
-			go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
-
-			time.Sleep(2 * time.Millisecond)
+		addr := fmt.Sprintf("127.0.0.%d", i)
+		cr, ok := results[addr]
+		if !ok {
+			results[addr] = &clientResult{atomicNumAllow: atomic.NewInt32(0), atomicNumFail: atomic.NewInt32(0)}
+			cr = results[addr]
 		}
+
+		go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
 	}
 
 	wg.Wait()
@@ -183,7 +184,6 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 		go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
 	}
 
-	// Limit the number of active go-routines to 5
 	wg.Wait()
 
 	for _, cr := range results {
