@@ -118,11 +118,11 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 		numFail := cr.atomicNumFail.Load()
 
 		// ensure there were some failed requests for the namespace
-		require.NotZerof(t, numFail, "expected some requests to fail; addr: %s, numSuccess: %d, numFail: %d, elapsed: %d", addr, numAllow, numFail, elapsed)
+		require.NotZerof(t, numFail, "expected some requests to fail; addr: %s, numSuccess: %d, numFail: %d, elapsed: %s", addr, numAllow, numFail, elapsed)
 
 		// ensure that we should never get more requests than allowed for the namespace
 		want := int32(ideal + 1)
-		require.Falsef(t, numAllow > want, "too many successful requests; addr: %s, want: %d, numSuccess: %d, numFail: %d, elapsed: %d", addr, want, numAllow, numFail, elapsed)
+		require.Falsef(t, numAllow > want, "too many successful requests; addr: %s, want: %d, numSuccess: %d, numFail: %d, elapsed: %s", addr, want, numAllow, numFail, elapsed)
 	}
 }
 
@@ -147,45 +147,44 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 	var wg sync.WaitGroup
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
 		defer wg.Done()
 
-		resp, err := rlq.allow(context.Background(), &Request{ClientAddress: addr})
-		if err != nil {
-			return
-		}
+		for ctx.Err() == nil {
+			resp, err := rlq.allow(ctx, &Request{ClientAddress: addr})
+			if err != nil {
+				return
+			}
 
-		if resp.Allowed {
-			atomicNumAllow.Add(1)
-		} else {
-			atomicNumFail.Add(1)
+			if resp.Allowed {
+				atomicNumAllow.Add(1)
+			} else {
+				atomicNumFail.Add(1)
+			}
+			time.Sleep(2 * time.Millisecond)
 		}
 	}
 
 	results := make(map[string]*clientResult)
 
-	start := time.Now()
-	end := start.Add(5 * time.Second)
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
 
-	for time.Now().Before(end) {
-		for i := 0; i < 5; i++ {
-			wg.Add(1)
-
-			addr := fmt.Sprintf("127.0.0.%d", i)
-			cr, ok := results[addr]
-			if !ok {
-				results[addr] = &clientResult{atomicNumAllow: atomic.NewInt32(0), atomicNumFail: atomic.NewInt32(0)}
-				cr = results[addr]
-			}
-
-			go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
-
-			time.Sleep(2 * time.Millisecond)
+		addr := fmt.Sprintf("127.0.0.%d", i)
+		cr, ok := results[addr]
+		if !ok {
+			results[addr] = &clientResult{atomicNumAllow: atomic.NewInt32(0), atomicNumFail: atomic.NewInt32(0)}
+			cr = results[addr]
 		}
 
-		// Limit the number of active go-routines to 5
-		wg.Wait()
+		go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
 	}
+
+	// Limit the number of active go-routines to 5
+	wg.Wait()
 
 	for _, cr := range results {
 		numAllow := cr.atomicNumAllow.Load()
