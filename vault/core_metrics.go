@@ -53,7 +53,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			if stopped {
 				return
 			}
-			if haState != consts.PerfStandby {
+			if haState == consts.Active {
 				c.metricsMutex.Lock()
 				// Emit on active node only
 				if c.expiration != nil {
