@@ -262,28 +262,18 @@ unable to check this value directly, you can run the following and look for the
 `"iss"` field to find the required value:
 
 ```bash
-kubectl proxy &
-curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/default/token \
-  -H "Content-Type: application/json" \
-  -X POST \
-  -d '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
+echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
+  | kubectl create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
   | jq -r '.status.token' \
   | cut -d . -f2 \
   | base64 -D
-
-# Kill the background proxy process when you're done
-kill %%
 ```
 
 Most clusters will also have that information available at the
 `.well-known/openid-configuration` endpoint:
 
 ```bash
-kubectl proxy &
-curl --silent http://127.0.0.1:8001/.well-known/openid-configuration | jq -r .issuer
-
-# Kill the background proxy process when you're done
-kill %%
+kubectl get --raw /.well-known/openid-configuration | jq -r .issuer
 ```
 
 This value is then used when configuring Kubernetes auth, e.g.:

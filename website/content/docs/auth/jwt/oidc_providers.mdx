@@ -339,11 +339,7 @@ Configuration steps:
 1. Find the issuer URL of the cluster.
 
    ```bash
-   kubectl proxy &
-   ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
-
-   # Kill the background proxy process when you're done
-   kill %%
+   ISSUER="$(kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer')"
    ```
 
 1. Enable and configure JWT auth in Vault.
@@ -395,16 +391,10 @@ Configuration steps:
 
    ```bash
    # 1. Find the issuer URL of the cluster.
-   kubectl proxy &
-   ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
+   ISSUER="$(kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer')"
 
    # 2. Query the jwks_uri specified in /.well-known/openid-configuration
-   # NB: You may need to run this from a pod within the cluster if the $ISSUER
-   # URL is not available outside the cluster.
-   curl "$(curl --fail --silent --show-error "${ISSUER}/.well-known/openid-configuration" | jq -r '.jwks_uri')"
-
-   # Kill the background proxy process when you're done
-   kill %%
+   kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
    ```
 
 1. Convert the keys from JWK format to PEM. You can use a CLI tool or an online
