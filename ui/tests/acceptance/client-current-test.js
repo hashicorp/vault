@@ -35,7 +35,6 @@ module('Acceptance | clients current tab', function (hooks) {
         data: {
           default_report_months: 12,
           enabled: 'default-disable',
-          queries_available: false,
           retention_months: 24,
         },
       };

@@ -2,19 +2,27 @@ import { addMonths, differenceInCalendarMonths, formatRFC3339, startOfMonth } fr
 import { Response } from 'miragejs';
 
 /** Scenarios
- * Config off, no data
- * * queries available (hist only)
- * * queries unavailable (hist only)
- * Config on, no data
- * Config on, with data
- * Filtering (data with mounts)
- * Filtering (data without mounts)
+  Config off, no data
+  Config on, no data
+  Config on, with data
+  Filtering (data with mounts)
+  Filtering (data without mounts)
+  Filtering (data without mounts)
+
  * -- HISTORY ONLY --
- * No permissions for license
- * Version (hist only)
- * License start date this month
+  No permissions for license
+  Version
+  queries available
+  queries unavailable
+  License start date this month
  */
 
+// TODO
+/*
+Filtering different date ranges (hist only)
+Upgrade warning 
+
+*/
 export const SELECTORS = {
   currentMonthActiveTab: '.active[data-test-current-month]',
   historyActiveTab: '.active[data-test-history]',
