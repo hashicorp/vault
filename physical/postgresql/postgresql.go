@@ -100,10 +100,10 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 	quoted_table := dbutil.QuoteIdentifier(unquoted_table)
 
-	maxParStr, ok := conf["max_parallel"]
+	maxParStr, maxParIsSet := conf["max_parallel"]
 	var maxParInt int
 	var err error
-	if ok {
+	if maxParIsSet {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
@@ -125,6 +125,8 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		if logger.IsDebug() {
 			logger.Debug("max_idle_connections set", "max_idle_connections", maxIdleConnsStr)
 		}
+	} else {
+		maxIdleConns = physical.DefaultIdleConnections
 	}
 
 	// Create PostgreSQL handle for the database.
@@ -132,11 +134,9 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
-	db.SetMaxOpenConns(maxParInt)
 
-	if maxIdleConnsIsSet {
-		db.SetMaxIdleConns(maxIdleConns)
-	}
+	db.SetMaxOpenConns(maxParInt)
+	db.SetMaxIdleConns(maxIdleConns)
 
 	// Determine if we should use a function to work around lack of upsert (versions < 9.5)
 	var upsertAvailable bool

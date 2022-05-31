@@ -99,7 +99,7 @@ LANGUAGE plpgsql;
   which to write Vault data. This table must already exist (Vault will not
   attempt to create it).
 
-- `max_idle_connections` `(int)` - Default not set. Sets the maximum number of
+- `max_idle_connections` `(string: "256")` - Sets the maximum number of
   connections in the idle connection pool. See
   [golang docs on SetMaxIdleConns][golang_setmaxidleconns] for more information.
   Requires 1.2 or later.

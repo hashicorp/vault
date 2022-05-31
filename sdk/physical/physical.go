@@ -8,6 +8,7 @@ import (
 )
 
 const DefaultParallelOperations = 128
+const DefaultIdleConnections = 256
 
 // The operation type
 type Operation string
