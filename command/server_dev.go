@@ -4,6 +4,15 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -13,14 +22,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/go-testing-interface"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
-	"sort"
-	"strings"
-	"sync"
-	"time"
 )
 
 func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core) error {
@@ -603,7 +604,8 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 			"name": options.idName,
 			"metadata": map[string]string{
 				"organization": "ACME Inc.",
-				"team":         "Squad-2"},
+				"team":         "Squad-2",
+			},
 			"policies": options.idPolicyName,
 		},
 	}
@@ -651,7 +653,8 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 			"canonical_id":   id,
 			"mount_accessor": accessor,
 			"custom-metadata": map[string]string{
-				"account": "demo"},
+				"account": "demo",
+			},
 		},
 	}
 	resp, err = core.HandleRequest(ctx, r)
