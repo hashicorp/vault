@@ -126,6 +126,7 @@ type ServerCommand struct {
 	flagDevFourCluster     bool
 	flagDevTransactional   bool
 	flagDevAutoSeal        bool
+	flagDevQuickStart      bool
 	flagTestVerifyOnly     bool
 	flagCombineLogs        bool
 	flagTestServerConfig   bool
@@ -262,6 +263,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Do not persist the dev root token to the token helper " +
 			"(usually the local filesystem) for use in future requests. " +
 			"The token will only be displayed in the command output.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-quickstart",
+		Target:  &c.flagDevQuickStart,
+		Default: false,
+		Usage:   "Configure the development server to include a suite of preconfigured options",
 	})
 
 	// Internal-only flags to follow.

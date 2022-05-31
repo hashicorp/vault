@@ -26,7 +26,7 @@ import (
 func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core) error {
 	if c.flagDev && !c.flagDevSkipInit {
 
-		init, err := c.enableDev(core, coreConfig)
+		init, qsOptions, err := c.enableDev(core, coreConfig)
 		if err != nil {
 			return fmt.Errorf("Error initializing Dev mode: %s", err)
 		}
@@ -66,6 +66,7 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 			t: time.AfterFunc(100*time.Millisecond, func() {
 				qwo.Do(func() {
 					c.logger.DeregisterSink(qw)
+					endpointURL := "http://" + config.Listeners[0].Address
 
 					// Print the big dev mode warning!
 					c.UI.Warn(wrapAtLength(
@@ -74,10 +75,14 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 							"token is already authenticated to the CLI, so you can immediately " +
 							"begin using Vault."))
 					c.UI.Warn("")
+
+					if c.flagDevQuickStart {
+						quickstartBanner(c, qsOptions, endpointURL)
+					}
+
 					c.UI.Warn("You may need to set the following environment variable:")
 					c.UI.Warn("")
 
-					endpointURL := "http://" + config.Listeners[0].Address
 					if runtime.GOOS == "windows" {
 						c.UI.Warn("PowerShell:")
 						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
@@ -334,7 +339,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	return 0
 }
 
-func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {
+func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, *quickstartOptions, error) {
 	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
 
 	var recoveryConfig *vault.SealConfig
@@ -360,14 +365,14 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		RecoveryConfig: recoveryConfig,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Handle unseal with stored keys
 	if core.SealAccess().StoredKeysSupported() == vaultseal.StoredKeysSupportedGeneric {
 		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		// Copy the key so that it can be zeroed
@@ -377,16 +382,16 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		// Unseal the core
 		unsealed, err := core.Unseal(key)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if !unsealed {
-			return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+			return nil, nil, fmt.Errorf("failed to unseal Vault for dev mode")
 		}
 	}
 
 	isLeader, _, _, err := core.Leader()
 	if err != nil && err != vault.ErrHANotEnabled {
-		return nil, fmt.Errorf("failed to check active status: %w", err)
+		return nil, nil, fmt.Errorf("failed to check active status: %w", err)
 	}
 	if err == nil {
 		leaderCount := 5
@@ -394,12 +399,12 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			if leaderCount == 0 {
 				buf := make([]byte, 1<<16)
 				runtime.Stack(buf, true)
-				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s", buf)
+				return nil, nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s", buf)
 			}
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
 			if err != nil {
-				return nil, fmt.Errorf("failed to check active status: %w", err)
+				return nil, nil, fmt.Errorf("failed to check active status: %w", err)
 			}
 			leaderCount--
 		}
@@ -421,13 +426,13 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 		resp, err := core.HandleRequest(ctx, req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create root token with ID %q: %w", coreConfig.DevToken, err)
+			return nil, nil, fmt.Errorf("failed to create root token with ID %q: %w", coreConfig.DevToken, err)
 		}
 		if resp == nil {
-			return nil, fmt.Errorf("nil response when creating root token with ID %q", coreConfig.DevToken)
+			return nil, nil, fmt.Errorf("nil response when creating root token with ID %q", coreConfig.DevToken)
 		}
 		if resp.Auth == nil {
-			return nil, fmt.Errorf("nil auth when creating root token with ID %q", coreConfig.DevToken)
+			return nil, nil, fmt.Errorf("nil auth when creating root token with ID %q", coreConfig.DevToken)
 		}
 
 		init.RootToken = resp.Auth.ClientToken
@@ -437,7 +442,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.Data = nil
 		_, err = core.HandleRequest(ctx, req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to revoke initial root token: %w", err)
+			return nil, nil, fmt.Errorf("failed to revoke initial root token: %w", err)
 		}
 	}
 
@@ -445,10 +450,10 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	if !c.flagDevNoStoreToken {
 		tokenHelper, err := c.TokenHelper()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if err := tokenHelper.Store(init.RootToken); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -471,11 +476,350 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 	resp, err := core.HandleRequest(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("error creating default K/V store: %w", err)
+		return nil, nil, fmt.Errorf("error creating default K/V store: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create default K/V store: %w", resp.Error())
+		return nil, nil, fmt.Errorf("failed to create default K/V store: %w", resp.Error())
 	}
 
-	return init, nil
+	var qsOption *quickstartOptions
+	if c.flagDevQuickStart {
+		qsOption, err = enableQuickstart(ctx, init, core)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to enable quickstart: %w", err)
+		}
+	}
+
+	return init, qsOption, nil
+}
+
+type quickstartOptions struct {
+	idName       string
+	idPolicy     string
+	idPolicyName string
+	idEntity     string
+
+	appRoleRoleID     string
+	appRoleSecretID   string
+	appRolePolicy     string
+	appRolePolicyName string
+	appRoleRoleName   string
+
+	username string
+	password string
+}
+
+func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.Core) (*quickstartOptions, error) {
+	options := &quickstartOptions{
+		idName:       "Lorem Ipsum",
+		idPolicyName: "developer",
+		idPolicy:     "path \"secret/*\" {capabilities = [\"create\", \"read\", \"update\", \"delete\"]}",
+
+		appRoleRoleName:   "app-read-only",
+		appRolePolicyName: "read-only",
+		appRolePolicy:     "path \"secret/*\" {capabilities = [\"read\"]}",
+
+		username: "lipsom",
+		password: "superSecretDemo",
+	}
+
+	// app role policy
+	r := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        fmt.Sprintf("sys/policy/%s", options.appRolePolicyName),
+		Data: map[string]interface{}{
+			"name":   options.appRolePolicyName,
+			"policy": options.appRolePolicy,
+		},
+	}
+	resp, err := core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating policy: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create policy: %w", resp.Error())
+	}
+
+	// userpass policy
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        fmt.Sprintf("sys/policy/%s", options.idPolicyName),
+		Data: map[string]interface{}{
+			"name":   options.idPolicyName,
+			"policy": options.idPolicy,
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating policy: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create policy: %w", resp.Error())
+	}
+
+	// userpass
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/auth/userpass",
+		Data: map[string]interface{}{
+			"type":        "userpass",
+			"path":        "userpass/",
+			"description": "sample userpass method",
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating userpass: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create userpass: %w", resp.Error())
+	}
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        fmt.Sprintf("auth/userpass/users/%s", options.username),
+		Data: map[string]interface{}{
+			"password":       options.password,
+			"token_policies": []string{"default"},
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating userpass user: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create userpass user: %w", resp.Error())
+	}
+
+	// identity
+	r = &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: init.RootToken,
+		Path:        "identity/entity",
+		Data: map[string]interface{}{
+			"name": options.idName,
+			"metadata": map[string]string{
+				"organization": "ACME Inc.",
+				"team":         "Squad-2"},
+			"policies": options.idPolicyName,
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating entity: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create entity: %w", resp.Error())
+	}
+	id, ok := resp.Data["id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to read entity id")
+	}
+
+	options.idEntity = id
+
+	r = &logical.Request{
+		Operation:   logical.ReadOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/auth",
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error reading mount accessor: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to read mount accessor: %w", resp.Error())
+	}
+	up, ok := resp.Data["userpass/"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to read mount accessor")
+	}
+	accessor, ok := up["accessor"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to read mount accessor")
+	}
+
+	r = &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: init.RootToken,
+		Path:        "identity/entity-alias",
+		Data: map[string]interface{}{
+			"name":           options.username,
+			"canonical_id":   id,
+			"mount_accessor": accessor,
+			"custom-metadata": map[string]string{
+				"account": "demo"},
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating entity: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create entity: %w", resp.Error())
+	}
+
+	// app role auth
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/auth/approle",
+		Data: map[string]interface{}{
+			"type":        "approle",
+			"path":        "approle/",
+			"description": "sample approle method",
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating approle: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create approle: %w", resp.Error())
+	}
+
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        fmt.Sprintf("auth/approle/role/%s", options.appRoleRoleName),
+		Data: map[string]interface{}{
+			"role_name":      options.appRoleRoleName,
+			"token_policies": []string{options.appRolePolicyName, "default"},
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error creating approle role: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to create approle role: %w", resp.Error())
+	}
+
+	r = &logical.Request{
+		Operation:   logical.ReadOperation,
+		ClientToken: init.RootToken,
+		Path:        fmt.Sprintf("auth/approle/role/%s/role-id", options.appRoleRoleName),
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving approle id: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to retrieve approle id: %w", resp.Error())
+	}
+
+	if roleID, ok := resp.Data["role_id"]; ok {
+		options.appRoleRoleID = roleID.(string)
+	}
+
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        fmt.Sprintf("auth/approle/role/%s/secret-id", options.appRoleRoleName),
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving approle id: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to retrieve approle id: %w", resp.Error())
+	}
+
+	if secretID, ok := resp.Data["secret_id"]; ok {
+		options.appRoleSecretID = secretID.(string)
+	}
+
+	// sample secret
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "secret/data/sample-secret",
+		Data: map[string]interface{}{
+			"data": map[string]interface{}{
+				"foo": "bar",
+				"zip": "zap",
+			},
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error writing sample secret: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to write sample secret: %w", resp.Error())
+	}
+
+	r = &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "secret/metadata/sample-secret",
+		Data: map[string]interface{}{
+			"custom_metadata": map[string]interface{}{
+				"team": "demo",
+			},
+		},
+	}
+	resp, err = core.HandleRequest(ctx, r)
+	if err != nil {
+		return nil, fmt.Errorf("error writing sample secret metadata: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("failed to write sample secret metadata: %w", resp.Error())
+	}
+
+	return options, nil
+}
+
+func quickstartBanner(c *ServerCommand, o *quickstartOptions, e string) {
+	if o == nil {
+		// no quickstart options seem to be set
+		return
+	}
+
+	c.UI.Warn(wrapAtLength("A set of quickstart options have been enabled!"))
+	c.UI.Warn("Read More: https://www.vaultproject.io/docs/concepts/dev-server")
+	c.UI.Warn("")
+	c.UI.Warn(wrapAtLength("An identity entity with an associated alias has been created. " +
+		"To explore the restricted account, authenticate with the following information"))
+	c.UI.Warn("Read More About Identity: https://www.vaultproject.io/docs/concepts/identity")
+	c.UI.Warn("Read More About Userpass: https://www.vaultproject.io/docs/auth/userpass")
+	c.UI.Warn("Read More About Policies: https://www.vaultproject.io/docs/concepts/policies")
+	c.UI.Warn("")
+
+	c.UI.Warn(fmt.Sprintf("               Name: %s", o.idName))
+	c.UI.Warn(fmt.Sprintf("         Enitity ID: %s", o.idEntity))
+	c.UI.Warn(fmt.Sprintf("             Policy: %s", o.idPolicyName))
+	c.UI.Warn("Associated Userpass:")
+	c.UI.Warn(fmt.Sprintf("         - Username: %s", o.username))
+	c.UI.Warn(fmt.Sprintf("         - Password: %s", o.password))
+	c.UI.Warn("")
+
+	c.UI.Warn(wrapAtLength("Applications can login with the following AppRole credentials:"))
+	c.UI.Warn("Read More: https://www.vaultproject.io/docs/auth/approle")
+	c.UI.Warn("")
+	c.UI.Warn(fmt.Sprintf("Login Path: %s/v1/auth/approle/login", e))
+	c.UI.Warn(fmt.Sprintf(" Role Name: %s", o.appRoleRoleName))
+	c.UI.Warn(fmt.Sprintf("   Role ID: %s", o.appRoleRoleID))
+	c.UI.Warn(fmt.Sprintf(" Secret ID: %s", o.appRoleSecretID))
+	c.UI.Warn(fmt.Sprintf("    Policy: %s", o.appRolePolicyName))
+	c.UI.Warn("")
+
+	c.UI.Warn(wrapAtLength("Polices have been created to enable the following permissions:"))
+	c.UI.Warn("")
+	c.UI.Warn(fmt.Sprintf("Policy Name: %s", o.idPolicyName))
+	c.UI.Warn(fmt.Sprintf("Policy Path: %s/v1/sys/policy/%s", e, o.idPolicyName))
+	c.UI.Warn(fmt.Sprintf("     Policy: %s", o.idPolicy))
+	c.UI.Warn("")
+	c.UI.Warn(fmt.Sprintf("Policy Name: %s", o.appRolePolicyName))
+	c.UI.Warn(fmt.Sprintf("Policy Path: %s/v1/sys/policy/%s", e, o.appRolePolicyName))
+	c.UI.Warn(fmt.Sprintf("     Policy: %s", o.appRolePolicy))
+	c.UI.Warn("")
+
+	c.UI.Warn(wrapAtLength("A sample secret is available at:"))
+	c.UI.Warn("")
+	c.UI.Warn(fmt.Sprintf("  Secret Path: %s/v1/secret/data/sample-secret", e))
+	c.UI.Warn(fmt.Sprintf("Metadata Path: %s/v1/secret/metadata/sample-secret", e))
 }
