@@ -18,6 +18,7 @@ import (
 // seal migration, wherein a given physical backend must be re-used as several
 // test clusters are sequentially created, tested, and discarded.
 type ReusableStorage struct {
+
 	// IsRaft specifies whether the storage is using a raft backend.
 	IsRaft bool
 

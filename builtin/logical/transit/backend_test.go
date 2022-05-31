@@ -623,8 +623,7 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 }
 
 func testAccStepEncrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -648,8 +647,7 @@ func testAccStepEncrypt(
 }
 
 func testAccStepEncryptUpsert(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "encrypt/" + name,
@@ -673,8 +671,7 @@ func testAccStepEncryptUpsert(
 }
 
 func testAccStepEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
-) logicaltest.TestStep {
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -700,8 +697,7 @@ func testAccStepEncryptContext(
 }
 
 func testAccStepDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -729,8 +725,7 @@ func testAccStepDecrypt(
 }
 
 func testAccStepRewrap(
-	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int,
-) logicaltest.TestStep {
+	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "rewrap/" + name,
@@ -762,8 +757,7 @@ func testAccStepRewrap(
 
 func testAccStepEncryptVX(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{},
-) logicaltest.TestStep {
+	ver int, encryptHistory map[int]map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -794,8 +788,7 @@ func testAccStepEncryptVX(
 
 func testAccStepLoadVX(
 	t *testing.T, name string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{},
-) logicaltest.TestStep {
+	ver int, encryptHistory map[int]map[string]interface{}) logicaltest.TestStep {
 	// This is really a no-op to allow us to do data manip in the check function
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
@@ -808,8 +801,7 @@ func testAccStepLoadVX(
 }
 
 func testAccStepDecryptExpectFailure(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -833,8 +825,7 @@ func testAccStepRotate(t *testing.T, name string) logicaltest.TestStep {
 
 func testAccStepWriteDatakey(t *testing.T, name string,
 	noPlaintext bool, bits int,
-	dataKeyInfo map[string]interface{},
-) logicaltest.TestStep {
+	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
 	data := map[string]interface{}{}
 	subPath := "plaintext"
 	if noPlaintext {
@@ -878,8 +869,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 }
 
 func testAccStepDecryptDatakey(t *testing.T, name string,
-	dataKeyInfo map[string]interface{},
-) logicaltest.TestStep {
+	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,

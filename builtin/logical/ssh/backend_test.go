@@ -1847,8 +1847,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 }
 
 func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string,
-) {
+	expectedValidPrincipal string, testEntityMetadata map[string]string) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -1927,8 +1926,7 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{},
-) logicaltest.TestStep {
+	requestParameters map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,

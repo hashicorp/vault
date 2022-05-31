@@ -32,8 +32,7 @@ func TestAccBackend_stepwise_UserCrud(t *testing.T) {
 }
 
 func testAccStepwiseUser(
-	t *testing.T, name string, password string, policies string,
-) stepwise.Step {
+	t *testing.T, name string, password string, policies string) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "users/" + name,

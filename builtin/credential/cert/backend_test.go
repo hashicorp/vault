@@ -1618,8 +1618,7 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 }
 
 func testAccStepListCerts(
-	t *testing.T, certs []string,
-) []logicaltest.TestStep {
+	t *testing.T, certs []string) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
 		{
 			Operation: logical.ListOperation,
@@ -1676,8 +1675,7 @@ type allowed struct {
 }
 
 func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool,
-) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1706,8 +1704,7 @@ func testAccStepCert(
 }
 
 func testAccStepCertLease(
-	t *testing.T, name string, cert []byte, policies string,
-) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1721,8 +1718,7 @@ func testAccStepCertLease(
 }
 
 func testAccStepCertTTL(
-	t *testing.T, name string, cert []byte, policies string,
-) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1736,8 +1732,7 @@ func testAccStepCertTTL(
 }
 
 func testAccStepCertMaxTTL(
-	t *testing.T, name string, cert []byte, policies string,
-) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1752,8 +1747,7 @@ func testAccStepCertMaxTTL(
 }
 
 func testAccStepCertNoLease(
-	t *testing.T, name string, cert []byte, policies string,
-) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
