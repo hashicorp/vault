@@ -16,7 +16,7 @@ the deployment of non-voting nodes alongside voting nodes on a per availability 
 When using redundancy zones, if an operator chooses to deploy Vault across 3 availability zones,
 they could have 2 (or more) nodes (1 voting/1+ non-voting) in each zone. In the event that a
 voting node in an availability zone fails, the redundancy zone configuration automatically
-promote the non-voting node to a voting node. In the event that an entire availability zone is
+promotes the non-voting node to a voting node. In the event that an entire availability zone is
 lost, a non-voting node in one of the existing availability zones would be promoted to a voting
 node, keeping quorum. This capability functions as a "hot standby" for server nodes while also
 providing enhanced read scalability.
